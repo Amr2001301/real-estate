@@ -1,18 +1,19 @@
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/page-header';
 import ProjectForm from '../_form';
 
 export default function NewProjectPage() {
   return (
-    <div>
-      <div className="mb-4">
-        <Link href="/dashboard/projects" className="text-sm text-brand-600 hover:underline">
-          ← العودة للمشاريع
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold mb-6">مشروع جديد</h1>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        <ProjectForm />
-      </div>
+    <div className="space-y-6 lg:space-y-8">
+      <PageHeader
+        title="إضافة مشروع جديد"
+        description="قم بتعبئة التفاصيل المعمارية والمكانية للمشروع الجديد. سيتم مراجعة البيانات قبل النشر النهائي في المحفظة الاستثمارية."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'المشاريع', href: '/dashboard/projects' },
+          { label: 'مشروع جديد' },
+        ]}
+      />
+      <ProjectForm />
     </div>
   );
 }

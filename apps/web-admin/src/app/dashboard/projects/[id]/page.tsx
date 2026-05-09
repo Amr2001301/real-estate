@@ -1,9 +1,33 @@
 import Link from 'next/link';
+import {
+  Pencil,
+  Send,
+  Archive,
+  Building2,
+  ImageIcon,
+  Map as MapIcon,
+  Layers,
+  CheckCircle2,
+  Plus,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Project } from '@/lib/types';
-import { tx } from '@/lib/format';
-import { ProjectStatusBadge } from '@/components/badges';
-import ProjectForm from '../_form';
+import type { Project, Paged, Unit } from '@/lib/types';
+import { tx, formatCurrency } from '@/lib/format';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/ui/empty-state';
+import { ProjectStatusBadge, UnitStatusBadge } from '@/components/badges';
+import { ProjectHero, type HeroStat } from '@/components/projects/project-hero';
+import {
+  AssetActionCard,
+  AssetActionForm,
+  type AssetAction,
+} from '@/components/projects/asset-action-card';
+import { ServiceTileGrid } from '@/components/projects/service-tile-grid';
+import { MapPreview } from '@/components/projects/map-preview';
+import { ConfirmButton } from '@/components/confirm-button';
 import {
   publishProjectAction,
   archiveProjectAction,
@@ -12,7 +36,6 @@ import {
   createBuildingAction,
 } from '../actions';
 import { ProjectMediaPanel } from './media-panel';
-import { ConfirmButton } from '@/components/confirm-button';
 
 export default async function ProjectDetailPage({
   params,
@@ -20,154 +43,408 @@ export default async function ProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const r = await safe(api.get<Project>(`/projects/${id}`));
 
-  if (r.error) {
+  const [projectRes, unitsRes] = await Promise.all([
+    safe(api.get<Project>(`/projects/${id}`)),
+    safe(api.get<Paged<Unit>>(`/units?projectId=${id}&pageSize=20`)),
+  ]);
+
+  if (projectRes.error || !projectRes.data) {
     return (
-      <div className="rounded-lg bg-red-50 text-red-700 p-4 text-sm">{r.error}</div>
+      <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
+        تعذر تحميل المشروع: {projectRes.error ?? 'غير موجود'}
+      </div>
     );
   }
-  const project = r.data!;
+
+  const project = projectRes.data;
+  const units = unitsRes.data?.data ?? [];
+  const cover = project.media?.[0]?.url;
+
+  // Aggregations from real data only.
+  const phaseCount = project.phases?.length ?? 0;
+  const buildingCount =
+    project.phases?.reduce((s, ph) => s + (ph.buildings?.length ?? 0), 0) ?? 0;
+  const unitsCountFromBuildings =
+    project.phases?.reduce(
+      (s, ph) =>
+        s + (ph.buildings?.reduce((bs, b) => bs + (b._count?.units ?? 0), 0) ?? 0),
+      0,
+    ) ?? 0;
+  const totalUnits = unitsRes.data?.meta.total ?? unitsCountFromBuildings;
+  const reserved = units.filter((u) => u.status === 'RESERVED').length;
+  const sold = units.filter((u) => u.status === 'SOLD').length;
+  const occupancyPct =
+    units.length > 0 ? Math.round(((reserved + sold) / units.length) * 100) : null;
+
+  const heroStats: HeroStat[] = [];
+  if (totalUnits > 0) heroStats.push({ label: 'الوحدات', value: totalUnits });
+  if (occupancyPct !== null)
+    heroStats.push({ label: 'الإشغال', value: `${occupancyPct}%` });
+  if (buildingCount > 0)
+    heroStats.push({ label: 'المباني', value: buildingCount });
+
+  const assetActions: AssetAction[] = [
+    {
+      key: 'units',
+      label: 'إدارة الوحدات',
+      icon: <Building2 />,
+      href: `/dashboard/units?projectId=${project.id}`,
+    },
+    {
+      key: 'media',
+      label: 'مكتبة الوسائط',
+      icon: <ImageIcon />,
+      href: `/dashboard/projects/${project.id}#media`,
+    },
+    {
+      key: 'map',
+      label: 'عرض الموقع على الخريطة',
+      icon: <MapIcon />,
+      href: `https://www.google.com/maps/search/?api=1&query=${project.lat},${project.lng}`,
+      external: true,
+    },
+    {
+      key: 'edit',
+      label: 'تعديل بيانات المشروع',
+      icon: <Pencil />,
+      href: `/dashboard/projects/${project.id}/edit`,
+    },
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <Link href="/dashboard/projects" className="text-sm text-brand-600 hover:underline">
-            ← المشاريع
-          </Link>
-          <h1 className="text-2xl font-bold mt-1 flex items-center gap-3">
-            {tx(project.name)}
+    <div className="space-y-6 lg:space-y-8">
+      <PageHeader
+        title={tx(project.name)}
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'المشاريع', href: '/dashboard/projects' },
+          { label: tx(project.name) },
+        ]}
+        meta={
+          <>
             <ProjectStatusBadge status={project.status} />
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {project.city} · {project.lat}, {project.lng}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {project.status !== 'PUBLISHED' && (
-            <form action={publishProjectAction.bind(null, id)}>
-              <button className="rounded-lg bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-sm">
-                نشر
-              </button>
-            </form>
-          )}
-          {project.status !== 'ARCHIVED' && (
-            <form action={archiveProjectAction.bind(null, id)}>
-              <button className="rounded-lg bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 text-sm">
-                أرشفة
-              </button>
-            </form>
-          )}
-          <ConfirmButton
-            label="حذف"
-            confirm="هل أنت متأكد من حذف هذا المشروع؟ لا يمكن التراجع."
-            action={deleteProjectAction.bind(null, id)}
-          />
-        </div>
-      </div>
+            <span className="text-sm text-slate-500">
+              {project.city} · {project.lat.toFixed(4)}, {project.lng.toFixed(4)}
+            </span>
+            {project.featured && (
+              <Badge tone="accent" variant="soft">
+                مميز
+              </Badge>
+            )}
+          </>
+        }
+        actions={
+          <>
+            <Link href={`/dashboard/projects/${id}/edit` as never}>
+              <Button
+                variant="outline"
+                size="md"
+                leftIcon={<Pencil className="h-4 w-4" />}
+              >
+                تعديل المشروع
+              </Button>
+            </Link>
+            {project.status !== 'PUBLISHED' && (
+              <form action={publishProjectAction.bind(null, id)}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  leftIcon={<Send className="h-4 w-4" />}
+                >
+                  نشر المشروع
+                </Button>
+              </form>
+            )}
+          </>
+        }
+      />
+
+      <ProjectHero
+        src={cover}
+        alt={tx(project.name)}
+        rightLabel="المساحة الإجمالية"
+        rightValue={`${totalUnits || 0}`}
+        rightSub={`${totalUnits || 0} وحدة في ${phaseCount} مرحلة`}
+        stats={heroStats}
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <section className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold mb-4">تفاصيل المشروع</h2>
-          <ProjectForm project={project} />
-        </section>
+        <div className="xl:col-span-2 space-y-6">
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="h-5 w-1 rounded-full bg-brand-500" />
+              <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                وصف المشروع
+              </h2>
+            </div>
+            <p className="text-sm text-slate-700 leading-relaxed">
+              {tx(project.description) || 'لا يوجد وصف لهذا المشروع.'}
+            </p>
 
-        <aside className="space-y-6">
-          <ProjectMediaPanel project={project} />
-          <PhasesPanel project={project} />
-        </aside>
-      </div>
-    </div>
-  );
-}
+            {project.services && project.services.length > 0 && (
+              <div className="mt-6">
+                <ServiceTileGrid services={project.services} />
+              </div>
+            )}
+          </Card>
 
-function PhasesPanel({ project }: { project: Project }) {
-  return (
-    <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-      <h2 className="text-lg font-bold mb-3">المراحل والمباني</h2>
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Layers className="h-5 w-5 text-brand-600" />
+                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                  مراحل المشروع
+                </h2>
+              </div>
+              <span className="text-2xs font-semibold text-slate-500">
+                {phaseCount} مرحلة · {buildingCount} مبنى
+              </span>
+            </div>
 
-      {(!project.phases || project.phases.length === 0) && (
-        <p className="text-sm text-gray-500 mb-4">لا توجد مراحل بعد</p>
-      )}
-
-      <div className="space-y-3">
-        {project.phases?.map((ph) => (
-          <div key={ph.id} className="border border-gray-100 rounded-lg p-3">
-            <div className="font-medium text-sm">{tx(ph.name)}</div>
-            {ph.buildings && ph.buildings.length > 0 ? (
-              <ul className="mt-2 space-y-1">
-                {ph.buildings.map((b) => (
-                  <li key={b.id} className="text-xs text-gray-600 flex justify-between">
-                    <span>
-                      {b.name} <span className="text-gray-400">· {b.totalFloors} طوابق</span>
-                    </span>
-                    <span className="text-gray-400">{b._count?.units ?? 0} وحدة</span>
-                  </li>
-                ))}
-              </ul>
+            {phaseCount === 0 ? (
+              <EmptyState
+                icon={<Layers />}
+                title="لا توجد مراحل بعد"
+                description="ابدأ بإضافة المرحلة الأولى للمشروع."
+              />
             ) : (
-              <p className="text-xs text-gray-400 mt-1">لا توجد مباني</p>
+              <div className="space-y-3">
+                {project.phases!.map((ph, idx) => {
+                  const buildingsCount = ph.buildings?.length ?? 0;
+                  const totalPhaseUnits =
+                    ph.buildings?.reduce(
+                      (s, b) => s + (b._count?.units ?? 0),
+                      0,
+                    ) ?? 0;
+                  return (
+                    <div
+                      key={ph.id}
+                      className="flex items-start gap-4 rounded-2xl bg-info-50/50 border border-hairline p-4"
+                    >
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-success-50 text-success-600 ring-1 ring-inset ring-success-100 shrink-0">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xs font-semibold text-slate-400 tabular-nums">
+                            {String(idx + 1).padStart(2, '0')}
+                          </span>
+                          <p className="text-sm font-semibold text-slate-900">
+                            {tx(ph.name)}
+                          </p>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {buildingsCount} مبنى · {totalPhaseUnits} وحدة
+                        </p>
+                        {ph.buildings && ph.buildings.length > 0 && (
+                          <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            {ph.buildings.map((b) => (
+                              <li
+                                key={b.id}
+                                className="flex items-center justify-between text-xs text-slate-600 bg-surface rounded-lg px-3 py-1.5 ring-1 ring-inset ring-hairline"
+                              >
+                                <span className="font-medium text-slate-700">
+                                  مبنى {b.name}
+                                </span>
+                                <span className="text-slate-400">
+                                  {b.totalFloors} طوابق · {b._count?.units ?? 0} وحدة
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <details className="mt-3 group">
+                          <summary className="text-2xs font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1 hover:text-brand-800">
+                            <Plus className="h-3 w-3" /> إضافة مبنى
+                          </summary>
+                          <form
+                            action={createBuildingAction.bind(null, project.id)}
+                            className="mt-2 flex flex-wrap gap-2"
+                          >
+                            <input type="hidden" name="phaseId" value={ph.id} />
+                            <input
+                              name="name"
+                              required
+                              placeholder="اسم المبنى (A)"
+                              className="text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
+                            />
+                            <input
+                              name="totalFloors"
+                              type="number"
+                              min={1}
+                              defaultValue={1}
+                              placeholder="الطوابق"
+                              className="w-24 text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
+                            />
+                            <Button type="submit" variant="outline" size="sm">
+                              حفظ
+                            </Button>
+                          </form>
+                        </details>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
 
-            <details className="mt-2">
-              <summary className="text-xs text-brand-600 cursor-pointer">+ إضافة مبنى</summary>
-              <form action={createBuildingAction.bind(null, project.id)} className="mt-2 space-y-2">
-                <input type="hidden" name="phaseId" value={ph.id} />
+            <details className="mt-4 group">
+              <summary className="text-sm font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1.5 hover:text-brand-800">
+                <Plus className="h-4 w-4" /> إضافة مرحلة جديدة
+              </summary>
+              <form
+                action={createPhaseAction.bind(null, project.id)}
+                className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2"
+              >
                 <input
-                  name="name"
+                  name="name_ar"
                   required
-                  placeholder="اسم المبنى (مثال: A)"
-                  className="w-full text-xs rounded-md border border-gray-300 px-2 py-1"
+                  dir="rtl"
+                  placeholder="اسم المرحلة (بالعربية)"
+                  className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
                 />
                 <input
-                  name="totalFloors"
-                  type="number"
-                  min={1}
-                  defaultValue={1}
-                  placeholder="عدد الطوابق"
-                  className="w-full text-xs rounded-md border border-gray-300 px-2 py-1"
+                  name="name_en"
+                  required
+                  dir="ltr"
+                  placeholder="Phase name (English)"
+                  className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
                 />
-                <button className="w-full text-xs rounded-md bg-gray-100 hover:bg-gray-200 px-2 py-1">
-                  حفظ
-                </button>
+                <input
+                  name="order"
+                  type="number"
+                  defaultValue={phaseCount}
+                  className="w-20 text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
+                />
+                <Button type="submit" variant="primary" size="sm">
+                  إضافة
+                </Button>
               </form>
             </details>
-          </div>
-        ))}
-      </div>
+          </Card>
 
-      <details className="mt-4">
-        <summary className="text-sm text-brand-600 cursor-pointer">+ إضافة مرحلة</summary>
-        <form action={createPhaseAction.bind(null, project.id)} className="mt-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <input
-              name="name_ar"
-              required
-              dir="rtl"
-              placeholder="بالعربية"
-              className="text-xs rounded-md border border-gray-300 px-2 py-1"
-            />
-            <input
-              name="name_en"
-              required
-              dir="ltr"
-              placeholder="English"
-              className="text-xs rounded-md border border-gray-300 px-2 py-1"
-            />
-          </div>
-          <input
-            name="order"
-            type="number"
-            placeholder="الترتيب"
-            defaultValue={project.phases?.length ?? 0}
-            className="w-full text-xs rounded-md border border-gray-300 px-2 py-1"
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                  الوحدات المتاحة
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  نظرة سريعة على الوحدات المعروضة للبيع حالياً
+                </p>
+              </div>
+              <Link
+                href={`/dashboard/units?projectId=${project.id}` as never}
+                className="text-xs font-semibold text-brand-700 hover:text-brand-800"
+              >
+                عرض الكل
+              </Link>
+            </div>
+
+            {units.length === 0 ? (
+              <EmptyState
+                icon={<Building2 />}
+                title="لا توجد وحدات بعد"
+                description="أضف وحدات إلى المباني داخل المشروع."
+              />
+            ) : (
+              <div className="overflow-x-auto scrollbar-thin -mx-2">
+                <table className="w-full text-sm">
+                  <thead className="text-2xs font-semibold uppercase tracking-wide text-slate-400">
+                    <tr>
+                      <th className="text-start font-semibold py-2 px-2">رقم الوحدة</th>
+                      <th className="text-start font-semibold py-2 px-2">النوع</th>
+                      <th className="text-start font-semibold py-2 px-2">المساحة</th>
+                      <th className="text-start font-semibold py-2 px-2">السعر</th>
+                      <th className="text-start font-semibold py-2 px-2">الحالة</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {units.slice(0, 6).map((u) => (
+                      <tr key={u.id} className="border-t border-hairline">
+                        <td className="py-3 px-2 font-mono text-sm font-semibold text-slate-900">
+                          {u.code}
+                        </td>
+                        <td className="py-3 px-2 text-slate-600">{u.type}</td>
+                        <td className="py-3 px-2 text-slate-700 tabular-nums">
+                          {u.area} م²
+                        </td>
+                        <td className="py-3 px-2 font-semibold text-brand-700 tabular-nums">
+                          {formatCurrency(u.price)}
+                        </td>
+                        <td className="py-3 px-2">
+                          <UnitStatusBadge status={u.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <AssetActionCard
+            title="إدارة الأصول"
+            actions={[
+              ...assetActions,
+              {
+                key: 'archive-or-publish',
+                label: project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر',
+                icon: <Archive />,
+                tone: 'danger',
+                form: (
+                  <AssetActionForm
+                    label={
+                      project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر'
+                    }
+                    icon={<Archive />}
+                    tone="danger"
+                    action={
+                      project.status === 'ARCHIVED'
+                        ? publishProjectAction.bind(null, id)
+                        : archiveProjectAction.bind(null, id)
+                    }
+                  />
+                ),
+              },
+            ]}
           />
-          <button className="w-full text-xs rounded-md bg-brand-600 text-white px-2 py-1.5">
-            إضافة المرحلة
-          </button>
-        </form>
-      </details>
-    </section>
+
+          <Card className="p-5">
+            <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
+              الموقع
+            </h3>
+            <MapPreview
+              lat={project.lat}
+              lng={project.lng}
+              city={project.city}
+              height="md"
+            />
+          </Card>
+
+          <div id="media">
+            <ProjectMediaPanel project={project} />
+          </div>
+
+          <Card className="p-5">
+            <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
+              منطقة الخطر
+            </h3>
+            <p className="text-xs text-slate-500 mb-3">
+              حذف المشروع سيؤدي إلى إزالته نهائياً مع جميع المراحل والمباني المرتبطة. لا يمكن التراجع.
+            </p>
+            <ConfirmButton
+              label="حذف المشروع"
+              confirm="هل أنت متأكد من حذف هذا المشروع؟ لا يمكن التراجع."
+              action={deleteProjectAction.bind(null, id)}
+            />
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 }
