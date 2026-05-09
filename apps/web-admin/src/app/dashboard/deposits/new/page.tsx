@@ -1,0 +1,31 @@
+import Link from 'next/link';
+import { api, safe } from '@/lib/api';
+import type { Paged, Contract } from '@/lib/types';
+import RecordDepositForm from './form';
+
+export default async function NewDepositPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ contractId?: string }>;
+}) {
+  const sp = await searchParams;
+  const r = await safe(api.get<Paged<Contract>>('/contracts?pageSize=200'));
+
+  return (
+    <div>
+      <div className="mb-4">
+        <Link href="/dashboard/deposits" className="text-sm text-brand-600 hover:underline">
+          ← العودة للدفعات
+        </Link>
+      </div>
+      <h1 className="text-2xl font-bold mb-6">تسجيل دفعة جديدة</h1>
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-2xl">
+        {r.error ? (
+          <div className="rounded-lg bg-red-50 text-red-700 p-3 text-sm">{r.error}</div>
+        ) : (
+          <RecordDepositForm contracts={r.data?.data ?? []} initialContractId={sp.contractId} />
+        )}
+      </div>
+    </div>
+  );
+}
