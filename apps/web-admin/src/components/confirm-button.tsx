@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   action: () => Promise<unknown>;
@@ -12,19 +13,25 @@ interface Props {
 export function ConfirmButton({ action, confirm, label, className }: Props) {
   const [pending, start] = useTransition();
   return (
-    <button
+    <Button
       type="button"
+      variant="danger"
+      size="sm"
+      loading={pending}
       disabled={pending}
-      className={
-        className ??
-        'rounded-lg bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 text-sm disabled:opacity-60'
-      }
+      className={className}
       onClick={() => {
         if (!window.confirm(confirm)) return;
-        start(() => action().catch((e) => alert((e as Error).message)));
+        start(async () => {
+          try {
+            await action();
+          } catch (e) {
+            alert((e as Error).message);
+          }
+        });
       }}
     >
       {pending ? 'جاري…' : label}
-    </button>
+    </Button>
   );
 }

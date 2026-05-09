@@ -1,5 +1,19 @@
 import type { Metadata } from 'next';
+import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google';
 import './globals.css';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const plexArabic = IBM_Plex_Sans_Arabic({
+  subsets: ['arabic'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-arabic',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Real Estate Admin',
@@ -8,7 +22,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ar" dir="rtl">
+    <html
+      lang="ar"
+      dir="rtl"
+      className={`${inter.variable} ${plexArabic.variable}`}
+    >
       <body>{children}</body>
     </html>
   );
