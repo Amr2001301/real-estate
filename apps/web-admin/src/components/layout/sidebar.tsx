@@ -86,7 +86,11 @@ export function SidebarContent({ user, onNavigate }: Props) {
 export function Sidebar({ user, className }: Omit<Props, 'onNavigate'>) {
   return (
     <aside
-      className={`hidden lg:flex w-[264px] shrink-0 ${className ?? ''}`}
+      className={`hidden lg:flex w-[264px] shrink-0 relative z-20 ${className ?? ''}`}
+      style={{
+        // Soft elevation toward the content side (end edge in RTL = visual left)
+        boxShadow: '-12px 0 32px -16px rgb(15 23 42 / 0.18)',
+      }}
     >
       <div className="sticky top-0 h-screen w-full">
         <SidebarContent user={user} />

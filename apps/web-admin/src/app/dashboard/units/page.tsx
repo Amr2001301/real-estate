@@ -5,6 +5,9 @@ import { tx, formatCurrency } from '@/lib/format';
 import { DataTable } from '@/components/table';
 import { UnitStatusBadge } from '@/components/badges';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 interface Search {
   projectId?: string;
   status?: string;

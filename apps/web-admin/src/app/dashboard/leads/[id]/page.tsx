@@ -1,16 +1,39 @@
-import Link from 'next/link';
+import {
+  Phone,
+  Mail,
+  Building2,
+  Calendar,
+  UserCog,
+  MessageSquare,
+  Activity,
+  ArrowLeft,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Lead, Paged, User, LeadStage } from '@/lib/types';
 import { formatDateTime, tx } from '@/lib/format';
+import { PageHeader } from '@/components/ui/page-header';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { EmptyState } from '@/components/ui/empty-state';
 import { LeadStageBadge } from '@/components/badges';
+import { StageSegmented } from '@/components/crm/stage-segmented';
 import { addNoteAction, assignLeadAction } from '../actions';
-import { StageButtons } from './stage-buttons';
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 interface LeadDetail extends Lead {
   activities?: Array<{ id: string; type: string; payload: unknown; createdAt: string }>;
 }
 
 const STAGES: LeadStage[] = ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION', 'WON', 'LOST'];
+
+function firstLetter(name: string): string {
+  return name.trim().charAt(0) || '·';
+}
 
 export default async function LeadDetailPage({
   params,
@@ -23,126 +46,318 @@ export default async function LeadDetailPage({
     safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
   ]);
 
-  if (leadRes.error) {
-    return <div className="rounded-lg bg-red-50 text-red-700 p-4 text-sm">{leadRes.error}</div>;
+  if (leadRes.error || !leadRes.data) {
+    return (
+      <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
+        تعذر تحميل بيانات العميل: {leadRes.error ?? 'غير موجود'}
+      </div>
+    );
   }
-  const lead = leadRes.data!;
+  const lead = leadRes.data;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <Link href="/dashboard/leads" className="text-sm text-brand-600 hover:underline">
-          ← العملاء المحتملون
-        </Link>
-        <h1 className="text-2xl font-bold mt-1 flex items-center gap-3">
-          {lead.fullName}
-          <LeadStageBadge stage={lead.stage} />
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          <span dir="ltr" className="font-mono">{lead.phone}</span>
-          {lead.email && <> · {lead.email}</>}
-        </p>
-      </div>
+    <div className="space-y-6 lg:space-y-8">
+      <PageHeader
+        title={lead.fullName}
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'العملاء المحتملون', href: '/dashboard/leads' },
+          { label: lead.fullName },
+        ]}
+        meta={
+          <>
+            <LeadStageBadge stage={lead.stage} />
+            <span className="text-sm text-slate-500" dir="ltr">
+              {lead.phone}
+            </span>
+            {lead.email && (
+              <span className="text-sm text-slate-500" dir="ltr">
+                · {lead.email}
+              </span>
+            )}
+          </>
+        }
+        actions={
+          <>
+            {lead.phone && (
+              <a href={`tel:${lead.phone}`}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  leftIcon={<Phone className="h-4 w-4" />}
+                >
+                  اتصال
+                </Button>
+              </a>
+            )}
+            {lead.email && (
+              <a href={`mailto:${lead.email}`}>
+                <Button
+                  type="button"
+                  variant="primary"
+                  size="md"
+                  leftIcon={<Mail className="h-4 w-4" />}
+                >
+                  إرسال بريد
+                </Button>
+              </a>
+            )}
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2 space-y-6">
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h2 className="text-lg font-bold mb-3">تغيير المرحلة</h2>
-            <StageButtons leadId={lead.id} currentStage={lead.stage} stages={STAGES} />
-          </section>
+          {/* Stage selector */}
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                  مرحلة العميل
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  انقل العميل بين مراحل البيع المختلفة
+                </p>
+              </div>
+            </div>
+            <StageSegmented leadId={lead.id} currentStage={lead.stage} stages={STAGES} />
+          </Card>
 
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h2 className="text-lg font-bold mb-3">الملاحظات</h2>
+          {/* Notes */}
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <MessageSquare className="h-5 w-5 text-brand-600" />
+              <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                الملاحظات
+              </h2>
+              <span className="ms-auto text-2xs font-semibold text-slate-400">
+                {lead.notes?.length ?? 0} ملاحظة
+              </span>
+            </div>
 
-            <form action={addNoteAction.bind(null, lead.id)} className="mb-4">
-              <textarea
+            <form action={addNoteAction.bind(null, lead.id)} className="mb-5 flex flex-col gap-2">
+              <Textarea
                 name="body"
                 required
-                rows={2}
-                placeholder="أضف ملاحظة…"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                rows={3}
+                placeholder="اكتب ملاحظة جديدة عن آخر تفاعل مع العميل…"
               />
-              <button className="mt-2 rounded-lg bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 text-sm">
-                حفظ الملاحظة
-              </button>
+              <div className="flex justify-end">
+                <Button type="submit" variant="primary" size="sm">
+                  حفظ الملاحظة
+                </Button>
+              </div>
             </form>
 
-            <ul className="space-y-3">
-              {(lead.notes ?? []).length === 0 && (
-                <li className="text-xs text-gray-400">لا توجد ملاحظات بعد</li>
-              )}
-              {lead.notes?.map((n) => (
-                <li key={n.id} className="border-r-2 border-brand-500 pr-3">
-                  <p className="text-sm">{n.body}</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {n.sales?.fullName ?? '—'} · {formatDateTime(n.createdAt)}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          </section>
+            {(!lead.notes || lead.notes.length === 0) ? (
+              <EmptyState
+                icon={<MessageSquare />}
+                title="لا توجد ملاحظات بعد"
+                description="ابدأ بتدوين أول ملاحظة لتتبع تفاعلاتك مع العميل."
+              />
+            ) : (
+              <ul className="space-y-3">
+                {lead.notes.map((n) => (
+                  <li
+                    key={n.id}
+                    className="relative rounded-2xl bg-surface-muted/50 border border-hairline px-4 py-3 ps-5"
+                  >
+                    <span
+                      aria-hidden
+                      className="absolute end-0 top-3 bottom-3 w-[3px] rounded-e-full bg-brand-500"
+                    />
+                    <p className="text-sm text-slate-800 leading-relaxed">{n.body}</p>
+                    <p className="mt-2 text-2xs text-slate-400 flex items-center gap-1.5">
+                      <UserCog className="h-3 w-3" />
+                      {n.sales?.fullName ?? 'مجهول'} · {formatDateTime(n.createdAt)}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
 
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h2 className="text-lg font-bold mb-3">السجل الزمني</h2>
-            <ul className="space-y-2 text-sm">
-              {(lead.activities ?? []).length === 0 && (
-                <li className="text-xs text-gray-400">لا يوجد نشاط</li>
-              )}
-              {lead.activities?.map((a) => (
-                <li key={a.id} className="flex justify-between text-xs">
-                  <span className="font-mono text-brand-700">{a.type}</span>
-                  <span className="text-gray-400">{formatDateTime(a.createdAt)}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+          {/* Timeline */}
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Activity className="h-5 w-5 text-brand-600" />
+              <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                السجل الزمني
+              </h2>
+            </div>
+            {(!lead.activities || lead.activities.length === 0) ? (
+              <EmptyState
+                icon={<Activity />}
+                title="لا يوجد نشاط بعد"
+                description="ستظهر التغييرات والتفاعلات هنا تلقائياً."
+              />
+            ) : (
+              <ul className="space-y-3">
+                {lead.activities.map((a) => (
+                  <li key={a.id} className="flex items-start gap-3">
+                    <span className="mt-1 inline-flex h-2 w-2 rounded-full bg-brand-500 shrink-0" />
+                    <div className="flex-1 min-w-0 flex flex-wrap items-baseline gap-2">
+                      <span className="font-mono text-xs font-semibold text-brand-700">
+                        {a.type}
+                      </span>
+                      <span className="text-2xs text-slate-400">
+                        {formatDateTime(a.createdAt)}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
         </div>
 
-        <aside className="space-y-6">
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h2 className="text-lg font-bold mb-3">الإسناد</h2>
-            <p className="text-sm mb-3">
-              مندوب المبيعات الحالي:{' '}
-              <span className="font-medium">{lead.assignedSales?.fullName ?? '— غير مسند —'}</span>
-            </p>
-            <form action={assignLeadAction.bind(null, lead.id)} className="space-y-2">
-              <select
+        <div className="space-y-6">
+          {/* Assignment */}
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <UserCog className="h-5 w-5 text-brand-600" />
+              <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                إسناد المبيعات
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-3 rounded-2xl bg-surface-muted/60 px-3 py-3 mb-4">
+              {lead.assignedSales ? (
+                <>
+                  <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-xs font-bold ring-1 ring-inset ring-white">
+                    {firstLetter(lead.assignedSales.fullName)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 truncate">
+                      {lead.assignedSales.fullName}
+                    </p>
+                    <p className="text-2xs text-slate-500">المسؤول الحالي</p>
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-slate-500">— غير مسند —</p>
+              )}
+            </div>
+
+            <form action={assignLeadAction.bind(null, lead.id)} className="flex flex-col gap-2">
+              <Select
                 name="assignedSalesId"
                 defaultValue={lead.assignedSalesId ?? ''}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                inputSize="sm"
               >
-                <option value="">— اختر —</option>
+                <option value="">— اختر مندوب —</option>
                 {salesRes.data?.data.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.fullName}
                   </option>
                 ))}
-              </select>
-              <button className="w-full rounded-lg bg-gray-800 text-white px-3 py-1.5 text-sm">
+              </Select>
+              <Button type="submit" variant="secondary" size="sm">
                 تحديث الإسناد
-              </button>
+              </Button>
             </form>
-          </section>
+          </Card>
 
-          <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-            <h2 className="text-lg font-bold mb-3">معلومات</h2>
-            <dl className="text-sm space-y-2">
-              <Row k="المشروع المهتم">{tx(lead.projectInterest?.name)}</Row>
-              <Row k="المصدر">{tx(lead.source?.name)}</Row>
-              <Row k="تاريخ الإنشاء">{formatDateTime(lead.createdAt)}</Row>
+          {/* Info */}
+          <Card className="p-5 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-900 tracking-tight mb-4">
+              معلومات
+            </h2>
+            <dl className="flex flex-col gap-3 text-sm">
+              <Row label="المشروع المهتم" icon={<Building2 className="h-3.5 w-3.5" />}>
+                {lead.projectInterest ? (
+                  <span className="font-medium text-slate-900">
+                    {tx(lead.projectInterest.name)}
+                  </span>
+                ) : (
+                  <span className="text-slate-400">—</span>
+                )}
+              </Row>
+              <Row label="مصدر العميل" icon={<ArrowLeft className="h-3.5 w-3.5" />}>
+                {lead.source ? (
+                  <Badge tone="info" variant="soft" size="sm">
+                    {tx(lead.source.name)}
+                  </Badge>
+                ) : (
+                  <span className="text-slate-400">—</span>
+                )}
+              </Row>
+              <Row label="تاريخ الإنشاء" icon={<Calendar className="h-3.5 w-3.5" />}>
+                <span className="text-slate-700">{formatDateTime(lead.createdAt)}</span>
+              </Row>
+              <Row label="معرّف العميل" icon={<UserCog className="h-3.5 w-3.5" />}>
+                <span className="font-mono text-2xs text-slate-500">
+                  #{lead.id.slice(0, 8).toUpperCase()}
+                </span>
+              </Row>
             </dl>
-          </section>
-        </aside>
+          </Card>
+
+          {/* Quick contact card */}
+          {(lead.phone || lead.email) && (
+            <Card className="p-5">
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
+                وسائل التواصل
+              </h3>
+              <div className="flex flex-col gap-2">
+                {lead.phone && (
+                  <a
+                    href={`tel:${lead.phone}`}
+                    className="flex items-center gap-3 rounded-xl bg-surface-muted/60 hover:bg-surface-muted px-3 py-2.5 transition-colors"
+                  >
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+                      <Phone className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-2xs text-slate-500">الهاتف</p>
+                      <p className="text-sm font-mono text-slate-900" dir="ltr">
+                        {lead.phone}
+                      </p>
+                    </div>
+                  </a>
+                )}
+                {lead.email && (
+                  <a
+                    href={`mailto:${lead.email}`}
+                    className="flex items-center gap-3 rounded-xl bg-surface-muted/60 hover:bg-surface-muted px-3 py-2.5 transition-colors"
+                  >
+                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-info-50 text-info-600">
+                      <Mail className="h-4 w-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-2xs text-slate-500">البريد الإلكتروني</p>
+                      <p className="text-sm text-slate-900 truncate" dir="ltr">
+                        {lead.email}
+                      </p>
+                    </div>
+                  </a>
+                )}
+              </div>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function Row({ k, children }: { k: string; children: React.ReactNode }) {
+function Row({
+  label,
+  icon,
+  children,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex justify-between gap-2">
-      <dt className="text-gray-500">{k}</dt>
-      <dd className="text-gray-900 text-left">{children}</dd>
+    <div className="flex items-center justify-between gap-3">
+      <dt className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-wide text-slate-500 font-semibold">
+        <span className="text-slate-400">{icon}</span>
+        {label}
+      </dt>
+      <dd className="text-end">{children}</dd>
     </div>
   );
 }

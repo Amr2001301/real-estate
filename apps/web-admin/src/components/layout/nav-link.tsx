@@ -21,6 +21,7 @@ export function NavLink({ href, label, icon, onNavigate }: Props) {
   return (
     <Link
       href={href as never}
+      prefetch={false}
       onClick={onNavigate}
       aria-current={active ? 'page' : undefined}
       className={cn(

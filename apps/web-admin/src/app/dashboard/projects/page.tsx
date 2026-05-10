@@ -25,6 +25,9 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ProjectStatusBadge } from '@/components/badges';
 import { ProjectThumbnail } from '@/components/projects/project-thumbnail';
 
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
 interface Search {
   page?: string;
   status?: string;

@@ -1,7 +1,10 @@
-import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, Project, LeadSource, User } from '@/lib/types';
+import { PageHeader } from '@/components/ui/page-header';
 import LeadForm from '../_form';
+
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 export default async function NewLeadPage() {
   const [projectsRes, sourcesRes, salesRes] = await Promise.all([
@@ -11,20 +14,21 @@ export default async function NewLeadPage() {
   ]);
 
   return (
-    <div>
-      <div className="mb-4">
-        <Link href="/dashboard/leads" className="text-sm text-brand-600 hover:underline">
-          ← العودة للعملاء
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold mb-6">عميل محتمل جديد</h1>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-3xl">
-        <LeadForm
-          projects={projectsRes.data?.data ?? []}
-          sources={sourcesRes.data ?? []}
-          sales={salesRes.data?.data ?? []}
-        />
-      </div>
+    <div className="space-y-6 lg:space-y-8">
+      <PageHeader
+        title="إضافة عميل محتمل جديد"
+        description="سجّل بيانات العميل الأساسية وأسنده إلى أحد مندوبي المبيعات لمتابعته في خط الأنابيب."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'العملاء المحتملون', href: '/dashboard/leads' },
+          { label: 'عميل جديد' },
+        ]}
+      />
+      <LeadForm
+        projects={projectsRes.data?.data ?? []}
+        sources={sourcesRes.data ?? []}
+        sales={salesRes.data?.data ?? []}
+      />
     </div>
   );
 }
