@@ -58,6 +58,17 @@ export interface Building {
   _count?: { units: number };
 }
 
+export interface UnitStatusHistoryEntry {
+  id: string;
+  unitId: string;
+  oldStatus: UnitStatus;
+  newStatus: UnitStatus;
+  changedById: string | null;
+  changedBy?: { id: string; fullName: string } | null;
+  reason: string | null;
+  changedAt: string;
+}
+
 export interface Unit {
   id: string;
   buildingId: string;
@@ -74,6 +85,7 @@ export interface Unit {
   updatedAt: string;
   media?: Media[];
   building?: Building & { phase?: Phase & { project?: Project } };
+  history?: UnitStatusHistoryEntry[];
 }
 
 export interface Lead {

@@ -5,7 +5,12 @@
       "Bash(git branch *)",
       "Bash(pnpm build *)",
       "Bash(pnpm typecheck *)",
-      "Bash(pnpm add *)"
+      "Bash(pnpm add *)",
+      "Bash(mkdir -p \"/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/units/[id]/edit\")",
+      "Bash(pnpm lint *)"
+    ],
+    "additionalDirectories": [
+      "/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/units/[id]"
     ]
   }
 }

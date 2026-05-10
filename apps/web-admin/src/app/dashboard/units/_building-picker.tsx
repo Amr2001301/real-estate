@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { Project, Phase, Building } from '@/lib/types';
-import { inputClass } from '@/components/form/field';
+import { Field } from '@/components/form/field';
+import { Select } from '@/components/ui/select';
 
 interface Props {
   projects: Project[];
@@ -63,19 +64,17 @@ export function BuildingPicker({ projects, initialBuildingId }: Props) {
   const buildings = phases.find((ph) => ph.id === phaseId)?.buildings ?? [];
 
   return (
-    <fieldset className="space-y-3">
-      <legend className="text-sm font-medium text-gray-700">المبنى</legend>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">المشروع</label>
-          <select
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Field label="المشروع" name="project" required>
+          <Select
+            id="project"
             value={projectId}
             onChange={(e) => {
               setProjectId(e.target.value);
               setPhaseId('');
               setBuildingId('');
             }}
-            className={inputClass}
           >
             <option value="">اختر مشروعًا…</option>
             {projects.map((p) => (
@@ -83,19 +82,18 @@ export function BuildingPicker({ projects, initialBuildingId }: Props) {
                 {p.name?.ar ?? p.name?.en ?? p.city}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
 
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">المرحلة</label>
-          <select
+        <Field label="المرحلة" name="phase" required>
+          <Select
+            id="phase"
             value={phaseId}
             onChange={(e) => {
               setPhaseId(e.target.value);
               setBuildingId('');
             }}
             disabled={!projectId || loading}
-            className={inputClass}
           >
             <option value="">اختر مرحلة…</option>
             {phases.map((ph) => (
@@ -103,33 +101,33 @@ export function BuildingPicker({ projects, initialBuildingId }: Props) {
                 {ph.name?.ar ?? ph.name?.en}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
 
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">المبنى</label>
-          <select
+        <Field label="المبنى" name="buildingId" required>
+          <Select
+            id="buildingId"
+            name="buildingId"
             value={buildingId}
             onChange={(e) => setBuildingId(e.target.value)}
             required
             disabled={!phaseId}
-            name="buildingId"
-            className={inputClass}
           >
             <option value="">اختر مبنى…</option>
             {buildings.map((b) => (
               <option key={b.id} value={b.id}>
-                {b.name}
+                مبنى {b.name}
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
       </div>
       {!projectId && (
-        <p className="text-xs text-gray-500">
-          يجب اختيار المشروع، ثم المرحلة، ثم المبنى. إذا لم تكن لديك مراحل/مباني فأنشئها من صفحة المشروع.
+        <p className="text-xs text-slate-500">
+          يجب اختيار المشروع، ثم المرحلة، ثم المبنى. إذا لم تكن لديك مراحل أو مبانٍ بعد، يمكنك
+          إنشاؤها من صفحة المشروع.
         </p>
       )}
-    </fieldset>
+    </div>
   );
 }

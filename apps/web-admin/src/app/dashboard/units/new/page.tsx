@@ -1,25 +1,31 @@
-import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, Project } from '@/lib/types';
+import { PageHeader } from '@/components/ui/page-header';
 import UnitForm from '../_form';
 
+export const dynamic = 'force-dynamic';
+
 export default async function NewUnitPage() {
-  const r = await safe(api.get<Paged<Project>>('/projects?pageSize=100'));
+  const r = await safe(api.get<Paged<Project>>('/projects?pageSize=200'));
+
   return (
-    <div>
-      <div className="mb-4">
-        <Link href="/dashboard/units" className="text-sm text-brand-600 hover:underline">
-          ← العودة للوحدات
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold mb-6">وحدة جديدة</h1>
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        {r.error ? (
-          <div className="rounded-lg bg-red-50 text-red-700 p-3 text-sm">{r.error}</div>
-        ) : (
-          <UnitForm projects={r.data?.data ?? []} />
-        )}
-      </div>
+    <div className="space-y-6 lg:space-y-8">
+      <PageHeader
+        title="إضافة وحدة عقارية"
+        description="أنشئ وحدة جديدة وحدّد بياناتها الأساسية، المواصفات الفنية، والتسعير."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'الوحدات', href: '/dashboard/units' },
+          { label: 'وحدة جديدة' },
+        ]}
+      />
+      {r.error ? (
+        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          {r.error}
+        </div>
+      ) : (
+        <UnitForm projects={r.data?.data ?? []} />
+      )}
     </div>
   );
 }
