@@ -180,13 +180,24 @@ async function main() {
   );
 
   // ---- Lead + assignment ----
+  // Every lead must be linked to a Client (User). Find-or-create by phone so
+  // re-running the seed doesn't produce duplicates.
   const fbSource = await prisma.leadSource.findFirst();
   if (fbSource) {
+    const phone = '+966500000001';
+    const email = 'ahmed@example.com';
+    const fullName = 'Ahmed Khaled';
+    const client =
+      (await prisma.user.findUnique({ where: { phone } })) ??
+      (await prisma.user.create({
+        data: { role: 'CLIENT', fullName, phone, email, locale: 'ar' },
+      }));
     await prisma.lead.create({
       data: {
-        fullName: 'Ahmed Khaled',
-        phone: '+966500000001',
-        email: 'ahmed@example.com',
+        clientId: client.id,
+        fullName: client.fullName,
+        phone: client.phone ?? phone,
+        email: client.email ?? email,
         sourceId: fbSource.id,
         projectInterestId: project.id,
         assignedSalesId: sales.id,

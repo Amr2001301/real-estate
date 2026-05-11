@@ -253,7 +253,7 @@ function DraggableLeadCard({ lead, isPending }: { lead: Lead; isPending: boolean
       <button
         ref={setActivatorNodeRef}
         type="button"
-        aria-label={`اسحب لتغيير مرحلة ${lead.fullName}`}
+        aria-label={`اسحب لتغيير مرحلة ${lead.client?.fullName ?? lead.fullName}`}
         {...listeners}
         {...attributes}
         onClick={(e) => e.preventDefault()}

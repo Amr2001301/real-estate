@@ -56,6 +56,9 @@ interface InnerProps {
 function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
   const tone = STAGE_TONE[lead.stage];
   const isGold = tone === 'warning'; // NEGOTIATION
+  const name = lead.client?.fullName ?? lead.fullName;
+  const phone = lead.client?.phone ?? lead.phone;
+  const email = lead.client?.email ?? lead.email;
   return (
     <div
       className={cn(
@@ -71,7 +74,7 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <h4 className="text-[15px] font-semibold text-slate-900 leading-tight truncate flex-1">
-          {lead.fullName}
+          {name}
         </h4>
         <span className="font-mono text-2xs text-slate-400 shrink-0 mt-0.5">
           #{lead.id.slice(0, 4).toUpperCase()}-{lead.id.slice(4, 8).toUpperCase()}
@@ -89,28 +92,28 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
         <span
           className={cn(
             'inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold shrink-0 ring-2 ring-white',
-            paletteFor(lead.fullName),
+            paletteFor(name),
           )}
           aria-hidden
         >
-          {firstLetter(lead.fullName)}
+          {firstLetter(name)}
         </span>
 
         <div className="flex items-center gap-1">
-          {lead.phone && (
+          {phone && (
             <span
               className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surface-muted text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-              aria-label={`هاتف ${lead.phone}`}
-              title={lead.phone}
+              aria-label={`هاتف ${phone}`}
+              title={phone}
             >
               <Phone className="h-3.5 w-3.5" />
             </span>
           )}
-          {lead.email && (
+          {email && (
             <span
               className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surface-muted text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
-              aria-label={`بريد ${lead.email}`}
-              title={lead.email}
+              aria-label={`بريد ${email}`}
+              title={email}
             >
               <Mail className="h-3.5 w-3.5" />
             </span>

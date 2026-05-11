@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, LeadStage } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
@@ -27,26 +31,133 @@ export class LeadsService {
   }
 
   // ----- Leads -----
+  /**
+   * Create a CRM lead linked to a Client (User).
+   *
+   * Resolution order for the client:
+   *   1. `clientId` provided → use it (must exist).
+   *   2. Otherwise, look up an existing User by phone.
+   *   3. Otherwise, look up an existing User by email.
+   *   4. Otherwise, create a new User with role=CLIENT using the supplied
+   *      fullName/phone/email.
+   *
+   * Wrapped in a single transaction so a partially-created client is rolled
+   * back if the lead insert fails. We catch unique-violation on phone/email to
+   * cover the rare race where another request creates the same client between
+   * the lookup and the insert.
+   */
   async create(dto: CreateLeadDto) {
-    const lead = await this.prisma.lead.create({
-      data: {
-        fullName: dto.fullName,
-        phone: dto.phone,
-        email: dto.email ?? null,
-        sourceId: dto.sourceId ?? null,
-        projectInterestId: dto.projectInterestId ?? null,
-        assignedSalesId: dto.assignedSalesId ?? null,
-      },
-    });
-    if (dto.notes && dto.assignedSalesId) {
-      await this.prisma.leadNote.create({
-        data: { leadId: lead.id, salesId: dto.assignedSalesId, body: dto.notes },
+    return this.prisma.$transaction(async (tx) => {
+      const client = await this.resolveClient(tx, dto);
+
+      const lead = await tx.lead.create({
+        data: {
+          clientId: client.id,
+          fullName: client.fullName,
+          phone: client.phone ?? dto.phone ?? '',
+          email: client.email ?? dto.email ?? null,
+          sourceId: dto.sourceId ?? null,
+          projectInterestId: dto.projectInterestId ?? null,
+          assignedSalesId: dto.assignedSalesId ?? null,
+        },
       });
-    }
-    await this.prisma.leadActivity.create({
-      data: { leadId: lead.id, type: 'created', payload: {} },
+
+      if (dto.notes && dto.assignedSalesId) {
+        await tx.leadNote.create({
+          data: { leadId: lead.id, salesId: dto.assignedSalesId, body: dto.notes },
+        });
+      }
+
+      await tx.leadActivity.create({
+        data: { leadId: lead.id, type: 'created', payload: {} },
+      });
+
+      return lead;
     });
-    return lead;
+  }
+
+  /**
+   * Resolve (or create) the Client a Lead must point to. Always runs inside
+   * the caller's transaction so duplicates can never be committed.
+   */
+  private async resolveClient(
+    tx: Prisma.TransactionClient,
+    dto: CreateLeadDto,
+  ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
+    if (dto.clientId) {
+      const found = await tx.user.findUnique({
+        where: { id: dto.clientId },
+        select: { id: true, fullName: true, phone: true, email: true },
+      });
+      if (!found) throw new NotFoundException('Client not found');
+      return found;
+    }
+
+    const phone = dto.phone?.trim() || null;
+    const email = dto.email?.trim() || null;
+    const fullName = dto.fullName?.trim() || '';
+
+    if (!phone && !email) {
+      throw new BadRequestException(
+        'A lead must reference a client: provide clientId, or phone/email to find-or-create one.',
+      );
+    }
+    if (!fullName && !phone && !email) {
+      throw new BadRequestException('Lead requires fullName when creating a new client.');
+    }
+
+    if (phone) {
+      const byPhone = await tx.user.findUnique({
+        where: { phone },
+        select: { id: true, fullName: true, phone: true, email: true },
+      });
+      if (byPhone) return byPhone;
+    }
+    if (email) {
+      const byEmail = await tx.user.findUnique({
+        where: { email },
+        select: { id: true, fullName: true, phone: true, email: true },
+      });
+      if (byEmail) return byEmail;
+    }
+
+    if (!fullName) {
+      throw new BadRequestException('fullName is required to create a new client');
+    }
+
+    try {
+      return await tx.user.create({
+        data: {
+          role: 'CLIENT',
+          fullName,
+          phone,
+          email,
+          locale: 'ar',
+        },
+        select: { id: true, fullName: true, phone: true, email: true },
+      });
+    } catch (e) {
+      // Race: another request inserted the same phone/email between our
+      // lookup and create. Re-fetch and use that record.
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        const target = phone
+          ? await tx.user.findUnique({
+              where: { phone },
+              select: { id: true, fullName: true, phone: true, email: true },
+            })
+          : email
+            ? await tx.user.findUnique({
+                where: { email },
+                select: { id: true, fullName: true, phone: true, email: true },
+              })
+            : null;
+        if (target) return target;
+      }
+      throw e;
+    }
   }
 
   async findAll(opts: {
@@ -56,6 +167,7 @@ export class LeadsService {
     salesId?: string;
     q?: string;
     assignedToMe?: string;
+    clientId?: string;
   }) {
     const page = opts.page ?? 1;
     const pageSize = opts.pageSize ?? 20;
@@ -63,12 +175,22 @@ export class LeadsService {
       ...(opts.stage ? { stage: opts.stage } : {}),
       ...(opts.salesId ? { assignedSalesId: opts.salesId } : {}),
       ...(opts.assignedToMe ? { assignedSalesId: opts.assignedToMe } : {}),
+      ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.q
         ? {
             OR: [
               { fullName: { contains: opts.q, mode: 'insensitive' } },
               { phone: { contains: opts.q } },
               { email: { contains: opts.q, mode: 'insensitive' } },
+              {
+                client: {
+                  OR: [
+                    { fullName: { contains: opts.q, mode: 'insensitive' } },
+                    { phone: { contains: opts.q } },
+                    { email: { contains: opts.q, mode: 'insensitive' } },
+                  ],
+                },
+              },
             ],
           }
         : {}),
@@ -79,6 +201,9 @@ export class LeadsService {
         ...takeSkip({ page, pageSize }),
         orderBy: { createdAt: 'desc' },
         include: {
+          client: {
+            select: { id: true, fullName: true, phone: true, email: true, role: true },
+          },
           source: true,
           assignedSales: { select: { id: true, fullName: true } },
           projectInterest: { select: { id: true, name: true } },
@@ -93,6 +218,18 @@ export class LeadsService {
     const lead = await this.prisma.lead.findUnique({
       where: { id },
       include: {
+        client: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            email: true,
+            role: true,
+            locale: true,
+            active: true,
+            createdAt: true,
+          },
+        },
         source: true,
         assignedSales: { select: { id: true, fullName: true } },
         projectInterest: true,

@@ -5,12 +5,12 @@ import { useActionState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
-import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { ClientPicker } from '@/components/crm/client-picker';
 import type { Project, LeadSource, User } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { createLeadAction, type LeadFormState } from './actions';
@@ -19,9 +19,11 @@ interface Props {
   projects: Project[];
   sources: LeadSource[];
   sales: User[];
+  /** Pre-selected client (e.g. when launched from Client Details). */
+  initialClient?: User | null;
 }
 
-export default function LeadForm({ projects, sources, sales }: Props) {
+export default function LeadForm({ projects, sources, sales, initialClient }: Props) {
   const [state, formAction] = useActionState<LeadFormState, FormData>(
     createLeadAction,
     {},
@@ -37,34 +39,18 @@ export default function LeadForm({ projects, sources, sales }: Props) {
       )}
 
       <FormSection
-        title="بيانات الاتصال"
-        description="الاسم ورقم الهاتف الأساسي. البريد الإلكتروني اختياري."
+        title="العميل المرتبط"
+        description="كل فرصة بيع يجب أن ترتبط بعميل. اختر عميلاً موجوداً، أو أنشئ عميلاً جديداً وسيتم إنشاء حسابه تلقائياً."
       >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="الاسم الكامل" name="fullName" required>
-            <Input id="fullName" name="fullName" required />
-          </Field>
-          <Field
-            label="رقم الهاتف"
-            name="phone"
-            hint="بصيغة E.164، مثال: +966500000001"
-            required
-          >
-            <Input id="phone" name="phone" required dir="ltr" />
-          </Field>
-        </div>
-
-        <Field label="البريد الإلكتروني (اختياري)" name="email">
-          <Input id="email" name="email" type="email" dir="ltr" />
-        </Field>
+        <ClientPicker initialClient={initialClient ?? null} />
       </FormSection>
 
       <FormSection
         title="الاهتمام والمصدر"
-        description="ساعدنا على فهم سياق هذا العميل لتحويله بشكل أسرع."
+        description="ساعدنا على فهم سياق هذه الفرصة لتحويلها بشكل أسرع."
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="مصدر العميل" name="sourceId">
+          <Field label="مصدر الفرصة" name="sourceId">
             <Select id="sourceId" name="sourceId" defaultValue="">
               <option value="">— غير محدد —</option>
               {sources.map((s) => (
@@ -89,7 +75,7 @@ export default function LeadForm({ projects, sources, sales }: Props) {
 
       <FormSection
         title="الإسناد والمتابعة"
-        description="حدّد المسؤول عن متابعة هذا العميل وأضف ملاحظاتك الأولية."
+        description="حدّد المسؤول عن متابعة هذه الفرصة وأضف ملاحظاتك الأولية."
       >
         <Field label="إسناد إلى مندوب مبيعات" name="assignedSalesId">
           <Select id="assignedSalesId" name="assignedSalesId" defaultValue="">
@@ -102,7 +88,11 @@ export default function LeadForm({ projects, sources, sales }: Props) {
           </Select>
         </Field>
 
-        <Field label="ملاحظات أولية" name="notes" hint="اختياري — مثال: اهتم بالطابق العلوي، يفضّل التواصل مساءً.">
+        <Field
+          label="ملاحظات أولية"
+          name="notes"
+          hint="اختياري — مثال: اهتم بالطابق العلوي، يفضّل التواصل مساءً."
+        >
           <Textarea id="notes" name="notes" rows={3} />
         </Field>
       </FormSection>
@@ -120,10 +110,10 @@ export default function LeadForm({ projects, sources, sales }: Props) {
                 إلغاء
               </Button>
             </Link>
-            <SubmitButton>إنشاء العميل</SubmitButton>
+            <SubmitButton>إنشاء فرصة CRM</SubmitButton>
           </>
         }
-        helper="سيتم إنشاء العميل بحالة جديد افتراضياً."
+        helper="سيتم إنشاء الفرصة بحالة جديد افتراضياً."
       />
     </form>
   );

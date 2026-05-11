@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
-import { UserRole } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 
 @Injectable()
@@ -30,8 +30,20 @@ export class UsersService {
     });
   }
 
-  async findAll(role?: UserRole, page = 1, pageSize = 20) {
-    const where = role ? { role } : {};
+  async findAll(role?: UserRole, page = 1, pageSize = 20, q?: string) {
+    const trimmed = q?.trim();
+    const where: Prisma.UserWhereInput = {
+      ...(role ? { role } : {}),
+      ...(trimmed
+        ? {
+            OR: [
+              { fullName: { contains: trimmed, mode: 'insensitive' } },
+              { phone: { contains: trimmed } },
+              { email: { contains: trimmed, mode: 'insensitive' } },
+            ],
+          }
+        : {}),
+    };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({
         where,

@@ -47,6 +47,7 @@ model User {
   visitRequests     VisitRequest[]      @relation("VisitRequestUser")
   infoRequests      InfoRequest[]       @relation("InfoRequestUser")
   assignedLeads     Lead[]              @relation("LeadAssignedSales")
+  leads             Lead[]              @relation("LeadClient")
   leadNotes         LeadNote[]
   reservations      Reservation[]       @relation("ReservationSales")
   customerContracts Contract[]          @relation("ContractCustomer")
@@ -282,6 +283,11 @@ model LeadSource {
 
 model Lead {
   id                String     @id @default(uuid()) @db.Uuid
+  // Canonical contact lives on the linked Client (User). The denormalized
+  // fullName/phone/email below are kept for safe backfill and as a cache for
+  // legacy readers; new code should prefer `client.*`.
+  clientId          String     @db.Uuid
+  client            User       @relation("LeadClient", fields: [clientId], references: [id])
   fullName          String
   phone             String
   email             String?
@@ -301,6 +307,7 @@ model Lead {
   visitRequests VisitRequest[]
   infoRequests  InfoRequest[]
 
+  @@index([clientId])
   @@index([assignedSalesId])
   @@index([stage])
   @@index([phone])

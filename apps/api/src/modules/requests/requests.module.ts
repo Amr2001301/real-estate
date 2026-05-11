@@ -58,6 +58,34 @@ class UpdateVisitStatusDto {
 class RequestsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  /**
+   * Find-or-create the Client (User) that a Lead must point to. Used by the
+   * public request endpoints when an unauthenticated visitor leaves their
+   * phone — we want a single canonical contact record per phone, never
+   * duplicates.
+   */
+  private async findOrCreateClient(
+    fullName: string,
+    phone: string,
+    email: string | null,
+  ): Promise<{ id: string; fullName: string; phone: string | null; email: string | null }> {
+    const byPhone = await this.prisma.user.findUnique({ where: { phone } });
+    if (byPhone) return byPhone;
+    if (email) {
+      const byEmail = await this.prisma.user.findUnique({ where: { email } });
+      if (byEmail) return byEmail;
+    }
+    return this.prisma.user.create({
+      data: {
+        role: 'CLIENT',
+        fullName: fullName || 'New Lead',
+        phone,
+        email,
+        locale: 'ar',
+      },
+    });
+  }
+
   // ---- Info requests ----
   async createInfoRequest(
     dto: CreateInfoRequestDto,
@@ -66,17 +94,21 @@ class RequestsService {
     let leadId: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       const existing = await this.prisma.lead.findFirst({ where: { phone: dto.phone } });
-      const lead =
-        existing ??
-        (await this.prisma.lead.create({
+      if (existing) {
+        leadId = existing.id;
+      } else {
+        const client = await this.findOrCreateClient(dto.name, dto.phone, dto.email ?? null);
+        const lead = await this.prisma.lead.create({
           data: {
-            fullName: dto.name,
-            phone: dto.phone,
-            email: dto.email ?? null,
+            clientId: client.id,
+            fullName: client.fullName,
+            phone: client.phone ?? dto.phone,
+            email: client.email ?? dto.email ?? null,
             projectInterestId: dto.projectId ?? null,
           },
-        }));
-      leadId = lead.id;
+        });
+        leadId = lead.id;
+      }
     }
     return this.prisma.infoRequest.create({
       data: {
@@ -105,14 +137,20 @@ class RequestsService {
     let leadId: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       const existing = await this.prisma.lead.findFirst({ where: { phone: dto.phone } });
-      const lead = existing ?? (await this.prisma.lead.create({
-        data: {
-          fullName: dto.name,
-          phone: dto.phone,
-          projectInterestId: dto.projectId,
-        },
-      }));
-      leadId = lead.id;
+      if (existing) {
+        leadId = existing.id;
+      } else {
+        const client = await this.findOrCreateClient(dto.name, dto.phone, null);
+        const lead = await this.prisma.lead.create({
+          data: {
+            clientId: client.id,
+            fullName: client.fullName,
+            phone: client.phone ?? dto.phone,
+            projectInterestId: dto.projectId,
+          },
+        });
+        leadId = lead.id;
+      }
     }
     return this.prisma.visitRequest.create({
       data: {

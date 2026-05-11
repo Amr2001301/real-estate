@@ -90,6 +90,20 @@ export interface Unit {
 
 export interface Lead {
   id: string;
+  /** Linked Client (User). Required at the schema level after the
+   *  `link_leads_to_clients` migration; older rows always have it post-backfill. */
+  clientId: string;
+  client?: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+    role: UserRole;
+    locale?: 'ar' | 'en';
+    active?: boolean;
+    createdAt?: string;
+  } | null;
+  /** Denormalized cache of client contact info; prefer `client.*` in new code. */
   fullName: string;
   phone: string;
   email: string | null;
@@ -196,5 +210,6 @@ export interface User {
   locale: 'ar' | 'en';
   active: boolean;
   createdAt: string;
+  updatedAt?: string;
   lastLoginAt: string | null;
 }

@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import {
   Phone,
   Mail,
@@ -7,6 +8,7 @@ import {
   MessageSquare,
   Activity,
   ArrowLeft,
+  ExternalLink,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Lead, Paged, User, LeadStage } from '@/lib/types';
@@ -54,33 +56,52 @@ export default async function LeadDetailPage({
     );
   }
   const lead = leadRes.data;
+  // Prefer the linked client's contact info; fall back to the denormalized
+  // copy on the lead row for older records.
+  const displayName = lead.client?.fullName ?? lead.fullName;
+  const displayPhone = lead.client?.phone ?? lead.phone ?? null;
+  const displayEmail = lead.client?.email ?? lead.email ?? null;
 
   return (
     <div className="space-y-6 lg:space-y-8">
       <PageHeader
-        title={lead.fullName}
+        title={displayName}
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'العملاء المحتملون', href: '/dashboard/leads' },
-          { label: lead.fullName },
+          { label: 'فرص المبيعات (CRM)', href: '/dashboard/leads' },
+          { label: displayName },
         ]}
         meta={
           <>
             <LeadStageBadge stage={lead.stage} />
-            <span className="text-sm text-slate-500" dir="ltr">
-              {lead.phone}
-            </span>
-            {lead.email && (
+            {displayPhone && (
               <span className="text-sm text-slate-500" dir="ltr">
-                · {lead.email}
+                {displayPhone}
+              </span>
+            )}
+            {displayEmail && (
+              <span className="text-sm text-slate-500" dir="ltr">
+                · {displayEmail}
               </span>
             )}
           </>
         }
         actions={
           <>
-            {lead.phone && (
-              <a href={`tel:${lead.phone}`}>
+            {lead.client?.id && (
+              <Link href={`/dashboard/clients/${lead.client.id}` as never}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  leftIcon={<ExternalLink className="h-4 w-4" />}
+                >
+                  ملف العميل
+                </Button>
+              </Link>
+            )}
+            {displayPhone && (
+              <a href={`tel:${displayPhone}`}>
                 <Button
                   type="button"
                   variant="outline"
@@ -91,8 +112,8 @@ export default async function LeadDetailPage({
                 </Button>
               </a>
             )}
-            {lead.email && (
-              <a href={`mailto:${lead.email}`}>
+            {displayEmail && (
+              <a href={`mailto:${displayEmail}`}>
                 <Button
                   type="button"
                   variant="primary"
@@ -114,10 +135,10 @@ export default async function LeadDetailPage({
             <div className="flex items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-base font-semibold text-slate-900 tracking-tight">
-                  مرحلة العميل
+                  مرحلة الفرصة
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  انقل العميل بين مراحل البيع المختلفة
+                  انقل الفرصة بين مراحل البيع المختلفة
                 </p>
               </div>
             </div>
@@ -259,6 +280,48 @@ export default async function LeadDetailPage({
             </form>
           </Card>
 
+          {/* Linked Client */}
+          {lead.client && (
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                  العميل المرتبط
+                </h3>
+                <Link
+                  href={`/dashboard/clients/${lead.client.id}` as never}
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                >
+                  ملف العميل
+                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                </Link>
+              </div>
+              <Link
+                href={`/dashboard/clients/${lead.client.id}` as never}
+                className="flex items-center gap-3 rounded-2xl bg-surface-muted/60 hover:bg-surface-muted px-3 py-3 transition-colors"
+              >
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-sm font-bold ring-1 ring-inset ring-white">
+                  {firstLetter(lead.client.fullName)}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">
+                    {lead.client.fullName}
+                  </p>
+                  <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">
+                    {lead.client.phone ?? lead.client.email ?? '—'}
+                  </p>
+                </div>
+                <Badge
+                  tone={lead.client.role === 'CUSTOMER' ? 'success' : 'info'}
+                  variant="soft"
+                  size="sm"
+                  className="ms-auto"
+                >
+                  {lead.client.role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
+                </Badge>
+              </Link>
+            </Card>
+          )}
+
           {/* Info */}
           <Card className="p-5 sm:p-6">
             <h2 className="text-base font-semibold text-slate-900 tracking-tight mb-4">
@@ -274,7 +337,7 @@ export default async function LeadDetailPage({
                   <span className="text-slate-400">—</span>
                 )}
               </Row>
-              <Row label="مصدر العميل" icon={<ArrowLeft className="h-3.5 w-3.5" />}>
+              <Row label="مصدر الفرصة" icon={<ArrowLeft className="h-3.5 w-3.5" />}>
                 {lead.source ? (
                   <Badge tone="info" variant="soft" size="sm">
                     {tx(lead.source.name)}
@@ -286,7 +349,7 @@ export default async function LeadDetailPage({
               <Row label="تاريخ الإنشاء" icon={<Calendar className="h-3.5 w-3.5" />}>
                 <span className="text-slate-700">{formatDateTime(lead.createdAt)}</span>
               </Row>
-              <Row label="معرّف العميل" icon={<UserCog className="h-3.5 w-3.5" />}>
+              <Row label="معرّف الفرصة" icon={<UserCog className="h-3.5 w-3.5" />}>
                 <span className="font-mono text-2xs text-slate-500">
                   #{lead.id.slice(0, 8).toUpperCase()}
                 </span>
@@ -295,15 +358,15 @@ export default async function LeadDetailPage({
           </Card>
 
           {/* Quick contact card */}
-          {(lead.phone || lead.email) && (
+          {(displayPhone || displayEmail) && (
             <Card className="p-5">
               <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
                 وسائل التواصل
               </h3>
               <div className="flex flex-col gap-2">
-                {lead.phone && (
+                {displayPhone && (
                   <a
-                    href={`tel:${lead.phone}`}
+                    href={`tel:${displayPhone}`}
                     className="flex items-center gap-3 rounded-xl bg-surface-muted/60 hover:bg-surface-muted px-3 py-2.5 transition-colors"
                   >
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
@@ -312,14 +375,14 @@ export default async function LeadDetailPage({
                     <div className="min-w-0">
                       <p className="text-2xs text-slate-500">الهاتف</p>
                       <p className="text-sm font-mono text-slate-900" dir="ltr">
-                        {lead.phone}
+                        {displayPhone}
                       </p>
                     </div>
                   </a>
                 )}
-                {lead.email && (
+                {displayEmail && (
                   <a
-                    href={`mailto:${lead.email}`}
+                    href={`mailto:${displayEmail}`}
                     className="flex items-center gap-3 rounded-xl bg-surface-muted/60 hover:bg-surface-muted px-3 py-2.5 transition-colors"
                   >
                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-info-50 text-info-600">
@@ -328,7 +391,7 @@ export default async function LeadDetailPage({
                     <div className="min-w-0">
                       <p className="text-2xs text-slate-500">البريد الإلكتروني</p>
                       <p className="text-sm text-slate-900 truncate" dir="ltr">
-                        {lead.email}
+                        {displayEmail}
                       </p>
                     </div>
                   </a>

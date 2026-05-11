@@ -32,8 +32,9 @@ export class UsersController {
     @Query('role') role?: UserRole,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
+    @Query('q') q?: string,
   ) {
-    return this.users.findAll(role, Number(page), Number(pageSize));
+    return this.users.findAll(role, Number(page), Number(pageSize), q);
   }
 
   @Get('me')

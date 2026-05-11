@@ -1,12 +1,29 @@
 import Link from 'next/link';
-import { Users, UserCheck, AlertCircle, Phone, Mail } from 'lucide-react';
+import {
+  Users,
+  UserCheck,
+  AlertCircle,
+  Phone,
+  Mail,
+  Plus,
+  Download,
+  Search,
+  ArrowRight,
+  ShieldCheck,
+  ShieldAlert,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
+import { KpiCard } from '@/components/ui/kpi-card';
+import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
+import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
 
 export const dynamic = 'force-dynamic';
@@ -23,8 +40,11 @@ const ROLE_LABEL: Record<'CLIENT' | 'CUSTOMER', { title: string; description: st
   },
 };
 
-function firstLetter(name: string): string {
-  return name.trim().charAt(0) || '·';
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 0) return '·';
+  if (parts.length === 1) return parts[0]!.slice(0, 2);
+  return parts[0]![0]! + parts[parts.length - 1]![0]!;
 }
 
 const PALETTE = [
@@ -42,23 +62,53 @@ function paletteFor(s: string): string {
   return PALETTE[Math.abs(h) % PALETTE.length]!;
 }
 
+const PAGE_SIZE = 20;
+
+interface Search {
+  role?: string;
+  q?: string;
+  page?: string;
+}
+
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ role?: string }>;
+  searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
   const role: 'CLIENT' | 'CUSTOMER' = sp.role === 'CUSTOMER' ? 'CUSTOMER' : 'CLIENT';
+  const q = (sp.q ?? '').trim();
+  const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const [currentRes, clientCountRes, customerCountRes] = await Promise.all([
-    safe(api.get<Paged<User>>(`/users?role=${role}&pageSize=100`)),
+    safe(
+      api.get<Paged<User>>(
+        `/users?role=${role}&page=${page}&pageSize=${PAGE_SIZE}`,
+      ),
+    ),
     safe(api.get<Paged<User>>('/users?role=CLIENT&pageSize=1')),
     safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=1')),
   ]);
 
-  const rows = currentRes.data?.data ?? [];
+  let rows = currentRes.data?.data ?? [];
+  // Client-side text filter (API doesn't support q on /users)
+  if (q) {
+    const needle = q.toLowerCase();
+    rows = rows.filter(
+      (u) =>
+        u.fullName?.toLowerCase().includes(needle) ||
+        u.email?.toLowerCase().includes(needle) ||
+        u.phone?.toLowerCase().includes(needle),
+    );
+  }
+  const total = currentRes.data?.meta.total ?? rows.length;
   const clientTotal = clientCountRes.data?.meta.total ?? 0;
   const customerTotal = customerCountRes.data?.meta.total ?? 0;
+
+  // KPI quick stats from current page (best-effort, no extra round-trip)
+  const activeOnPage = rows.filter((u) => u.active).length;
+  const inactiveOnPage = rows.length - activeOnPage;
+
   const labels = ROLE_LABEL[role];
 
   return (
@@ -70,22 +120,65 @@ export default async function ClientsPage({
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'العملاء' },
         ]}
+        actions={
+          <>
+            <IconButton label="تصدير" variant="outline" size="md">
+              <Download />
+            </IconButton>
+            <Link href={`/dashboard/clients/new?role=${role}` as never}>
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                إضافة عميل جديد
+              </Button>
+            </Link>
+          </>
+        }
       />
 
+      {/* Role tabs */}
       <div className="inline-flex items-center gap-1 rounded-2xl bg-surface-muted p-1 ring-1 ring-inset ring-hairline">
         <RoleTab
-          href="/dashboard/clients?role=CLIENT"
+          href={`/dashboard/clients?role=CLIENT${q ? `&q=${encodeURIComponent(q)}` : ''}`}
           active={role === 'CLIENT'}
           icon={<Users className="h-4 w-4" />}
           label="متصفّحون"
           count={clientTotal}
         />
         <RoleTab
-          href="/dashboard/clients?role=CUSTOMER"
+          href={`/dashboard/clients?role=CUSTOMER${q ? `&q=${encodeURIComponent(q)}` : ''}`}
           active={role === 'CUSTOMER'}
           icon={<UserCheck className="h-4 w-4" />}
           label="مالكون"
           count={customerTotal}
+        />
+      </div>
+
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <KpiCard
+          label="إجمالي العملاء"
+          value={clientTotal + customerTotal}
+          sub="بكل أنواعهم"
+          icon={<Users />}
+          tone="brand"
+        />
+        <KpiCard
+          label="عملاء متصفّحون"
+          value={clientTotal}
+          icon={<Users />}
+          tone="info"
+        />
+        <KpiCard
+          label="مالكون"
+          value={customerTotal}
+          icon={<UserCheck />}
+          tone="success"
+        />
+        <KpiCard
+          label="موقوفون (في هذه الصفحة)"
+          value={inactiveOnPage}
+          sub={`من ${rows.length} ظاهر`}
+          icon={<ShieldAlert />}
+          tone="warning"
         />
       </div>
 
@@ -96,34 +189,82 @@ export default async function ClientsPage({
         </div>
       )}
 
+      {/* Search bar */}
+      <form
+        method="get"
+        action="/dashboard/clients"
+        className="flex flex-wrap items-center gap-3"
+      >
+        <input type="hidden" name="role" value={role} />
+        <div className="flex-1 min-w-[220px] max-w-xl">
+          <Input
+            name="q"
+            defaultValue={q}
+            placeholder="ابحث بالاسم، البريد، أو الهاتف…"
+            leftAddon={<Search />}
+          />
+        </div>
+        <Button type="submit" variant="secondary" size="md">
+          بحث
+        </Button>
+        {q && (
+          <Link
+            href={`/dashboard/clients?role=${role}` as never}
+            className="text-xs font-semibold text-slate-500 hover:text-slate-900"
+          >
+            مسح البحث
+          </Link>
+        )}
+      </form>
+
       <Card className="overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">الهاتف</th>
-                <th className="text-start font-semibold py-3 px-4">البريد الإلكتروني</th>
-                <th className="text-start font-semibold py-3 px-4">الدور</th>
+                <th className="text-start font-semibold py-3 px-4">بيانات الاتصال</th>
+                <th className="text-start font-semibold py-3 px-4">النوع</th>
+                <th className="text-start font-semibold py-3 px-4">الحالة</th>
                 <th className="text-start font-semibold py-3 px-4">تاريخ التسجيل</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5">آخر دخول</th>
+                <th className="text-start font-semibold py-3 px-4">آخر دخول</th>
+                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-0">
+                  <td colSpan={7} className="p-0">
                     <EmptyState
                       icon={role === 'CUSTOMER' ? <UserCheck /> : <Users />}
                       title={
-                        role === 'CUSTOMER'
-                          ? 'لا يوجد مالكون بعد'
-                          : 'لا يوجد عملاء متصفّحون بعد'
+                        q
+                          ? 'لا توجد نتائج'
+                          : role === 'CUSTOMER'
+                            ? 'لا يوجد مالكون بعد'
+                            : 'لا يوجد عملاء متصفّحون بعد'
                       }
                       description={
-                        role === 'CUSTOMER'
-                          ? 'يتم ترقية العميل إلى مالك تلقائياً عند توقيع عقد.'
-                          : 'يظهر هنا كل من يسجّل في المنصة من المتصفحين.'
+                        q
+                          ? 'جرّب تعديل كلمات البحث أو تغيير التبويب.'
+                          : role === 'CUSTOMER'
+                            ? 'يتم ترقية العميل إلى مالك تلقائياً عند توقيع عقد.'
+                            : 'يظهر هنا كل من يسجّل في المنصة من المتصفحين.'
+                      }
+                      action={
+                        !q ? (
+                          <Link
+                            href={`/dashboard/clients/new?role=${role}` as never}
+                          >
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              leftIcon={<Plus className="h-4 w-4" />}
+                            >
+                              إضافة عميل
+                            </Button>
+                          </Link>
+                        ) : undefined
                       }
                     />
                   </td>
@@ -138,50 +279,52 @@ export default async function ClientsPage({
                     <div className="flex items-center gap-3">
                       <span
                         className={cn(
-                          'inline-flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold shrink-0 ring-1 ring-inset ring-white',
+                          'inline-flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold uppercase shrink-0 ring-1 ring-inset ring-white shadow-sm',
                           paletteFor(u.fullName ?? u.email ?? u.id),
                         )}
                         aria-hidden
                       >
-                        {firstLetter(u.fullName ?? u.email ?? '·')}
+                        {initials(u.fullName ?? u.email ?? '·')}
                       </span>
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-900 truncate">
+                        <Link
+                          href={`/dashboard/clients/${u.id}` as never}
+                          className="font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                        >
                           {u.fullName ?? '—'}
-                        </p>
+                        </Link>
                         <p className="text-2xs text-slate-400 mt-0.5 font-mono">
-                          #{u.id.slice(0, 8).toUpperCase()}
+                          ID: #{u.id.slice(0, 8).toUpperCase()}
                         </p>
                       </div>
                     </div>
                   </td>
                   <td className="py-3 px-4">
-                    {u.phone ? (
-                      <a
-                        href={`tel:${u.phone}`}
-                        className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 font-mono text-xs"
-                        dir="ltr"
-                      >
-                        <Phone className="h-3 w-3 text-slate-400" />
-                        {u.phone}
-                      </a>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    {u.email ? (
-                      <a
-                        href={`mailto:${u.email}`}
-                        className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 text-xs"
-                        dir="ltr"
-                      >
-                        <Mail className="h-3 w-3 text-slate-400" />
-                        <span className="truncate max-w-[200px]">{u.email}</span>
-                      </a>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
+                    <div className="flex flex-col gap-1">
+                      {u.phone ? (
+                        <a
+                          href={`tel:${u.phone}`}
+                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 font-mono text-xs"
+                          dir="ltr"
+                        >
+                          <Phone className="h-3 w-3 text-slate-400" />
+                          {u.phone}
+                        </a>
+                      ) : null}
+                      {u.email ? (
+                        <a
+                          href={`mailto:${u.email}`}
+                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 text-xs"
+                          dir="ltr"
+                        >
+                          <Mail className="h-3 w-3 text-slate-400" />
+                          <span className="truncate max-w-[220px]">{u.email}</span>
+                        </a>
+                      ) : null}
+                      {!u.phone && !u.email && (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <Badge
@@ -192,18 +335,52 @@ export default async function ClientsPage({
                       {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
                     </Badge>
                   </td>
-                  <td className="py-3 px-4 text-slate-500 text-xs">
+                  <td className="py-3 px-4">
+                    {u.active ? (
+                      <Badge tone="success" variant="soft" size="sm" dot>
+                        نشط
+                      </Badge>
+                    ) : (
+                      <Badge tone="gray" variant="soft" size="sm" dot>
+                        موقوف
+                      </Badge>
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
                     {formatDate(u.createdAt)}
                   </td>
-                  <td className="py-3 ps-4 pe-5 text-slate-500 text-xs">
+                  <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
                     {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                  </td>
+                  <td className="py-3 ps-4 pe-5">
+                    <Link href={`/dashboard/clients/${u.id}` as never}>
+                      <IconButton label="عرض الملف" variant="ghost" size="sm">
+                        <ArrowRight className="rtl:rotate-180" />
+                      </IconButton>
+                    </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {currentRes.data && total > PAGE_SIZE && !q && (
+          <Pagination
+            page={currentRes.data.meta.page}
+            pageSize={currentRes.data.meta.pageSize}
+            total={total}
+            basePath="/dashboard/clients"
+            params={{ role }}
+          />
+        )}
       </Card>
+
+      {/* Footer hint about activity */}
+      <p className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
+        <ShieldCheck className="h-3 w-3" />
+        تتبع جميع التغييرات على ملفات العملاء عبر سجل التدقيق المركزي.
+      </p>
     </div>
   );
 }

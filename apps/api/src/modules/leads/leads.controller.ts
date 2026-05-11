@@ -56,6 +56,7 @@ export class LeadsController {
     @Query('salesId') salesId?: string,
     @Query('q') q?: string,
     @Query('mine') mine?: string,
+    @Query('clientId') clientId?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -68,6 +69,7 @@ export class LeadsController {
       salesId: effectiveSalesId,
       q,
       assignedToMe,
+      clientId,
     });
   }
 

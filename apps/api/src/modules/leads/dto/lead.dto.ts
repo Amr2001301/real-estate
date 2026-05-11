@@ -9,8 +9,13 @@ import {
 import { LeadStage } from '@prisma/client';
 
 export class CreateLeadDto {
-  @IsString() @MinLength(2) fullName!: string;
-  @IsString() phone!: string;
+  // When `clientId` is provided we link to an existing User and ignore the
+  // person-level fields below. When omitted, the service finds-or-creates a
+  // User by phone (legacy callers stay compatible).
+  @IsOptional() @IsUUID() clientId?: string;
+
+  @IsOptional() @IsString() @MinLength(2) fullName?: string;
+  @IsOptional() @IsString() phone?: string;
   @IsOptional() @IsEmail() email?: string;
   @IsOptional() @IsUUID() sourceId?: string;
   @IsOptional() @IsUUID() projectInterestId?: string;
