@@ -12,6 +12,13 @@ export type ProjectStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 export type UnitStatus = 'AVAILABLE' | 'RESERVED' | 'SOLD';
 export type LeadStage = 'NEW' | 'INTERESTED' | 'VISIT' | 'NEGOTIATION' | 'WON' | 'LOST';
 export type VisitStatus = 'PENDING' | 'APPROVED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
+export type VisitRequestStatus = 'NEW' | 'UNDER_REVIEW' | 'CONVERTED' | 'REJECTED' | 'CANCELLED';
+export type VisitRequestSource = 'WEBSITE' | 'MOBILE_APP' | 'SALES' | 'PHONE' | 'WHATSAPP' | 'OTHER';
+export type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED';
+export type VisitActivityType =
+  | 'REQUEST_CREATED' | 'REQUEST_REVIEWED' | 'REQUEST_REJECTED' | 'REQUEST_CANCELLED'
+  | 'VISIT_SCHEDULED' | 'VISIT_CONFIRMED' | 'VISIT_COMPLETED' | 'VISIT_CANCELLED'
+  | 'VISIT_NO_SHOW' | 'VISIT_RESCHEDULED' | 'SALES_ASSIGNED' | 'NOTE_ADDED';
 export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED';
 export type MaintenanceStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 export type UserRole = 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER';
@@ -115,6 +122,7 @@ export interface Lead {
   assignedSales?: { id: string; fullName: string } | null;
   stage: LeadStage;
   createdAt: string;
+  upcomingVisit?: { id: string; visitNumber: string; scheduledAt: string; status: AppointmentStatus } | null;
   notes?: LeadNote[];
 }
 
@@ -164,13 +172,91 @@ export interface VisitRequest {
   projectId: string;
   project?: { id: string; name: Translatable };
   unitId: string | null;
-  unit?: Unit;
+  unit?: { id: string; code: string; type: string } | null;
   preferredDate: string;
   scheduledAt: string | null;
   status: VisitStatus;
   assignedSalesId: string | null;
   assignedSales?: { id: string; fullName: string } | null;
   notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  // v2 fields
+  requestNumber: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  preferredTime: string | null;
+  preferredContactMethod: string | null;
+  source: VisitRequestSource | null;
+  requestNotes: string | null;
+  adminNotes: string | null;
+  requestStatus: VisitRequestStatus | null;
+  convertedAt: string | null;
+  rejectedAt: string | null;
+  cancelledAt: string | null;
+  appointments?: VisitAppointmentSummary[];
+  user?: { id: string; fullName: string; phone: string | null; email: string | null } | null;
+  lead?: { id: string; fullName: string; phone: string; email: string | null; stage: string } | null;
+}
+
+export interface VisitAppointmentSummary {
+  id: string;
+  visitNumber: string;
+  scheduledAt: string;
+  status: AppointmentStatus;
+  assignedSales?: { id: string; fullName: string } | null;
+}
+
+export interface VisitAppointment {
+  id: string;
+  visitNumber: string;
+  visitRequestId: string | null;
+  visitRequest?: { id: string; requestNumber: string | null; customerName: string | null; requestStatus: VisitRequestStatus | null } | null;
+  leadId: string | null;
+  lead?: { id: string; fullName: string; phone: string; stage: string } | null;
+  clientId: string | null;
+  client?: { id: string; fullName: string; phone: string | null; email: string | null } | null;
+  projectId: string | null;
+  project?: { id: string; name: Translatable } | null;
+  unitId: string | null;
+  unit?: { id: string; code: string; type: string } | null;
+  assignedSalesId: string | null;
+  assignedSales?: { id: string; fullName: string; phone: string | null } | null;
+  scheduledAt: string;
+  durationMinutes: number | null;
+  location: string | null;
+  meetingPoint: string | null;
+  status: AppointmentStatus;
+  salesNotes: string | null;
+  customerFeedback: string | null;
+  resultNotes: string | null;
+  cancellationReason: string | null;
+  noShowReason: string | null;
+  createdById: string | null;
+  createdBy?: { id: string; fullName: string } | null;
+  createdAt: string;
+  updatedAt: string;
+  confirmedAt: string | null;
+  completedAt: string | null;
+  cancelledAt: string | null;
+  noShowAt: string | null;
+  visitActivities?: VisitActivity[];
+}
+
+export interface VisitActivity {
+  id: string;
+  visitRequestId: string | null;
+  visitId: string | null;
+  leadId: string | null;
+  clientId: string | null;
+  actorId: string | null;
+  actor?: { id: string; fullName: string; role: string } | null;
+  actorRole: string | null;
+  type: VisitActivityType;
+  oldValue: Record<string, unknown> | null;
+  newValue: Record<string, unknown> | null;
+  note: string | null;
   createdAt: string;
 }
 

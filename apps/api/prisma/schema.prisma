@@ -58,7 +58,13 @@ model User {
   recordedDeposits  Deposit[]            @relation("DepositRecordedBy")
   auditLogs         AuditLog[]
   unitStatusChanges UnitStatusHistory[]
-  visitsScheduledForSales VisitRequest[] @relation("VisitRequestSales")
+  visitsScheduledForSales  VisitRequest[]    @relation("VisitRequestSales")
+  assignedAppointments     VisitAppointment[] @relation("AppointmentSales")
+  createdAppointments      VisitAppointment[] @relation("AppointmentCreator")
+  updatedAppointments      VisitAppointment[] @relation("AppointmentUpdater")
+  clientAppointments       VisitAppointment[] @relation("AppointmentClient")
+  actedVisitActivities     VisitActivity[]    @relation("VisitActivityActor")
+  clientVisitActivities    VisitActivity[]    @relation("VisitActivityClient")
 
   @@index([role])
   @@index([phone])
@@ -162,6 +168,7 @@ model Project {
   visitRequests VisitRequest[]
   infoRequests  InfoRequest[]
   favorites     Favorite[]
+  appointments  VisitAppointment[]
 
   @@index([city])
   @@index([status, featured])
@@ -228,6 +235,7 @@ model Unit {
   infoRequests  InfoRequest[]
   favorites     Favorite[]
   maintenanceRequests MaintenanceRequest[]
+  appointments  VisitAppointment[]
 
   @@unique([buildingId, code])
   @@index([status])
@@ -301,11 +309,13 @@ model Lead {
   createdAt         DateTime   @default(now())
   updatedAt         DateTime   @updatedAt
 
-  notes        LeadNote[]
-  activities   LeadActivity[]
-  reservations Reservation[]
-  visitRequests VisitRequest[]
-  infoRequests  InfoRequest[]
+  notes             LeadNote[]
+  activities        LeadActivity[]
+  reservations      Reservation[]
+  visitRequests     VisitRequest[]
+  infoRequests      InfoRequest[]
+  appointments      VisitAppointment[]
+  visitActivities   VisitActivity[]
 
   @@index([clientId])
   @@index([assignedSalesId])
@@ -348,6 +358,47 @@ enum VisitStatus {
   CANCELLED
 }
 
+enum VisitRequestStatus {
+  NEW
+  UNDER_REVIEW
+  CONVERTED
+  REJECTED
+  CANCELLED
+}
+
+enum VisitRequestSource {
+  WEBSITE
+  MOBILE_APP
+  SALES
+  PHONE
+  WHATSAPP
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+}
+
+enum VisitActivityType {
+  REQUEST_CREATED
+  REQUEST_REVIEWED
+  REQUEST_REJECTED
+  REQUEST_CANCELLED
+  VISIT_SCHEDULED
+  VISIT_CONFIRMED
+  VISIT_COMPLETED
+  VISIT_CANCELLED
+  VISIT_NO_SHOW
+  VISIT_RESCHEDULED
+  SALES_ASSIGNED
+  NOTE_ADDED
+}
+
 model InfoRequest {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String?  @db.Uuid
@@ -385,9 +436,99 @@ model VisitRequest {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  // v2 fields — additive, all nullable, coexist with legacy columns above
+  requestNumber            String?            @unique
+  customerName             String?
+  customerPhone            String?
+  customerEmail            String?
+  preferredTime            String?
+  preferredContactMethod   String?
+  source                   VisitRequestSource?
+  requestNotes             String?
+  adminNotes               String?
+  requestStatus            VisitRequestStatus?
+  convertedAt              DateTime?
+  rejectedAt               DateTime?
+  cancelledAt              DateTime?
+
+  appointments             VisitAppointment[]
+  visitActivities          VisitActivity[]
+
   @@index([status])
+  @@index([requestStatus])
   @@index([projectId])
   @@index([assignedSalesId])
+}
+
+model VisitAppointment {
+  id              String            @id @default(uuid()) @db.Uuid
+  visitNumber     String            @unique
+  visitRequestId  String?           @db.Uuid
+  visitRequest    VisitRequest?     @relation(fields: [visitRequestId], references: [id])
+  leadId          String?           @db.Uuid
+  lead            Lead?             @relation(fields: [leadId], references: [id])
+  clientId        String?           @db.Uuid
+  client          User?             @relation("AppointmentClient", fields: [clientId], references: [id])
+  projectId       String?           @db.Uuid
+  project         Project?          @relation(fields: [projectId], references: [id])
+  unitId          String?           @db.Uuid
+  unit            Unit?             @relation(fields: [unitId], references: [id])
+  assignedSalesId String?           @db.Uuid
+  assignedSales   User?             @relation("AppointmentSales", fields: [assignedSalesId], references: [id])
+  scheduledAt     DateTime
+  durationMinutes Int?
+  location        String?
+  meetingPoint    String?
+  status          AppointmentStatus @default(SCHEDULED)
+  salesNotes      String?
+  customerFeedback String?
+  resultNotes     String?
+  cancellationReason String?
+  noShowReason    String?
+  createdById     String?           @db.Uuid
+  createdBy       User?             @relation("AppointmentCreator", fields: [createdById], references: [id])
+  updatedById     String?           @db.Uuid
+  updatedBy       User?             @relation("AppointmentUpdater", fields: [updatedById], references: [id])
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  confirmedAt     DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  noShowAt        DateTime?
+
+  visitActivities VisitActivity[]
+
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([visitRequestId])
+  @@index([assignedSalesId])
+  @@index([leadId])
+  @@index([clientId])
+}
+
+model VisitActivity {
+  id             String            @id @default(uuid()) @db.Uuid
+  visitRequestId String?           @db.Uuid
+  visitRequest   VisitRequest?     @relation(fields: [visitRequestId], references: [id])
+  visitId        String?           @db.Uuid
+  visit          VisitAppointment? @relation(fields: [visitId], references: [id])
+  leadId         String?           @db.Uuid
+  lead           Lead?             @relation(fields: [leadId], references: [id])
+  clientId       String?           @db.Uuid
+  client         User?             @relation("VisitActivityClient", fields: [clientId], references: [id])
+  actorId        String?           @db.Uuid
+  actor          User?             @relation("VisitActivityActor", fields: [actorId], references: [id])
+  actorRole      String?
+  type           VisitActivityType
+  oldValue       Json?
+  newValue       Json?
+  note           String?
+  createdAt      DateTime          @default(now())
+
+  @@index([visitRequestId])
+  @@index([visitId])
+  @@index([leadId])
+  @@index([clientId])
 }
 
 model Favorite {

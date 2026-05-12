@@ -3,6 +3,8 @@ import type {
   UnitStatus,
   LeadStage,
   VisitStatus,
+  VisitRequestStatus,
+  AppointmentStatus,
   ReservationStatus,
   MaintenanceStatus,
 } from '@/lib/types';
@@ -75,5 +77,30 @@ const MAINT: Record<MaintenanceStatus, { c: string; l: string }> = {
 };
 export function MaintenanceStatusBadge({ status }: { status: MaintenanceStatus }) {
   const x = MAINT[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const VISIT_REQUEST: Record<VisitRequestStatus, { c: string; l: string }> = {
+  NEW: { c: 'bg-gray-100 text-gray-700', l: 'جديد' },
+  UNDER_REVIEW: { c: 'bg-blue-100 text-blue-700', l: 'قيد المراجعة' },
+  CONVERTED: { c: 'bg-green-100 text-green-700', l: 'تم التحويل' },
+  REJECTED: { c: 'bg-red-100 text-red-700', l: 'مرفوض' },
+  CANCELLED: { c: 'bg-gray-200 text-gray-500', l: 'ملغى' },
+};
+export function VisitRequestStatusBadge({ status }: { status: VisitRequestStatus }) {
+  const x = VISIT_REQUEST[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const APPOINTMENT: Record<AppointmentStatus, { c: string; l: string }> = {
+  SCHEDULED: { c: 'bg-blue-100 text-blue-700', l: 'مجدولة' },
+  CONFIRMED: { c: 'bg-purple-100 text-purple-700', l: 'مؤكدة' },
+  COMPLETED: { c: 'bg-green-100 text-green-700', l: 'مكتملة' },
+  CANCELLED: { c: 'bg-red-100 text-red-700', l: 'ملغاة' },
+  NO_SHOW: { c: 'bg-amber-100 text-amber-700', l: 'لم يحضر' },
+  RESCHEDULED: { c: 'bg-gray-100 text-gray-600', l: 'معاد جدولتها' },
+};
+export function AppointmentStatusBadge({ status }: { status: AppointmentStatus }) {
+  const x = APPOINTMENT[status];
   return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
 }

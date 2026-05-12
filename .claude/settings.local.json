@@ -35,7 +35,13 @@
       "Bash(tee /tmp/login.json)",
       "Bash(jq -r '.tokens.accessToken' /tmp/login.json)",
       "Read(//tmp/**)",
-      "Bash(curl -s -H \"Authorization: Bearer $\\(cat /tmp/token.txt\\)\" 'http://localhost:4000/v1/users?role=CLIENT&pageSize=10')"
+      "Bash(curl -s -H \"Authorization: Bearer $\\(cat /tmp/token.txt\\)\" 'http://localhost:4000/v1/users?role=CLIENT&pageSize=10')",
+      "Bash(npx prisma *)",
+      "Bash(expect -c ' *)",
+      "Bash(xargs basename)",
+      "Bash(mkdir -p \"/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/visits/requests/[id]/_components\")",
+      "Bash(mkdir -p \"/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/visits/appointments/[id]/_components\")",
+      "Bash(npx tsc *)"
     ],
     "additionalDirectories": [
       "/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/units/[id]",

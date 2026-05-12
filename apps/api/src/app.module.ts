@@ -21,6 +21,7 @@ import { UnitsModule } from './modules/units/units.module';
 import { MediaModule } from './modules/media/media.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { RequestsModule } from './modules/requests/requests.module';
+import { VisitsModule } from './modules/visits/visits.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
 import { ReservationsModule } from './modules/reservations/reservations.module';
 import { ContractsModule } from './modules/contracts/contracts.module';
@@ -61,6 +62,7 @@ import { HealthController } from './modules/health/health.controller';
     MediaModule,
     LeadsModule,
     RequestsModule,
+    VisitsModule,
     FavoritesModule,
     ReservationsModule,
     ContractsModule,

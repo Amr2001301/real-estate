@@ -23,7 +23,7 @@ import {
   MinLength,
 } from 'class-validator';
 import type { Prisma } from '@prisma/client';
-import { UserRole, VisitStatus } from '@prisma/client';
+import { UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -160,6 +160,10 @@ class RequestsService {
         unitId: dto.unitId ?? null,
         preferredDate: new Date(dto.preferredDate),
         notes: dto.notes ?? null,
+        requestStatus: VisitRequestStatus.NEW,
+        source: VisitRequestSource.WEBSITE,
+        customerName: dto.name ?? null,
+        customerPhone: dto.phone ?? null,
       },
     });
   }

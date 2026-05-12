@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import { Building2, Phone, Mail, GripVertical } from 'lucide-react';
+import { Building2, Phone, Mail, GripVertical, CalendarClock } from 'lucide-react';
 import type { Lead, LeadStage } from '@/lib/types';
+import { formatDateTime } from '@/lib/format';
 import { tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 
@@ -81,12 +82,19 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
         </span>
       </div>
 
-      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 min-h-[18px]">
+      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3 min-h-[18px]">
         <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
         <span className="truncate">
           {lead.projectInterest ? tx(lead.projectInterest.name) : 'لم يتم تحديد مشروع'}
         </span>
       </div>
+
+      {lead.upcomingVisit && (
+        <div className="flex items-center gap-1.5 text-xs text-purple-700 bg-purple-50 rounded-lg px-2 py-1 mb-3">
+          <CalendarClock className="h-3 w-3 shrink-0" />
+          <span className="truncate">{formatDateTime(lead.upcomingVisit.scheduledAt)}</span>
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-2 pt-3 border-t border-hairline/80">
         <span

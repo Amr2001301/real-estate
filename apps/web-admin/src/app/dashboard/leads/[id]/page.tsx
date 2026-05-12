@@ -4,6 +4,7 @@ import {
   Mail,
   Building2,
   Calendar,
+  CalendarClock,
   UserCog,
   MessageSquare,
   Activity,
@@ -11,8 +12,8 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Lead, Paged, User, LeadStage } from '@/lib/types';
-import { formatDateTime, tx } from '@/lib/format';
+import type { Lead, Paged, User, LeadStage, VisitRequest, VisitAppointment } from '@/lib/types';
+import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LeadStageBadge } from '@/components/badges';
+import { LeadStageBadge, VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { StageSegmented } from '@/components/crm/stage-segmented';
 import { addNoteAction, assignLeadAction } from '../actions';
 
@@ -43,9 +44,11 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [leadRes, salesRes] = await Promise.all([
+  const [leadRes, salesRes, visitRequestsRes, appointmentsRes] = await Promise.all([
     safe(api.get<LeadDetail>(`/leads/${id}`)),
     safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
+    safe(api.get<Paged<VisitRequest>>(`/visits/requests?leadId=${id}&pageSize=10`)),
+    safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?leadId=${id}&pageSize=10`)),
   ]);
 
   if (leadRes.error || !leadRes.data) {
@@ -56,6 +59,8 @@ export default async function LeadDetailPage({
     );
   }
   const lead = leadRes.data;
+  const visitRequests = visitRequestsRes.data?.data ?? [];
+  const appointments = appointmentsRes.data?.data ?? [];
   // Prefer the linked client's contact info; fall back to the denormalized
   // copy on the lead row for older records.
   const displayName = lead.client?.fullName ?? lead.fullName;
@@ -198,6 +203,50 @@ export default async function LeadDetailPage({
               </ul>
             )}
           </Card>
+
+          {/* Visits section */}
+          {(visitRequests.length > 0 || appointments.length > 0) && (
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarClock className="h-5 w-5 text-brand-600" />
+                <h2 className="text-base font-semibold text-slate-900 tracking-tight">الزيارات</h2>
+              </div>
+
+              {visitRequests.length > 0 && (
+                <div className="mb-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">طلبات الزيارة</p>
+                  <ul className="space-y-2">
+                    {visitRequests.map((r) => (
+                      <li key={r.id} className="flex items-center justify-between gap-3 rounded-xl bg-surface-muted/50 px-3 py-2 text-sm">
+                        <Link href={`/dashboard/visits/requests/${r.id}` as never} className="text-brand-700 hover:underline font-mono text-xs">
+                          {r.requestNumber ?? r.id.slice(0, 8)}
+                        </Link>
+                        <span className="text-slate-500 text-xs">{formatDate(r.preferredDate)}</span>
+                        {r.requestStatus && <VisitRequestStatusBadge status={r.requestStatus} />}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {appointments.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">الزيارات المجدولة</p>
+                  <ul className="space-y-2">
+                    {appointments.map((a) => (
+                      <li key={a.id} className="flex items-center justify-between gap-3 rounded-xl bg-surface-muted/50 px-3 py-2 text-sm">
+                        <Link href={`/dashboard/visits/appointments/${a.id}` as never} className="text-brand-700 hover:underline font-mono text-xs">
+                          {a.visitNumber}
+                        </Link>
+                        <span className="text-slate-500 text-xs">{formatDateTime(a.scheduledAt)}</span>
+                        <AppointmentStatusBadge status={a.status} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </Card>
+          )}
 
           {/* Timeline */}
           <Card className="p-5 sm:p-6">

@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, LeadStage } from '@prisma/client';
+import { AppointmentStatus, Prisma, LeadStage } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   CreateLeadDto,
@@ -195,7 +195,7 @@ export class LeadsService {
           }
         : {}),
     };
-    const [data, total] = await this.prisma.$transaction([
+    const [raw, total] = await this.prisma.$transaction([
       this.prisma.lead.findMany({
         where,
         ...takeSkip({ page, pageSize }),
@@ -207,10 +207,24 @@ export class LeadsService {
           source: true,
           assignedSales: { select: { id: true, fullName: true } },
           projectInterest: { select: { id: true, name: true } },
+          appointments: {
+            where: {
+              status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+              scheduledAt: { gte: new Date() },
+            },
+            orderBy: { scheduledAt: 'asc' },
+            take: 1,
+            select: { id: true, visitNumber: true, scheduledAt: true, status: true },
+          },
         },
       }),
       this.prisma.lead.count({ where }),
     ]);
+
+    const data = raw.map(({ appointments, ...lead }) => ({
+      ...lead,
+      upcomingVisit: appointments[0] ?? null,
+    }));
     return paginate(data, total, { page, pageSize });
   }
 
