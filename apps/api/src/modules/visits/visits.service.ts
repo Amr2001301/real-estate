@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   AppointmentStatus,
+  LeadStage,
   Prisma,
   UserRole,
   VisitActivityType,
@@ -277,6 +278,16 @@ export class VisitsService {
         const salesName = dto.assignedSalesId
           ? (await tx.user.findUnique({ where: { id: dto.assignedSalesId }, select: { fullName: true } }))?.fullName
           : null;
+
+        // Advance lead to VISIT stage if still in an early stage
+        await tx.lead.updateMany({
+          where: {
+            id: req.leadId,
+            stage: { in: [LeadStage.NEW, LeadStage.INTERESTED] },
+          },
+          data: { stage: LeadStage.VISIT },
+        });
+
         await tx.leadActivity.create({
           data: {
             leadId: req.leadId,
@@ -428,6 +439,17 @@ export class VisitsService {
       });
 
       if (appt.leadId) {
+        // Advance to VISIT on confirmation if still in an early stage
+        if (dto.status === AppointmentStatus.CONFIRMED) {
+          await tx.lead.updateMany({
+            where: {
+              id: appt.leadId,
+              stage: { in: [LeadStage.NEW, LeadStage.INTERESTED] },
+            },
+            data: { stage: LeadStage.VISIT },
+          });
+        }
+
         await tx.leadActivity.create({
           data: {
             leadId: appt.leadId,

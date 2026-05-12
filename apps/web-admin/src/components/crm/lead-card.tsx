@@ -92,7 +92,10 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
       {lead.upcomingVisit && (
         <div className="flex items-center gap-1.5 text-xs text-purple-700 bg-purple-50 rounded-lg px-2 py-1 mb-3">
           <CalendarClock className="h-3 w-3 shrink-0" />
-          <span className="truncate">{formatDateTime(lead.upcomingVisit.scheduledAt)}</span>
+          <span className="truncate flex-1">{formatDateTime(lead.upcomingVisit.scheduledAt)}</span>
+          <span className="shrink-0 font-medium">
+            {lead.upcomingVisit.status === 'CONFIRMED' ? 'مؤكدة' : 'مجدولة'}
+          </span>
         </div>
       )}
 
