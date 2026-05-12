@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Eye, CheckCircle2, X, Ban } from 'lucide-react';
-import type { Reservation, ReservationStatus } from '@/lib/types';
+import type { Reservation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { StatusDialog } from './status-dialog';
 import {
@@ -11,8 +11,6 @@ import {
   rejectReservationAction,
   cancelReservationAction,
 } from '../actions';
-
-const FINAL: ReservationStatus[] = ['APPROVED', 'REJECTED', 'CANCELLED', 'EXPIRED'];
 
 interface Props {
   reservation: Reservation;
@@ -23,7 +21,9 @@ export function ReservationActions({ reservation }: Props) {
   const [cancelOpen, setCancelOpen] = useState(false);
   const [approvePending, startApprove] = useTransition();
 
-  const isFinal = FINAL.includes(reservation.status);
+  const isPending = reservation.status === 'PENDING';
+  const isApproved = reservation.status === 'APPROVED';
+  const canCancel = isPending || isApproved;
 
   function handleApprove() {
     if (!window.confirm('هل أنت متأكد من الموافقة على هذا الحجز؟')) return;
@@ -40,7 +40,7 @@ export function ReservationActions({ reservation }: Props) {
         </Button>
       </Link>
 
-      {!isFinal && (
+      {isPending && (
         <>
           <Button
             variant="subtle"
@@ -62,17 +62,19 @@ export function ReservationActions({ reservation }: Props) {
           >
             رفض
           </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<Ban className="h-3.5 w-3.5" />}
-            onClick={() => setCancelOpen(true)}
-            className="text-slate-500 hover:text-slate-700"
-          >
-            إلغاء
-          </Button>
         </>
+      )}
+
+      {canCancel && (
+        <Button
+          variant="ghost"
+          size="sm"
+          leftIcon={<Ban className="h-3.5 w-3.5" />}
+          onClick={() => setCancelOpen(true)}
+          className="text-slate-500 hover:text-slate-700"
+        >
+          إلغاء
+        </Button>
       )}
 
       <StatusDialog
@@ -89,9 +91,14 @@ export function ReservationActions({ reservation }: Props) {
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
         title="إلغاء الحجز"
-        description="هل أنت متأكد من إلغاء هذا الحجز؟ سيتم إعادة الوحدة إلى حالة متاحة."
+        description={
+          isApproved
+            ? 'سيتم إلغاء هذا الحجز المعتمد قبل التعاقد. يُلزم ذكر السبب للأرشيف.'
+            : 'سيتم إلغاء هذا الحجز. يُلزم ذكر السبب للأرشيف.'
+        }
         confirmLabel="تأكيد الإلغاء"
         confirmVariant="danger"
+        reasonRequired
         action={cancelReservationAction.bind(null, reservation.id)}
       />
     </div>

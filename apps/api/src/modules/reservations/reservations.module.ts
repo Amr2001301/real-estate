@@ -43,6 +43,12 @@ class UpdateReservationStatusDto {
   @IsOptional() @IsString() reason?: string;
 }
 
+class UpdateReservationDto {
+  @IsOptional() @IsUUID() salesId?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(720) expiresInHours?: number;
+  @IsOptional() @IsString() notes?: string;
+}
+
 class AddNoteDto {
   @IsString() @IsNotEmpty() body!: string;
 }
@@ -311,15 +317,54 @@ class ReservationsService {
     if (!reservation) throw new NotFoundException('Reservation not found');
 
     const FINAL: ReservationStatus[] = [
-      ReservationStatus.APPROVED,
       ReservationStatus.REJECTED,
       ReservationStatus.CANCELLED,
       ReservationStatus.EXPIRED,
     ];
     if (FINAL.includes(reservation.status)) {
-      throw new BadRequestException(`Reservation is already ${reservation.status}`);
+      throw new BadRequestException(
+        `Reservation is already ${reservation.status} and cannot be changed`,
+      );
     }
     if (reservation.status === dto.status) return reservation;
+
+    if (dto.status === ReservationStatus.EXPIRED) {
+      throw new BadRequestException(
+        'EXPIRED status can only be set automatically by the system',
+      );
+    }
+
+    const allowedFromPending: ReservationStatus[] = [
+      ReservationStatus.APPROVED,
+      ReservationStatus.REJECTED,
+      ReservationStatus.CANCELLED,
+    ];
+    const allowedFromApproved: ReservationStatus[] = [ReservationStatus.CANCELLED];
+
+    if (
+      reservation.status === ReservationStatus.PENDING &&
+      !allowedFromPending.includes(dto.status)
+    ) {
+      throw new BadRequestException(
+        `Pending reservation can only transition to APPROVED, REJECTED, or CANCELLED`,
+      );
+    }
+    if (
+      reservation.status === ReservationStatus.APPROVED &&
+      !allowedFromApproved.includes(dto.status)
+    ) {
+      throw new BadRequestException(
+        'Approved reservation can only be cancelled',
+      );
+    }
+
+    if (dto.status === ReservationStatus.CANCELLED) {
+      const trimmedReason = dto.reason?.trim();
+      if (!trimmedReason) {
+        throw new BadRequestException('سبب الإلغاء مطلوب');
+      }
+      dto.reason = trimmedReason;
+    }
 
     const now = new Date();
     const STATUS_TO_ACTIVITY: Partial<Record<ReservationStatus, ReservationActivityType>> = {
@@ -426,6 +471,82 @@ class ReservationsService {
       },
     });
     return note;
+  }
+
+  async update(id: string, dto: UpdateReservationDto, actor: AuthUser) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        salesId: true,
+        expiresAt: true,
+        notes: true,
+        unitId: true,
+        sales: { select: { fullName: true } },
+      },
+    });
+    if (!reservation) throw new NotFoundException('Reservation not found');
+
+    if (reservation.status !== ReservationStatus.PENDING) {
+      throw new BadRequestException('Only pending reservations can be edited');
+    }
+
+    const data: Prisma.ReservationUpdateInput = {};
+    const changes: string[] = [];
+
+    if (dto.salesId && dto.salesId !== reservation.salesId) {
+      const salesUser = await this.prisma.user.findUnique({
+        where: { id: dto.salesId },
+        select: { id: true, role: true, active: true, fullName: true },
+      });
+      if (!salesUser) throw new BadRequestException('Sales person not found');
+      if (salesUser.role !== UserRole.SALES) {
+        throw new BadRequestException('Selected user is not a sales person');
+      }
+      if (!salesUser.active) {
+        throw new BadRequestException('Selected sales person is inactive');
+      }
+      data.sales = { connect: { id: salesUser.id } };
+      changes.push(
+        `تم تغيير المندوب من ${reservation.sales?.fullName ?? '—'} إلى ${salesUser.fullName}`,
+      );
+    }
+
+    let newExpiresAt: Date | null = null;
+    if (dto.expiresInHours !== undefined) {
+      newExpiresAt = new Date(Date.now() + dto.expiresInHours * 3_600_000);
+      data.expiresAt = newExpiresAt;
+      changes.push(`تم تمديد الصلاحية حتى ${newExpiresAt.toISOString()}`);
+    }
+
+    if (dto.notes !== undefined && dto.notes !== reservation.notes) {
+      data.notes = dto.notes;
+      changes.push('تم تعديل الملاحظات');
+    }
+
+    if (changes.length === 0) {
+      return this.findOne(id);
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.reservation.update({ where: { id }, data });
+      if (newExpiresAt) {
+        await tx.unit.update({
+          where: { id: reservation.unitId },
+          data: { reservationExpiresAt: newExpiresAt },
+        });
+      }
+      await tx.reservationActivity.create({
+        data: {
+          reservationId: id,
+          type: ReservationActivityType.NOTE_ADDED,
+          actorId: actor.sub,
+          note: changes.join(' • ').substring(0, 500),
+        },
+      });
+      return tx.reservation.findUnique({ where: { id }, include: FULL_INCLUDE });
+    });
   }
 
   async expireDue() {
@@ -568,6 +689,16 @@ class ReservationsController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateReservationDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.update(id, dto, user);
   }
 
   @Roles(UserRole.ADMIN)

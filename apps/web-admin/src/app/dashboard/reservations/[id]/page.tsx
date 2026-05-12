@@ -10,7 +10,7 @@ import {
   Home,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Reservation } from '@/lib/types';
+import type { Paged, Reservation, User as UserType } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,11 @@ export default async function ReservationDetailPage({
   }
 
   const reservation = res.data;
+  const salesOptions =
+    reservation.status === 'PENDING'
+      ? (await safe(api.get<Paged<UserType>>('/users?role=SALES&active=true&pageSize=100'))).data
+          ?.data ?? []
+      : [];
   const clientName = reservation.client?.fullName ?? reservation.lead?.fullName ?? '—';
   const clientPhone = reservation.client?.phone ?? reservation.lead?.phone ?? null;
   const clientEmail = reservation.client?.email ?? reservation.lead?.email ?? null;
@@ -74,6 +79,9 @@ export default async function ReservationDetailPage({
           <ReservationDetailActions
             reservationId={reservation.id}
             status={reservation.status}
+            currentSalesId={reservation.salesId}
+            currentNotes={reservation.notes}
+            salesOptions={salesOptions.map((s) => ({ id: s.id, fullName: s.fullName }))}
           />
         }
       />

@@ -12,7 +12,8 @@ interface Props {
   description: string;
   confirmLabel: string;
   confirmVariant?: 'danger' | 'primary';
-  action: (formData: FormData) => Promise<void>;
+  reasonRequired?: boolean;
+  action: (formData: FormData) => Promise<void | { error?: string }>;
 }
 
 export function StatusDialog({
@@ -22,17 +23,29 @@ export function StatusDialog({
   description,
   confirmLabel,
   confirmVariant = 'danger',
+  reasonRequired = false,
   action,
 }: Props) {
   const [pending, startTransition] = useTransition();
   const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit() {
+    setError(null);
+    if (reasonRequired && !reason.trim()) {
+      setError('سبب الإلغاء مطلوب');
+      return;
+    }
     const fd = new FormData();
     fd.set('reason', reason);
     startTransition(async () => {
-      await action(fd);
+      const result = await action(fd);
+      if (result && 'error' in result && result.error) {
+        setError(result.error);
+        return;
+      }
       setReason('');
+      setError(null);
       onClose();
     });
   }
@@ -62,7 +75,7 @@ export function StatusDialog({
     >
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-medium text-slate-600">
-          السبب (اختياري)
+          {reasonRequired ? 'السبب (مطلوب)' : 'السبب (اختياري)'}
         </label>
         <Textarea
           rows={3}
@@ -71,6 +84,7 @@ export function StatusDialog({
           onChange={(e) => setReason(e.target.value)}
           disabled={pending}
         />
+        {error && <p className="text-xs text-danger-600 mt-1">{error}</p>}
       </div>
     </Dialog>
   );

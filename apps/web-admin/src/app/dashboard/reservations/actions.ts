@@ -68,11 +68,51 @@ export async function rejectReservationAction(id: string, formData: FormData) {
   revalidatePath(`/dashboard/reservations/${id}`);
 }
 
-export async function cancelReservationAction(id: string, formData: FormData) {
-  const reason = String(formData.get('reason') ?? '').trim() || undefined;
-  await api.patch(`/reservations/${id}/status`, { status: 'CANCELLED', reason });
+export async function cancelReservationAction(
+  id: string,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const reason = String(formData.get('reason') ?? '').trim();
+  if (!reason) {
+    return { error: 'سبب الإلغاء مطلوب' };
+  }
+  try {
+    await api.patch(`/reservations/${id}/status`, { status: 'CANCELLED', reason });
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
   revalidatePath('/dashboard/reservations');
   revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
+}
+
+export async function updateReservationAction(
+  id: string,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const salesId = String(formData.get('salesId') ?? '').trim() || undefined;
+  const notes = String(formData.get('notes') ?? '');
+  const hasNotes = formData.has('notes');
+  const expiresInHoursRaw = String(formData.get('expiresInHours') ?? '').trim();
+  const expiresInHours = expiresInHoursRaw ? Number(expiresInHoursRaw) : undefined;
+
+  const payload: Record<string, unknown> = {};
+  if (salesId) payload.salesId = salesId;
+  if (expiresInHours && Number.isFinite(expiresInHours)) payload.expiresInHours = expiresInHours;
+  if (hasNotes) payload.notes = notes;
+
+  if (Object.keys(payload).length === 0) {
+    return { error: 'لا يوجد تعديل لحفظه' };
+  }
+
+  try {
+    await api.patch(`/reservations/${id}`, payload);
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+  revalidatePath('/dashboard/reservations');
+  revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
 }
 
 export async function addReservationNoteAction(id: string, formData: FormData) {
