@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ProjectStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
@@ -95,6 +95,40 @@ export class ProjectsService {
 
   async remove(id: string) {
     await this.assertExists(id);
+
+    const [reservations, contracts, maintenance, activeUnits, visitRequests] =
+      await this.prisma.$transaction([
+        this.prisma.reservation.count({
+          where: { unit: { building: { phase: { projectId: id } } } },
+        }),
+        this.prisma.contract.count({
+          where: { unit: { building: { phase: { projectId: id } } } },
+        }),
+        this.prisma.maintenanceRequest.count({
+          where: { unit: { building: { phase: { projectId: id } } } },
+        }),
+        this.prisma.unit.count({
+          where: {
+            building: { phase: { projectId: id } },
+            status: { in: ['SOLD', 'RESERVED'] },
+          },
+        }),
+        this.prisma.visitRequest.count({ where: { projectId: id } }),
+      ]);
+
+    const blockers: string[] = [];
+    if (reservations > 0) blockers.push(`${reservations} حجز`);
+    if (contracts > 0) blockers.push(`${contracts} عقد`);
+    if (maintenance > 0) blockers.push(`${maintenance} طلب صيانة`);
+    if (activeUnits > 0) blockers.push(`${activeUnits} وحدة محجوزة أو مباعة`);
+    if (visitRequests > 0) blockers.push(`${visitRequests} طلب زيارة`);
+
+    if (blockers.length > 0) {
+      throw new ConflictException(
+        `لا يمكن حذف المشروع لأنه مرتبط بـ: ${blockers.join('، ')}. يجب إزالة أو نقل هذه السجلات أولاً.`,
+      );
+    }
+
     return this.prisma.project.delete({ where: { id } });
   }
 

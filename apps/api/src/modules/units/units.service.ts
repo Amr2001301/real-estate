@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma, UnitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
@@ -145,6 +150,24 @@ export class UnitsService {
     if (unit.status === UnitStatus.SOLD) {
       throw new BadRequestException('Cannot delete a SOLD unit');
     }
+
+    const [reservations, contracts, maintenance] = await this.prisma.$transaction([
+      this.prisma.reservation.count({ where: { unitId: id } }),
+      this.prisma.contract.count({ where: { unitId: id } }),
+      this.prisma.maintenanceRequest.count({ where: { unitId: id } }),
+    ]);
+
+    const blockers: string[] = [];
+    if (reservations > 0) blockers.push(`${reservations} حجز`);
+    if (contracts > 0) blockers.push(`${contracts} عقد`);
+    if (maintenance > 0) blockers.push(`${maintenance} طلب صيانة`);
+
+    if (blockers.length > 0) {
+      throw new ConflictException(
+        `لا يمكن حذف الوحدة لأنها مرتبطة بـ: ${blockers.join('، ')}. يجب إلغاء أو نقل هذه السجلات أولاً.`,
+      );
+    }
+
     return this.prisma.unit.delete({ where: { id } });
   }
 
