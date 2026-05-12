@@ -57,8 +57,8 @@ export function VisitStatusBadge({ status }: { status: VisitStatus }) {
 }
 
 const RESERVATION: Record<ReservationStatus, { c: string; l: string }> = {
-  PENDING: { c: 'bg-gray-100 text-gray-700', l: 'قيد الانتظار' },
-  APPROVED: { c: 'bg-green-100 text-green-700', l: 'موافق' },
+  PENDING: { c: 'bg-amber-100 text-amber-700', l: 'قيد المراجعة' },
+  APPROVED: { c: 'bg-green-100 text-green-700', l: 'تمت الموافقة' },
   REJECTED: { c: 'bg-red-100 text-red-700', l: 'مرفوض' },
   CANCELLED: { c: 'bg-red-100 text-red-700', l: 'ملغى' },
   EXPIRED: { c: 'bg-amber-100 text-amber-700', l: 'منتهي' },

@@ -14,11 +14,12 @@ import {
   Power,
   PowerOff,
   Briefcase,
+  BookmarkCheck,
   Plus,
   UserCog,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { User, Lead, Paged } from '@/lib/types';
+import type { User, Lead, Paged, Reservation } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
@@ -26,7 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmButton } from '@/components/confirm-button';
-import { LeadStageBadge } from '@/components/badges';
+import { LeadStageBadge, ReservationStatusBadge } from '@/components/badges';
 import { cn } from '@/lib/cn';
 import { activateClientAction, deactivateClientAction } from '../actions';
 
@@ -84,10 +85,11 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [userRes, auditRes, leadsRes] = await Promise.all([
+  const [userRes, auditRes, leadsRes, reservationsRes] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
     safe(api.get<AuditPaged>(`/audit-logs?entityId=${id}&pageSize=6`)),
     safe(api.get<Paged<Lead>>(`/leads?clientId=${id}&pageSize=20`)),
+    safe(api.get<Paged<Reservation>>(`/reservations?clientId=${id}&pageSize=10`)),
   ]);
 
   if (userRes.error || !userRes.data) {
@@ -104,6 +106,7 @@ export default async function ClientDetailPage({
     | 'CUSTOMER';
   const recentActivity = auditRes.data?.data ?? [];
   const leads = leadsRes.data?.data ?? [];
+  const reservations = reservationsRes.data?.data ?? [];
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -293,6 +296,82 @@ export default async function ClientDetailPage({
                       </Link>
                     </li>
                   ))}
+                </ul>
+              )}
+            </div>
+          </Card>
+
+          {/* Reservations */}
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <BookmarkCheck className="h-5 w-5 text-brand-600" />
+                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                  الحجوزات
+                </h2>
+                <span className="text-2xs font-semibold text-slate-400">
+                  {reservations.length}
+                </span>
+              </div>
+              {reservations.length > 0 && (
+                <Link
+                  href={`/dashboard/reservations?clientId=${u.id}` as never}
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                >
+                  عرض كل الحجوزات
+                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                </Link>
+              )}
+            </div>
+
+            <div className="mt-4">
+              {reservations.length === 0 ? (
+                <EmptyState
+                  icon={<BookmarkCheck />}
+                  title="لا توجد حجوزات لهذا العميل"
+                  description="ستظهر هنا أي حجوزات يقوم بها العميل على الوحدات."
+                />
+              ) : (
+                <ul className="flex flex-col divide-y divide-hairline -mx-2">
+                  {reservations.map((r) => {
+                    const projectName = r.unit?.building?.phase?.project?.name
+                      ? tx(r.unit.building.phase.project.name)
+                      : null;
+                    return (
+                      <li key={r.id}>
+                        <Link
+                          href={`/dashboard/reservations/${r.id}` as never}
+                          className="flex items-center gap-3 px-2 py-3 hover:bg-surface-muted/40 rounded-lg transition-colors"
+                        >
+                          <span className="font-mono text-2xs text-slate-400 shrink-0">
+                            {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="text-sm font-medium text-slate-900 truncate">
+                                {projectName ? `${projectName} · ` : ''}
+                                وحدة {r.unit?.code ?? '—'}
+                              </p>
+                              <ReservationStatusBadge status={r.status} />
+                            </div>
+                            <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
+                              {r.sales?.fullName && (
+                                <>
+                                  <span className="inline-flex items-center gap-1">
+                                    <UserCog className="h-3 w-3" />
+                                    {r.sales.fullName}
+                                  </span>
+                                  <span className="text-slate-300">·</span>
+                                </>
+                              )}
+                              <span>ينتهي {formatDate(r.expiresAt)}</span>
+                            </p>
+                          </div>
+                          <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
+                        </Link>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </div>

@@ -50,6 +50,9 @@ model User {
   leads             Lead[]              @relation("LeadClient")
   leadNotes         LeadNote[]
   reservations      Reservation[]       @relation("ReservationSales")
+  reservationClients Reservation[]      @relation("ReservationClient")
+  reservationNotes  ReservationNote[]   @relation("ReservationNoteAuthor")
+  reservationActivities ReservationActivity[] @relation("ReservationActivityActor")
   customerContracts Contract[]          @relation("ContractCustomer")
   bonusEntries      BonusEntry[]
   salesTargets      SalesTarget[]
@@ -564,22 +567,67 @@ enum InstallmentStatus {
 }
 
 model Reservation {
-  id        String            @id @default(uuid()) @db.Uuid
-  unitId    String            @db.Uuid
-  unit      Unit              @relation(fields: [unitId], references: [id])
-  salesId   String            @db.Uuid
-  sales     User              @relation("ReservationSales", fields: [salesId], references: [id])
-  leadId    String?           @db.Uuid
-  lead      Lead?             @relation(fields: [leadId], references: [id])
-  status    ReservationStatus @default(PENDING)
-  notes     String?
-  expiresAt DateTime
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  id                String            @id @default(uuid()) @db.Uuid
+  reservationNumber String?           @unique
+  unitId            String            @db.Uuid
+  unit              Unit              @relation(fields: [unitId], references: [id])
+  salesId           String            @db.Uuid
+  sales             User              @relation("ReservationSales", fields: [salesId], references: [id])
+  leadId            String?           @db.Uuid
+  lead              Lead?             @relation(fields: [leadId], references: [id])
+  clientId          String?           @db.Uuid
+  client            User?             @relation("ReservationClient", fields: [clientId], references: [id])
+  status            ReservationStatus @default(PENDING)
+  notes             String?
+  reason            String?
+  expiresAt         DateTime
+  approvedAt        DateTime?
+  rejectedAt        DateTime?
+  cancelledAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  reservationNotes      ReservationNote[]
+  activities            ReservationActivity[]
 
   @@index([unitId])
   @@index([salesId])
+  @@index([clientId])
   @@index([status])
+}
+
+enum ReservationActivityType {
+  CREATED
+  APPROVED
+  REJECTED
+  CANCELLED
+  EXPIRED
+  NOTE_ADDED
+}
+
+model ReservationNote {
+  id            String      @id @default(uuid()) @db.Uuid
+  reservationId String      @db.Uuid
+  reservation   Reservation @relation(fields: [reservationId], references: [id])
+  body          String
+  authorId      String?     @db.Uuid
+  author        User?       @relation("ReservationNoteAuthor", fields: [authorId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([reservationId])
+}
+
+model ReservationActivity {
+  id            String                  @id @default(uuid()) @db.Uuid
+  reservationId String                  @db.Uuid
+  reservation   Reservation             @relation(fields: [reservationId], references: [id])
+  type          ReservationActivityType
+  actorId       String?                 @db.Uuid
+  actor         User?                   @relation("ReservationActivityActor", fields: [actorId], references: [id])
+  note          String?
+  createdAt     DateTime                @default(now())
+
+  @@index([reservationId])
 }
 
 model Contract {

@@ -3,6 +3,7 @@ import {
   Phone,
   Mail,
   Building2,
+  BookmarkCheck,
   Calendar,
   CalendarClock,
   UserCog,
@@ -12,7 +13,15 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Lead, Paged, User, LeadStage, VisitRequest, VisitAppointment } from '@/lib/types';
+import type {
+  Lead,
+  Paged,
+  Reservation,
+  User,
+  LeadStage,
+  VisitRequest,
+  VisitAppointment,
+} from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
@@ -21,7 +30,12 @@ import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/ui/empty-state';
-import { LeadStageBadge, VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
+import {
+  LeadStageBadge,
+  ReservationStatusBadge,
+  VisitRequestStatusBadge,
+  AppointmentStatusBadge,
+} from '@/components/badges';
 import { StageSegmented } from '@/components/crm/stage-segmented';
 import { addNoteAction, assignLeadAction } from '../actions';
 
@@ -44,12 +58,14 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [leadRes, salesRes, visitRequestsRes, appointmentsRes] = await Promise.all([
-    safe(api.get<LeadDetail>(`/leads/${id}`)),
-    safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
-    safe(api.get<Paged<VisitRequest>>(`/visits/requests?leadId=${id}&pageSize=10`)),
-    safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?leadId=${id}&pageSize=10`)),
-  ]);
+  const [leadRes, salesRes, visitRequestsRes, appointmentsRes, reservationsRes] =
+    await Promise.all([
+      safe(api.get<LeadDetail>(`/leads/${id}`)),
+      safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
+      safe(api.get<Paged<VisitRequest>>(`/visits/requests?leadId=${id}&pageSize=10`)),
+      safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?leadId=${id}&pageSize=10`)),
+      safe(api.get<Paged<Reservation>>(`/reservations?leadId=${id}&pageSize=10`)),
+    ]);
 
   if (leadRes.error || !leadRes.data) {
     return (
@@ -61,6 +77,7 @@ export default async function LeadDetailPage({
   const lead = leadRes.data;
   const visitRequests = visitRequestsRes.data?.data ?? [];
   const appointments = appointmentsRes.data?.data ?? [];
+  const reservations = reservationsRes.data?.data ?? [];
   // Prefer the linked client's contact info; fall back to the denormalized
   // copy on the lead row for older records.
   const displayName = lead.client?.fullName ?? lead.fullName;
@@ -248,6 +265,58 @@ export default async function LeadDetailPage({
             </Card>
           )}
 
+          {/* Reservations */}
+          {reservations.length > 0 && (
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <BookmarkCheck className="h-5 w-5 text-brand-600" />
+                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                  الحجوزات المرتبطة
+                </h2>
+                <span className="ms-auto text-2xs font-semibold text-slate-400">
+                  {reservations.length} حجز
+                </span>
+              </div>
+              <ul className="space-y-2">
+                {reservations.map((r) => {
+                  const projectName = r.unit?.building?.phase?.project?.name
+                    ? tx(r.unit.building.phase.project.name)
+                    : null;
+                  return (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between gap-3 rounded-xl bg-surface-muted/50 px-3 py-2 text-sm"
+                    >
+                      <Link
+                        href={`/dashboard/reservations/${r.id}` as never}
+                        className="text-brand-700 hover:underline font-mono text-xs"
+                      >
+                        {r.reservationNumber ?? r.id.slice(0, 8)}
+                      </Link>
+                      <span className="text-slate-600 text-xs truncate">
+                        {projectName ? `${projectName} · ` : ''}
+                        {r.unit?.code ?? '—'}
+                      </span>
+                      <span className="text-slate-500 text-xs">
+                        ينتهي {formatDate(r.expiresAt)}
+                      </span>
+                      <ReservationStatusBadge status={r.status} />
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="mt-3 flex justify-end">
+                <Link
+                  href={`/dashboard/reservations?leadId=${lead.id}` as never}
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                >
+                  عرض كل الحجوزات
+                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                </Link>
+              </div>
+            </Card>
+          )}
+
           {/* Timeline */}
           <Card className="p-5 sm:p-6">
             <div className="flex items-center gap-2 mb-4">
@@ -264,19 +333,32 @@ export default async function LeadDetailPage({
               />
             ) : (
               <ul className="space-y-3">
-                {lead.activities.map((a) => (
-                  <li key={a.id} className="flex items-start gap-3">
-                    <span className="mt-1 inline-flex h-2 w-2 rounded-full bg-brand-500 shrink-0" />
-                    <div className="flex-1 min-w-0 flex flex-wrap items-baseline gap-2">
-                      <span className="font-mono text-xs font-semibold text-brand-700">
-                        {a.type}
-                      </span>
-                      <span className="text-2xs text-slate-400">
-                        {formatDateTime(a.createdAt)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
+                {lead.activities.map((a) => {
+                  const meta = renderLeadActivity(a.type, a.payload);
+                  return (
+                    <li key={a.id} className="flex items-start gap-3">
+                      <span
+                        className={`mt-1 inline-flex h-2 w-2 rounded-full shrink-0 ${meta.dotColor}`}
+                      />
+                      <div className="flex-1 min-w-0 flex flex-wrap items-baseline gap-2">
+                        <span className="text-xs font-medium text-slate-700">
+                          {meta.label}
+                        </span>
+                        {meta.link && (
+                          <Link
+                            href={meta.link as never}
+                            className="font-mono text-2xs text-brand-700 hover:underline"
+                          >
+                            {meta.linkLabel}
+                          </Link>
+                        )}
+                        <span className="text-2xs text-slate-400">
+                          {formatDateTime(a.createdAt)}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Card>
@@ -472,4 +554,58 @@ function Row({
       <dd className="text-end">{children}</dd>
     </div>
   );
+}
+
+interface ActivityMeta {
+  label: string;
+  dotColor: string;
+  link?: string;
+  linkLabel?: string;
+}
+
+const RESERVATION_LABELS: Record<string, string> = {
+  CREATED: 'تم إنشاء حجز',
+  APPROVED: 'تمت الموافقة على الحجز',
+  REJECTED: 'تم رفض الحجز',
+  CANCELLED: 'تم إلغاء الحجز',
+  EXPIRED: 'انتهت صلاحية الحجز',
+};
+
+function renderLeadActivity(type: string, payload: unknown): ActivityMeta {
+  const p = (payload ?? {}) as Record<string, unknown>;
+
+  if (type === 'reservation') {
+    const status = typeof p.status === 'string' ? p.status : '';
+    const reservationId = typeof p.reservationId === 'string' ? p.reservationId : undefined;
+    const reservationNumber =
+      typeof p.reservationNumber === 'string' ? p.reservationNumber : undefined;
+    return {
+      label: RESERVATION_LABELS[status] ?? 'تحديث على الحجز',
+      dotColor:
+        status === 'APPROVED'
+          ? 'bg-success-500'
+          : status === 'REJECTED' || status === 'CANCELLED'
+            ? 'bg-danger-500'
+            : status === 'EXPIRED'
+              ? 'bg-warning-500'
+              : 'bg-brand-500',
+      link: reservationId ? `/dashboard/reservations/${reservationId}` : undefined,
+      linkLabel: reservationNumber ?? reservationId?.slice(0, 8),
+    };
+  }
+
+  if (type === 'status_change') {
+    const from = typeof p.from === 'string' ? p.from : '';
+    const to = typeof p.to === 'string' ? p.to : '';
+    return {
+      label: `تغيير المرحلة: ${from} ← ${to}`,
+      dotColor: 'bg-warning-500',
+    };
+  }
+
+  if (type === 'note') {
+    return { label: 'تم إضافة ملاحظة', dotColor: 'bg-slate-400' };
+  }
+
+  return { label: type, dotColor: 'bg-brand-500' };
 }

@@ -262,14 +262,50 @@ export interface VisitActivity {
 
 export interface Reservation {
   id: string;
+  reservationNumber: string | null;
   unitId: string;
   unit?: Unit;
   salesId: string;
   sales?: { id: string; fullName: string };
   leadId: string | null;
-  lead?: { id: string; fullName: string; phone: string };
+  lead?: { id: string; fullName: string; phone: string; email?: string | null } | null;
+  clientId: string | null;
+  client?: { id: string; fullName: string; phone: string | null; email?: string | null } | null;
   status: ReservationStatus;
+  notes: string | null;
+  reason: string | null;
   expiresAt: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  cancelledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  reservationNotes?: ReservationNote[];
+  activities?: ReservationActivity[];
+}
+
+export interface ReservationNote {
+  id: string;
+  body: string;
+  createdAt: string;
+  author?: { id: string; fullName: string } | null;
+}
+
+export type ReservationActivityType =
+  | 'CREATED'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'NOTE_ADDED';
+
+export interface ReservationActivity {
+  id: string;
+  reservationId: string;
+  type: ReservationActivityType;
+  actorId: string | null;
+  actor?: { id: string; fullName: string } | null;
+  note: string | null;
   createdAt: string;
 }
 

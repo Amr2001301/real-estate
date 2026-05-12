@@ -10,18 +10,28 @@ import {
   History,
   CalendarClock,
   Bookmark,
+  BookmarkCheck,
+  ArrowLeft,
   ArrowRightLeft,
   ArrowRight,
+  User as UserIcon,
+  UserCog,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Unit, UnitStatus, UnitStatusHistoryEntry } from '@/lib/types';
+import type {
+  Paged,
+  Reservation,
+  Unit,
+  UnitStatus,
+  UnitStatusHistoryEntry,
+} from '@/lib/types';
 import { tx, formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
-import { UnitStatusBadge } from '@/components/badges';
+import { ReservationStatusBadge, UnitStatusBadge } from '@/components/badges';
 import { ConfirmButton } from '@/components/confirm-button';
 import { UnitMediaPanel } from './media-panel';
 import { deleteUnitAction } from '../actions';
@@ -40,7 +50,10 @@ export default async function UnitDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const unitRes = await safe(api.get<Unit>(`/units/${id}`));
+  const [unitRes, reservationsRes] = await Promise.all([
+    safe(api.get<Unit>(`/units/${id}`)),
+    safe(api.get<Paged<Reservation>>(`/reservations?unitId=${id}&pageSize=20`)),
+  ]);
 
   if (unitRes.error || !unitRes.data) {
     return (
@@ -57,6 +70,11 @@ export default async function UnitDetailPage({
   const city = unit.building?.phase?.project?.city;
   const cover = unit.media?.find((m) => m.type === 'IMAGE')?.url;
   const history = unit.history ?? [];
+  const reservations = reservationsRes.data?.data ?? [];
+  const activeReservation = reservations.find(
+    (r) => r.status === 'PENDING' || r.status === 'APPROVED',
+  );
+  const pastReservations = reservations.filter((r) => r.id !== activeReservation?.id);
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -230,12 +248,109 @@ export default async function UnitDetailPage({
                 value={formatDate(unit.updatedAt)}
               />
             </div>
-            {unit.status === 'AVAILABLE' && (
-              <p className="mt-4 text-xs text-slate-500">
-                لا توجد حجوزات نشطة لهذه الوحدة حالياً. الوحدة جاهزة للعرض والبيع الفوري.
-              </p>
+
+            {activeReservation ? (
+              <div className="mt-5 rounded-2xl border border-warning-100 bg-warning-50/40 p-4 sm:p-5">
+                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                  <div className="flex items-center gap-2">
+                    <BookmarkCheck className="h-5 w-5 text-warning-600" />
+                    <h3 className="text-sm font-semibold text-slate-900">الحجز النشط</h3>
+                    <ReservationStatusBadge status={activeReservation.status} />
+                  </div>
+                  <Link
+                    href={`/dashboard/reservations/${activeReservation.id}` as never}
+                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                  >
+                    تفاصيل الحجز
+                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                  </Link>
+                </div>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  <KV
+                    label="رقم الحجز"
+                    value={
+                      <span className="font-mono">
+                        {activeReservation.reservationNumber ??
+                          `#${activeReservation.id.slice(0, 8).toUpperCase()}`}
+                      </span>
+                    }
+                  />
+                  <KV
+                    label="العميل"
+                    value={
+                      <span className="inline-flex items-center gap-1.5">
+                        <UserIcon className="h-3.5 w-3.5 text-slate-400" />
+                        {activeReservation.client?.fullName ??
+                          activeReservation.lead?.fullName ??
+                          '—'}
+                      </span>
+                    }
+                  />
+                  <KV
+                    label="المندوب المسؤول"
+                    value={
+                      activeReservation.sales?.fullName ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <UserCog className="h-3.5 w-3.5 text-slate-400" />
+                          {activeReservation.sales.fullName}
+                        </span>
+                      ) : (
+                        '—'
+                      )
+                    }
+                  />
+                  <KV
+                    label="ينتهي في"
+                    value={formatDate(activeReservation.expiresAt)}
+                  />
+                </dl>
+              </div>
+            ) : (
+              unit.status === 'AVAILABLE' && (
+                <p className="mt-4 text-xs text-slate-500">
+                  لا توجد حجوزات نشطة لهذه الوحدة حالياً. الوحدة جاهزة للعرض والبيع الفوري.
+                </p>
+              )
             )}
           </Card>
+
+          {/* Reservation history */}
+          {pastReservations.length > 0 && (
+            <Card className="p-5 sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <SectionTitle title="سجل الحجوزات" accent="brand" />
+                <span className="text-2xs font-semibold text-slate-500">
+                  {pastReservations.length} حجز
+                </span>
+              </div>
+              <ul className="mt-4 flex flex-col divide-y divide-hairline -mx-2">
+                {pastReservations.map((r) => (
+                  <li key={r.id}>
+                    <Link
+                      href={`/dashboard/reservations/${r.id}` as never}
+                      className="flex items-center gap-3 px-2 py-3 hover:bg-surface-muted/40 rounded-lg transition-colors"
+                    >
+                      <span className="font-mono text-2xs text-slate-400 shrink-0">
+                        {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-medium text-slate-900 truncate">
+                            {r.client?.fullName ?? r.lead?.fullName ?? '—'}
+                          </p>
+                          <ReservationStatusBadge status={r.status} />
+                        </div>
+                        <p className="text-2xs text-slate-500 mt-0.5">
+                          {formatDateTime(r.createdAt)}
+                        </p>
+                      </div>
+                      <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
 
           {/* Activity / history timeline */}
           <Card className="p-5 sm:p-6">
