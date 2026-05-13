@@ -208,6 +208,7 @@ export class LeadsService {
           source: true,
           assignedSales: { select: { id: true, fullName: true } },
           projectInterest: { select: { id: true, name: true } },
+          unitInterest: { select: { id: true, code: true } },
           appointments: {
             where: {
               status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },

@@ -90,11 +90,18 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
         </div>
       )}
 
-      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3 min-h-[18px]">
-        <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-        <span className="truncate">
-          {lead.projectInterest ? tx(lead.projectInterest.name) : 'لم يتم تحديد مشروع'}
-        </span>
+      <div className="flex items-start gap-1.5 text-xs text-slate-500 mb-3 min-h-[18px]">
+        <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-px" />
+        <div className="min-w-0">
+          <span className="truncate block">
+            {lead.projectInterest ? tx(lead.projectInterest.name) : 'لم يتم تحديد مشروع'}
+          </span>
+          {lead.unitInterest && (
+            <span className="truncate block text-slate-400 text-2xs font-medium mt-0.5">
+              وحدة {lead.unitInterest.code}
+            </span>
+          )}
+        </div>
       </div>
 
       {lead.upcomingVisit && (

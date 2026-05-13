@@ -119,6 +119,8 @@ export interface Lead {
   source?: LeadSource | null;
   projectInterestId: string | null;
   projectInterest?: { id: string; name: Translatable } | null;
+  unitInterestId?: string | null;
+  unitInterest?: { id: string; code: string } | null;
   assignedSalesId: string | null;
   assignedSales?: { id: string; fullName: string } | null;
   stage: LeadStage;
