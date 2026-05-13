@@ -15,6 +15,7 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { VisitsService } from './visits.service';
 import {
   AssignSalesDto,
+  CreateDirectAppointmentDto,
   ListAppointmentsDto,
   ListRequestsDto,
   RescheduleVisitDto,
@@ -69,6 +70,15 @@ export class VisitsController {
   }
 
   // ─── Appointments ─────────────────────────────────────────────────────────
+
+  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Post('visits/appointments')
+  createDirect(
+    @Body() dto: CreateDirectAppointmentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.visits.createDirectAppointment(dto, user);
+  }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
   @Get('visits/appointments')

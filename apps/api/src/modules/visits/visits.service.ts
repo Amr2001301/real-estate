@@ -17,6 +17,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import {
   AssignSalesDto,
+  CreateDirectAppointmentDto,
   ListAppointmentsDto,
   ListRequestsDto,
   RescheduleVisitDto,
@@ -24,6 +25,7 @@ import {
   UpdateAppointmentStatusDto,
   UpdateRequestStatusDto,
 } from './dto/visits.dto';
+import { VisitRequestSource } from '@prisma/client';
 import { AuthUser } from '../../common/decorators/current-user.decorator';
 
 // Statuses that are final — no further edits allowed
@@ -52,7 +54,7 @@ const REQUEST_INCLUDE = {
 } satisfies Prisma.VisitRequestInclude;
 
 const APPOINTMENT_INCLUDE = {
-  visitRequest: { select: { id: true, requestNumber: true, customerName: true, requestStatus: true } },
+  visitRequest: { select: { id: true, requestNumber: true, customerName: true, customerPhone: true, requestStatus: true } },
   lead: { select: { id: true, fullName: true, phone: true, stage: true } },
   client: { select: { id: true, fullName: true, phone: true, email: true } },
   project: { select: { id: true, name: true } },
@@ -305,6 +307,216 @@ export class VisitsService {
 
       return appointment;
     });
+  }
+
+  // ─── Create Direct Appointment (walk-in / sales-initiated) ────────────────
+
+  async createDirectAppointment(dto: CreateDirectAppointmentDto, user: AuthUser) {
+    if (dto.leadId && dto.clientId) {
+      throw new BadRequestException('لا يمكن تحديد عميل محتمل وعميل مسجل معًا');
+    }
+
+    const customerName = dto.customerName?.trim() || null;
+    const customerPhone = dto.customerPhone?.trim() || null;
+    const isWalkin = !dto.leadId && !dto.clientId;
+    if (isWalkin && (!customerName || !customerPhone)) {
+      throw new BadRequestException(
+        'يجب إدخال اسم العميل ورقم الهاتف في حالة الزيارة بدون حساب مسجل',
+      );
+    }
+
+    let resolvedLeadId: string | null = null;
+    let resolvedClientId: string | null = null;
+    let derivedName = customerName;
+    let derivedPhone = customerPhone;
+
+    if (dto.clientId) {
+      const c = await this.prisma.user.findUnique({
+        where: { id: dto.clientId },
+        select: { id: true, role: true, active: true, fullName: true, phone: true },
+      });
+      if (!c) throw new BadRequestException('Client not found');
+      if (c.role !== UserRole.CLIENT && c.role !== UserRole.CUSTOMER) {
+        throw new BadRequestException('Selected user is not a client or customer');
+      }
+      if (!c.active) throw new BadRequestException('Selected client is inactive');
+      resolvedClientId = c.id;
+      derivedName = customerName ?? c.fullName;
+      derivedPhone = customerPhone ?? c.phone;
+    } else if (dto.leadId) {
+      const l = await this.prisma.lead.findUnique({
+        where: { id: dto.leadId },
+        select: { id: true, clientId: true, fullName: true, phone: true },
+      });
+      if (!l) throw new BadRequestException('Lead not found');
+      resolvedLeadId = l.id;
+      derivedName = customerName ?? l.fullName;
+      derivedPhone = customerPhone ?? l.phone;
+    }
+
+    const project = await this.prisma.project.findUnique({
+      where: { id: dto.projectId },
+      select: { id: true },
+    });
+    if (!project) throw new BadRequestException('Project not found');
+
+    if (dto.unitId) {
+      const unit = await this.prisma.unit.findUnique({
+        where: { id: dto.unitId },
+        select: { id: true, building: { select: { phase: { select: { projectId: true } } } } },
+      });
+      if (!unit) throw new BadRequestException('Unit not found');
+      if (unit.building.phase.projectId !== dto.projectId) {
+        throw new BadRequestException('الوحدة لا تنتمي إلى المشروع المختار');
+      }
+    }
+
+    const scheduledAt = new Date(dto.scheduledAt);
+    if (Number.isNaN(scheduledAt.getTime())) {
+      throw new BadRequestException('Invalid scheduled date');
+    }
+    const isPast = scheduledAt < new Date();
+    if (isPast && user.role !== UserRole.ADMIN) {
+      throw new BadRequestException('لا يمكن جدولة زيارة في الماضي');
+    }
+    if (isPast && dto.status !== AppointmentStatus.COMPLETED) {
+      throw new BadRequestException(
+        'الزيارة في تاريخ ماضٍ يجب حفظها كمنفّذة (COMPLETED)',
+      );
+    }
+
+    let effectiveSalesId: string | null = null;
+    if (user.role === UserRole.SALES) {
+      effectiveSalesId = user.sub;
+    } else if (dto.assignedSalesId) {
+      const s = await this.prisma.user.findUnique({
+        where: { id: dto.assignedSalesId },
+        select: { id: true, role: true, active: true, fullName: true },
+      });
+      if (!s) throw new BadRequestException('Sales person not found');
+      if (s.role !== UserRole.SALES) {
+        throw new BadRequestException('Selected user is not a sales person');
+      }
+      if (!s.active) throw new BadRequestException('Selected sales person is inactive');
+      effectiveSalesId = s.id;
+    }
+
+    const initialStatus =
+      dto.status === AppointmentStatus.COMPLETED
+        ? AppointmentStatus.COMPLETED
+        : AppointmentStatus.SCHEDULED;
+
+    return this.withUniqueRetry(async () => {
+      const visitNumber = await this.nextVisitNumber();
+      const requestNumber = await this.nextRequestNumber();
+
+      return this.prisma.$transaction(async (tx) => {
+        const visitRequest = await tx.visitRequest.create({
+          data: {
+            requestNumber,
+            projectId: dto.projectId,
+            unitId: dto.unitId ?? null,
+            leadId: resolvedLeadId,
+            userId: resolvedClientId,
+            customerName: derivedName,
+            customerPhone: derivedPhone,
+            preferredDate: scheduledAt,
+            source: VisitRequestSource.SALES,
+            requestStatus: VisitRequestStatus.CONVERTED,
+            convertedAt: new Date(),
+            assignedSalesId: effectiveSalesId,
+          },
+        });
+
+        const appointment = await tx.visitAppointment.create({
+          data: {
+            visitNumber,
+            visitRequestId: visitRequest.id,
+            leadId: resolvedLeadId,
+            clientId: resolvedClientId,
+            projectId: dto.projectId,
+            unitId: dto.unitId ?? null,
+            assignedSalesId: effectiveSalesId,
+            scheduledAt,
+            durationMinutes: dto.durationMinutes ?? null,
+            location: dto.location ?? null,
+            meetingPoint: dto.meetingPoint ?? null,
+            salesNotes: dto.salesNotes ?? null,
+            status: initialStatus,
+            completedAt:
+              initialStatus === AppointmentStatus.COMPLETED ? scheduledAt : null,
+            createdById: user.sub,
+            updatedById: user.sub,
+          },
+          include: APPOINTMENT_INCLUDE,
+        });
+
+      await tx.visitActivity.create({
+        data: {
+          visitRequestId: visitRequest.id,
+          visitId: appointment.id,
+          leadId: resolvedLeadId,
+          actorId: user.sub,
+          actorRole: user.role,
+          type:
+            initialStatus === AppointmentStatus.COMPLETED
+              ? VisitActivityType.VISIT_COMPLETED
+              : VisitActivityType.VISIT_SCHEDULED,
+          newValue: {
+            visitNumber,
+            scheduledAt: scheduledAt.toISOString(),
+            status: initialStatus,
+          },
+        },
+      });
+
+      if (resolvedLeadId) {
+        await tx.lead.updateMany({
+          where: {
+            id: resolvedLeadId,
+            stage: { in: [LeadStage.NEW, LeadStage.INTERESTED] },
+          },
+          data: { stage: LeadStage.VISIT },
+        });
+
+        await tx.leadActivity.create({
+          data: {
+            leadId: resolvedLeadId,
+            type: 'visit',
+            payload: {
+              visitId: appointment.id,
+              visitNumber,
+              status: initialStatus,
+              scheduledAt: scheduledAt.toISOString(),
+            },
+          },
+        });
+      }
+
+        return appointment;
+      });
+    });
+  }
+
+  private async withUniqueRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
+    let lastError: unknown;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (e) {
+        const isUniqueConflict =
+          e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002';
+        if (!isUniqueConflict) throw e;
+        lastError = e;
+      }
+    }
+    throw lastError;
+  }
+
+  private async nextRequestNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const count = await this.prisma.visitRequest.count();
+    return `VR-${year}-${String(count + 1).padStart(4, '0')}`;
   }
 
   // ─── Appointments ─────────────────────────────────────────────────────────

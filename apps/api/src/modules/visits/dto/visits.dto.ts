@@ -76,3 +76,19 @@ export class UpdateAppointmentStatusDto {
 export class AssignSalesDto {
   @IsUUID() assignedSalesId!: string;
 }
+
+export class CreateDirectAppointmentDto {
+  @IsOptional() @IsUUID() leadId?: string;
+  @IsOptional() @IsUUID() clientId?: string;
+  @IsUUID() projectId!: string;
+  @IsOptional() @IsUUID() unitId?: string;
+  @IsOptional() @IsUUID() assignedSalesId?: string;
+  @IsDateString() scheduledAt!: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(15) durationMinutes?: number;
+  @IsOptional() @IsString() location?: string;
+  @IsOptional() @IsString() meetingPoint?: string;
+  @IsOptional() @IsString() salesNotes?: string;
+  @IsOptional() @IsString() customerName?: string;
+  @IsOptional() @IsString() customerPhone?: string;
+  @IsOptional() @IsEnum(AppointmentStatus) status?: AppointmentStatus;
+}
