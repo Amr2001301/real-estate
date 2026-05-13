@@ -31,6 +31,7 @@ export class ListAppointmentsDto {
   @IsOptional() @IsUUID() assignedSalesId?: string;
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() leadId?: string;
+  @IsOptional() @IsUUID() clientId?: string;
   @IsOptional() @IsDateString() scheduledFrom?: string;
   @IsOptional() @IsDateString() scheduledTo?: string;
   @IsOptional() @IsString() today?: string;

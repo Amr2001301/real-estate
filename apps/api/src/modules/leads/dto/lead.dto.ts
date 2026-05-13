@@ -19,6 +19,7 @@ export class CreateLeadDto {
   @IsOptional() @IsEmail() email?: string;
   @IsOptional() @IsUUID() sourceId?: string;
   @IsOptional() @IsUUID() projectInterestId?: string;
+  @IsOptional() @IsUUID() unitInterestId?: string;
   @IsOptional() @IsUUID() assignedSalesId?: string;
   @IsOptional() @IsString() notes?: string;
 }
@@ -29,6 +30,7 @@ export class UpdateLeadDto {
   @IsOptional() @IsEmail() email?: string;
   @IsOptional() @IsUUID() sourceId?: string;
   @IsOptional() @IsUUID() projectInterestId?: string;
+  @IsOptional() @IsUUID() unitInterestId?: string;
   @IsOptional() @IsUUID() assignedSalesId?: string;
 }
 

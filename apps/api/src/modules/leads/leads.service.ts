@@ -58,6 +58,7 @@ export class LeadsService {
           email: client.email ?? dto.email ?? null,
           sourceId: dto.sourceId ?? null,
           projectInterestId: dto.projectInterestId ?? null,
+          unitInterestId: dto.unitInterestId ?? null,
           assignedSalesId: dto.assignedSalesId ?? null,
         },
       });
@@ -202,7 +203,7 @@ export class LeadsService {
         orderBy: { createdAt: 'desc' },
         include: {
           client: {
-            select: { id: true, fullName: true, phone: true, email: true, role: true },
+            select: { id: true, fullName: true, phone: true, email: true, role: true, passwordHash: true, createdAt: true },
           },
           source: true,
           assignedSales: { select: { id: true, fullName: true } },
@@ -221,10 +222,23 @@ export class LeadsService {
       this.prisma.lead.count({ where }),
     ]);
 
-    const data = raw.map(({ appointments, ...lead }) => ({
-      ...lead,
-      upcomingVisit: appointments[0] ?? null,
-    }));
+    const data = raw.map(({ appointments, ...lead }) => {
+      const c = lead.client;
+      return {
+        ...lead,
+        client: c
+          ? {
+              ...c,
+              hasAccount:
+                !!c.passwordHash ||
+                (c.createdAt != null && new Date(c.createdAt).getTime() < new Date(lead.createdAt).getTime() - 5_000),
+              passwordHash: undefined,
+              createdAt: undefined,
+            }
+          : c,
+        upcomingVisit: appointments[0] ?? null,
+      };
+    });
     return paginate(data, total, { page, pageSize });
   }
 
@@ -242,6 +256,7 @@ export class LeadsService {
             locale: true,
             active: true,
             createdAt: true,
+            passwordHash: true,
           },
         },
         source: true,
@@ -255,6 +270,14 @@ export class LeadsService {
       },
     });
     if (!lead) throw new NotFoundException('Lead not found');
+    if (lead.client) {
+      const { passwordHash, createdAt: clientCreatedAt, ...clientRest } = lead.client;
+      const hasAccount =
+        !!passwordHash ||
+        (clientCreatedAt != null &&
+          new Date(clientCreatedAt).getTime() < new Date(lead.createdAt).getTime() - 5_000);
+      return { ...lead, client: { ...clientRest, hasAccount } };
+    }
     return lead;
   }
 

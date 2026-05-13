@@ -28,6 +28,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 
 class CreateReservationDto {
   @IsUUID() unitId!: string;
@@ -111,11 +112,15 @@ class ReservationsService {
       effectiveSalesId = dto.salesId;
     }
 
+    // XOR ownership: a reservation belongs to EITHER a lead OR a client, never both.
     let resolvedClientId: string | null = null;
+    let clientFullName = '';
+    let clientPhone: string | null = null;
+    let clientEmail: string | null = null;
     if (dto.clientId) {
       const clientUser = await this.prisma.user.findUnique({
         where: { id: dto.clientId },
-        select: { id: true, role: true, active: true },
+        select: { id: true, role: true, active: true, fullName: true, phone: true, email: true },
       });
       if (!clientUser) {
         throw new BadRequestException('Client not found');
@@ -127,18 +132,24 @@ class ReservationsService {
         throw new BadRequestException('Selected client is inactive');
       }
       resolvedClientId = clientUser.id;
+      clientFullName = clientUser.fullName;
+      clientPhone = clientUser.phone;
+      clientEmail = clientUser.email;
     } else if (dto.leadId) {
       const lead = await this.prisma.lead.findUnique({
         where: { id: dto.leadId },
-        select: { id: true, clientId: true },
+        select: { id: true },
       });
       if (!lead) {
         throw new BadRequestException('Lead not found');
       }
-      resolvedClientId = lead.clientId ?? null;
+      // resolvedClientId stays null — lead-path reservations never carry a clientId
     }
 
-    const unit = await this.prisma.unit.findUnique({ where: { id: dto.unitId } });
+    const unit = await this.prisma.unit.findUnique({
+      where: { id: dto.unitId },
+      include: { building: { include: { phase: { select: { projectId: true } } } } },
+    });
     if (!unit) throw new NotFoundException('Unit not found');
     if (unit.status !== UnitStatus.AVAILABLE) {
       throw new ConflictException('Unit is not available');
@@ -180,6 +191,8 @@ class ReservationsService {
         },
       });
 
+      const bumpableStages: LeadStage[] = [LeadStage.NEW, LeadStage.INTERESTED, LeadStage.VISIT];
+
       if (dto.leadId) {
         await tx.leadActivity.create({
           data: {
@@ -199,11 +212,6 @@ class ReservationsService {
           where: { id: dto.leadId },
           select: { stage: true },
         });
-        const bumpableStages: LeadStage[] = [
-          LeadStage.NEW,
-          LeadStage.INTERESTED,
-          LeadStage.VISIT,
-        ];
         if (previousStage && bumpableStages.includes(previousStage.stage)) {
           await tx.lead.update({
             where: { id: dto.leadId },
@@ -221,6 +229,31 @@ class ReservationsService {
             },
           });
         }
+      } else if (resolvedClientId) {
+        const { leadId: targetLeadId } = await matchOrCreateLeadForClient(tx, {
+          clientId: resolvedClientId,
+          projectId: unit.building.phase.projectId,
+          unitId: dto.unitId,
+          bumpableStages,
+          targetStage: LeadStage.NEGOTIATION,
+          clientFullName,
+          clientPhone: clientPhone ?? '',
+          clientEmail,
+          assignedSalesId: effectiveSalesId,
+        });
+        await tx.leadActivity.create({
+          data: {
+            leadId: targetLeadId,
+            type: 'reservation',
+            payload: {
+              status: 'CREATED',
+              reservationId: reservation.id,
+              reservationNumber: reservation.reservationNumber,
+              unitId: unit.id,
+              unitCode: unit.code,
+            },
+          },
+        });
       }
 
       return reservation;

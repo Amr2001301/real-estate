@@ -15,6 +15,7 @@ import {
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
@@ -236,12 +237,14 @@ export class VisitsService {
     const visitNumber = await this.nextVisitNumber();
 
     return this.prisma.$transaction(async (tx) => {
+      // XOR ownership: if the request is lead-linked, the appointment carries leadId only.
+      // If portal-submitted (userId), it carries clientId only.
       const appointment = await tx.visitAppointment.create({
         data: {
           visitNumber,
           visitRequestId: requestId,
           leadId: req.leadId ?? null,
-          clientId: req.userId ?? null,
+          clientId: req.leadId ? null : (req.userId ?? null),
           projectId: dto.projectId ?? req.projectId,
           unitId: dto.unitId ?? req.unitId ?? null,
           assignedSalesId: dto.assignedSalesId ?? null,
@@ -327,13 +330,16 @@ export class VisitsService {
 
     let resolvedLeadId: string | null = null;
     let resolvedClientId: string | null = null;
+    let clientFullName = '';
+    let clientPhone: string | null = null;
+    let clientEmail: string | null = null;
     let derivedName = customerName;
     let derivedPhone = customerPhone;
 
     if (dto.clientId) {
       const c = await this.prisma.user.findUnique({
         where: { id: dto.clientId },
-        select: { id: true, role: true, active: true, fullName: true, phone: true },
+        select: { id: true, role: true, active: true, fullName: true, phone: true, email: true },
       });
       if (!c) throw new BadRequestException('Client not found');
       if (c.role !== UserRole.CLIENT && c.role !== UserRole.CUSTOMER) {
@@ -341,6 +347,9 @@ export class VisitsService {
       }
       if (!c.active) throw new BadRequestException('Selected client is inactive');
       resolvedClientId = c.id;
+      clientFullName = c.fullName;
+      clientPhone = c.phone;
+      clientEmail = c.email ?? null;
       derivedName = customerName ?? c.fullName;
       derivedPhone = customerPhone ?? c.phone;
     } else if (dto.leadId) {
@@ -491,6 +500,30 @@ export class VisitsService {
             },
           },
         });
+      } else if (resolvedClientId) {
+        const { leadId: targetLeadId } = await matchOrCreateLeadForClient(tx, {
+          clientId: resolvedClientId,
+          projectId: dto.projectId,
+          unitId: dto.unitId ?? null,
+          bumpableStages: [LeadStage.NEW, LeadStage.INTERESTED],
+          targetStage: LeadStage.VISIT,
+          clientFullName,
+          clientPhone: clientPhone ?? '',
+          clientEmail,
+          assignedSalesId: effectiveSalesId,
+        });
+        await tx.leadActivity.create({
+          data: {
+            leadId: targetLeadId,
+            type: 'visit',
+            payload: {
+              visitId: appointment.id,
+              visitNumber,
+              status: initialStatus,
+              scheduledAt: scheduledAt.toISOString(),
+            },
+          },
+        });
       }
 
         return appointment;
@@ -535,6 +568,7 @@ export class VisitsService {
       ...(dto.projectId ? { projectId: dto.projectId } : {}),
       ...(dto.assignedSalesId ? { assignedSalesId: dto.assignedSalesId } : {}),
       ...(dto.leadId ? { leadId: dto.leadId } : {}),
+      ...(dto.clientId ? { clientId: dto.clientId } : {}),
       ...(dto.today
         ? { scheduledAt: { gte: todayStart, lt: todayEnd } }
         : dto.scheduledFrom || dto.scheduledTo

@@ -239,6 +239,7 @@ model Unit {
   favorites     Favorite[]
   maintenanceRequests MaintenanceRequest[]
   appointments  VisitAppointment[]
+  leadsInterested Lead[] @relation("LeadUnitInterest")
 
   @@unique([buildingId, code])
   @@index([status])
@@ -306,6 +307,8 @@ model Lead {
   source            LeadSource? @relation(fields: [sourceId], references: [id])
   projectInterestId String?    @db.Uuid
   projectInterest   Project?   @relation(fields: [projectInterestId], references: [id])
+  unitInterestId    String?    @db.Uuid
+  unitInterest      Unit?      @relation("LeadUnitInterest", fields: [unitInterestId], references: [id])
   assignedSalesId   String?    @db.Uuid
   assignedSales     User?      @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
   stage             LeadStage  @default(NEW)
@@ -324,6 +327,7 @@ model Lead {
   @@index([assignedSalesId])
   @@index([stage])
   @@index([phone])
+  @@index([unitInterestId])
 }
 
 model LeadNote {
