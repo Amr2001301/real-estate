@@ -33,10 +33,10 @@ interface SalesUser {
 export default async function VisitsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; status?: string; q?: string }>;
+  searchParams: Promise<{ tab?: string; status?: string; q?: string; clientId?: string }>;
 }) {
   const sp = await searchParams;
-  const tab: Tab = (sp.tab as Tab) ?? 'requests';
+  const tab: Tab = (sp.tab as Tab) ?? (sp.clientId ? 'appointments' : 'requests');
 
   const [statsRes, salesRes] = await Promise.all([
     safe(api.get<Stats>('/visits/stats')),
@@ -60,13 +60,18 @@ export default async function VisitsPage({
     requestsData = r.data?.data ?? [];
   } else if (tab === 'appointments') {
     const qs = new URLSearchParams({ pageSize: '50' });
-    qs.set('status', 'SCHEDULED');
+    if (sp.clientId) { qs.set('clientId', sp.clientId); } else { qs.set('status', 'SCHEDULED'); }
     if (sp.q) qs.set('q', sp.q);
     const r1 = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs}`));
-    const qs2 = new URLSearchParams({ pageSize: '50', status: 'CONFIRMED' });
-    const r2 = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs2}`));
-    appointmentsData = [...(r1.data?.data ?? []), ...(r2.data?.data ?? [])];
-    fetchError = r1.error ?? r2.error ?? null;
+    if (sp.clientId) {
+      appointmentsData = r1.data?.data ?? [];
+      fetchError = r1.error ?? null;
+    } else {
+      const qs2 = new URLSearchParams({ pageSize: '50', status: 'CONFIRMED' });
+      const r2 = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs2}`));
+      appointmentsData = [...(r1.data?.data ?? []), ...(r2.data?.data ?? [])];
+      fetchError = r1.error ?? r2.error ?? null;
+    }
   } else if (tab === 'today') {
     const qs = new URLSearchParams({ pageSize: '50', today: '1' });
     const r = await safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?${qs}`));

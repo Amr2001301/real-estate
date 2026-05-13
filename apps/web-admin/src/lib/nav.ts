@@ -48,7 +48,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/dashboard/projects', label: 'المشاريع', icon: Building2 },
       { href: '/dashboard/units', label: 'الوحدات', icon: Home },
-      { href: '/dashboard/leads', label: 'العملاء المحتملون (CRM)', icon: Users },
+      { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', icon: Users },
       { href: '/dashboard/clients', label: 'العملاء', icon: UserSquare2 },
       { href: '/dashboard/visits', label: 'الزيارات', icon: CalendarClock },
       { href: '/dashboard/reservations', label: 'الحجوزات', icon: BookmarkCheck },

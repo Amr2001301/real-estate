@@ -82,6 +82,14 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
         </span>
       </div>
 
+      {lead.client?.hasAccount && (
+        <div className="mb-2">
+          <span className="inline-flex items-center rounded-full bg-success-50 px-2 py-0.5 text-2xs font-semibold text-success-700 ring-1 ring-inset ring-success-200">
+            عميل مسجل
+          </span>
+        </div>
+      )}
+
       <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3 min-h-[18px]">
         <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
         <span className="truncate">

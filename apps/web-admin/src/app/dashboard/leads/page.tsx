@@ -48,7 +48,7 @@ export default async function LeadsPage({
                 </Link>
               </li>
               <li aria-hidden className="text-slate-300">⁄</li>
-              <li className="text-slate-700 font-medium">العملاء المحتملون</li>
+              <li className="text-slate-700 font-medium">فرص المبيعات</li>
             </ol>
           </nav>
           <p className="text-2xs font-bold uppercase tracking-[0.18em] text-brand-600 mb-1.5">
@@ -58,7 +58,7 @@ export default async function LeadsPage({
             مسار مبيعات العقارات
           </h1>
           <p className="mt-1.5 text-sm text-slate-500 max-w-2xl">
-            نظرة كاملة على دورة حياة العملاء المحتملين عبر مراحل البيع. اسحب البطاقات بين المراحل لتحديث الحالة فوراً.
+            نظرة كاملة على فرص المبيعات عبر مراحل البيع. اسحب البطاقات بين المراحل لتحديث الحالة فوراً.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0 flex-wrap">
@@ -69,7 +69,7 @@ export default async function LeadsPage({
               size="md"
               leftIcon={<Plus className="h-4 w-4" />}
             >
-              إضافة عميل جديد
+              إضافة فرصة جديدة
             </Button>
           </Link>
         </div>

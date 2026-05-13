@@ -109,6 +109,7 @@ export interface Lead {
     locale?: 'ar' | 'en';
     active?: boolean;
     createdAt?: string;
+    hasAccount?: boolean;
   } | null;
   /** Denormalized cache of client contact info; prefer `client.*` in new code. */
   fullName: string;

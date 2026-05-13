@@ -15,11 +15,12 @@ import {
   PowerOff,
   Briefcase,
   BookmarkCheck,
+  CalendarClock,
   Plus,
   UserCog,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { User, Lead, Paged, Reservation } from '@/lib/types';
+import type { User, Lead, Paged, Reservation, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
@@ -27,7 +28,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmButton } from '@/components/confirm-button';
-import { LeadStageBadge, ReservationStatusBadge } from '@/components/badges';
+import { LeadStageBadge, ReservationStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { cn } from '@/lib/cn';
 import { activateClientAction, deactivateClientAction } from '../actions';
 
@@ -98,12 +99,13 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [userRes, auditRes, leadsRes, reservationsRes, reservationActivitiesRes] = await Promise.all([
+  const [userRes, auditRes, leadsRes, reservationsRes, reservationActivitiesRes, visitsRes] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
     safe(api.get<AuditPaged>(`/audit-logs?entityId=${id}&pageSize=6`)),
     safe(api.get<Paged<Lead>>(`/leads?clientId=${id}&pageSize=20`)),
     safe(api.get<Paged<Reservation>>(`/reservations?clientId=${id}&pageSize=10`)),
     safe(api.get<ReservationActivityEntry[]>(`/reservations/activities?clientId=${id}&pageSize=8`)),
+    safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?clientId=${id}&pageSize=10`)),
   ]);
 
   if (userRes.error || !userRes.data) {
@@ -122,6 +124,7 @@ export default async function ClientDetailPage({
   const leads = leadsRes.data?.data ?? [];
   const reservations = reservationsRes.data?.data ?? [];
   const reservationActivities = reservationActivitiesRes.data ?? [];
+  const visits = visitsRes.data?.data ?? [];
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -387,6 +390,77 @@ export default async function ClientDetailPage({
                       </li>
                     );
                   })}
+                </ul>
+              )}
+            </div>
+          </Card>
+
+          {/* Visits */}
+          <Card className="p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <CalendarClock className="h-5 w-5 text-brand-600" />
+                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+                  الزيارات
+                </h2>
+                <span className="text-2xs font-semibold text-slate-400">
+                  {visits.length}
+                </span>
+              </div>
+              {visits.length > 0 && (
+                <Link
+                  href={`/dashboard/visits?clientId=${u.id}` as never}
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                >
+                  عرض كل الزيارات
+                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                </Link>
+              )}
+            </div>
+
+            <div className="mt-4">
+              {visits.length === 0 ? (
+                <EmptyState
+                  icon={<CalendarClock />}
+                  title="لا توجد زيارات لهذا العميل"
+                  description="ستظهر هنا أي زيارات مجدولة أو منفّذة."
+                />
+              ) : (
+                <ul className="flex flex-col divide-y divide-hairline -mx-2">
+                  {visits.map((v) => (
+                    <li key={v.id}>
+                      <Link
+                        href={`/dashboard/visits/appointments/${v.id}` as never}
+                        className="flex items-center gap-3 px-2 py-3 hover:bg-surface-muted/40 rounded-lg transition-colors"
+                      >
+                        <span className="font-mono text-2xs text-slate-400 shrink-0">
+                          {v.visitNumber}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {v.project ? tx(v.project.name) : '—'}
+                              {v.unit ? ` · وحدة ${v.unit.code}` : ''}
+                            </p>
+                            <AppointmentStatusBadge status={v.status} />
+                          </div>
+                          <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
+                            {v.assignedSales && (
+                              <>
+                                <span className="inline-flex items-center gap-1">
+                                  <UserCog className="h-3 w-3" />
+                                  {v.assignedSales.fullName}
+                                </span>
+                                <span className="text-slate-300">·</span>
+                              </>
+                            )}
+                            <span>{formatDateTime(v.scheduledAt)}</span>
+                          </p>
+                        </div>
+                        <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
+                      </Link>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
