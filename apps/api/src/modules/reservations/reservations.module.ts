@@ -549,6 +549,28 @@ class ReservationsService {
     });
   }
 
+  async listActivitiesForOwner(opts: { clientId?: string; leadId?: string; limit?: number }) {
+    return this.prisma.reservationActivity.findMany({
+      where: {
+        reservation: {
+          ...(opts.clientId ? { clientId: opts.clientId } : {}),
+          ...(opts.leadId ? { leadId: opts.leadId } : {}),
+        },
+      },
+      include: {
+        reservation: {
+          select: {
+            reservationNumber: true,
+            unit: { select: { code: true } },
+          },
+        },
+        actor: { select: { id: true, fullName: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: opts.limit ?? 10,
+    });
+  }
+
   async expireDue() {
     const due = await this.prisma.reservation.findMany({
       where: {
@@ -683,6 +705,16 @@ class ReservationsController {
       dateFrom,
       dateTo,
     });
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Get('activities')
+  listActivities(
+    @Query('clientId') clientId?: string,
+    @Query('leadId') leadId?: string,
+    @Query('pageSize') pageSize = 10,
+  ) {
+    return this.svc.listActivitiesForOwner({ clientId, leadId, limit: Number(pageSize) });
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)

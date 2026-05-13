@@ -47,6 +47,19 @@ interface AuditPaged {
   meta: { page: number; pageSize: number; total: number };
 }
 
+interface ReservationActivityEntry {
+  id: string;
+  type: string;
+  note: string | null;
+  actorId: string | null;
+  actor?: { id: string; fullName: string } | null;
+  createdAt: string;
+  reservation: {
+    reservationNumber: string;
+    unit: { code: string } | null;
+  } | null;
+}
+
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
@@ -85,11 +98,12 @@ export default async function ClientDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [userRes, auditRes, leadsRes, reservationsRes] = await Promise.all([
+  const [userRes, auditRes, leadsRes, reservationsRes, reservationActivitiesRes] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
     safe(api.get<AuditPaged>(`/audit-logs?entityId=${id}&pageSize=6`)),
     safe(api.get<Paged<Lead>>(`/leads?clientId=${id}&pageSize=20`)),
     safe(api.get<Paged<Reservation>>(`/reservations?clientId=${id}&pageSize=10`)),
+    safe(api.get<ReservationActivityEntry[]>(`/reservations/activities?clientId=${id}&pageSize=8`)),
   ]);
 
   if (userRes.error || !userRes.data) {
@@ -107,6 +121,7 @@ export default async function ClientDetailPage({
   const recentActivity = auditRes.data?.data ?? [];
   const leads = leadsRes.data?.data ?? [];
   const reservations = reservationsRes.data?.data ?? [];
+  const reservationActivities = reservationActivitiesRes.data ?? [];
 
   return (
     <div className="space-y-6 lg:space-y-8">
@@ -396,7 +411,7 @@ export default async function ClientDetailPage({
             </div>
 
             <div className="mt-4">
-              {recentActivity.length === 0 ? (
+              {recentActivity.length === 0 && reservationActivities.length === 0 ? (
                 <EmptyState
                   icon={<Activity />}
                   title="لا يوجد نشاط بعد"
@@ -404,6 +419,9 @@ export default async function ClientDetailPage({
                 />
               ) : (
                 <ol className="relative ms-4 border-s-2 border-hairline ps-6 space-y-5">
+                  {reservationActivities.map((a) => (
+                    <ReservationActivityItem key={a.id} entry={a} />
+                  ))}
                   {recentActivity.map((a) => (
                     <ActivityItem key={a.id} entry={a} />
                   ))}
@@ -572,6 +590,71 @@ function ContactCell({
     );
   }
   return <div className={className}>{inner}</div>;
+}
+
+const RESERVATION_ACTIVITY_LABEL: Record<string, string> = {
+  CREATED: 'تم إنشاء الحجز',
+  APPROVED: 'تمت الموافقة على الحجز',
+  REJECTED: 'تم رفض الحجز',
+  CANCELLED: 'تم إلغاء الحجز',
+  EXPIRED: 'انتهت صلاحية الحجز',
+  NOTE_ADDED: 'تمت إضافة ملاحظة على الحجز',
+};
+
+const RESERVATION_ACTIVITY_TONE: Record<string, 'success' | 'danger' | 'warning' | 'brand'> = {
+  CREATED: 'brand',
+  APPROVED: 'success',
+  REJECTED: 'danger',
+  CANCELLED: 'danger',
+  EXPIRED: 'warning',
+  NOTE_ADDED: 'brand',
+};
+
+function ReservationActivityItem({ entry }: { entry: ReservationActivityEntry }) {
+  const tone = RESERVATION_ACTIVITY_TONE[entry.type] ?? 'brand';
+  const dotClass = {
+    success: 'bg-success-100 text-success-700 ring-success-200',
+    danger: 'bg-danger-100 text-danger-700 ring-danger-200',
+    warning: 'bg-warning-100 text-warning-700 ring-warning-200',
+    brand: 'bg-brand-100 text-brand-700 ring-brand-200',
+  }[tone];
+  const label = RESERVATION_ACTIVITY_LABEL[entry.type] ?? entry.type;
+  const unitCode = entry.reservation?.unit?.code;
+  const reservationNumber = entry.reservation?.reservationNumber;
+  return (
+    <li className="relative">
+      <span
+        className={cn(
+          'absolute -start-[33px] top-1 inline-flex h-7 w-7 items-center justify-center rounded-full ring-2',
+          dotClass,
+        )}
+      >
+        <BookmarkCheck className="h-3.5 w-3.5" />
+      </span>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm text-slate-900">
+            <span className="font-semibold">{label}</span>
+            {unitCode && (
+              <span className="font-mono text-xs text-slate-500"> — وحدة {unitCode}</span>
+            )}
+            {reservationNumber && (
+              <span className="font-mono text-xs text-slate-400"> ({reservationNumber})</span>
+            )}
+          </p>
+          <p className="mt-1 text-2xs text-slate-500">
+            بواسطة{' '}
+            <span className="font-medium text-slate-700">
+              {entry.actor?.fullName ?? '— نظام —'}
+            </span>
+          </p>
+        </div>
+        <time className="shrink-0 text-2xs text-slate-500 tabular-nums">
+          {formatDateTime(entry.createdAt)}
+        </time>
+      </div>
+    </li>
+  );
 }
 
 function ActivityItem({ entry }: { entry: AuditLog }) {
