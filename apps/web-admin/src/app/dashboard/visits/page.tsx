@@ -1,5 +1,6 @@
 import Link from 'next/link';
-import { CalendarClock, CalendarCheck, CalendarDays, Clock, AlertCircle } from 'lucide-react';
+import { CalendarClock, CalendarCheck, CalendarDays, Clock, AlertCircle, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { api, safe } from '@/lib/api';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
@@ -97,6 +98,13 @@ export default async function VisitsPage({
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الزيارات' },
         ]}
+        actions={
+          <Link href="/dashboard/visits/new">
+            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+              زيارة جديدة
+            </Button>
+          </Link>
+        }
       />
 
       {/* KPI cards */}
@@ -253,10 +261,10 @@ export default async function VisitsPage({
               cell: (a) => (
                 <div>
                   <p className="font-medium text-slate-900">
-                    {a.client?.fullName ?? a.lead?.fullName ?? '—'}
+                    {a.client?.fullName ?? a.lead?.fullName ?? a.visitRequest?.customerName ?? '—'}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {a.client?.phone ?? a.lead?.phone ?? ''}
+                    {a.client?.phone ?? a.lead?.phone ?? a.visitRequest?.customerPhone ?? ''}
                   </p>
                 </div>
               ),

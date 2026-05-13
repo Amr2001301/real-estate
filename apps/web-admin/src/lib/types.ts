@@ -212,7 +212,7 @@ export interface VisitAppointment {
   id: string;
   visitNumber: string;
   visitRequestId: string | null;
-  visitRequest?: { id: string; requestNumber: string | null; customerName: string | null; requestStatus: VisitRequestStatus | null } | null;
+  visitRequest?: { id: string; requestNumber: string | null; customerName: string | null; customerPhone: string | null; requestStatus: VisitRequestStatus | null } | null;
   leadId: string | null;
   lead?: { id: string; fullName: string; phone: string; stage: string } | null;
   clientId: string | null;

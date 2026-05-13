@@ -1,7 +1,70 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+
+export interface VisitFormState {
+  error?: string;
+}
+
+export async function createVisitAction(
+  _prev: VisitFormState,
+  formData: FormData,
+): Promise<VisitFormState> {
+  const ownerType = String(formData.get('ownerType') ?? '').trim();
+  const rawLeadId = String(formData.get('leadId') ?? '').trim() || undefined;
+  const rawClientId = String(formData.get('clientId') ?? '').trim() || undefined;
+  const projectId = String(formData.get('projectId') ?? '').trim();
+  const unitId = String(formData.get('unitId') ?? '').trim() || undefined;
+  const assignedSalesId = String(formData.get('assignedSalesId') ?? '').trim() || undefined;
+  const scheduledAt = String(formData.get('scheduledAt') ?? '').trim();
+  const durationRaw = String(formData.get('durationMinutes') ?? '').trim();
+  const durationMinutes = durationRaw ? Number(durationRaw) : undefined;
+  const location = String(formData.get('location') ?? '').trim() || undefined;
+  const meetingPoint = String(formData.get('meetingPoint') ?? '').trim() || undefined;
+  const salesNotes = String(formData.get('salesNotes') ?? '').trim() || undefined;
+  const customerName = String(formData.get('customerName') ?? '').trim() || undefined;
+  const customerPhone = String(formData.get('customerPhone') ?? '').trim() || undefined;
+  const status = String(formData.get('status') ?? '').trim() || undefined;
+
+  const leadId = ownerType === 'lead' ? rawLeadId : undefined;
+  const clientId = ownerType === 'client' ? rawClientId : undefined;
+
+  if (!projectId) return { error: 'يجب اختيار المشروع' };
+  if (!scheduledAt) return { error: 'يجب تحديد تاريخ ووقت الزيارة' };
+
+  if (ownerType === 'lead' && !leadId) return { error: 'يجب اختيار العميل المحتمل' };
+  if (ownerType === 'client' && !clientId) return { error: 'يجب اختيار العميل المسجل' };
+  if (ownerType === 'walkin' && (!customerName || !customerPhone)) {
+    return { error: 'يجب إدخال اسم العميل ورقم الهاتف للزيارة بدون حساب' };
+  }
+
+  let createdId: string | null = null;
+  try {
+    const res = await api.post<{ id: string }>('/visits/appointments', {
+      ...(leadId ? { leadId } : {}),
+      ...(clientId ? { clientId } : {}),
+      projectId,
+      unitId,
+      assignedSalesId,
+      scheduledAt: new Date(scheduledAt).toISOString(),
+      durationMinutes,
+      location,
+      meetingPoint,
+      salesNotes,
+      customerName,
+      customerPhone,
+      ...(status ? { status } : {}),
+    });
+    createdId = res.id;
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+
+  revalidatePath('/dashboard/visits');
+  redirect(`/dashboard/visits/appointments/${createdId}`);
+}
 
 export async function updateRequestStatusAction(requestId: string, formData: FormData) {
   const status = String(formData.get('status'));

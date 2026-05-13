@@ -39,8 +39,8 @@ export default async function AppointmentDetailPage({
   const appt = apptRes.data;
   const salesOptions = salesRes.data?.data ?? [];
   const activities = appt.visitActivities ?? [];
-  const customerName = appt.client?.fullName ?? appt.lead?.fullName ?? '—';
-  const customerPhone = appt.client?.phone ?? appt.lead?.phone ?? null;
+  const customerName = appt.client?.fullName ?? appt.lead?.fullName ?? appt.visitRequest?.customerName ?? '—';
+  const customerPhone = appt.client?.phone ?? appt.lead?.phone ?? appt.visitRequest?.customerPhone ?? null;
   const customerEmail = appt.client?.email ?? null;
 
   return (
