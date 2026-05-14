@@ -39,35 +39,36 @@ model User {
   updatedAt    DateTime  @updatedAt
   lastLoginAt  DateTime?
 
-  refreshTokens     RefreshToken[]
-  rolePermissions   UserPermission[]
-  deviceTokens      DeviceToken[]
-  notifications     Notification[]
-  favorites         Favorite[]
-  visitRequests     VisitRequest[]      @relation("VisitRequestUser")
-  infoRequests      InfoRequest[]       @relation("InfoRequestUser")
-  assignedLeads     Lead[]              @relation("LeadAssignedSales")
-  leads             Lead[]              @relation("LeadClient")
-  leadNotes         LeadNote[]
-  reservations      Reservation[]       @relation("ReservationSales")
-  reservationClients Reservation[]      @relation("ReservationClient")
-  reservationNotes  ReservationNote[]   @relation("ReservationNoteAuthor")
-  reservationActivities ReservationActivity[] @relation("ReservationActivityActor")
-  customerContracts Contract[]          @relation("ContractCustomer")
-  bonusEntries      BonusEntry[]
-  salesTargets      SalesTarget[]
-  maintenanceReqs   MaintenanceRequest[] @relation("MaintenanceCustomer")
-  maintenanceAssigned MaintenanceRequest[] @relation("MaintenanceAdmin")
-  recordedDeposits  Deposit[]            @relation("DepositRecordedBy")
-  auditLogs         AuditLog[]
-  unitStatusChanges UnitStatusHistory[]
-  visitsScheduledForSales  VisitRequest[]    @relation("VisitRequestSales")
-  assignedAppointments     VisitAppointment[] @relation("AppointmentSales")
-  createdAppointments      VisitAppointment[] @relation("AppointmentCreator")
-  updatedAppointments      VisitAppointment[] @relation("AppointmentUpdater")
-  clientAppointments       VisitAppointment[] @relation("AppointmentClient")
-  actedVisitActivities     VisitActivity[]    @relation("VisitActivityActor")
-  clientVisitActivities    VisitActivity[]    @relation("VisitActivityClient")
+  refreshTokens           RefreshToken[]
+  rolePermissions         UserPermission[]
+  deviceTokens            DeviceToken[]
+  notifications           Notification[]
+  favorites               Favorite[]
+  visitRequests           VisitRequest[]            @relation("VisitRequestUser")
+  infoRequests            InfoRequest[]             @relation("InfoRequestUser")
+  assignedLeads           Lead[]                    @relation("LeadAssignedSales")
+  leads                   Lead[]                    @relation("LeadClient")
+  leadNotes               LeadNote[]
+  reservations            Reservation[]             @relation("ReservationSales")
+  reservationClients      Reservation[]             @relation("ReservationClient")
+  reservationNotes        ReservationNote[]         @relation("ReservationNoteAuthor")
+  reservationActivities   ReservationActivity[]     @relation("ReservationActivityActor")
+  customerContracts       Contract[]                @relation("ContractCustomer")
+  bonusEntries            BonusEntry[]
+  salesTargets            SalesTarget[]
+  maintenanceReqs         MaintenanceRequest[]      @relation("MaintenanceCustomer")
+  maintenanceAssigned     MaintenanceRequest[]      @relation("MaintenanceAdmin")
+  recordedDeposits        Deposit[]                 @relation("DepositRecordedBy")
+  auditLogs               AuditLog[]
+  unitStatusChanges       UnitStatusHistory[]
+  visitsScheduledForSales VisitRequest[]            @relation("VisitRequestSales")
+  assignedAppointments    VisitAppointment[]        @relation("AppointmentSales")
+  createdAppointments     VisitAppointment[]        @relation("AppointmentCreator")
+  updatedAppointments     VisitAppointment[]        @relation("AppointmentUpdater")
+  clientAppointments      VisitAppointment[]        @relation("AppointmentClient")
+  actedVisitActivities    VisitActivity[]           @relation("VisitActivityActor")
+  clientVisitActivities   VisitActivity[]           @relation("VisitActivityClient")
+  planTemplatesCreated    InstallmentPlanTemplate[] @relation("PlanTemplateCreator")
 
   @@index([role])
   @@index([phone])
@@ -75,16 +76,16 @@ model User {
 }
 
 model RefreshToken {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @db.Uuid
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String    @unique
-  deviceId   String?
-  userAgent  String?
-  ipAddress  String?
-  expiresAt  DateTime
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  deviceId  String?
+  userAgent String?
+  ipAddress String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
 
   @@index([userId])
 }
@@ -153,17 +154,17 @@ enum MediaType {
 }
 
 model Project {
-  id          String         @id @default(uuid()) @db.Uuid
+  id          String        @id @default(uuid()) @db.Uuid
   name        Json // Translatable { ar, en }
   description Json
   city        String
   lat         Float
   lng         Float
-  status      ProjectStatus  @default(DRAFT)
-  featured    Boolean        @default(false)
-  services    Json           @default("[]") // Translatable[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  status      ProjectStatus @default(DRAFT)
+  featured    Boolean       @default(false)
+  services    Json          @default("[]") // Translatable[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   media         ProjectMedia[]
   phases        Phase[]
@@ -172,6 +173,7 @@ model Project {
   infoRequests  InfoRequest[]
   favorites     Favorite[]
   appointments  VisitAppointment[]
+  planTemplates InstallmentPlanTemplate[] @relation("ProjectPlanTemplates")
 
   @@index([city])
   @@index([status, featured])
@@ -215,31 +217,32 @@ model Building {
 }
 
 model Unit {
-  id                    String     @id @default(uuid()) @db.Uuid
-  buildingId            String     @db.Uuid
-  building              Building   @relation(fields: [buildingId], references: [id], onDelete: Cascade)
-  code                  String
-  type                  String // studio | 1BR | 2BR | villa | ...
-  area                  Float
-  bedrooms              Int        @default(0)
-  bathrooms             Int        @default(0)
-  floor                 Int        @default(0)
-  price                 Decimal    @db.Decimal(14, 2)
-  status                UnitStatus @default(AVAILABLE)
-  reservationExpiresAt  DateTime?
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @updatedAt
+  id                   String     @id @default(uuid()) @db.Uuid
+  buildingId           String     @db.Uuid
+  building             Building   @relation(fields: [buildingId], references: [id], onDelete: Cascade)
+  code                 String
+  type                 String // studio | 1BR | 2BR | villa | ...
+  area                 Float
+  bedrooms             Int        @default(0)
+  bathrooms            Int        @default(0)
+  floor                Int        @default(0)
+  price                Decimal    @db.Decimal(14, 2)
+  status               UnitStatus @default(AVAILABLE)
+  reservationExpiresAt DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
 
-  media         UnitMedia[]
-  history       UnitStatusHistory[]
-  reservations  Reservation[]
-  contracts     Contract[]
-  visitRequests VisitRequest[]
-  infoRequests  InfoRequest[]
-  favorites     Favorite[]
+  media               UnitMedia[]
+  history             UnitStatusHistory[]
+  reservations        Reservation[]
+  contracts           Contract[]
+  visitRequests       VisitRequest[]
+  infoRequests        InfoRequest[]
+  favorites           Favorite[]
   maintenanceRequests MaintenanceRequest[]
-  appointments  VisitAppointment[]
-  leadsInterested Lead[] @relation("LeadUnitInterest")
+  appointments        VisitAppointment[]
+  leadsInterested     Lead[]                    @relation("LeadUnitInterest")
+  planTemplates       InstallmentPlanTemplate[] @relation("UnitPlanTemplates")
 
   @@unique([buildingId, code])
   @@index([status])
@@ -294,34 +297,34 @@ model LeadSource {
 }
 
 model Lead {
-  id                String     @id @default(uuid()) @db.Uuid
+  id                String      @id @default(uuid()) @db.Uuid
   // Canonical contact lives on the linked Client (User). The denormalized
   // fullName/phone/email below are kept for safe backfill and as a cache for
   // legacy readers; new code should prefer `client.*`.
-  clientId          String     @db.Uuid
-  client            User       @relation("LeadClient", fields: [clientId], references: [id])
+  clientId          String      @db.Uuid
+  client            User        @relation("LeadClient", fields: [clientId], references: [id])
   fullName          String
   phone             String
   email             String?
-  sourceId          String?    @db.Uuid
+  sourceId          String?     @db.Uuid
   source            LeadSource? @relation(fields: [sourceId], references: [id])
-  projectInterestId String?    @db.Uuid
-  projectInterest   Project?   @relation(fields: [projectInterestId], references: [id])
-  unitInterestId    String?    @db.Uuid
-  unitInterest      Unit?      @relation("LeadUnitInterest", fields: [unitInterestId], references: [id])
-  assignedSalesId   String?    @db.Uuid
-  assignedSales     User?      @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
-  stage             LeadStage  @default(NEW)
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  projectInterestId String?     @db.Uuid
+  projectInterest   Project?    @relation(fields: [projectInterestId], references: [id])
+  unitInterestId    String?     @db.Uuid
+  unitInterest      Unit?       @relation("LeadUnitInterest", fields: [unitInterestId], references: [id])
+  assignedSalesId   String?     @db.Uuid
+  assignedSales     User?       @relation("LeadAssignedSales", fields: [assignedSalesId], references: [id])
+  stage             LeadStage   @default(NEW)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
 
-  notes             LeadNote[]
-  activities        LeadActivity[]
-  reservations      Reservation[]
-  visitRequests     VisitRequest[]
-  infoRequests      InfoRequest[]
-  appointments      VisitAppointment[]
-  visitActivities   VisitActivity[]
+  notes           LeadNote[]
+  activities      LeadActivity[]
+  reservations    Reservation[]
+  visitRequests   VisitRequest[]
+  infoRequests    InfoRequest[]
+  appointments    VisitAppointment[]
+  visitActivities VisitActivity[]
 
   @@index([clientId])
   @@index([assignedSalesId])
@@ -444,22 +447,22 @@ model VisitRequest {
   updatedAt       DateTime    @updatedAt
 
   // v2 fields — additive, all nullable, coexist with legacy columns above
-  requestNumber            String?            @unique
-  customerName             String?
-  customerPhone            String?
-  customerEmail            String?
-  preferredTime            String?
-  preferredContactMethod   String?
-  source                   VisitRequestSource?
-  requestNotes             String?
-  adminNotes               String?
-  requestStatus            VisitRequestStatus?
-  convertedAt              DateTime?
-  rejectedAt               DateTime?
-  cancelledAt              DateTime?
+  requestNumber          String?             @unique
+  customerName           String?
+  customerPhone          String?
+  customerEmail          String?
+  preferredTime          String?
+  preferredContactMethod String?
+  source                 VisitRequestSource?
+  requestNotes           String?
+  adminNotes             String?
+  requestStatus          VisitRequestStatus?
+  convertedAt            DateTime?
+  rejectedAt             DateTime?
+  cancelledAt            DateTime?
 
-  appointments             VisitAppointment[]
-  visitActivities          VisitActivity[]
+  appointments    VisitAppointment[]
+  visitActivities VisitActivity[]
 
   @@index([status])
   @@index([requestStatus])
@@ -468,40 +471,40 @@ model VisitRequest {
 }
 
 model VisitAppointment {
-  id              String            @id @default(uuid()) @db.Uuid
-  visitNumber     String            @unique
-  visitRequestId  String?           @db.Uuid
-  visitRequest    VisitRequest?     @relation(fields: [visitRequestId], references: [id])
-  leadId          String?           @db.Uuid
-  lead            Lead?             @relation(fields: [leadId], references: [id])
-  clientId        String?           @db.Uuid
-  client          User?             @relation("AppointmentClient", fields: [clientId], references: [id])
-  projectId       String?           @db.Uuid
-  project         Project?          @relation(fields: [projectId], references: [id])
-  unitId          String?           @db.Uuid
-  unit            Unit?             @relation(fields: [unitId], references: [id])
-  assignedSalesId String?           @db.Uuid
-  assignedSales   User?             @relation("AppointmentSales", fields: [assignedSalesId], references: [id])
-  scheduledAt     DateTime
-  durationMinutes Int?
-  location        String?
-  meetingPoint    String?
-  status          AppointmentStatus @default(SCHEDULED)
-  salesNotes      String?
-  customerFeedback String?
-  resultNotes     String?
+  id                 String            @id @default(uuid()) @db.Uuid
+  visitNumber        String            @unique
+  visitRequestId     String?           @db.Uuid
+  visitRequest       VisitRequest?     @relation(fields: [visitRequestId], references: [id])
+  leadId             String?           @db.Uuid
+  lead               Lead?             @relation(fields: [leadId], references: [id])
+  clientId           String?           @db.Uuid
+  client             User?             @relation("AppointmentClient", fields: [clientId], references: [id])
+  projectId          String?           @db.Uuid
+  project            Project?          @relation(fields: [projectId], references: [id])
+  unitId             String?           @db.Uuid
+  unit               Unit?             @relation(fields: [unitId], references: [id])
+  assignedSalesId    String?           @db.Uuid
+  assignedSales      User?             @relation("AppointmentSales", fields: [assignedSalesId], references: [id])
+  scheduledAt        DateTime
+  durationMinutes    Int?
+  location           String?
+  meetingPoint       String?
+  status             AppointmentStatus @default(SCHEDULED)
+  salesNotes         String?
+  customerFeedback   String?
+  resultNotes        String?
   cancellationReason String?
-  noShowReason    String?
-  createdById     String?           @db.Uuid
-  createdBy       User?             @relation("AppointmentCreator", fields: [createdById], references: [id])
-  updatedById     String?           @db.Uuid
-  updatedBy       User?             @relation("AppointmentUpdater", fields: [updatedById], references: [id])
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  confirmedAt     DateTime?
-  completedAt     DateTime?
-  cancelledAt     DateTime?
-  noShowAt        DateTime?
+  noShowReason       String?
+  createdById        String?           @db.Uuid
+  createdBy          User?             @relation("AppointmentCreator", fields: [createdById], references: [id])
+  updatedById        String?           @db.Uuid
+  updatedBy          User?             @relation("AppointmentUpdater", fields: [updatedById], references: [id])
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  confirmedAt        DateTime?
+  completedAt        DateTime?
+  cancelledAt        DateTime?
+  noShowAt           DateTime?
 
   visitActivities VisitActivity[]
 
@@ -591,8 +594,8 @@ model Reservation {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
-  reservationNotes      ReservationNote[]
-  activities            ReservationActivity[]
+  reservationNotes ReservationNote[]
+  activities       ReservationActivity[]
 
   @@index([unitId])
   @@index([salesId])
@@ -643,7 +646,7 @@ model Contract {
   pdfUrl      String?
   signedAt    DateTime?
   totalAmount Decimal   @db.Decimal(14, 2)
-  downPayment Decimal   @db.Decimal(14, 2) @default(0)
+  downPayment Decimal   @default(0) @db.Decimal(14, 2)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
@@ -683,20 +686,101 @@ model Installment {
 }
 
 model Deposit {
-  id              String       @id @default(uuid()) @db.Uuid
-  contractId      String       @db.Uuid
-  contract        Contract     @relation(fields: [contractId], references: [id])
-  installmentId   String?      @db.Uuid
-  installment     Installment? @relation(fields: [installmentId], references: [id])
-  amount          Decimal      @db.Decimal(14, 2)
-  paidAt          DateTime
-  receiptUrl      String?
-  recordedById    String       @db.Uuid
-  recordedBy      User         @relation("DepositRecordedBy", fields: [recordedById], references: [id])
-  verified        Boolean      @default(false)
-  createdAt       DateTime     @default(now())
+  id            String       @id @default(uuid()) @db.Uuid
+  contractId    String       @db.Uuid
+  contract      Contract     @relation(fields: [contractId], references: [id])
+  installmentId String?      @db.Uuid
+  installment   Installment? @relation(fields: [installmentId], references: [id])
+  amount        Decimal      @db.Decimal(14, 2)
+  paidAt        DateTime
+  receiptUrl    String?
+  recordedById  String       @db.Uuid
+  recordedBy    User         @relation("DepositRecordedBy", fields: [recordedById], references: [id])
+  verified      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
 
   @@index([contractId])
+}
+
+// =============================================================================
+// INSTALLMENT PLAN TEMPLATES (standalone, Admin-created, visible to Sales)
+// =============================================================================
+
+enum DownPaymentType {
+  FIXED
+  PERCENTAGE
+}
+
+enum InstallmentFrequency {
+  MONTHLY
+  QUARTERLY
+  SEMI_ANNUAL
+  YEARLY
+}
+
+enum StartDateRule {
+  MANUAL
+  AFTER_RESERVATION
+  AFTER_CONTRACT
+}
+
+enum PlanTemplateStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+}
+
+enum PlanPaymentType {
+  RESERVATION
+  DOWN_PAYMENT
+  INSTALLMENT
+  FINAL_PAYMENT
+}
+
+model InstallmentPlanTemplate {
+  id                 String               @id @default(uuid()) @db.Uuid
+  name               String
+  description        String?
+  projectId          String               @db.Uuid
+  project            Project              @relation("ProjectPlanTemplates", fields: [projectId], references: [id])
+  unitId             String?              @db.Uuid
+  unit               Unit?                @relation("UnitPlanTemplates", fields: [unitId], references: [id])
+  totalPrice         Decimal              @db.Decimal(14, 2)
+  discountAmount     Decimal              @default(0) @db.Decimal(14, 2)
+  netPrice           Decimal              @db.Decimal(14, 2)
+  reservationAmount  Decimal              @default(0) @db.Decimal(14, 2)
+  downPaymentType    DownPaymentType      @default(FIXED)
+  downPaymentValue   Decimal              @db.Decimal(14, 2)
+  downPaymentAmount  Decimal              @db.Decimal(14, 2)
+  installmentsCount  Int
+  frequency          InstallmentFrequency @default(MONTHLY)
+  startDateRule      StartDateRule        @default(AFTER_CONTRACT)
+  manualStartDate    DateTime?
+  finalPaymentAmount Decimal?             @db.Decimal(14, 2)
+  visibility         String               @default("SALES_ONLY")
+  status             PlanTemplateStatus   @default(DRAFT)
+  createdById        String               @db.Uuid
+  createdBy          User                 @relation("PlanTemplateCreator", fields: [createdById], references: [id])
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  scheduleItems PlanTemplateScheduleItem[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model PlanTemplateScheduleItem {
+  id               String                  @id @default(uuid()) @db.Uuid
+  planId           String                  @db.Uuid
+  plan             InstallmentPlanTemplate @relation(fields: [planId], references: [id], onDelete: Cascade)
+  paymentNumber    Int
+  paymentType      PlanPaymentType
+  dueDate          DateTime?
+  amount           Decimal                 @db.Decimal(14, 2)
+  remainingBalance Decimal                 @db.Decimal(14, 2)
+
+  @@index([planId])
 }
 
 // =============================================================================
@@ -710,13 +794,13 @@ enum BonusEntryStatus {
 }
 
 model BonusRule {
-  id          String       @id @default(uuid()) @db.Uuid
-  name        String
-  percentage  Decimal      @db.Decimal(5, 2) @default(0)
-  conditions  Json         @default("{}") // e.g. { minUnits: 3 }
-  active      Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  entries     BonusEntry[]
+  id         String       @id @default(uuid()) @db.Uuid
+  name       String
+  percentage Decimal      @default(0) @db.Decimal(5, 2)
+  conditions Json         @default("{}") // e.g. { minUnits: 3 }
+  active     Boolean      @default(true)
+  createdAt  DateTime     @default(now())
+  entries    BonusEntry[]
 }
 
 model BonusEntry {

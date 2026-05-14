@@ -42,7 +42,8 @@
       "Bash(mkdir -p \"/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/visits/requests/[id]/_components\")",
       "Bash(mkdir -p \"/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/visits/appointments/[id]/_components\")",
       "Bash(npx tsc *)",
-      "Bash(npx tsx -e ' *)"
+      "Bash(npx tsx -e ' *)",
+      "Bash(grep -E \"\\\\.\\(tsx?|jsx?\\)$\")"
     ],
     "additionalDirectories": [
       "/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/units/[id]",

@@ -58,7 +58,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'العمليات',
     items: [
-      { href: '/dashboard/installments', label: 'خطط التقسيط', icon: Wallet, admin: true },
+      { href: '/dashboard/installments', label: 'خطط التقسيط', icon: Wallet },
       { href: '/dashboard/deposits', label: 'الدفعات', icon: Receipt, admin: true },
       { href: '/dashboard/maintenance', label: 'الصيانة', icon: Wrench, admin: true },
       { href: '/dashboard/bonus', label: 'العمولات', icon: BadgePercent, admin: true },

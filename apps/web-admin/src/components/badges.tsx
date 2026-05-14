@@ -7,6 +7,7 @@ import type {
   AppointmentStatus,
   ReservationStatus,
   MaintenanceStatus,
+  PlanTemplateStatus,
 } from '@/lib/types';
 
 const PILL = 'inline-block rounded-full px-2 py-0.5 text-xs font-medium';
@@ -102,5 +103,15 @@ const APPOINTMENT: Record<AppointmentStatus, { c: string; l: string }> = {
 };
 export function AppointmentStatusBadge({ status }: { status: AppointmentStatus }) {
   const x = APPOINTMENT[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const PLAN_TEMPLATE: Record<PlanTemplateStatus, { c: string; l: string }> = {
+  DRAFT: { c: 'bg-gray-100 text-gray-700', l: 'مسودة' },
+  ACTIVE: { c: 'bg-green-100 text-green-700', l: 'نشطة' },
+  INACTIVE: { c: 'bg-red-100 text-red-700', l: 'غير نشطة' },
+};
+export function PlanTemplateStatusBadge({ status }: { status: PlanTemplateStatus }) {
+  const x = PLAN_TEMPLATE[status];
   return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
 }

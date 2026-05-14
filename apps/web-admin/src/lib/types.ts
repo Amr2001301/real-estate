@@ -9,6 +9,11 @@ export interface Paged<T> {
 }
 
 export type ProjectStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type PlanTemplateStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE';
+export type DownPaymentType = 'FIXED' | 'PERCENTAGE';
+export type InstallmentFrequency = 'MONTHLY' | 'QUARTERLY' | 'SEMI_ANNUAL' | 'YEARLY';
+export type StartDateRule = 'MANUAL' | 'AFTER_RESERVATION' | 'AFTER_CONTRACT';
+export type PlanPaymentType = 'RESERVATION' | 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FINAL_PAYMENT';
 export type UnitStatus = 'AVAILABLE' | 'RESERVED' | 'SOLD';
 export type LeadStage = 'NEW' | 'INTERESTED' | 'VISIT' | 'NEGOTIATION' | 'WON' | 'LOST';
 export type VisitStatus = 'PENDING' | 'APPROVED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
@@ -337,4 +342,42 @@ export interface User {
   createdAt: string;
   updatedAt?: string;
   lastLoginAt: string | null;
+}
+
+export interface PlanTemplateScheduleItem {
+  id: string;
+  planId: string;
+  paymentNumber: number;
+  paymentType: PlanPaymentType;
+  dueDate: string | null;
+  amount: string | number;
+  remainingBalance: string | number;
+}
+
+export interface InstallmentPlanTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  projectId: string;
+  project?: { id: string; name: Translatable };
+  unitId: string | null;
+  unit?: { id: string; code: string; type?: string } | null;
+  totalPrice: string | number;
+  discountAmount: string | number;
+  netPrice: string | number;
+  reservationAmount: string | number;
+  downPaymentType: DownPaymentType;
+  downPaymentValue: string | number;
+  downPaymentAmount: string | number;
+  installmentsCount: number;
+  frequency: InstallmentFrequency;
+  startDateRule: StartDateRule;
+  manualStartDate: string | null;
+  finalPaymentAmount: string | number | null;
+  visibility: string;
+  status: PlanTemplateStatus;
+  createdBy?: { id: string; fullName: string };
+  createdAt: string;
+  updatedAt: string;
+  scheduleItems?: PlanTemplateScheduleItem[];
 }
