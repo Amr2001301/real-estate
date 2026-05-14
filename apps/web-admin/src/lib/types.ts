@@ -361,7 +361,7 @@ export interface InstallmentPlanTemplate {
   projectId: string;
   project?: { id: string; name: Translatable };
   unitId: string | null;
-  unit?: { id: string; code: string; type?: string } | null;
+  unit?: { id: string; code: string; type?: string; price?: string | number } | null;
   totalPrice: string | number;
   discountAmount: string | number;
   netPrice: string | number;

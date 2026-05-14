@@ -57,7 +57,7 @@ class CreatePlanTemplateDto {
   @IsString() name!: string;
   @IsOptional() @IsString() description?: string;
   @IsUUID() projectId!: string;
-  @IsOptional() @IsUUID() unitId?: string;
+  @IsUUID() unitId!: string;
   @IsNumber() @IsPositive() totalPrice!: number;
   @IsOptional() @IsNumber() @Min(0) discountAmount?: number;
   @IsNumber() @Min(0) reservationAmount!: number;
@@ -322,7 +322,7 @@ class PlanTemplatesService {
       where: { id },
       include: {
         project: { select: { id: true, name: true } },
-        unit: { select: { id: true, code: true, type: true } },
+        unit: { select: { id: true, code: true, type: true, price: true } },
         createdBy: { select: { id: true, fullName: true } },
         scheduleItems: { orderBy: { paymentNumber: 'asc' } },
       },
@@ -331,7 +331,19 @@ class PlanTemplatesService {
     return plan;
   }
 
+  private async validateUnit(unitId: string, projectId: string): Promise<void> {
+    const unit = await this.prisma.unit.findUnique({
+      where: { id: unitId },
+      select: { id: true, building: { select: { phase: { select: { projectId: true } } } } },
+    });
+    if (!unit) throw new NotFoundException('الوحدة غير موجودة');
+    if (unit.building.phase.projectId !== projectId)
+      throw new BadRequestException('الوحدة لا تنتمي إلى المشروع المحدد');
+  }
+
   async create(dto: CreatePlanTemplateDto, userId: string) {
+    await this.validateUnit(dto.unitId, dto.projectId);
+
     const totalPrice = dto.totalPrice;
     const discountAmount = dto.discountAmount ?? 0;
     const netPrice = totalPrice - discountAmount;
@@ -347,7 +359,7 @@ class PlanTemplatesService {
           name: dto.name,
           description: dto.description,
           projectId: dto.projectId,
-          unitId: dto.unitId ?? null,
+          unitId: dto.unitId,
           totalPrice: new Prisma.Decimal(totalPrice),
           discountAmount: new Prisma.Decimal(discountAmount),
           netPrice: new Prisma.Decimal(netPrice),
@@ -377,7 +389,7 @@ class PlanTemplatesService {
         where: { id: plan.id },
         include: {
           project: { select: { id: true, name: true } },
-          unit: { select: { id: true, code: true } },
+          unit: { select: { id: true, code: true, type: true, price: true } },
           scheduleItems: { orderBy: { paymentNumber: 'asc' } },
         },
       });
@@ -386,6 +398,13 @@ class PlanTemplatesService {
 
   async update(id: string, dto: UpdatePlanTemplateDto) {
     const existing = await this.findOne(id);
+
+    const resolvedProjectId = dto.projectId ?? existing.projectId;
+    const resolvedUnitId = dto.unitId ?? existing.unitId;
+    if (!resolvedUnitId) throw new BadRequestException('يرجى اختيار الوحدة');
+    if (dto.unitId || dto.projectId) {
+      await this.validateUnit(resolvedUnitId, resolvedProjectId);
+    }
 
     const totalPrice = dto.totalPrice ?? Number(existing.totalPrice);
     const discountAmount = dto.discountAmount ?? Number(existing.discountAmount);
@@ -397,8 +416,8 @@ class PlanTemplatesService {
     const merged: CreatePlanTemplateDto = {
       name: dto.name ?? existing.name,
       description: dto.description ?? existing.description ?? undefined,
-      projectId: dto.projectId ?? existing.projectId,
-      unitId: dto.unitId ?? existing.unitId ?? undefined,
+      projectId: resolvedProjectId,
+      unitId: resolvedUnitId,
       totalPrice,
       discountAmount,
       reservationAmount: dto.reservationAmount ?? Number(existing.reservationAmount),
@@ -453,7 +472,7 @@ class PlanTemplatesService {
         where: { id: plan.id },
         include: {
           project: { select: { id: true, name: true } },
-          unit: { select: { id: true, code: true } },
+          unit: { select: { id: true, code: true, type: true, price: true } },
           scheduleItems: { orderBy: { paymentNumber: 'asc' } },
         },
       });

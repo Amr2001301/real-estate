@@ -17,7 +17,6 @@ import type {
   DownPaymentType,
   InstallmentFrequency,
   StartDateRule,
-  PlanTemplateStatus,
   PlanPaymentType,
 } from '@/lib/types';
 import { createPlanAction, updatePlanAction, type PlanFormState } from './actions';
@@ -56,13 +55,6 @@ const FREQUENCY_MONTHS: Record<InstallmentFrequency, number> = {
   YEARLY: 12,
 };
 
-const FREQUENCY_LABELS: Record<InstallmentFrequency, string> = {
-  MONTHLY: 'شهري',
-  QUARTERLY: 'ربع سنوي',
-  SEMI_ANNUAL: 'نصف سنوي',
-  YEARLY: 'سنوي',
-};
-
 const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
   RESERVATION: 'دفعة حجز',
   DOWN_PAYMENT: 'دفعة أولى',
@@ -70,8 +62,33 @@ const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
   FINAL_PAYMENT: 'دفعة أخيرة',
 };
 
+const PAYMENT_TYPE_BADGE: Record<PlanPaymentType, string> = {
+  RESERVATION: 'bg-blue-50 text-blue-700',
+  DOWN_PAYMENT: 'bg-amber-50 text-amber-700',
+  INSTALLMENT: 'bg-slate-50 text-slate-700',
+  FINAL_PAYMENT: 'bg-purple-50 text-purple-700',
+};
+
 function formatDateLabel(date: Date): string {
   return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function parseNum(val: string): number {
+  const n = parseFloat(val.replace(/[^0-9.]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Safely convert any API value (string, number, Decimal, null, undefined) to a finite number
+function safeNum(val: unknown, fallback = 0): number {
+  if (val === null || val === undefined || val === '') return fallback;
+  const n = typeof val === 'number' ? val : parseFloat(String(val));
+  return Number.isFinite(n) ? n : fallback;
+}
+
+// Convert to a display string for an input; returns fallback if the value is not a valid number
+function safeStr(val: unknown, fallback = ''): string {
+  const n = safeNum(val, NaN);
+  return Number.isFinite(n) ? String(n) : fallback;
 }
 
 function computeSchedule(params: {
@@ -189,36 +206,40 @@ function validateSchedule(params: {
   if (netPrice <= 0) return null;
   if (downPaymentAmount > netPrice) return 'الدفعة الأولى تتجاوز صافي السعر';
   if (reservationAmount + downPaymentAmount + finalPaymentAmount > netPrice)
-    return 'مجموع الدفعة الأولى + الحجز + الدفعة الأخيرة يتجاوز صافي السعر';
+    return 'مجموع الحجز + المقدم + الدفعة الأخيرة يتجاوز صافي السعر';
   if (installmentsCount < 1) return 'عدد الأقساط يجب أن يكون 1 على الأقل';
   return null;
 }
 
 export default function PlanForm({ projects, initialData, mode }: Props) {
-  const action = mode === 'edit' && initialData
-    ? updatePlanAction.bind(null, initialData.id)
-    : createPlanAction;
+  const action =
+    mode === 'edit' && initialData
+      ? updatePlanAction.bind(null, initialData.id)
+      : createPlanAction;
 
   const [state, formAction] = useActionState<PlanFormState, FormData>(action, {});
 
   const d = initialData;
 
-  // form state
+  // ── form state ────────────────────────────────────────────────────────────
   const [projectId, setProjectId] = useState(d?.projectId ?? '');
   const [units, setUnits] = useState<UnitOption[]>([]);
+  const [unitsLoading, setUnitsLoading] = useState(false);
   const [unitId, setUnitId] = useState(d?.unitId ?? '');
-  const [totalPrice, setTotalPrice] = useState(d ? String(Number(d.totalPrice)) : '');
-  const [discountAmount, setDiscountAmount] = useState(d ? String(Number(d.discountAmount)) : '0');
-  const [reservationAmount, setReservationAmount] = useState(
-    d ? String(Number(d.reservationAmount)) : '0',
-  );
+  // unitPrice tracks the current unit's price from the units list (not the stored plan price)
+  const [unitPrice, setUnitPrice] = useState<number>(0);
+  // In edit mode the price may have been customised; keep it editable by default
+  const [manualPriceOverride, setManualPriceOverride] = useState(mode === 'edit');
+  const [totalPrice, setTotalPrice] = useState(safeStr(d?.totalPrice));
+  const [discountAmount, setDiscountAmount] = useState(safeStr(d?.discountAmount, '0'));
+  const [reservationAmount, setReservationAmount] = useState(safeStr(d?.reservationAmount, '0'));
   const [downPaymentType, setDownPaymentType] = useState<DownPaymentType>(
     d?.downPaymentType ?? 'FIXED',
   );
-  const [downPaymentValue, setDownPaymentValue] = useState(
-    d ? String(Number(d.downPaymentValue)) : '',
+  const [downPaymentValue, setDownPaymentValue] = useState(safeStr(d?.downPaymentValue));
+  const [installmentsCount, setInstallmentsCount] = useState(
+    d ? String(d.installmentsCount) : '12',
   );
-  const [installmentsCount, setInstallmentsCount] = useState(d ? String(d.installmentsCount) : '12');
   const [frequency, setFrequency] = useState<InstallmentFrequency>(d?.frequency ?? 'MONTHLY');
   const [startDateRule, setStartDateRule] = useState<StartDateRule>(
     d?.startDateRule ?? 'AFTER_CONTRACT',
@@ -227,17 +248,22 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
     d?.manualStartDate ? d.manualStartDate.slice(0, 10) : '',
   );
   const [finalPaymentAmount, setFinalPaymentAmount] = useState(
-    d?.finalPaymentAmount ? String(Number(d.finalPaymentAmount)) : '',
+    d?.finalPaymentAmount != null ? safeStr(d.finalPaymentAmount) : '',
   );
+  // client-side unit validation
+  const [unitTouched, setUnitTouched] = useState(false);
 
-  // Load units when project changes
+  // ── load units when project changes ──────────────────────────────────────
   useEffect(() => {
     if (!projectId) {
       setUnits([]);
       setUnitId('');
+      setUnitPrice(0);
+      if (!manualPriceOverride) setTotalPrice('');
       return;
     }
-    fetch(`/api-proxy/units?projectId=${projectId}&pageSize=200&status=AVAILABLE`)
+    setUnitsLoading(true);
+    fetch(`/api-proxy/units?projectId=${projectId}&pageSize=200`)
       .then((r) => r.json())
       .then((data) => {
         const list: UnitOption[] = (data?.data ?? []).map((u: UnitOption) => ({
@@ -247,34 +273,57 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           price: u.price,
         }));
         setUnits(list);
-        // pre-fill price from unit if one is selected
-        if (d?.unitId && list.find((u) => u.id === d.unitId)) {
-          setUnitId(d.unitId);
+
+        // In edit mode, restore the unit price from the loaded list; totalPrice stays untouched
+        if (d?.unitId) {
+          const existing = list.find((u) => u.id === d.unitId);
+          if (existing) {
+            setUnitPrice(safeNum(existing.price));
+          }
         }
       })
-      .catch(() => setUnits([]));
-  }, [projectId]); // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => setUnits([]))
+      .finally(() => setUnitsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
 
-  // When unit selection changes, optionally update price
+  // ── when unit changes, auto-fill price ───────────────────────────────────
   function handleUnitChange(id: string) {
     setUnitId(id);
-    if (!id) return;
+    setUnitTouched(true);
+    if (!id) {
+      setUnitPrice(0);
+      if (!manualPriceOverride) setTotalPrice('');
+      return;
+    }
     const unit = units.find((u) => u.id === id);
-    if (unit && !totalPrice) {
-      setTotalPrice(String(Number(unit.price)));
+    if (unit) {
+      const price = safeNum(unit.price);
+      setUnitPrice(price);
+      if (!manualPriceOverride) {
+        setTotalPrice(price > 0 ? String(price) : '');
+      }
     }
   }
 
-  // derived values
-  const tp = parseFloat(totalPrice) || 0;
-  const disc = parseFloat(discountAmount) || 0;
+  // ── manual price override toggle ──────────────────────────────────────────
+  function handleManualOverrideChange(checked: boolean) {
+    setManualPriceOverride(checked);
+    if (!checked && unitPrice > 0) {
+      // Reset total price to unit price
+      setTotalPrice(String(unitPrice));
+    }
+  }
+
+  // ── derived values ────────────────────────────────────────────────────────
+  const tp = parseNum(totalPrice);
+  const disc = parseNum(discountAmount);
   const netPrice = tp - disc;
-  const reservation = parseFloat(reservationAmount) || 0;
-  const dpVal = parseFloat(downPaymentValue) || 0;
-  const dpAmount =
-    downPaymentType === 'PERCENTAGE' ? (netPrice * dpVal) / 100 : dpVal;
+  const reservation = parseNum(reservationAmount);
+  const dpVal = parseNum(downPaymentValue);
+  const dpAmount = downPaymentType === 'PERCENTAGE' ? (netPrice * dpVal) / 100 : dpVal;
   const installments = parseInt(installmentsCount) || 0;
-  const finalAmt = parseFloat(finalPaymentAmount) || 0;
+  const finalAmt = parseNum(finalPaymentAmount);
 
   const scheduleRows = computeSchedule({
     totalPrice: tp,
@@ -289,7 +338,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
     finalPaymentAmount: finalAmt,
   });
 
-  const validationError = validateSchedule({
+  const scheduleError = validateSchedule({
     netPrice,
     reservationAmount: reservation,
     downPaymentAmount: dpAmount,
@@ -297,12 +346,34 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
     installmentsCount: installments,
   });
 
-  const paymentTypeBadgeClass: Record<PlanPaymentType, string> = {
-    RESERVATION: 'bg-blue-50 text-blue-700',
-    DOWN_PAYMENT: 'bg-amber-50 text-amber-700',
-    INSTALLMENT: 'bg-slate-50 text-slate-700',
-    FINAL_PAYMENT: 'bg-purple-50 text-purple-700',
-  };
+  const unitError = unitTouched && !unitId ? 'يرجى اختيار الوحدة' : undefined;
+
+  // ── numeric input helper: allows free typing ──────────────────────────────
+  // We use type="text" + inputMode="decimal" so the browser never blocks
+  // intermediate states (e.g. "1.", "0.0", "-" while typing)
+  function numericInputProps(
+    value: string,
+    onChange: (v: string) => void,
+    opts?: { allowEmpty?: boolean },
+  ) {
+    return {
+      type: 'text' as const,
+      inputMode: 'decimal' as const,
+      value,
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value;
+        // Allow digits, a single decimal point, and empty string
+        if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
+          onChange(raw);
+        }
+      },
+      onBlur: (e: React.FocusEvent<HTMLInputElement>) => {
+        const n = parseFloat(e.target.value);
+        if (!opts?.allowEmpty && !Number.isFinite(n)) onChange('0');
+        else if (Number.isFinite(n)) onChange(String(n));
+      },
+    };
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
@@ -316,7 +387,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
       {/* ── Section 1: Plan Info ─────────────────────────────────────────── */}
       <FormSection
         title="معلومات الخطة"
-        description="الاسم والوصف وربط الخطة بمشروع أو وحدة."
+        description="الاسم والوصف وربط الخطة بمشروع ووحدة."
       >
         <Field label="اسم الخطة" name="name" required>
           <Input
@@ -338,13 +409,18 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           />
         </Field>
 
-        <Field label="المشروع" name="projectId" required>
+        {/* Project — used to filter units */}
+        <Field label="المشروع" name="projectId" required hint="اختر المشروع لتحميل الوحدات المتاحة">
           <Select
             id="projectId"
             name="projectId"
             required
             value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
+            onChange={(e) => {
+              setProjectId(e.target.value);
+              setUnitId('');
+              setUnitTouched(false);
+            }}
           >
             <option value="">— اختر مشروعاً —</option>
             {projects.map((p) => (
@@ -355,27 +431,40 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           </Select>
         </Field>
 
-        {units.length > 0 && (
-          <Field label="الوحدة (اختياري)" name="unitId" hint="إذا تركتها فارغة تنطبق الخطة على المشروع بأكمله">
-            <Select
-              id="unitId"
-              name="unitId"
-              value={unitId}
-              onChange={(e) => handleUnitChange(e.target.value)}
-            >
-              <option value="">— بدون وحدة محددة —</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.code} — {u.type} — {formatCurrency(u.price)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
-        {/* hidden unitId when no units loaded but editing existing */}
-        {units.length === 0 && unitId && (
-          <input type="hidden" name="unitId" value={unitId} />
-        )}
+        {/* Unit — always required, visible once project is selected */}
+        <Field
+          label="الوحدة"
+          name="unitId"
+          required
+          error={unitError}
+          hint={
+            !projectId
+              ? 'اختر المشروع أولاً لتحميل الوحدات'
+              : unitsLoading
+              ? 'جاري تحميل الوحدات…'
+              : units.length === 0
+              ? 'لا توجد وحدات متاحة في هذا المشروع'
+              : undefined
+          }
+        >
+          <Select
+            id="unitId"
+            name="unitId"
+            required
+            value={unitId}
+            disabled={!projectId || unitsLoading || units.length === 0}
+            onChange={(e) => handleUnitChange(e.target.value)}
+            invalid={!!unitError}
+            onBlur={() => setUnitTouched(true)}
+          >
+            <option value="">— اختر وحدة —</option>
+            {units.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.code} — {u.type} — {formatCurrency(u.price)}
+              </option>
+            ))}
+          </Select>
+        </Field>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="الحالة" name="status">
@@ -385,14 +474,11 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
               <option value="INACTIVE">غير نشطة</option>
             </Select>
           </Field>
-          <Field label="الصلاحية" name="visibility" hint="ثابتة: للمبيعات فقط">
-            <Input
-              id="visibility"
-              name="visibility"
-              value="SALES_ONLY"
-              readOnly
-              className="bg-slate-50 text-slate-500 cursor-not-allowed"
-            />
+          <Field label="الصلاحية" hint="ثابتة: للمبيعات فقط">
+            <input type="hidden" name="visibility" value="SALES_ONLY" />
+            <div className="h-10 flex items-center rounded-xl border border-hairline bg-slate-50 px-3 text-sm text-slate-500">
+              مبيعات فقط
+            </div>
           </Field>
         </div>
       </FormSection>
@@ -410,43 +496,62 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           ) : null
         }
       >
-        <Field label="السعر الإجمالي (ج.م)" name="totalPrice" required>
+        {/* Total price — read-only by default, editable when override is on */}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between">
+            <label htmlFor="totalPrice" className="text-sm font-medium text-slate-700">
+              السعر الإجمالي (ج.م)
+              <span className="text-danger-600 ms-0.5">*</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={manualPriceOverride}
+                onChange={(e) => handleManualOverrideChange(e.target.checked)}
+                className="accent-brand-500 h-3.5 w-3.5"
+              />
+              <span className="text-xs text-slate-600">تعديل السعر يدوياً</span>
+            </label>
+          </div>
           <Input
             id="totalPrice"
             name="totalPrice"
-            type="number"
-            min="0"
-            step="0.01"
             required
-            value={totalPrice}
-            onChange={(e) => setTotalPrice(e.target.value)}
-            placeholder="0.00"
+            readOnly={!manualPriceOverride}
+            className={!manualPriceOverride ? 'bg-slate-50 text-slate-600 cursor-default' : ''}
+            placeholder="يُحدَّد تلقائياً من سعر الوحدة"
+            {...(manualPriceOverride
+              ? numericInputProps(totalPrice, setTotalPrice, { allowEmpty: false })
+              : { value: totalPrice, onChange: () => {} })}
           />
-        </Field>
+          <p className="text-xs text-slate-500">
+            السعر الافتراضي مأخوذ من سعر الوحدة، ويمكن تعديله يدوياً عند الحاجة.
+          </p>
+        </div>
 
-        <Field label="قيمة الخصم (ج.م)" name="discountAmount" hint="اتركها صفراً إذا لم يكن هناك خصم">
+        <Field
+          label="قيمة الخصم (ج.م)"
+          name="discountAmount"
+          hint="اتركها صفراً إذا لم يكن هناك خصم"
+        >
           <Input
             id="discountAmount"
             name="discountAmount"
-            type="number"
-            min="0"
-            step="0.01"
-            value={discountAmount}
-            onChange={(e) => setDiscountAmount(e.target.value)}
-            placeholder="0.00"
+            placeholder="0"
+            {...numericInputProps(discountAmount, setDiscountAmount)}
           />
         </Field>
 
-        <Field label="دفعة الحجز (ج.م)" name="reservationAmount" hint="المبلغ الأولي الذي يدفعه العميل عند الحجز">
+        <Field
+          label="دفعة الحجز (ج.م)"
+          name="reservationAmount"
+          hint="المبلغ الأولي الذي يدفعه العميل عند الحجز"
+        >
           <Input
             id="reservationAmount"
             name="reservationAmount"
-            type="number"
-            min="0"
-            step="0.01"
-            value={reservationAmount}
-            onChange={(e) => setReservationAmount(e.target.value)}
-            placeholder="0.00"
+            placeholder="0"
+            {...numericInputProps(reservationAmount, setReservationAmount)}
           />
         </Field>
       </FormSection>
@@ -498,14 +603,8 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           <Input
             id="downPaymentValue"
             name="downPaymentValue"
-            type="number"
-            min="0"
-            step={downPaymentType === 'PERCENTAGE' ? '0.1' : '0.01'}
-            max={downPaymentType === 'PERCENTAGE' ? '100' : undefined}
-            required
-            value={downPaymentValue}
-            onChange={(e) => setDownPaymentValue(e.target.value)}
-            placeholder={downPaymentType === 'PERCENTAGE' ? '10' : '0.00'}
+            placeholder={downPaymentType === 'PERCENTAGE' ? '10' : '0'}
+            {...numericInputProps(downPaymentValue, setDownPaymentValue, { allowEmpty: true })}
           />
         </Field>
       </FormSection>
@@ -520,12 +619,11 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
             <Input
               id="installmentsCount"
               name="installmentsCount"
-              type="number"
-              min="1"
-              max="360"
-              required
-              value={installmentsCount}
-              onChange={(e) => setInstallmentsCount(e.target.value)}
+              placeholder="12"
+              {...numericInputProps(installmentsCount, (v) => {
+                // Only allow integers for installments count
+                if (v === '' || /^[0-9]+$/.test(v)) setInstallmentsCount(v);
+              })}
             />
           </Field>
 
@@ -589,16 +687,16 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           </Field>
         )}
 
-        <Field label="الدفعة الأخيرة (ج.م)" name="finalPaymentAmount" hint="اتركها فارغة إذا لم تكن هناك دفعة أخيرة بالون">
+        <Field
+          label="الدفعة الأخيرة (ج.م)"
+          name="finalPaymentAmount"
+          hint="اتركها فارغة إذا لم تكن هناك دفعة بالون"
+        >
           <Input
             id="finalPaymentAmount"
             name="finalPaymentAmount"
-            type="number"
-            min="0"
-            step="0.01"
-            value={finalPaymentAmount}
-            onChange={(e) => setFinalPaymentAmount(e.target.value)}
-            placeholder="0.00"
+            placeholder="0"
+            {...numericInputProps(finalPaymentAmount, setFinalPaymentAmount, { allowEmpty: true })}
           />
         </Field>
       </FormSection>
@@ -609,22 +707,24 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           <Calculator className="h-5 w-5 text-brand-600" />
           <h2 className="text-base font-semibold text-slate-900">معاينة جدول السداد</h2>
           {netPrice > 0 && (
-            <span className="text-xs text-slate-500 me-auto">
+            <span className="text-xs text-slate-500 ms-auto">
               صافي السعر: {formatCurrency(netPrice)} | {scheduleRows.length} دفعة
             </span>
           )}
         </div>
 
-        {validationError && (
+        {scheduleError && (
           <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>{validationError}</p>
+            <p>{scheduleError}</p>
           </div>
         )}
 
         {scheduleRows.length === 0 ? (
           <div className="rounded-2xl border border-hairline bg-surface p-8 text-center text-sm text-slate-400">
-            أدخل تفاصيل الخطة لمعاينة جدول السداد
+            {!unitId
+              ? 'اختر المشروع والوحدة لمعاينة جدول السداد'
+              : 'أدخل تفاصيل التسعير والأقساط لمعاينة جدول السداد'}
           </div>
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-hairline">
@@ -644,7 +744,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
                     <td className="px-4 py-3 text-slate-500 tabular-nums">{row.paymentNumber}</td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${paymentTypeBadgeClass[row.paymentType]}`}
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PAYMENT_TYPE_BADGE[row.paymentType]}`}
                       >
                         {row.label}
                       </span>
