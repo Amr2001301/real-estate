@@ -1,41 +1,83 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { loginAction, type LoginState } from './actions';
 
 export default function LoginForm() {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form action={action} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium mb-1">البريد الإلكتروني</label>
+    <form action={action} className="space-y-8">
+
+      {/* Email */}
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium text-slate-700 text-right">
+          البريد الإلكتروني
+        </label>
         <input
           name="email"
           type="email"
           required
           autoComplete="email"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
+          placeholder="ahmed@example.com"
+          className="w-full bg-transparent border-0 border-b border-slate-300 px-0 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 text-right focus:outline-none focus:border-brand-600 transition-colors"
         />
       </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">كلمة المرور</label>
-        <input
-          name="password"
-          type="password"
-          required
-          autoComplete="current-password"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-500"
-        />
+
+      {/* Password */}
+      <div className="space-y-1.5">
+        <label className="block text-sm font-medium text-slate-700 text-right">
+          كلمة المرور
+        </label>
+        <div className="relative">
+          <input
+            name="password"
+            type={showPassword ? 'text' : 'password'}
+            required
+            autoComplete="current-password"
+            placeholder="••••••••••"
+            className="w-full bg-transparent border-0 border-b border-slate-300 px-0 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 text-right pe-8 focus:outline-none focus:border-brand-600 transition-colors"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            className="absolute start-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+            tabIndex={-1}
+            aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+
+      {/* Error */}
+      {state.error && (
+        <p className="text-sm text-red-600 text-right bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+          {state.error}
+        </p>
+      )}
+
+      {/* Submit */}
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded-lg bg-brand-600 text-white py-2 font-medium hover:bg-brand-700 disabled:opacity-60"
+        className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1E3348] text-white py-3.5 text-sm font-semibold hover:bg-[#172b3c] active:scale-[0.98] disabled:opacity-60 transition-all duration-150"
       >
-        {pending ? 'جاري تسجيل الدخول…' : 'تسجيل الدخول'}
+        {pending ? (
+          <>
+            <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            جاري تسجيل الدخول…
+          </>
+        ) : (
+          <>
+            تسجيل الدخول
+            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
+          </>
+        )}
       </button>
+
     </form>
   );
 }
