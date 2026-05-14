@@ -567,6 +567,13 @@ enum ReservationStatus {
   EXPIRED
 }
 
+enum ReservationBookingPaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  WAIVED
+}
+
 enum InstallmentStatus {
   PENDING
   PAID
@@ -594,6 +601,25 @@ model Reservation {
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
+  // ── Booking amount tracking (manual, recorded by Admin) ──────────────────
+  bookingAmount             Decimal                         @default(0) @db.Decimal(14, 2)
+  bookingPaymentStatus      ReservationBookingPaymentStatus @default(UNPAID)
+  bookingPaidAt             DateTime?
+  bookingNotes              String?
+  installmentPlanTemplateId String?                         @db.Uuid
+  installmentPlanTemplate   InstallmentPlanTemplate?        @relation("ReservationPlanTemplate", fields: [installmentPlanTemplateId], references: [id])
+
+  // ── Selected duration + financial snapshot (set at create time, immutable) ──
+  selectedDurationOptionId   String?                       @db.Uuid
+  selectedDurationOption     InstallmentPlanDurationOption? @relation(fields: [selectedDurationOptionId], references: [id], onDelete: SetNull)
+  selectedDurationMonths     Int?
+  selectedIncreasePercentage Decimal?                      @db.Decimal(6, 2)
+  snapshotDownPaymentAmount  Decimal?                      @db.Decimal(14, 2)
+  snapshotRemainingAmount    Decimal?                      @db.Decimal(14, 2)
+  snapshotFinancedAmount     Decimal?                      @db.Decimal(14, 2)
+  snapshotMonthlyInstallment Decimal?                      @db.Decimal(14, 2)
+  snapshotTotalPayable       Decimal?                      @db.Decimal(14, 2)
+
   reservationNotes ReservationNote[]
   activities       ReservationActivity[]
 
@@ -601,6 +627,8 @@ model Reservation {
   @@index([salesId])
   @@index([clientId])
   @@index([status])
+  @@index([installmentPlanTemplateId])
+  @@index([selectedDurationOptionId])
 }
 
 enum ReservationActivityType {
@@ -610,6 +638,8 @@ enum ReservationActivityType {
   CANCELLED
   EXPIRED
   NOTE_ADDED
+  BOOKING_PAYMENT_CONFIRMED
+  BOOKING_PAYMENT_UNCONFIRMED
 }
 
 model ReservationNote {
@@ -752,7 +782,7 @@ model InstallmentPlanTemplate {
   downPaymentType    DownPaymentType      @default(FIXED)
   downPaymentValue   Decimal              @db.Decimal(14, 2)
   downPaymentAmount  Decimal              @db.Decimal(14, 2)
-  installmentsCount  Int
+  installmentsCount  Int?
   frequency          InstallmentFrequency @default(MONTHLY)
   startDateRule      StartDateRule        @default(AFTER_CONTRACT)
   manualStartDate    DateTime?
@@ -764,10 +794,27 @@ model InstallmentPlanTemplate {
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
 
-  scheduleItems PlanTemplateScheduleItem[]
+  scheduleItems   PlanTemplateScheduleItem[]
+  durationOptions InstallmentPlanDurationOption[]
+  reservations    Reservation[]                  @relation("ReservationPlanTemplate")
 
   @@index([projectId])
   @@index([status])
+}
+
+model InstallmentPlanDurationOption {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  planId             String                  @db.Uuid
+  plan               InstallmentPlanTemplate @relation(fields: [planId], references: [id], onDelete: Cascade)
+  durationMonths     Int
+  increasePercentage Decimal                 @default(0) @db.Decimal(6, 2)
+  order              Int                     @default(0)
+  createdAt          DateTime                @default(now())
+
+  reservations Reservation[]
+
+  @@unique([planId, durationMonths])
+  @@index([planId])
 }
 
 model PlanTemplateScheduleItem {

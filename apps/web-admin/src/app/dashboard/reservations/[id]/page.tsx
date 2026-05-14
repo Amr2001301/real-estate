@@ -10,14 +10,20 @@ import {
   Home,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { Paged, Reservation, User as UserType } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReservationStatusBadge, UnitStatusBadge } from '@/components/badges';
+import {
+  ReservationStatusBadge,
+  ReservationBookingPaymentBadge,
+  UnitStatusBadge,
+} from '@/components/badges';
 import { ReservationTimelineCard } from '../_components/reservation-timeline';
 import { ReservationDetailActions } from './_components/detail-actions';
 import { AddNoteForm } from './_components/add-note-form';
+import { BookingPaymentActions } from './_components/booking-payment-actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +46,8 @@ export default async function ReservationDetailPage({
   }
 
   const reservation = res.data;
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
   const salesOptions =
     reservation.status === 'PENDING'
       ? (await safe(api.get<Paged<UserType>>('/users?role=SALES&active=true&pageSize=100'))).data
@@ -153,6 +161,140 @@ export default async function ReservationDetailPage({
               )}
             </CardBody>
           </Card>
+
+          {/* Booking amount card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>مبلغ الحجز</CardTitle>
+            </CardHeader>
+            <CardBody className="space-y-4">
+              <dl className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <dt className="text-slate-500 mb-0.5">مبلغ الحجز المطلوب</dt>
+                  <dd className="font-bold text-slate-900 text-base" dir="ltr">
+                    {Number(reservation.bookingAmount).toLocaleString('ar-SA')} ر.س
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-slate-500 mb-0.5">حالة دفع مبلغ الحجز</dt>
+                  <dd>
+                    <ReservationBookingPaymentBadge status={reservation.bookingPaymentStatus} />
+                  </dd>
+                </div>
+                {reservation.bookingPaidAt && (
+                  <div>
+                    <dt className="text-slate-500 mb-0.5">تاريخ دفع مبلغ الحجز</dt>
+                    <dd className="font-medium">{formatDateTime(reservation.bookingPaidAt)}</dd>
+                  </div>
+                )}
+                {reservation.installmentPlanTemplate && (
+                  <div>
+                    <dt className="text-slate-500 mb-0.5">خطة التقسيط المرتبطة</dt>
+                    <dd className="font-medium">
+                      <Link
+                        href={
+                          `/dashboard/installments/${reservation.installmentPlanTemplate.id}` as never
+                        }
+                        className="text-brand-700 hover:underline"
+                      >
+                        {reservation.installmentPlanTemplate.name}
+                      </Link>
+                    </dd>
+                  </div>
+                )}
+                {reservation.bookingNotes && (
+                  <div className="col-span-2">
+                    <dt className="text-slate-500 mb-0.5">ملاحظات مبلغ الحجز</dt>
+                    <dd className="text-slate-700 whitespace-pre-wrap">
+                      {reservation.bookingNotes}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              {isAdmin && (
+                <div className="pt-2 border-t border-hairline">
+                  <BookingPaymentActions
+                    reservationId={reservation.id}
+                    bookingPaymentStatus={reservation.bookingPaymentStatus}
+                    reservationStatus={reservation.status}
+                    bookingAmount={Number(reservation.bookingAmount)}
+                  />
+                </div>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Selected duration snapshot card (only when a duration was chosen at create time) */}
+          {reservation.selectedDurationMonths != null && (
+            <Card>
+              <CardHeader>
+                <CardTitle>خطة التقسيط المختارة</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <p className="text-xs text-slate-500 mb-3">
+                  هذه القيم تم تجميدها عند إنشاء الحجز ولا تتأثر بأي تعديل لاحق على الخطة.
+                </p>
+                <dl className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <dt className="text-slate-500 mb-0.5">مدة التقسيط المختارة</dt>
+                    <dd className="font-medium tabular-nums">
+                      {reservation.selectedDurationMonths} شهر
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500 mb-0.5">نسبة الزيادة</dt>
+                    <dd className="font-medium tabular-nums">
+                      {Number(reservation.selectedIncreasePercentage ?? 0)}%
+                    </dd>
+                  </div>
+                  {reservation.snapshotDownPaymentAmount != null && (
+                    <div>
+                      <dt className="text-slate-500 mb-0.5">الدفعة الأولى</dt>
+                      <dd className="font-medium tabular-nums" dir="ltr">
+                        {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} ر.س
+                      </dd>
+                    </div>
+                  )}
+                  {reservation.snapshotRemainingAmount != null && (
+                    <div>
+                      <dt className="text-slate-500 mb-0.5">المبلغ المتبقي</dt>
+                      <dd className="font-medium tabular-nums" dir="ltr">
+                        {Number(reservation.snapshotRemainingAmount).toLocaleString('ar-SA')} ر.س
+                      </dd>
+                    </div>
+                  )}
+                  {reservation.snapshotFinancedAmount != null && (
+                    <div>
+                      <dt className="text-slate-500 mb-0.5">المبلغ الممول</dt>
+                      <dd className="font-medium tabular-nums" dir="ltr">
+                        {Number(reservation.snapshotFinancedAmount).toLocaleString('ar-SA')} ر.س
+                      </dd>
+                    </div>
+                  )}
+                  {reservation.snapshotMonthlyInstallment != null && (
+                    <div>
+                      <dt className="text-slate-500 mb-0.5">القسط الشهري</dt>
+                      <dd className="font-bold tabular-nums text-brand-700" dir="ltr">
+                        {Number(reservation.snapshotMonthlyInstallment).toLocaleString('ar-SA', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        ر.س
+                      </dd>
+                    </div>
+                  )}
+                  {reservation.snapshotTotalPayable != null && (
+                    <div className="col-span-2 border-t border-hairline pt-3 mt-1">
+                      <dt className="text-slate-500 mb-0.5">إجمالي السداد</dt>
+                      <dd className="font-bold tabular-nums text-slate-900 text-base" dir="ltr">
+                        {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')} ر.س
+                      </dd>
+                    </div>
+                  )}
+                </dl>
+              </CardBody>
+            </Card>
+          )}
 
           {/* Internal notes card */}
           <Card>

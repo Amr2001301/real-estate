@@ -18,6 +18,7 @@ import {
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiTags } from '@nestjs/swagger';
 import {
+  IsArray,
   IsDateString,
   IsEnum,
   IsInt,
@@ -28,7 +29,9 @@ import {
   IsUUID,
   Max,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import {
   Prisma,
   InstallmentStatus,
@@ -41,6 +44,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { computeDurationOption } from './duration-calc';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
 
@@ -53,6 +57,11 @@ class CreatePlanDto {
 
 // ─── Template DTOs ─────────────────────────────────────────────────────────────
 
+class DurationOptionDto {
+  @IsInt() @Min(1) durationMonths!: number;
+  @IsNumber() @Min(0) increasePercentage!: number;
+}
+
 class CreatePlanTemplateDto {
   @IsString() name!: string;
   @IsOptional() @IsString() description?: string;
@@ -63,12 +72,16 @@ class CreatePlanTemplateDto {
   @IsNumber() @Min(0) reservationAmount!: number;
   @IsEnum(DownPaymentType) downPaymentType!: DownPaymentType;
   @IsNumber() @IsPositive() downPaymentValue!: number;
-  @IsInt() @Min(1) installmentsCount!: number;
-  @IsEnum(InstallmentFrequency) frequency!: InstallmentFrequency;
+  // installmentsCount + frequency are legacy single-duration fields.
+  // New templates should send durationOptions instead.
+  @IsOptional() @IsInt() @Min(1) installmentsCount?: number;
+  @IsOptional() @IsEnum(InstallmentFrequency) frequency?: InstallmentFrequency;
   @IsEnum(StartDateRule) startDateRule!: StartDateRule;
   @IsOptional() @IsDateString() manualStartDate?: string;
   @IsOptional() @IsNumber() @Min(0) finalPaymentAmount?: number;
   @IsOptional() @IsEnum(PlanTemplateStatus) status?: PlanTemplateStatus;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
+  durationOptions?: DurationOptionDto[];
 }
 
 class UpdatePlanTemplateDto {
@@ -87,6 +100,8 @@ class UpdatePlanTemplateDto {
   @IsOptional() @IsDateString() manualStartDate?: string;
   @IsOptional() @IsNumber() @Min(0) finalPaymentAmount?: number;
   @IsOptional() @IsEnum(PlanTemplateStatus) status?: PlanTemplateStatus;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => DurationOptionDto)
+  durationOptions?: DurationOptionDto[];
 }
 
 // ─── Existing contract-based plan service ─────────────────────────────────────
@@ -246,6 +261,67 @@ function buildScheduleItems(
   return items as Prisma.PlanTemplateScheduleItemCreateManyInput[];
 }
 
+/**
+ * Validate the duration-options array and return rows ready for createMany.
+ * - No duplicate durationMonths
+ * - All durationMonths > 0, increasePercentage >= 0
+ * - Caller must also enforce reservationAmount + downPaymentAmount <= netPrice
+ */
+function buildDurationOptionRows(
+  options: DurationOptionDto[] | undefined,
+): Omit<Prisma.InstallmentPlanDurationOptionCreateManyInput, 'planId'>[] {
+  if (!options || options.length === 0) return [];
+  const seen = new Set<number>();
+  return options.map((opt, idx) => {
+    if (!Number.isInteger(opt.durationMonths) || opt.durationMonths <= 0) {
+      throw new BadRequestException(
+        `مدة التقسيط (${opt.durationMonths}) يجب أن تكون عدداً صحيحاً موجباً`,
+      );
+    }
+    if (opt.increasePercentage < 0) {
+      throw new BadRequestException(
+        `نسبة الزيادة (${opt.increasePercentage}) يجب أن تكون صفراً أو أكثر`,
+      );
+    }
+    if (seen.has(opt.durationMonths)) {
+      throw new BadRequestException(
+        `مدة التقسيط ${opt.durationMonths} مكررة في نفس الخطة`,
+      );
+    }
+    seen.add(opt.durationMonths);
+    return {
+      durationMonths: opt.durationMonths,
+      increasePercentage: new Prisma.Decimal(opt.increasePercentage),
+      order: idx,
+    };
+  });
+}
+
+/**
+ * Annotate each persisted duration option with its calculated breakdown.
+ */
+function enrichDurationOptions(
+  options: { id: string; durationMonths: number; increasePercentage: Prisma.Decimal; order: number }[],
+  context: { netPrice: Prisma.Decimal | number; reservationAmount: Prisma.Decimal | number; downPaymentAmount: Prisma.Decimal | number },
+) {
+  const netPrice = Number(context.netPrice);
+  const reservationAmount = Number(context.reservationAmount);
+  const downPaymentAmount = Number(context.downPaymentAmount);
+  return options.map((o) => ({
+    id: o.id,
+    durationMonths: o.durationMonths,
+    increasePercentage: o.increasePercentage.toString(),
+    order: o.order,
+    calculated: computeDurationOption({
+      netPrice,
+      reservationAmount,
+      downPaymentAmount,
+      durationMonths: o.durationMonths,
+      increasePercentage: Number(o.increasePercentage),
+    }),
+  }));
+}
+
 @Injectable()
 class PlanTemplatesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -291,6 +367,10 @@ class PlanTemplatesService {
           project: { select: { id: true, name: true } },
           unit: { select: { id: true, code: true } },
           createdBy: { select: { id: true, fullName: true } },
+          durationOptions: {
+            select: { id: true, durationMonths: true, order: true },
+            orderBy: { order: 'asc' },
+          },
         },
       }),
       this.prisma.installmentPlanTemplate.count({ where }),
@@ -325,10 +405,18 @@ class PlanTemplatesService {
         unit: { select: { id: true, code: true, type: true, price: true } },
         createdBy: { select: { id: true, fullName: true } },
         scheduleItems: { orderBy: { paymentNumber: 'asc' } },
+        durationOptions: { orderBy: { order: 'asc' } },
       },
     });
     if (!plan) throw new NotFoundException('Installment plan template not found');
-    return plan;
+    return {
+      ...plan,
+      durationOptions: enrichDurationOptions(plan.durationOptions, {
+        netPrice: plan.netPrice,
+        reservationAmount: plan.reservationAmount,
+        downPaymentAmount: plan.downPaymentAmount,
+      }),
+    };
   }
 
   private async validateUnit(unitId: string, projectId: string): Promise<void> {
@@ -353,7 +441,28 @@ class PlanTemplatesService {
       dto.downPaymentValue,
     );
 
-    return this.prisma.$transaction(async (tx) => {
+    // Business rule (shared with legacy and new model):
+    // reservationAmount + downPaymentAmount cannot exceed netPrice
+    const reservation = dto.reservationAmount ?? 0;
+    if (reservation + dpAmount > netPrice) {
+      throw new BadRequestException(
+        'مبلغ الحجز + الدفعة الأولى يتجاوزان صافي السعر',
+      );
+    }
+
+    const useDurationOptions = !!dto.durationOptions && dto.durationOptions.length > 0;
+    const durationOptionRows = buildDurationOptionRows(dto.durationOptions);
+
+    // Duration-option templates are used by Reservations to derive bookingAmount.
+    // The reservation flow rejects plans with reservationAmount <= 0, so block this
+    // earlier — at the source — with a clear admin-facing message.
+    if (useDurationOptions && reservation <= 0) {
+      throw new BadRequestException(
+        'دفعة الحجز يجب أن تكون أكبر من صفر للخطط التي تستخدم خيارات المدة',
+      );
+    }
+
+    const createdId = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.installmentPlanTemplate.create({
         data: {
           name: dto.name,
@@ -363,11 +472,11 @@ class PlanTemplatesService {
           totalPrice: new Prisma.Decimal(totalPrice),
           discountAmount: new Prisma.Decimal(discountAmount),
           netPrice: new Prisma.Decimal(netPrice),
-          reservationAmount: new Prisma.Decimal(dto.reservationAmount ?? 0),
+          reservationAmount: new Prisma.Decimal(reservation),
           downPaymentType: dto.downPaymentType,
           downPaymentValue: new Prisma.Decimal(dto.downPaymentValue),
           downPaymentAmount: new Prisma.Decimal(dpAmount),
-          installmentsCount: dto.installmentsCount,
+          installmentsCount: useDurationOptions ? null : dto.installmentsCount,
           frequency: dto.frequency,
           startDateRule: dto.startDateRule,
           manualStartDate: dto.manualStartDate ? new Date(dto.manualStartDate) : null,
@@ -379,21 +488,26 @@ class PlanTemplatesService {
         },
       });
 
-      const scheduleRows = buildScheduleItems(dto, totalPrice, discountAmount).map((item) => ({
-        ...item,
-        planId: plan.id,
-      }));
-      await tx.planTemplateScheduleItem.createMany({ data: scheduleRows });
+      if (useDurationOptions) {
+        await tx.installmentPlanDurationOption.createMany({
+          data: durationOptionRows.map((r) => ({ ...r, planId: plan.id })),
+        });
+      } else if (dto.installmentsCount) {
+        // Legacy single-duration template: keep generating PlanTemplateScheduleItem rows
+        const scheduleRows = buildScheduleItems(dto, totalPrice, discountAmount).map((item) => ({
+          ...item,
+          planId: plan.id,
+        }));
+        await tx.planTemplateScheduleItem.createMany({ data: scheduleRows });
+      }
 
-      return tx.installmentPlanTemplate.findUnique({
-        where: { id: plan.id },
-        include: {
-          project: { select: { id: true, name: true } },
-          unit: { select: { id: true, code: true, type: true, price: true } },
-          scheduleItems: { orderBy: { paymentNumber: 'asc' } },
-        },
-      });
+      return plan.id;
     });
+
+    // findOne must run AFTER the transaction commits — running it inside the
+    // $transaction callback uses `this.prisma` (a different connection) which
+    // cannot see the not-yet-committed writes, and would falsely 404.
+    return this.findOne(createdId);
   }
 
   async update(id: string, dto: UpdatePlanTemplateDto) {
@@ -423,7 +537,7 @@ class PlanTemplatesService {
       reservationAmount: dto.reservationAmount ?? Number(existing.reservationAmount),
       downPaymentType: dpType,
       downPaymentValue: dpValue,
-      installmentsCount: dto.installmentsCount ?? existing.installmentsCount,
+      installmentsCount: dto.installmentsCount ?? existing.installmentsCount ?? undefined,
       frequency: dto.frequency ?? existing.frequency,
       startDateRule: dto.startDateRule ?? existing.startDateRule,
       manualStartDate:
@@ -434,9 +548,30 @@ class PlanTemplatesService {
       status: dto.status ?? existing.status,
     };
 
-    return this.prisma.$transaction(async (tx) => {
-      await tx.planTemplateScheduleItem.deleteMany({ where: { planId: id } });
+    const reservation = merged.reservationAmount ?? 0;
+    if (reservation + dpAmount > netPrice) {
+      throw new BadRequestException(
+        'مبلغ الحجز + الدفعة الأولى يتجاوزان صافي السعر',
+      );
+    }
 
+    // Resolve duration options: explicit payload replaces the set; if not provided, keep existing.
+    const explicitDurationOptions = dto.durationOptions !== undefined;
+    const durationOptionRows = explicitDurationOptions
+      ? buildDurationOptionRows(dto.durationOptions)
+      : [];
+    const willUseDurationOptions = explicitDurationOptions
+      ? durationOptionRows.length > 0
+      : existing.durationOptions.length > 0;
+
+    // Same rule as create(): duration-option templates must have reservationAmount > 0
+    if (willUseDurationOptions && reservation <= 0) {
+      throw new BadRequestException(
+        'دفعة الحجز يجب أن تكون أكبر من صفر للخطط التي تستخدم خيارات المدة',
+      );
+    }
+
+    const updatedId = await this.prisma.$transaction(async (tx) => {
       const plan = await tx.installmentPlanTemplate.update({
         where: { id },
         data: {
@@ -447,11 +582,11 @@ class PlanTemplatesService {
           totalPrice: new Prisma.Decimal(totalPrice),
           discountAmount: new Prisma.Decimal(discountAmount),
           netPrice: new Prisma.Decimal(netPrice),
-          reservationAmount: new Prisma.Decimal(merged.reservationAmount ?? 0),
+          reservationAmount: new Prisma.Decimal(reservation),
           downPaymentType: dpType,
           downPaymentValue: new Prisma.Decimal(dpValue),
           downPaymentAmount: new Prisma.Decimal(dpAmount),
-          installmentsCount: merged.installmentsCount,
+          installmentsCount: willUseDurationOptions ? null : merged.installmentsCount,
           frequency: merged.frequency,
           startDateRule: merged.startDateRule,
           manualStartDate: merged.manualStartDate ? new Date(merged.manualStartDate) : null,
@@ -462,21 +597,31 @@ class PlanTemplatesService {
         },
       });
 
-      const scheduleRows = buildScheduleItems(merged, totalPrice, discountAmount).map((item) => ({
-        ...item,
-        planId: plan.id,
-      }));
-      await tx.planTemplateScheduleItem.createMany({ data: scheduleRows });
+      // Duration options: replace the set if explicitly provided
+      if (explicitDurationOptions) {
+        await tx.installmentPlanDurationOption.deleteMany({ where: { planId: id } });
+        if (durationOptionRows.length > 0) {
+          await tx.installmentPlanDurationOption.createMany({
+            data: durationOptionRows.map((r) => ({ ...r, planId: id })),
+          });
+        }
+      }
 
-      return tx.installmentPlanTemplate.findUnique({
-        where: { id: plan.id },
-        include: {
-          project: { select: { id: true, name: true } },
-          unit: { select: { id: true, code: true, type: true, price: true } },
-          scheduleItems: { orderBy: { paymentNumber: 'asc' } },
-        },
-      });
+      // Legacy schedule items: regenerate only when we are NOT using duration options
+      await tx.planTemplateScheduleItem.deleteMany({ where: { planId: id } });
+      if (!willUseDurationOptions && merged.installmentsCount) {
+        const scheduleRows = buildScheduleItems(merged, totalPrice, discountAmount).map((item) => ({
+          ...item,
+          planId: plan.id,
+        }));
+        await tx.planTemplateScheduleItem.createMany({ data: scheduleRows });
+      }
+
+      return plan.id;
     });
+
+    // Same reasoning as create(): findOne must run after the transaction commits.
+    return this.findOne(updatedId);
   }
 
   async delete(id: string) {

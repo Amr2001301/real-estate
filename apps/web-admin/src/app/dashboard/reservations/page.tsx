@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { DataTable } from '@/components/table';
-import { ReservationStatusBadge } from '@/components/badges';
+import { ReservationStatusBadge, ReservationBookingPaymentBadge } from '@/components/badges';
 import { ReservationActions } from './_components/reservation-actions';
 
 export const dynamic = 'force-dynamic';
@@ -263,6 +263,23 @@ export default async function ReservationsPage({
             key: 'sales',
             header: 'المندوب',
             cell: (r) => r.sales?.fullName ?? '—',
+          },
+          {
+            key: 'booking',
+            header: 'مبلغ الحجز',
+            cell: (r) => {
+              const amount = Number(r.bookingAmount);
+              return (
+                <div className="flex flex-col gap-1">
+                  <span className="font-medium text-slate-800" dir="ltr">
+                    {Number.isFinite(amount)
+                      ? `${amount.toLocaleString('ar-SA')} ر.س`
+                      : '—'}
+                  </span>
+                  <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} />
+                </div>
+              );
+            },
           },
           {
             key: 'status',

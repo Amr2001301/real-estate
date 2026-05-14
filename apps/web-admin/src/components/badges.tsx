@@ -6,6 +6,7 @@ import type {
   VisitRequestStatus,
   AppointmentStatus,
   ReservationStatus,
+  ReservationBookingPaymentStatus,
   MaintenanceStatus,
   PlanTemplateStatus,
 } from '@/lib/types';
@@ -113,5 +114,20 @@ const PLAN_TEMPLATE: Record<PlanTemplateStatus, { c: string; l: string }> = {
 };
 export function PlanTemplateStatusBadge({ status }: { status: PlanTemplateStatus }) {
   const x = PLAN_TEMPLATE[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const BOOKING_PAYMENT: Record<ReservationBookingPaymentStatus, { c: string; l: string }> = {
+  UNPAID: { c: 'bg-red-100 text-red-700', l: 'غير مدفوع' },
+  PENDING: { c: 'bg-amber-100 text-amber-700', l: 'بانتظار التأكيد' },
+  PAID: { c: 'bg-green-100 text-green-700', l: 'مدفوع' },
+  WAIVED: { c: 'bg-gray-200 text-gray-600', l: 'معفى' },
+};
+export function ReservationBookingPaymentBadge({
+  status,
+}: {
+  status: ReservationBookingPaymentStatus;
+}) {
+  const x = BOOKING_PAYMENT[status];
   return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
 }

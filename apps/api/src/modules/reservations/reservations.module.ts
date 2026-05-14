@@ -15,11 +15,24 @@ import {
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiTags } from '@nestjs/swagger';
-import { IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 import {
   LeadStage,
+  PlanTemplateStatus,
   Prisma,
   ReservationActivityType,
+  ReservationBookingPaymentStatus,
   ReservationStatus,
   UnitStatus,
   UserRole,
@@ -29,6 +42,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
+import { computeDurationOption } from '../installments/duration-calc';
 
 class CreateReservationDto {
   @IsUUID() unitId!: string;
@@ -37,6 +51,13 @@ class CreateReservationDto {
   @IsOptional() @IsUUID() salesId?: string;
   @IsOptional() @IsString() notes?: string;
   @IsOptional() @IsInt() @Min(1) @Max(720) expiresInHours?: number;
+  // Plan linkage: when provided, server copies plan.reservationAmount → bookingAmount.
+  // bookingAmount / bookingPaymentStatus / bookingPaidAt are intentionally NOT accepted
+  // on create — they are derived from the plan and the confirm-payment flow.
+  @IsOptional() @IsUUID() installmentPlanTemplateId?: string;
+  // Required when the linked template has duration options; ignored otherwise.
+  @IsOptional() @IsUUID() installmentPlanDurationOptionId?: string;
+  @IsOptional() @IsString() bookingNotes?: string;
 }
 
 class UpdateReservationStatusDto {
@@ -48,10 +69,28 @@ class UpdateReservationDto {
   @IsOptional() @IsUUID() salesId?: string;
   @IsOptional() @IsInt() @Min(1) @Max(720) expiresInHours?: number;
   @IsOptional() @IsString() notes?: string;
+  // Booking amount fields — editable by Admin on PENDING or APPROVED reservations
+  @IsOptional() @IsUUID() installmentPlanTemplateId?: string | null;
+  @IsOptional() @IsNumber() @Min(0) bookingAmount?: number;
+  @IsOptional() @IsEnum(ReservationBookingPaymentStatus)
+  bookingPaymentStatus?: ReservationBookingPaymentStatus;
+  @IsOptional() @IsDateString() bookingPaidAt?: string | null;
+  @IsOptional() @IsString() bookingNotes?: string | null;
 }
 
 class AddNoteDto {
   @IsString() @IsNotEmpty() body!: string;
+}
+
+class ConfirmBookingPaymentDto {
+  @IsOptional() @IsDateString() paidAt?: string;
+  @IsOptional() @IsString() note?: string;
+}
+
+class UnconfirmBookingPaymentDto {
+  @IsOptional() @IsEnum(ReservationBookingPaymentStatus)
+  newStatus?: ReservationBookingPaymentStatus;
+  @IsOptional() @IsString() note?: string;
 }
 
 const FULL_INCLUDE = {
@@ -63,6 +102,12 @@ const FULL_INCLUDE = {
   sales: { select: { id: true, fullName: true } },
   lead: { select: { id: true, fullName: true, phone: true, email: true } },
   client: { select: { id: true, fullName: true, phone: true, email: true } },
+  installmentPlanTemplate: {
+    select: { id: true, name: true, status: true, reservationAmount: true, projectId: true, unitId: true },
+  },
+  selectedDurationOption: {
+    select: { id: true, durationMonths: true, increasePercentage: true },
+  },
   reservationNotes: {
     orderBy: { createdAt: 'desc' as const },
     include: { author: { select: { id: true, fullName: true } } },
@@ -81,6 +126,46 @@ class ReservationsService {
     const year = new Date().getFullYear();
     const count = await this.prisma.reservation.count();
     return `RES-${year}-${String(count + 1).padStart(4, '0')}`;
+  }
+
+  /**
+   * Resolve and validate a booking installment plan. If valid, returns the full plan
+   * (including duration options + financial figures needed for snapshot computation).
+   */
+  private async validateBookingPlan(
+    planId: string,
+    unitId: string,
+    projectId: string,
+  ) {
+    const plan = await this.prisma.installmentPlanTemplate.findUnique({
+      where: { id: planId },
+      select: {
+        id: true,
+        status: true,
+        projectId: true,
+        unitId: true,
+        netPrice: true,
+        reservationAmount: true,
+        downPaymentAmount: true,
+        durationOptions: {
+          select: { id: true, durationMonths: true, increasePercentage: true },
+        },
+      },
+    });
+    if (!plan) {
+      throw new BadRequestException('خطة التقسيط غير موجودة');
+    }
+    if (plan.status !== PlanTemplateStatus.ACTIVE) {
+      throw new BadRequestException('خطة التقسيط غير مفعّلة');
+    }
+    // Plan must match either the exact unit, or be a project-wide plan for the same project
+    if (plan.unitId && plan.unitId !== unitId) {
+      throw new BadRequestException('خطة التقسيط مرتبطة بوحدة مختلفة');
+    }
+    if (plan.projectId !== projectId) {
+      throw new BadRequestException('خطة التقسيط لا تنتمي إلى مشروع هذه الوحدة');
+    }
+    return plan;
   }
 
   async create(actor: AuthUser, dto: CreateReservationDto) {
@@ -157,6 +242,88 @@ class ReservationsService {
     const expiresAt = new Date(Date.now() + (dto.expiresInHours ?? 72) * 3_600_000);
     const reservationNumber = await this.nextReservationNumber();
 
+    // ── Booking amount + selected-duration snapshot ────────────────────────
+    // Business rules:
+    //  - bookingAmount on create is ALWAYS derived from the linked plan's
+    //    reservationAmount. Manual amounts from the client are ignored.
+    //  - If the linked plan has duration options, the client MUST also send
+    //    installmentPlanDurationOptionId; the duration option must belong to
+    //    the same plan. A financial snapshot is then computed and persisted.
+    //  - Reservations may still be created without a plan (no booking amount,
+    //    no duration snapshot).
+    let resolvedPlanId: string | null = null;
+    let resolvedBookingAmount: Prisma.Decimal = new Prisma.Decimal(0);
+    let selectedDurationOptionId: string | null = null;
+    let selectedDurationMonths: number | null = null;
+    let selectedIncreasePercentage: Prisma.Decimal | null = null;
+    let snapshotDownPaymentAmount: Prisma.Decimal | null = null;
+    let snapshotRemainingAmount: Prisma.Decimal | null = null;
+    let snapshotFinancedAmount: Prisma.Decimal | null = null;
+    let snapshotMonthlyInstallment: Prisma.Decimal | null = null;
+    let snapshotTotalPayable: Prisma.Decimal | null = null;
+
+    if (dto.installmentPlanTemplateId) {
+      const plan = await this.validateBookingPlan(
+        dto.installmentPlanTemplateId,
+        dto.unitId,
+        unit.building.phase.projectId,
+      );
+      if (plan.reservationAmount.lte(0)) {
+        throw new BadRequestException(
+          'خطة التقسيط المختارة لا تحدد مبلغ حجز صالحاً',
+        );
+      }
+      resolvedPlanId = plan.id;
+      resolvedBookingAmount = plan.reservationAmount;
+
+      if (plan.durationOptions.length > 0) {
+        // Plan has duration options → option id is required and must belong here.
+        if (!dto.installmentPlanDurationOptionId) {
+          throw new BadRequestException(
+            'اختر مدة التقسيط من الخطة قبل إنشاء الحجز',
+          );
+        }
+        const option = plan.durationOptions.find(
+          (o) => o.id === dto.installmentPlanDurationOptionId,
+        );
+        if (!option) {
+          throw new BadRequestException(
+            'مدة التقسيط المختارة لا تنتمي إلى الخطة',
+          );
+        }
+        const calc = computeDurationOption({
+          netPrice: Number(plan.netPrice),
+          reservationAmount: Number(plan.reservationAmount),
+          downPaymentAmount: Number(plan.downPaymentAmount),
+          durationMonths: option.durationMonths,
+          increasePercentage: Number(option.increasePercentage),
+        });
+        selectedDurationOptionId = option.id;
+        selectedDurationMonths = option.durationMonths;
+        selectedIncreasePercentage = option.increasePercentage;
+        snapshotDownPaymentAmount = plan.downPaymentAmount;
+        snapshotRemainingAmount = new Prisma.Decimal(calc.remainingAmount);
+        snapshotFinancedAmount = new Prisma.Decimal(calc.financedAmount);
+        snapshotMonthlyInstallment = new Prisma.Decimal(calc.monthlyInstallment);
+        snapshotTotalPayable = new Prisma.Decimal(calc.totalPayable);
+      } else if (dto.installmentPlanDurationOptionId) {
+        // Plan has no duration options but client sent one → reject.
+        throw new BadRequestException(
+          'خطة التقسيط المختارة لا تحتوي على خيارات مدة',
+        );
+      }
+    } else if (dto.installmentPlanDurationOptionId) {
+      // No plan but option provided → reject as inconsistent input.
+      throw new BadRequestException(
+        'لا يمكن اختيار مدة تقسيط بدون اختيار خطة التقسيط',
+      );
+    }
+
+    // Payment status on create is always UNPAID; payment is confirmed later
+    // via POST /reservations/:id/booking-payment/confirm.
+    const resolvedPaymentStatus = ReservationBookingPaymentStatus.UNPAID;
+    const resolvedPaidAt: Date | null = null;
+
     return this.prisma.$transaction(async (tx) => {
       const reservation = await tx.reservation.create({
         data: {
@@ -168,6 +335,19 @@ class ReservationsService {
           notes: dto.notes ?? null,
           expiresAt,
           status: ReservationStatus.PENDING,
+          installmentPlanTemplateId: resolvedPlanId,
+          bookingAmount: resolvedBookingAmount,
+          bookingPaymentStatus: resolvedPaymentStatus,
+          bookingPaidAt: resolvedPaidAt,
+          bookingNotes: dto.bookingNotes ?? null,
+          selectedDurationOptionId,
+          selectedDurationMonths,
+          selectedIncreasePercentage,
+          snapshotDownPaymentAmount,
+          snapshotRemainingAmount,
+          snapshotFinancedAmount,
+          snapshotMonthlyInstallment,
+          snapshotTotalPayable,
         },
       });
       await tx.unit.update({
@@ -326,6 +506,9 @@ class ReservationsService {
           sales: { select: { id: true, fullName: true } },
           lead: { select: { id: true, fullName: true, phone: true } },
           client: { select: { id: true, fullName: true, phone: true } },
+          installmentPlanTemplate: {
+            select: { id: true, name: true, reservationAmount: true },
+          },
         },
       }),
       this.prisma.reservation.count({ where }),
@@ -481,6 +664,93 @@ class ReservationsService {
     });
   }
 
+  async confirmBookingPayment(
+    id: string,
+    dto: ConfirmBookingPaymentDto,
+    actor: AuthUser,
+  ) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      select: { id: true, status: true, bookingAmount: true, bookingPaymentStatus: true },
+    });
+    if (!reservation) throw new NotFoundException('Reservation not found');
+
+    if (
+      reservation.status !== ReservationStatus.PENDING &&
+      reservation.status !== ReservationStatus.APPROVED
+    ) {
+      throw new BadRequestException(
+        'يمكن تأكيد سداد الحجز فقط للحجوزات المعلقة أو المعتمدة',
+      );
+    }
+    if (reservation.bookingAmount.lte(0)) {
+      throw new BadRequestException('يجب تحديد مبلغ الحجز قبل تأكيد السداد');
+    }
+
+    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.reservation.update({
+        where: { id },
+        data: {
+          bookingPaymentStatus: ReservationBookingPaymentStatus.PAID,
+          bookingPaidAt: paidAt,
+        },
+      });
+      await tx.reservationActivity.create({
+        data: {
+          reservationId: id,
+          type: ReservationActivityType.BOOKING_PAYMENT_CONFIRMED,
+          actorId: actor.sub,
+          note:
+            dto.note?.trim()?.substring(0, 500) ??
+            `تم تأكيد سداد مبلغ الحجز (${updated.bookingAmount.toString()})`,
+        },
+      });
+      return updated;
+    });
+  }
+
+  async unconfirmBookingPayment(
+    id: string,
+    dto: UnconfirmBookingPaymentDto,
+    actor: AuthUser,
+  ) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      select: { id: true, status: true, bookingPaymentStatus: true },
+    });
+    if (!reservation) throw new NotFoundException('Reservation not found');
+
+    if (reservation.bookingPaymentStatus !== ReservationBookingPaymentStatus.PAID) {
+      throw new BadRequestException('مبلغ الحجز ليس في حالة "مدفوع"');
+    }
+
+    const newStatus = dto.newStatus ?? ReservationBookingPaymentStatus.UNPAID;
+    if (newStatus === ReservationBookingPaymentStatus.PAID) {
+      throw new BadRequestException('الحالة الجديدة يجب ألا تكون "مدفوع"');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.reservation.update({
+        where: { id },
+        data: {
+          bookingPaymentStatus: newStatus,
+          bookingPaidAt: null,
+        },
+      });
+      await tx.reservationActivity.create({
+        data: {
+          reservationId: id,
+          type: ReservationActivityType.BOOKING_PAYMENT_UNCONFIRMED,
+          actorId: actor.sub,
+          note: dto.note?.trim()?.substring(0, 500) ?? 'تم إلغاء تأكيد سداد مبلغ الحجز',
+        },
+      });
+      return updated;
+    });
+  }
+
   async addNote(id: string, dto: AddNoteDto, actorId: string) {
     await this.findOne(id);
     const body = dto.body.trim();
@@ -516,13 +786,39 @@ class ReservationsService {
         expiresAt: true,
         notes: true,
         unitId: true,
+        bookingAmount: true,
+        bookingPaymentStatus: true,
+        installmentPlanTemplateId: true,
         sales: { select: { fullName: true } },
+        unit: { select: { building: { select: { phase: { select: { projectId: true } } } } } },
       },
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
 
-    if (reservation.status !== ReservationStatus.PENDING) {
+    // Core reservation fields (sales/expiresIn/notes) are only editable while PENDING.
+    // Booking payment fields are also editable on APPROVED reservations.
+    const isCoreEdit =
+      dto.salesId !== undefined ||
+      dto.expiresInHours !== undefined ||
+      dto.notes !== undefined;
+    const isBookingEdit =
+      dto.installmentPlanTemplateId !== undefined ||
+      dto.bookingAmount !== undefined ||
+      dto.bookingPaymentStatus !== undefined ||
+      dto.bookingPaidAt !== undefined ||
+      dto.bookingNotes !== undefined;
+
+    if (isCoreEdit && reservation.status !== ReservationStatus.PENDING) {
       throw new BadRequestException('Only pending reservations can be edited');
+    }
+    if (
+      isBookingEdit &&
+      reservation.status !== ReservationStatus.PENDING &&
+      reservation.status !== ReservationStatus.APPROVED
+    ) {
+      throw new BadRequestException(
+        'حقول مبلغ الحجز قابلة للتعديل فقط على الحجوزات المعلقة أو المعتمدة',
+      );
     }
 
     const data: Prisma.ReservationUpdateInput = {};
@@ -556,6 +852,75 @@ class ReservationsService {
     if (dto.notes !== undefined && dto.notes !== reservation.notes) {
       data.notes = dto.notes;
       changes.push('تم تعديل الملاحظات');
+    }
+
+    // ── Booking amount fields ────────────────────────────────────────────
+    if (dto.installmentPlanTemplateId !== undefined) {
+      if (dto.installmentPlanTemplateId === null) {
+        if (reservation.installmentPlanTemplateId) {
+          data.installmentPlanTemplate = { disconnect: true };
+          changes.push('تم إلغاء ربط خطة التقسيط');
+        }
+      } else {
+        const plan = await this.validateBookingPlan(
+          dto.installmentPlanTemplateId,
+          reservation.unitId,
+          reservation.unit.building.phase.projectId,
+        );
+        if (plan.id !== reservation.installmentPlanTemplateId) {
+          data.installmentPlanTemplate = { connect: { id: plan.id } };
+          changes.push('تم تحديث خطة التقسيط');
+          // If admin did not also send a booking amount, default to plan's reservationAmount
+          if (dto.bookingAmount === undefined) {
+            data.bookingAmount = plan.reservationAmount;
+            changes.push('تم تحديث مبلغ الحجز من خطة التقسيط');
+          }
+        }
+      }
+    }
+
+    if (dto.bookingAmount !== undefined) {
+      const amount = new Prisma.Decimal(dto.bookingAmount);
+      if (!reservation.bookingAmount.eq(amount)) {
+        data.bookingAmount = amount;
+        changes.push(`تم تحديث مبلغ الحجز إلى ${amount.toString()}`);
+      }
+    }
+
+    if (
+      dto.bookingPaymentStatus !== undefined &&
+      dto.bookingPaymentStatus !== reservation.bookingPaymentStatus
+    ) {
+      // Validate PAID requires non-zero amount unless WAIVED
+      const newAmount = data.bookingAmount
+        ? (data.bookingAmount as Prisma.Decimal)
+        : reservation.bookingAmount;
+      if (
+        dto.bookingPaymentStatus === ReservationBookingPaymentStatus.PAID &&
+        new Prisma.Decimal(newAmount as Prisma.Decimal.Value).lte(0)
+      ) {
+        throw new BadRequestException('مبلغ الحجز المدفوع يجب أن يكون أكبر من صفر');
+      }
+      data.bookingPaymentStatus = dto.bookingPaymentStatus;
+      changes.push(`تم تحديث حالة سداد الحجز إلى ${dto.bookingPaymentStatus}`);
+      // Auto-manage bookingPaidAt only when transitioning into/out of PAID and admin didn't set it explicitly
+      if (dto.bookingPaidAt === undefined) {
+        if (dto.bookingPaymentStatus === ReservationBookingPaymentStatus.PAID) {
+          data.bookingPaidAt = new Date();
+        } else {
+          data.bookingPaidAt = null;
+        }
+      }
+    }
+
+    if (dto.bookingPaidAt !== undefined) {
+      data.bookingPaidAt = dto.bookingPaidAt ? new Date(dto.bookingPaidAt) : null;
+      changes.push('تم تحديث تاريخ سداد الحجز');
+    }
+
+    if (dto.bookingNotes !== undefined) {
+      data.bookingNotes = dto.bookingNotes ?? null;
+      changes.push('تم تحديث ملاحظات مبلغ الحجز');
     }
 
     if (changes.length === 0) {
@@ -784,6 +1149,26 @@ class ReservationsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.svc.addNote(id, dto, user.sub);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Post(':id/booking-payment/confirm')
+  confirmBookingPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConfirmBookingPaymentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.confirmBookingPayment(id, dto, user);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Post(':id/booking-payment/unconfirm')
+  unconfirmBookingPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UnconfirmBookingPaymentDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.unconfirmBookingPayment(id, dto, user);
   }
 }
 

@@ -216,12 +216,27 @@ export default async function InstallmentPlansPage({
           {
             key: 'installments',
             header: 'الأقساط',
-            cell: (r) => (
-              <div>
-                <p>{r.installmentsCount} قسط</p>
-                <p className="text-xs text-slate-500">{FREQUENCY_LABELS[r.frequency] ?? r.frequency}</p>
-              </div>
-            ),
+            cell: (r) => {
+              const optionsCount = r.durationOptions?.length ?? 0;
+              if (optionsCount > 0) {
+                return (
+                  <div>
+                    <p>{optionsCount} خيار مدة</p>
+                    <p className="text-xs text-slate-500">
+                      {r.durationOptions!
+                        .map((o) => `${o.durationMonths}ش`)
+                        .join(' / ')}
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div>
+                  <p>{r.installmentsCount != null ? `${r.installmentsCount} قسط` : '—'}</p>
+                  <p className="text-xs text-slate-500">{FREQUENCY_LABELS[r.frequency] ?? r.frequency}</p>
+                </div>
+              );
+            },
           },
           {
             key: 'status',

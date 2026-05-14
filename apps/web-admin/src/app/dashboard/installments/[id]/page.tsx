@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlanTemplateStatusBadge } from '@/components/badges';
 import { PlanDetailActions } from '../_components/plan-detail-actions';
+import { DurationSelector } from './_components/duration-selector';
 
 const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
   RESERVATION: 'دفعة حجز',
@@ -55,6 +56,8 @@ export default async function InstallmentPlanDetailPage({
   const plan = planRes.data;
   const isAdmin = session?.role === 'ADMIN';
   const scheduleItems = plan.scheduleItems ?? [];
+  const durationOptions = plan.durationOptions ?? [];
+  const hasDurationOptions = durationOptions.length > 0;
 
   return (
     <div className="space-y-6 pb-2">
@@ -109,12 +112,23 @@ export default async function InstallmentPlanDetailPage({
                     <dd className="font-medium text-green-700">- {formatCurrency(plan.discountAmount)}</dd>
                   </div>
                 )}
-                {Number(plan.reservationAmount) > 0 && (
-                  <div>
-                    <dt className="text-slate-500 mb-0.5">دفعة الحجز</dt>
-                    <dd className="font-medium">{formatCurrency(plan.reservationAmount)}</dd>
-                  </div>
-                )}
+                <div>
+                  <dt className="text-slate-500 mb-0.5">دفعة الحجز</dt>
+                  <dd
+                    className={
+                      Number(plan.reservationAmount) > 0
+                        ? 'font-medium'
+                        : 'font-medium text-warning-700'
+                    }
+                  >
+                    {formatCurrency(plan.reservationAmount)}
+                    {Number(plan.reservationAmount) <= 0 && (
+                      <span className="text-xs text-warning-700 ms-2">
+                        ⚠ يجب تحديد دفعة الحجز قبل استخدام الخطة لإنشاء حجز
+                      </span>
+                    )}
+                  </dd>
+                </div>
                 <div>
                   <dt className="text-slate-500 mb-0.5">الدفعة الأولى</dt>
                   <dd className="font-medium">
@@ -127,8 +141,14 @@ export default async function InstallmentPlanDetailPage({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-slate-500 mb-0.5">عدد الأقساط</dt>
-                  <dd className="font-medium">{plan.installmentsCount} قسط</dd>
+                  <dt className="text-slate-500 mb-0.5">{hasDurationOptions ? 'خيارات المدة' : 'عدد الأقساط'}</dt>
+                  <dd className="font-medium">
+                    {hasDurationOptions
+                      ? `${durationOptions.length} خيار`
+                      : plan.installmentsCount != null
+                        ? `${plan.installmentsCount} قسط`
+                        : '—'}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-slate-500 mb-0.5">تكرار القسط</dt>
@@ -154,7 +174,23 @@ export default async function InstallmentPlanDetailPage({
             </CardBody>
           </Card>
 
-          {/* Schedule table */}
+          {/* Duration options or legacy schedule */}
+          {hasDurationOptions ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>خيارات مدة التقسيط ({durationOptions.length})</CardTitle>
+              </CardHeader>
+              <CardBody>
+                <DurationSelector
+                  options={durationOptions}
+                  netPrice={Number(plan.netPrice)}
+                  reservationAmount={Number(plan.reservationAmount)}
+                  downPaymentAmount={Number(plan.downPaymentAmount)}
+                  totalPrice={Number(plan.totalPrice)}
+                />
+              </CardBody>
+            </Card>
+          ) : (
           <Card>
             <CardHeader>
               <CardTitle>جدول السداد ({scheduleItems.length} دفعة)</CardTitle>
@@ -215,6 +251,7 @@ export default async function InstallmentPlanDetailPage({
               )}
             </CardBody>
           </Card>
+          )}
         </div>
 
         {/* ── Sidebar ───────────────────────────────────────────────────── */}

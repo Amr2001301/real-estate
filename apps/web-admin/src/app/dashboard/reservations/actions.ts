@@ -35,6 +35,17 @@ export async function createReservationAction(
     };
   }
 
+  // Plan linkage + optional booking notes are the only booking-related fields
+  // accepted on create. bookingAmount is derived server-side from the plan,
+  // and bookingPaymentStatus always starts as UNPAID (confirmed later via the
+  // dedicated booking-payment endpoints).
+  const installmentPlanTemplateId =
+    String(formData.get('installmentPlanTemplateId') ?? '').trim() || undefined;
+  const installmentPlanDurationOptionId =
+    String(formData.get('installmentPlanDurationOptionId') ?? '').trim() || undefined;
+  const bookingNotes =
+    String(formData.get('bookingNotes') ?? '').trim() || undefined;
+
   let createdId: string | null = null;
   try {
     const res = await api.post<{ id: string }>('/reservations', {
@@ -44,6 +55,11 @@ export async function createReservationAction(
       salesId,
       notes,
       expiresInHours,
+      ...(installmentPlanTemplateId ? { installmentPlanTemplateId } : {}),
+      ...(installmentPlanDurationOptionId
+        ? { installmentPlanDurationOptionId }
+        : {}),
+      ...(bookingNotes ? { bookingNotes } : {}),
     });
     createdId = res.id;
   } catch (e: unknown) {
@@ -120,4 +136,90 @@ export async function addReservationNoteAction(id: string, formData: FormData) {
   if (!body) return;
   await api.post(`/reservations/${id}/notes`, { body });
   revalidatePath(`/dashboard/reservations/${id}`);
+}
+
+export async function confirmBookingPaymentAction(
+  id: string,
+  formData?: FormData,
+): Promise<{ error?: string }> {
+  const paidAtRaw = String(formData?.get('paidAt') ?? '').trim();
+  const note = String(formData?.get('note') ?? '').trim() || undefined;
+  const payload: Record<string, unknown> = {};
+  if (paidAtRaw) payload.paidAt = new Date(paidAtRaw).toISOString();
+  if (note) payload.note = note;
+  try {
+    await api.post(`/reservations/${id}/booking-payment/confirm`, payload);
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+  revalidatePath('/dashboard/reservations');
+  revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
+}
+
+export async function unconfirmBookingPaymentAction(
+  id: string,
+  formData?: FormData,
+): Promise<{ error?: string }> {
+  const newStatus = String(formData?.get('newStatus') ?? '').trim() || undefined;
+  const note = String(formData?.get('note') ?? '').trim() || undefined;
+  const payload: Record<string, unknown> = {};
+  if (newStatus) payload.newStatus = newStatus;
+  if (note) payload.note = note;
+  try {
+    await api.post(`/reservations/${id}/booking-payment/unconfirm`, payload);
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+  revalidatePath('/dashboard/reservations');
+  revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
+}
+
+export async function updateReservationBookingAction(
+  id: string,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const payload: Record<string, unknown> = {};
+
+  if (formData.has('installmentPlanTemplateId')) {
+    const v = String(formData.get('installmentPlanTemplateId') ?? '').trim();
+    payload.installmentPlanTemplateId = v || null;
+  }
+  if (formData.has('bookingAmount')) {
+    const raw = String(formData.get('bookingAmount') ?? '').trim();
+    if (raw === '') {
+      payload.bookingAmount = 0;
+    } else {
+      const n = Number(raw);
+      if (!Number.isFinite(n) || n < 0) {
+        return { error: 'مبلغ الحجز يجب أن يكون رقماً موجباً' };
+      }
+      payload.bookingAmount = n;
+    }
+  }
+  if (formData.has('bookingPaymentStatus')) {
+    const v = String(formData.get('bookingPaymentStatus') ?? '').trim();
+    if (v) payload.bookingPaymentStatus = v;
+  }
+  if (formData.has('bookingPaidAt')) {
+    const v = String(formData.get('bookingPaidAt') ?? '').trim();
+    payload.bookingPaidAt = v ? new Date(v).toISOString() : null;
+  }
+  if (formData.has('bookingNotes')) {
+    payload.bookingNotes = String(formData.get('bookingNotes') ?? '');
+  }
+
+  if (Object.keys(payload).length === 0) {
+    return { error: 'لا يوجد تعديل لحفظه' };
+  }
+
+  try {
+    await api.patch(`/reservations/${id}`, payload);
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+  revalidatePath('/dashboard/reservations');
+  revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
 }

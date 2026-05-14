@@ -25,6 +25,7 @@ export type VisitActivityType =
   | 'VISIT_SCHEDULED' | 'VISIT_CONFIRMED' | 'VISIT_COMPLETED' | 'VISIT_CANCELLED'
   | 'VISIT_NO_SHOW' | 'VISIT_RESCHEDULED' | 'SALES_ASSIGNED' | 'NOTE_ADDED';
 export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED';
+export type ReservationBookingPaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'WAIVED';
 export type MaintenanceStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 export type UserRole = 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER';
 export type MediaType = 'IMAGE' | 'VIDEO' | 'FLOORPLAN' | 'DOCUMENT';
@@ -288,6 +289,34 @@ export interface Reservation {
   cancelledAt: string | null;
   createdAt: string;
   updatedAt: string;
+  // Booking amount (manual tracking, recorded by Admin)
+  bookingAmount: string | number;
+  bookingPaymentStatus: ReservationBookingPaymentStatus;
+  bookingPaidAt: string | null;
+  bookingNotes: string | null;
+  installmentPlanTemplateId: string | null;
+  installmentPlanTemplate?: {
+    id: string;
+    name: string;
+    reservationAmount: string | number;
+    status?: PlanTemplateStatus;
+    projectId?: string;
+    unitId?: string | null;
+  } | null;
+  // Selected duration option + financial snapshot (frozen at create time).
+  selectedDurationOptionId: string | null;
+  selectedDurationOption?: {
+    id: string;
+    durationMonths: number;
+    increasePercentage: string | number;
+  } | null;
+  selectedDurationMonths: number | null;
+  selectedIncreasePercentage: string | number | null;
+  snapshotDownPaymentAmount: string | number | null;
+  snapshotRemainingAmount: string | number | null;
+  snapshotFinancedAmount: string | number | null;
+  snapshotMonthlyInstallment: string | number | null;
+  snapshotTotalPayable: string | number | null;
   reservationNotes?: ReservationNote[];
   activities?: ReservationActivity[];
 }
@@ -305,7 +334,9 @@ export type ReservationActivityType =
   | 'REJECTED'
   | 'CANCELLED'
   | 'EXPIRED'
-  | 'NOTE_ADDED';
+  | 'NOTE_ADDED'
+  | 'BOOKING_PAYMENT_CONFIRMED'
+  | 'BOOKING_PAYMENT_UNCONFIRMED';
 
 export interface ReservationActivity {
   id: string;
@@ -369,7 +400,7 @@ export interface InstallmentPlanTemplate {
   downPaymentType: DownPaymentType;
   downPaymentValue: string | number;
   downPaymentAmount: string | number;
-  installmentsCount: number;
+  installmentsCount: number | null;
   frequency: InstallmentFrequency;
   startDateRule: StartDateRule;
   manualStartDate: string | null;
@@ -380,4 +411,21 @@ export interface InstallmentPlanTemplate {
   createdAt: string;
   updatedAt: string;
   scheduleItems?: PlanTemplateScheduleItem[];
+  durationOptions?: InstallmentPlanDurationOption[];
+}
+
+export interface DurationOptionCalculated {
+  remainingAmount: number;
+  financedAmount: number;
+  monthlyInstallment: number;
+  totalPayable: number;
+}
+
+export interface InstallmentPlanDurationOption {
+  id: string;
+  durationMonths: number;
+  // Present on detail responses; omitted on list responses to keep payloads small.
+  increasePercentage?: string | number;
+  order: number;
+  calculated?: DurationOptionCalculated;
 }

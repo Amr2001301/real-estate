@@ -1,5 +1,5 @@
 import { api, safe } from '@/lib/api';
-import type { Paged, User, LeadStage } from '@/lib/types';
+import type { Paged, User, LeadStage, InstallmentPlanTemplate } from '@/lib/types';
 import { PageHeader } from '@/components/ui/page-header';
 import NewReservationForm from './_form';
 
@@ -9,7 +9,9 @@ interface AvailableUnit {
   id: string;
   code: string;
   type: string;
-  building?: { phase?: { project?: { name: { ar: string; en: string } } } };
+  building?: {
+    phase?: { projectId?: string; project?: { id: string; name: { ar: string; en: string } } };
+  };
 }
 
 interface LeadOption {
@@ -21,12 +23,15 @@ interface LeadOption {
 }
 
 export default async function NewReservationPage() {
-  const [unitsRes, leadsRes, clientsRes, customersRes, salesRes] = await Promise.all([
+  const [unitsRes, leadsRes, clientsRes, customersRes, salesRes, plansRes] = await Promise.all([
     safe(api.get<Paged<AvailableUnit>>('/units?status=AVAILABLE&pageSize=200')),
     safe(api.get<Paged<LeadOption>>('/leads?pageSize=200')),
     safe(api.get<Paged<User>>('/users?role=CLIENT&pageSize=200')),
     safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=200')),
     safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
+    safe(api.get<Paged<InstallmentPlanTemplate>>(
+      '/installment-plan-templates?status=ACTIVE&pageSize=200',
+    )),
   ]);
 
   const clients = [
@@ -56,6 +61,20 @@ export default async function NewReservationPage() {
         leads={leadsRes.data?.data ?? []}
         clients={clients}
         salesOptions={salesRes.data?.data ?? []}
+        plans={(plansRes.data?.data ?? []).map((p) => ({
+          id: p.id,
+          name: p.name,
+          netPrice: p.netPrice,
+          reservationAmount: p.reservationAmount,
+          downPaymentAmount: p.downPaymentAmount,
+          durationOptions: (p.durationOptions ?? []).map((o) => ({
+            id: o.id,
+            durationMonths: o.durationMonths,
+            increasePercentage: o.increasePercentage ?? 0,
+          })),
+          projectId: p.projectId,
+          unitId: p.unitId,
+        }))}
       />
     </div>
   );

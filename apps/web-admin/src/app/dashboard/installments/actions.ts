@@ -20,14 +20,19 @@ export async function createPlanAction(
   const name = String(formData.get('name') ?? '').trim();
   const projectId = String(formData.get('projectId') ?? '').trim();
   const totalPrice = Number(formData.get('totalPrice'));
-  const installmentsCount = Number(formData.get('installmentsCount'));
 
   if (!name) return { error: 'اسم الخطة مطلوب' };
   if (!projectId) return { error: 'المشروع مطلوب' };
   if (!totalPrice || totalPrice <= 0) return { error: 'السعر الإجمالي يجب أن يكون أكبر من صفر' };
-  if (!installmentsCount || installmentsCount < 1) return { error: 'عدد الأقساط يجب أن يكون أكبر من صفر' };
 
   const payload = buildPayload(formData);
+
+  // Validate: must have either duration options or legacy installmentsCount
+  const hasDurations = Array.isArray(payload.durationOptions) && payload.durationOptions.length > 0;
+  const hasLegacy = typeof payload.installmentsCount === 'number' && payload.installmentsCount > 0;
+  if (!hasDurations && !hasLegacy) {
+    return { error: 'أضف خيار مدة واحد على الأقل أو حدد عدد الأقساط (للنمط القديم)' };
+  }
 
   let createdId: string;
   try {
@@ -100,6 +105,30 @@ function buildPayload(formData: FormData): Record<string, unknown> {
     return Number.isFinite(n) ? n : undefined;
   };
 
+  // Duration options come from the form as a JSON-encoded array (hidden input)
+  const rawDurationOptions = String(formData.get('durationOptions') ?? '').trim();
+  let durationOptions: { durationMonths: number; increasePercentage: number }[] = [];
+  if (rawDurationOptions) {
+    try {
+      const parsed = JSON.parse(rawDurationOptions);
+      if (Array.isArray(parsed)) {
+        durationOptions = parsed
+          .map((o: unknown) => {
+            if (typeof o !== 'object' || o === null) return null;
+            const r = o as Record<string, unknown>;
+            const months = Number(r.durationMonths);
+            const pct = Number(r.increasePercentage);
+            if (!Number.isFinite(months) || months <= 0) return null;
+            if (!Number.isFinite(pct) || pct < 0) return null;
+            return { durationMonths: months, increasePercentage: pct };
+          })
+          .filter((x): x is { durationMonths: number; increasePercentage: number } => x !== null);
+      }
+    } catch {
+      // ignore malformed input — treat as empty
+    }
+  }
+
   return {
     name: str('name'),
     description: str('description'),
@@ -116,5 +145,6 @@ function buildPayload(formData: FormData): Record<string, unknown> {
     manualStartDate: str('manualStartDate') || null,
     finalPaymentAmount: num('finalPaymentAmount') || null,
     status: str('status'),
+    durationOptions,
   };
 }

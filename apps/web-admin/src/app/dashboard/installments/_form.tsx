@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertCircle, Calculator } from 'lucide-react';
+import { AlertCircle, Calculator, Plus, Trash2 } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
 import { Input } from '@/components/ui/input';
@@ -17,9 +17,20 @@ import type {
   DownPaymentType,
   InstallmentFrequency,
   StartDateRule,
-  PlanPaymentType,
 } from '@/lib/types';
+import { computeDurationOption } from '@/lib/installment-calc';
 import { createPlanAction, updatePlanAction, type PlanFormState } from './actions';
+
+interface DurationOptionState {
+  // local id for React keys; not sent to server
+  key: string;
+  durationMonths: string;
+  increasePercentage: string;
+}
+
+function newDurationKey(): string {
+  return Math.random().toString(36).slice(2, 10);
+}
 
 interface ProjectOption {
   id: string;
@@ -37,40 +48,6 @@ interface Props {
   projects: ProjectOption[];
   initialData?: InstallmentPlanTemplate;
   mode: 'create' | 'edit';
-}
-
-interface ScheduleRow {
-  paymentNumber: number;
-  paymentType: PlanPaymentType;
-  label: string;
-  dueDateLabel: string;
-  amount: number;
-  remainingBalance: number;
-}
-
-const FREQUENCY_MONTHS: Record<InstallmentFrequency, number> = {
-  MONTHLY: 1,
-  QUARTERLY: 3,
-  SEMI_ANNUAL: 6,
-  YEARLY: 12,
-};
-
-const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
-  RESERVATION: 'دفعة حجز',
-  DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط',
-  FINAL_PAYMENT: 'دفعة أخيرة',
-};
-
-const PAYMENT_TYPE_BADGE: Record<PlanPaymentType, string> = {
-  RESERVATION: 'bg-blue-50 text-blue-700',
-  DOWN_PAYMENT: 'bg-amber-50 text-amber-700',
-  INSTALLMENT: 'bg-slate-50 text-slate-700',
-  FINAL_PAYMENT: 'bg-purple-50 text-purple-700',
-};
-
-function formatDateLabel(date: Date): string {
-  return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
 function parseNum(val: string): number {
@@ -91,125 +68,6 @@ function safeStr(val: unknown, fallback = ''): string {
   return Number.isFinite(n) ? String(n) : fallback;
 }
 
-function computeSchedule(params: {
-  totalPrice: number;
-  discountAmount: number;
-  reservationAmount: number;
-  downPaymentType: DownPaymentType;
-  downPaymentValue: number;
-  installmentsCount: number;
-  frequency: InstallmentFrequency;
-  startDateRule: StartDateRule;
-  manualStartDate: string;
-  finalPaymentAmount: number;
-}): ScheduleRow[] {
-  const {
-    totalPrice,
-    discountAmount,
-    reservationAmount,
-    downPaymentType,
-    downPaymentValue,
-    installmentsCount,
-    frequency,
-    startDateRule,
-    manualStartDate,
-    finalPaymentAmount,
-  } = params;
-
-  if (totalPrice <= 0 || installmentsCount < 1) return [];
-
-  const netPrice = totalPrice - discountAmount;
-  const dpAmount =
-    downPaymentType === 'PERCENTAGE'
-      ? (netPrice * downPaymentValue) / 100
-      : downPaymentValue;
-  const finalAmt = finalPaymentAmount ?? 0;
-  const remaining = netPrice - reservationAmount - dpAmount - finalAmt;
-  const perInstallment = installmentsCount > 0 ? remaining / installmentsCount : 0;
-
-  const monthStep = FREQUENCY_MONTHS[frequency];
-  const startDate =
-    startDateRule === 'MANUAL' && manualStartDate ? new Date(manualStartDate) : null;
-
-  const rows: ScheduleRow[] = [];
-  let paymentNumber = 1;
-  let remainingBalance = netPrice;
-
-  if (reservationAmount > 0) {
-    remainingBalance -= reservationAmount;
-    rows.push({
-      paymentNumber: paymentNumber++,
-      paymentType: 'RESERVATION',
-      label: PAYMENT_TYPE_LABELS.RESERVATION,
-      dueDateLabel: 'عند الحجز',
-      amount: reservationAmount,
-      remainingBalance,
-    });
-  }
-
-  remainingBalance -= dpAmount;
-  rows.push({
-    paymentNumber: paymentNumber++,
-    paymentType: 'DOWN_PAYMENT',
-    label: PAYMENT_TYPE_LABELS.DOWN_PAYMENT,
-    dueDateLabel: 'عند التعاقد',
-    amount: dpAmount,
-    remainingBalance,
-  });
-
-  for (let i = 0; i < installmentsCount; i++) {
-    let dueDateLabel = '—';
-    if (startDate) {
-      const d = new Date(startDate);
-      d.setMonth(d.getMonth() + i * monthStep);
-      dueDateLabel = formatDateLabel(d);
-    } else if (startDateRule === 'AFTER_RESERVATION') {
-      dueDateLabel = `بعد الحجز بـ ${i * monthStep + monthStep} شهر`;
-    } else {
-      dueDateLabel = `بعد التعاقد بـ ${i * monthStep + monthStep} شهر`;
-    }
-    remainingBalance -= perInstallment;
-    rows.push({
-      paymentNumber: paymentNumber++,
-      paymentType: 'INSTALLMENT',
-      label: `${PAYMENT_TYPE_LABELS.INSTALLMENT} ${i + 1}`,
-      dueDateLabel,
-      amount: perInstallment,
-      remainingBalance,
-    });
-  }
-
-  if (finalAmt > 0) {
-    remainingBalance -= finalAmt;
-    rows.push({
-      paymentNumber: paymentNumber++,
-      paymentType: 'FINAL_PAYMENT',
-      label: PAYMENT_TYPE_LABELS.FINAL_PAYMENT,
-      dueDateLabel: '—',
-      amount: finalAmt,
-      remainingBalance,
-    });
-  }
-
-  return rows;
-}
-
-function validateSchedule(params: {
-  netPrice: number;
-  reservationAmount: number;
-  downPaymentAmount: number;
-  finalPaymentAmount: number;
-  installmentsCount: number;
-}): string | null {
-  const { netPrice, reservationAmount, downPaymentAmount, finalPaymentAmount, installmentsCount } =
-    params;
-  if (netPrice <= 0) return null;
-  if (downPaymentAmount > netPrice) return 'الدفعة الأولى تتجاوز صافي السعر';
-  if (reservationAmount + downPaymentAmount + finalPaymentAmount > netPrice)
-    return 'مجموع الحجز + المقدم + الدفعة الأخيرة يتجاوز صافي السعر';
-  if (installmentsCount < 1) return 'عدد الأقساط يجب أن يكون 1 على الأقل';
-  return null;
-}
 
 export default function PlanForm({ projects, initialData, mode }: Props) {
   const action =
@@ -238,7 +96,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
   );
   const [downPaymentValue, setDownPaymentValue] = useState(safeStr(d?.downPaymentValue));
   const [installmentsCount, setInstallmentsCount] = useState(
-    d ? String(d.installmentsCount) : '12',
+    d?.installmentsCount != null ? String(d.installmentsCount) : '12',
   );
   const [frequency, setFrequency] = useState<InstallmentFrequency>(d?.frequency ?? 'MONTHLY');
   const [startDateRule, setStartDateRule] = useState<StartDateRule>(
@@ -250,6 +108,37 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
   const [finalPaymentAmount, setFinalPaymentAmount] = useState(
     d?.finalPaymentAmount != null ? safeStr(d.finalPaymentAmount) : '',
   );
+
+  // Duration options (multi). In edit mode initialise from existing; else start with one row.
+  const [durationOptions, setDurationOptions] = useState<DurationOptionState[]>(() => {
+    if (d?.durationOptions && d.durationOptions.length > 0) {
+      return d.durationOptions.map((opt) => ({
+        key: newDurationKey(),
+        durationMonths: String(opt.durationMonths),
+        increasePercentage: safeStr(opt.increasePercentage, '0'),
+      }));
+    }
+    if (mode === 'edit') return []; // legacy plan being edited — leave options empty so user opts in
+    return [{ key: newDurationKey(), durationMonths: '12', increasePercentage: '0' }];
+  });
+
+  function addDurationOption() {
+    setDurationOptions((opts) => [
+      ...opts,
+      { key: newDurationKey(), durationMonths: '', increasePercentage: '0' },
+    ]);
+  }
+
+  function removeDurationOption(key: string) {
+    setDurationOptions((opts) => opts.filter((o) => o.key !== key));
+  }
+
+  function updateDurationOption(key: string, patch: Partial<Omit<DurationOptionState, 'key'>>) {
+    setDurationOptions((opts) =>
+      opts.map((o) => (o.key === key ? { ...o, ...patch } : o)),
+    );
+  }
+
   // client-side unit validation
   const [unitTouched, setUnitTouched] = useState(false);
 
@@ -322,31 +211,54 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
   const reservation = parseNum(reservationAmount);
   const dpVal = parseNum(downPaymentValue);
   const dpAmount = downPaymentType === 'PERCENTAGE' ? (netPrice * dpVal) / 100 : dpVal;
-  const installments = parseInt(installmentsCount) || 0;
-  const finalAmt = parseNum(finalPaymentAmount);
-
-  const scheduleRows = computeSchedule({
-    totalPrice: tp,
-    discountAmount: disc,
-    reservationAmount: reservation,
-    downPaymentType,
-    downPaymentValue: dpVal,
-    installmentsCount: installments,
-    frequency,
-    startDateRule,
-    manualStartDate,
-    finalPaymentAmount: finalAmt,
-  });
-
-  const scheduleError = validateSchedule({
-    netPrice,
-    reservationAmount: reservation,
-    downPaymentAmount: dpAmount,
-    finalPaymentAmount: finalAmt,
-    installmentsCount: installments,
-  });
 
   const unitError = unitTouched && !unitId ? 'يرجى اختيار الوحدة' : undefined;
+
+  // Derived: per-duration calculated rows
+  const durationCalcRows = useMemo(() => {
+    return durationOptions.map((opt) => {
+      const months = parseInt(opt.durationMonths) || 0;
+      const pct = parseNum(opt.increasePercentage);
+      const calc = computeDurationOption({
+        netPrice,
+        reservationAmount: reservation,
+        downPaymentAmount: dpAmount,
+        durationMonths: months,
+        increasePercentage: pct,
+      });
+      return { ...opt, months, pct, ...calc };
+    });
+  }, [durationOptions, netPrice, reservation, dpAmount]);
+
+  const durationOptionsError = (() => {
+    if (durationOptions.length === 0) return null;
+    const months = durationCalcRows.map((r) => r.months);
+    if (months.some((m) => m <= 0))
+      return 'كل مدة يجب أن تكون عدداً صحيحاً موجباً';
+    const seen = new Set<number>();
+    for (const m of months) {
+      if (seen.has(m)) return `مدة التقسيط ${m} مكررة`;
+      seen.add(m);
+    }
+    if (durationCalcRows.some((r) => r.pct < 0))
+      return 'نسبة الزيادة يجب أن تكون صفراً أو أكثر';
+    return null;
+  })();
+
+  const reservationPlusDownError =
+    netPrice > 0 && reservation + dpAmount > netPrice
+      ? 'مبلغ الحجز + الدفعة الأولى يتجاوزان صافي السعر'
+      : null;
+
+  const useDurationModel = durationOptions.length > 0;
+
+  // Duration-option templates must declare a positive booking amount. The reservation
+  // create flow reads InstallmentPlanTemplate.reservationAmount as the required booking
+  // amount, and rejects plans with 0.
+  const reservationAmountError =
+    useDurationModel && reservation <= 0
+      ? 'دفعة الحجز يجب أن تكون أكبر من صفر للخطط التي تستخدم خيارات المدة'
+      : null;
 
   // ── numeric input helper: allows free typing ──────────────────────────────
   // We use type="text" + inputMode="decimal" so the browser never blocks
@@ -545,12 +457,13 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
         <Field
           label="دفعة الحجز (ج.م)"
           name="reservationAmount"
-          hint="المبلغ الأولي الذي يدفعه العميل عند الحجز"
+          required
+          hint="مبلغ الحجز المطلوب من العميل. هذا المبلغ يُستخدم تلقائياً عند إنشاء الحجز. مطلوب وأكبر من صفر للخطط التي تستخدم خيارات المدة."
         >
           <Input
             id="reservationAmount"
             name="reservationAmount"
-            placeholder="0"
+            placeholder="مثال: 50000"
             {...numericInputProps(reservationAmount, setReservationAmount)}
           />
         </Field>
@@ -609,42 +522,202 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
         </Field>
       </FormSection>
 
-      {/* ── Section 4: Installment Schedule ─────────────────────────────── */}
+      {/* ── Section 4: Duration Options ─────────────────────────────────── */}
       <FormSection
-        title="الأقساط"
-        description="عدد الأقساط، التكرار، وقاعدة تاريخ البدء."
+        title="خيارات مدة التقسيط"
+        description="حدد المدد المتاحة ونسبة الزيادة لكل مدة. المبيعات سيختارون مدة من القائمة فقط (نسبة الزيادة للعرض فقط ولا يمكنهم تعديلها)."
       >
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="عدد الأقساط" name="installmentsCount" required>
-            <Input
-              id="installmentsCount"
-              name="installmentsCount"
-              placeholder="12"
-              {...numericInputProps(installmentsCount, (v) => {
-                // Only allow integers for installments count
-                if (v === '' || /^[0-9]+$/.test(v)) setInstallmentsCount(v);
-              })}
-            />
-          </Field>
+        {/* Serialize duration options as a hidden JSON field for the server action */}
+        <input
+          type="hidden"
+          name="durationOptions"
+          value={JSON.stringify(
+            durationCalcRows.map((r) => ({
+              durationMonths: r.months,
+              increasePercentage: r.pct,
+            })),
+          )}
+        />
 
-          <Field label="تكرار القسط" name="frequency">
-            <Select
-              id="frequency"
-              name="frequency"
-              value={frequency}
-              onChange={(e) => setFrequency(e.target.value as InstallmentFrequency)}
-            >
-              <option value="MONTHLY">شهري</option>
-              <option value="QUARTERLY">ربع سنوي (كل 3 أشهر)</option>
-              <option value="SEMI_ANNUAL">نصف سنوي (كل 6 أشهر)</option>
-              <option value="YEARLY">سنوي</option>
-            </Select>
-          </Field>
+        {reservationPlusDownError && (
+          <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>{reservationPlusDownError}</p>
+          </div>
+        )}
+
+        {reservationAmountError && (
+          <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>{reservationAmountError}</p>
+          </div>
+        )}
+
+        {durationOptionsError && (
+          <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>{durationOptionsError}</p>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-hairline overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-hairline">
+              <tr>
+                <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">المدة (شهر)</th>
+                <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">نسبة الزيادة %</th>
+                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">المبلغ المُمول</th>
+                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">القسط الشهري</th>
+                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">إجمالي السداد</th>
+                <th className="px-3 py-2.5"></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-hairline">
+              {durationCalcRows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-6 text-center text-xs text-slate-400">
+                    {mode === 'edit'
+                      ? 'خطة قديمة بدون خيارات مدة. اضغط "إضافة خيار مدة" للترقية إلى النظام الجديد.'
+                      : 'أضف خيار مدة واحد على الأقل'}
+                  </td>
+                </tr>
+              ) : (
+                durationCalcRows.map((row) => (
+                  <tr key={row.key} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-3 py-2">
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="12"
+                        value={row.durationMonths}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === '' || /^[0-9]+$/.test(v))
+                            updateDurationOption(row.key, { durationMonths: v });
+                        }}
+                        className="max-w-24"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={row.increasePercentage}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === '' || /^[0-9]*\.?[0-9]*$/.test(v))
+                            updateDurationOption(row.key, { increasePercentage: v });
+                        }}
+                        className="max-w-28"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-end tabular-nums text-slate-700">
+                      {row.months > 0 && netPrice > 0
+                        ? formatCurrency(row.financedAmount)
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-end tabular-nums font-medium">
+                      {row.months > 0 && netPrice > 0
+                        ? formatCurrency(row.monthlyInstallment)
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-end tabular-nums text-slate-700">
+                      {row.months > 0 && netPrice > 0
+                        ? formatCurrency(row.totalPayable)
+                        : '—'}
+                    </td>
+                    <td className="px-3 py-2 text-end">
+                      <button
+                        type="button"
+                        onClick={() => removeDurationOption(row.key)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition"
+                        aria-label="حذف خيار المدة"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
 
         <div>
-          <span className="text-sm font-medium text-slate-700">قاعدة تاريخ البدء</span>
-          <div className="flex flex-col gap-2 mt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={addDurationOption}
+            leftIcon={<Plus className="h-4 w-4" />}
+          >
+            إضافة خيار مدة
+          </Button>
+        </div>
+
+        <p className="text-xs text-slate-500 leading-relaxed">
+          نسبة الزيادة تُطبَّق على المتبقي بعد دفعة الحجز والدفعة الأولى. الصيغة:{' '}
+          <span className="font-mono" dir="ltr">
+            financed = remaining × (1 + %); monthly = financed / months
+          </span>
+        </p>
+      </FormSection>
+
+      {/* ── Legacy fields — kept only when no duration options ──────────── */}
+      {!useDurationModel && (
+        <FormSection
+          title="إعدادات قديمة (اختيارية)"
+          description="هذه الحقول للخطط القديمة فقط. للخطط الجديدة استخدم خيارات المدة بالأعلى."
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="عدد الأقساط" name="installmentsCount">
+              <Input
+                id="installmentsCount"
+                name="installmentsCount"
+                placeholder="12"
+                {...numericInputProps(installmentsCount, (v) => {
+                  if (v === '' || /^[0-9]+$/.test(v)) setInstallmentsCount(v);
+                })}
+              />
+            </Field>
+            <Field label="تكرار القسط" name="frequency">
+              <Select
+                id="frequency"
+                name="frequency"
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value as InstallmentFrequency)}
+              >
+                <option value="MONTHLY">شهري</option>
+                <option value="QUARTERLY">ربع سنوي (كل 3 أشهر)</option>
+                <option value="SEMI_ANNUAL">نصف سنوي (كل 6 أشهر)</option>
+                <option value="YEARLY">سنوي</option>
+              </Select>
+            </Field>
+          </div>
+
+          <Field
+            label="الدفعة الأخيرة (ج.م)"
+            name="finalPaymentAmount"
+            hint="اتركها فارغة إذا لم تكن هناك دفعة بالون"
+          >
+            <Input
+              id="finalPaymentAmount"
+              name="finalPaymentAmount"
+              placeholder="0"
+              {...numericInputProps(finalPaymentAmount, setFinalPaymentAmount, { allowEmpty: true })}
+            />
+          </Field>
+        </FormSection>
+      )}
+
+      {/* ── Start-date rule (applies to both models) ────────────────────── */}
+      <FormSection
+        title="تاريخ بدء الأقساط"
+        description="حدد متى يبدأ احتساب تواريخ الأقساط."
+      >
+        <div>
+          <div className="flex flex-col gap-2">
             {(['MANUAL', 'AFTER_RESERVATION', 'AFTER_CONTRACT'] as StartDateRule[]).map((r) => (
               <label
                 key={r}
@@ -666,8 +739,8 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
                   {r === 'MANUAL'
                     ? 'تاريخ محدد يدوياً'
                     : r === 'AFTER_RESERVATION'
-                    ? 'بعد تاريخ الحجز'
-                    : 'بعد تاريخ التعاقد'}
+                      ? 'بعد تاريخ الحجز'
+                      : 'بعد تاريخ التعاقد'}
                 </span>
               </label>
             ))}
@@ -686,94 +759,21 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
             />
           </Field>
         )}
-
-        <Field
-          label="الدفعة الأخيرة (ج.م)"
-          name="finalPaymentAmount"
-          hint="اتركها فارغة إذا لم تكن هناك دفعة بالون"
-        >
-          <Input
-            id="finalPaymentAmount"
-            name="finalPaymentAmount"
-            placeholder="0"
-            {...numericInputProps(finalPaymentAmount, setFinalPaymentAmount, { allowEmpty: true })}
-          />
-        </Field>
       </FormSection>
 
-      {/* ── Section 5: Schedule Preview ──────────────────────────────────── */}
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-brand-600" />
-          <h2 className="text-base font-semibold text-slate-900">معاينة جدول السداد</h2>
-          {netPrice > 0 && (
-            <span className="text-xs text-slate-500 ms-auto">
-              صافي السعر: {formatCurrency(netPrice)} | {scheduleRows.length} دفعة
-            </span>
-          )}
-        </div>
-
-        {scheduleError && (
-          <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>{scheduleError}</p>
-          </div>
-        )}
-
-        {scheduleRows.length === 0 ? (
-          <div className="rounded-2xl border border-hairline bg-surface p-8 text-center text-sm text-slate-400">
-            {!unitId
-              ? 'اختر المشروع والوحدة لمعاينة جدول السداد'
-              : 'أدخل تفاصيل التسعير والأقساط لمعاينة جدول السداد'}
-          </div>
-        ) : (
-          <div className="overflow-x-auto rounded-2xl border border-hairline">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-hairline">
-                <tr>
-                  <th className="px-4 py-3 text-start text-xs font-medium text-slate-500">#</th>
-                  <th className="px-4 py-3 text-start text-xs font-medium text-slate-500">نوع الدفعة</th>
-                  <th className="px-4 py-3 text-start text-xs font-medium text-slate-500">تاريخ الاستحقاق</th>
-                  <th className="px-4 py-3 text-end text-xs font-medium text-slate-500">المبلغ</th>
-                  <th className="px-4 py-3 text-end text-xs font-medium text-slate-500">الرصيد المتبقي</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {scheduleRows.map((row) => (
-                  <tr key={row.paymentNumber} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-4 py-3 text-slate-500 tabular-nums">{row.paymentNumber}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PAYMENT_TYPE_BADGE[row.paymentType]}`}
-                      >
-                        {row.label}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600 text-xs">{row.dueDateLabel}</td>
-                    <td className="px-4 py-3 text-end font-medium tabular-nums">
-                      {formatCurrency(row.amount)}
-                    </td>
-                    <td className="px-4 py-3 text-end text-slate-500 tabular-nums text-xs">
-                      {formatCurrency(Math.max(0, row.remainingBalance))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot className="bg-slate-50 border-t-2 border-slate-200">
-                <tr>
-                  <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-slate-700">
-                    الإجمالي
-                  </td>
-                  <td className="px-4 py-3 text-end font-bold text-slate-900 tabular-nums">
-                    {formatCurrency(scheduleRows.reduce((s, r) => s + r.amount, 0))}
-                  </td>
-                  <td />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-      </section>
+      {/* ── Net price summary ─────────────────────────────────────────────── */}
+      {netPrice > 0 && (
+        <section className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm">
+          <Calculator className="h-4 w-4 text-brand-600" />
+          <span className="text-slate-500">صافي السعر:</span>
+          <span className="font-bold text-slate-900">{formatCurrency(netPrice)}</span>
+          <span className="text-slate-300 mx-1">|</span>
+          <span className="text-slate-500">المتبقي بعد الحجز والدفعة الأولى:</span>
+          <span className="font-bold text-slate-900">
+            {formatCurrency(Math.max(0, netPrice - reservation - dpAmount))}
+          </span>
+        </section>
+      )}
 
       <FormFooter
         sticky
