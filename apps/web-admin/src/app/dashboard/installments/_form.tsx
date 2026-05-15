@@ -152,7 +152,11 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
       return;
     }
     setUnitsLoading(true);
-    fetch(`/api-proxy/units?projectId=${projectId}&pageSize=200`)
+    const unitsUrl =
+      mode === 'create'
+        ? `/api-proxy/units?projectId=${projectId}&pageSize=200&withoutPlan=true`
+        : `/api-proxy/units?projectId=${projectId}&pageSize=200`;
+    fetch(unitsUrl)
       .then((r) => r.json())
       .then((data) => {
         const list: UnitOption[] = (data?.data ?? []).map((u: UnitOption) => ({
@@ -174,7 +178,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
       .catch(() => setUnits([]))
       .finally(() => setUnitsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
+  }, [projectId, mode]);
 
   // ── when unit changes, auto-fill price ───────────────────────────────────
   function handleUnitChange(id: string) {
@@ -354,6 +358,8 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
               ? 'اختر المشروع أولاً لتحميل الوحدات'
               : unitsLoading
               ? 'جاري تحميل الوحدات…'
+              : units.length === 0 && mode === 'create'
+              ? 'لا توجد وحدات متاحة بدون خطة تقسيط في هذا المشروع'
               : units.length === 0
               ? 'لا توجد وحدات متاحة في هذا المشروع'
               : undefined

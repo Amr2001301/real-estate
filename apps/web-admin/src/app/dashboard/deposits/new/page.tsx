@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, Contract } from '@/lib/types';
+import { PageHeader } from '@/components/ui/page-header';
 import RecordDepositForm from './form';
+
+export const dynamic = 'force-dynamic';
 
 export default async function NewDepositPage({
   searchParams,
@@ -12,13 +15,16 @@ export default async function NewDepositPage({
   const r = await safe(api.get<Paged<Contract>>('/contracts?pageSize=200'));
 
   return (
-    <div>
-      <div className="mb-4">
-        <Link href="/dashboard/deposits" className="text-sm text-brand-600 hover:underline">
-          ← العودة للدفعات
-        </Link>
-      </div>
-      <h1 className="text-2xl font-bold mb-6">تسجيل دفعة جديدة</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="تسجيل دفعة جديدة"
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'الدفعات', href: '/dashboard/deposits' },
+          { label: 'تسجيل دفعة' },
+        ]}
+      />
+
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 max-w-2xl">
         {r.error ? (
           <div className="rounded-lg bg-red-50 text-red-700 p-3 text-sm">{r.error}</div>

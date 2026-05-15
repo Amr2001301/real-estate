@@ -55,3 +55,25 @@ export async function createInstallmentPlanAction(contractId: string, formData: 
   });
   revalidatePath(`/dashboard/contracts/${contractId}`);
 }
+
+export async function recordInstallmentPaymentAction(
+  contractId: string,
+  installmentId: string,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const payload = {
+    contractId,
+    installmentId,
+    amount: Number(formData.get('amount') ?? 0),
+    paidAt: String(formData.get('paidAt') ?? '') || undefined,
+    receiptUrl: String(formData.get('receiptUrl') ?? '') || undefined,
+  };
+  try {
+    await api.post('/deposits', payload);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/contracts/${contractId}`);
+  revalidatePath('/dashboard/deposits');
+  return {};
+}

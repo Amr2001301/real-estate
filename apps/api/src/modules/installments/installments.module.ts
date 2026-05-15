@@ -432,6 +432,14 @@ class PlanTemplatesService {
   async create(dto: CreatePlanTemplateDto, userId: string) {
     await this.validateUnit(dto.unitId, dto.projectId);
 
+    if (dto.unitId) {
+      const duplicate = await this.prisma.installmentPlanTemplate.findFirst({
+        where: { unitId: dto.unitId },
+        select: { id: true },
+      });
+      if (duplicate) throw new ConflictException('هذه الوحدة لديها خطة تقسيط بالفعل');
+    }
+
     const totalPrice = dto.totalPrice;
     const discountAmount = dto.discountAmount ?? 0;
     const netPrice = totalPrice - discountAmount;

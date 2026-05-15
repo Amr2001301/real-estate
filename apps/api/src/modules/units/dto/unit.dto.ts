@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsNumber,
@@ -67,6 +68,7 @@ export class UnitQueryDto {
   @IsOptional() @IsInt() bedrooms?: number;
   @IsOptional() @IsInt() page?: number;
   @IsOptional() @IsInt() pageSize?: number;
+  @IsOptional() @IsBoolean() withoutPlan?: boolean;
 }
 
 export class UpdateUnitStatusDto {

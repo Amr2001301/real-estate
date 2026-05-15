@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -29,7 +30,7 @@ import { paginate, takeSkip } from '../../common/utils/pagination';
 
 class RecordDepositDto {
   @IsUUID() contractId!: string;
-  @IsOptional() @IsUUID() installmentId?: string;
+  @IsUUID() installmentId!: string;
   @IsNumber() @IsPositive() amount!: number;
   @IsOptional() @IsDateString() paidAt?: string;
   @IsOptional() @IsString() receiptUrl?: string;
@@ -47,23 +48,44 @@ class DepositsService {
     const contract = await this.prisma.contract.findUnique({ where: { id: dto.contractId } });
     if (!contract) throw new NotFoundException('Contract not found');
 
+    // Ownership: installment must belong to this contract's plan
+    const installment = await this.prisma.installment.findFirst({
+      where: {
+        id: dto.installmentId,
+        plan: { contractId: dto.contractId },
+      },
+    });
+    if (!installment) throw new BadRequestException('القسط لا ينتمي إلى هذا العقد');
+
+    // Duplicate guard
+    if (installment.status === InstallmentStatus.PAID) {
+      throw new BadRequestException('تم دفع هذا القسط مسبقاً');
+    }
+
+    // Amount validation
+    const expected = Number(installment.amount);
+    if (dto.amount < expected) {
+      throw new BadRequestException('الدفعات الجزئية غير مدعومة حالياً');
+    }
+    if (dto.amount > expected) {
+      throw new BadRequestException('لا يمكن دفع مبلغ أكبر من قيمة القسط');
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const deposit = await tx.deposit.create({
         data: {
           contractId: dto.contractId,
-          installmentId: dto.installmentId ?? null,
+          installmentId: dto.installmentId,
           amount: new Prisma.Decimal(dto.amount),
           paidAt: dto.paidAt ? new Date(dto.paidAt) : new Date(),
           receiptUrl: dto.receiptUrl ?? null,
           recordedById,
         },
       });
-      if (dto.installmentId) {
-        await tx.installment.update({
-          where: { id: dto.installmentId },
-          data: { status: InstallmentStatus.PAID, paidAt: deposit.paidAt },
-        });
-      }
+      await tx.installment.update({
+        where: { id: dto.installmentId },
+        data: { status: InstallmentStatus.PAID, paidAt: deposit.paidAt },
+      });
       return deposit;
     });
   }
@@ -78,7 +100,10 @@ class DepositsService {
         where,
         ...takeSkip(opts),
         orderBy: { paidAt: 'desc' },
-        include: { contract: { include: { customer: true } } },
+        include: {
+          contract: { select: { id: true, contractNumber: true, customer: { select: { id: true, fullName: true } } } },
+          installment: { select: { id: true, dueDate: true, amount: true } },
+        },
       }),
       this.prisma.deposit.count({ where }),
     ]);

@@ -18,6 +18,7 @@ import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ContractPdfPanel } from './pdf-panel';
 import { createInstallmentPlanAction } from '../actions';
+import { RecordPaymentButton } from './record-payment-button';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +33,6 @@ const INST_STATUS: Record<string, { label: string; cls: string }> = {
   PENDING: { label: 'قيد الانتظار', cls: 'bg-slate-100 text-slate-600' },
   PAID: { label: 'مدفوع', cls: 'bg-success-100 text-success-700' },
   OVERDUE: { label: 'متأخر', cls: 'bg-danger-100 text-danger-700' },
-  PARTIALLY_PAID: { label: 'مدفوع جزئياً', cls: 'bg-amber-100 text-amber-700' },
 };
 
 export default async function ContractDetailPage({
@@ -169,7 +169,7 @@ export default async function ContractDetailPage({
 
                   {/* Installments table */}
                   {plan.installments && plan.installments.length > 0 && (
-                    <div className="overflow-auto max-h-72">
+                    <div className="overflow-auto max-h-96">
                       <table className="w-full text-sm">
                         <thead className="sticky top-0 bg-slate-50 text-xs text-slate-500 border-b border-hairline">
                           <tr>
@@ -178,11 +178,13 @@ export default async function ContractDetailPage({
                             <th className="px-4 py-2 text-right font-medium">المبلغ</th>
                             <th className="px-4 py-2 text-right font-medium">الحالة</th>
                             <th className="px-4 py-2 text-right font-medium">تاريخ الدفع</th>
+                            <th className="px-4 py-2 text-right font-medium"></th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-hairline">
                           {plan.installments.map((inst, i) => {
                             const s = INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
+                            const canPay = inst.status === 'PENDING' || inst.status === 'OVERDUE';
                             return (
                               <tr key={inst.id} className="hover:bg-slate-50/50">
                                 <td className="px-6 py-2.5 text-slate-500 font-mono text-xs">{i + 1}</td>
@@ -195,6 +197,16 @@ export default async function ContractDetailPage({
                                 </td>
                                 <td className="px-4 py-2.5 text-slate-400 text-xs">
                                   {inst.paidAt ? formatDate(inst.paidAt) : '—'}
+                                </td>
+                                <td className="px-4 py-2.5">
+                                  {canPay && (
+                                    <RecordPaymentButton
+                                      contractId={contract.id}
+                                      installmentId={inst.id}
+                                      amount={inst.amount}
+                                      dueDate={inst.dueDate}
+                                    />
+                                  )}
                                 </td>
                               </tr>
                             );

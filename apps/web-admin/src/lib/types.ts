@@ -148,7 +148,7 @@ export interface LeadNote {
   sales?: { id: string; fullName: string };
 }
 
-export type InstallmentStatus = 'PENDING' | 'PAID' | 'OVERDUE' | 'PARTIALLY_PAID';
+export type InstallmentStatus = 'PENDING' | 'PAID' | 'OVERDUE';
 
 export interface ContractInstallment {
   id: string;
@@ -188,7 +188,9 @@ export interface Contract {
 export interface Deposit {
   id: string;
   contractId: string;
-  contract?: { id: string; customer?: { fullName: string } };
+  contract?: { id: string; contractNumber?: string | null; customer?: { fullName: string } };
+  installmentId?: string | null;
+  installment?: { id: string; dueDate: string; amount: string | number } | null;
   amount: string | number;
   paidAt: string;
   receiptUrl: string | null;
