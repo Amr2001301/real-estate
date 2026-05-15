@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Clock,
   Home,
+  FileText,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
@@ -24,6 +25,7 @@ import { ReservationTimelineCard } from '../_components/reservation-timeline';
 import { ReservationDetailActions } from './_components/detail-actions';
 import { AddNoteForm } from './_components/add-note-form';
 import { BookingPaymentActions } from './_components/booking-payment-actions';
+import { ConvertReservationForm } from './_components/convert-reservation-form';
 
 export const dynamic = 'force-dynamic';
 
@@ -144,6 +146,14 @@ export default async function ReservationDetailPage({
                   <p className="text-slate-500 mb-0.5">تاريخ الإلغاء</p>
                   <p className="font-medium text-danger-600">
                     {formatDateTime(reservation.cancelledAt)}
+                  </p>
+                </div>
+              )}
+              {reservation.convertedAt && (
+                <div>
+                  <p className="text-slate-500 mb-0.5">تاريخ التحويل إلى عقد</p>
+                  <p className="font-medium text-success-700">
+                    {formatDateTime(reservation.convertedAt)}
                   </p>
                 </div>
               )}
@@ -333,6 +343,63 @@ export default async function ReservationDetailPage({
 
         {/* Right sidebar (1/3) */}
         <div className="space-y-4">
+          {/* Linked contract card — shown when CONVERTED */}
+          {reservation.status === 'CONVERTED' && reservation.contract && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-success-600" />
+                  العقد المرتبط
+                </CardTitle>
+              </CardHeader>
+              <CardBody className="space-y-2 text-sm">
+                <p className="text-slate-500 text-xs">تم تحويل هذا الحجز إلى عقد</p>
+                <Link
+                  href={`/dashboard/contracts/${reservation.contract.id}` as never}
+                  className="flex items-center gap-2 font-semibold text-brand-700 hover:underline"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {reservation.contract.contractNumber ?? reservation.contract.id.slice(0, 8)}
+                </Link>
+                {reservation.convertedAt && (
+                  <p className="text-xs text-slate-400">
+                    في {formatDateTime(reservation.convertedAt)}
+                  </p>
+                )}
+              </CardBody>
+            </Card>
+          )}
+
+          {/* Convert to contract card — shown to ADMIN on APPROVED reservations only */}
+          {isAdmin && reservation.status === 'APPROVED' && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-brand-600" />
+                  تحويل إلى عقد
+                </CardTitle>
+              </CardHeader>
+              <CardBody>
+                <ConvertReservationForm
+                  reservation={{
+                    id: reservation.id,
+                    status: reservation.status,
+                    bookingAmount: reservation.bookingAmount,
+                    bookingPaymentStatus: reservation.bookingPaymentStatus,
+                    installmentPlanTemplateId: reservation.installmentPlanTemplateId ?? null,
+                    selectedDurationMonths: reservation.selectedDurationMonths ?? null,
+                    selectedIncreasePercentage: reservation.selectedIncreasePercentage ?? null,
+                    snapshotDownPaymentAmount: reservation.snapshotDownPaymentAmount ?? null,
+                    snapshotMonthlyInstallment: reservation.snapshotMonthlyInstallment ?? null,
+                    snapshotTotalPayable: reservation.snapshotTotalPayable ?? null,
+                    clientName,
+                    unitCode: reservation.unit?.code ?? '—',
+                  }}
+                />
+              </CardBody>
+            </Card>
+          )}
+
           {/* Client / Lead card */}
           <Card>
             <CardHeader>

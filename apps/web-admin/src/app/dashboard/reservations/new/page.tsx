@@ -70,7 +70,7 @@ export default async function NewReservationPage() {
           durationOptions: (p.durationOptions ?? []).map((o) => ({
             id: o.id,
             durationMonths: o.durationMonths,
-            increasePercentage: o.increasePercentage ?? 0,
+            increasePercentage: o.increasePercentage,
           })),
           projectId: p.projectId,
           unitId: p.unitId,

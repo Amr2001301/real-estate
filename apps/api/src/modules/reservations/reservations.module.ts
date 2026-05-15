@@ -78,6 +78,13 @@ class UpdateReservationDto {
   @IsOptional() @IsString() bookingNotes?: string | null;
 }
 
+class ConvertReservationDto {
+  // Required only when the reservation has selectedDurationMonths.
+  @IsOptional() @IsDateString() startsAt?: string;
+  @IsOptional() @IsDateString() signedAt?: string;
+  @IsOptional() @IsString() pdfUrl?: string;
+}
+
 class AddNoteDto {
   @IsString() @IsNotEmpty() body!: string;
 }
@@ -108,6 +115,7 @@ const FULL_INCLUDE = {
   selectedDurationOption: {
     select: { id: true, durationMonths: true, increasePercentage: true },
   },
+  contract: { select: { id: true, contractNumber: true } },
   reservationNotes: {
     orderBy: { createdAt: 'desc' as const },
     include: { author: { select: { id: true, fullName: true } } },
@@ -126,6 +134,30 @@ class ReservationsService {
     const year = new Date().getFullYear();
     const count = await this.prisma.reservation.count();
     return `RES-${year}-${String(count + 1).padStart(4, '0')}`;
+  }
+
+  /**
+   * Generate the next contract number by finding the highest existing numeric
+   * suffix for the current year, then adding 1.  Using COUNT()+1 is unsafe
+   * because deleted rows leave gaps that cause duplicates.
+   *
+   * Example: CON-2026-0001 deleted, CON-2026-0002 exists → returns CON-2026-0003.
+   */
+  private async nextContractNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `CON-${year}-`;
+    const rows = await this.prisma.contract.findMany({
+      where: { contractNumber: { startsWith: prefix } },
+      select: { contractNumber: true },
+    });
+    let maxSeq = 0;
+    for (const { contractNumber } of rows) {
+      if (contractNumber) {
+        const seq = parseInt(contractNumber.slice(prefix.length), 10);
+        if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+      }
+    }
+    return `${prefix}${String(maxSeq + 1).padStart(4, '0')}`;
   }
 
   /**
@@ -536,6 +568,7 @@ class ReservationsService {
       ReservationStatus.REJECTED,
       ReservationStatus.CANCELLED,
       ReservationStatus.EXPIRED,
+      ReservationStatus.CONVERTED,
     ];
     if (FINAL.includes(reservation.status)) {
       throw new BadRequestException(
@@ -547,6 +580,11 @@ class ReservationsService {
     if (dto.status === ReservationStatus.EXPIRED) {
       throw new BadRequestException(
         'EXPIRED status can only be set automatically by the system',
+      );
+    }
+    if (dto.status === ReservationStatus.CONVERTED) {
+      throw new BadRequestException(
+        'CONVERTED status is set automatically during contract conversion',
       );
     }
 
@@ -969,6 +1007,230 @@ class ReservationsService {
     });
   }
 
+  async convertReservation(id: string, dto: ConvertReservationDto, actor: AuthUser) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      include: {
+        unit: { include: { building: { include: { phase: { select: { projectId: true } } } } } },
+        lead: { select: { id: true, clientId: true, stage: true } },
+        client: { select: { id: true } },
+        contract: { select: { id: true } },
+      },
+    });
+    if (!reservation) throw new NotFoundException('Reservation not found');
+
+    if (reservation.status !== ReservationStatus.APPROVED) {
+      throw new BadRequestException('يجب أن يكون الحجز بحالة "معتمد" قبل التحويل إلى عقد');
+    }
+    if (reservation.contract) {
+      throw new BadRequestException('تم تحويل هذا الحجز مسبقاً إلى عقد');
+    }
+    if (
+      reservation.bookingAmount.gt(0) &&
+      reservation.bookingPaymentStatus !== ReservationBookingPaymentStatus.PAID &&
+      reservation.bookingPaymentStatus !== ReservationBookingPaymentStatus.WAIVED
+    ) {
+      throw new BadRequestException(
+        'يجب تأكيد سداد مبلغ الحجز أو إعفاؤه قبل التحويل إلى عقد',
+      );
+    }
+    // If the reservation is linked to a plan template, the full duration snapshot
+    // must be present. Old reservations created before snapshot fields were added,
+    // or ones where the user skipped selecting a duration, will be missing these
+    // values — proceeding without them silently creates a broken contract (wrong
+    // amounts, no installment plan).
+    if (reservation.installmentPlanTemplateId != null) {
+      if (
+        reservation.selectedDurationMonths == null ||
+        reservation.selectedIncreasePercentage == null ||
+        reservation.snapshotDownPaymentAmount == null ||
+        reservation.snapshotFinancedAmount == null ||
+        reservation.snapshotMonthlyInstallment == null ||
+        reservation.snapshotTotalPayable == null
+      ) {
+        throw new BadRequestException(
+          'لا يمكن تحويل هذا الحجز إلى عقد لأنه لا يحتوي على مدة تقسيط محفوظة. اختر مدة التقسيط أولاً أو أعد إنشاء الحجز بالخطة المحدثة.',
+        );
+      }
+    }
+
+    if (reservation.selectedDurationMonths != null && !dto.startsAt) {
+      throw new BadRequestException('تاريخ بدء التقسيط مطلوب عند وجود مدة تقسيط محددة');
+    }
+
+    // Resolve the customer: clientId on the reservation, or the lead's linked client.
+    const customerId = reservation.clientId ?? reservation.lead?.clientId ?? null;
+    if (!customerId) {
+      throw new BadRequestException(
+        'لا يمكن تحديد العميل المرتبط بهذا الحجز. تأكد من ربط العميل قبل التحويل.',
+      );
+    }
+
+    // Build the contract amounts from snapshot values, falling back to unit price.
+    const totalAmount: Prisma.Decimal =
+      reservation.snapshotTotalPayable != null
+        ? reservation.snapshotTotalPayable
+        : new Prisma.Decimal(reservation.unit.price);
+    const downPayment: Prisma.Decimal =
+      reservation.snapshotDownPaymentAmount ?? new Prisma.Decimal(0);
+
+    // Validate optional date strings before entering the transaction.
+    if (dto.startsAt) {
+      const d = new Date(dto.startsAt);
+      if (isNaN(d.getTime())) {
+        throw new BadRequestException('تاريخ بدء التقسيط غير صالح');
+      }
+    }
+    if (dto.signedAt) {
+      const d = new Date(dto.signedAt);
+      if (isNaN(d.getTime())) {
+        throw new BadRequestException('تاريخ توقيع العقد غير صالح');
+      }
+    }
+
+    const now = new Date();
+
+    // Retry up to 3 times in the rare case two conversions race on the same
+    // contract number.  The root fix (max-based generator) makes this unlikely;
+    // the retry is purely a safety net.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const contractNumber = await this.nextContractNumber();
+
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          // 1. Create the Contract.
+          const contract = await tx.contract.create({
+            data: {
+              contractNumber,
+              customerId,
+              unitId: reservation.unitId,
+              reservationId: reservation.id,
+              totalAmount,
+              downPayment,
+              pdfUrl: dto.pdfUrl ?? null,
+              signedAt: dto.signedAt ? new Date(dto.signedAt) : null,
+            },
+          });
+
+      // 2. Promote CLIENT → CUSTOMER.
+      await tx.user.updateMany({
+        where: { id: customerId, role: UserRole.CLIENT },
+        data: { role: UserRole.CUSTOMER },
+      });
+
+      // 3. Mark unit SOLD.
+      const previousUnitStatus = reservation.unit.status;
+      await tx.unit.update({
+        where: { id: reservation.unitId },
+        data: { status: UnitStatus.SOLD, reservationExpiresAt: null },
+      });
+      await tx.unitStatusHistory.create({
+        data: {
+          unitId: reservation.unitId,
+          oldStatus: previousUnitStatus,
+          newStatus: UnitStatus.SOLD,
+          changedById: actor.sub,
+          reason: `Contract ${contractNumber}`,
+        },
+      });
+
+      // 4. Generate InstallmentPlan + Installment rows from snapshot (if duration was selected).
+      if (
+        reservation.selectedDurationMonths != null &&
+        reservation.snapshotMonthlyInstallment != null &&
+        dto.startsAt
+      ) {
+        const startsAt = new Date(dto.startsAt);
+        const plan = await tx.installmentPlan.create({
+          data: {
+            contractId: contract.id,
+            totalMonths: reservation.selectedDurationMonths,
+            monthlyAmount: reservation.snapshotMonthlyInstallment,
+            startsAt,
+            frequency: 'MONTHLY',
+          },
+        });
+
+        const rows: Prisma.InstallmentCreateManyInput[] = [];
+        for (let i = 0; i < reservation.selectedDurationMonths; i++) {
+          const dueDate = new Date(startsAt);
+          dueDate.setMonth(dueDate.getMonth() + i);
+          rows.push({
+            planId: plan.id,
+            dueDate,
+            amount: reservation.snapshotMonthlyInstallment,
+          });
+        }
+        await tx.installment.createMany({ data: rows });
+      }
+
+      // 5. Mark Reservation CONVERTED.
+      await tx.reservation.update({
+        where: { id },
+        data: { status: ReservationStatus.CONVERTED, convertedAt: now },
+      });
+      await tx.reservationActivity.create({
+        data: {
+          reservationId: id,
+          type: ReservationActivityType.CONVERTED,
+          actorId: actor.sub,
+          note: `تم إنشاء العقد ${contractNumber}`,
+        },
+      });
+
+      // 6. Advance lead to WON if the reservation was lead-based.
+      if (reservation.lead) {
+        const bumpableStages: LeadStage[] = [
+          LeadStage.NEW, LeadStage.INTERESTED, LeadStage.VISIT,
+          LeadStage.NEGOTIATION,
+        ];
+        if (bumpableStages.includes(reservation.lead.stage)) {
+          await tx.lead.update({
+            where: { id: reservation.lead.id },
+            data: { stage: LeadStage.WON },
+          });
+          await tx.leadActivity.create({
+            data: {
+              leadId: reservation.lead.id,
+              type: 'status_change',
+              payload: { from: reservation.lead.stage, to: LeadStage.WON, reason: contractNumber },
+            },
+          });
+        }
+        await tx.leadActivity.create({
+          data: {
+            leadId: reservation.lead.id,
+            type: 'reservation',
+            payload: { status: 'CONVERTED', reservationId: id, contractId: contract.id, contractNumber },
+          },
+        });
+      }
+
+          return { contractId: contract.id, contractNumber };
+        });
+      } catch (e: unknown) {
+        const err = e as { code?: string; meta?: { target?: string[] } };
+        const isDuplicateContractNumber =
+          err?.code === 'P2002' &&
+          Array.isArray(err?.meta?.target) &&
+          err.meta!.target!.includes('contractNumber');
+        if (isDuplicateContractNumber && attempt < 2) {
+          // Race condition: another concurrent conversion grabbed the same number.
+          // Regenerate on the next iteration.
+          continue;
+        }
+        if (isDuplicateContractNumber) {
+          throw new BadRequestException(
+            'تعذّر إنشاء رقم العقد بعد عدة محاولات، يرجى المحاولة مرة أخرى.',
+          );
+        }
+        throw e;
+      }
+    }
+    // Unreachable — the loop always returns or throws, but TypeScript needs this.
+    throw new BadRequestException('تعذّر إنشاء العقد، يرجى المحاولة مرة أخرى.');
+  }
+
   async expireDue() {
     const due = await this.prisma.reservation.findMany({
       where: {
@@ -1149,6 +1411,16 @@ class ReservationsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.svc.addNote(id, dto, user.sub);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Post(':id/convert')
+  convertReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConvertReservationDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.convertReservation(id, dto, user);
   }
 
   @Roles(UserRole.ADMIN)

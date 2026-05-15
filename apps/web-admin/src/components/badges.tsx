@@ -64,6 +64,7 @@ const RESERVATION: Record<ReservationStatus, { c: string; l: string }> = {
   REJECTED: { c: 'bg-red-100 text-red-700', l: 'مرفوض' },
   CANCELLED: { c: 'bg-red-100 text-red-700', l: 'ملغى' },
   EXPIRED: { c: 'bg-amber-100 text-amber-700', l: 'منتهي' },
+  CONVERTED: { c: 'bg-indigo-100 text-indigo-700', l: 'محوّل إلى عقد' },
 };
 export function ReservationStatusBadge({ status }: { status: ReservationStatus }) {
   const x = RESERVATION[status];

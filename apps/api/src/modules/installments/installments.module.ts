@@ -368,7 +368,7 @@ class PlanTemplatesService {
           unit: { select: { id: true, code: true } },
           createdBy: { select: { id: true, fullName: true } },
           durationOptions: {
-            select: { id: true, durationMonths: true, order: true },
+            select: { id: true, durationMonths: true, increasePercentage: true, order: true },
             orderBy: { order: 'asc' },
           },
         },

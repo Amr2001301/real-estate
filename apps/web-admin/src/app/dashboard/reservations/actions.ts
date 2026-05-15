@@ -131,6 +131,28 @@ export async function updateReservationAction(
   return {};
 }
 
+export async function convertReservationAction(
+  id: string,
+  formData: FormData,
+): Promise<{ error?: string; contractId?: string }> {
+  const startsAt = String(formData.get('startsAt') ?? '').trim() || undefined;
+  const signedAt = String(formData.get('signedAt') ?? '').trim() || undefined;
+  const pdfUrl = String(formData.get('pdfUrl') ?? '').trim() || undefined;
+
+  try {
+    const result = await api.post<{ contractId: string; contractNumber: string }>(
+      `/reservations/${id}/convert`,
+      { startsAt, signedAt, pdfUrl },
+    );
+    revalidatePath('/dashboard/reservations');
+    revalidatePath(`/dashboard/reservations/${id}`);
+    revalidatePath('/dashboard/contracts');
+    return { contractId: result.contractId };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
+  }
+}
+
 export async function addReservationNoteAction(id: string, formData: FormData) {
   const body = String(formData.get('body') ?? '').trim();
   if (!body) return;

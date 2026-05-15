@@ -88,8 +88,37 @@ class ContractsService {
     });
   }
 
-  async list(opts: { page: number; pageSize: number; customerId?: string }) {
-    const where: Prisma.ContractWhereInput = opts.customerId ? { customerId: opts.customerId } : {};
+  async list(opts: {
+    page: number;
+    pageSize: number;
+    customerId?: string;
+    q?: string;
+    signed?: 'yes' | 'no';
+    hasReservation?: 'yes' | 'no';
+  }) {
+    const where: Prisma.ContractWhereInput = {
+      ...(opts.customerId ? { customerId: opts.customerId } : {}),
+      ...(opts.signed === 'yes'
+        ? { signedAt: { not: null } }
+        : opts.signed === 'no'
+          ? { signedAt: null }
+          : {}),
+      ...(opts.hasReservation === 'yes'
+        ? { reservationId: { not: null } }
+        : opts.hasReservation === 'no'
+          ? { reservationId: null }
+          : {}),
+      ...(opts.q
+        ? {
+            OR: [
+              { contractNumber: { contains: opts.q, mode: Prisma.QueryMode.insensitive } },
+              { customer: { fullName: { contains: opts.q, mode: Prisma.QueryMode.insensitive } } },
+              { customer: { phone: { contains: opts.q, mode: Prisma.QueryMode.insensitive } } },
+              { unit: { code: { contains: opts.q, mode: Prisma.QueryMode.insensitive } } },
+            ],
+          }
+        : {}),
+    };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.contract.findMany({
         where,
@@ -97,8 +126,14 @@ class ContractsService {
         orderBy: { createdAt: 'desc' },
         include: {
           customer: { select: { id: true, fullName: true, phone: true } },
-          unit: { include: { building: { include: { phase: { include: { project: true } } } } } },
-          installmentPlan: true,
+          unit: {
+            select: {
+              id: true, code: true, type: true,
+              building: { select: { phase: { select: { project: { select: { id: true, name: true } } } } } },
+            },
+          },
+          reservation: { select: { id: true, reservationNumber: true } },
+          installmentPlan: { select: { id: true, totalMonths: true, monthlyAmount: true, startsAt: true, frequency: true } },
         },
       }),
       this.prisma.contract.count({ where }),
@@ -110,8 +145,9 @@ class ContractsService {
     const contract = await this.prisma.contract.findUnique({
       where: { id },
       include: {
-        customer: true,
+        customer: { select: { id: true, fullName: true, phone: true, email: true } },
         unit: { include: { building: { include: { phase: { include: { project: true } } } } } },
+        reservation: { select: { id: true, reservationNumber: true } },
         installmentPlan: { include: { installments: { orderBy: { dueDate: 'asc' } } } },
         deposits: { orderBy: { paidAt: 'desc' } },
       },
@@ -146,10 +182,21 @@ class ContractsController {
   @Get()
   list(
     @Query('customerId') customerId?: string,
+    @Query('q') q?: string,
+    @Query('signed') signed?: string,
+    @Query('hasReservation') hasReservation?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
-    return this.svc.list({ page: Number(page), pageSize: Number(pageSize), customerId });
+    return this.svc.list({
+      page: Number(page),
+      pageSize: Number(pageSize),
+      customerId,
+      q,
+      signed: signed === 'yes' ? 'yes' : signed === 'no' ? 'no' : undefined,
+      hasReservation:
+        hasReservation === 'yes' ? 'yes' : hasReservation === 'no' ? 'no' : undefined,
+    });
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)

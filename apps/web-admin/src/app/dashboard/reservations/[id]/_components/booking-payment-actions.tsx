@@ -13,7 +13,7 @@ import type { ReservationBookingPaymentStatus } from '@/lib/types';
 interface Props {
   reservationId: string;
   bookingPaymentStatus: ReservationBookingPaymentStatus;
-  reservationStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED';
+  reservationStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED' | 'CONVERTED';
   bookingAmount: number;
 }
 

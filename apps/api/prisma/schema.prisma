@@ -565,6 +565,7 @@ enum ReservationStatus {
   REJECTED
   CANCELLED
   EXPIRED
+  CONVERTED
 }
 
 enum ReservationBookingPaymentStatus {
@@ -598,6 +599,7 @@ model Reservation {
   approvedAt        DateTime?
   rejectedAt        DateTime?
   cancelledAt       DateTime?
+  convertedAt       DateTime?
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
 
@@ -622,6 +624,7 @@ model Reservation {
 
   reservationNotes ReservationNote[]
   activities       ReservationActivity[]
+  contract         Contract?
 
   @@index([unitId])
   @@index([salesId])
@@ -640,6 +643,7 @@ enum ReservationActivityType {
   NOTE_ADDED
   BOOKING_PAYMENT_CONFIRMED
   BOOKING_PAYMENT_UNCONFIRMED
+  CONVERTED
 }
 
 model ReservationNote {
@@ -668,33 +672,38 @@ model ReservationActivity {
 }
 
 model Contract {
-  id          String    @id @default(uuid()) @db.Uuid
-  customerId  String    @db.Uuid
-  customer    User      @relation("ContractCustomer", fields: [customerId], references: [id])
-  unitId      String    @db.Uuid
-  unit        Unit      @relation(fields: [unitId], references: [id])
-  pdfUrl      String?
-  signedAt    DateTime?
-  totalAmount Decimal   @db.Decimal(14, 2)
-  downPayment Decimal   @default(0) @db.Decimal(14, 2)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id             String       @id @default(uuid()) @db.Uuid
+  contractNumber String?      @unique
+  customerId     String       @db.Uuid
+  customer       User         @relation("ContractCustomer", fields: [customerId], references: [id])
+  unitId         String       @db.Uuid
+  unit           Unit         @relation(fields: [unitId], references: [id])
+  reservationId  String?      @unique @db.Uuid
+  reservation    Reservation? @relation(fields: [reservationId], references: [id])
+  pdfUrl         String?
+  signedAt       DateTime?
+  totalAmount    Decimal      @db.Decimal(14, 2)
+  downPayment    Decimal      @default(0) @db.Decimal(14, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   installmentPlan InstallmentPlan?
   deposits        Deposit[]
 
   @@index([customerId])
   @@index([unitId])
+  @@index([reservationId])
 }
 
 model InstallmentPlan {
-  id            String   @id @default(uuid()) @db.Uuid
-  contractId    String   @unique @db.Uuid
-  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  id            String               @id @default(uuid()) @db.Uuid
+  contractId    String               @unique @db.Uuid
+  contract      Contract             @relation(fields: [contractId], references: [id], onDelete: Cascade)
   totalMonths   Int
-  monthlyAmount Decimal  @db.Decimal(14, 2)
+  monthlyAmount Decimal              @db.Decimal(14, 2)
   startsAt      DateTime
-  createdAt     DateTime @default(now())
+  frequency     InstallmentFrequency @default(MONTHLY)
+  createdAt     DateTime             @default(now())
 
   installments Installment[]
 }

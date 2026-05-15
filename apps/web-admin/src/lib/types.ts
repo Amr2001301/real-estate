@@ -24,7 +24,7 @@ export type VisitActivityType =
   | 'REQUEST_CREATED' | 'REQUEST_REVIEWED' | 'REQUEST_REJECTED' | 'REQUEST_CANCELLED'
   | 'VISIT_SCHEDULED' | 'VISIT_CONFIRMED' | 'VISIT_COMPLETED' | 'VISIT_CANCELLED'
   | 'VISIT_NO_SHOW' | 'VISIT_RESCHEDULED' | 'SALES_ASSIGNED' | 'NOTE_ADDED';
-export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED';
+export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED' | 'CONVERTED';
 export type ReservationBookingPaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'WAIVED';
 export type MaintenanceStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
 export type UserRole = 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER';
@@ -148,18 +148,41 @@ export interface LeadNote {
   sales?: { id: string; fullName: string };
 }
 
+export type InstallmentStatus = 'PENDING' | 'PAID' | 'OVERDUE' | 'PARTIALLY_PAID';
+
+export interface ContractInstallment {
+  id: string;
+  dueDate: string;
+  amount: string | number;
+  status: InstallmentStatus;
+  paidAt: string | null;
+}
+
+export interface ContractInstallmentPlan {
+  id: string;
+  totalMonths: number;
+  monthlyAmount: string | number;
+  startsAt: string;
+  frequency: InstallmentFrequency;
+  installments?: ContractInstallment[];
+}
+
 export interface Contract {
   id: string;
+  contractNumber: string | null;
   customerId: string;
-  customer?: { id: string; fullName: string; phone: string | null };
+  customer?: { id: string; fullName: string; phone: string | null; email?: string | null };
   unitId: string;
   unit?: Unit;
+  reservationId: string | null;
+  reservation?: { id: string; reservationNumber: string | null } | null;
   pdfUrl: string | null;
   signedAt: string | null;
   totalAmount: string | number;
   downPayment: string | number;
   createdAt: string;
-  installmentPlan?: unknown;
+  installmentPlan?: ContractInstallmentPlan | null;
+  deposits?: Deposit[];
 }
 
 export interface Deposit {
@@ -287,6 +310,7 @@ export interface Reservation {
   approvedAt: string | null;
   rejectedAt: string | null;
   cancelledAt: string | null;
+  convertedAt: string | null;
   createdAt: string;
   updatedAt: string;
   // Booking amount (manual tracking, recorded by Admin)
@@ -319,6 +343,7 @@ export interface Reservation {
   snapshotTotalPayable: string | number | null;
   reservationNotes?: ReservationNote[];
   activities?: ReservationActivity[];
+  contract?: { id: string; contractNumber: string | null } | null;
 }
 
 export interface ReservationNote {
@@ -336,7 +361,8 @@ export type ReservationActivityType =
   | 'EXPIRED'
   | 'NOTE_ADDED'
   | 'BOOKING_PAYMENT_CONFIRMED'
-  | 'BOOKING_PAYMENT_UNCONFIRMED';
+  | 'BOOKING_PAYMENT_UNCONFIRMED'
+  | 'CONVERTED';
 
 export interface ReservationActivity {
   id: string;
@@ -424,8 +450,7 @@ export interface DurationOptionCalculated {
 export interface InstallmentPlanDurationOption {
   id: string;
   durationMonths: number;
-  // Present on detail responses; omitted on list responses to keep payloads small.
-  increasePercentage?: string | number;
+  increasePercentage: string | number;
   order: number;
   calculated?: DurationOptionCalculated;
 }

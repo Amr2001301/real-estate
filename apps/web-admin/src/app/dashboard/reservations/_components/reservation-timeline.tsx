@@ -11,6 +11,7 @@ const TYPE_LABELS: Record<ReservationActivityType, string> = {
   NOTE_ADDED: 'تمت إضافة ملاحظة',
   BOOKING_PAYMENT_CONFIRMED: 'تم تأكيد سداد مبلغ الحجز',
   BOOKING_PAYMENT_UNCONFIRMED: 'تم إلغاء تأكيد سداد مبلغ الحجز',
+  CONVERTED: 'تم تحويل الحجز إلى عقد',
 };
 
 const TYPE_COLORS: Record<ReservationActivityType, string> = {
@@ -22,6 +23,7 @@ const TYPE_COLORS: Record<ReservationActivityType, string> = {
   NOTE_ADDED: 'bg-slate-400',
   BOOKING_PAYMENT_CONFIRMED: 'bg-success-500',
   BOOKING_PAYMENT_UNCONFIRMED: 'bg-amber-500',
+  CONVERTED: 'bg-indigo-500',
 };
 
 interface Props {

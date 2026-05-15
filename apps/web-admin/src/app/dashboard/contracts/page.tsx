@@ -1,66 +1,301 @@
 import Link from 'next/link';
+import { Plus, FileText, CheckCircle2, Link2, Unlink } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Paged, Contract } from '@/lib/types';
+import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
+import { PageHeader } from '@/components/ui/page-header';
+import { KpiCard } from '@/components/ui/kpi-card';
+import { FilterBar, FilterField } from '@/components/ui/toolbar';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Pagination } from '@/components/ui/pagination';
 import { DataTable } from '@/components/table';
 
-export default async function ContractsPage() {
-  const r = await safe(api.get<Paged<Contract>>('/contracts?pageSize=50'));
+export const dynamic = 'force-dynamic';
+
+interface ContractRow {
+  id: string;
+  contractNumber: string | null;
+  totalAmount: string | number;
+  downPayment: string | number;
+  signedAt: string | null;
+  createdAt: string;
+  customer: { id: string; fullName: string; phone: string | null } | null;
+  unit: {
+    id: string;
+    code: string;
+    type: string;
+    building?: {
+      phase?: {
+        project?: { id: string; name: { ar: string; en: string } } | null;
+      } | null;
+    } | null;
+  } | null;
+  reservation: { id: string; reservationNumber: string | null } | null;
+  installmentPlan: {
+    id: string;
+    totalMonths: number;
+    monthlyAmount: string | number;
+  } | null;
+}
+
+interface Stats {
+  total: number;
+  signed: number;
+  withReservation: number;
+}
+
+export default async function ContractsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    q?: string;
+    signed?: string;
+    hasReservation?: string;
+    page?: string;
+  }>;
+}) {
+  const sp = await searchParams;
+  const page = Number(sp.page ?? 1);
+  const pageSize = 20;
+
+  const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+  if (sp.q) qs.set('q', sp.q);
+  if (sp.signed) qs.set('signed', sp.signed);
+  if (sp.hasReservation) qs.set('hasReservation', sp.hasReservation);
+
+  const [contractsRes, allRes] = await Promise.all([
+    safe(api.get<Paged<ContractRow>>(`/contracts?${qs}`)),
+    safe(api.get<Paged<ContractRow>>('/contracts?pageSize=1')),
+  ]);
+
+  const contracts = contractsRes.data?.data ?? [];
+  const meta = contractsRes.data?.meta;
+  const totalContracts = allRes.data?.meta.total ?? 0;
+
+  // Derive KPI counts from current filtered set for signed / reservation stats
+  // (approximate — full count would need a dedicated stats endpoint)
+  const signedCount = contracts.filter((c) => c.signedAt).length;
+  const withReservationCount = contracts.filter((c) => c.reservation).length;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">العقود</h1>
-        <Link
-          href="/dashboard/contracts/new"
-          className="rounded-lg bg-brand-600 text-white px-4 py-2 text-sm hover:bg-brand-700"
-        >
-          + عقد جديد
-        </Link>
+    <div className="space-y-6 pb-2">
+      <PageHeader
+        title="العقود"
+        description="عرض وإدارة عقود البيع المرتبطة بالوحدات والعملاء."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'العقود' },
+        ]}
+        actions={
+          <Link href="/dashboard/contracts/new">
+            <Button variant="primary" size="md">
+              <Plus className="h-4 w-4 ml-2" />
+              عقد يدوي
+            </Button>
+          </Link>
+        }
+      />
+
+      {/* KPI row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <KpiCard
+          label="إجمالي العقود"
+          value={totalContracts}
+          icon={<FileText />}
+          tone="brand"
+        />
+        <KpiCard
+          label="عقود موقّعة (الصفحة الحالية)"
+          value={signedCount}
+          icon={<CheckCircle2 />}
+          tone="success"
+          sub={`من ${contracts.length} عقد في هذه الصفحة`}
+        />
+        <KpiCard
+          label="محوّلة من حجز (الصفحة الحالية)"
+          value={withReservationCount}
+          icon={<Link2 />}
+          tone="info"
+          sub={`من ${contracts.length} عقد في هذه الصفحة`}
+        />
       </div>
 
-      {r.error && (
-        <div className="rounded-lg bg-red-50 text-red-700 p-4 mb-4 text-sm">{r.error}</div>
+      {/* Filter bar */}
+      <FilterBar
+        method="get"
+        trailing={
+          (sp.q || sp.signed || sp.hasReservation) && (
+            <Link href="/dashboard/contracts">
+              <Button variant="ghost" size="sm" type="button">
+                مسح الفلاتر
+              </Button>
+            </Link>
+          )
+        }
+      >
+        <FilterField label="بحث" htmlFor="q">
+          <Input
+            id="q"
+            name="q"
+            placeholder="رقم العقد، العميل، الوحدة…"
+            defaultValue={sp.q ?? ''}
+            className="w-56"
+          />
+        </FilterField>
+        <FilterField label="التوقيع" htmlFor="signed">
+          <Select id="signed" name="signed" defaultValue={sp.signed ?? ''} className="w-36">
+            <option value="">الكل</option>
+            <option value="yes">موقّع</option>
+            <option value="no">غير موقّع</option>
+          </Select>
+        </FilterField>
+        <FilterField label="المصدر" htmlFor="hasReservation">
+          <Select
+            id="hasReservation"
+            name="hasReservation"
+            defaultValue={sp.hasReservation ?? ''}
+            className="w-40"
+          >
+            <option value="">الكل</option>
+            <option value="yes">من حجز</option>
+            <option value="no">يدوي</option>
+          </Select>
+        </FilterField>
+        <Button type="submit" variant="secondary" size="sm">
+          تطبيق
+        </Button>
+      </FilterBar>
+
+      {contractsRes.error && (
+        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          {contractsRes.error}
+        </div>
       )}
 
-      {r.data && (
-        <DataTable
-          rowKey={(c) => c.id}
-          rows={r.data.data}
-          emptyMessage="لا توجد عقود بعد"
-          columns={[
-            {
-              key: 'customer',
-              header: 'العميل',
-              cell: (c) => <span className="font-medium">{c.customer?.fullName ?? '—'}</span>,
-            },
-            {
-              key: 'unit',
-              header: 'الوحدة',
-              cell: (c) => (
-                <span className="text-xs text-gray-600">
-                  {c.unit?.code ?? '—'} · {tx(c.unit?.building?.phase?.project?.name)}
+      <DataTable
+        rowKey={(c) => c.id}
+        rows={contracts}
+        emptyMessage="لا توجد عقود تطابق الفلاتر الحالية"
+        columns={[
+          {
+            key: 'number',
+            header: 'رقم العقد',
+            cell: (c) => (
+              <Link
+                href={`/dashboard/contracts/${c.id}`}
+                className="font-mono text-sm font-semibold text-brand-700 hover:underline"
+              >
+                {c.contractNumber ?? c.id.slice(0, 8)}
+              </Link>
+            ),
+          },
+          {
+            key: 'customer',
+            header: 'العميل',
+            cell: (c) => (
+              <div>
+                <p className="font-medium text-slate-900">{c.customer?.fullName ?? '—'}</p>
+                {c.customer?.phone && (
+                  <p className="text-xs text-slate-400" dir="ltr">{c.customer.phone}</p>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: 'unit',
+            header: 'الوحدة',
+            cell: (c) => (
+              <div>
+                <p className="font-medium">{c.unit?.code ?? '—'} · {c.unit?.type ?? ''}</p>
+                <p className="text-xs text-slate-400">
+                  {tx(c.unit?.building?.phase?.project?.name) || '—'}
+                </p>
+              </div>
+            ),
+          },
+          {
+            key: 'amounts',
+            header: 'الإجمالي / المقدم',
+            cell: (c) => (
+              <div className="tabular-nums text-sm">
+                <p className="font-semibold">{formatCurrency(c.totalAmount)}</p>
+                {Number(c.downPayment) > 0 && (
+                  <p className="text-xs text-slate-400">مقدم: {formatCurrency(c.downPayment)}</p>
+                )}
+              </div>
+            ),
+          },
+          {
+            key: 'plan',
+            header: 'خطة التقسيط',
+            cell: (c) =>
+              c.installmentPlan ? (
+                <span className="inline-flex items-center gap-1 text-xs text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {c.installmentPlan.totalMonths} شهر
+                </span>
+              ) : (
+                <span className="text-xs text-slate-400">—</span>
+              ),
+          },
+          {
+            key: 'source',
+            header: 'المصدر',
+            cell: (c) =>
+              c.reservation ? (
+                <Link
+                  href={`/dashboard/reservations/${c.reservation.id}`}
+                  className="inline-flex items-center gap-1 text-xs text-indigo-700 hover:underline"
+                >
+                  <Link2 className="h-3 w-3" />
+                  {c.reservation.reservationNumber ?? c.reservation.id.slice(0, 8)}
+                </Link>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs text-slate-400">
+                  <Unlink className="h-3 w-3" />
+                  يدوي
                 </span>
               ),
-            },
-            { key: 'total', header: 'الإجمالي', cell: (c) => formatCurrency(c.totalAmount) },
-            { key: 'down', header: 'المقدم', cell: (c) => formatCurrency(c.downPayment) },
-            {
-              key: 'pdf',
-              header: 'العقد PDF',
-              cell: (c) => (c.pdfUrl ? '✓' : '—'),
-            },
-            { key: 'created', header: 'التاريخ', cell: (c) => formatDate(c.createdAt) },
-            {
-              key: 'actions',
-              header: '',
-              cell: (c) => (
-                <Link href={`/dashboard/contracts/${c.id}`} className="text-brand-600 hover:underline text-sm">
-                  عرض
-                </Link>
+          },
+          {
+            key: 'signed',
+            header: 'التوقيع',
+            cell: (c) =>
+              c.signedAt ? (
+                <span className="text-xs text-success-700">{formatDate(c.signedAt)}</span>
+              ) : (
+                <span className="text-xs text-slate-400">غير موقّع</span>
               ),
-            },
-          ]}
+          },
+          {
+            key: 'created',
+            header: 'تاريخ الإنشاء',
+            cell: (c) => <span className="text-xs text-slate-500">{formatDate(c.createdAt)}</span>,
+          },
+          {
+            key: 'actions',
+            header: '',
+            cell: (c) => (
+              <Link
+                href={`/dashboard/contracts/${c.id}`}
+                className="text-brand-600 hover:underline text-sm font-medium"
+              >
+                عرض
+              </Link>
+            ),
+          },
+        ]}
+      />
+
+      {meta && (
+        <Pagination
+          page={meta.page}
+          pageSize={meta.pageSize}
+          total={meta.total}
+          basePath="/dashboard/contracts"
+          params={{ q: sp.q, signed: sp.signed, hasReservation: sp.hasReservation }}
         />
       )}
     </div>
