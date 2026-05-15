@@ -5,7 +5,7 @@ import { verifyDepositAction } from './actions';
 
 interface Props {
   id: string;
-  contractId: string;
+  contractId: string | null;
   verified: boolean;
 }
 

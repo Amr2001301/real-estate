@@ -30,8 +30,8 @@ export async function recordDepositAction(
   redirect(`/dashboard/contracts/${payload.contractId}`);
 }
 
-export async function verifyDepositAction(id: string, contractId: string, verified: boolean) {
+export async function verifyDepositAction(id: string, contractId: string | null, verified: boolean) {
   await api.patch(`/deposits/${id}/verify`, { verified });
   revalidatePath('/dashboard/deposits');
-  revalidatePath(`/dashboard/contracts/${contractId}`);
+  if (contractId) revalidatePath(`/dashboard/contracts/${contractId}`);
 }

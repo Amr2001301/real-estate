@@ -581,6 +581,13 @@ enum InstallmentStatus {
   OVERDUE
 }
 
+enum DepositType {
+  BOOKING_AMOUNT
+  DOWN_PAYMENT
+  INSTALLMENT
+  FINAL_PAYMENT
+}
+
 model Reservation {
   id                String            @id @default(uuid()) @db.Uuid
   reservationNumber String?           @unique
@@ -616,15 +623,17 @@ model Reservation {
   selectedDurationOption     InstallmentPlanDurationOption? @relation(fields: [selectedDurationOptionId], references: [id], onDelete: SetNull)
   selectedDurationMonths     Int?
   selectedIncreasePercentage Decimal?                      @db.Decimal(6, 2)
-  snapshotDownPaymentAmount  Decimal?                      @db.Decimal(14, 2)
-  snapshotRemainingAmount    Decimal?                      @db.Decimal(14, 2)
-  snapshotFinancedAmount     Decimal?                      @db.Decimal(14, 2)
-  snapshotMonthlyInstallment Decimal?                      @db.Decimal(14, 2)
-  snapshotTotalPayable       Decimal?                      @db.Decimal(14, 2)
+  snapshotDownPaymentAmount   Decimal?                      @db.Decimal(14, 2)
+  snapshotRemainingAmount     Decimal?                      @db.Decimal(14, 2)
+  snapshotFinancedAmount      Decimal?                      @db.Decimal(14, 2)
+  snapshotMonthlyInstallment  Decimal?                      @db.Decimal(14, 2)
+  snapshotTotalPayable        Decimal?                      @db.Decimal(14, 2)
+  snapshotFinalPaymentAmount  Decimal?                      @db.Decimal(14, 2)
 
   reservationNotes ReservationNote[]
   activities       ReservationActivity[]
   contract         Contract?
+  deposits         Deposit[]
 
   @@index([unitId])
   @@index([salesId])
@@ -712,6 +721,7 @@ model Installment {
   id        String            @id @default(uuid()) @db.Uuid
   planId    String            @db.Uuid
   plan      InstallmentPlan   @relation(fields: [planId], references: [id], onDelete: Cascade)
+  type      PlanPaymentType   @default(INSTALLMENT)
   dueDate   DateTime
   amount    Decimal           @db.Decimal(14, 2)
   status    InstallmentStatus @default(PENDING)
@@ -725,20 +735,24 @@ model Installment {
 }
 
 model Deposit {
-  id            String       @id @default(uuid()) @db.Uuid
-  contractId    String       @db.Uuid
-  contract      Contract     @relation(fields: [contractId], references: [id])
-  installmentId String?      @db.Uuid
-  installment   Installment? @relation(fields: [installmentId], references: [id])
-  amount        Decimal      @db.Decimal(14, 2)
-  paidAt        DateTime
-  receiptUrl    String?
-  recordedById  String       @db.Uuid
-  recordedBy    User         @relation("DepositRecordedBy", fields: [recordedById], references: [id])
-  verified      Boolean      @default(false)
-  createdAt     DateTime     @default(now())
+  id             String       @id @default(uuid()) @db.Uuid
+  type           DepositType  @default(INSTALLMENT)
+  contractId     String?      @db.Uuid
+  contract       Contract?    @relation(fields: [contractId], references: [id])
+  reservationId  String?      @db.Uuid
+  reservation    Reservation? @relation(fields: [reservationId], references: [id])
+  installmentId  String?      @db.Uuid
+  installment    Installment? @relation(fields: [installmentId], references: [id])
+  amount         Decimal      @db.Decimal(14, 2)
+  paidAt         DateTime
+  receiptUrl     String?
+  recordedById   String       @db.Uuid
+  recordedBy     User         @relation("DepositRecordedBy", fields: [recordedById], references: [id])
+  verified       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
 
   @@index([contractId])
+  @@index([reservationId])
 }
 
 // =============================================================================

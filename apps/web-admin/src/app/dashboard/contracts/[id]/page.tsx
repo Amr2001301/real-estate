@@ -35,6 +35,13 @@ const INST_STATUS: Record<string, { label: string; cls: string }> = {
   OVERDUE: { label: 'متأخر', cls: 'bg-danger-100 text-danger-700' },
 };
 
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+  RESERVATION: 'مبلغ الحجز',
+  DOWN_PAYMENT: 'دفعة أولى',
+  INSTALLMENT: 'قسط',
+  FINAL_PAYMENT: 'دفعة أخيرة',
+};
+
 export default async function ContractDetailPage({
   params,
 }: {
@@ -174,6 +181,7 @@ export default async function ContractDetailPage({
                         <thead className="sticky top-0 bg-slate-50 text-xs text-slate-500 border-b border-hairline">
                           <tr>
                             <th className="px-6 py-2 text-right font-medium">#</th>
+                            <th className="px-4 py-2 text-right font-medium">النوع</th>
                             <th className="px-4 py-2 text-right font-medium">تاريخ الاستحقاق</th>
                             <th className="px-4 py-2 text-right font-medium">المبلغ</th>
                             <th className="px-4 py-2 text-right font-medium">الحالة</th>
@@ -182,35 +190,49 @@ export default async function ContractDetailPage({
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-hairline">
-                          {plan.installments.map((inst, i) => {
-                            const s = INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
-                            const canPay = inst.status === 'PENDING' || inst.status === 'OVERDUE';
-                            return (
-                              <tr key={inst.id} className="hover:bg-slate-50/50">
-                                <td className="px-6 py-2.5 text-slate-500 font-mono text-xs">{i + 1}</td>
-                                <td className="px-4 py-2.5">{formatDate(inst.dueDate)}</td>
-                                <td className="px-4 py-2.5 font-semibold tabular-nums">{formatCurrency(inst.amount)}</td>
-                                <td className="px-4 py-2.5">
-                                  <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>
-                                    {s.label}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-2.5 text-slate-400 text-xs">
-                                  {inst.paidAt ? formatDate(inst.paidAt) : '—'}
-                                </td>
-                                <td className="px-4 py-2.5">
-                                  {canPay && (
-                                    <RecordPaymentButton
-                                      contractId={contract.id}
-                                      installmentId={inst.id}
-                                      amount={inst.amount}
-                                      dueDate={inst.dueDate}
-                                    />
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
+                          {(() => {
+                            let installmentCounter = 0;
+                            return plan.installments!.map((inst) => {
+                              const s = INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
+                              const canPay = inst.status === 'PENDING' || inst.status === 'OVERDUE';
+                              const isInstallment = !inst.type || inst.type === 'INSTALLMENT';
+                              if (isInstallment) installmentCounter++;
+                              const rowLabel = isInstallment
+                                ? String(installmentCounter)
+                                : PAYMENT_TYPE_LABELS[inst.type] ?? inst.type;
+                              return (
+                                <tr key={inst.id} className="hover:bg-slate-50/50">
+                                  <td className="px-6 py-2.5 text-slate-500 font-mono text-xs">
+                                    {isInstallment ? rowLabel : '—'}
+                                  </td>
+                                  <td className="px-4 py-2.5 text-xs text-slate-600">
+                                    {PAYMENT_TYPE_LABELS[inst.type] ?? 'قسط'}
+                                  </td>
+                                  <td className="px-4 py-2.5">{formatDate(inst.dueDate)}</td>
+                                  <td className="px-4 py-2.5 font-semibold tabular-nums">{formatCurrency(inst.amount)}</td>
+                                  <td className="px-4 py-2.5">
+                                    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>
+                                      {s.label}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-2.5 text-slate-400 text-xs">
+                                    {inst.paidAt ? formatDate(inst.paidAt) : '—'}
+                                  </td>
+                                  <td className="px-4 py-2.5">
+                                    {canPay && (
+                                      <RecordPaymentButton
+                                        contractId={contract.id}
+                                        installmentId={inst.id}
+                                        amount={inst.amount}
+                                        dueDate={inst.dueDate}
+                                        installmentType={inst.type}
+                                      />
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>

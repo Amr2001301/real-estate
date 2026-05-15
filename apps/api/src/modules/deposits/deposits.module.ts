@@ -22,7 +22,7 @@ import {
   IsString,
   IsUUID,
 } from 'class-validator';
-import { Prisma, InstallmentStatus, UserRole } from '@prisma/client';
+import { DepositType, Prisma, PlanPaymentType, InstallmentStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -71,9 +71,18 @@ class DepositsService {
       throw new BadRequestException('لا يمكن دفع مبلغ أكبر من قيمة القسط');
     }
 
+    // Map installment type → deposit type
+    const depositTypeMap: Partial<Record<PlanPaymentType, DepositType>> = {
+      [PlanPaymentType.DOWN_PAYMENT]: DepositType.DOWN_PAYMENT,
+      [PlanPaymentType.INSTALLMENT]: DepositType.INSTALLMENT,
+      [PlanPaymentType.FINAL_PAYMENT]: DepositType.FINAL_PAYMENT,
+    };
+    const depositType = depositTypeMap[installment.type] ?? DepositType.INSTALLMENT;
+
     return this.prisma.$transaction(async (tx) => {
       const deposit = await tx.deposit.create({
         data: {
+          type: depositType,
           contractId: dto.contractId,
           installmentId: dto.installmentId,
           amount: new Prisma.Decimal(dto.amount),
@@ -101,8 +110,26 @@ class DepositsService {
         ...takeSkip(opts),
         orderBy: { paidAt: 'desc' },
         include: {
-          contract: { select: { id: true, contractNumber: true, customer: { select: { id: true, fullName: true } } } },
-          installment: { select: { id: true, dueDate: true, amount: true } },
+          contract: {
+            select: {
+              id: true,
+              contractNumber: true,
+              customer: { select: { id: true, fullName: true } },
+              unit: { select: { id: true, code: true } },
+            },
+          },
+          installment: { select: { id: true, dueDate: true, amount: true, type: true } },
+          reservation: {
+            select: {
+              id: true,
+              reservationNumber: true,
+              createdAt: true,
+              expiresAt: true,
+              unit: { select: { id: true, code: true } },
+              client: { select: { id: true, fullName: true } },
+              lead: { select: { id: true, fullName: true } },
+            },
+          },
         },
       }),
       this.prisma.deposit.count({ where }),

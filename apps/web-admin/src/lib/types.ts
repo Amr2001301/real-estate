@@ -149,9 +149,11 @@ export interface LeadNote {
 }
 
 export type InstallmentStatus = 'PENDING' | 'PAID' | 'OVERDUE';
+export type DepositType = 'BOOKING_AMOUNT' | 'DOWN_PAYMENT' | 'INSTALLMENT' | 'FINAL_PAYMENT';
 
 export interface ContractInstallment {
   id: string;
+  type: PlanPaymentType;
   dueDate: string;
   amount: string | number;
   status: InstallmentStatus;
@@ -187,10 +189,26 @@ export interface Contract {
 
 export interface Deposit {
   id: string;
-  contractId: string;
-  contract?: { id: string; contractNumber?: string | null; customer?: { fullName: string } };
+  type: DepositType;
+  contractId: string | null;
+  contract?: {
+    id: string;
+    contractNumber?: string | null;
+    customer?: { fullName: string };
+    unit?: { id: string; code: string } | null;
+  } | null;
+  reservationId?: string | null;
+  reservation?: {
+    id: string;
+    reservationNumber?: string | null;
+    createdAt?: string;
+    expiresAt?: string;
+    unit?: { id: string; code: string } | null;
+    client?: { id: string; fullName: string } | null;
+    lead?: { id: string; fullName: string } | null;
+  } | null;
   installmentId?: string | null;
-  installment?: { id: string; dueDate: string; amount: string | number } | null;
+  installment?: { id: string; dueDate: string; amount: string | number; type?: PlanPaymentType } | null;
   amount: string | number;
   paidAt: string;
   receiptUrl: string | null;
@@ -343,6 +361,7 @@ export interface Reservation {
   snapshotFinancedAmount: string | number | null;
   snapshotMonthlyInstallment: string | number | null;
   snapshotTotalPayable: string | number | null;
+  snapshotFinalPaymentAmount: string | number | null;
   reservationNotes?: ReservationNote[];
   activities?: ReservationActivity[];
   contract?: { id: string; contractNumber: string | null } | null;

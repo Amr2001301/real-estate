@@ -176,6 +176,7 @@ export async function confirmBookingPaymentAction(
   }
   revalidatePath('/dashboard/reservations');
   revalidatePath(`/dashboard/reservations/${id}`);
+  revalidatePath('/dashboard/deposits');
   return {};
 }
 
@@ -195,6 +196,7 @@ export async function unconfirmBookingPaymentAction(
   }
   revalidatePath('/dashboard/reservations');
   revalidatePath(`/dashboard/reservations/${id}`);
+  revalidatePath('/dashboard/deposits');
   return {};
 }
 

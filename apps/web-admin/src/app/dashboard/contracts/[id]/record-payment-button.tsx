@@ -7,14 +7,21 @@ import { Button } from '@/components/ui/button';
 import { recordInstallmentPaymentAction } from '../actions';
 import { formatCurrency, formatDate } from '@/lib/format';
 
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+  DOWN_PAYMENT: 'الدفعة الأولى',
+  INSTALLMENT: 'القسط',
+  FINAL_PAYMENT: 'الدفعة الأخيرة',
+};
+
 interface Props {
   contractId: string;
   installmentId: string;
   amount: string | number;
   dueDate: string;
+  installmentType?: string;
 }
 
-export function RecordPaymentButton({ contractId, installmentId, amount, dueDate }: Props) {
+export function RecordPaymentButton({ contractId, installmentId, amount, dueDate, installmentType }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -49,7 +56,9 @@ export function RecordPaymentButton({ contractId, installmentId, amount, dueDate
   return (
     <div className="mt-1 rounded-lg border border-brand-200 bg-brand-50 p-3 text-sm space-y-3">
       <div className="flex items-center justify-between">
-        <span className="font-medium text-brand-800 text-xs">تسجيل دفعة — القسط {formatDate(dueDate)}</span>
+        <span className="font-medium text-brand-800 text-xs">
+          تسجيل دفعة — {PAYMENT_TYPE_LABELS[installmentType ?? 'INSTALLMENT'] ?? 'القسط'} {formatDate(dueDate)}
+        </span>
         <button type="button" onClick={() => setOpen(false)} className="text-slate-400 hover:text-slate-600">
           <X className="h-3.5 w-3.5" />
         </button>

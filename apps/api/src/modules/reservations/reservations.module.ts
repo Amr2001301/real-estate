@@ -28,7 +28,9 @@ import {
   Min,
 } from 'class-validator';
 import {
+  DepositType,
   LeadStage,
+  PlanPaymentType,
   PlanTemplateStatus,
   Prisma,
   ReservationActivityType,
@@ -179,6 +181,7 @@ class ReservationsService {
         netPrice: true,
         reservationAmount: true,
         downPaymentAmount: true,
+        finalPaymentAmount: true,
         durationOptions: {
           select: { id: true, durationMonths: true, increasePercentage: true },
         },
@@ -293,6 +296,7 @@ class ReservationsService {
     let snapshotFinancedAmount: Prisma.Decimal | null = null;
     let snapshotMonthlyInstallment: Prisma.Decimal | null = null;
     let snapshotTotalPayable: Prisma.Decimal | null = null;
+    let snapshotFinalPaymentAmount: Prisma.Decimal | null = null;
 
     if (dto.installmentPlanTemplateId) {
       const plan = await this.validateBookingPlan(
@@ -338,6 +342,7 @@ class ReservationsService {
         snapshotFinancedAmount = new Prisma.Decimal(calc.financedAmount);
         snapshotMonthlyInstallment = new Prisma.Decimal(calc.monthlyInstallment);
         snapshotTotalPayable = new Prisma.Decimal(calc.totalPayable);
+        snapshotFinalPaymentAmount = plan.finalPaymentAmount ?? null;
       } else if (dto.installmentPlanDurationOptionId) {
         // Plan has no duration options but client sent one → reject.
         throw new BadRequestException(
@@ -380,6 +385,7 @@ class ReservationsService {
           snapshotFinancedAmount,
           snapshotMonthlyInstallment,
           snapshotTotalPayable,
+          snapshotFinalPaymentAmount,
         },
       });
       await tx.unit.update({
@@ -745,6 +751,22 @@ class ReservationsService {
             `تم تأكيد سداد مبلغ الحجز (${updated.bookingAmount.toString()})`,
         },
       });
+      // Idempotent: remove any previous BOOKING_AMOUNT deposit, then re-create.
+      await tx.deposit.deleteMany({
+        where: { reservationId: id, type: DepositType.BOOKING_AMOUNT },
+      });
+      await tx.deposit.create({
+        data: {
+          type: DepositType.BOOKING_AMOUNT,
+          reservationId: id,
+          contractId: null,
+          installmentId: null,
+          amount: reservation.bookingAmount,
+          paidAt,
+          recordedById: actor.sub,
+          verified: true,
+        },
+      });
       return updated;
     });
   }
@@ -776,6 +798,9 @@ class ReservationsService {
           bookingPaymentStatus: newStatus,
           bookingPaidAt: null,
         },
+      });
+      await tx.deposit.deleteMany({
+        where: { reservationId: id, type: DepositType.BOOKING_AMOUNT },
       });
       await tx.reservationActivity.create({
         data: {
@@ -1151,17 +1176,46 @@ class ReservationsService {
           },
         });
 
+        // 4a. DOWN_PAYMENT row (before monthly installments).
+        if (downPayment.gt(0)) {
+          const downPaymentDueDate = dto.signedAt ? new Date(dto.signedAt) : now;
+          await tx.installment.create({
+            data: {
+              planId: plan.id,
+              type: PlanPaymentType.DOWN_PAYMENT,
+              dueDate: downPaymentDueDate,
+              amount: downPayment,
+            },
+          });
+        }
+
+        // 4b. Monthly INSTALLMENT rows.
         const rows: Prisma.InstallmentCreateManyInput[] = [];
         for (let i = 0; i < reservation.selectedDurationMonths; i++) {
           const dueDate = new Date(startsAt);
           dueDate.setMonth(dueDate.getMonth() + i);
           rows.push({
             planId: plan.id,
+            type: PlanPaymentType.INSTALLMENT,
             dueDate,
             amount: reservation.snapshotMonthlyInstallment,
           });
         }
         await tx.installment.createMany({ data: rows });
+
+        // 4c. FINAL_PAYMENT row (one period after the last monthly installment).
+        if (reservation.snapshotFinalPaymentAmount?.gt(0)) {
+          const finalDueDate = new Date(startsAt);
+          finalDueDate.setMonth(finalDueDate.getMonth() + reservation.selectedDurationMonths);
+          await tx.installment.create({
+            data: {
+              planId: plan.id,
+              type: PlanPaymentType.FINAL_PAYMENT,
+              dueDate: finalDueDate,
+              amount: reservation.snapshotFinalPaymentAmount,
+            },
+          });
+        }
       }
 
       // 5. Mark Reservation CONVERTED.
