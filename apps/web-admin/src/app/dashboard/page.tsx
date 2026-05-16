@@ -16,7 +16,7 @@ import {
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { Button } from '@/components/ui/button';
-import { KpiCard } from '@/components/ui/kpi-card';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { ChartPanel } from '@/components/dashboard/chart-panel';
@@ -106,7 +106,7 @@ export default async function DashboardHome() {
   const error = r.error;
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-5">
       <PageHeader
         title="مرحباً بك في المجلس الرقمي"
         description="نظرة عامة على أداء المحفظة العقارية والعمليات الجارية اليوم."
@@ -143,46 +143,42 @@ export default async function DashboardHome() {
       )}
 
       {kpis && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-          <KpiCard
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+          <PageKpiCard
             label="إجمالي المشاريع"
             value={kpis.projects}
             icon={<Building2 />}
             tone="brand"
           />
-          <KpiCard
+          <PageKpiCard
             label="الوحدات المتاحة"
             value={kpis.units.available}
             sub={`من إجمالي ${kpis.units.total}`}
             icon={<Home />}
             tone="info"
           />
-          <KpiCard
+          <PageKpiCard
             label="الفرص الجديدة"
             value={kpis.leads.new}
+            sub={kpis.leads.new > 0 ? `+${kpis.leads.new} هذا الشهر` : undefined}
             icon={<Zap />}
             tone="accent"
-            delta={
-              kpis.leads.new > 0
-                ? { value: `+${kpis.leads.new}`, direction: 'up' }
-                : undefined
-            }
           />
-          <KpiCard
+          <PageKpiCard
             label="الحجوزات النشطة"
             value={kpis.units.reserved}
             icon={<CalendarCheck2 />}
             tone="success"
           />
-          <KpiCard
+          <PageKpiCard
             label="ودائع معلقة"
             value={kpis.pendingVisits}
             icon={<Receipt />}
             tone="warning"
           />
-          <KpiCard
+          <PageKpiCard
             label="طلبات صيانة"
-            value="07"
+            value={7}
             sub="بيانات تجريبية"
             icon={<Wrench />}
             tone="danger"
@@ -190,7 +186,7 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <ChartPanel
           title="توزيع العملاء المحتملين"
           description="حسب مصدر القناة"
@@ -217,24 +213,24 @@ export default async function DashboardHome() {
         </ChartPanel>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
-        <Card className="p-5 sm:p-6 lg:col-span-1">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-2">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-danger-50 text-danger-600">
-                <AlertCircle className="h-4 w-4" />
-              </span>
-              <h3 className="text-base font-semibold text-slate-900 tracking-tight">
-                تنبيهات معلقة
-              </h3>
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="overflow-hidden lg:col-span-1">
+          <div className="flex items-center gap-2 px-5 py-3 border-b border-hairline">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-danger-50 text-danger-600 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5">
+              <AlertCircle className="h-3.5 w-3.5" />
+            </span>
+            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
+              تنبيهات معلقة
+            </h3>
           </div>
-          <AlertList items={ALERTS} />
+          <div className="p-4 sm:p-5">
+            <AlertList items={ALERTS} />
+          </div>
         </Card>
 
-        <Card className="p-5 sm:p-6 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold text-slate-900 tracking-tight">
+        <Card className="overflow-hidden lg:col-span-2">
+          <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
+            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
               آخر النشاطات
             </h3>
             <Link
@@ -245,7 +241,9 @@ export default async function DashboardHome() {
               <ArrowLeft className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <ActivityTable rows={ACTIVITIES} />
+          <div className="p-4 sm:p-5">
+            <ActivityTable rows={ACTIVITIES} />
+          </div>
         </Card>
       </div>
 

@@ -8,7 +8,6 @@ interface Props {
   trailing?: ReactNode;
   children: ReactNode;
   className?: string;
-  /** Inner canvas tint behind the chart. */
   canvas?: 'plain' | 'tinted';
 }
 
@@ -18,27 +17,25 @@ export function ChartPanel({
   trailing,
   children,
   className,
-  canvas = 'tinted',
+  canvas = 'plain',
 }: Props) {
   return (
-    <Card className={cn('p-5 sm:p-6', className)}>
-      <div className="flex items-start justify-between gap-3 mb-5">
+    <Card className={cn('overflow-hidden', className)}>
+      <div className="flex items-start justify-between gap-3 px-5 py-3 border-b border-hairline">
         <div className="min-w-0">
-          <h3 className="text-base font-semibold text-slate-900 tracking-tight">
+          <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
             {title}
           </h3>
           {description && (
-            <p className="mt-1 text-xs text-slate-500">{description}</p>
+            <p className="mt-0.5 text-xs text-slate-400">{description}</p>
           )}
         </div>
         {trailing && <div className="shrink-0">{trailing}</div>}
       </div>
-      <div
-        className={cn(
-          'rounded-2xl',
-          canvas === 'tinted' ? 'bg-info-50/60 p-4 sm:p-5' : 'p-0',
-        )}
-      >
+      <div className={cn(
+        'p-4 sm:p-5',
+        canvas === 'tinted' && 'bg-slate-50/50',
+      )}>
         {children}
       </div>
     </Card>
