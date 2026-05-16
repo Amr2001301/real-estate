@@ -187,6 +187,19 @@ export interface Contract {
   deposits?: Deposit[];
 }
 
+export interface DepositTotals {
+  totalAmount: string;
+  bookingAmount: string;
+  downPayment: string;
+  installment: string;
+  finalPayment: string;
+  count: number;
+}
+
+export interface PagedDeposits extends Paged<Deposit> {
+  totals: DepositTotals;
+}
+
 export interface Deposit {
   id: string;
   type: DepositType;
@@ -474,4 +487,71 @@ export interface InstallmentPlanDurationOption {
   increasePercentage: string | number;
   order: number;
   calculated?: DurationOptionCalculated;
+}
+
+// ── Financial Reports ─────────────────────────────────────────────────────────
+
+export interface FinancialSummary {
+  totalContractValue: string;
+  totalCollected: string;
+  totalRemaining: string;
+  totalOverdue: string;
+  collectedThisMonth: string;
+  dueThisMonth: string;
+  contractCount: number;
+  depositCount: number;
+  overdueInstallmentCount: number;
+}
+
+export interface FinancialInstallmentRow {
+  id: string;
+  type: PlanPaymentType;
+  dueDate: string;
+  amount: string | number;
+  status: InstallmentStatus;
+  plan: {
+    contract: {
+      id: string;
+      contractNumber: string | null;
+      customer: { id: string; fullName: string };
+      unit: { id: string; code: string };
+    };
+  };
+}
+
+export interface FinancialDepositRow {
+  id: string;
+  type: DepositType;
+  amount: string | number;
+  paidAt: string;
+  verified: boolean;
+  contract: {
+    id: string;
+    contractNumber: string | null;
+    customer: { id: string; fullName: string } | null;
+    unit: { id: string; code: string } | null;
+  } | null;
+  reservation: {
+    id: string;
+    reservationNumber: string | null;
+    unit: { id: string; code: string } | null;
+    client: { id: string; fullName: string } | null;
+    lead: { id: string; fullName: string } | null;
+  } | null;
+}
+
+export interface CashflowTrendPoint {
+  month: string;
+  label: string;
+  collected: number;
+  due: number;
+}
+
+export interface FinancialDashboard {
+  summary: FinancialSummary;
+  overdue: FinancialInstallmentRow[];
+  upcomingThisWeek: FinancialInstallmentRow[];
+  upcomingThisMonth: FinancialInstallmentRow[];
+  recentDeposits: FinancialDepositRow[];
+  cashflowTrend: CashflowTrendPoint[];
 }
