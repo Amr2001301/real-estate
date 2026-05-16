@@ -20,7 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
-import { KpiCard } from '@/components/ui/kpi-card';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Pagination } from '@/components/ui/pagination';
@@ -112,7 +112,7 @@ export default async function ClientsPage({
   const labels = ROLE_LABEL[role];
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-5">
       <PageHeader
         title={labels.title}
         description={labels.description}
@@ -154,26 +154,26 @@ export default async function ClientsPage({
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard
+        <PageKpiCard
           label="إجمالي العملاء"
           value={clientTotal + customerTotal}
           sub="بكل أنواعهم"
           icon={<Users />}
           tone="brand"
         />
-        <KpiCard
+        <PageKpiCard
           label="عملاء متصفّحون"
           value={clientTotal}
           icon={<Users />}
           tone="info"
         />
-        <KpiCard
+        <PageKpiCard
           label="مالكون"
           value={customerTotal}
           icon={<UserCheck />}
           tone="success"
         />
-        <KpiCard
+        <PageKpiCard
           label="موقوفون (في هذه الصفحة)"
           value={inactiveOnPage}
           sub={`من ${rows.length} ظاهر`}
@@ -193,28 +193,26 @@ export default async function ClientsPage({
       <form
         method="get"
         action="/dashboard/clients"
-        className="flex flex-wrap items-center gap-3"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
       >
         <input type="hidden" name="role" value={role} />
-        <div className="flex-1 min-w-[220px] max-w-xl">
+        <div className="flex-1 min-w-[180px]">
           <Input
             name="q"
+            inputSize="sm"
             defaultValue={q}
             placeholder="ابحث بالاسم، البريد، أو الهاتف…"
             leftAddon={<Search />}
           />
         </div>
-        <Button type="submit" variant="secondary" size="md">
-          بحث
-        </Button>
-        {q && (
-          <Link
-            href={`/dashboard/clients?role=${role}` as never}
-            className="text-xs font-semibold text-slate-500 hover:text-slate-900"
-          >
-            مسح البحث
-          </Link>
-        )}
+        <div className="flex items-center gap-1.5 ms-auto">
+          <Button type="submit" variant="primary" size="sm">بحث</Button>
+          {q && (
+            <Link href={`/dashboard/clients?role=${role}` as never}>
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
+            </Link>
+          )}
+        </div>
       </form>
 
       <Card className="overflow-hidden">

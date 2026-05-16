@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { Plus, BookmarkCheck, Clock, CheckCircle2, XCircle, CalendarX2, AlertCircle } from 'lucide-react';
+import { Plus, BookmarkCheck, Clock, CheckCircle2, XCircle, CalendarX2, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Reservation } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
-import { KpiCard } from '@/components/ui/kpi-card';
-import { FilterBar, FilterField } from '@/components/ui/toolbar';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -46,11 +45,32 @@ export default async function ReservationsPage({
     dateFrom?: string;
     dateTo?: string;
     page?: string;
+    showFilters?: string;
   }>;
 }) {
   const sp = await searchParams;
   const page = Number(sp.page ?? 1);
   const pageSize = 20;
+
+  const hasAdvancedFilters = !!(sp.salesId || sp.dateFrom || sp.dateTo);
+  const showFilters = hasAdvancedFilters || sp.showFilters === '1';
+
+  function pageUrl(overrides: Record<string, string | undefined>): string {
+    const base: Record<string, string | undefined> = {
+      status: sp.status, projectId: sp.projectId, q: sp.q,
+      salesId: sp.salesId, dateFrom: sp.dateFrom, dateTo: sp.dateTo,
+      showFilters: sp.showFilters,
+    };
+    const merged = { ...base, ...overrides };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(merged)) { if (v) p.set(k, v); }
+    const qs = p.toString();
+    return `/dashboard/reservations${qs ? `?${qs}` : ''}`;
+  }
+
+  const toggleFiltersUrl = showFilters
+    ? pageUrl({ showFilters: undefined })
+    : pageUrl({ showFilters: '1' });
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
   if (sp.status) qs.set('status', sp.status);
@@ -74,7 +94,7 @@ export default async function ReservationsPage({
   const salesOptions: SalesUser[] = salesRes.data?.data ?? [];
 
   return (
-    <div className="space-y-6 pb-2">
+    <div className="space-y-5">
       <PageHeader
         title="الحجوزات"
         description="مراجعة وإدارة طلبات الحجز المرتبطة بالوحدات والعملاء."
@@ -93,31 +113,31 @@ export default async function ReservationsPage({
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
-        <KpiCard
+        <PageKpiCard
           label="إجمالي الحجوزات"
           value={stats?.total ?? '—'}
           icon={<BookmarkCheck className="h-5 w-5" />}
           tone="neutral"
         />
-        <KpiCard
+        <PageKpiCard
           label="قيد المراجعة"
           value={stats?.pending ?? '—'}
           icon={<Clock className="h-5 w-5" />}
           tone="warning"
         />
-        <KpiCard
+        <PageKpiCard
           label="تمت الموافقة"
           value={stats?.approved ?? '—'}
           icon={<CheckCircle2 className="h-5 w-5" />}
           tone="success"
         />
-        <KpiCard
+        <PageKpiCard
           label="مرفوضة"
           value={stats?.rejected ?? '—'}
           icon={<XCircle className="h-5 w-5" />}
           tone="danger"
         />
-        <KpiCard
+        <PageKpiCard
           label="منتهية / ملغاة"
           value={(stats?.expired ?? 0) + (stats?.cancelled ?? 0)}
           icon={<CalendarX2 className="h-5 w-5" />}
@@ -125,86 +145,81 @@ export default async function ReservationsPage({
         />
       </div>
 
-      {/* Filters */}
-      <FilterBar method="get" action="/dashboard/reservations">
-        <FilterField label="بحث" htmlFor="filter-q">
+      {/* Filter strip */}
+      <form method="get" action="/dashboard/reservations">
+        {!showFilters && sp.salesId  && <input type="hidden" name="salesId"  value={sp.salesId} />}
+        {!showFilters && sp.dateFrom && <input type="hidden" name="dateFrom" value={sp.dateFrom} />}
+        {!showFilters && sp.dateTo   && <input type="hidden" name="dateTo"   value={sp.dateTo} />}
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
           <Input
-            id="filter-q"
             name="q"
-            defaultValue={sp.q}
-            placeholder="اسم العميل أو رقم الحجز…"
             inputSize="sm"
+            defaultValue={sp.q ?? ''}
+            placeholder="اسم العميل أو رقم الحجز…"
+            className="flex-1 min-w-[160px]"
           />
-        </FilterField>
-        <FilterField label="الحالة" htmlFor="filter-status">
-          <Select id="filter-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
-            <option value="">الكل</option>
+          <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
+            <option value="">كل الحالات</option>
             <option value="PENDING">قيد المراجعة</option>
             <option value="APPROVED">تمت الموافقة</option>
             <option value="REJECTED">مرفوض</option>
             <option value="CANCELLED">ملغي</option>
             <option value="EXPIRED">منتهي</option>
           </Select>
-        </FilterField>
-        <FilterField label="المشروع" htmlFor="filter-project">
-          <Select
-            id="filter-project"
-            name="projectId"
-            inputSize="sm"
-            defaultValue={sp.projectId ?? ''}
-          >
-            <option value="">الكل</option>
+          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
+            <option value="">كل المشاريع</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {tx(p.name)}
-              </option>
+              <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
-        </FilterField>
-        <FilterField label="المندوب" htmlFor="filter-sales">
-          <Select
-            id="filter-sales"
-            name="salesId"
-            inputSize="sm"
-            defaultValue={sp.salesId ?? ''}
+          <div className="flex items-center gap-1.5 ms-auto">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {(sp.q || sp.status || sp.projectId || hasAdvancedFilters) && (
+              <Link href="/dashboard/reservations">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
+          <Link
+            href={toggleFiltersUrl as never}
+            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium shrink-0 transition-colors ${
+              showFilters ? 'text-brand-600' : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
-            <option value="">الكل</option>
-            {salesOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.fullName}
-              </option>
-            ))}
-          </Select>
-        </FilterField>
-        <FilterField label="من تاريخ" htmlFor="filter-from">
-          <Input
-            id="filter-from"
-            name="dateFrom"
-            type="date"
-            defaultValue={sp.dateFrom}
-            inputSize="sm"
-          />
-        </FilterField>
-        <FilterField label="إلى تاريخ" htmlFor="filter-to">
-          <Input
-            id="filter-to"
-            name="dateTo"
-            type="date"
-            defaultValue={sp.dateTo}
-            inputSize="sm"
-          />
-        </FilterField>
-        <div className="flex items-end gap-2">
-          <Button type="submit" variant="primary" size="sm">
-            تصفية
-          </Button>
-          <Link href="/dashboard/reservations">
-            <Button type="button" variant="outline" size="sm">
-              إعادة تعيين
-            </Button>
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {hasAdvancedFilters && !showFilters && (
+              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">!</span>
+            )}
           </Link>
         </div>
-      </FilterBar>
+
+        {showFilters && (
+          <div className="mt-2 rounded-xl border border-hairline bg-white shadow-xs px-4 py-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">المندوب</label>
+                <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+                  <option value="">الكل</option>
+                  {salesOptions.map((s) => (
+                    <option key={s.id} value={s.id}>{s.fullName}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">من تاريخ</label>
+                <Input name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">إلى تاريخ</label>
+                <Input name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} />
+              </div>
+            </div>
+          </div>
+        )}
+      </form>
 
       {/* Error */}
       {reservationsRes.error && (

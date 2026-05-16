@@ -7,10 +7,10 @@ import {
   CircleDollarSign,
   ArrowRight,
   Download,
-  Filter,
   BedDouble,
   Ruler,
   Building2,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Unit, Project } from '@/lib/types';
@@ -18,9 +18,8 @@ import { tx, formatCurrency, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
-import { KpiCard } from '@/components/ui/kpi-card';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { PageHeader } from '@/components/ui/page-header';
-import { FilterBar, FilterField } from '@/components/ui/toolbar';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Pagination } from '@/components/ui/pagination';
@@ -39,6 +38,7 @@ interface Search {
   priceMax?: string;
   areaMin?: string;
   areaMax?: string;
+  showFilters?: string;
 }
 
 const PAGE_SIZE = 12;
@@ -80,8 +80,28 @@ export default async function UnitsPage({
 
   const projects = projectsRes.data?.data ?? [];
 
+  const hasAdvancedFilters = !!(sp.bedrooms || sp.priceMin || sp.priceMax || sp.areaMin || sp.areaMax);
+  const showFilters = hasAdvancedFilters || sp.showFilters === '1';
+
+  function pageUrl(overrides: Record<string, string | undefined>): string {
+    const base: Record<string, string | undefined> = {
+      projectId: sp.projectId, status: sp.status,
+      bedrooms: sp.bedrooms, priceMin: sp.priceMin, priceMax: sp.priceMax,
+      areaMin: sp.areaMin, areaMax: sp.areaMax, showFilters: sp.showFilters,
+    };
+    const merged = { ...base, ...overrides };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(merged)) { if (v) p.set(k, v); }
+    const qs = p.toString();
+    return `/dashboard/units${qs ? `?${qs}` : ''}`;
+  }
+
+  const toggleFiltersUrl = showFilters
+    ? pageUrl({ showFilters: undefined })
+    : pageUrl({ showFilters: '1' });
+
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-5">
       <PageHeader
         title="إدارة الوحدات السكنية"
         description="استعرض وتابع محفظة الوحدات بدقة عالية من خلال نظام إدارة المخزون المتقدم."
@@ -104,7 +124,7 @@ export default async function UnitsPage({
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard
+        <PageKpiCard
           label="القيمة الإجمالية"
           value={formatCurrency(
             all.reduce((s, u) => s + Number(u.price ?? 0), 0),
@@ -112,20 +132,20 @@ export default async function UnitsPage({
           icon={<CircleDollarSign />}
           tone="brand"
         />
-        <KpiCard
+        <PageKpiCard
           label="إجمالي المتاح"
           value={available}
           sub={`من أصل ${total} وحدة`}
           icon={<CheckCircle2 />}
           tone="success"
         />
-        <KpiCard
+        <PageKpiCard
           label="قيد الحجز"
           value={reserved}
           icon={<Bookmark />}
           tone="warning"
         />
-        <KpiCard
+        <PageKpiCard
           label="إجمالي المبيعات"
           value={sold}
           icon={<Box />}
@@ -139,77 +159,76 @@ export default async function UnitsPage({
         </div>
       )}
 
-      <FilterBar
-        method="get"
-        action="/dashboard/units"
-        trailing={
-          <Button type="submit" variant="secondary" size="sm" leftIcon={<Filter className="h-4 w-4" />}>
-            تطبيق
-          </Button>
-        }
-      >
-        <FilterField label="المشروع" htmlFor="filter-project">
-          <Select
-            id="filter-project"
-            name="projectId"
-            inputSize="sm"
-            defaultValue={sp.projectId ?? ''}
-          >
-            <option value="">الكل</option>
+      <form method="get" action="/dashboard/units">
+        {!showFilters && sp.bedrooms && <input type="hidden" name="bedrooms" value={sp.bedrooms} />}
+        {!showFilters && sp.priceMin && <input type="hidden" name="priceMin" value={sp.priceMin} />}
+        {!showFilters && sp.priceMax && <input type="hidden" name="priceMax" value={sp.priceMax} />}
+        {!showFilters && sp.areaMin  && <input type="hidden" name="areaMin"  value={sp.areaMin} />}
+        {!showFilters && sp.areaMax  && <input type="hidden" name="areaMax"  value={sp.areaMax} />}
+
+        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
+            <option value="">كل المشاريع</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {tx(p.name)}
-              </option>
+              <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
-        </FilterField>
-        <FilterField label="الحالة" htmlFor="filter-status">
-          <Select
-            id="filter-status"
-            name="status"
-            inputSize="sm"
-            defaultValue={sp.status ?? ''}
-          >
-            <option value="">الكل</option>
+          <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
+            <option value="">كل الحالات</option>
             <option value="AVAILABLE">متاحة</option>
             <option value="RESERVED">محجوزة</option>
             <option value="SOLD">مباعة</option>
           </Select>
-        </FilterField>
-        <FilterField label="غرف النوم" htmlFor="filter-bedrooms" className="min-w-[120px]">
-          <Input
-            id="filter-bedrooms"
-            name="bedrooms"
-            type="number"
-            min={0}
-            inputSize="sm"
-            placeholder="—"
-            defaultValue={sp.bedrooms ?? ''}
-          />
-        </FilterField>
-        <FilterField label="السعر من" htmlFor="filter-price-min" className="min-w-[140px]">
-          <Input
-            id="filter-price-min"
-            name="priceMin"
-            type="number"
-            min={0}
-            inputSize="sm"
-            placeholder="0"
-            defaultValue={sp.priceMin ?? ''}
-          />
-        </FilterField>
-        <FilterField label="السعر إلى" htmlFor="filter-price-max" className="min-w-[140px]">
-          <Input
-            id="filter-price-max"
-            name="priceMax"
-            type="number"
-            min={0}
-            inputSize="sm"
-            placeholder="∞"
-            defaultValue={sp.priceMax ?? ''}
-          />
-        </FilterField>
-      </FilterBar>
+          <div className="flex items-center gap-1.5 ms-auto">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {(sp.projectId || sp.status || hasAdvancedFilters) && (
+              <Link href="/dashboard/units">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
+          <Link
+            href={toggleFiltersUrl as never}
+            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium shrink-0 transition-colors ${
+              showFilters ? 'text-brand-600' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {hasAdvancedFilters && !showFilters && (
+              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">!</span>
+            )}
+          </Link>
+        </div>
+
+        {showFilters && (
+          <div className="mt-2 rounded-xl border border-hairline bg-white shadow-xs px-4 py-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">غرف النوم</label>
+                <Input name="bedrooms" type="number" min={0} inputSize="sm" placeholder="—" defaultValue={sp.bedrooms ?? ''} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">السعر من</label>
+                <Input name="priceMin" type="number" min={0} inputSize="sm" placeholder="0" defaultValue={sp.priceMin ?? ''} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">السعر إلى</label>
+                <Input name="priceMax" type="number" min={0} inputSize="sm" placeholder="∞" defaultValue={sp.priceMax ?? ''} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">المساحة من (م²)</label>
+                <Input name="areaMin" type="number" min={0} inputSize="sm" placeholder="0" defaultValue={sp.areaMin ?? ''} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[11px] font-medium text-slate-400">المساحة إلى (م²)</label>
+                <Input name="areaMax" type="number" min={0} inputSize="sm" placeholder="∞" defaultValue={sp.areaMax ?? ''} />
+              </div>
+            </div>
+          </div>
+        )}
+      </form>
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">

@@ -5,8 +5,7 @@ import { getSession } from '@/lib/session';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { formatDate, formatCurrency, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
-import { KpiCard } from '@/components/ui/kpi-card';
-import { FilterBar, FilterField } from '@/components/ui/toolbar';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -68,7 +67,7 @@ export default async function InstallmentPlansPage({
   const projects: ProjectOption[] = projectsRes.data?.data ?? [];
 
   return (
-    <div className="space-y-6 pb-2">
+    <div className="space-y-5">
       <PageHeader
         title="خطط التقسيط"
         description="تُنشئها الإدارة وتُتاح لفريق المبيعات لعرضها على العملاء."
@@ -90,25 +89,25 @@ export default async function InstallmentPlansPage({
       {/* KPI cards (admin only) */}
       {isAdmin && stats && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-          <KpiCard
+          <PageKpiCard
             label="إجمالي الخطط"
             value={stats.total}
             icon={<Wallet className="h-5 w-5" />}
             tone="neutral"
           />
-          <KpiCard
+          <PageKpiCard
             label="نشطة"
             value={stats.active}
             icon={<CheckCircle2 className="h-5 w-5" />}
             tone="success"
           />
-          <KpiCard
+          <PageKpiCard
             label="مسودة"
             value={stats.draft}
             icon={<FileText className="h-5 w-5" />}
             tone="warning"
           />
-          <KpiCard
+          <PageKpiCard
             label="غير نشطة"
             value={stats.inactive}
             icon={<Wallet className="h-5 w-5" />}
@@ -118,57 +117,37 @@ export default async function InstallmentPlansPage({
       )}
 
       {/* Filters */}
-      <FilterBar method="get" action="/dashboard/installments">
-        <FilterField label="بحث" htmlFor="filter-q">
-          <Input
-            id="filter-q"
-            name="q"
-            defaultValue={sp.q}
-            placeholder="اسم الخطة أو المشروع أو الوحدة…"
-            inputSize="sm"
-          />
-        </FilterField>
-        <FilterField label="المشروع" htmlFor="filter-project">
-          <Select
-            id="filter-project"
-            name="projectId"
-            inputSize="sm"
-            defaultValue={sp.projectId ?? ''}
-          >
-            <option value="">الكل</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {tx(p.name)}
-              </option>
-            ))}
-          </Select>
-        </FilterField>
+      <form method="get" action="/dashboard/installments" className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+        <Input
+          name="q"
+          inputSize="sm"
+          defaultValue={sp.q ?? ''}
+          placeholder="اسم الخطة أو المشروع أو الوحدة…"
+          className="flex-1 min-w-[180px]"
+        />
+        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
+          <option value="">كل المشاريع</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>{tx(p.name)}</option>
+          ))}
+        </Select>
         {isAdmin && (
-          <FilterField label="الحالة" htmlFor="filter-status">
-            <Select
-              id="filter-status"
-              name="status"
-              inputSize="sm"
-              defaultValue={sp.status ?? ''}
-            >
-              <option value="">الكل</option>
-              <option value="DRAFT">مسودة</option>
-              <option value="ACTIVE">نشطة</option>
-              <option value="INACTIVE">غير نشطة</option>
-            </Select>
-          </FilterField>
+          <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
+            <option value="">كل الحالات</option>
+            <option value="DRAFT">مسودة</option>
+            <option value="ACTIVE">نشطة</option>
+            <option value="INACTIVE">غير نشطة</option>
+          </Select>
         )}
-        <div className="flex items-end gap-2">
-          <Button type="submit" variant="primary" size="sm">
-            تصفية
-          </Button>
-          <Link href="/dashboard/installments">
-            <Button type="button" variant="outline" size="sm">
-              إعادة تعيين
-            </Button>
-          </Link>
+        <div className="flex items-center gap-1.5 ms-auto">
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          {(sp.q || sp.projectId || sp.status) && (
+            <Link href="/dashboard/installments">
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
+            </Link>
+          )}
         </div>
-      </FilterBar>
+      </form>
 
       {/* Error */}
       {plansRes.error && (

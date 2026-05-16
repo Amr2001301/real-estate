@@ -12,34 +12,40 @@ interface Props<T> {
   rows: T[];
   emptyMessage?: string;
   rowKey: (row: T) => string;
+  header?: ReactNode;
 }
 
-export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا توجد بيانات' }: Props<T>) {
+export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا توجد بيانات', header }: Props<T>) {
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
+      {header && (
+        <div className="px-4 py-3 border-b border-hairline">
+          {header}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+          <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
             <tr>
               {columns.map((col) => (
-                <th key={col.key} className={`text-right p-3 font-medium ${col.className ?? ''}`}>
+                <th key={col.key} className={`text-right px-4 py-2.5 font-medium whitespace-nowrap ${col.className ?? ''}`}>
                   {col.header}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-hairline">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="p-8 text-center text-gray-400">
+                <td colSpan={columns.length} className="px-4 py-10 text-center text-sm text-slate-400">
                   {emptyMessage}
                 </td>
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="border-t border-gray-100 hover:bg-gray-50">
+              <tr key={rowKey(row)} className="hover:bg-slate-50/60 transition-colors">
                 {columns.map((col) => (
-                  <td key={col.key} className={`p-3 align-middle ${col.className ?? ''}`}>
+                  <td key={col.key} className={`px-4 py-2.5 align-middle ${col.className ?? ''}`}>
                     {col.cell(row)}
                   </td>
                 ))}

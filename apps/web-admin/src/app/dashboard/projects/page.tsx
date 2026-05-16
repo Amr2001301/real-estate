@@ -7,8 +7,6 @@ import {
   Star,
   Eye,
   Pencil,
-  Download,
-  Printer,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Project } from '@/lib/types';
@@ -16,9 +14,8 @@ import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
-import { KpiCard } from '@/components/ui/kpi-card';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { PageHeader } from '@/components/ui/page-header';
-import { FilterBar, FilterField } from '@/components/ui/toolbar';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -75,7 +72,7 @@ export default async function ProjectsPage({
   const featuredCount = allProjects.filter((p) => p.featured).length;
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-5">
       <PageHeader
         title="قائمة المشاريع"
         description="إدارة ومراقبة أداء المحفظة العقارية الحالية."
@@ -93,25 +90,25 @@ export default async function ProjectsPage({
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard
+        <PageKpiCard
           label="إجمالي المشاريع"
           value={total}
           icon={<Building2 />}
           tone="brand"
         />
-        <KpiCard
+        <PageKpiCard
           label="مشاريع منشورة"
           value={published}
           icon={<CheckCircle2 />}
           tone="success"
         />
-        <KpiCard
+        <PageKpiCard
           label="مسودات"
           value={drafts}
           icon={<Pencil />}
           tone="warning"
         />
-        <KpiCard
+        <PageKpiCard
           label="مشاريع مميزة"
           value={featuredCount}
           icon={<Star />}
@@ -125,52 +122,28 @@ export default async function ProjectsPage({
         </div>
       )}
 
-      <FilterBar
-        method="get"
-        action="/dashboard/projects"
-        trailing={
-          <>
-            <IconButton label="طباعة" variant="outline" size="md">
-              <Printer />
-            </IconButton>
-            <IconButton label="تصدير" variant="outline" size="md">
-              <Download />
-            </IconButton>
-          </>
-        }
-      >
-        <FilterField label="الحالة" htmlFor="filter-status">
-          <Select
-            id="filter-status"
-            name="status"
-            inputSize="sm"
-            defaultValue={sp.status ?? ''}
-          >
-            <option value="">الكل</option>
-            <option value="DRAFT">مسودة</option>
-            <option value="PUBLISHED">منشور</option>
-            <option value="ARCHIVED">مؤرشف</option>
-          </Select>
-        </FilterField>
-        <FilterField label="المدينة" htmlFor="filter-city">
-          <Select
-            id="filter-city"
-            name="city"
-            inputSize="sm"
-            defaultValue={sp.city ?? ''}
-          >
-            <option value="">الكل</option>
-            {cities.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
-        </FilterField>
-        <Button type="submit" variant="secondary" size="sm">
-          تطبيق
-        </Button>
-      </FilterBar>
+      <form method="get" action="/dashboard/projects" className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
+          <option value="">كل الحالات</option>
+          <option value="DRAFT">مسودة</option>
+          <option value="PUBLISHED">منشور</option>
+          <option value="ARCHIVED">مؤرشف</option>
+        </Select>
+        <Select name="city" inputSize="sm" defaultValue={sp.city ?? ''} className="w-36 shrink-0">
+          <option value="">كل المدن</option>
+          {cities.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </Select>
+        <div className="flex items-center gap-1.5 ms-auto">
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          {(sp.status || sp.city) && (
+            <Link href="/dashboard/projects">
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
+            </Link>
+          )}
+        </div>
+      </form>
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">

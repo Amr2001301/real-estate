@@ -4,8 +4,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
-import { KpiCard } from '@/components/ui/kpi-card';
-import { FilterBar, FilterField } from '@/components/ui/toolbar';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -80,7 +79,7 @@ export default async function ContractsPage({
   const withReservationCount = contracts.filter((c) => c.reservation).length;
 
   return (
-    <div className="space-y-6 pb-2">
+    <div className="space-y-5">
       <PageHeader
         title="العقود"
         description="عرض وإدارة عقود البيع المرتبطة بالوحدات والعملاء."
@@ -100,20 +99,20 @@ export default async function ContractsPage({
 
       {/* KPI row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <KpiCard
+        <PageKpiCard
           label="إجمالي العقود"
           value={totalContracts}
           icon={<FileText />}
           tone="brand"
         />
-        <KpiCard
+        <PageKpiCard
           label="عقود موقّعة (الصفحة الحالية)"
           value={signedCount}
           icon={<CheckCircle2 />}
           tone="success"
           sub={`من ${contracts.length} عقد في هذه الصفحة`}
         />
-        <KpiCard
+        <PageKpiCard
           label="محوّلة من حجز (الصفحة الحالية)"
           value={withReservationCount}
           icon={<Link2 />}
@@ -122,51 +121,34 @@ export default async function ContractsPage({
         />
       </div>
 
-      {/* Filter bar */}
-      <FilterBar
-        method="get"
-        trailing={
-          (sp.q || sp.signed || sp.hasReservation) && (
+      {/* Filter strip */}
+      <form method="get" action="/dashboard/contracts" className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+        <Input
+          name="q"
+          inputSize="sm"
+          placeholder="رقم العقد، العميل، الوحدة…"
+          defaultValue={sp.q ?? ''}
+          className="flex-1 min-w-[160px]"
+        />
+        <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-36 shrink-0">
+          <option value="">كل التوقيع</option>
+          <option value="yes">موقّع</option>
+          <option value="no">غير موقّع</option>
+        </Select>
+        <Select name="hasReservation" inputSize="sm" defaultValue={sp.hasReservation ?? ''} className="w-36 shrink-0">
+          <option value="">كل المصادر</option>
+          <option value="yes">من حجز</option>
+          <option value="no">يدوي</option>
+        </Select>
+        <div className="flex items-center gap-1.5 ms-auto">
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          {(sp.q || sp.signed || sp.hasReservation) && (
             <Link href="/dashboard/contracts">
-              <Button variant="ghost" size="sm" type="button">
-                مسح الفلاتر
-              </Button>
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
-          )
-        }
-      >
-        <FilterField label="بحث" htmlFor="q">
-          <Input
-            id="q"
-            name="q"
-            placeholder="رقم العقد، العميل، الوحدة…"
-            defaultValue={sp.q ?? ''}
-            className="w-56"
-          />
-        </FilterField>
-        <FilterField label="التوقيع" htmlFor="signed">
-          <Select id="signed" name="signed" defaultValue={sp.signed ?? ''} className="w-36">
-            <option value="">الكل</option>
-            <option value="yes">موقّع</option>
-            <option value="no">غير موقّع</option>
-          </Select>
-        </FilterField>
-        <FilterField label="المصدر" htmlFor="hasReservation">
-          <Select
-            id="hasReservation"
-            name="hasReservation"
-            defaultValue={sp.hasReservation ?? ''}
-            className="w-40"
-          >
-            <option value="">الكل</option>
-            <option value="yes">من حجز</option>
-            <option value="no">يدوي</option>
-          </Select>
-        </FilterField>
-        <Button type="submit" variant="secondary" size="sm">
-          تطبيق
-        </Button>
-      </FilterBar>
+          )}
+        </div>
+      </form>
 
       {contractsRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">

@@ -5,7 +5,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
-import { KpiCard } from '@/components/ui/kpi-card';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Tabs } from '@/components/ui/tabs';
 import { DataTable } from '@/components/table';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
@@ -96,7 +96,7 @@ export default async function VisitsPage({
   const activeHref = `/dashboard/visits?tab=${tab}`;
 
   return (
-    <div className="space-y-6 pb-2">
+    <div className="space-y-5">
       <PageHeader
         title="الزيارات"
         breadcrumbs={[
@@ -114,25 +114,25 @@ export default async function VisitsPage({
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
+        <PageKpiCard
           label="طلبات جديدة"
           value={stats?.newRequests ?? '—'}
           icon={<CalendarClock />}
           tone="info"
         />
-        <KpiCard
+        <PageKpiCard
           label="زيارات اليوم"
           value={stats?.todayVisits ?? '—'}
           icon={<CalendarDays />}
           tone="brand"
         />
-        <KpiCard
+        <PageKpiCard
           label="هذا الأسبوع"
           value={stats?.weekVisits ?? '—'}
           icon={<CalendarCheck />}
           tone="success"
         />
-        <KpiCard
+        <PageKpiCard
           label="تحتاج تأكيد"
           value={stats?.pendingConfirmation ?? '—'}
           icon={<Clock />}
