@@ -17,12 +17,16 @@ import {
   IsBoolean,
   IsDateString,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsPositive,
   IsString,
   IsUUID,
+  Max,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { DepositType, Prisma, PlanPaymentType, InstallmentStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -280,6 +284,8 @@ class DepositsService {
 }
 
 class ListDepositsQueryDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number;
   @IsOptional() @IsUUID() contractId?: string;
   @IsOptional() @IsUUID() customerId?: string;
   @IsOptional() @IsEnum(DepositType) type?: DepositType;
@@ -308,10 +314,10 @@ class DepositsController {
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
   @Get('deposits')
-  list(@Query() q: ListDepositsQueryDto, @Query('page') page = 1, @Query('pageSize') pageSize = 20) {
+  list(@Query() q: ListDepositsQueryDto) {
     return this.svc.list({
-      page: Number(page),
-      pageSize: Number(pageSize),
+      page: q.page ?? 1,
+      pageSize: q.pageSize ?? 20,
       contractId: q.contractId,
       customerId: q.customerId,
       type: q.type,

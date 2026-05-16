@@ -1,35 +1,44 @@
 import Link from 'next/link';
-import { DollarSign, TrendingUp, CreditCard, Landmark, Wallet } from 'lucide-react';
+import {
+  DollarSign, CreditCard, Landmark, Hash,
+  SlidersHorizontal, ReceiptText, Search,
+  CheckCircle2, XCircle, ExternalLink,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PagedDeposits, Deposit, DepositType, Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
-import { KpiCard } from '@/components/ui/kpi-card';
-import { FilterBar, FilterField } from '@/components/ui/toolbar';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { DataTable } from '@/components/table';
+import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
 import { VerifyToggle } from './verify-toggle';
 
 export const dynamic = 'force-dynamic';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
 interface ProjectOption { id: string; name: { ar: string; en: string } }
+
+// ── Maps ──────────────────────────────────────────────────────────────────────
 
 const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
   BOOKING_AMOUNT: 'مبلغ الحجز',
-  DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط شهري',
-  FINAL_PAYMENT: 'دفعة أخيرة',
+  DOWN_PAYMENT:   'دفعة أولى',
+  INSTALLMENT:    'قسط شهري',
+  FINAL_PAYMENT:  'دفعة أخيرة',
 };
 
 const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
   BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700',
-  DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
-  INSTALLMENT: 'bg-slate-100 text-slate-600',
-  FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+  DOWN_PAYMENT:   'bg-amber-100 text-amber-700',
+  INSTALLMENT:    'bg-slate-100 text-slate-600',
+  FINAL_PAYMENT:  'bg-purple-100 text-purple-700',
 };
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getCustomerName(d: Deposit): string {
   if (d.contract?.customer?.fullName) return d.contract.customer.fullName;
@@ -73,6 +82,54 @@ function buildApiUrl(sp: Record<string, string | undefined>, page: number, pageS
   return `/deposits?${params.toString()}`;
 }
 
+// ── SummaryCard ───────────────────────────────────────────────────────────────
+
+type SummaryTone = 'brand' | 'success' | 'info' | 'neutral';
+
+const SUMMARY_BAR:  Record<SummaryTone, string> = {
+  brand:   'bg-brand-500',
+  success: 'bg-success-500',
+  info:    'bg-info-500',
+  neutral: 'bg-slate-300',
+};
+const SUMMARY_ICON: Record<SummaryTone, string> = {
+  brand:   'bg-brand-50 text-brand-600',
+  success: 'bg-success-50 text-success-600',
+  info:    'bg-info-50 text-info-600',
+  neutral: 'bg-slate-100 text-slate-600',
+};
+
+function SummaryCard({
+  label, value, sub, icon, tone = 'brand',
+}: {
+  label: string; value: React.ReactNode; sub?: string;
+  icon?: React.ReactNode; tone?: SummaryTone;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
+      <div className={cn('h-0.5', SUMMARY_BAR[tone])} />
+      <div className="px-4 py-4 flex items-start gap-3">
+        {icon && (
+          <div className={cn(
+            'mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-inset ring-black/5 shrink-0 [&_svg]:h-4 [&_svg]:w-4',
+            SUMMARY_ICON[tone],
+          )}>
+            {icon}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-[11px] font-medium text-slate-400 leading-tight uppercase tracking-wide">{label}</p>
+          <p className="mt-0.5 text-xl leading-tight font-bold tracking-tight tabular-nums text-slate-900 truncate">
+            {value}
+          </p>
+          {sub && <p className="mt-0.5 text-[11px] text-slate-400">{sub}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DepositsPage({
   searchParams,
@@ -83,17 +140,43 @@ export default async function DepositsPage({
   const page = Math.max(1, Number(sp.page ?? 1));
   const pageSize = 20;
 
+  // Advanced filter state
+  const hasAdvancedFilters = !!(
+    sp.ref || sp.paidAtFrom || sp.paidAtTo || sp.dueDateFrom || sp.dueDateTo || sp.verified
+  );
+  const showFilters = hasAdvancedFilters || sp.showFilters === '1';
+
+  // URL builder for the advanced toggle link (preserves all active params)
+  function pageUrl(overrides: Record<string, string | undefined>): string {
+    const base: Record<string, string | undefined> = {
+      type: sp.type, projectId: sp.projectId, q: sp.q,
+      ref: sp.ref, paidAtFrom: sp.paidAtFrom, paidAtTo: sp.paidAtTo,
+      dueDateFrom: sp.dueDateFrom, dueDateTo: sp.dueDateTo,
+      verified: sp.verified, showFilters: sp.showFilters,
+    };
+    const merged = { ...base, ...overrides };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(merged)) { if (v) p.set(k, v); }
+    const qs = p.toString();
+    return `/dashboard/deposits${qs ? `?${qs}` : ''}`;
+  }
+
+  const toggleFiltersUrl = showFilters
+    ? pageUrl({ showFilters: undefined })
+    : pageUrl({ showFilters: '1' });
+
   const [depositsRes, projectsRes] = await Promise.all([
     safe(api.get<PagedDeposits>(buildApiUrl(sp, page, pageSize))),
     safe(api.get<Paged<ProjectOption>>('/projects?pageSize=100')),
   ]);
 
   const deposits = depositsRes.data;
-  const totals = deposits?.totals;
+  const totals   = deposits?.totals;
   const projects: ProjectOption[] = projectsRes.data?.data ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <PageHeader
         title="الدفعات"
         description="سجل جميع الدفعات المالية على الحجوزات والعقود."
@@ -104,274 +187,306 @@ export default async function DepositsPage({
         actions={
           <Link
             href="/dashboard/deposits/new"
-            className="rounded-lg bg-brand-600 text-white px-4 py-2 text-sm hover:bg-brand-700"
+            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 transition-colors shadow-xs"
           >
             + تسجيل دفعة
           </Link>
         }
       />
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-        <KpiCard
+      {/* ── 4 primary KPI cards ─────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard
           tone="brand"
           label="إجمالي المحصّل"
           icon={<DollarSign />}
           value={totals ? formatCurrency(totals.totalAmount) : '—'}
           sub={totals ? `${totals.count} دفعة` : undefined}
         />
-        <KpiCard
+        <SummaryCard
           tone="info"
           label="مبالغ الحجز"
           icon={<Landmark />}
           value={totals ? formatCurrency(totals.bookingAmount) : '—'}
         />
-        <KpiCard
-          tone="warning"
-          label="الدفعات الأولى"
-          icon={<TrendingUp />}
-          value={totals ? formatCurrency(totals.downPayment) : '—'}
-        />
-        <KpiCard
+        <SummaryCard
           tone="neutral"
           label="الأقساط الشهرية"
           icon={<CreditCard />}
           value={totals ? formatCurrency(totals.installment) : '—'}
         />
-        <KpiCard
-          tone="accent"
-          label="الدفعات الأخيرة"
-          icon={<Wallet />}
-          value={totals ? formatCurrency(totals.finalPayment) : '—'}
-        />
-        <KpiCard
+        <SummaryCard
           tone="success"
           label="عدد الدفعات"
+          icon={<Hash />}
           value={totals ? totals.count.toLocaleString('ar-EG') : '—'}
+          sub="إجمالي الدفعات المسجلة"
         />
       </div>
 
-      {/* Filter Bar */}
-      <FilterBar method="get" action="/dashboard/deposits">
-        <FilterField label="نوع الدفعة" htmlFor="type">
-          <Select id="type" name="type" inputSize="sm" defaultValue={sp.type ?? ''}>
-            <option value="">الكل</option>
+      {/* ── Quick filter strip ──────────────────────────────────────────────── */}
+      <form method="get" action="/dashboard/deposits">
+        {/* Hidden inputs: preserve active advanced filter values when only quick filters are submitted */}
+        {!showFilters && sp.ref        && <input type="hidden" name="ref"        value={sp.ref} />}
+        {!showFilters && sp.paidAtFrom && <input type="hidden" name="paidAtFrom" value={sp.paidAtFrom} />}
+        {!showFilters && sp.paidAtTo   && <input type="hidden" name="paidAtTo"   value={sp.paidAtTo} />}
+        {!showFilters && sp.dueDateFrom && <input type="hidden" name="dueDateFrom" value={sp.dueDateFrom} />}
+        {!showFilters && sp.dueDateTo  && <input type="hidden" name="dueDateTo"  value={sp.dueDateTo} />}
+        {!showFilters && sp.verified   && <input type="hidden" name="verified"   value={sp.verified} />}
+
+        <div className="flex flex-wrap items-center gap-2 bg-white rounded-xl border border-hairline shadow-xs px-3 py-2.5">
+
+          {/* Type */}
+          <Select name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-36 shrink-0">
+            <option value="">كل الأنواع</option>
             <option value="BOOKING_AMOUNT">مبلغ الحجز</option>
             <option value="DOWN_PAYMENT">دفعة أولى</option>
             <option value="INSTALLMENT">قسط شهري</option>
             <option value="FINAL_PAYMENT">دفعة أخيرة</option>
           </Select>
-        </FilterField>
 
-        <FilterField label="المشروع" htmlFor="projectId">
-          <Select id="projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+          {/* Project */}
+          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
             <option value="">كل المشاريع</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
-        </FilterField>
 
-        <FilterField label="العميل" htmlFor="q">
-          <Input
-            id="q"
-            name="q"
-            inputSize="sm"
-            placeholder="ابحث باسم العميل"
-            defaultValue={sp.q ?? ''}
-          />
-        </FilterField>
+          {/* Unified search */}
+          <div className="flex-1 min-w-[180px]">
+            <Input
+              name="q"
+              inputSize="sm"
+              placeholder="ابحث باسم العميل أو رقم العقد أو الحجز"
+              defaultValue={sp.q ?? ''}
+              leftAddon={<Search />}
+            />
+          </div>
 
-        <FilterField label="المرجع" htmlFor="ref">
-          <Input
-            id="ref"
-            name="ref"
-            inputSize="sm"
-            placeholder="رقم العقد أو الحجز"
-            defaultValue={sp.ref ?? ''}
-          />
-        </FilterField>
+          {/* Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Link href="/dashboard/deposits">
+              <Button type="button" variant="secondary" size="sm">إعادة تعيين</Button>
+            </Link>
+          </div>
 
-        <FilterField label="تاريخ الدفع من" htmlFor="paidAtFrom">
-          <Input
-            id="paidAtFrom"
-            name="paidAtFrom"
-            type="date"
-            inputSize="sm"
-            defaultValue={sp.paidAtFrom ?? ''}
-          />
-        </FilterField>
-
-        <FilterField label="تاريخ الدفع إلى" htmlFor="paidAtTo">
-          <Input
-            id="paidAtTo"
-            name="paidAtTo"
-            type="date"
-            inputSize="sm"
-            defaultValue={sp.paidAtTo ?? ''}
-          />
-        </FilterField>
-
-        <FilterField label="تاريخ الاستحقاق من" htmlFor="dueDateFrom">
-          <Input
-            id="dueDateFrom"
-            name="dueDateFrom"
-            type="date"
-            inputSize="sm"
-            defaultValue={sp.dueDateFrom ?? ''}
-          />
-        </FilterField>
-
-        <FilterField label="تاريخ الاستحقاق إلى" htmlFor="dueDateTo">
-          <Input
-            id="dueDateTo"
-            name="dueDateTo"
-            type="date"
-            inputSize="sm"
-            defaultValue={sp.dueDateTo ?? ''}
-          />
-        </FilterField>
-
-        <FilterField label="التحقق" htmlFor="verified">
-          <Select id="verified" name="verified" inputSize="sm" defaultValue={sp.verified ?? ''}>
-            <option value="">الكل</option>
-            <option value="true">متحقق</option>
-            <option value="false">غير متحقق</option>
-          </Select>
-        </FilterField>
-
-        <div className="flex items-end gap-2">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          <Link href="/dashboard/deposits">
-            <Button type="button" variant="secondary" size="sm">إعادة تعيين</Button>
+          {/* Divider + advanced toggle */}
+          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
+          <Link
+            href={toggleFiltersUrl as never}
+            className={cn(
+              'hidden sm:inline-flex items-center gap-1.5 text-xs font-medium shrink-0 transition-colors',
+              showFilters
+                ? 'text-brand-600'
+                : 'text-slate-500 hover:text-slate-700',
+            )}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {hasAdvancedFilters && !showFilters && (
+              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
+                !
+              </span>
+            )}
           </Link>
         </div>
-      </FilterBar>
+
+        {/* ── Advanced filters (collapsed by default) ──────────────────────── */}
+        {showFilters && (
+          <div className="mt-2 rounded-xl border border-hairline bg-white shadow-xs px-4 py-3.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="paidAtFrom" className="text-[11px] font-medium text-slate-400">تاريخ الدفع من</label>
+                <Input id="paidAtFrom" name="paidAtFrom" type="date" inputSize="sm" defaultValue={sp.paidAtFrom ?? ''} />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="paidAtTo" className="text-[11px] font-medium text-slate-400">تاريخ الدفع إلى</label>
+                <Input id="paidAtTo" name="paidAtTo" type="date" inputSize="sm" defaultValue={sp.paidAtTo ?? ''} />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="dueDateFrom" className="text-[11px] font-medium text-slate-400">الاستحقاق من</label>
+                <Input id="dueDateFrom" name="dueDateFrom" type="date" inputSize="sm" defaultValue={sp.dueDateFrom ?? ''} />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="dueDateTo" className="text-[11px] font-medium text-slate-400">الاستحقاق إلى</label>
+                <Input id="dueDateTo" name="dueDateTo" type="date" inputSize="sm" defaultValue={sp.dueDateTo ?? ''} />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="ref" className="text-[11px] font-medium text-slate-400">رقم المرجع</label>
+                <Input id="ref" name="ref" inputSize="sm" placeholder="رقم العقد أو الحجز" defaultValue={sp.ref ?? ''} />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="verified" className="text-[11px] font-medium text-slate-400">التحقق</label>
+                <Select id="verified" name="verified" inputSize="sm" defaultValue={sp.verified ?? ''}>
+                  <option value="">الكل</option>
+                  <option value="true">متحقق</option>
+                  <option value="false">غير متحقق</option>
+                </Select>
+              </div>
+
+            </div>
+          </div>
+        )}
+      </form>
 
       {depositsRes.error && (
-        <div className="rounded-lg bg-red-50 text-red-700 p-4 text-sm">{depositsRes.error}</div>
+        <div className="rounded-xl bg-red-50 text-red-700 px-4 py-3 text-sm border border-red-100">
+          {depositsRes.error}
+        </div>
       )}
 
-      {deposits && (
-        <>
-          <DataTable
-            rowKey={(d) => d.id}
-            rows={deposits.data}
-            emptyMessage="لا توجد دفعات تطابق الفلاتر المختارة"
-            columns={[
-              {
-                key: 'type',
-                header: 'نوع الدفعة',
-                cell: (d) => {
-                  const type = d.type ?? 'INSTALLMENT';
-                  return (
-                    <span
-                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${DEPOSIT_TYPE_CLS[type as DepositType] ?? 'bg-slate-100 text-slate-600'}`}
-                    >
-                      {DEPOSIT_TYPE_LABELS[type as DepositType] ?? type}
-                    </span>
-                  );
-                },
-              },
-              {
-                key: 'customer',
-                header: 'العميل',
-                cell: (d) => getCustomerName(d),
-              },
-              {
-                key: 'unit',
-                header: 'الوحدة',
-                cell: (d) => (
-                  <span className="font-mono text-xs">{getUnitCode(d)}</span>
-                ),
-              },
-              {
-                key: 'reference',
-                header: 'المرجع',
-                cell: (d) => {
-                  if (d.contractId && d.contract) {
+      {/* ── Deposits table ───────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <ReceiptText className="h-4 w-4 text-brand-500 shrink-0" />
+            <CardTitle className="text-sm">سجل الدفعات</CardTitle>
+          </div>
+          {deposits && (
+            <span className="text-xs text-slate-400 tabular-nums">
+              {deposits.meta.total.toLocaleString('ar-EG')} دفعة
+            </span>
+          )}
+        </CardHeader>
+        <CardBody className="p-0">
+          {!deposits || deposits.data.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-12 text-center">
+              <CreditCard className="h-8 w-8 text-slate-200" />
+              <p className="text-sm text-slate-400">لا توجد دفعات تطابق الفلاتر المختارة</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[800px]">
+                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+                  <tr>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">نوع الدفعة</th>
+                    <th className="px-4 py-2.5 text-right font-medium">العميل</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الوحدة</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المرجع</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">تاريخ الاستحقاق</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المبلغ</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">تاريخ الدفع</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الإيصال</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">التحقق</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {deposits.data.map((d) => {
+                    const dueDate = getDueDate(d);
                     return (
-                      <Link
-                        href={`/dashboard/contracts/${d.contractId}`}
-                        className="text-brand-600 hover:underline text-xs font-mono"
-                      >
-                        {d.contract.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
-                      </Link>
-                    );
-                  }
-                  if (d.reservationId && d.reservation) {
-                    return (
-                      <Link
-                        href={`/dashboard/reservations/${d.reservationId}`}
-                        className="text-indigo-600 hover:underline text-xs font-mono"
-                      >
-                        {d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
-                      </Link>
-                    );
-                  }
-                  return <span className="text-slate-400 text-xs">—</span>;
-                },
-              },
-              {
-                key: 'dueDate',
-                header: 'تاريخ الاستحقاق',
-                cell: (d) => {
-                  const date = getDueDate(d);
-                  if (!date) return <span className="text-xs text-slate-400">—</span>;
-                  return (
-                    <span className="text-xs text-slate-600" title={getDueDateTitle(d)}>
-                      {formatDate(date)}
-                    </span>
-                  );
-                },
-              },
-              { key: 'amount', header: 'المبلغ', cell: (d) => formatCurrency(d.amount) },
-              { key: 'paidAt', header: 'تاريخ الدفع', cell: (d) => formatDate(d.paidAt) },
-              {
-                key: 'receipt',
-                header: 'الإيصال',
-                cell: (d) =>
-                  d.receiptUrl ? (
-                    <a
-                      href={d.receiptUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-brand-600 hover:underline text-xs"
-                    >
-                      عرض
-                    </a>
-                  ) : (
-                    '—'
-                  ),
-              },
-              {
-                key: 'verified',
-                header: 'التحقق',
-                cell: (d) => (
-                  <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
-                ),
-              },
-            ]}
-          />
+                      <tr key={d.id} className="hover:bg-slate-50/60 transition-colors">
 
-          <Pagination
-            basePath="/dashboard/deposits"
-            page={page}
-            pageSize={pageSize}
-            total={deposits.meta.total}
-            params={{
-              type: sp.type,
-              projectId: sp.projectId,
-              q: sp.q,
-              ref: sp.ref,
-              paidAtFrom: sp.paidAtFrom,
-              paidAtTo: sp.paidAtTo,
-              dueDateFrom: sp.dueDateFrom,
-              dueDateTo: sp.dueDateTo,
-              verified: sp.verified,
-            }}
-          />
-        </>
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <span className={cn(
+                            'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
+                            DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
+                          )}>
+                            {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">
+                          {getCustomerName(d)}
+                        </td>
+
+                        <td className="px-4 py-2.5 font-mono text-xs text-slate-400 whitespace-nowrap">
+                          {getUnitCode(d)}
+                        </td>
+
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          {d.contractId && d.contract ? (
+                            <Link
+                              href={`/dashboard/contracts/${d.contractId}`}
+                              className="font-mono text-xs text-brand-600 hover:underline"
+                            >
+                              {d.contract.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
+                            </Link>
+                          ) : d.reservationId && d.reservation ? (
+                            <Link
+                              href={`/dashboard/reservations/${d.reservationId}`}
+                              className="font-mono text-xs text-indigo-600 hover:underline"
+                            >
+                              {d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
+                            </Link>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          {dueDate ? (
+                            <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d)}>
+                              {formatDate(dueDate)}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
+                          {formatCurrency(d.amount)}
+                        </td>
+
+                        <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
+                          {formatDate(d.paidAt)}
+                        </td>
+
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          {d.receiptUrl ? (
+                            <a
+                              href={d.receiptUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3 shrink-0" />
+                              عرض
+                            </a>
+                          ) : (
+                            <span className="text-slate-300 text-xs">—</span>
+                          )}
+                        </td>
+
+                        <td className="px-4 py-2.5 whitespace-nowrap">
+                          <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {deposits && deposits.meta.total > pageSize && (
+        <Pagination
+          basePath="/dashboard/deposits"
+          page={page}
+          pageSize={pageSize}
+          total={deposits.meta.total}
+          params={{
+            type: sp.type,
+            projectId: sp.projectId,
+            q: sp.q,
+            ref: sp.ref,
+            paidAtFrom: sp.paidAtFrom,
+            paidAtTo: sp.paidAtTo,
+            dueDateFrom: sp.dueDateFrom,
+            dueDateTo: sp.dueDateTo,
+            verified: sp.verified,
+          }}
+        />
       )}
     </div>
   );
