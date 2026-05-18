@@ -27,14 +27,14 @@ export class AuthService {
     private readonly sms: SmsService,
   ) {}
 
-  // ------------- Email + password (Admin / Sales) -------------
+  // ------------- Email + password (Admin / Sales / Broker) -------------
 
   async loginEmail(email: string, password: string) {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
     if (!user.active) throw new ForbiddenException('Account inactive');
-    if (user.role !== 'ADMIN' && user.role !== 'SALES') {
-      throw new ForbiddenException('Email login is for staff only');
+    if (user.role !== 'ADMIN' && user.role !== 'SALES' && user.role !== 'BROKER') {
+      throw new ForbiddenException('Email login is for staff and brokers only');
     }
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');

@@ -57,7 +57,8 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     },
   );
 
-  redirect('/dashboard');
+  // Send each role to its own workspace.
+  redirect(result.user.role === 'BROKER' ? '/portal' : '/dashboard');
 }
 
 export async function logoutAction() {

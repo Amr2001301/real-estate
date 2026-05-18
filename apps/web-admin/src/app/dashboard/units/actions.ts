@@ -3,11 +3,14 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { api } from '@/lib/api';
+import type { Phase } from '@/lib/types';
 
 export interface UnitFormState {
   error?: string;
   ok?: boolean;
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function buildPayload(formData: FormData) {
   return {
@@ -28,6 +31,9 @@ export async function createUnitAction(
   formData: FormData,
 ): Promise<UnitFormState> {
   const payload = buildPayload(formData);
+  if (!UUID_RE.test(payload.buildingId)) {
+    return { error: 'يرجى اختيار مشروع ومرحلة ومبنى قبل الحفظ' };
+  }
   let created;
   try {
     created = await api.post<{ id: string }>('/units', payload);
@@ -69,4 +75,15 @@ export async function deleteUnitAction(id: string) {
 export async function deleteUnitMediaAction(unitId: string, mediaId: string) {
   await api.delete(`/media/units/${mediaId}`);
   revalidatePath(`/dashboard/units/${unitId}`);
+}
+
+/** Fetches a project's phases+buildings server-side (with proper auth). */
+export async function getProjectPhasesAction(projectId: string): Promise<Phase[]> {
+  if (!UUID_RE.test(projectId)) return [];
+  try {
+    const project = await api.get<{ phases?: Phase[] }>(`/projects/${projectId}`);
+    return project.phases ?? [];
+  } catch {
+    return [];
+  }
 }

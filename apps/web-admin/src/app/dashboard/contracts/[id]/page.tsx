@@ -143,6 +143,66 @@ export default async function ContractDetailPage({
             </Card>
           )}
 
+          {/* Broker attribution (when the source reservation was broker-originated) */}
+          {contract.broker && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <CardTitle>الوسيط</CardTitle>
+                </div>
+              </CardHeader>
+              <CardBody className="space-y-3">
+                <div>
+                  <p className="text-xs text-slate-500">شركة الوساطة</p>
+                  <Link
+                    href={`/dashboard/brokers/${contract.broker.id}`}
+                    className="text-sm font-semibold text-slate-900 hover:text-brand-700"
+                  >
+                    {contract.broker.companyName}
+                    {contract.broker.commercialName && (
+                      <span className="text-slate-500 font-normal">
+                        {' '}— {contract.broker.commercialName}
+                      </span>
+                    )}
+                  </Link>
+                  <p className="text-2xs text-slate-500 font-mono mt-0.5" dir="ltr">
+                    {contract.broker.code}
+                  </p>
+                </div>
+                {contract.brokerAgent && (
+                  <div>
+                    <p className="text-xs text-slate-500">جهة الاتصال</p>
+                    <p className="text-sm text-slate-800">{contract.brokerAgent.fullName}</p>
+                    <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">
+                      {contract.brokerAgent.email ?? contract.brokerAgent.phone ?? '—'}
+                    </p>
+                  </div>
+                )}
+                {contract.reservation &&
+                  (contract.reservation.commissionLockedPct !== null ||
+                    contract.reservation.commissionLockedAmount !== null) && (
+                    <div className="rounded-xl bg-surface-muted px-3 py-2.5 text-xs text-slate-700">
+                      <p className="text-2xs text-slate-500 mb-1">لقطة العمولة (من الحجز)</p>
+                      {contract.reservation.commissionLockedPct !== null &&
+                        contract.reservation.commissionLockedPct !== undefined && (
+                          <p>
+                            النسبة:{' '}
+                            {Number(contract.reservation.commissionLockedPct).toFixed(2)}%
+                          </p>
+                        )}
+                      {contract.reservation.commissionLockedAmount !== null &&
+                        contract.reservation.commissionLockedAmount !== undefined && (
+                          <p className="mt-0.5">
+                            المبلغ:{' '}
+                            {String(contract.reservation.commissionLockedAmount)}
+                          </p>
+                        )}
+                    </div>
+                  )}
+              </CardBody>
+            </Card>
+          )}
+
           {/* Installment plan */}
           <Card>
             <CardHeader>

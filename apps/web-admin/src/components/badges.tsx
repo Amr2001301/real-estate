@@ -9,6 +9,11 @@ import type {
   ReservationBookingPaymentStatus,
   MaintenanceStatus,
   PlanTemplateStatus,
+  BrokerStatus,
+  BrokerUserStatus,
+  BrokerLeadStatus,
+  BrokerCommissionStatus,
+  BrokerPayoutStatus,
 } from '@/lib/types';
 
 const PILL = 'inline-block rounded-full px-2 py-0.5 text-xs font-medium';
@@ -115,6 +120,63 @@ const PLAN_TEMPLATE: Record<PlanTemplateStatus, { c: string; l: string }> = {
 };
 export function PlanTemplateStatusBadge({ status }: { status: PlanTemplateStatus }) {
   const x = PLAN_TEMPLATE[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const BROKER: Record<BrokerStatus, { c: string; l: string }> = {
+  PENDING: { c: 'bg-amber-100 text-amber-700', l: 'قيد الانضمام' },
+  ACTIVE: { c: 'bg-green-100 text-green-700', l: 'نشط' },
+  SUSPENDED: { c: 'bg-red-100 text-red-700', l: 'موقوف' },
+  TERMINATED: { c: 'bg-gray-200 text-gray-600', l: 'منتهي' },
+};
+export function BrokerStatusBadge({ status }: { status: BrokerStatus }) {
+  const x = BROKER[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const BROKER_LEAD: Record<BrokerLeadStatus, { c: string; l: string }> = {
+  PENDING: { c: 'bg-amber-100 text-amber-700', l: 'قيد المراجعة' },
+  APPROVED: { c: 'bg-green-100 text-green-700', l: 'موافق عليه' },
+  REJECTED: { c: 'bg-red-100 text-red-700', l: 'مرفوض' },
+  DUPLICATE: { c: 'bg-purple-100 text-purple-700', l: 'مكرر' },
+  EXPIRED: { c: 'bg-gray-200 text-gray-600', l: 'منتهي' },
+};
+export function BrokerLeadStatusBadge({ status }: { status: BrokerLeadStatus }) {
+  const x = BROKER_LEAD[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const BROKER_PAYOUT: Record<BrokerPayoutStatus, { c: string; l: string }> = {
+  DRAFT: { c: 'bg-gray-100 text-gray-700', l: 'مسودة' },
+  APPROVED: { c: 'bg-blue-100 text-blue-700', l: 'موافق عليها' },
+  PROCESSING: { c: 'bg-amber-100 text-amber-700', l: 'قيد التنفيذ' },
+  PAID: { c: 'bg-green-100 text-green-700', l: 'مدفوعة' },
+  CANCELLED: { c: 'bg-gray-200 text-gray-600', l: 'ملغاة' },
+};
+export function BrokerPayoutStatusBadge({ status }: { status: BrokerPayoutStatus }) {
+  const x = BROKER_PAYOUT[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const BROKER_COMMISSION: Record<BrokerCommissionStatus, { c: string; l: string }> = {
+  PENDING: { c: 'bg-amber-100 text-amber-700', l: 'قيد المراجعة' },
+  APPROVED: { c: 'bg-green-100 text-green-700', l: 'موافق عليها' },
+  REJECTED: { c: 'bg-red-100 text-red-700', l: 'مرفوضة' },
+  CANCELLED: { c: 'bg-gray-200 text-gray-600', l: 'ملغاة' },
+};
+export function BrokerCommissionStatusBadge({ status }: { status: BrokerCommissionStatus }) {
+  const x = BROKER_COMMISSION[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const BROKER_USER: Record<BrokerUserStatus, { c: string; l: string }> = {
+  INVITED: { c: 'bg-blue-100 text-blue-700', l: 'مدعو' },
+  ACTIVE: { c: 'bg-green-100 text-green-700', l: 'نشط' },
+  SUSPENDED: { c: 'bg-amber-100 text-amber-700', l: 'موقوف' },
+  REMOVED: { c: 'bg-gray-200 text-gray-600', l: 'محذوف' },
+};
+export function BrokerUserStatusBadge({ status }: { status: BrokerUserStatus }) {
+  const x = BROKER_USER[status];
   return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
 }
 

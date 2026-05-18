@@ -2,16 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, LogOut, UserCircle2 } from 'lucide-react';
+import type { SessionRole } from '@/lib/session';
 import { Avatar } from '@/components/ui/avatar';
 import { logoutAction } from '@/app/login/actions';
 
-const ROLE_LABEL: Record<'ADMIN' | 'SALES', string> = {
+const ROLE_LABEL: Record<SessionRole, string> = {
   ADMIN: 'مدير النظام',
   SALES: 'مبيعات',
+  BROKER: 'وسيط',
 };
 
 interface Props {
-  user: { fullName: string; role: 'ADMIN' | 'SALES' };
+  user: { fullName: string; role: SessionRole };
 }
 
 export function UserMenu({ user }: Props) {

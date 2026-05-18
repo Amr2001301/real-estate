@@ -27,8 +27,12 @@ export type VisitActivityType =
 export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED' | 'CONVERTED';
 export type ReservationBookingPaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'WAIVED';
 export type MaintenanceStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
-export type UserRole = 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER';
+export type UserRole = 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER' | 'BROKER';
 export type MediaType = 'IMAGE' | 'VIDEO' | 'FLOORPLAN' | 'DOCUMENT';
+export type BrokerStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED';
+export type BrokerUserStatus = 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
+export type BrokerCommissionModel = 'PERCENT_OF_SALE' | 'FIXED_PER_UNIT' | 'TIERED';
+export type BrokerLeadStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'DUPLICATE' | 'EXPIRED';
 
 export interface Media {
   id: string;
@@ -177,14 +181,109 @@ export interface Contract {
   unitId: string;
   unit?: Unit;
   reservationId: string | null;
-  reservation?: { id: string; reservationNumber: string | null } | null;
+  reservation?: {
+    id: string;
+    reservationNumber: string | null;
+    commissionLockedPct?: string | number | null;
+    commissionLockedAmount?: string | number | null;
+    sales?: { id: string; fullName: string; email: string | null; phone: string | null } | null;
+    lead?: { id: string; fullName: string; phone: string } | null;
+  } | null;
   pdfUrl: string | null;
   signedAt: string | null;
   totalAmount: string | number;
   downPayment: string | number;
   createdAt: string;
+  brokerId?: string | null;
+  brokerAgentId?: string | null;
+  broker?: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    status: BrokerStatus;
+  } | null;
+  brokerAgent?: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
   installmentPlan?: ContractInstallmentPlan | null;
   deposits?: Deposit[];
+}
+
+export interface PortalContract {
+  id: string;
+  contractNumber: string | null;
+  customerId: string;
+  unitId: string;
+  reservationId: string | null;
+  brokerId: string | null;
+  brokerAgentId: string | null;
+  pdfUrl: string | null;
+  signedAt: string | null;
+  totalAmount: string | number;
+  downPayment: string | number;
+  createdAt: string;
+  updatedAt: string;
+  customer?: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
+  unit?: {
+    id: string;
+    code: string;
+    type: string;
+    price: string | number;
+    status: UnitStatus;
+    area?: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    floor?: number;
+    building?: {
+      id: string;
+      name: string;
+      phase: {
+        id: string;
+        projectId: string;
+        project: {
+          id: string;
+          name: Translatable;
+          city: string;
+          status: ProjectStatus;
+        };
+      };
+    };
+  };
+  reservation?: {
+    id: string;
+    reservationNumber: string | null;
+    commissionLockedPct: string | number | null;
+    commissionLockedAmount: string | number | null;
+    sales: { id: string; fullName: string; email: string | null; phone: string | null } | null;
+    lead: { id: string; fullName: string; phone: string } | null;
+  } | null;
+  installmentPlan?: ContractInstallmentPlan | null;
+  deposits?: Deposit[];
+}
+
+export interface AdminBrokerContract extends PortalContract {
+  broker?: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    status: BrokerStatus;
+  } | null;
+  brokerAgent?: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
 }
 
 export interface DepositTotals {
@@ -489,6 +588,805 @@ export interface InstallmentPlanDurationOption {
   calculated?: DurationOptionCalculated;
 }
 
+// ── Brokers ───────────────────────────────────────────────────────────────────
+
+export interface Broker {
+  id: string;
+  companyName: string;
+  commercialName: string | null;
+  code: string;
+  logoUrl: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  taxId: string | null;
+  commercialRegistration: string | null;
+  bankName: string | null;
+  bankAccountName: string | null;
+  bankIban: string | null;
+  defaultCommissionPct: string | number;
+  commissionModel: BrokerCommissionModel;
+  status: BrokerStatus;
+  contractStartAt: string | null;
+  contractEndAt: string | null;
+  contractPdfUrl: string | null;
+  notes: string | null;
+  createdById: string | null;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { brokerUsers: number; projectAccess: number; unitAccess: number };
+}
+
+export interface BrokerUser {
+  id: string;
+  userId: string;
+  brokerId: string;
+  jobTitle: string | null;
+  isPrimaryContact: boolean;
+  canManageBrokerUsers: boolean;
+  canViewCommissions: boolean;
+  invitedAt: string | null;
+  joinedAt: string | null;
+  status: BrokerUserStatus;
+  createdAt: string;
+  updatedAt: string;
+  user: {
+    id: string;
+    role: UserRole;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+    locale: 'ar' | 'en';
+    active: boolean;
+    lastLoginAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface BrokerProjectAccess {
+  id: string;
+  brokerId: string;
+  projectId: string;
+  commissionPct: string | number | null;
+  fixedAmountPerUnit: string | number | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  active: boolean;
+  createdAt: string;
+  project: {
+    id: string;
+    name: Translatable;
+    city: string;
+    status: ProjectStatus;
+    featured: boolean;
+  };
+}
+
+export interface BrokerUnitAccess {
+  id: string;
+  brokerId: string;
+  unitId: string;
+  active: boolean;
+  createdAt: string;
+  unit: {
+    id: string;
+    code: string;
+    type: string;
+    price: string | number;
+    status: UnitStatus;
+    buildingId: string;
+    building: {
+      id: string;
+      name: string;
+      phaseId: string;
+      phase: { id: string; projectId: string; name: Translatable };
+    };
+  };
+}
+
+export interface BrokerAccessBundle {
+  projects: BrokerProjectAccess[];
+  units: BrokerUnitAccess[];
+}
+
+// ── Broker portal payloads (/portal/*) ──────────────────────────────────────
+
+export interface PortalMe {
+  user: {
+    id: string;
+    role: UserRole;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+    locale: 'ar' | 'en';
+    active: boolean;
+    lastLoginAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  brokerUser: {
+    id: string;
+    jobTitle: string | null;
+    isPrimaryContact: boolean;
+    canManageBrokerUsers: boolean;
+    canViewCommissions: boolean;
+    status: BrokerUserStatus;
+    invitedAt: string | null;
+    joinedAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  broker: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    logoUrl: string | null;
+    email: string | null;
+    phone: string | null;
+    city: string | null;
+    address: string | null;
+    defaultCommissionPct: string | number;
+    commissionModel: BrokerCommissionModel;
+    contractStartAt: string | null;
+    contractEndAt: string | null;
+    contractPdfUrl: string | null;
+    status: BrokerStatus;
+    createdAt: string;
+    updatedAt: string;
+  };
+  permissions: {
+    isPrimaryContact: boolean;
+    canManageBrokerUsers: boolean;
+    canViewCommissions: boolean;
+  };
+}
+
+export interface PortalProject {
+  project: {
+    id: string;
+    name: Translatable;
+    description: Translatable;
+    city: string;
+    lat: number;
+    lng: number;
+    status: ProjectStatus;
+    featured: boolean;
+    services: Translatable[];
+    createdAt: string;
+    updatedAt: string;
+    media: Media[];
+  };
+  access: {
+    id: string;
+    commissionPct: string | number | null;
+    fixedAmountPerUnit: string | number | null;
+    startsAt: string | null;
+    endsAt: string | null;
+    active: boolean;
+    createdAt: string;
+  };
+}
+
+export interface PortalLead {
+  id: string;
+  clientId: string;
+  fullName: string;
+  phone: string;
+  email: string | null;
+  sourceId: string | null;
+  source?: LeadSource | null;
+  projectInterestId: string | null;
+  projectInterest?: { id: string; name: Translatable; city: string } | null;
+  unitInterestId: string | null;
+  unitInterest?: { id: string; code: string; type: string } | null;
+  assignedSalesId: string | null;
+  assignedSales?: { id: string; fullName: string } | null;
+  stage: LeadStage;
+  brokerId: string | null;
+  brokerAgentId: string | null;
+  brokerSubmittedAt: string | null;
+  brokerApprovalStatus: BrokerLeadStatus | null;
+  brokerApprovedAt: string | null;
+  brokerRejectedAt: string | null;
+  brokerRejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+  client?: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+    role: UserRole;
+  } | null;
+  notes?: LeadNote[];
+  appointments?: VisitAppointmentSummary[];
+  // Returned on create when the phone collided with a prior lead.
+  isDuplicate?: boolean;
+  duplicateOfId?: string | null;
+}
+
+export interface PortalVisitRequest {
+  id: string;
+  leadId: string | null;
+  projectId: string;
+  unitId: string | null;
+  preferredDate: string;
+  scheduledAt: string | null;
+  status: VisitStatus;
+  requestStatus: VisitRequestStatus | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  customerEmail: string | null;
+  notes: string | null;
+  brokerId: string | null;
+  brokerAgentId: string | null;
+  createdAt: string;
+  project?: { id: string; name: Translatable; city: string } | null;
+  unit?: { id: string; code: string; type: string } | null;
+  lead?: { id: string; fullName: string; phone: string } | null;
+  appointments?: VisitAppointmentSummary[];
+}
+
+export type PortalActivityType =
+  | 'LEAD_SUBMITTED'
+  | 'VISIT_REQUESTED'
+  | 'LEAD_APPROVED'
+  | 'LEAD_REJECTED'
+  | 'LEAD_MARKED_DUPLICATE'
+  | 'RESERVATION_CREATED'
+  | 'CONTRACT_CREATED'
+  | 'CONTRACT_SIGNED'
+  | 'COMMISSION_EARNED'
+  | 'COMMISSION_APPROVED'
+  | 'COMMISSION_REJECTED'
+  | 'COMMISSION_CANCELLED'
+  | 'PAYOUT_CREATED'
+  | 'PAYOUT_APPROVED'
+  | 'PAYOUT_PROCESSING'
+  | 'PAYOUT_PAID'
+  | 'PAYOUT_CANCELLED';
+
+export type BrokerCommissionStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED';
+
+export interface PortalCommission {
+  id: string;
+  commissionNumber: string;
+  brokerId: string;
+  brokerAgentId: string | null;
+  contractId: string;
+  reservationId: string | null;
+  unitId: string;
+  projectId: string;
+  basisAmount: string | number;
+  commissionPct: string | number | null;
+  grossAmount: string | number;
+  taxPct: string | number;
+  taxAmount: string | number;
+  withholdingPct: string | number;
+  withholdingAmount: string | number;
+  netAmount: string | number;
+  status: BrokerCommissionStatus;
+  earnedAt: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  rejectionReason: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  brokerAgent?: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
+  contract?: {
+    id: string;
+    contractNumber: string | null;
+    totalAmount: string | number;
+    downPayment: string | number;
+    signedAt: string | null;
+    customer?: { id: string; fullName: string; phone: string | null } | null;
+  };
+  reservation?: {
+    id: string;
+    reservationNumber: string | null;
+    sales?: { id: string; fullName: string } | null;
+    lead?: { id: string; fullName: string; phone: string } | null;
+  } | null;
+  unit?: {
+    id: string;
+    code: string;
+    type: string;
+    price: string | number;
+    building?: {
+      id: string;
+      name: string;
+      phase?: { id: string; name?: Translatable; projectId: string };
+    };
+  };
+  project?: {
+    id: string;
+    name: Translatable;
+    city: string;
+    status: ProjectStatus;
+  };
+}
+
+export interface AdminBrokerCommission extends PortalCommission {
+  broker?: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    status: BrokerStatus;
+  } | null;
+  approvedBy?: { id: string; fullName: string } | null;
+  rejectedBy?: { id: string; fullName: string } | null;
+}
+
+export type BrokerPayoutStatus =
+  | 'DRAFT'
+  | 'APPROVED'
+  | 'PROCESSING'
+  | 'PAID'
+  | 'CANCELLED';
+
+export type BrokerPayoutMethod = 'BANK_TRANSFER' | 'CHEQUE' | 'CASH' | 'OTHER';
+
+export interface PortalPayout {
+  id: string;
+  payoutNumber: string;
+  brokerId: string;
+  period: string | null;
+  totalGross: string | number;
+  totalTax: string | number;
+  totalWithholding: string | number;
+  totalNet: string | number;
+  status: BrokerPayoutStatus;
+  paymentMethod: BrokerPayoutMethod | null;
+  paymentReference: string | null;
+  receiptUrl: string | null;
+  invoiceUrl: string | null;
+  scheduledAt: string | null;
+  approvedAt: string | null;
+  processedAt: string | null;
+  paidAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  commissions?: Array<{
+    id: string;
+    commissionNumber: string;
+    grossAmount: string | number;
+    taxAmount: string | number;
+    withholdingAmount: string | number;
+    netAmount: string | number;
+    earnedAt: string;
+    contract: { id: string; contractNumber: string | null };
+    unit: {
+      id: string;
+      code: string;
+      building?: {
+        phase?: { project?: { id: string; name: Translatable } };
+      };
+    };
+    project?: { id: string; name: Translatable };
+  }>;
+}
+
+export interface AdminBrokerPayout extends PortalPayout {
+  broker?: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    status: BrokerStatus;
+  } | null;
+  approvedBy?: { id: string; fullName: string } | null;
+  processedBy?: { id: string; fullName: string } | null;
+  cancelledBy?: { id: string; fullName: string } | null;
+  commissions?: Array<{
+    id: string;
+    commissionNumber: string;
+    status: BrokerCommissionStatus;
+    basisAmount: string | number;
+    commissionPct: string | number | null;
+    grossAmount: string | number;
+    taxAmount: string | number;
+    withholdingAmount: string | number;
+    netAmount: string | number;
+    earnedAt: string;
+    brokerAgent?: { id: string; fullName: string } | null;
+    contract: {
+      id: string;
+      contractNumber: string | null;
+      totalAmount: string | number;
+      customer: { id: string; fullName: string } | null;
+    };
+    unit: {
+      id: string;
+      code: string;
+      type: string;
+      building?: {
+        phase?: { project?: { id: string; name: Translatable } };
+      };
+    };
+    project?: { id: string; name: Translatable };
+  }>;
+}
+
+// ── Broker reports / performance ────────────────────────────────────────────
+
+export interface BrokerReportsSummary {
+  totalBrokers: number;
+  activeBrokers: number;
+  totalBrokerAgents: number;
+  leadsSubmitted: number;
+  leadsApproved: number;
+  leadsRejected: number;
+  leadsDuplicate: number;
+  visitsRequested: number;
+  reservationsCreated: number;
+  reservationsApproved: number;
+  reservationsCancelled: number;
+  contractsCreated: number;
+  contractsSigned: number;
+  salesGross: string;
+  commissionsPending: number;
+  commissionsApproved: number;
+  commissionsRejected: number;
+  commissionsCancelled: number;
+  commissionsGross: string;
+  commissionsNet: string;
+  payoutsDraft: number;
+  payoutsApproved: number;
+  payoutsProcessing: number;
+  payoutsPaid: number;
+  payoutsTotalNet: string;
+  leadToReservationRate: number;
+  reservationToContractRate: number;
+  signedContractRate: number;
+  contractToPaidPayoutRate: number;
+}
+
+export interface TopBrokerRow {
+  brokerId: string;
+  companyName: string;
+  code: string;
+  status: BrokerStatus;
+  leads: number;
+  approvedLeads: number;
+  reservations: number;
+  contracts: number;
+  contractsSigned: number;
+  salesGross: string;
+  commissionGross: string;
+  commissionNet: string;
+  payoutNet: string;
+  conversionRate: number;
+}
+
+export interface TopBrokersResponse {
+  metric: 'leads' | 'reservations' | 'contracts' | 'salesGross' | 'commissionNet' | 'payoutNet';
+  limit: number;
+  data: TopBrokerRow[];
+}
+
+export interface BrokerReportProjectRow {
+  projectId: string;
+  projectName: Translatable | null;
+  city: string | null;
+  brokerCount: number;
+  contracts: number;
+  contractsSigned: number;
+  salesGross: string;
+  commissionGross: string;
+  commissionNet: string;
+  payoutNet: string;
+}
+
+export interface BrokerReportAgentRow {
+  brokerAgentId: string;
+  brokerId: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  leadsSubmitted: number;
+  approvedLeads: number;
+  reservations: number;
+  contracts: number;
+  contractsSigned: number;
+  salesGross: string;
+  commissionGross: string;
+  commissionNet: string;
+  payoutNet: string;
+}
+
+export interface BrokerMonthlyTrendPoint {
+  label: string;
+  reservations: number;
+  contractsSigned: number;
+  commissionsNet: string;
+  payoutsNet: string;
+}
+
+export interface BrokerDetailReport {
+  broker: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    status: BrokerStatus;
+    defaultCommissionPct: string | number;
+    commissionModel: BrokerCommissionModel;
+    contractStartAt: string | null;
+    contractEndAt: string | null;
+    _count: { brokerUsers: number; projectAccess: number; unitAccess: number };
+  };
+  summary: BrokerReportsSummary;
+  monthlyTrend: BrokerMonthlyTrendPoint[];
+  projectBreakdown: BrokerReportProjectRow[];
+  agentBreakdown: BrokerReportAgentRow[];
+  recent: {
+    leads: Array<{
+      id: string;
+      fullName: string;
+      phone: string;
+      stage: LeadStage;
+      brokerApprovalStatus: BrokerLeadStatus | null;
+      createdAt: string;
+      projectInterest: { id: string; name: Translatable } | null;
+    }>;
+    reservations: Array<{
+      id: string;
+      reservationNumber: string | null;
+      status: ReservationStatus;
+      createdAt: string;
+      unit: { id: string; code: string };
+    }>;
+    contracts: Array<{
+      id: string;
+      contractNumber: string | null;
+      signedAt: string | null;
+      totalAmount: string | number;
+      createdAt: string;
+      unit: { id: string; code: string };
+    }>;
+    commissions: Array<{
+      id: string;
+      commissionNumber: string;
+      status: BrokerCommissionStatus;
+      grossAmount: string | number;
+      netAmount: string | number;
+      earnedAt: string;
+    }>;
+    payouts: Array<{
+      id: string;
+      payoutNumber: string;
+      status: BrokerPayoutStatus;
+      period: string | null;
+      totalNet: string | number;
+      createdAt: string;
+      paidAt: string | null;
+    }>;
+  };
+}
+
+export interface PortalPerformanceResponse extends BrokerDetailReport {
+  canSeeAllAgents: boolean;
+}
+
+export interface AdminEligibleCommission {
+  id: string;
+  commissionNumber: string;
+  basisAmount: string | number;
+  commissionPct: string | number | null;
+  grossAmount: string | number;
+  taxAmount: string | number;
+  withholdingAmount: string | number;
+  netAmount: string | number;
+  earnedAt: string;
+  brokerAgent?: { id: string; fullName: string } | null;
+  contract: {
+    id: string;
+    contractNumber: string | null;
+    totalAmount: string | number;
+    customer: { id: string; fullName: string } | null;
+  };
+  unit: { id: string; code: string; type: string };
+  project?: { id: string; name: Translatable; city: string };
+}
+
+export interface PortalActivityItem {
+  id: string;
+  type: PortalActivityType;
+  rawType: string;
+  entityType: 'Lead' | 'VisitRequest' | 'Reservation' | 'Contract' | 'Commission' | 'Payout';
+  entityId: string;
+  payload: Record<string, unknown>;
+  createdAt: string;
+  // Null for Payout activity entries — those come from BrokerActivityLog
+  // which is broker-scoped, not lead-scoped.
+  lead: {
+    id: string;
+    fullName: string;
+    phone: string;
+    brokerApprovalStatus: BrokerLeadStatus | null;
+    stage: LeadStage;
+    projectInterest: { id: string; name: Translatable; city: string } | null;
+    unitInterest: { id: string; code: string; type: string } | null;
+  } | null;
+}
+
+export interface PortalReservation {
+  id: string;
+  reservationNumber: string | null;
+  unitId: string;
+  salesId: string;
+  leadId: string | null;
+  clientId: string | null;
+  brokerId: string | null;
+  brokerAgentId: string | null;
+  status: ReservationStatus;
+  notes: string | null;
+  reason: string | null;
+  expiresAt: string;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  cancelledAt: string | null;
+  convertedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  bookingAmount: string | number;
+  bookingPaymentStatus: ReservationBookingPaymentStatus;
+  commissionLockedPct: string | number | null;
+  commissionLockedAmount: string | number | null;
+  selectedDurationMonths: number | null;
+  selectedIncreasePercentage: string | number | null;
+  snapshotDownPaymentAmount: string | number | null;
+  snapshotRemainingAmount: string | number | null;
+  snapshotFinancedAmount: string | number | null;
+  snapshotMonthlyInstallment: string | number | null;
+  snapshotTotalPayable: string | number | null;
+  snapshotFinalPaymentAmount: string | number | null;
+  installmentPlanTemplateId: string | null;
+  selectedDurationOptionId: string | null;
+  unit?: {
+    id: string;
+    code: string;
+    type: string;
+    price: string | number;
+    status: UnitStatus;
+    area?: number;
+    bedrooms?: number;
+    bathrooms?: number;
+    floor?: number;
+    building?: {
+      id: string;
+      name: string;
+      phase: {
+        id: string;
+        projectId: string;
+        project: {
+          id: string;
+          name: Translatable;
+          city: string;
+          status: ProjectStatus;
+        };
+      };
+    };
+  };
+  lead?: {
+    id: string;
+    fullName: string;
+    phone: string;
+    email: string | null;
+    brokerApprovalStatus: BrokerLeadStatus | null;
+    stage: LeadStage;
+  } | null;
+  client?: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
+  sales?: { id: string; fullName: string; email: string | null; phone: string | null };
+  installmentPlanTemplate?: {
+    id: string;
+    name: string;
+    netPrice: string | number;
+    reservationAmount: string | number;
+    downPaymentAmount?: string | number;
+  } | null;
+  selectedDurationOption?: {
+    id: string;
+    durationMonths: number;
+    increasePercentage: string | number;
+  } | null;
+  reservationNotes?: ReservationNote[];
+  activities?: ReservationActivity[];
+}
+
+export interface AdminBrokerReservation extends PortalReservation {
+  broker?: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    status: BrokerStatus;
+  } | null;
+  brokerAgent?: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
+}
+
+export interface AdminBrokerLead extends PortalLead {
+  broker?: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+    status: BrokerStatus;
+  } | null;
+  brokerAgent?: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+  } | null;
+  activities?: Array<{
+    id: string;
+    type: string;
+    payload: Record<string, unknown>;
+    createdAt: string;
+  }>;
+}
+
+export interface PortalUnit {
+  id: string;
+  buildingId: string;
+  code: string;
+  type: string;
+  area: number;
+  bedrooms: number;
+  bathrooms: number;
+  floor: number;
+  price: string | number;
+  status: UnitStatus;
+  reservationExpiresAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  media: Media[];
+  accessSource: 'PROJECT_ACCESS' | 'UNIT_ACCESS';
+  building: {
+    id: string;
+    name: string;
+    phase: {
+      id: string;
+      name: Translatable;
+      projectId: string;
+      project: {
+        id: string;
+        name: Translatable;
+        city: string;
+        status: ProjectStatus;
+      };
+    };
+  };
+}
+
 // ── Financial Reports ─────────────────────────────────────────────────────────
 
 export interface FinancialSummary {
@@ -554,4 +1452,17 @@ export interface FinancialDashboard {
   upcomingThisMonth: FinancialInstallmentRow[];
   recentDeposits: FinancialDepositRow[];
   cashflowTrend: CashflowTrendPoint[];
+}
+
+export type NotificationChannel = 'IN_APP' | 'PUSH' | 'EMAIL' | 'SMS';
+
+export interface NotificationItem {
+  id: string;
+  userId: string;
+  templateCode: string;
+  channel: NotificationChannel;
+  payload: Record<string, unknown> | null;
+  sentAt: string | null;
+  readAt: string | null;
+  createdAt: string;
 }

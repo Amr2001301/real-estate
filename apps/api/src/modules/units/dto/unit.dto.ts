@@ -12,7 +12,7 @@ import {
 import { UnitStatus } from '@prisma/client';
 
 export class CreateUnitDto {
-  @IsUUID()
+  @IsUUID('all', { message: 'يجب اختيار مبنى صالح' })
   buildingId!: string;
 
   @IsString()

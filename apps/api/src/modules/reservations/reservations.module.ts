@@ -5,6 +5,7 @@ import {
   Controller,
   Get,
   Injectable,
+  Logger,
   Module,
   NotFoundException,
   Param,
@@ -30,6 +31,7 @@ import {
 import {
   DepositType,
   LeadStage,
+  NotificationChannel,
   PlanPaymentType,
   PlanTemplateStatus,
   Prisma,
@@ -45,6 +47,8 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { computeDurationOption } from '../installments/duration-calc';
+import { BrokerCommissionsModule } from '../broker-commissions/broker-commissions.module';
+import { BrokerCommissionsService } from '../broker-commissions/broker-commissions.service';
 
 class CreateReservationDto {
   @IsUUID() unitId!: string;
@@ -129,10 +133,17 @@ const FULL_INCLUDE = {
 };
 
 @Injectable()
-class ReservationsService {
-  constructor(private readonly prisma: PrismaService) {}
+export class ReservationsService {
+  private readonly logger = new Logger(ReservationsService.name);
 
-  private async nextReservationNumber(): Promise<string> {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly brokerCommissions: BrokerCommissionsService,
+  ) {}
+
+  // Public so the broker portal reservations service can reuse the same
+  // numbering scheme without duplicating logic. Behavior unchanged.
+  async nextReservationNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const count = await this.prisma.reservation.count();
     return `RES-${year}-${String(count + 1).padStart(4, '0')}`;
@@ -165,8 +176,11 @@ class ReservationsService {
   /**
    * Resolve and validate a booking installment plan. If valid, returns the full plan
    * (including duration options + financial figures needed for snapshot computation).
+   *
+   * Public so the broker portal reservations service can reuse the same validation
+   * (status / unit-match / project-match) without duplicating logic. Behavior unchanged.
    */
-  private async validateBookingPlan(
+  async validateBookingPlan(
     planId: string,
     unitId: string,
     projectId: string,
@@ -1122,7 +1136,7 @@ class ReservationsService {
       const contractNumber = await this.nextContractNumber();
 
       try {
-        return await this.prisma.$transaction(async (tx) => {
+        const result = await this.prisma.$transaction(async (tx) => {
           // 1. Create the Contract.
           const contract = await tx.contract.create({
             data: {
@@ -1134,6 +1148,11 @@ class ReservationsService {
               downPayment,
               pdfUrl: dto.pdfUrl ?? null,
               signedAt: dto.signedAt ? new Date(dto.signedAt) : null,
+              // Inherit broker attribution from the source reservation — this
+              // is the ONLY path that sets these fields on a contract. Direct
+              // POST /contracts (the standalone create) does not accept them.
+              brokerId: reservation.brokerId,
+              brokerAgentId: reservation.brokerAgentId,
             },
           });
 
@@ -1258,10 +1277,123 @@ class ReservationsService {
             payload: { status: 'CONVERTED', reservationId: id, contractId: contract.id, contractNumber },
           },
         });
+        // Broker portal activity — surfaces as CONTRACT_CREATED in
+        // /portal/activity. Optionally a second row when signedAt is set
+        // at creation time (admins occasionally do both in one shot).
+        if (reservation.brokerId) {
+          await tx.leadActivity.create({
+            data: {
+              leadId: reservation.lead.id,
+              type: 'broker_contract_created',
+              payload: {
+                brokerId: reservation.brokerId,
+                brokerAgentId: reservation.brokerAgentId,
+                contractId: contract.id,
+                contractNumber,
+                reservationId: id,
+                reservationNumber: reservation.reservationNumber,
+                unitId: reservation.unitId,
+                projectId: reservation.unit.building.phase.projectId,
+                totalAmount: totalAmount.toString(),
+                downPayment: downPayment.toString(),
+              },
+            },
+          });
+          if (dto.signedAt) {
+            await tx.leadActivity.create({
+              data: {
+                leadId: reservation.lead.id,
+                type: 'broker_contract_signed',
+                payload: {
+                  brokerId: reservation.brokerId,
+                  brokerAgentId: reservation.brokerAgentId,
+                  contractId: contract.id,
+                  contractNumber,
+                  signedAt: dto.signedAt,
+                },
+              },
+            });
+          }
+        }
       }
 
           return { contractId: contract.id, contractNumber };
         });
+
+        // Post-transaction notifications — only fire when the contract is
+        // broker-attributed. Best-effort: failures are logged but never thrown.
+        if (reservation.brokerId) {
+          try {
+            const recipients = await this.prisma.brokerUser.findMany({
+              where: { brokerId: reservation.brokerId, status: 'ACTIVE' },
+              select: { userId: true },
+            });
+            const userIds = new Set<string>(recipients.map((r) => r.userId));
+            // Internal sales user gets a notification too.
+            const salesUserId =
+              (await this.prisma.reservation.findUnique({
+                where: { id },
+                select: { salesId: true },
+              }))?.salesId ?? null;
+            if (salesUserId) userIds.add(salesUserId);
+
+            if (userIds.size > 0) {
+              const basePayload = {
+                contractId: result.contractId,
+                contractNumber: result.contractNumber,
+                reservationId: id,
+                unitId: reservation.unitId,
+                projectId: reservation.unit.building.phase.projectId,
+              };
+              await this.prisma.notification.createMany({
+                data: Array.from(userIds).map((userId) => ({
+                  userId,
+                  templateCode: 'broker_contract_created',
+                  payload: basePayload as Prisma.InputJsonValue,
+                  channel: NotificationChannel.IN_APP,
+                  sentAt: new Date(),
+                })),
+              });
+              if (dto.signedAt) {
+                await this.prisma.notification.createMany({
+                  data: Array.from(userIds).map((userId) => ({
+                    userId,
+                    templateCode: 'broker_contract_signed',
+                    payload: {
+                      ...basePayload,
+                      signedAt: dto.signedAt,
+                    } as Prisma.InputJsonValue,
+                    channel: NotificationChannel.IN_APP,
+                    sentAt: new Date(),
+                  })),
+                });
+              }
+            }
+          } catch (notifyErr) {
+            this.logger.warn(
+              `Broker contract notify failed for reservation ${id}: ${(notifyErr as Error).message}`,
+            );
+          }
+        }
+
+        // Materialize the broker commission row only when the contract was
+        // created already-signed. The standard path is: convert → contract
+        // unsigned → admin PATCHes signedAt → ContractsService.update
+        // materializes from there. Best-effort: a failure here is logged
+        // but never propagated (the contract itself is already committed).
+        if (reservation.brokerId && dto.signedAt) {
+          try {
+            await this.brokerCommissions.materializeFromContract(
+              result.contractId,
+            );
+          } catch (commErr) {
+            this.logger.warn(
+              `materializeFromContract(${result.contractId}) failed: ${(commErr as Error).message}`,
+            );
+          }
+        }
+
+        return result;
       } catch (e: unknown) {
         const err = e as { code?: string; meta?: { target?: string[] } };
         const isDuplicateContractNumber =
@@ -1499,6 +1631,7 @@ class ReservationsController {
 }
 
 @Module({
+  imports: [BrokerCommissionsModule],
   controllers: [ReservationsController],
   providers: [ReservationsService, ReservationExpiryCron],
   exports: [ReservationsService],

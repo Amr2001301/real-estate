@@ -1,7 +1,156 @@
-import { PrismaClient, UserRole, ProjectStatus, UnitStatus, MediaType, NotificationChannel } from '@prisma/client';
+import {
+  PrismaClient,
+  UserRole,
+  ProjectStatus,
+  UnitStatus,
+  MediaType,
+  NotificationChannel,
+} from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
+
+// ============================================================================
+// Idempotency helpers — needed because translatable JSON name columns have no
+// unique constraint, so we cannot use `upsert` directly on them.
+// ============================================================================
+
+async function findProjectByTranslatedName(nameAr: string, nameEn: string) {
+  return prisma.project.findFirst({
+    where: {
+      OR: [
+        { name: { path: ['en'], equals: nameEn } },
+        { name: { path: ['ar'], equals: nameAr } },
+      ],
+    },
+  });
+}
+
+async function findPhaseByTranslatedName(
+  projectId: string,
+  nameAr: string,
+  nameEn: string,
+) {
+  return prisma.phase.findFirst({
+    where: {
+      projectId,
+      OR: [
+        { name: { path: ['en'], equals: nameEn } },
+        { name: { path: ['ar'], equals: nameAr } },
+      ],
+    },
+  });
+}
+
+async function findBuildingByName(phaseId: string, name: string) {
+  return prisma.building.findFirst({ where: { phaseId, name } });
+}
+
+async function findLeadSourceByEn(nameEn: string) {
+  return prisma.leadSource.findFirst({
+    where: { name: { path: ['en'], equals: nameEn } },
+  });
+}
+
+async function findMaintenanceCategoryByEn(nameEn: string) {
+  return prisma.maintenanceCategory.findFirst({
+    where: { name: { path: ['en'], equals: nameEn } },
+  });
+}
+
+type Translatable = { ar: string; en: string };
+
+async function ensureProject(params: {
+  nameAr: string;
+  nameEn: string;
+  descriptionAr: string;
+  descriptionEn: string;
+  city: string;
+  lat: number;
+  lng: number;
+  status: ProjectStatus;
+  featured: boolean;
+  services: Translatable[];
+  mediaUrls?: string[];
+}) {
+  const existing = await findProjectByTranslatedName(params.nameAr, params.nameEn);
+  if (existing) return existing;
+  return prisma.project.create({
+    data: {
+      name: { ar: params.nameAr, en: params.nameEn },
+      description: { ar: params.descriptionAr, en: params.descriptionEn },
+      city: params.city,
+      lat: params.lat,
+      lng: params.lng,
+      status: params.status,
+      featured: params.featured,
+      services: params.services,
+      ...(params.mediaUrls && params.mediaUrls.length
+        ? {
+            media: {
+              create: params.mediaUrls.map((url, i) => ({
+                url,
+                type: MediaType.IMAGE,
+                order: i,
+              })),
+            },
+          }
+        : {}),
+    },
+  });
+}
+
+async function ensurePhase(
+  projectId: string,
+  nameAr: string,
+  nameEn: string,
+  order: number,
+) {
+  const existing = await findPhaseByTranslatedName(projectId, nameAr, nameEn);
+  if (existing) return existing;
+  return prisma.phase.create({
+    data: { projectId, name: { ar: nameAr, en: nameEn }, order },
+  });
+}
+
+async function ensureBuilding(
+  phaseId: string,
+  name: string,
+  totalFloors: number,
+  order: number,
+) {
+  const existing = await findBuildingByName(phaseId, name);
+  if (existing) return existing;
+  return prisma.building.create({
+    data: { phaseId, name, totalFloors, order },
+  });
+}
+
+type UnitSeed = {
+  code: string;
+  type: string;
+  area: number;
+  bedrooms: number;
+  bathrooms: number;
+  floor: number;
+  price: number;
+  status?: UnitStatus;
+};
+
+async function ensureUnits(buildingId: string, units: UnitSeed[]) {
+  for (const u of units) {
+    await prisma.unit.upsert({
+      where: { buildingId_code: { buildingId, code: u.code } },
+      create: { buildingId, ...u },
+      // Don't overwrite admin-edited unit state on re-seed.
+      update: {},
+    });
+  }
+}
+
+// ============================================================================
+// Seed
+// ============================================================================
 
 async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com';
@@ -9,9 +158,9 @@ async function main() {
 
   console.log('🌱 Seeding database…');
 
-  // ---- Users ----
+  // ---- Users (idempotent via email upsert) ----
   const adminHash = await argon2.hash(adminPassword);
-  const admin = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: adminEmail },
     create: {
       email: adminEmail,
@@ -36,109 +185,90 @@ async function main() {
     update: { passwordHash: salesHash },
   });
 
-  // ---- Lead sources ----
-  const sources = await Promise.all(
-    [
-      { ar: 'فيسبوك', en: 'Facebook' },
-      { ar: 'انستغرام', en: 'Instagram' },
-      { ar: 'موقع الويب', en: 'Website' },
-      { ar: 'إحالة', en: 'Referral' },
-    ].map((name) =>
-      prisma.leadSource.create({ data: { name } }).catch(() => null),
-    ),
-  );
+  // ---- Lead sources (find-or-create by en name; JSON column has no unique idx) ----
+  for (const name of [
+    { ar: 'فيسبوك', en: 'Facebook' },
+    { ar: 'انستغرام', en: 'Instagram' },
+    { ar: 'موقع الويب', en: 'Website' },
+    { ar: 'إحالة', en: 'Referral' },
+  ]) {
+    const existing = await findLeadSourceByEn(name.en);
+    if (!existing) {
+      await prisma.leadSource.create({ data: { name } });
+    }
+  }
 
-  // ---- Project + phases + buildings + units ----
-  const project = await prisma.project.create({
-    data: {
-      name: { ar: 'كمبوند الرياض الجديدة', en: 'New Riyadh Compound' },
-      description: {
-        ar: 'مجتمع سكني فاخر بإطلالات خلابة ومرافق متكاملة.',
-        en: 'A luxurious residential community with stunning views and full amenities.',
-      },
-      city: 'Riyadh',
-      lat: 24.7136,
-      lng: 46.6753,
-      status: ProjectStatus.PUBLISHED,
-      featured: true,
-      services: [
-        { ar: 'حمام سباحة', en: 'Swimming Pool' },
-        { ar: 'نادي صحي', en: 'Gym' },
-        { ar: 'حدائق', en: 'Gardens' },
-      ],
-      media: {
-        create: [
-          { url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200', type: MediaType.IMAGE, order: 0 },
-          { url: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=1200', type: MediaType.IMAGE, order: 1 },
-        ],
-      },
-      phases: {
-        create: [
-          {
-            name: { ar: 'المرحلة الأولى', en: 'Phase 1' },
-            order: 0,
-            buildings: {
-              create: [
-                {
-                  name: 'Building A',
-                  totalFloors: 6,
-                  units: {
-                    create: [
-                      { code: 'A-101', type: '1BR', area: 75, bedrooms: 1, bathrooms: 1, floor: 1, price: 850000 },
-                      { code: 'A-102', type: '2BR', area: 110, bedrooms: 2, bathrooms: 2, floor: 1, price: 1250000 },
-                      { code: 'A-201', type: '2BR', area: 115, bedrooms: 2, bathrooms: 2, floor: 2, price: 1300000, status: UnitStatus.RESERVED },
-                      { code: 'A-301', type: '3BR', area: 165, bedrooms: 3, bathrooms: 2, floor: 3, price: 1850000 },
-                    ],
-                  },
-                },
-                {
-                  name: 'Building B',
-                  totalFloors: 4,
-                  units: {
-                    create: [
-                      { code: 'B-101', type: '2BR', area: 105, bedrooms: 2, bathrooms: 2, floor: 1, price: 1180000 },
-                      { code: 'B-102', type: '3BR', area: 160, bedrooms: 3, bathrooms: 3, floor: 1, price: 1750000 },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-    include: {
-      phases: {
-        include: { buildings: { include: { units: true } } },
-      },
-    },
+  // ---- Demo project 1: idempotent project + phase + buildings + units ----
+  const proj1 = await ensureProject({
+    nameAr: 'كمبوند الرياض الجديدة',
+    nameEn: 'New Riyadh Compound',
+    descriptionAr: 'مجتمع سكني فاخر بإطلالات خلابة ومرافق متكاملة.',
+    descriptionEn:
+      'A luxurious residential community with stunning views and full amenities.',
+    city: 'Riyadh',
+    lat: 24.7136,
+    lng: 46.6753,
+    status: ProjectStatus.PUBLISHED,
+    featured: true,
+    services: [
+      { ar: 'حمام سباحة', en: 'Swimming Pool' },
+      { ar: 'نادي صحي', en: 'Gym' },
+      { ar: 'حدائق', en: 'Gardens' },
+    ],
+    mediaUrls: [
+      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
+      'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=1200',
+    ],
   });
 
-  // Second project (draft)
-  await prisma.project.create({
-    data: {
-      name: { ar: 'فيلات الجولف', en: 'Golf Villas' },
-      description: { ar: 'فيلات راقية بإطلالة على الجولف.', en: 'Premium villas overlooking the golf course.' },
-      city: 'Jeddah',
-      lat: 21.4858,
-      lng: 39.1925,
-      status: ProjectStatus.DRAFT,
-      featured: false,
-      services: [{ ar: 'ملعب جولف', en: 'Golf Course' }],
-    },
+  const phase1 = await ensurePhase(
+    proj1.id,
+    'المرحلة الأولى',
+    'Phase 1',
+    0,
+  );
+  const buildingA = await ensureBuilding(phase1.id, 'Building A', 6, 0);
+  const buildingB = await ensureBuilding(phase1.id, 'Building B', 4, 1);
+
+  await ensureUnits(buildingA.id, [
+    { code: 'A-101', type: '1BR', area: 75, bedrooms: 1, bathrooms: 1, floor: 1, price: 850000 },
+    { code: 'A-102', type: '2BR', area: 110, bedrooms: 2, bathrooms: 2, floor: 1, price: 1250000 },
+    { code: 'A-201', type: '2BR', area: 115, bedrooms: 2, bathrooms: 2, floor: 2, price: 1300000, status: UnitStatus.RESERVED },
+    { code: 'A-301', type: '3BR', area: 165, bedrooms: 3, bathrooms: 2, floor: 3, price: 1850000 },
+  ]);
+  await ensureUnits(buildingB.id, [
+    { code: 'B-101', type: '2BR', area: 105, bedrooms: 2, bathrooms: 2, floor: 1, price: 1180000 },
+    { code: 'B-102', type: '3BR', area: 160, bedrooms: 3, bathrooms: 3, floor: 1, price: 1750000 },
+  ]);
+
+  // ---- Demo project 2 (draft) ----
+  await ensureProject({
+    nameAr: 'فيلات الجولف',
+    nameEn: 'Golf Villas',
+    descriptionAr: 'فيلات راقية بإطلالة على الجولف.',
+    descriptionEn: 'Premium villas overlooking the golf course.',
+    city: 'Jeddah',
+    lat: 21.4858,
+    lng: 39.1925,
+    status: ProjectStatus.DRAFT,
+    featured: false,
+    services: [{ ar: 'ملعب جولف', en: 'Golf Course' }],
   });
 
-  // ---- Maintenance categories ----
-  await Promise.all(
-    [
-      { ar: 'سباكة', en: 'Plumbing' },
-      { ar: 'كهرباء', en: 'Electrical' },
-      { ar: 'تكييف', en: 'HVAC' },
-      { ar: 'أعمال عامة', en: 'General' },
-    ].map((name) => prisma.maintenanceCategory.create({ data: { name } })),
-  );
+  // ---- Maintenance categories (find-or-create by en) ----
+  for (const name of [
+    { ar: 'سباكة', en: 'Plumbing' },
+    { ar: 'كهرباء', en: 'Electrical' },
+    { ar: 'تكييف', en: 'HVAC' },
+    { ar: 'أعمال عامة', en: 'General' },
+  ]) {
+    const existing = await findMaintenanceCategoryByEn(name.en);
+    if (!existing) {
+      await prisma.maintenanceCategory.create({ data: { name } });
+    }
+  }
 
-  // ---- Notification templates ----
+  // ---- Notification templates (already idempotent via @unique code) ----
   await Promise.all(
     [
       {
@@ -179,10 +309,8 @@ async function main() {
     ),
   );
 
-  // ---- Lead + assignment ----
-  // Every lead must be linked to a Client (User). Find-or-create by phone so
-  // re-running the seed doesn't produce duplicates.
-  const fbSource = await prisma.leadSource.findFirst();
+  // ---- Lead + assignment (idempotent by clientId + projectInterestId) ----
+  const fbSource = await findLeadSourceByEn('Facebook');
   if (fbSource) {
     const phone = '+966500000001';
     const email = 'ahmed@example.com';
@@ -192,18 +320,47 @@ async function main() {
       (await prisma.user.create({
         data: { role: 'CLIENT', fullName, phone, email, locale: 'ar' },
       }));
-    await prisma.lead.create({
-      data: {
-        clientId: client.id,
-        fullName: client.fullName,
-        phone: client.phone ?? phone,
-        email: client.email ?? email,
-        sourceId: fbSource.id,
-        projectInterestId: project.id,
-        assignedSalesId: sales.id,
-      },
+    const existingLead = await prisma.lead.findFirst({
+      where: { clientId: client.id, projectInterestId: proj1.id },
     });
+    if (!existingLead) {
+      await prisma.lead.create({
+        data: {
+          clientId: client.id,
+          fullName: client.fullName,
+          phone: client.phone ?? phone,
+          email: client.email ?? email,
+          sourceId: fbSource.id,
+          projectInterestId: proj1.id,
+          assignedSalesId: sales.id,
+        },
+      });
+    }
   }
+
+  // ---- Broker permission codes (Phase 1: codes only; no role bindings yet) ----
+  const brokerPermissions: Array<{ code: string; description: string }> = [
+    { code: 'brokers:read', description: 'List/view brokerage firms' },
+    { code: 'brokers:create', description: 'Onboard a new brokerage firm' },
+    { code: 'brokers:update', description: 'Edit brokerage firm profile and access' },
+    { code: 'brokers:suspend', description: 'Suspend a brokerage firm' },
+    { code: 'brokers:terminate', description: 'Terminate a brokerage firm' },
+    { code: 'broker_users:read', description: 'List/view broker agent users' },
+    { code: 'broker_users:invite', description: 'Invite a new broker agent' },
+    { code: 'broker_users:update', description: 'Edit broker agent profile and permissions' },
+    { code: 'broker_users:remove', description: 'Remove a broker agent from a firm' },
+    { code: 'broker_leads:approve', description: 'Approve a lead submitted by a broker' },
+    { code: 'broker_leads:reject', description: 'Reject a lead submitted by a broker' },
+  ];
+  await Promise.all(
+    brokerPermissions.map((p) =>
+      prisma.permission.upsert({
+        where: { code: p.code },
+        create: p,
+        update: { description: p.description },
+      }),
+    ),
+  );
 
   console.log('✅ Seed complete');
   console.log('   Admin:', adminEmail, '/', adminPassword);

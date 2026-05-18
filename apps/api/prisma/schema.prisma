@@ -19,6 +19,7 @@ enum UserRole {
   SALES
   CLIENT
   CUSTOMER
+  BROKER
 }
 
 enum Locale {
@@ -69,6 +70,22 @@ model User {
   actedVisitActivities    VisitActivity[]           @relation("VisitActivityActor")
   clientVisitActivities   VisitActivity[]           @relation("VisitActivityClient")
   planTemplatesCreated    InstallmentPlanTemplate[] @relation("PlanTemplateCreator")
+
+  // ── Broker relations (additive) ──────────────────────────────────────────
+  brokerProfile           BrokerUser?
+  brokersOnboarded        Broker[]                  @relation("BrokerCreatedBy")
+  brokerLeads             Lead[]                    @relation("LeadBrokerAgent")
+  brokerReservations      Reservation[]             @relation("ReservationBrokerAgent")
+  brokerContracts         Contract[]                @relation("ContractBrokerAgent")
+  brokerVisitRequests     VisitRequest[]            @relation("VisitRequestBrokerAgent")
+  brokerAppointments      VisitAppointment[]        @relation("AppointmentBrokerAgent")
+  brokerCommissionsAsAgent    BrokerCommission[]    @relation("BrokerCommissionAgent")
+  brokerCommissionsApproved   BrokerCommission[]    @relation("BrokerCommissionApprovedBy")
+  brokerCommissionsRejected   BrokerCommission[]    @relation("BrokerCommissionRejectedBy")
+  brokerPayoutsApproved       BrokerPayout[]        @relation("BrokerPayoutApprovedBy")
+  brokerPayoutsProcessed      BrokerPayout[]        @relation("BrokerPayoutProcessedBy")
+  brokerPayoutsCancelled      BrokerPayout[]        @relation("BrokerPayoutCancelledBy")
+  brokerActivityLogs          BrokerActivityLog[]   @relation("BrokerActivityLogAgent")
 
   @@index([role])
   @@index([phone])
@@ -174,6 +191,8 @@ model Project {
   favorites     Favorite[]
   appointments  VisitAppointment[]
   planTemplates InstallmentPlanTemplate[] @relation("ProjectPlanTemplates")
+  brokerAccess  BrokerProjectAccess[]
+  brokerCommissions BrokerCommission[]
 
   @@index([city])
   @@index([status, featured])
@@ -243,6 +262,8 @@ model Unit {
   appointments        VisitAppointment[]
   leadsInterested     Lead[]                    @relation("LeadUnitInterest")
   planTemplates       InstallmentPlanTemplate[] @relation("UnitPlanTemplates")
+  brokerAccess        BrokerUnitAccess[]
+  brokerCommissions   BrokerCommission[]
 
   @@unique([buildingId, code])
   @@index([status])
@@ -318,6 +339,17 @@ model Lead {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
+  // ── Broker attribution (additive, all nullable) ─────────────────────────
+  brokerId              String?            @db.Uuid
+  broker                Broker?            @relation(fields: [brokerId], references: [id])
+  brokerAgentId         String?            @db.Uuid
+  brokerAgent           User?              @relation("LeadBrokerAgent", fields: [brokerAgentId], references: [id])
+  brokerSubmittedAt     DateTime?
+  brokerApprovalStatus  BrokerLeadStatus?
+  brokerApprovedAt      DateTime?
+  brokerRejectedAt      DateTime?
+  brokerRejectionReason String?
+
   notes           LeadNote[]
   activities      LeadActivity[]
   reservations    Reservation[]
@@ -331,6 +363,9 @@ model Lead {
   @@index([stage])
   @@index([phone])
   @@index([unitInterestId])
+  @@index([brokerId])
+  @@index([brokerAgentId])
+  @@index([brokerApprovalStatus])
 }
 
 model LeadNote {
@@ -461,6 +496,12 @@ model VisitRequest {
   rejectedAt             DateTime?
   cancelledAt            DateTime?
 
+  // ── Broker attribution (additive, all nullable) ─────────────────────────
+  brokerId      String? @db.Uuid
+  broker        Broker? @relation(fields: [brokerId], references: [id])
+  brokerAgentId String? @db.Uuid
+  brokerAgent   User?   @relation("VisitRequestBrokerAgent", fields: [brokerAgentId], references: [id])
+
   appointments    VisitAppointment[]
   visitActivities VisitActivity[]
 
@@ -468,6 +509,8 @@ model VisitRequest {
   @@index([requestStatus])
   @@index([projectId])
   @@index([assignedSalesId])
+  @@index([brokerId])
+  @@index([brokerAgentId])
 }
 
 model VisitAppointment {
@@ -506,6 +549,12 @@ model VisitAppointment {
   cancelledAt        DateTime?
   noShowAt           DateTime?
 
+  // ── Broker attribution (additive, all nullable) ─────────────────────────
+  brokerId      String? @db.Uuid
+  broker        Broker? @relation(fields: [brokerId], references: [id])
+  brokerAgentId String? @db.Uuid
+  brokerAgent   User?   @relation("AppointmentBrokerAgent", fields: [brokerAgentId], references: [id])
+
   visitActivities VisitActivity[]
 
   @@index([status])
@@ -514,6 +563,8 @@ model VisitAppointment {
   @@index([assignedSalesId])
   @@index([leadId])
   @@index([clientId])
+  @@index([brokerId])
+  @@index([brokerAgentId])
 }
 
 model VisitActivity {
@@ -630,10 +681,19 @@ model Reservation {
   snapshotTotalPayable        Decimal?                      @db.Decimal(14, 2)
   snapshotFinalPaymentAmount  Decimal?                      @db.Decimal(14, 2)
 
+  // ── Broker attribution (additive, all nullable; salesId stays required) ──
+  brokerId               String?  @db.Uuid
+  broker                 Broker?  @relation(fields: [brokerId], references: [id])
+  brokerAgentId          String?  @db.Uuid
+  brokerAgent            User?    @relation("ReservationBrokerAgent", fields: [brokerAgentId], references: [id])
+  commissionLockedPct    Decimal? @db.Decimal(5, 2)
+  commissionLockedAmount Decimal? @db.Decimal(14, 2)
+
   reservationNotes ReservationNote[]
   activities       ReservationActivity[]
   contract         Contract?
   deposits         Deposit[]
+  brokerCommissions BrokerCommission[]
 
   @@index([unitId])
   @@index([salesId])
@@ -641,6 +701,8 @@ model Reservation {
   @@index([status])
   @@index([installmentPlanTemplateId])
   @@index([selectedDurationOptionId])
+  @@index([brokerId])
+  @@index([brokerAgentId])
 }
 
 enum ReservationActivityType {
@@ -696,12 +758,21 @@ model Contract {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  // ── Broker attribution (additive, all nullable) ─────────────────────────
+  brokerId      String? @db.Uuid
+  broker        Broker? @relation(fields: [brokerId], references: [id])
+  brokerAgentId String? @db.Uuid
+  brokerAgent   User?   @relation("ContractBrokerAgent", fields: [brokerAgentId], references: [id])
+
   installmentPlan InstallmentPlan?
   deposits        Deposit[]
+  brokerCommission BrokerCommission?
 
   @@index([customerId])
   @@index([unitId])
   @@index([reservationId])
+  @@index([brokerId])
+  @@index([brokerAgentId])
 }
 
 model InstallmentPlan {
@@ -1023,6 +1094,270 @@ model AuditLog {
 
   @@index([entityType, entityId])
   @@index([actorId, createdAt])
+}
+
+// =============================================================================
+// BROKERS (Phase 1 — foundation only; no commissions/payouts yet)
+// =============================================================================
+
+enum BrokerStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum BrokerUserStatus {
+  INVITED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum BrokerCommissionModel {
+  PERCENT_OF_SALE
+  FIXED_PER_UNIT
+  TIERED
+}
+
+enum BrokerLeadStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DUPLICATE
+  EXPIRED
+}
+
+enum BrokerCommissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum BrokerPayoutStatus {
+  DRAFT
+  APPROVED
+  PROCESSING
+  PAID
+  CANCELLED
+}
+
+enum BrokerPayoutMethod {
+  BANK_TRANSFER
+  CHEQUE
+  CASH
+  OTHER
+}
+
+enum BrokerActivityType {
+  PAYOUT_CREATED
+  PAYOUT_APPROVED
+  PAYOUT_PROCESSING
+  PAYOUT_PAID
+  PAYOUT_CANCELLED
+}
+
+model Broker {
+  id                     String                @id @default(uuid()) @db.Uuid
+  companyName            String
+  commercialName         String?
+  code                   String                @unique
+  logoUrl                String?
+  email                  String?
+  phone                  String?
+  address                String?
+  city                   String?
+  taxId                  String?               @unique
+  commercialRegistration String?
+  bankName               String?
+  bankAccountName        String?
+  bankIban               String?
+  defaultCommissionPct   Decimal               @default(0) @db.Decimal(5, 2)
+  commissionModel        BrokerCommissionModel @default(PERCENT_OF_SALE)
+  status                 BrokerStatus          @default(PENDING)
+  contractStartAt        DateTime?
+  contractEndAt          DateTime?
+  contractPdfUrl         String?
+  notes                  String?
+  createdById            String?               @db.Uuid
+  createdBy              User?                 @relation("BrokerCreatedBy", fields: [createdById], references: [id])
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+
+  brokerUsers       BrokerUser[]
+  projectAccess     BrokerProjectAccess[]
+  unitAccess        BrokerUnitAccess[]
+  leads             Lead[]
+  reservations      Reservation[]
+  contracts         Contract[]
+  visitRequests     VisitRequest[]
+  visitAppointments VisitAppointment[]
+  commissions       BrokerCommission[]
+  payouts           BrokerPayout[]
+  activityLogs      BrokerActivityLog[]
+
+  @@index([status])
+  @@index([code])
+}
+
+model BrokerUser {
+  id                    String           @id @default(uuid()) @db.Uuid
+  userId                String           @unique @db.Uuid
+  user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brokerId              String           @db.Uuid
+  broker                Broker           @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  jobTitle              String?
+  isPrimaryContact      Boolean          @default(false)
+  canManageBrokerUsers  Boolean          @default(false)
+  canViewCommissions    Boolean          @default(true)
+  invitedAt             DateTime?
+  joinedAt              DateTime?
+  status                BrokerUserStatus @default(INVITED)
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@index([brokerId, status])
+}
+
+model BrokerProjectAccess {
+  id                 String   @id @default(uuid()) @db.Uuid
+  brokerId           String   @db.Uuid
+  broker             Broker   @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  projectId          String   @db.Uuid
+  project            Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  commissionPct      Decimal? @db.Decimal(5, 2)
+  fixedAmountPerUnit Decimal? @db.Decimal(14, 2)
+  startsAt           DateTime?
+  endsAt             DateTime?
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  @@unique([brokerId, projectId])
+  @@index([projectId, active])
+}
+
+model BrokerUnitAccess {
+  id        String   @id @default(uuid()) @db.Uuid
+  brokerId  String   @db.Uuid
+  broker    Broker   @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  unitId    String   @db.Uuid
+  unit      Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  @@unique([brokerId, unitId])
+  @@index([unitId, active])
+}
+
+model BrokerCommission {
+  id                String                 @id @default(uuid()) @db.Uuid
+  commissionNumber  String                 @unique
+  brokerId          String                 @db.Uuid
+  broker            Broker                 @relation(fields: [brokerId], references: [id])
+  brokerAgentId     String?                @db.Uuid
+  brokerAgent       User?                  @relation("BrokerCommissionAgent", fields: [brokerAgentId], references: [id])
+  contractId        String                 @unique @db.Uuid
+  contract          Contract               @relation(fields: [contractId], references: [id])
+  reservationId     String?                @db.Uuid
+  reservation       Reservation?           @relation(fields: [reservationId], references: [id])
+  unitId            String                 @db.Uuid
+  unit              Unit                   @relation(fields: [unitId], references: [id])
+  projectId         String                 @db.Uuid
+  project           Project                @relation(fields: [projectId], references: [id])
+
+  basisAmount       Decimal                @db.Decimal(14, 2)
+  commissionPct     Decimal?               @db.Decimal(5, 2)
+  grossAmount       Decimal                @db.Decimal(14, 2)
+  taxPct            Decimal                @default(0) @db.Decimal(5, 2)
+  taxAmount         Decimal                @default(0) @db.Decimal(14, 2)
+  withholdingPct    Decimal                @default(0) @db.Decimal(5, 2)
+  withholdingAmount Decimal                @default(0) @db.Decimal(14, 2)
+  netAmount         Decimal                @db.Decimal(14, 2)
+
+  status            BrokerCommissionStatus @default(PENDING)
+  earnedAt          DateTime
+
+  approvedById      String?                @db.Uuid
+  approvedBy        User?                  @relation("BrokerCommissionApprovedBy", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  rejectedById      String?                @db.Uuid
+  rejectedBy        User?                  @relation("BrokerCommissionRejectedBy", fields: [rejectedById], references: [id])
+  rejectedAt        DateTime?
+  rejectionReason   String?
+
+  notes             String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  // ── Payout link (nullable; set when admin attaches the commission to a
+  //    DRAFT BrokerPayout) ──────────────────────────────────────────────────
+  payoutId          String?                @db.Uuid
+  payout            BrokerPayout?          @relation(fields: [payoutId], references: [id])
+
+  @@index([brokerId, status])
+  @@index([projectId, earnedAt])
+  @@index([brokerAgentId])
+  @@index([status, earnedAt])
+  @@index([payoutId])
+}
+
+model BrokerPayout {
+  id                String              @id @default(uuid()) @db.Uuid
+  payoutNumber      String              @unique
+  brokerId          String              @db.Uuid
+  broker            Broker              @relation(fields: [brokerId], references: [id])
+  period            String?             // "2026-05" style, optional
+
+  totalGross        Decimal             @default(0) @db.Decimal(14, 2)
+  totalTax          Decimal             @default(0) @db.Decimal(14, 2)
+  totalWithholding  Decimal             @default(0) @db.Decimal(14, 2)
+  totalNet          Decimal             @default(0) @db.Decimal(14, 2)
+
+  status            BrokerPayoutStatus  @default(DRAFT)
+  paymentMethod     BrokerPayoutMethod?
+  paymentReference  String?
+  receiptUrl        String?
+  invoiceUrl        String?
+  scheduledAt       DateTime?
+
+  approvedById      String?             @db.Uuid
+  approvedBy        User?               @relation("BrokerPayoutApprovedBy", fields: [approvedById], references: [id])
+  approvedAt        DateTime?
+  processedById     String?             @db.Uuid
+  processedBy       User?               @relation("BrokerPayoutProcessedBy", fields: [processedById], references: [id])
+  processedAt       DateTime?
+  paidAt            DateTime?
+  cancelledById     String?             @db.Uuid
+  cancelledBy       User?               @relation("BrokerPayoutCancelledBy", fields: [cancelledById], references: [id])
+  cancelledAt       DateTime?
+  cancelReason      String?
+
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  commissions       BrokerCommission[]
+
+  @@index([brokerId, status])
+  @@index([brokerId, period])
+  @@index([status, createdAt])
+}
+
+model BrokerActivityLog {
+  id            String             @id @default(uuid()) @db.Uuid
+  brokerId      String             @db.Uuid
+  broker        Broker             @relation(fields: [brokerId], references: [id], onDelete: Cascade)
+  brokerAgentId String?            @db.Uuid
+  brokerAgent   User?              @relation("BrokerActivityLogAgent", fields: [brokerAgentId], references: [id])
+  type          BrokerActivityType
+  entityType    String
+  entityId      String?            @db.Uuid
+  payload       Json               @default("{}")
+  createdAt     DateTime           @default(now())
+
+  @@index([brokerId, createdAt])
+  @@index([brokerAgentId, createdAt])
 }
 
 // =============================================================================

@@ -34,6 +34,16 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ReportsModule } from './modules/reports/reports.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { BrokersModule } from './modules/brokers/brokers.module';
+import { BrokerUsersModule } from './modules/broker-users/broker-users.module';
+import { BrokerAccessModule } from './modules/broker-access/broker-access.module';
+import { BrokerPortalModule } from './modules/broker-portal/broker-portal.module';
+import { BrokerLeadsModule } from './modules/broker-leads/broker-leads.module';
+import { BrokerReservationsModule } from './modules/broker-reservations/broker-reservations.module';
+import { BrokerContractsModule } from './modules/broker-contracts/broker-contracts.module';
+import { BrokerCommissionsModule } from './modules/broker-commissions/broker-commissions.module';
+import { BrokerPayoutsModule } from './modules/broker-payouts/broker-payouts.module';
+import { BrokerReportsModule } from './modules/broker-reports/broker-reports.module';
 import { HealthController } from './modules/health/health.controller';
 
 @Module({
@@ -75,6 +85,16 @@ import { HealthController } from './modules/health/health.controller';
     ReportsModule,
     AuditModule,
     SettingsModule,
+    BrokersModule,
+    BrokerUsersModule,
+    BrokerAccessModule,
+    BrokerPortalModule,
+    BrokerLeadsModule,
+    BrokerReservationsModule,
+    BrokerContractsModule,
+    BrokerCommissionsModule,
+    BrokerPayoutsModule,
+    BrokerReportsModule,
   ],
   controllers: [HealthController],
   providers: [

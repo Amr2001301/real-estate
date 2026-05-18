@@ -1,19 +1,22 @@
 import { LogOut } from 'lucide-react';
-import type { SessionUser } from '@/lib/session';
-import { filterNavForRole } from '@/lib/nav';
+import type { SessionUser, SessionRole } from '@/lib/session';
+import { filterNavForRole, type NavSection } from '@/lib/nav';
 import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
 import { NavLink } from './nav-link';
 
 interface Props {
   user: SessionUser;
+  /** Optional override for nav sections. Falls back to filterNavForRole(user.role). */
+  sections?: NavSection[];
   onNavigate?: () => void;
   className?: string;
 }
 
-const ROLE_LABEL: Record<SessionUser['role'], string> = {
+const ROLE_LABEL: Record<SessionRole, string> = {
   ADMIN: 'مدير النظام',
   SALES: 'مبيعات',
+  BROKER: 'وسيط',
 };
 
 function initials(name: string): string {
@@ -23,8 +26,8 @@ function initials(name: string): string {
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
-export function SidebarContent({ user, onNavigate }: Props) {
-  const sections = filterNavForRole(user.role);
+export function SidebarContent({ user, sections, onNavigate }: Props) {
+  const resolved = sections ?? filterNavForRole(user.role);
 
   return (
     <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text">
@@ -33,7 +36,7 @@ export function SidebarContent({ user, onNavigate }: Props) {
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-5 space-y-6">
-        {sections.map((section) => (
+        {resolved.map((section) => (
           <div key={section.title}>
             <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-text-muted">
               {section.title}
@@ -83,7 +86,7 @@ export function SidebarContent({ user, onNavigate }: Props) {
   );
 }
 
-export function Sidebar({ user, className }: Omit<Props, 'onNavigate'>) {
+export function Sidebar({ user, sections, className }: Omit<Props, 'onNavigate'>) {
   return (
     <aside
       className={`hidden lg:flex w-[264px] shrink-0 relative z-20 ${className ?? ''}`}
@@ -93,7 +96,7 @@ export function Sidebar({ user, className }: Omit<Props, 'onNavigate'>) {
       }}
     >
       <div className="sticky top-0 h-screen w-full">
-        <SidebarContent user={user} />
+        <SidebarContent user={user} sections={sections} />
       </div>
     </aside>
   );

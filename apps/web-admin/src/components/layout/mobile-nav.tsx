@@ -4,10 +4,17 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import type { SessionUser } from '@/lib/session';
+import type { NavSection } from '@/lib/nav';
 import { IconButton } from '@/components/ui/icon-button';
 import { SidebarContent } from './sidebar';
 
-export function MobileNav({ user }: { user: SessionUser }) {
+export function MobileNav({
+  user,
+  sections,
+}: {
+  user: SessionUser;
+  sections?: NavSection[];
+}) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
@@ -58,7 +65,7 @@ export function MobileNav({ user }: { user: SessionUser }) {
             >
               <X className="h-4 w-4" />
             </button>
-            <SidebarContent user={user} onNavigate={() => setOpen(false)} />
+            <SidebarContent user={user} sections={sections} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}

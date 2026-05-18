@@ -47,7 +47,12 @@ export default function UnitForm({ unit, projects }: Props) {
         title="الموقع داخل المشروع"
         description="حدّد المشروع، ثم المرحلة، ثم المبنى الذي تنتمي إليه الوحدة."
       >
-        <BuildingPicker projects={projects} initialBuildingId={unit?.buildingId} />
+        <BuildingPicker
+            projects={projects}
+            initialProjectId={unit?.building?.phase?.projectId}
+            initialPhaseId={unit?.building?.phaseId}
+            initialBuildingId={unit?.buildingId}
+          />
       </FormSection>
 
       <FormSection

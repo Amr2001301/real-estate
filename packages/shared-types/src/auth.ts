@@ -32,7 +32,7 @@ export interface AuthTokens {
 export interface AuthPayload {
   user: {
     id: string;
-    role: 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER';
+    role: 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER' | 'BROKER';
     fullName: string;
     email: string | null;
     phone: string | null;

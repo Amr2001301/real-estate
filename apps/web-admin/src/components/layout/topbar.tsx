@@ -1,15 +1,29 @@
+import Link from 'next/link';
 import { Bell, HelpCircle, Search } from 'lucide-react';
 import type { SessionUser } from '@/lib/session';
 import { IconButton } from '@/components/ui/icon-button';
 import { UserMenu } from './user-menu';
+import { api } from '@/lib/api';
+import type { NotificationItem } from '@/lib/types';
 
 interface Props {
   user: SessionUser;
+  notificationsHref: string;
   /** Slot rendered on mobile (hamburger). Hidden on lg+. */
   leading?: React.ReactNode;
 }
 
-export function Topbar({ user, leading }: Props) {
+async function getUnreadCount(): Promise<number> {
+  try {
+    const items = await api.get<NotificationItem[]>('/me/notifications?unreadOnly=1');
+    return items.length;
+  } catch {
+    return 0;
+  }
+}
+
+export async function Topbar({ user, notificationsHref, leading }: Props) {
+  const unread = await getUnreadCount();
   return (
     <header className="sticky top-0 z-30 h-[72px] bg-surface/85 backdrop-blur-md border-b border-hairline">
       <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center gap-3">
@@ -37,15 +51,19 @@ export function Topbar({ user, leading }: Props) {
             <HelpCircle />
           </IconButton>
 
-          <div className="relative">
+          <Link href={notificationsHref as never} className="relative inline-flex">
             <IconButton label="الإشعارات" variant="ghost" size="md">
               <Bell />
             </IconButton>
-            <span
-              aria-hidden
-              className="absolute top-1.5 end-1.5 h-2 w-2 rounded-full bg-brand-500 ring-2 ring-surface"
-            />
-          </div>
+            {unread > 0 && (
+              <span
+                aria-label={`${unread} إشعار غير مقروء`}
+                className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-brand-600 text-white text-[10px] font-semibold ring-2 ring-surface tabular-nums"
+              >
+                {unread > 99 ? '99+' : unread}
+              </span>
+            )}
+          </Link>
 
           <div className="h-7 w-px bg-hairline mx-1.5 hidden sm:block" />
 

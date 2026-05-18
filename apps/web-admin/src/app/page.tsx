@@ -4,5 +4,5 @@ import { getSession } from '@/lib/session';
 export default async function Home() {
   const user = await getSession();
   if (!user) redirect('/login');
-  redirect('/dashboard');
+  redirect(user.role === 'BROKER' ? '/portal' : '/dashboard');
 }

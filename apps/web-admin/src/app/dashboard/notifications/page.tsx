@@ -1,89 +1,43 @@
-import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
+import { FileEdit } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { Translatable } from '@/lib/types';
-import { tx, formatDate } from '@/lib/format';
+import type { NotificationItem } from '@/lib/types';
+import { PageHeader } from '@/components/ui/page-header';
+import { Button } from '@/components/ui/button';
+import { NotificationList } from '@/components/notifications/notification-list';
 
-interface Template {
-  id: string;
-  code: string;
-  channel: 'PUSH' | 'EMAIL' | 'IN_APP';
-  subject: Translatable;
-  body: Translatable;
-  active: boolean;
-  updatedAt: string;
-}
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
-async function upsertTemplateAction(formData: FormData) {
-  'use server';
-  await api.post('/notification-templates', {
-    code: String(formData.get('code') ?? ''),
-    channel: String(formData.get('channel') ?? 'PUSH'),
-    ar_subject: String(formData.get('ar_subject') ?? ''),
-    en_subject: String(formData.get('en_subject') ?? ''),
-    ar_body: String(formData.get('ar_body') ?? ''),
-    en_body: String(formData.get('en_body') ?? ''),
-  });
-  revalidatePath('/dashboard/notifications');
-}
+export default async function AdminNotificationsInboxPage() {
+  const res = await safe(api.get<NotificationItem[]>('/me/notifications'));
+  const items = res.data ?? [];
 
-export default async function NotificationsPage() {
-  const r = await safe(api.get<Template[]>('/notification-templates'));
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">الإشعارات</h1>
+    <div className="space-y-5">
+      <PageHeader
+        title="الإشعارات"
+        description="جميع الإشعارات الواردة. اضغط على الإشعار للانتقال إلى السجل المرتبط."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'الإشعارات' },
+        ]}
+        actions={
+          <Link href="/dashboard/notifications/templates">
+            <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
+              قوالب الإشعارات
+            </Button>
+          </Link>
+        }
+      />
 
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h2 className="font-bold mb-3">قوالب الإشعارات</h2>
-        {r.error && <div className="rounded-lg bg-red-50 text-red-700 p-3 text-sm mb-3">{r.error}</div>}
-        <ul className="divide-y divide-gray-100 text-sm">
-          {(r.data ?? []).map((t) => (
-            <li key={t.id} className="py-3">
-              <div className="flex justify-between">
-                <span className="font-mono text-xs text-brand-700">{t.code}</span>
-                <span className="text-xs text-gray-500">{t.channel} · {formatDate(t.updatedAt)}</span>
-              </div>
-              <p className="mt-1 text-sm font-medium">{tx(t.subject)}</p>
-              <p className="text-xs text-gray-600 mt-0.5">{tx(t.body)}</p>
-            </li>
-          ))}
-          {(r.data ?? []).length === 0 && (
-            <li className="text-xs text-gray-400 py-2">لا توجد قوالب</li>
-          )}
-        </ul>
-      </section>
+      {res.error && (
+        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          تعذر تحميل الإشعارات: {res.error}
+        </div>
+      )}
 
-      <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <h2 className="font-bold mb-3">إنشاء / تعديل قالب</h2>
-        <form action={upsertTemplateAction} className="space-y-3">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              name="code"
-              required
-              dir="ltr"
-              placeholder="code (e.g. visit_approved)"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono"
-            />
-            <select
-              name="channel"
-              defaultValue="PUSH"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
-            >
-              <option value="PUSH">PUSH</option>
-              <option value="EMAIL">EMAIL</option>
-              <option value="IN_APP">IN_APP</option>
-            </select>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input name="ar_subject" required dir="rtl" placeholder="العنوان" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <input name="en_subject" required dir="ltr" placeholder="Subject" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <textarea name="ar_body" required dir="rtl" rows={3} placeholder="نص الإشعار" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-            <textarea name="en_body" required dir="ltr" rows={3} placeholder="Body" className="rounded-lg border border-gray-300 px-3 py-2 text-sm" />
-          </div>
-          <button className="rounded-lg bg-brand-600 hover:bg-brand-700 text-white px-3 py-1.5 text-sm">حفظ</button>
-        </form>
-      </section>
+      <NotificationList items={items} basePath="/dashboard" />
     </div>
   );
 }

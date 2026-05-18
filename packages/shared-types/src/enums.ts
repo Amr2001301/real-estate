@@ -3,6 +3,7 @@ export const UserRole = {
   SALES: 'SALES',
   CLIENT: 'CLIENT',
   CUSTOMER: 'CUSTOMER',
+  BROKER: 'BROKER',
 } as const;
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
@@ -91,3 +92,35 @@ export const MediaType = {
   DOCUMENT: 'DOCUMENT',
 } as const;
 export type MediaType = (typeof MediaType)[keyof typeof MediaType];
+
+export const BrokerStatus = {
+  PENDING: 'PENDING',
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  TERMINATED: 'TERMINATED',
+} as const;
+export type BrokerStatus = (typeof BrokerStatus)[keyof typeof BrokerStatus];
+
+export const BrokerUserStatus = {
+  INVITED: 'INVITED',
+  ACTIVE: 'ACTIVE',
+  SUSPENDED: 'SUSPENDED',
+  REMOVED: 'REMOVED',
+} as const;
+export type BrokerUserStatus = (typeof BrokerUserStatus)[keyof typeof BrokerUserStatus];
+
+export const BrokerCommissionModel = {
+  PERCENT_OF_SALE: 'PERCENT_OF_SALE',
+  FIXED_PER_UNIT: 'FIXED_PER_UNIT',
+  TIERED: 'TIERED',
+} as const;
+export type BrokerCommissionModel = (typeof BrokerCommissionModel)[keyof typeof BrokerCommissionModel];
+
+export const BrokerLeadStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+  DUPLICATE: 'DUPLICATE',
+  EXPIRED: 'EXPIRED',
+} as const;
+export type BrokerLeadStatus = (typeof BrokerLeadStatus)[keyof typeof BrokerLeadStatus];
