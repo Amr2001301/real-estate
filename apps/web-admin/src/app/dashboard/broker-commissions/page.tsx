@@ -71,7 +71,7 @@ export default async function AdminBrokerCommissionsPage({
     <div className="space-y-5">
       <PageHeader
         title="عمولات الوسطاء"
-        description="عمولات تم احتسابها تلقائياً من العقود الموقّعة. تتطلب اعتماد الإدارة قبل الدفع."
+        description="عمولات تُحتسب تلقائيًا عند توقيع عقود ناتجة عن الوسطاء، وتتطلب اعتماد الإدارة قبل الدفع."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوسطاء', href: '/dashboard/brokers' },
@@ -170,7 +170,7 @@ export default async function AdminBrokerCommissionsPage({
                     <EmptyState
                       icon={<BadgePercent />}
                       title="لا توجد عمولات بعد"
-                      description="تُحتسب العمولات تلقائياً عند توقيع عقد منبثق من حجز وسيط."
+                      description="تُنشأ العمولات تلقائيًا عند توقيع عقد ناتج عن وسيط. لا يتم إنشاؤها يدويًا."
                     />
                   </td>
                 </tr>

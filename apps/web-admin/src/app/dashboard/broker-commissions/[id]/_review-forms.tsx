@@ -56,7 +56,13 @@ export function RejectCommissionForm({ id }: { id: string }) {
     {},
   );
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form
+      action={formAction}
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        if (!window.confirm('سيتم رفض العمولة. هل أنت متأكد؟')) e.preventDefault();
+      }}
+    >
       <Banner state={state} />
       <Field label="سبب الرفض" name="reason" required>
         <Textarea id={`reject-${id}`} name="reason" rows={3} required />
@@ -74,7 +80,13 @@ export function CancelCommissionForm({ id }: { id: string }) {
     {},
   );
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form
+      action={formAction}
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        if (!window.confirm('سيتم إلغاء العمولة. هل أنت متأكد؟')) e.preventDefault();
+      }}
+    >
       <Banner state={state} />
       <Field label="سبب الإلغاء" name="reason" required>
         <Textarea id={`cancel-${id}`} name="reason" rows={3} required />

@@ -66,13 +66,20 @@ export default async function AdminBrokerContractsPage({
   return (
     <div className="space-y-5">
       <PageHeader
-        title="عقود الوسطاء"
-        description="جميع العقود المنبثقة من حجوزات الوسطاء."
+        title="عقود من الوسطاء"
+        description="عقود بيع العملاء الناتجة عن حجوزات أرسلها الوسطاء."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'عقود الوسطاء' },
+          { label: 'عقود من الوسطاء' },
         ]}
+        actions={
+          <Link href="/dashboard/broker-reservations?status=APPROVED">
+            <Button variant="outline" size="md">
+              تحويل حجز وسيط إلى عقد
+            </Button>
+          </Link>
+        }
       />
 
       {contractsRes.error && (
@@ -165,7 +172,7 @@ export default async function AdminBrokerContractsPage({
                     <EmptyState
                       icon={<FileText />}
                       title="لا توجد عقود من الوسطاء"
-                      description="ستظهر هنا فور تحويل أول حجز وسيط إلى عقد."
+                      description="ستظهر هنا عقود البيع التي تم إنشاؤها من حجوزات ناتجة عن الوسطاء."
                     />
                   </td>
                 </tr>

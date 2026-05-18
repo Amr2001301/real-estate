@@ -1,9 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
-import { BrokerReservationsQueryDto } from './dto/broker-reservation.dto';
+import { BrokerPortalReservationsService } from '../broker-portal/broker-portal-reservations.service';
+import {
+  BrokerReservationsQueryDto,
+  CreateAdminBrokerReservationDto,
+} from './dto/broker-reservation.dto';
 
 const BROKER_RESERVATION_INCLUDE = {
   unit: {
@@ -69,7 +78,10 @@ const BROKER_RESERVATION_INCLUDE = {
 
 @Injectable()
 export class BrokerReservationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly portalReservations: BrokerPortalReservationsService,
+  ) {}
 
   async list(query: BrokerReservationsQueryDto, actor: AuthUser) {
     const page = query.page ?? 1;
@@ -128,5 +140,76 @@ export class BrokerReservationsService {
       throw new NotFoundException('Reservation not found');
     }
     return reservation;
+  }
+
+  // ── Admin "create on behalf of broker" (Phase 18A) ─────────────────────
+  //
+  // Admin enters a reservation that a broker phoned/whatsapp'd in. Identity
+  // checks (broker active, optional agent belongs to broker + is active)
+  // happen here; the rest of the validation — lead approved, sales assigned,
+  // unit visible to broker, unit AVAILABLE, no duplicate active reservation,
+  // commission snapshot — is delegated to the shared core in
+  // `BrokerPortalReservationsService.createForActor()` so portal and admin
+  // paths can never drift.
+
+  async createOnBehalfOfBroker(
+    actor: AuthUser,
+    dto: CreateAdminBrokerReservationDto,
+  ) {
+    const broker = await this.prisma.broker.findUnique({
+      where: { id: dto.brokerId },
+      select: { id: true, status: true, companyName: true },
+    });
+    if (!broker) throw new NotFoundException('Broker not found');
+    if (broker.status !== 'ACTIVE') {
+      throw new ConflictException(
+        `Broker ${broker.companyName} is not ACTIVE — cannot create a reservation on their behalf`,
+      );
+    }
+
+    if (dto.brokerAgentId) {
+      const agent = await this.prisma.brokerUser.findUnique({
+        where: { id: dto.brokerAgentId },
+        select: { id: true, userId: true, brokerId: true, status: true },
+      });
+      if (!agent || agent.brokerId !== dto.brokerId) {
+        throw new BadRequestException(
+          'brokerAgentId does not belong to the selected broker firm',
+        );
+      }
+      if (agent.status !== 'ACTIVE') {
+        throw new ConflictException('Selected broker agent is not ACTIVE');
+      }
+
+      return this.portalReservations.createForActor({
+        brokerId: dto.brokerId,
+        brokerAgentUserId: agent.userId,
+        actorUserId: actor.sub,
+        origin: 'ADMIN_ON_BEHALF',
+        dto: {
+          leadId: dto.leadId,
+          unitId: dto.unitId,
+          installmentPlanTemplateId: dto.installmentPlanTemplateId,
+          selectedDurationOptionId: dto.selectedDurationOptionId,
+          notes: dto.notes,
+          expiresInHours: dto.expiresInHours,
+        },
+      });
+    }
+
+    return this.portalReservations.createForActor({
+      brokerId: dto.brokerId,
+      brokerAgentUserId: null,
+      actorUserId: actor.sub,
+      origin: 'ADMIN_ON_BEHALF',
+      dto: {
+        leadId: dto.leadId,
+        unitId: dto.unitId,
+        installmentPlanTemplateId: dto.installmentPlanTemplateId,
+        selectedDurationOptionId: dto.selectedDurationOptionId,
+        notes: dto.notes,
+        expiresInHours: dto.expiresInHours,
+      },
+    });
   }
 }

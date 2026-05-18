@@ -21,6 +21,7 @@ import { Tabs } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmButton } from '@/components/confirm-button';
 import { UnitStatusBadge, ProjectStatusBadge } from '@/components/badges';
+import { UnitAccessGrantForm } from './_unit-access-form';
 import {
   grantProjectAccessAction,
   revokeProjectAccessAction,
@@ -287,32 +288,9 @@ export default async function BrokerAccessPage({
             </h2>
             <p className="text-xs text-slate-500 mb-4">
               عادةً تُمنح الصلاحيات على مستوى المشروع. استخدم هذا الجزء عند الحاجة لتقييد وحدات بعينها فقط.
+              لا يمكن منح صلاحية وصول لوحدة محجوزة أو مباعة.
             </p>
-            <form action={grantUnit} className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <Field label="الوحدة" name="unitId" required>
-                <Select id="unitId" name="unitId" required defaultValue="">
-                  <option value="" disabled>
-                    اختر وحدة
-                  </option>
-                  {allUnits.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.code} — {u.type}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-              <div className="flex items-end">
-                <label className="inline-flex items-center gap-2 text-sm text-slate-700 h-10">
-                  <Checkbox name="active" defaultChecked />
-                  <span>مفعّل</span>
-                </label>
-              </div>
-              <div className="flex items-end justify-end">
-                <Button type="submit" variant="primary" size="md">
-                  منح الصلاحية
-                </Button>
-              </div>
-            </form>
+            <UnitAccessGrantForm action={grantUnit} allUnits={allUnits} projects={allProjects} />
           </Card>
 
           <Card className="overflow-hidden">

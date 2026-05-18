@@ -5,6 +5,7 @@ import {
   Header,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -18,6 +19,8 @@ import {
   BrokerScopeGuard,
   type BrokerScopeContext,
 } from '../../common/guards/broker-scope.guard';
+import { BrokerManagerGuard } from '../../common/guards/broker-manager.guard';
+import { BrokerCommissionsViewerGuard } from '../../common/guards/broker-commissions-viewer.guard';
 import { BrokerPortalService } from './broker-portal.service';
 import { BrokerPortalLeadsService } from './broker-portal-leads.service';
 import { BrokerPortalVisitsService } from './broker-portal-visits.service';
@@ -27,7 +30,14 @@ import { BrokerPortalContractsService } from './broker-portal-contracts.service'
 import { BrokerPortalCommissionsService } from './broker-portal-commissions.service';
 import { BrokerPortalPayoutsService } from './broker-portal-payouts.service';
 import { BrokerPortalPerformanceService } from './broker-portal-performance.service';
+import { BrokerPortalTeamService } from './broker-portal-team.service';
 import { PortalUnitsQueryDto } from './dto/portal-query.dto';
+import {
+  CreatePortalTeamMemberDto,
+  PortalTeamQueryDto,
+  UpdatePortalTeamMemberDto,
+  UpdatePortalTeamMemberStatusDto,
+} from './dto/portal-team.dto';
 import { PortalContractsQueryDto } from './dto/portal-contract.dto';
 import { PortalCommissionsQueryDto } from './dto/portal-commission.dto';
 import { PortalPayoutsQueryDto } from './dto/portal-payout.dto';
@@ -61,6 +71,7 @@ export class BrokerPortalController {
     private readonly portalCommissions: BrokerPortalCommissionsService,
     private readonly portalPayouts: BrokerPortalPayoutsService,
     private readonly portalPerformance: BrokerPortalPerformanceService,
+    private readonly portalTeam: BrokerPortalTeamService,
   ) {}
 
   @Get('me')
@@ -185,8 +196,11 @@ export class BrokerPortalController {
   }
 
   // ── Commissions (read-only) ───────────────────────────────────────────
+  // Gated by BrokerCommissionsViewerGuard — only broker users whose
+  // `canViewCommissions` flag is true may read financial endpoints.
 
   @Get('commissions')
+  @UseGuards(BrokerCommissionsViewerGuard)
   listCommissions(
     @BrokerScope() scope: BrokerScopeContext,
     @Query() query: PortalCommissionsQueryDto,
@@ -195,6 +209,7 @@ export class BrokerPortalController {
   }
 
   @Get('commissions/:id')
+  @UseGuards(BrokerCommissionsViewerGuard)
   getCommission(
     @BrokerScope() scope: BrokerScopeContext,
     @Param('id', ParseUUIDPipe) id: string,
@@ -205,6 +220,7 @@ export class BrokerPortalController {
   // ── Payouts (read-only) ───────────────────────────────────────────────
 
   @Get('payouts')
+  @UseGuards(BrokerCommissionsViewerGuard)
   listPayouts(
     @BrokerScope() scope: BrokerScopeContext,
     @Query() query: PortalPayoutsQueryDto,
@@ -213,6 +229,7 @@ export class BrokerPortalController {
   }
 
   @Get('payouts/:id')
+  @UseGuards(BrokerCommissionsViewerGuard)
   getPayout(
     @BrokerScope() scope: BrokerScopeContext,
     @Param('id', ParseUUIDPipe) id: string,
@@ -246,5 +263,56 @@ export class BrokerPortalController {
     @Query() query: PortalPerformanceQueryDto,
   ) {
     return this.portalPerformance.exportCsv(scope, query);
+  }
+
+  // ── Team management ───────────────────────────────────────────────────
+  // Gated by BrokerManagerGuard — only the primary contact or users with
+  // `canManageBrokerUsers=true` may reach these routes.
+
+  @Get('team')
+  @UseGuards(BrokerManagerGuard)
+  listTeam(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Query() query: PortalTeamQueryDto,
+  ) {
+    return this.portalTeam.list(scope, query);
+  }
+
+  @Post('team')
+  @UseGuards(BrokerManagerGuard)
+  createTeamMember(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Body() dto: CreatePortalTeamMemberDto,
+  ) {
+    return this.portalTeam.create(scope, dto);
+  }
+
+  @Get('team/:id')
+  @UseGuards(BrokerManagerGuard)
+  getTeamMember(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.portalTeam.findOne(scope, id);
+  }
+
+  @Patch('team/:id')
+  @UseGuards(BrokerManagerGuard)
+  updateTeamMember(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePortalTeamMemberDto,
+  ) {
+    return this.portalTeam.update(scope, id, dto);
+  }
+
+  @Patch('team/:id/status')
+  @UseGuards(BrokerManagerGuard)
+  updateTeamMemberStatus(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdatePortalTeamMemberStatusDto,
+  ) {
+    return this.portalTeam.updateStatus(scope, id, dto);
   }
 }

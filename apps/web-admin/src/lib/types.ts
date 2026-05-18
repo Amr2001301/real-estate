@@ -1454,6 +1454,115 @@ export interface FinancialDashboard {
   cashflowTrend: CashflowTrendPoint[];
 }
 
+export type DocumentOwnerType =
+  | 'PROJECT'
+  | 'UNIT'
+  | 'LEAD'
+  | 'RESERVATION'
+  | 'CONTRACT'
+  | 'DEPOSIT'
+  | 'BROKER'
+  | 'BROKER_COMMISSION'
+  | 'BROKER_PAYOUT'
+  | 'USER'
+  | 'OTHER';
+
+export type DocumentCategory =
+  | 'IMAGE'
+  | 'CONTRACT'
+  | 'RECEIPT'
+  | 'INVOICE'
+  | 'BROKER_AGREEMENT'
+  | 'COMMISSION_STATEMENT'
+  | 'PAYOUT_RECEIPT'
+  | 'ID_DOCUMENT'
+  | 'LEGAL'
+  | 'FINANCIAL'
+  | 'OTHER';
+
+export type DocumentVisibility = 'ADMIN_ONLY' | 'BROKER_VISIBLE' | 'CUSTOMER_VISIBLE';
+
+export interface DocumentItem {
+  id: string;
+  ownerType: DocumentOwnerType;
+  ownerId: string;
+  category: DocumentCategory;
+  title: string;
+  description: string | null;
+  fileUrl: string;
+  fileName: string | null;
+  mimeType: string | null;
+  sizeBytes: number | null;
+  visibility: DocumentVisibility;
+  uploadedById: string | null;
+  createdAt: string;
+  updatedAt: string;
+  uploadedBy: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    role: UserRole;
+  } | null;
+}
+
+export interface SettingItem {
+  key: string;
+  value: unknown;
+  updatedAt: string;
+  group: string;
+  sensitive: boolean;
+}
+
+export interface PermissionItem {
+  id: string;
+  code: string;
+  description: string | null;
+  userCount: number;
+}
+
+export interface UserPermissionsResponse {
+  user: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+    role: UserRole;
+    active: boolean;
+  };
+  assigned: Array<{ id: string; code: string; description: string | null }>;
+  available: Array<{ id: string; code: string; description: string | null }>;
+}
+
+export interface AuditLogItem {
+  id: string;
+  actorId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  before: unknown;
+  after: unknown;
+  ip: string | null;
+  createdAt: string;
+  actor: {
+    id: string;
+    fullName: string;
+    email: string | null;
+    phone: string | null;
+    role: UserRole;
+  } | null;
+}
+
+export interface OperationsSummary {
+  totals: { today: number; last7Days: number; last30Days: number };
+  topActors: Array<{
+    actor: { id: string; fullName: string; email: string | null; role: UserRole } | null;
+    count: number;
+  }>;
+  topEntities: Array<{ entityType: string; count: number }>;
+  topActions: Array<{ action: string; count: number }>;
+  entityCounts: Record<string, number>;
+}
+
 export type NotificationChannel = 'IN_APP' | 'PUSH' | 'EMAIL' | 'SMS';
 
 export interface NotificationItem {

@@ -93,10 +93,10 @@ export default async function PortalPayoutsPage({
         <Input
           name="period"
           inputSize="sm"
-          placeholder="YYYY-MM"
+          placeholder="الفترة (مثال: 2026-05)"
           dir="ltr"
           defaultValue={sp.period ?? ''}
-          className="w-32 shrink-0"
+          className="w-40 shrink-0"
         />
         <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
         <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-40 shrink-0" />

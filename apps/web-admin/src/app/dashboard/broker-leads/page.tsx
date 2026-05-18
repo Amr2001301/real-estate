@@ -84,12 +84,12 @@ export default async function AdminBrokerLeadsPage({
   return (
     <div className="space-y-5">
       <PageHeader
-        title="فرص الوسطاء"
-        description="الفرص (Leads) المُرسلة من الوسطاء بانتظار المراجعة."
+        title="فرص من الوسطاء"
+        description="فرص أرسلها الوسطاء وتحتاج إلى مراجعة الإدارة."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'فرص الوسطاء' },
+          { label: 'فرص من الوسطاء' },
         ]}
         meta={
           <span className="text-xs text-slate-500">

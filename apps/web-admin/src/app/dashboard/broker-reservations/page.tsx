@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BookmarkCheck, Eye, Briefcase, Phone } from 'lucide-react';
+import { BookmarkCheck, Eye, Briefcase, Phone, Plus } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
   AdminBrokerReservation,
@@ -66,13 +66,20 @@ export default async function AdminBrokerReservationsPage({
   return (
     <div className="space-y-5">
       <PageHeader
-        title="حجوزات الوسطاء"
-        description="جميع الحجوزات المُنشأة من بوابة الوسطاء بانتظار المراجعة الداخلية."
+        title="حجوزات من الوسطاء"
+        description="حجوزات عملاء نشأت من بوابة الوسيط وتحتاج إلى مراجعة داخلية."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'حجوزات الوسطاء' },
+          { label: 'حجوزات من الوسطاء' },
         ]}
+        actions={
+          <Link href="/dashboard/broker-reservations/new">
+            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+              إنشاء حجز نيابة عن وسيط
+            </Button>
+          </Link>
+        }
       />
 
       {resRes.error && (

@@ -2,6 +2,7 @@ import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nes
 import { Prisma } from '@prisma/client';
 import { Observable, tap } from 'rxjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { maskSensitiveFields } from '../utils/sensitive-fields';
 
 const MUTATING = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
@@ -52,7 +53,10 @@ export class AuditInterceptor implements NestInterceptor {
 
   private safeJson(value: unknown): Prisma.InputJsonValue | typeof Prisma.JsonNull {
     try {
-      const parsed = JSON.parse(JSON.stringify(value));
+      // Mask sensitive fields (passwords, tokens, OTPs, secrets) BEFORE the
+      // JSON roundtrip so they never reach the AuditLog row.
+      const sanitised = maskSensitiveFields(value);
+      const parsed = JSON.parse(JSON.stringify(sanitised));
       return parsed ?? Prisma.JsonNull;
     } catch {
       return Prisma.JsonNull;

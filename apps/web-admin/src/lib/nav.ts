@@ -20,6 +20,8 @@ import {
   Settings,
   UserCircle,
   Activity,
+  Gauge,
+  Files,
   type LucideIcon,
 } from 'lucide-react';
 import type { SessionRole } from './session';
@@ -72,9 +74,9 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'الوسطاء',
     items: [
       { href: '/dashboard/brokers', label: 'الوسطاء', icon: Briefcase, admin: true },
-      { href: '/dashboard/broker-leads', label: 'فرص الوسطاء', icon: Users, admin: true },
-      { href: '/dashboard/broker-reservations', label: 'حجوزات الوسطاء', icon: BookmarkCheck, admin: true },
-      { href: '/dashboard/broker-contracts', label: 'عقود الوسطاء', icon: FileText, admin: true },
+      { href: '/dashboard/broker-leads', label: 'فرص من الوسطاء', icon: Users, admin: true },
+      { href: '/dashboard/broker-reservations', label: 'حجوزات من الوسطاء', icon: BookmarkCheck, admin: true },
+      { href: '/dashboard/broker-contracts', label: 'عقود من الوسطاء', icon: FileText, admin: true },
       { href: '/dashboard/broker-commissions', label: 'عمولات الوسطاء', icon: BadgePercent, admin: true },
       { href: '/dashboard/broker-payouts', label: 'مدفوعات الوسطاء', icon: Wallet, admin: true },
       { href: '/dashboard/broker-reports', label: 'تقارير الوسطاء', icon: BarChart3, admin: true },
@@ -84,10 +86,13 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'الإدارة',
     items: [
       { href: '/dashboard/cms', label: 'المحتوى', icon: FileEdit, admin: true },
+      { href: '/dashboard/documents', label: 'المستندات', icon: Files, admin: true },
       { href: '/dashboard/notifications', label: 'الإشعارات', icon: Bell, admin: true },
       { href: '/dashboard/reports', label: 'التقارير', icon: BarChart3, admin: true },
       { href: '/dashboard/users', label: 'المستخدمون', icon: ShieldCheck, admin: true },
-      { href: '/dashboard/audit', label: 'سجل التدقيق', icon: ScrollText, admin: true },
+      { href: '/dashboard/permissions', label: 'الصلاحيات', icon: ShieldCheck, admin: true },
+      { href: '/dashboard/operations', label: 'مركز العمليات', icon: Gauge, admin: true },
+      { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', icon: ScrollText, admin: true },
       { href: '/dashboard/settings', label: 'الإعدادات', icon: Settings, admin: true },
     ],
   },
@@ -122,10 +127,34 @@ export const BROKER_NAV_SECTIONS: NavSection[] = [
       { href: '/portal/payouts', label: 'المدفوعات', icon: Wallet },
       { href: '/portal/activity', label: 'النشاط', icon: Activity },
       { href: '/portal/notifications', label: 'الإشعارات', icon: Bell },
+      { href: '/portal/team', label: 'فريق العمل', icon: Users },
       { href: '/portal/profile', label: 'الملف الشخصي', icon: UserCircle },
     ],
   },
 ];
+
+/**
+ * Filter the broker portal nav based on per-user flags. Items the user can't
+ * use are hidden so the sidebar doesn't dangle dead links — the backend
+ * also enforces these (BrokerManagerGuard / BrokerCommissionsViewerGuard).
+ */
+export function filterBrokerNavForFlags(flags: {
+  canManageBrokerUsers: boolean;
+  isPrimaryContact: boolean;
+  canViewCommissions: boolean;
+}): NavSection[] {
+  const canManageTeam = flags.isPrimaryContact || flags.canManageBrokerUsers;
+  return BROKER_NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => {
+      if (item.href === '/portal/team') return canManageTeam;
+      if (item.href === '/portal/commissions' || item.href === '/portal/payouts') {
+        return flags.canViewCommissions;
+      }
+      return true;
+    }),
+  })).filter((s) => s.items.length > 0);
+}
 
 export function findNavItem(pathname: string): NavItem | undefined {
   // Prefer exact match; fall back to prefix match for nested routes (/dashboard/units/123).

@@ -10,6 +10,7 @@ import { BrokerPortalContractsService } from './broker-portal-contracts.service'
 import { BrokerPortalCommissionsService } from './broker-portal-commissions.service';
 import { BrokerPortalPayoutsService } from './broker-portal-payouts.service';
 import { BrokerPortalPerformanceService } from './broker-portal-performance.service';
+import { BrokerPortalTeamService } from './broker-portal-team.service';
 import { BrokerPortalController } from './broker-portal.controller';
 
 @Module({
@@ -30,6 +31,7 @@ import { BrokerPortalController } from './broker-portal.controller';
     BrokerPortalCommissionsService,
     BrokerPortalPayoutsService,
     BrokerPortalPerformanceService,
+    BrokerPortalTeamService,
   ],
   exports: [
     BrokerPortalService,
@@ -41,6 +43,7 @@ import { BrokerPortalController } from './broker-portal.controller';
     BrokerPortalCommissionsService,
     BrokerPortalPayoutsService,
     BrokerPortalPerformanceService,
+    BrokerPortalTeamService,
   ],
 })
 export class BrokerPortalModule {}

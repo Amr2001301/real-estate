@@ -25,6 +25,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerStatusBadge } from '@/components/badges';
+import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -220,6 +221,16 @@ export default async function BrokerDetailPage({
           </p>
         </Card>
       )}
+
+      <OwnerDocumentsCard
+        ownerType="BROKER"
+        ownerId={broker.id}
+        legacy={
+          broker.contractPdfUrl
+            ? [{ label: 'اتفاقية الوسيط (PDF)', href: broker.contractPdfUrl, hint: 'حقل قديم — broker.contractPdfUrl' }]
+            : undefined
+        }
+      />
 
       <Card className="p-5">
         <h2 className="text-sm font-semibold text-slate-900 mb-3">روابط سريعة</h2>

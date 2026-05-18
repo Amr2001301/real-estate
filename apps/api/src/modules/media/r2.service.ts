@@ -31,7 +31,14 @@ export class R2Service {
 
   async createPresignedUpload(opts: {
     contentType: string;
-    folder: 'projects' | 'units' | 'contracts' | 'receipts' | 'maintenance' | 'banners';
+    folder:
+      | 'projects'
+      | 'units'
+      | 'contracts'
+      | 'receipts'
+      | 'maintenance'
+      | 'banners'
+      | 'documents';
     extension?: string;
   }) {
     if (!this.client || !this.bucket) {
@@ -71,6 +78,16 @@ export class R2Service {
         return '.mp4';
       case 'application/pdf':
         return '.pdf';
+      case 'application/msword':
+        return '.doc';
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return '.docx';
+      case 'application/vnd.ms-excel':
+        return '.xls';
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+        return '.xlsx';
+      case 'text/csv':
+        return '.csv';
       default:
         return '';
     }

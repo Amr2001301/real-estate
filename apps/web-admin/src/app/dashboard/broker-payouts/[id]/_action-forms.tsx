@@ -125,7 +125,15 @@ export function CancelPayoutForm({ id }: { id: string }) {
     {},
   );
   return (
-    <form action={formAction} className="flex flex-col gap-3">
+    <form
+      action={formAction}
+      className="flex flex-col gap-3"
+      onSubmit={(e) => {
+        if (!window.confirm('سيتم إلغاء الدفعة وفصل جميع العمولات المرتبطة بها. هل أنت متأكد؟')) {
+          e.preventDefault();
+        }
+      }}
+    >
       <Banner state={state} />
       <Field label="سبب الإلغاء" name="reason" required>
         <Textarea id={`cancel-${id}`} name="reason" rows={3} required />

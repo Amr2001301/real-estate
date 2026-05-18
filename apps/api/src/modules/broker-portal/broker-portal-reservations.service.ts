@@ -150,11 +150,52 @@ export class BrokerPortalReservationsService {
 
   // ── Create ──────────────────────────────────────────────────────────────
 
+  /** Portal entry-point — auth = broker. Delegates to the shared core below. */
   async create(scope: BrokerScopeContext, dto: CreatePortalReservationDto) {
+    return this.createForActor({
+      brokerId: scope.brokerId,
+      brokerAgentUserId: scope.brokerAgentUserId,
+      actorUserId: scope.brokerAgentUserId,
+      origin: 'BROKER_PORTAL',
+      dto,
+    });
+  }
+
+  /**
+   * Shared broker-reservation creation core. Used by:
+   *   - portal `create(scope, dto)` — broker creating their own reservation.
+   *   - admin `createOnBehalfOfBroker(...)` (Phase 18A) — admin entering a
+   *     reservation a broker phoned in.
+   *
+   * Identity inputs are explicit:
+   *   - `brokerId`              — owning broker firm.
+   *   - `brokerAgentUserId`     — the broker agent attribution (nullable for
+   *                               admin paths where the agent isn't named).
+   *   - `actorUserId`           — the User whose action this is. Used for
+   *                               UnitStatusHistory.changedById and the
+   *                               ReservationActivity actor.
+   *   - `origin`                — narrative tag stored in the lead activity
+   *                               payload so admins can tell portal-submitted
+   *                               from admin-on-behalf reservations later.
+   *
+   * Business rules (lead approved, sales assigned, unit visible, unit
+   * AVAILABLE, no duplicate active reservation, commission snapshot)
+   * are identical to the portal-only behavior — never change a hot
+   * financial path between callers.
+   */
+  async createForActor(input: {
+    brokerId: string;
+    brokerAgentUserId: string | null;
+    actorUserId: string;
+    origin: 'BROKER_PORTAL' | 'ADMIN_ON_BEHALF';
+    dto: CreatePortalReservationDto;
+  }) {
+    const { brokerId, brokerAgentUserId, actorUserId, origin, dto } = input;
+
     // 1) Lead must belong to this broker, be APPROVED, and have an internal
     //    sales handler — those are hard preconditions per the business rules.
     const lead = await this.prisma.lead.findFirst({
-      where: { id: dto.leadId, brokerId: scope.brokerId },
+      where: { id: dto.leadId, brokerId },
       select: {
         id: true,
         clientId: true,
@@ -200,7 +241,7 @@ export class BrokerPortalReservationsService {
     });
     if (!unit) throw new NotFoundException('Unit not found');
     const projectId = unit.building.phase.projectId;
-    await this.assertUnitVisible(scope.brokerId, dto.unitId, projectId);
+    await this.assertUnitVisible(brokerId, dto.unitId, projectId);
     if (unit.status !== UnitStatus.AVAILABLE) {
       throw new ConflictException('Unit is not available for reservation');
     }
@@ -220,7 +261,7 @@ export class BrokerPortalReservationsService {
     //    the same (lead, unit) pair.
     const dupForLeadUnit = await this.prisma.reservation.findFirst({
       where: {
-        brokerId: scope.brokerId,
+        brokerId,
         leadId: lead.id,
         unitId: dto.unitId,
         status: { in: ACTIVE_RESERVATION_STATUSES },
@@ -300,7 +341,7 @@ export class BrokerPortalReservationsService {
     //    project-level commissionPct → broker.defaultCommissionPct.
     //    For FIXED_PER_UNIT model, lock the fixed amount and leave pct null.
     const commission = await this.computeCommissionSnapshot({
-      brokerId: scope.brokerId,
+      brokerId,
       projectId,
       basisAmount: snapshot.totalPayable ?? new Prisma.Decimal(unit.price),
     });
@@ -326,8 +367,8 @@ export class BrokerPortalReservationsService {
           bookingAmount,
           bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID,
           // Broker attribution + commission snapshot.
-          brokerId: scope.brokerId,
-          brokerAgentId: scope.brokerAgentUserId,
+          brokerId,
+          brokerAgentId: brokerAgentUserId,
           commissionLockedPct: commission.lockedPct,
           commissionLockedAmount: commission.lockedAmount,
           // Plan + duration snapshot (when applicable).
@@ -355,7 +396,7 @@ export class BrokerPortalReservationsService {
           unitId: dto.unitId,
           oldStatus: UnitStatus.AVAILABLE,
           newStatus: UnitStatus.RESERVED,
-          changedById: scope.brokerAgentUserId,
+          changedById: actorUserId,
           reason: `Broker reservation ${reservationNumber}`,
         },
       });
@@ -365,8 +406,11 @@ export class BrokerPortalReservationsService {
         data: {
           reservationId: created.id,
           type: ReservationActivityType.CREATED,
-          actorId: scope.brokerAgentUserId,
-          note: 'Created via broker portal',
+          actorId: actorUserId,
+          note:
+            origin === 'ADMIN_ON_BEHALF'
+              ? 'Created by admin on behalf of broker'
+              : 'Created via broker portal',
         },
       });
 
@@ -376,8 +420,9 @@ export class BrokerPortalReservationsService {
           leadId: lead.id,
           type: 'broker_reservation_created',
           payload: {
-            brokerId: scope.brokerId,
-            brokerAgentId: scope.brokerAgentUserId,
+            origin,
+            brokerId,
+            brokerAgentId: brokerAgentUserId,
             reservationId: created.id,
             reservationNumber,
             unitId: dto.unitId,
@@ -410,8 +455,9 @@ export class BrokerPortalReservationsService {
     });
 
     // 8) Notifications — best-effort, never blocks the action.
-    await this.notify(reservation.id, scope, {
-      brokerId: scope.brokerId,
+    await this.notify(reservation.id, {
+      brokerId,
+      brokerAgentUserId,
       salesUserId: lead.assignedSalesId,
       reservationNumber: reservation.reservationNumber,
       unitCode: unit.code,
@@ -486,9 +532,9 @@ export class BrokerPortalReservationsService {
 
   private async notify(
     reservationId: string,
-    scope: BrokerScopeContext,
     info: {
       brokerId: string;
+      brokerAgentUserId: string | null;
       salesUserId: string | null;
       reservationNumber: string | null;
       unitCode: string;
@@ -509,7 +555,7 @@ export class BrokerPortalReservationsService {
         reservationNumber: info.reservationNumber,
         unitCode: info.unitCode,
         leadName: info.leadName,
-        brokerAgentId: scope.brokerAgentUserId,
+        brokerAgentId: info.brokerAgentUserId,
       };
 
       await this.prisma.notification.createMany({

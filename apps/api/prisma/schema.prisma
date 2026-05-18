@@ -86,6 +86,7 @@ model User {
   brokerPayoutsProcessed      BrokerPayout[]        @relation("BrokerPayoutProcessedBy")
   brokerPayoutsCancelled      BrokerPayout[]        @relation("BrokerPayoutCancelledBy")
   brokerActivityLogs          BrokerActivityLog[]   @relation("BrokerActivityLogAgent")
+  uploadedDocuments           Document[]            @relation("DocumentUploader")
 
   @@index([role])
   @@index([phone])
@@ -1369,3 +1370,74 @@ model Setting {
   value     Json
   updatedAt DateTime @updatedAt
 }
+
+// =============================================================================
+// DOCUMENTS CENTER (Phase 17 — additive; existing media/url fields untouched)
+// =============================================================================
+//
+// Generic, polymorphic document store. We deliberately store `ownerId` as a
+// plain UUID String (no Prisma relation) because the owner can be any of
+// several entities — Project, Unit, Lead, Reservation, Contract, Deposit,
+// Broker, BrokerCommission, BrokerPayout, User. The application layer
+// validates that the referenced entity exists when feasible; the DB does
+// not enforce it.
+
+enum DocumentOwnerType {
+  PROJECT
+  UNIT
+  LEAD
+  RESERVATION
+  CONTRACT
+  DEPOSIT
+  BROKER
+  BROKER_COMMISSION
+  BROKER_PAYOUT
+  USER
+  OTHER
+}
+
+enum DocumentCategory {
+  IMAGE
+  CONTRACT
+  RECEIPT
+  INVOICE
+  BROKER_AGREEMENT
+  COMMISSION_STATEMENT
+  PAYOUT_RECEIPT
+  ID_DOCUMENT
+  LEGAL
+  FINANCIAL
+  OTHER
+}
+
+enum DocumentVisibility {
+  ADMIN_ONLY
+  BROKER_VISIBLE
+  CUSTOMER_VISIBLE
+}
+
+model Document {
+  id           String             @id @default(uuid()) @db.Uuid
+  ownerType    DocumentOwnerType
+  ownerId      String             @db.Uuid
+  category     DocumentCategory   @default(OTHER)
+  title        String
+  description  String?
+  fileUrl      String
+  fileName     String?
+  mimeType     String?
+  sizeBytes    Int?
+  visibility   DocumentVisibility @default(ADMIN_ONLY)
+  uploadedById String?            @db.Uuid
+  uploadedBy   User?              @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  deletedAt    DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([ownerType, ownerId])
+  @@index([category])
+  @@index([uploadedById])
+  @@index([createdAt])
+  @@index([deletedAt])
+}
+

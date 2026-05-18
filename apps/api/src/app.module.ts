@@ -34,6 +34,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { ReportsModule } from './modules/reports/reports.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { SettingsModule } from './modules/settings/settings.module';
+import { PermissionsModule } from './modules/permissions/permissions.module';
+import { DocumentsModule } from './modules/documents/documents.module';
 import { BrokersModule } from './modules/brokers/brokers.module';
 import { BrokerUsersModule } from './modules/broker-users/broker-users.module';
 import { BrokerAccessModule } from './modules/broker-access/broker-access.module';
@@ -85,6 +87,8 @@ import { HealthController } from './modules/health/health.controller';
     ReportsModule,
     AuditModule,
     SettingsModule,
+    PermissionsModule,
+    DocumentsModule,
     BrokersModule,
     BrokerUsersModule,
     BrokerAccessModule,

@@ -54,7 +54,7 @@ export default async function AdminBrokerPayoutsPage({
     <div className="space-y-5">
       <PageHeader
         title="مدفوعات الوسطاء"
-        description="مجموعات دفعات لعمولات معتمدة. تتيح اعتماد الإدارة ثم تحديد الصرف الخارجي."
+        description="دفعات عمولات معتمدة تصرفها الشركة للوسطاء."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوسطاء', href: '/dashboard/brokers' },
@@ -136,7 +136,7 @@ export default async function AdminBrokerPayoutsPage({
                     <EmptyState
                       icon={<Wallet />}
                       title="لا توجد مدفوعات بعد"
-                      description="أنشئ أول دفعة لتجميع عمولات معتمدة وإصدار صرف خارجي."
+                      description="أنشئ أول دفعة بعد اعتماد عمولات الوسطاء."
                       action={
                         <Link href="/dashboard/broker-payouts/new">
                           <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>

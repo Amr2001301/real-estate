@@ -13,6 +13,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/form/field';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerUserStatusBadge } from '@/components/badges';
+import { ConfirmingForm } from '@/components/confirming-form';
 import {
   updateBrokerUserAction,
   setBrokerUserPrimaryAction,
@@ -201,14 +202,17 @@ export default async function BrokerUsersPage({
                           </form>
                         )}
                         {bu.status !== 'REMOVED' && (
-                          <form action={changeStatus.bind(null, bu.id, 'REMOVED')}>
+                          <ConfirmingForm
+                            action={changeStatus.bind(null, bu.id, 'REMOVED')}
+                            confirmMessage={`سيتم حذف «${bu.user.fullName}» من قائمة موظفي الوسيط. هل أنت متأكد؟`}
+                          >
                             <button
                               type="submit"
                               className="text-2xs text-red-600 hover:underline"
                             >
                               حذف
                             </button>
-                          </form>
+                          </ConfirmingForm>
                         )}
                       </div>
                     </td>

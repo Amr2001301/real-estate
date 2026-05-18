@@ -1,5 +1,6 @@
 import {
   Injectable,
+  ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -137,7 +138,7 @@ export class BrokerAccessService {
 
   async grantUnit(brokerId: string, dto: GrantBrokerUnitAccessDto) {
     await this.assertBrokerExists(brokerId);
-    await this.assertUnitExists(dto.unitId);
+    await this.assertUnitGrantable(dto.unitId);
 
     const existing = await this.prisma.brokerUnitAccess.findUnique({
       where: { brokerId_unitId: { brokerId, unitId: dto.unitId } },
@@ -200,5 +201,33 @@ export class BrokerAccessService {
       select: { id: true },
     });
     if (!unit) throw new NotFoundException('Unit not found');
+  }
+
+  /**
+   * Phase 18A — refuse to mint a unit-level access grant when the unit is
+   * already sold/contracted/reserved. The broker would not be able to
+   * reserve it anyway, so the grant would be misleading.
+   *
+   * Reactivating an existing grant on a previously-granted unit still
+   * goes through `grantUnit` and lands here too; if the unit moved into a
+   * blocked status since the original grant, we refuse the reactivation.
+   * Revoking is unaffected.
+   */
+  private async assertUnitGrantable(unitId: string) {
+    const unit = await this.prisma.unit.findUnique({
+      where: { id: unitId },
+      select: { id: true, status: true },
+    });
+    if (!unit) throw new NotFoundException('Unit not found');
+    if (unit.status === 'SOLD') {
+      throw new ConflictException(
+        'Unit is already sold and cannot be granted to a broker',
+      );
+    }
+    if (unit.status === 'RESERVED') {
+      throw new ConflictException(
+        'Unit is currently reserved. Wait for the reservation to clear before granting access.',
+      );
+    }
   }
 }
