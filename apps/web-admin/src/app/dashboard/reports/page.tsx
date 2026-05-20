@@ -4,6 +4,7 @@ import { formatCurrency, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { KpiCard } from '@/components/ui/kpi-card';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
+import { CsvExportLink } from '@/components/csv-export-link';
 import { ReportsTabs } from './_components/reports-tabs';
 
 interface Sales {
@@ -67,6 +68,27 @@ export default async function ReportsPage({
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'التقارير' },
         ]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <CsvExportLink
+              path="/reports/sales/export.csv"
+              filename="sales-report.csv"
+              params={{ period }}
+              label="تصدير المبيعات CSV"
+            />
+            <CsvExportLink
+              path="/reports/financial/export.csv"
+              filename="financial-report.csv"
+              params={{ period }}
+              label="تصدير المالية CSV"
+            />
+            <CsvExportLink
+              path="/reports/operational/export.csv"
+              filename="operational-report.csv"
+              label="تصدير التشغيلي CSV"
+            />
+          </div>
+        }
       />
 
       <ReportsTabs active="sales" />

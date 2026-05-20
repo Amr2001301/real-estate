@@ -44,6 +44,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { computeDurationOption } from './duration-calc';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
@@ -670,12 +671,14 @@ class InstallmentsController {
   constructor(private readonly svc: InstallmentsService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
   @Post('installment-plans')
   create(@Body() dto: CreatePlanDto) {
     return this.svc.createPlan(dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('installments:read')
   @Get('contracts/:contractId/installment-plan')
   byContract(@Param('contractId', ParseUUIDPipe) contractId: string) {
     return this.svc.findByContract(contractId);
@@ -690,6 +693,7 @@ class PlanTemplatesController {
   constructor(private readonly svc: PlanTemplatesService) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('installments:read')
   @Get()
   list(
     @Query('page') page = '1',
@@ -697,7 +701,7 @@ class PlanTemplatesController {
     @Query('q') q?: string,
     @Query('projectId') projectId?: string,
     @Query('status') status?: string,
-    @Req() req?: any,
+    @Req() req?: { user?: { role?: UserRole } },
   ) {
     return this.svc.list({
       page: Number(page),
@@ -710,42 +714,49 @@ class PlanTemplatesController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('installments:read')
   @Get('stats')
   stats() {
     return this.svc.stats();
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('installments:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
   @Post()
-  create(@Body() dto: CreatePlanTemplateDto, @Req() req: any) {
+  create(@Body() dto: CreatePlanTemplateDto, @Req() req: { user: { sub: string } }) {
     return this.svc.create(dto, req.user.sub);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePlanTemplateDto) {
     return this.svc.update(id, dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('installments:manage')
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.delete(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('installments:activate')
   @Post(':id/activate')
   activate(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.setStatus(id, PlanTemplateStatus.ACTIVE);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('installments:activate')
   @Post(':id/deactivate')
   deactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.setStatus(id, PlanTemplateStatus.INACTIVE);

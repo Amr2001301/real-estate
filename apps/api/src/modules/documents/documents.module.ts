@@ -36,6 +36,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { MediaModule } from '../media/media.module';
@@ -380,31 +381,37 @@ class DocumentsController {
 
   // Mints the presigned R2 upload URL. Mounted BEFORE `:id` routes so
   // the literal segment isn't interpreted as a UUID parameter.
+  @Permissions('documents:upload')
   @Post('presign')
   presign(@Body() dto: DocumentsPresignDto) {
     return this.svc.presign(dto);
   }
 
+  @Permissions('documents:read')
   @Get()
   list(@Query() query: DocumentsQueryDto) {
     return this.svc.list(query);
   }
 
+  @Permissions('documents:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
   }
 
+  @Permissions('documents:upload')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateDocumentDto) {
     return this.svc.create(user.sub, dto);
   }
 
+  @Permissions('documents:update')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateDocumentDto) {
     return this.svc.update(id, dto);
   }
 
+  @Permissions('documents:delete')
   @Delete(':id')
   softDelete(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.softDelete(id);

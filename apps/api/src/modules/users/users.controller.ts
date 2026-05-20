@@ -12,6 +12,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
 
@@ -21,12 +22,14 @@ export class UsersController {
   constructor(private readonly users: UsersService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('users:create')
   @Post()
   create(@Body() dto: CreateUserDto) {
     return this.users.create(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('users:read')
   @Get()
   findAll(
     @Query('role') role?: UserRole,
@@ -37,6 +40,8 @@ export class UsersController {
     return this.users.findAll(role, Number(page), Number(pageSize), q);
   }
 
+  // Self-profile routes — no role gate, no permission gate. Any authenticated
+  // user reads/updates their own profile.
   @Get('me')
   me(@CurrentUser() user: AuthUser) {
     return this.users.findOne(user.sub);
@@ -48,24 +53,28 @@ export class UsersController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('users:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.findOne(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('users:update')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
     return this.users.update(id, dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('users:deactivate')
   @Patch(':id/deactivate')
   deactivate(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.deactivate(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('users:activate')
   @Patch(':id/activate')
   activate(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.activate(id);

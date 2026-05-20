@@ -113,7 +113,16 @@ export async function updateBrokerStatusAction(
   const reason = str(formData, 'reason');
   if (!status) return { error: 'الحالة مطلوبة' };
   try {
-    await api.patch(`/brokers/${id}/status`, { status, reason });
+    // Destructive transitions now have dedicated strict routes; non-destructive
+    // ones (ACTIVE/PENDING) still go through PATCH /status. The status <Select>
+    // form is unchanged — only the dispatch target depends on the chosen value.
+    if (status === 'SUSPENDED') {
+      await api.post(`/brokers/${id}/suspend`, { reason });
+    } else if (status === 'TERMINATED') {
+      await api.post(`/brokers/${id}/terminate`, { reason });
+    } else {
+      await api.patch(`/brokers/${id}/status`, { status, reason });
+    }
   } catch (e) {
     return { error: (e as Error).message };
   }

@@ -26,23 +26,39 @@ import {
 import { NotificationChannel, Prisma, UnitStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { BrokerCommissionsModule } from '../broker-commissions/broker-commissions.module';
 import { BrokerCommissionsService } from '../broker-commissions/broker-commissions.service';
 
 class CreateContractDto {
+  // `signedAt` is intentionally NOT accepted here. Creation produces an
+  // unsigned contract; signing is a separate action (POST /contracts/:id/sign)
+  // that requires the strict `contracts:sign` permission and fires broker
+  // activity, notification, and commission materialisation side effects.
+  // The global ValidationPipe is configured with `forbidNonWhitelisted: true`
+  // so any inbound `signedAt` on POST /contracts is rejected with 400 rather
+  // than silently bypassing the strict permission.
   @IsUUID() customerId!: string;
   @IsUUID() unitId!: string;
   @IsNumber() @IsPositive() totalAmount!: number;
   @IsOptional() @IsNumber() @Min(0) downPayment?: number;
   @IsOptional() @IsString() pdfUrl?: string;
-  @IsOptional() @IsDateString() signedAt?: string;
 }
 
 class UpdateContractDto {
+  // `signedAt` is intentionally NOT accepted here. Signing has substantial
+  // side effects (broker activity log, notification fan-out, broker
+  // commission materialization) and a distinct permission code; it is
+  // performed via POST /contracts/:id/sign. The global ValidationPipe is
+  // configured with forbidNonWhitelisted=true so an inbound `signedAt` will
+  // be rejected with 400 rather than silently signing.
   @IsOptional() @IsString() pdfUrl?: string;
-  @IsOptional() @IsDateString() signedAt?: string;
+}
+
+class SignContractDto {
+  @IsDateString() signedAt!: string;
 }
 
 @Injectable()
@@ -69,7 +85,8 @@ class ContractsService {
           totalAmount: new Prisma.Decimal(dto.totalAmount),
           downPayment: new Prisma.Decimal(dto.downPayment ?? 0),
           pdfUrl: dto.pdfUrl ?? null,
-          signedAt: dto.signedAt ? new Date(dto.signedAt) : null,
+          // Contracts are created unsigned. Signing goes through sign().
+          signedAt: null,
         },
       });
       // Promote customer role if currently CLIENT
@@ -209,8 +226,30 @@ class ContractsService {
   }
 
   async update(id: string, dto: UpdateContractDto) {
-    // We need the prior state to detect signedAt transitions for broker
-    // activity / notification purposes.
+    // Generic update path — pdfUrl only. Signing is performed via sign().
+    const exists = await this.prisma.contract.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('Contract not found');
+
+    return this.prisma.contract.update({
+      where: { id },
+      data: {
+        pdfUrl: dto.pdfUrl ?? undefined,
+      },
+    });
+  }
+
+  /**
+   * Transition a contract from unsigned to signed. Runs the broker activity
+   * log, the notification fan-out, and the broker commission materialisation
+   * exactly as the previous PATCH-path did.
+   *
+   * Idempotent: signing an already-signed contract is a no-op and does NOT
+   * re-fire side effects. The current contract state is returned.
+   */
+  async sign(id: string, dto: SignContractDto) {
     const before = await this.prisma.contract.findUnique({
       where: { id },
       select: {
@@ -231,22 +270,20 @@ class ContractsService {
     });
     if (!before) throw new NotFoundException('Contract not found');
 
+    // Idempotent: already signed → return current state, no side effects.
+    if (before.signedAt !== null) {
+      return this.prisma.contract.findUnique({ where: { id } });
+    }
+
+    const signedAtDate = new Date(dto.signedAt);
     const updated = await this.prisma.contract.update({
       where: { id },
-      data: {
-        pdfUrl: dto.pdfUrl ?? undefined,
-        signedAt: dto.signedAt ? new Date(dto.signedAt) : undefined,
-      },
+      data: { signedAt: signedAtDate },
     });
 
-    const becameSigned =
-      before.signedAt === null &&
-      dto.signedAt !== undefined &&
-      dto.signedAt !== null;
-
-    if (becameSigned && before.brokerId) {
-      // Broker portal activity timeline (LeadActivity is the shared store).
-      // Best-effort: failures are logged but never thrown.
+    if (before.brokerId) {
+      // Broker portal activity timeline. Best-effort: failures are logged
+      // but never thrown — the contract is already signed.
       try {
         if (before.reservation?.leadId) {
           await this.prisma.leadActivity.create({
@@ -315,12 +352,14 @@ class ContractsController {
   constructor(private readonly svc: ContractsService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('contracts:upload')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateContractDto) {
     return this.svc.create(dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('contracts:read')
   @Get()
   list(
     @Query('customerId') customerId?: string,
@@ -346,12 +385,13 @@ class ContractsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('contracts:read')
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
   }
 
-  // Customer view of their own contracts
+  // Customer view of their own contracts — intentionally NOT permission-gated.
   @Roles(UserRole.CUSTOMER)
   @Get('me/contracts')
   myContracts(
@@ -367,9 +407,20 @@ class ContractsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('contracts:update')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateContractDto) {
     return this.svc.update(id, dto);
+  }
+
+  // Strict: even an ADMIN must hold contracts:sign explicitly. Signing
+  // triggers broker activity log, notification fan-out, and broker commission
+  // materialisation. Segregation of duties — see PermissionsGuard tests.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('contracts:sign')
+  @Post(':id/sign')
+  sign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SignContractDto) {
+    return this.svc.sign(id, dto);
   }
 }
 

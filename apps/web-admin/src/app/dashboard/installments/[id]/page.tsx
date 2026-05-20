@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Pencil, CheckCircle2, PauseCircle, Building2, Home, Calendar, User } from 'lucide-react';
+import { Pencil, Building2, Home, Calendar, User } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { InstallmentPlanTemplate, PlanPaymentType } from '@/lib/types';

@@ -7,9 +7,7 @@ import {
   Module,
   Param,
   ParseUUIDPipe,
-  Patch,
   Post,
-  Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -22,6 +20,7 @@ import {
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 
 class UpsertPageDto {
@@ -179,44 +178,53 @@ class CmsController {
     return this.svc.getArticle(slug, true);
   }
 
-  // Admin
+  // Admin — Pages
   @Roles(UserRole.ADMIN)
+  @Permissions('cms:pages:manage')
   @Get('cms/pages')
   listPages() {
     return this.svc.listPages();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('cms:pages:manage')
   @Post('cms/pages')
   upsertPage(@Body() dto: UpsertPageDto) {
     return this.svc.upsertPage(dto);
   }
 
+  // Admin — Banners
   @Roles(UserRole.ADMIN)
+  @Permissions('cms:banners:manage')
   @Get('cms/banners')
   listBanners() {
     return this.svc.listBanners();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('cms:banners:manage')
   @Post('cms/banners')
   createBanner(@Body() dto: UpsertBannerDto) {
     return this.svc.createBanner(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('cms:banners:manage')
   @Delete('cms/banners/:id')
   removeBanner(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.removeBanner(id);
   }
 
+  // Admin — Articles
   @Roles(UserRole.ADMIN)
+  @Permissions('cms:articles:manage')
   @Get('cms/articles')
   listArticles() {
     return this.svc.listArticles();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('cms:articles:manage')
   @Post('cms/articles')
   upsertArticle(@Body() dto: UpsertArticleDto) {
     return this.svc.upsertArticle(dto);

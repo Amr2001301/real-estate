@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel in-flight runs for the same ref to save minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: lint · typecheck · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # An ephemeral Postgres is provided so that any Prisma schema-validation
+    # step has somewhere to connect. NOTHING destructive runs against this DB —
+    # we only verify that `prisma migrate status` is satisfied, never deploy.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # CI-only; placeholder values. Each job gets a throwaway Postgres.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ci?schema=public
+      NODE_ENV: test
+      # Min-length-16 placeholders that pass dev-mode env validation.
+      JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
+      JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+
+      # `migrate status` is read-only: it reports drift between schema + migrations
+      # without applying anything. Acceptable against a real DB.
+      - name: Prisma migrate status (read-only check)
+        working-directory: apps/api
+        run: npx prisma migrate status --schema=./prisma/schema.prisma
+        continue-on-error: true # report but don't fail the build until migrations are stable
+
+      - name: Lint
+        run: pnpm -r lint
+
+      - name: Typecheck
+        run: pnpm -r typecheck
+
+      - name: Build
+        run: pnpm -r build

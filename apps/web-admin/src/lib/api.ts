@@ -1,8 +1,19 @@
 import { cookies } from 'next/headers';
+import { formatMissingPermissionMessage } from './permission-error';
 
 export const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 
 export class ApiError extends Error {
+  /** Stable code surfaced by the API (e.g. 'missing_permission'). */
+  public code?: string;
+  /** Permission codes the user is missing, when `code === 'missing_permission'`. */
+  public permissions?: string[];
+
+  /** The original API message (e.g. "Missing permission: contracts:sign"),
+   *  kept for logging/debugging. `.message` is overridden below for known
+   *  403 shapes so user-facing reads get Arabic text automatically. */
+  public rawMessage: string;
+
   constructor(
     public status: number,
     message: string,
@@ -10,6 +21,24 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = 'ApiError';
+    this.rawMessage = message;
+    if (payload && typeof payload === 'object') {
+      const p = payload as { code?: unknown; permissions?: unknown };
+      if (typeof p.code === 'string') this.code = p.code;
+      if (Array.isArray(p.permissions)) {
+        this.permissions = p.permissions.filter(
+          (c): c is string => typeof c === 'string',
+        );
+      }
+    }
+    // Central substitution: server actions and any other caller that just
+    // reads `.message` automatically gets a friendly Arabic string for the
+    // two 403 shapes the API emits — no per-action rewriting needed.
+    if (this.code === 'missing_permission') {
+      this.message = formatMissingPermissionMessage(this);
+    } else if (this.status === 403) {
+      this.message = 'ليست لديك صلاحية الوصول إلى هذا المورد.';
+    }
   }
 }
 
@@ -103,11 +132,41 @@ export async function apiCall<T>(path: string, init?: RequestInit & { body?: unk
   return api.delete<T>(path);
 }
 
-/** A safe wrapper that returns either { data } or { error } — useful for server components. */
-export async function safe<T>(promise: Promise<T>): Promise<{ data: T; error: null } | { data: null; error: string }> {
+export interface SafeError {
+  /** Localised, user-friendly Arabic message — already substituted for
+   *  missing_permission / generic 403, so existing read sites that just
+   *  render `.error` keep working without changes. */
+  error: string;
+  /** HTTP status, when the underlying failure was an ApiError. */
+  status?: number;
+  /** Stable API code (e.g. 'missing_permission'). */
+  code?: string;
+  /** Permission codes the user is missing, when applicable. */
+  permissions?: string[];
+}
+
+/**
+ * A safe wrapper that returns either { data } or { error } — useful for
+ * server components. Extends the legacy two-field shape with optional
+ * `status` / `code` / `permissions` so callers that care can render a
+ * precise empty-state without re-fetching, while existing callers that
+ * only read `.error` continue to work.
+ */
+export async function safe<T>(
+  promise: Promise<T>,
+): Promise<{ data: T; error: null } | ({ data: null } & SafeError)> {
   try {
     return { data: await promise, error: null };
   } catch (e) {
-    return { data: null, error: (e as Error).message };
+    if (e instanceof ApiError) {
+      return {
+        data: null,
+        error: formatMissingPermissionMessage(e),
+        status: e.status,
+        code: e.code,
+        permissions: e.permissions,
+      };
+    }
+    return { data: null, error: (e as Error).message ?? 'حدث خطأ غير متوقع.' };
   }
 }

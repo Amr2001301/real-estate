@@ -9,6 +9,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { BrokerReportsService } from './broker-reports.service';
 import {
   AgentsReportQueryDto,
@@ -20,6 +21,10 @@ import {
 
 @ApiTags('broker-reports')
 @Roles(UserRole.ADMIN)
+// Controller-level: every report read + CSV export route requires this code.
+// PermissionsGuard resolves via getAllAndOverride([handler, class]), so a
+// per-route decorator could still override this if ever needed.
+@Permissions('broker_reports:read')
 @Controller('broker-reports')
 export class BrokerReportsController {
   constructor(private readonly svc: BrokerReportsService) {}

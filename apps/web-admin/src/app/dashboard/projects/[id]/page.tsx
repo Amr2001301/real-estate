@@ -26,7 +26,7 @@ import {
   type AssetAction,
 } from '@/components/projects/asset-action-card';
 import { ServiceTileGrid } from '@/components/projects/service-tile-grid';
-import { MapPreview } from '@/components/projects/map-preview';
+import { ProjectMap } from '@/components/maps/project-map';
 import { ConfirmButton } from '@/components/confirm-button';
 import {
   publishProjectAction,
@@ -416,14 +416,17 @@ export default async function ProjectDetailPage({
 
           <Card className="p-5">
             <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
-              الموقع
+              الموقع على الخريطة
             </h3>
-            <MapPreview
+            <ProjectMap
               lat={project.lat}
               lng={project.lng}
               city={project.city}
               height="md"
             />
+            <p className="mt-3 text-2xs text-slate-500 font-mono" dir="ltr">
+              {project.lat.toFixed(5)}, {project.lng.toFixed(5)}
+            </p>
           </Card>
 
           <div id="media">

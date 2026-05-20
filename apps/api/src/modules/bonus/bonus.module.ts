@@ -13,7 +13,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean,
-  IsEnum,
+  IsIn,
   IsNumber,
   IsObject,
   IsOptional,
@@ -25,6 +25,7 @@ import {
 import { Prisma, BonusEntryStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 
 class CreateRuleDto {
@@ -41,8 +42,14 @@ class CreateEntryDto {
   @IsString() period!: string; // YYYY-MM
 }
 
+/**
+ * PATCH /bonus-entries/:id is now the revert-to-PENDING route only.
+ * APPROVED and PAID transitions live on their dedicated POST endpoints
+ * (gated by @PermissionsStrict). The global ValidationPipe's
+ * forbidNonWhitelisted + IsIn enforcement rejects other values with 400.
+ */
 class UpdateEntryStatusDto {
-  @IsEnum(BonusEntryStatus) status!: BonusEntryStatus;
+  @IsIn([BonusEntryStatus.PENDING]) status!: BonusEntryStatus;
 }
 
 class CreateTargetDto {
@@ -138,12 +145,14 @@ class BonusController {
 
   // Rules
   @Roles(UserRole.ADMIN)
+  @Permissions('bonus:rules:manage')
   @Get('bonus-rules')
   listRules() {
     return this.svc.listRules();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('bonus:rules:manage')
   @Post('bonus-rules')
   createRule(@Body() dto: CreateRuleDto) {
     return this.svc.createRule(dto);
@@ -151,12 +160,14 @@ class BonusController {
 
   // Entries
   @Roles(UserRole.ADMIN)
+  @Permissions('bonus:entries:create')
   @Post('bonus-entries')
   createEntry(@Body() dto: CreateEntryDto) {
     return this.svc.createEntry(dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('bonus:entries:read')
   @Get('bonus-entries')
   listEntries(
     @CurrentUser() user: AuthUser,
@@ -168,7 +179,27 @@ class BonusController {
     return this.svc.listEntries({ salesId: effectiveSalesId, status, period });
   }
 
+  // Strict: approval recognises the bonus as payable. Segregation of duties
+  // — separate the admin who creates entries from the admin who approves.
   @Roles(UserRole.ADMIN)
+  @PermissionsStrict('bonus:entries:approve')
+  @Post('bonus-entries/:id/approve')
+  approveEntry(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.setEntryStatus(id, { status: BonusEntryStatus.APPROVED });
+  }
+
+  // Strict: stamps paidAt — the persisted record of payment.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('bonus:entries:pay')
+  @Post('bonus-entries/:id/pay')
+  payEntry(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.setEntryStatus(id, { status: BonusEntryStatus.PAID });
+  }
+
+  // Revert-only path. DTO is narrowed to accept ONLY status: PENDING. The
+  // global ValidationPipe rejects any other value with 400.
+  @Roles(UserRole.ADMIN)
+  @Permissions('bonus:entries:approve')
   @Patch('bonus-entries/:id')
   setEntryStatus(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEntryStatusDto) {
     return this.svc.setEntryStatus(id, dto);
@@ -176,12 +207,14 @@ class BonusController {
 
   // Targets
   @Roles(UserRole.ADMIN)
+  @Permissions('targets:manage')
   @Post('sales-targets')
   upsertTarget(@Body() dto: CreateTargetDto) {
     return this.svc.upsertTarget(dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('targets:read')
   @Get('sales-targets')
   listTargets(@CurrentUser() user: AuthUser, @Query('salesId') salesId?: string) {
     const effective = user.role === UserRole.SALES ? user.sub : salesId;

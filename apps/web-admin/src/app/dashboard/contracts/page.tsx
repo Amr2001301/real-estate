@@ -39,12 +39,6 @@ interface ContractRow {
   } | null;
 }
 
-interface Stats {
-  total: number;
-  signed: number;
-  withReservation: number;
-}
-
 export default async function ContractsPage({
   searchParams,
 }: {

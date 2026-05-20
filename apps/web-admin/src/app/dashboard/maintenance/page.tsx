@@ -7,9 +7,21 @@ import { MaintenanceStatusBadge } from '@/components/badges';
 
 async function updateMaintAction(id: string, formData: FormData) {
   'use server';
-  const status = String(formData.get('status') ?? '') as MaintenanceStatus;
+  // The legacy PATCH /maintenance-requests/:id multiplexer has been removed.
+  // Assignment and status changes each route to a dedicated POST endpoint
+  // with its own permission code (maintenance:assign vs maintenance:resolve).
+  // When both fields are submitted we call assign first, then status —
+  // matching the natural admin workflow.
+  const status = String(formData.get('status') ?? '') as MaintenanceStatus | '';
   const assignedAdminId = String(formData.get('assignedAdminId') ?? '') || undefined;
-  await api.patch(`/maintenance-requests/${id}`, { status, assignedAdminId });
+
+  if (assignedAdminId) {
+    await api.post(`/maintenance-requests/${id}/assign`, { assignedAdminId });
+  }
+  if (status) {
+    await api.post(`/maintenance-requests/${id}/status`, { status });
+  }
+
   revalidatePath('/dashboard/maintenance');
 }
 

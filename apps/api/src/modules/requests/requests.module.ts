@@ -26,6 +26,7 @@ import type { Prisma } from '@prisma/client';
 import { UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -265,6 +266,7 @@ class RequestsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('visits:read')
   @Get('visit-requests')
   listVisits(
     @CurrentUser() user: AuthUser,
@@ -285,6 +287,7 @@ class RequestsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('visits:approve')
   @Patch('visit-requests/:id')
   updateVisit(
     @Param('id', ParseUUIDPipe) id: string,

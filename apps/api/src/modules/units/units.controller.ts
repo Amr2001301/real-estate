@@ -12,6 +12,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { UnitsService } from './units.service';
@@ -41,8 +42,10 @@ export class UnitsController {
     return this.units.findOne(id, true);
   }
 
-  // Sales installment calculator (Sales-only feature per scope)
+  // Sales installment calculator (Sales-only feature per scope) — reads
+  // unit pricing context, so gated under `units:read`.
   @Roles(UserRole.SALES, UserRole.ADMIN)
+  @Permissions('units:read')
   @Post('units/calc-installment')
   calc(@Body() dto: CalcInstallmentDto) {
     return this.units.calcInstallment(dto);
@@ -50,30 +53,37 @@ export class UnitsController {
 
   // Admin/Sales
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('units:read')
   @Get('units')
   list(@Query() query: UnitQueryDto) {
     return this.units.findAll(query);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('units:read')
   @Get('units/:id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.units.findOne(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('units:create')
   @Post('units')
   create(@Body() dto: CreateUnitDto) {
     return this.units.create(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('units:update')
   @Patch('units/:id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUnitDto) {
     return this.units.update(id, dto);
   }
 
+  // Admin override path for unit status. Status is normally driven by
+  // reservation/contract side effects; this route exists for corrections.
   @Roles(UserRole.ADMIN)
+  @Permissions('units:change-status')
   @Patch('units/:id/status')
   setStatus(
     @Param('id', ParseUUIDPipe) id: string,
@@ -84,6 +94,7 @@ export class UnitsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('units:delete')
   @Delete('units/:id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.units.remove(id);

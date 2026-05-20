@@ -8,6 +8,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerContractsService } from './broker-contracts.service';
 import { BrokerContractsQueryDto } from './dto/broker-contract.dto';
@@ -18,6 +19,7 @@ export class BrokerContractsController {
   constructor(private readonly svc: BrokerContractsService) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('broker_contracts:read')
   @Get()
   list(
     @Query() query: BrokerContractsQueryDto,
@@ -27,6 +29,7 @@ export class BrokerContractsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('broker_contracts:read')
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,

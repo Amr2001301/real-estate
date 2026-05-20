@@ -41,7 +41,7 @@ export default function PortalLeadForm({ projects, units }: Props) {
           <Info className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-semibold">
-              تم تسجيل العميل بحالة "مكرر" — رقم الجوال موجود بالفعل في النظام.
+              تم تسجيل العميل بحالة &quot;مكرر&quot; — رقم الجوال موجود بالفعل في النظام.
             </p>
             <p className="text-xs">
               ستراجع الإدارة الحالة وقد تعتمدها أو تبقيها مكررة.{' '}

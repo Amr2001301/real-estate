@@ -1,0 +1,323 @@
+import {
+  CanActivate,
+  ExecutionContext,
+  Global,
+  INestApplication,
+  Module,
+  ValidationPipe,
+} from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { Test } from '@nestjs/testing';
+import request from 'supertest';
+import { UserRole } from '@prisma/client';
+import { ContractsModule } from '../contracts.module';
+import { BrokerCommissionsService } from '../../broker-commissions/broker-commissions.service';
+import { RolesGuard } from '../../../common/guards/roles.guard';
+import { PermissionsGuard } from '../../../common/guards/permissions.guard';
+import { PrismaService } from '../../../common/prisma/prisma.service';
+
+/**
+ * Contract signing workflow.
+ *
+ * Focus on:
+ *   - POST /contracts/:id/sign sets signedAt
+ *   - sign() is idempotent on already-signed contracts
+ *   - broker-attributed signing triggers materializeFromContract()
+ *   - non-broker signing does NOT invoke commission materialization
+ *   - signing failures in side effects don't prevent the contract from
+ *     becoming signed (best-effort: commission warning is swallowed)
+ *
+ * BrokerCommissionsService is mocked at the DI boundary so we observe the
+ * exact call shape without re-running its internal Prisma writes (that
+ * service has its own test surface).
+ */
+
+const CONTRACT_ID = 'c1111111-1111-4111-8111-111111111111';
+const PATH_SIGN = `/contracts/${CONTRACT_ID}/sign`;
+
+interface ContractFixture {
+  id: string;
+  contractNumber: string | null;
+  signedAt: Date | null;
+  brokerId: string | null;
+  brokerAgentId: string | null;
+  reservationId: string | null;
+  reservation:
+    | { reservationNumber: string | null; leadId: string | null; salesId: string }
+    | null;
+}
+
+const fixture: { contract: ContractFixture } = { contract: {} as never };
+
+function resetFixture() {
+  fixture.contract = {
+    id: CONTRACT_ID,
+    contractNumber: 'CT-0001',
+    signedAt: null,
+    brokerId: null,
+    brokerAgentId: null,
+    reservationId: null,
+    reservation: null,
+  };
+}
+
+class FakeAuthGuard implements CanActivate {
+  static currentUser: { sub: string; role: UserRole; codes: string[] } | null = null;
+  canActivate(context: ExecutionContext): boolean {
+    if (!FakeAuthGuard.currentUser) return false;
+    const req = context.switchToHttp().getRequest();
+    req.user = {
+      sub: FakeAuthGuard.currentUser.sub,
+      role: FakeAuthGuard.currentUser.role,
+      email: null,
+      phone: null,
+    };
+    return true;
+  }
+}
+
+function makePrismaMock() {
+  const m = {
+    userPermission: {
+      findMany: jest.fn().mockImplementation(async () => {
+        const u = FakeAuthGuard.currentUser;
+        return (u?.codes ?? []).map((code) => ({ permission: { code } }));
+      }),
+    },
+    contract: {
+      findUnique: jest.fn().mockImplementation(async () => ({ ...fixture.contract })),
+      findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
+      update: jest.fn().mockImplementation(async ({ where, data }) => ({
+        ...fixture.contract,
+        ...data,
+        id: where.id,
+      })),
+    },
+    leadActivity: { create: jest.fn().mockResolvedValue({}) },
+    brokerUser: { findMany: jest.fn().mockResolvedValue([]) },
+    notification: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    unit: { findUnique: jest.fn().mockResolvedValue({ id: 'u', status: 'AVAILABLE' }) },
+    $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
+      if (Array.isArray(ops)) return Promise.all(ops);
+      if (typeof ops === 'function') return (ops as (tx: unknown) => Promise<unknown>)(m);
+      return ops;
+    }),
+  };
+  return m;
+}
+
+const brokerCommissionsMock = {
+  materializeFromContract: jest
+    .fn<Promise<{ status: string }>, [string]>()
+    .mockResolvedValue({ status: 'created' }),
+};
+
+let mock = makePrismaMock();
+
+describe('Contracts · signing workflow', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    mock = makePrismaMock();
+
+    @Global()
+    @Module({
+      providers: [{ provide: PrismaService, useValue: mock }],
+      exports: [PrismaService],
+    })
+    class MockPrismaModule {}
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [MockPrismaModule, ContractsModule],
+      providers: [
+        { provide: APP_GUARD, useClass: FakeAuthGuard },
+        { provide: APP_GUARD, useClass: RolesGuard },
+        { provide: APP_GUARD, useClass: PermissionsGuard },
+      ],
+    })
+      .overrideProvider(BrokerCommissionsService)
+      .useValue(brokerCommissionsMock)
+      .compile();
+
+    app = moduleRef.createNestApplication();
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        transform: true,
+        forbidNonWhitelisted: true,
+        transformOptions: { enableImplicitConversion: true },
+      }),
+    );
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  beforeEach(() => {
+    FakeAuthGuard.currentUser = {
+      sub: 'admin-1',
+      role: UserRole.ADMIN,
+      codes: ['contracts:sign'],
+    };
+    resetFixture();
+    mock.contract.findUnique.mockClear();
+    mock.contract.update.mockClear();
+    mock.leadActivity.create.mockClear();
+    mock.brokerUser.findMany.mockClear();
+    mock.notification.createMany.mockClear();
+    brokerCommissionsMock.materializeFromContract.mockClear();
+    brokerCommissionsMock.materializeFromContract.mockResolvedValue({ status: 'created' });
+  });
+
+  // ── Happy path: non-broker contract ─────────────────────────────────────
+
+  it('sets signedAt on a non-broker contract and skips commission materialization', async () => {
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    expect(mock.contract.update).toHaveBeenCalledTimes(1);
+    const updateArgs = mock.contract.update.mock.calls[0]![0] as {
+      where: { id: string };
+      data: { signedAt: Date };
+    };
+    expect(updateArgs.where.id).toBe(CONTRACT_ID);
+    expect(updateArgs.data.signedAt).toBeInstanceOf(Date);
+
+    // No broker attribution → side effects don't fire.
+    expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
+    expect(mock.brokerUser.findMany).not.toHaveBeenCalled();
+    expect(mock.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  // ── Idempotence on a contract that is already signed ────────────────────
+
+  it('signing an already-signed contract is idempotent: no update, no commission re-trigger', async () => {
+    fixture.contract.signedAt = new Date('2030-04-01T00:00:00Z');
+    fixture.contract.brokerId = 'broker-1'; // even a broker contract is idempotent
+
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    // The pre-read happens twice in the idempotent path (one for `before`,
+    // one to return current state). What matters is that no UPDATE fires
+    // and no side effects run.
+    expect(mock.contract.update).not.toHaveBeenCalled();
+    expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
+    expect(mock.leadActivity.create).not.toHaveBeenCalled();
+    expect(mock.notification.createMany).not.toHaveBeenCalled();
+  });
+
+  // ── Broker-attributed contract: commission materializes ─────────────────
+
+  it('signing a broker-attributed contract triggers materializeFromContract exactly once', async () => {
+    fixture.contract.brokerId = 'broker-1';
+    fixture.contract.brokerAgentId = 'agent-1';
+    fixture.contract.reservationId = 'r-1';
+    fixture.contract.reservation = {
+      reservationNumber: 'RES-0001',
+      leadId: 'lead-1',
+      salesId: 'sales-1',
+    };
+
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    expect(mock.contract.update).toHaveBeenCalledTimes(1);
+    expect(brokerCommissionsMock.materializeFromContract).toHaveBeenCalledTimes(1);
+    expect(brokerCommissionsMock.materializeFromContract).toHaveBeenCalledWith(CONTRACT_ID);
+  });
+
+  it('broker portal activity + notifications fire on broker contract sign', async () => {
+    fixture.contract.brokerId = 'broker-1';
+    fixture.contract.reservationId = 'r-1';
+    fixture.contract.reservation = {
+      reservationNumber: 'RES-0001',
+      leadId: 'lead-1',
+      salesId: 'sales-1',
+    };
+    mock.brokerUser.findMany.mockResolvedValueOnce([
+      { userId: 'broker-user-a' },
+      { userId: 'broker-user-b' },
+    ]);
+
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    // broker_contract_signed activity row on the source lead.
+    expect(mock.leadActivity.create).toHaveBeenCalledTimes(1);
+    const actArgs = mock.leadActivity.create.mock.calls[0]![0] as {
+      data: { leadId: string; type: string };
+    };
+    expect(actArgs.data.type).toBe('broker_contract_signed');
+    expect(actArgs.data.leadId).toBe('lead-1');
+
+    // Notifications go to the 2 broker users + the salesId (3 total).
+    expect(mock.notification.createMany).toHaveBeenCalledTimes(1);
+    const notifArgs = mock.notification.createMany.mock.calls[0]![0] as {
+      data: Array<{ userId: string; templateCode: string }>;
+    };
+    expect(notifArgs.data).toHaveLength(3);
+    expect(new Set(notifArgs.data.map((n) => n.userId))).toEqual(
+      new Set(['broker-user-a', 'broker-user-b', 'sales-1']),
+    );
+    expect(notifArgs.data.every((n) => n.templateCode === 'broker_contract_signed')).toBe(true);
+  });
+
+  // ── Best-effort: commission materialization failure does NOT break sign ─
+
+  it('contract is signed even when materializeFromContract throws (best-effort side effect)', async () => {
+    fixture.contract.brokerId = 'broker-1';
+    fixture.contract.reservationId = 'r-1';
+    fixture.contract.reservation = {
+      reservationNumber: 'RES-0001',
+      leadId: 'lead-1',
+      salesId: 'sales-1',
+    };
+    brokerCommissionsMock.materializeFromContract.mockRejectedValueOnce(
+      new Error('downstream blew up'),
+    );
+
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    // The signing UPDATE must still have committed.
+    expect(mock.contract.update).toHaveBeenCalledTimes(1);
+  });
+
+  // ── DTO + validation ────────────────────────────────────────────────────
+
+  it('rejects POST /sign without signedAt (400)', async () => {
+    await request(app.getHttpServer()).post(PATH_SIGN).send({}).expect(400);
+    expect(mock.contract.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects POST /sign with an unrecognised field (400, ValidationPipe whitelist)', async () => {
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z', mode: 'force' })
+      .expect(400);
+    expect(mock.contract.update).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when the contract does not exist', async () => {
+    mock.contract.findUnique.mockResolvedValueOnce(null);
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(404);
+    expect(mock.contract.update).not.toHaveBeenCalled();
+  });
+});

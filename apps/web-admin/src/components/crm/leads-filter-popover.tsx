@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { ListFilter, Search } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -119,12 +120,12 @@ export function LeadsFilterPopover({ defaultStage, defaultQ }: Props) {
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-1">
-              <a
+              <Link
                 href="/dashboard/leads"
                 className="text-xs font-semibold text-slate-500 hover:text-slate-700"
               >
                 إعادة تعيين
-              </a>
+              </Link>
               <Button type="submit" variant="primary" size="sm">
                 تطبيق
               </Button>

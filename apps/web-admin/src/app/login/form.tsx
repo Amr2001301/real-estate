@@ -4,12 +4,15 @@ import { useActionState, useState } from 'react';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { loginAction, type LoginState } from './actions';
 
-export default function LoginForm() {
+export default function LoginForm({ from }: { from?: string }) {
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={action} className="space-y-8">
+
+      {/* Forward the middleware-supplied ?from=... so the action can honor it. */}
+      {from ? <input type="hidden" name="from" value={from} /> : null}
 
       {/* Email */}
       <div className="space-y-1.5">

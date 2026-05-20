@@ -1,0 +1,14 @@
+node_modules
+dist
+.turbo
+.next
+coverage
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+docs
+test
+**/*.spec.ts
+**/*.test.ts

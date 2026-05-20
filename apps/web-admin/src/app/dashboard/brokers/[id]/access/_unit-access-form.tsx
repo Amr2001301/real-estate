@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/form/field';
-import { UnitStatusBadge } from '@/components/badges';
 import type { Project, Unit } from '@/lib/types';
 import { tx } from '@/lib/format';
 

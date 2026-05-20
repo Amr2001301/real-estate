@@ -1,9 +1,9 @@
 import { Type } from 'class-transformer';
 import {
-  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -214,10 +214,27 @@ export class UpdateBrokerDto {
   notes?: string;
 }
 
+/**
+ * PATCH /brokers/:id/status now handles ONLY the non-destructive transitions
+ * (reactivate → ACTIVE, send back to PENDING). The destructive transitions —
+ * SUSPENDED and TERMINATED — moved to dedicated strict routes
+ * (POST /:id/suspend, POST /:id/terminate) so each carries its own permission
+ * code. The @IsIn whitelist makes the split tamper-proof: a caller holding
+ * only brokers:update cannot suspend/terminate through this generic route.
+ */
 export class UpdateBrokerStatusDto {
-  @IsEnum(BrokerStatus)
+  @IsIn([BrokerStatus.ACTIVE, BrokerStatus.PENDING])
   status!: BrokerStatus;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  reason?: string;
+}
+
+/** Body for the dedicated suspend/terminate routes — status is implied by the
+ *  route, so only the optional audit reason travels in the body. */
+export class BrokerStatusReasonDto {
   @IsOptional()
   @IsString()
   @MaxLength(2000)

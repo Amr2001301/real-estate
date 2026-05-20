@@ -1,4 +1,11 @@
-import { Controller, Get, Injectable, Module, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  Injectable,
+  Module,
+  Query,
+} from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
   IsDateString,
@@ -11,12 +18,13 @@ import {
   DepositType,
   InstallmentStatus,
   Prisma,
-  ReservationStatus,
   UnitStatus,
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { toCsv, type CsvCell } from '../../common/utils/csv';
 
 @Injectable()
 class ReportsService {
@@ -466,6 +474,205 @@ class ReportsService {
     };
   }
 
+  // ── CSV builders ─────────────────────────────────────────────────────────
+  // Each builder takes the already-computed report payload and emits a CSV
+  // string with a UTF-8 BOM (Excel-friendly Arabic). Reuses the service's
+  // existing data methods — no new business logic.
+
+  async salesCsv(period?: string): Promise<string> {
+    const data = await this.sales(period);
+
+    // Section 1 — summary KPIs (one row per metric)
+    const summaryRows: CsvCell[][] = [
+      ['الفترة', period ?? 'الكل'],
+      ['عدد العقود', data.contracts],
+      ['إجمالي قيمة العقود', Number(data.total).toFixed(2)],
+    ];
+
+    // Section 2 — per-project breakdown
+    const projectHeaders = ['معرّف المشروع', 'عدد العقود', 'إجمالي القيمة'];
+    const projectRows: CsvCell[][] = (data.byProject ?? []).map((p) => [
+      p.projectId,
+      p.count,
+      Number(p.total).toFixed(2),
+    ]);
+
+    return [
+      toCsv(['المؤشر', 'القيمة'], summaryRows),
+      '',
+      toCsv(projectHeaders, projectRows),
+    ].join('\r\n');
+  }
+
+  async financialCsv(period?: string): Promise<string> {
+    const data = await this.financial(period);
+    const rows: CsvCell[][] = [
+      ['الفترة', period ?? 'الكل'],
+      ['عدد الدفعات', data.deposits],
+      ['الدفعات الموثّقة', data.verified],
+      ['إجمالي المبالغ المحصّلة', Number(data.total).toFixed(2)],
+    ];
+    return toCsv(['المؤشر', 'القيمة'], rows);
+  }
+
+  async operationalCsv(): Promise<string> {
+    // Operational export bundles two existing reads: KPIs + reservation
+    // breakdown by status. They are emitted as two stacked tables so the
+    // user can read them with a single download.
+    const [k, r] = await Promise.all([this.kpis(), this.reservations()]);
+
+    const kpiRows: CsvCell[][] = [
+      ['المشاريع المنشورة', k.projects],
+      ['إجمالي الوحدات', k.units.total],
+      ['وحدات متاحة', k.units.available],
+      ['وحدات محجوزة', k.units.reserved],
+      ['وحدات مباعة', k.units.sold],
+      ['إجمالي العملاء المتصفّحين (Leads)', k.leads.total],
+      ['عملاء جدد', k.leads.new],
+      ['زيارات قيد الانتظار', k.pendingVisits],
+      ['عدد العقود', k.contracts],
+      ['إجمالي الدفعات المحصّلة', Number(k.depositsTotal).toFixed(2)],
+    ];
+
+    const reservationRows: CsvCell[][] = Object.entries(r).map(
+      ([status, count]) => [status, count],
+    );
+
+    return [
+      toCsv(['المؤشر', 'القيمة'], kpiRows),
+      '',
+      toCsv(['حالة الحجز', 'العدد'], reservationRows),
+    ].join('\r\n');
+  }
+
+  async financialDashboardCsv(opts: {
+    projectId?: string;
+    q?: string;
+    type?: DepositType;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<string> {
+    const data = await this.financialDashboard(opts);
+
+    const summaryRows: CsvCell[][] = [
+      ['إجمالي قيمة العقود', data.summary.totalContractValue],
+      ['إجمالي المحصّل', data.summary.totalCollected],
+      ['المتبقي', data.summary.totalRemaining],
+      ['المتأخر', data.summary.totalOverdue],
+      ['المحصّل هذا الشهر', data.summary.collectedThisMonth],
+      ['المستحق هذا الشهر', data.summary.dueThisMonth],
+      ['عدد العقود', data.summary.contractCount],
+      ['عدد الدفعات', data.summary.depositCount],
+      ['أقساط متأخرة', data.summary.overdueInstallmentCount],
+    ];
+
+    // We use a permissive shape here — the report payload's nested selects
+    // vary slightly between branches and aren't worth a new exported type
+    // just for the CSV builder.
+    type InstRow = {
+      id: string;
+      type: string;
+      dueDate: Date | string;
+      amount: Prisma.Decimal | string | number;
+      status: string;
+      plan: {
+        contract: {
+          contractNumber: string | null;
+          customer: { fullName: string };
+          unit: { code: string };
+        };
+      };
+    };
+    type DepositRow = {
+      id: string;
+      type: string;
+      amount: Prisma.Decimal | string | number;
+      paidAt: Date | string;
+      verified: boolean;
+      contract:
+        | {
+            contractNumber: string | null;
+            customer: { fullName: string } | null;
+            unit: { code: string } | null;
+          }
+        | null;
+      reservation:
+        | {
+            reservationNumber: string | null;
+            unit: { code: string } | null;
+            client: { fullName: string } | null;
+            lead: { fullName: string } | null;
+          }
+        | null;
+    };
+
+    const fmtInst = (rows: InstRow[]): CsvCell[][] =>
+      rows.map((r) => [
+        r.plan.contract.contractNumber ?? '',
+        r.plan.contract.customer.fullName,
+        r.plan.contract.unit.code,
+        r.type,
+        new Date(r.dueDate).toISOString().slice(0, 10),
+        r.amount.toString(),
+        r.status,
+      ]);
+
+    const overdueRows = fmtInst(data.overdue as unknown as InstRow[]);
+    const weekRows = fmtInst(data.upcomingThisWeek as unknown as InstRow[]);
+    const monthRows = fmtInst(data.upcomingThisMonth as unknown as InstRow[]);
+
+    const depositRows: CsvCell[][] = (
+      data.recentDeposits as unknown as DepositRow[]
+    ).map((d) => [
+      d.contract?.contractNumber ?? d.reservation?.reservationNumber ?? '',
+      d.contract?.customer?.fullName ??
+        d.reservation?.client?.fullName ??
+        d.reservation?.lead?.fullName ??
+        '',
+      d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '',
+      d.type,
+      new Date(d.paidAt).toISOString().slice(0, 10),
+      d.amount.toString(),
+      d.verified ? 'نعم' : 'لا',
+    ]);
+
+    const instHeaders = [
+      'رقم العقد',
+      'العميل',
+      'كود الوحدة',
+      'النوع',
+      'تاريخ الاستحقاق',
+      'المبلغ',
+      'الحالة',
+    ];
+    const depHeaders = [
+      'المرجع',
+      'العميل',
+      'كود الوحدة',
+      'النوع',
+      'تاريخ السداد',
+      'المبلغ',
+      'موثّقة',
+    ];
+
+    return [
+      '# ملخص',
+      toCsv(['المؤشر', 'القيمة'], summaryRows),
+      '',
+      '# الأقساط المتأخرة',
+      toCsv(instHeaders, overdueRows),
+      '',
+      '# أقساط مستحقة هذا الأسبوع',
+      toCsv(instHeaders, weekRows),
+      '',
+      '# أقساط مستحقة هذا الشهر',
+      toCsv(instHeaders, monthRows),
+      '',
+      '# آخر الدفعات',
+      toCsv(depHeaders, depositRows),
+    ].join('\r\n');
+  }
+
   private periodWhereContract(period: string): Prisma.ContractWhereInput {
     const [y, m] = period.split('-').map(Number);
     const start = new Date(Date.UTC(y!, (m ?? 1) - 1, 1));
@@ -495,33 +702,85 @@ class ReportsController {
   constructor(private readonly svc: ReportsService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
   @Get('kpis')
   kpis() {
     return this.svc.kpis();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('reports:sales:read')
   @Get('sales')
   sales(@Query('period') period?: string) {
     return this.svc.sales(period);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
   @Get('financial')
   financial(@Query('period') period?: string) {
     return this.svc.financial(period);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
   @Get('reservations')
   reservations() {
     return this.svc.reservations();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
   @Get('financial-dashboard')
   financialDashboard(@Query() query: FinancialDashboardQueryDto) {
     return this.svc.financialDashboard({
+      projectId: query.projectId,
+      q: query.q,
+      type: query.type,
+      dateFrom: query.dateFrom,
+      dateTo: query.dateTo,
+    });
+  }
+
+  // ── CSV exports ────────────────────────────────────────────────────────
+  // Each returns a raw CSV string; @Header switches the response so the
+  // browser treats the body as a download. Permissions mirror the matching
+  // JSON read route exactly.
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:sales:read')
+  @Get('sales/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="sales-report.csv"')
+  salesCsv(@Query('period') period?: string) {
+    return this.svc.salesCsv(period);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @Get('financial/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="financial-report.csv"')
+  financialCsv(@Query('period') period?: string) {
+    return this.svc.financialCsv(period);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
+  @Get('operational/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="operational-report.csv"')
+  operationalCsv() {
+    return this.svc.operationalCsv();
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @Get('financial-dashboard/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="financial-dashboard.csv"')
+  financialDashboardCsv(@Query() query: FinancialDashboardQueryDto) {
+    return this.svc.financialDashboardCsv({
       projectId: query.projectId,
       q: query.q,
       type: query.type,

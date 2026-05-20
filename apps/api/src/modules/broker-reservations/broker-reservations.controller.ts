@@ -10,6 +10,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { BrokerReservationsService } from './broker-reservations.service';
 import {
@@ -23,6 +24,7 @@ export class BrokerReservationsController {
   constructor(private readonly svc: BrokerReservationsService) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('broker_reservations:read')
   @Get()
   list(
     @Query() query: BrokerReservationsQueryDto,
@@ -34,6 +36,7 @@ export class BrokerReservationsController {
   // Admin-only: create a broker-originated reservation on behalf of a broker.
   // Mounted BEFORE the `:id` GET below so the literal POST never collides.
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_reservations:create')
   @Post()
   createOnBehalfOfBroker(
     @Body() dto: CreateAdminBrokerReservationDto,
@@ -43,6 +46,7 @@ export class BrokerReservationsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('broker_reservations:read')
   @Get(':id')
   findOne(
     @Param('id', ParseUUIDPipe) id: string,

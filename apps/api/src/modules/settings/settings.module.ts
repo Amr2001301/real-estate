@@ -15,6 +15,7 @@ import { IsObject, IsOptional, IsString } from 'class-validator';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 /**
  * Setting keys whose value should be masked on the wire. Matching is
@@ -137,18 +138,21 @@ class SettingsController {
   constructor(private readonly svc: SettingsService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('settings:read')
   @Get()
   list(@Query() query: SettingsQueryDto) {
     return this.svc.list(query);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('settings:read')
   @Get(':key')
   get(@Param('key') key: string) {
     return this.svc.get(key);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('settings:write')
   @Put(':key')
   upsert(@Param('key') key: string, @Body() dto: UpsertSettingDto) {
     this.svc.rejectMaskValue(dto.value);
@@ -158,6 +162,7 @@ class SettingsController {
   // Phase 16 — PATCH alias. Accepts any JSON shape (the legacy PUT only
   // accepted object/array). Same upsert semantics underneath.
   @Roles(UserRole.ADMIN)
+  @Permissions('settings:write')
   @Patch(':key')
   patch(@Param('key') key: string, @Body() dto: PatchSettingDto) {
     this.svc.rejectMaskValue(dto.value);

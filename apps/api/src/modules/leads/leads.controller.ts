@@ -11,6 +11,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { LeadStage, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { LeadsService } from './leads.service';
 import {
@@ -29,12 +30,14 @@ export class LeadsController {
 
   // Sources
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:read')
   @Get('lead-sources')
   listSources() {
     return this.leads.listSources();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('lead_sources:manage')
   @Post('lead-sources')
   createSource(@Body() dto: CreateLeadSourceDto) {
     return this.leads.createSource(dto);
@@ -42,6 +45,7 @@ export class LeadsController {
 
   // Pipeline counts
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:read')
   @Get('leads/pipeline')
   pipeline() {
     return this.leads.pipelineCounts();
@@ -49,6 +53,7 @@ export class LeadsController {
 
   // Leads
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:read')
   @Get('leads')
   list(
     @CurrentUser() user: AuthUser,
@@ -74,24 +79,28 @@ export class LeadsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:read')
   @Get('leads/:id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.leads.findOne(id);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:create')
   @Post('leads')
   create(@Body() dto: CreateLeadDto) {
     return this.leads.create(dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:update')
   @Patch('leads/:id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateLeadDto) {
     return this.leads.update(id, dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:advance-stage')
   @Patch('leads/:id/stage')
   updateStage(
     @Param('id', ParseUUIDPipe) id: string,
@@ -101,12 +110,14 @@ export class LeadsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('leads:assign')
   @Patch('leads/:id/assign')
   assign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignLeadDto) {
     return this.leads.assign(id, dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('leads:note')
   @Post('leads/:id/notes')
   addNote(
     @Param('id', ParseUUIDPipe) id: string,

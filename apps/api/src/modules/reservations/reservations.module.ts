@@ -43,12 +43,14 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { computeDurationOption } from '../installments/duration-calc';
-import { BrokerCommissionsModule } from '../broker-commissions/broker-commissions.module';
-import { BrokerCommissionsService } from '../broker-commissions/broker-commissions.service';
+// BrokerCommissionsModule/Service no longer imported here. Commission
+// materialisation runs from ContractsService.sign() — the only path that
+// signs a contract — and convert always produces an unsigned contract.
 
 class CreateReservationDto {
   @IsUUID() unitId!: string;
@@ -66,8 +68,23 @@ class CreateReservationDto {
   @IsOptional() @IsString() bookingNotes?: string;
 }
 
+/**
+ * Internal type used by ReservationsService.setStatus(). The public
+ * controller surface now exposes per-transition POST routes
+ * (/approve, /reject, /cancel) that build this object internally;
+ * the old PATCH /:id/status route has been removed.
+ */
 class UpdateReservationStatusDto {
   @IsEnum(ReservationStatus) status!: ReservationStatus;
+  @IsOptional() @IsString() reason?: string;
+}
+
+/**
+ * Body for POST /reservations/:id/reject and POST /reservations/:id/cancel.
+ * `reason` is required at the service layer for CANCELLED, optional for
+ * REJECTED; the existing setStatus implementation enforces this.
+ */
+class StatusChangeReasonDto {
   @IsOptional() @IsString() reason?: string;
 }
 
@@ -87,7 +104,11 @@ class UpdateReservationDto {
 class ConvertReservationDto {
   // Required only when the reservation has selectedDurationMonths.
   @IsOptional() @IsDateString() startsAt?: string;
-  @IsOptional() @IsDateString() signedAt?: string;
+  // `signedAt` is intentionally NOT accepted here. Conversion always creates
+  // an unsigned contract; signing is a separate strict action via
+  // POST /contracts/:id/sign (gated by @PermissionsStrict('contracts:sign')).
+  // The global ValidationPipe's forbidNonWhitelisted rejects inbound
+  // `signedAt` with 400, closing the convert→signed bypass.
   @IsOptional() @IsString() pdfUrl?: string;
 }
 
@@ -136,10 +157,7 @@ const FULL_INCLUDE = {
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
 
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly brokerCommissions: BrokerCommissionsService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   // Public so the broker portal reservations service can reuse the same
   // numbering scheme without duplicating logic. Behavior unchanged.
@@ -1120,13 +1138,6 @@ export class ReservationsService {
         throw new BadRequestException('تاريخ بدء التقسيط غير صالح');
       }
     }
-    if (dto.signedAt) {
-      const d = new Date(dto.signedAt);
-      if (isNaN(d.getTime())) {
-        throw new BadRequestException('تاريخ توقيع العقد غير صالح');
-      }
-    }
-
     const now = new Date();
 
     // Retry up to 3 times in the rare case two conversions race on the same
@@ -1147,7 +1158,11 @@ export class ReservationsService {
               totalAmount,
               downPayment,
               pdfUrl: dto.pdfUrl ?? null,
-              signedAt: dto.signedAt ? new Date(dto.signedAt) : null,
+              // Conversion always creates an unsigned contract. Signing flows
+              // through POST /contracts/:id/sign (strict permission), which
+              // also fires the broker_contract_signed activity / notification
+              // / materializeFromContract side effects.
+              signedAt: null,
               // Inherit broker attribution from the source reservation — this
               // is the ONLY path that sets these fields on a contract. Direct
               // POST /contracts (the standalone create) does not accept them.
@@ -1197,7 +1212,7 @@ export class ReservationsService {
 
         // 4a. DOWN_PAYMENT row (before monthly installments).
         if (downPayment.gt(0)) {
-          const downPaymentDueDate = dto.signedAt ? new Date(dto.signedAt) : now;
+          const downPaymentDueDate = now;
           await tx.installment.create({
             data: {
               planId: plan.id,
@@ -1299,21 +1314,10 @@ export class ReservationsService {
               },
             },
           });
-          if (dto.signedAt) {
-            await tx.leadActivity.create({
-              data: {
-                leadId: reservation.lead.id,
-                type: 'broker_contract_signed',
-                payload: {
-                  brokerId: reservation.brokerId,
-                  brokerAgentId: reservation.brokerAgentId,
-                  contractId: contract.id,
-                  contractNumber,
-                  signedAt: dto.signedAt,
-                },
-              },
-            });
-          }
+          // The `broker_contract_signed` LeadActivity row is no longer
+          // written here — conversion now produces an unsigned contract.
+          // Signing flows through POST /contracts/:id/sign, which fires
+          // the activity from ContractsService.sign().
         }
       }
 
@@ -1354,20 +1358,10 @@ export class ReservationsService {
                   sentAt: new Date(),
                 })),
               });
-              if (dto.signedAt) {
-                await this.prisma.notification.createMany({
-                  data: Array.from(userIds).map((userId) => ({
-                    userId,
-                    templateCode: 'broker_contract_signed',
-                    payload: {
-                      ...basePayload,
-                      signedAt: dto.signedAt,
-                    } as Prisma.InputJsonValue,
-                    channel: NotificationChannel.IN_APP,
-                    sentAt: new Date(),
-                  })),
-                });
-              }
+              // The `broker_contract_signed` notification fan-out is no
+              // longer emitted here — conversion creates an unsigned
+              // contract. Signing routes through POST /contracts/:id/sign,
+              // which fans out from ContractsService.sign().
             }
           } catch (notifyErr) {
             this.logger.warn(
@@ -1376,22 +1370,10 @@ export class ReservationsService {
           }
         }
 
-        // Materialize the broker commission row only when the contract was
-        // created already-signed. The standard path is: convert → contract
-        // unsigned → admin PATCHes signedAt → ContractsService.update
-        // materializes from there. Best-effort: a failure here is logged
-        // but never propagated (the contract itself is already committed).
-        if (reservation.brokerId && dto.signedAt) {
-          try {
-            await this.brokerCommissions.materializeFromContract(
-              result.contractId,
-            );
-          } catch (commErr) {
-            this.logger.warn(
-              `materializeFromContract(${result.contractId}) failed: ${(commErr as Error).message}`,
-            );
-          }
-        }
+        // Broker commission materialization is performed by
+        // ContractsService.sign() — the only path that signs a contract.
+        // Convert always produces an unsigned contract, so no commission
+        // is materialized at conversion time.
 
         return result;
       } catch (e: unknown) {
@@ -1510,18 +1492,21 @@ class ReservationsController {
   constructor(private readonly svc: ReservationsService) {}
 
   @Roles(UserRole.SALES, UserRole.ADMIN)
+  @Permissions('reservations:create')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateReservationDto) {
     return this.svc.create(user, dto);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('reservations:read')
   @Get('stats')
   stats() {
     return this.svc.stats();
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('reservations:read')
   @Get()
   list(
     @CurrentUser() user: AuthUser,
@@ -1554,6 +1539,7 @@ class ReservationsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('reservations:read')
   @Get('activities')
   listActivities(
     @Query('clientId') clientId?: string,
@@ -1564,12 +1550,14 @@ class ReservationsController {
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('reservations:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('reservations:update')
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -1579,16 +1567,8 @@ class ReservationsController {
     return this.svc.update(id, dto, user);
   }
 
-  @Roles(UserRole.ADMIN)
-  @Patch(':id/status')
-  setStatus(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: UpdateReservationStatusDto,
-    @CurrentUser() user: AuthUser,
-  ) {
-    return this.svc.setStatus(id, dto, user);
-  }
-
+  // Notes intentionally left without @Permissions — SALES users add notes
+  // routinely while working a reservation; the @Roles gate is sufficient.
   @Roles(UserRole.ADMIN, UserRole.SALES)
   @Post(':id/notes')
   addNote(
@@ -1599,7 +1579,55 @@ class ReservationsController {
     return this.svc.addNote(id, dto, user.sub);
   }
 
+  // Strict: approval is the gate that lets a reservation proceed to contract
+  // conversion. Classic SoD — separate creator from approver.
   @Roles(UserRole.ADMIN)
+  @PermissionsStrict('reservations:approve')
+  @Post(':id/approve')
+  approveReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.setStatus(id, { status: ReservationStatus.APPROVED }, user);
+  }
+
+  // Strict: rejection frees the unit and writes a permanent rejection record.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('reservations:reject')
+  @Post(':id/reject')
+  rejectReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: StatusChangeReasonDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.setStatus(
+      id,
+      { status: ReservationStatus.REJECTED, reason: dto.reason },
+      user,
+    );
+  }
+
+  // Strict: cancellation also frees the unit, and can fire from APPROVED.
+  // Service enforces that `reason` is non-empty.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('reservations:cancel')
+  @Post(':id/cancel')
+  cancelReservation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: StatusChangeReasonDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.svc.setStatus(
+      id,
+      { status: ReservationStatus.CANCELLED, reason: dto.reason },
+      user,
+    );
+  }
+
+  // Strict: the most consequential transition — creates Contract, marks Unit
+  // SOLD, generates installment plan, materializes broker commission.
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('reservations:convert')
   @Post(':id/convert')
   convertReservation(
     @Param('id', ParseUUIDPipe) id: string,
@@ -1609,7 +1637,10 @@ class ReservationsController {
     return this.svc.convertReservation(id, dto, user);
   }
 
+  // Strict: confirm inserts an auto-verified Deposit row of type
+  // BOOKING_AMOUNT; unconfirm deletes it. Symmetric pairing under one code.
   @Roles(UserRole.ADMIN)
+  @PermissionsStrict('reservations:booking-payment')
   @Post(':id/booking-payment/confirm')
   confirmBookingPayment(
     @Param('id', ParseUUIDPipe) id: string,
@@ -1620,6 +1651,7 @@ class ReservationsController {
   }
 
   @Roles(UserRole.ADMIN)
+  @PermissionsStrict('reservations:booking-payment')
   @Post(':id/booking-payment/unconfirm')
   unconfirmBookingPayment(
     @Param('id', ParseUUIDPipe) id: string,
@@ -1631,7 +1663,6 @@ class ReservationsController {
 }
 
 @Module({
-  imports: [BrokerCommissionsModule],
   controllers: [ReservationsController],
   providers: [ReservationsService, ReservationExpiryCron],
   exports: [ReservationsService],

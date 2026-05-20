@@ -72,14 +72,16 @@ export async function createReservationAction(
 }
 
 export async function approveReservationAction(id: string) {
-  await api.patch(`/reservations/${id}/status`, { status: 'APPROVED' });
+  // Each status transition now has a dedicated strict-permission endpoint.
+  // The legacy PATCH /reservations/:id/status route has been removed.
+  await api.post(`/reservations/${id}/approve`, {});
   revalidatePath('/dashboard/reservations');
   revalidatePath(`/dashboard/reservations/${id}`);
 }
 
 export async function rejectReservationAction(id: string, formData: FormData) {
   const reason = String(formData.get('reason') ?? '').trim() || undefined;
-  await api.patch(`/reservations/${id}/status`, { status: 'REJECTED', reason });
+  await api.post(`/reservations/${id}/reject`, { reason });
   revalidatePath('/dashboard/reservations');
   revalidatePath(`/dashboard/reservations/${id}`);
 }
@@ -93,7 +95,7 @@ export async function cancelReservationAction(
     return { error: 'سبب الإلغاء مطلوب' };
   }
   try {
-    await api.patch(`/reservations/${id}/status`, { status: 'CANCELLED', reason });
+    await api.post(`/reservations/${id}/cancel`, { reason });
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
@@ -135,22 +137,47 @@ export async function convertReservationAction(
   id: string,
   formData: FormData,
 ): Promise<{ error?: string; contractId?: string }> {
+  // The API no longer accepts `signedAt` on /reservations/:id/convert —
+  // signing is a separate strict action via POST /contracts/:id/sign.
+  // The convert UI still exposes the optional signedAt field; we split
+  // the flow here.
   const startsAt = String(formData.get('startsAt') ?? '').trim() || undefined;
   const signedAt = String(formData.get('signedAt') ?? '').trim() || undefined;
   const pdfUrl = String(formData.get('pdfUrl') ?? '').trim() || undefined;
 
+  let result: { contractId: string; contractNumber: string };
   try {
-    const result = await api.post<{ contractId: string; contractNumber: string }>(
+    result = await api.post<{ contractId: string; contractNumber: string }>(
       `/reservations/${id}/convert`,
-      { startsAt, signedAt, pdfUrl },
+      { startsAt, pdfUrl },
     );
-    revalidatePath('/dashboard/reservations');
-    revalidatePath(`/dashboard/reservations/${id}`);
-    revalidatePath('/dashboard/contracts');
-    return { contractId: result.contractId };
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
+
+  // Optional signing step — naturally requires the strict `contracts:sign`
+  // permission. If signing fails, the contract was still created; surface
+  // the error so the user can sign manually from the contract detail page
+  // rather than re-submitting the convert form (which would duplicate).
+  if (signedAt) {
+    try {
+      await api.post(`/contracts/${result.contractId}/sign`, { signedAt });
+    } catch (e: unknown) {
+      revalidatePath('/dashboard/reservations');
+      revalidatePath(`/dashboard/reservations/${id}`);
+      revalidatePath('/dashboard/contracts');
+      const reason = e instanceof Error ? e.message : 'حدث خطأ غير متوقع';
+      return {
+        contractId: result.contractId,
+        error: `تم تحويل الحجز إلى عقد لكن فشل التوقيع: ${reason}. افتح صفحة العقد وحاول التوقيع مرة أخرى.`,
+      };
+    }
+  }
+
+  revalidatePath('/dashboard/reservations');
+  revalidatePath(`/dashboard/reservations/${id}`);
+  revalidatePath('/dashboard/contracts');
+  return { contractId: result.contractId };
 }
 
 export async function addReservationNoteAction(id: string, formData: FormData) {

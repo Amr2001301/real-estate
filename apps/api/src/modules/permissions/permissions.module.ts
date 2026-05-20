@@ -15,6 +15,7 @@ import { IsArray, IsOptional, IsString } from 'class-validator';
 import { UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 
 /**
  * Lightweight, ADMIN-only management surface for the existing
@@ -169,18 +170,21 @@ class PermissionsController {
   constructor(private readonly svc: PermissionsService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('permissions:manage')
   @Get('permissions')
   list() {
     return this.svc.list();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('permissions:manage')
   @Get('users/:id/permissions')
   listForUser(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.listForUser(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('permissions:manage')
   @Patch('users/:id/permissions')
   updateForUser(
     @Param('id', ParseUUIDPipe) id: string,

@@ -1,0 +1,115 @@
+# Local docker stack.
+#
+# Profiles let you run just infrastructure or the full stack:
+#   * `docker compose --profile infra up -d`
+#       → postgres + redis only (use this for local `pnpm dev`)
+#   * `docker compose --profile full up -d --build`
+#       → postgres + redis + api + web-admin (full stack inside Docker)
+#
+# Env values are read from .env in the repo root.
+# Copy .env.docker.example → .env and edit secrets before first run.
+
+name: real-estate
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    profiles: ["infra", "full"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-realestate}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-realestate}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    profiles: ["infra", "full"]
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    profiles: ["full"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:4000}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3001}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-realestate}?schema=public
+      REDIS_URL: redis://redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-30d}
+      OTP_PROVIDER: ${OTP_PROVIDER:-console}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
+      FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
+      FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
+      # Set RUN_MIGRATIONS=true to apply pending Prisma migrations on container
+      # startup. Leave unset (or false) in production — operators should run
+      # `pnpm --filter @rep/api prisma:deploy` out-of-band instead.
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-false}
+    ports:
+      - "${API_PORT:-4000}:4000"
+
+  web-admin:
+    build:
+      context: .
+      dockerfile: apps/web-admin/Dockerfile
+    profiles: ["full"]
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      # The container resolves `api` via the compose network; this URL is
+      # used by Next.js rewrites for /api-proxy/*.
+      API_BASE_URL: http://api:4000
+      NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Real Estate Admin}
+    ports:
+      - "${WEB_ADMIN_PORT:-3001}:3001"
+
+volumes:
+  postgres-data:
+  redis-data:

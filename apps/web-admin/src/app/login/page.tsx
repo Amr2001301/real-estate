@@ -1,6 +1,13 @@
 import LoginForm from './form';
 
-export default function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  // Next.js 15 makes route params async.
+  searchParams: Promise<{ from?: string | string[] }>;
+}) {
+  const sp = await searchParams;
+  const from = typeof sp.from === 'string' ? sp.from : undefined;
   return (
     <div className="min-h-screen flex flex-col lg:flex-row" dir="rtl">
 
@@ -66,7 +73,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <LoginForm />
+          <LoginForm from={from} />
         </div>
       </div>
 

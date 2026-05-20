@@ -16,6 +16,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { UserRole } from '@prisma/client';
 
 class CreateBuildingDto {
@@ -89,30 +90,35 @@ class BuildingsController {
   constructor(private readonly buildings: BuildingsService) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('projects:read')
   @Get()
   list(@Query('phaseId') phaseId?: string) {
     return this.buildings.list(phaseId);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('projects:read')
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.buildings.get(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('buildings:manage')
   @Post()
   create(@Body() dto: CreateBuildingDto) {
     return this.buildings.create(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('buildings:manage')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateBuildingDto) {
     return this.buildings.update(id, dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('buildings:manage')
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.buildings.remove(id);

@@ -1,7 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import { api, safe } from '@/lib/api';
 import { DataTable } from '@/components/table';
-import type { Paged, User } from '@/lib/types';
+import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 
 interface BonusRule {
@@ -31,15 +31,27 @@ async function createRuleAction(formData: FormData) {
 
 async function setEntryStatusAction(id: string, formData: FormData) {
   'use server';
-  await api.patch(`/bonus-entries/${id}`, { status: String(formData.get('status') ?? 'PENDING') });
+  // The API no longer accepts APPROVED/PAID on PATCH /bonus-entries/:id.
+  // Each transition has its own strict-permission route:
+  //   APPROVED → POST /bonus-entries/:id/approve  (bonus:entries:approve)
+  //   PAID     → POST /bonus-entries/:id/pay      (bonus:entries:pay)
+  //   PENDING  → PATCH /bonus-entries/:id         (revert, bonus:entries:approve)
+  // The UI's <select> still submits the same { status } field; we route here.
+  const status = String(formData.get('status') ?? 'PENDING');
+  if (status === 'APPROVED') {
+    await api.post(`/bonus-entries/${id}/approve`, {});
+  } else if (status === 'PAID') {
+    await api.post(`/bonus-entries/${id}/pay`, {});
+  } else {
+    await api.patch(`/bonus-entries/${id}`, { status: 'PENDING' });
+  }
   revalidatePath('/dashboard/bonus');
 }
 
 export default async function BonusPage() {
-  const [rulesRes, entriesRes, salesRes] = await Promise.all([
+  const [rulesRes, entriesRes] = await Promise.all([
     safe(api.get<BonusRule[]>('/bonus-rules')),
     safe(api.get<BonusEntry[] | Paged<BonusEntry>>('/bonus-entries')),
-    safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
   ]);
 
   const entries = Array.isArray(entriesRes.data)

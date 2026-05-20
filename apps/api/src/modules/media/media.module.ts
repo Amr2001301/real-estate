@@ -6,7 +6,6 @@ import {
   Module,
   Param,
   ParseUUIDPipe,
-  Patch,
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
@@ -14,6 +13,7 @@ import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-va
 import { MediaType, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { R2Service } from './r2.service';
 
 class CreatePresignedDto {
@@ -90,30 +90,35 @@ class MediaController {
   constructor(private readonly media: MediaService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('project_media:manage')
   @Post('presign')
   presign(@Body() dto: CreatePresignedDto) {
     return this.media.presign(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('project_media:manage')
   @Post('projects')
   attachProject(@Body() dto: AttachProjectMediaDto) {
     return this.media.attachProject(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('project_media:manage')
   @Post('units')
   attachUnit(@Body() dto: AttachUnitMediaDto) {
     return this.media.attachUnit(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('project_media:manage')
   @Delete('projects/:id')
   removeProject(@Param('id', ParseUUIDPipe) id: string) {
     return this.media.removeProjectMedia(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('project_media:manage')
   @Delete('units/:id')
   removeUnit(@Param('id', ParseUUIDPipe) id: string) {
     return this.media.removeUnitMedia(id);

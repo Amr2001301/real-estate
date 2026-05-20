@@ -275,7 +275,8 @@ export class BrokerPayoutsService {
   }
 
   async removeCommissions(id: string, dto: CommissionIdsDto) {
-    const payout = await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
+    // Status guard (throws unless DRAFT); the row itself isn't needed here.
+    await this.assertPayoutInStatus(id, BrokerPayoutStatus.DRAFT);
 
     await this.prisma.$transaction(async (tx) => {
       // Only unlink commissions that are actually attached to THIS payout —
@@ -291,7 +292,6 @@ export class BrokerPayoutsService {
     });
 
     return this.findOne(id);
-    void payout;
   }
 
   // ── Status transitions ─────────────────────────────────────────────────

@@ -155,14 +155,38 @@ export class BrokersService {
   }
 
   async updateStatus(id: string, dto: UpdateBrokerStatusDto) {
+    return this.applyStatus(id, dto.status, dto.reason);
+  }
+
+  /** Suspend a firm. Dedicated route so it carries the brokers:suspend code. */
+  async suspend(id: string, reason?: string) {
+    return this.applyStatus(id, BrokerStatus.SUSPENDED, reason);
+  }
+
+  /** Terminate a firm. Dedicated route so it carries the brokers:terminate code. */
+  async terminate(id: string, reason?: string) {
+    return this.applyStatus(id, BrokerStatus.TERMINATED, reason);
+  }
+
+  /**
+   * Shared status-change logic. All status transitions (the generic
+   * reactivate/pending route plus the dedicated suspend/terminate routes)
+   * funnel through here so business behavior and response shape stay
+   * identical regardless of entry point.
+   */
+  private async applyStatus(
+    id: string,
+    status: BrokerStatus,
+    reason?: string,
+  ) {
     const existing = await this.assertExists(id);
 
     // Append the reason to notes for auditability (the global AuditInterceptor
     // also captures the request body, so this is just a soft trail.)
-    const data: Prisma.BrokerUpdateInput = { status: dto.status };
-    if (dto.reason && dto.reason.trim().length > 0) {
+    const data: Prisma.BrokerUpdateInput = { status };
+    if (reason && reason.trim().length > 0) {
       const stamp = new Date().toISOString();
-      const line = `[${stamp}] ${existing.status} → ${dto.status}: ${dto.reason.trim()}`;
+      const line = `[${stamp}] ${existing.status} → ${status}: ${reason.trim()}`;
       data.notes = existing.notes ? `${existing.notes}\n${line}` : line;
     }
 

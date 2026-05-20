@@ -10,6 +10,10 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import {
+  Permissions,
+  PermissionsStrict,
+} from '../../common/decorators/permissions.decorator';
 import { BrokerUsersService } from './broker-users.service';
 import {
   CreateBrokerUserDto,
@@ -23,12 +27,14 @@ export class BrokerUsersController {
   constructor(private readonly brokerUsers: BrokerUsersService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_users:read')
   @Get('brokers/:id/users')
   listByBroker(@Param('id', ParseUUIDPipe) brokerId: string) {
     return this.brokerUsers.listByBroker(brokerId);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_users:invite')
   @Post('brokers/:id/users')
   create(
     @Param('id', ParseUUIDPipe) brokerId: string,
@@ -38,6 +44,7 @@ export class BrokerUsersController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_users:update')
   @Patch('broker-users/:id')
   update(
     @Param('id', ParseUUIDPipe) id: string,
@@ -46,7 +53,12 @@ export class BrokerUsersController {
     return this.brokerUsers.update(id, dto);
   }
 
+  // Strict: this route can SUSPEND or REMOVE a broker agent (in addition to
+  // re-activating). Gating the whole route behind broker_users:remove is the
+  // conservative choice — it never grants more than the dedicated remove code,
+  // so no destructive status change leaks through a lesser permission.
   @Roles(UserRole.ADMIN)
+  @PermissionsStrict('broker_users:remove')
   @Patch('broker-users/:id/status')
   updateStatus(
     @Param('id', ParseUUIDPipe) id: string,

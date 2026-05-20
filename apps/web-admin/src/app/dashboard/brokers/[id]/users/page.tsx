@@ -8,7 +8,6 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/form/field';
 import { EmptyState } from '@/components/ui/empty-state';

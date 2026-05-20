@@ -22,6 +22,7 @@ import {
 import { Prisma, NotificationChannel, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 
 class UpsertTemplateDto {
@@ -134,18 +135,21 @@ class NotificationsController {
   constructor(private readonly svc: NotificationsService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('notifications:templates:manage')
   @Get('notification-templates')
   listTemplates() {
     return this.svc.listTemplates();
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('notifications:templates:manage')
   @Post('notification-templates')
   upsertTemplate(@Body() dto: UpsertTemplateDto) {
     return this.svc.upsertTemplate(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('notifications:send')
   @Post('notifications/send')
   send(@Body() dto: SendNotificationDto) {
     return this.svc.send(dto);

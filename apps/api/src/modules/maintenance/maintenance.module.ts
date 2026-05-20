@@ -23,6 +23,7 @@ import {
 import { Prisma, MaintenanceStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 
@@ -44,9 +45,23 @@ class CreateRequestDto {
   @IsString() @MinLength(5) description!: string;
 }
 
+/**
+ * Internal type kept for the service signature. The legacy
+ * PATCH /maintenance-requests/:id multiplexer is removed; the controller
+ * now exposes dedicated POST endpoints (/assign, /status) per the route
+ * split. Service body is unchanged so the two adapters can share it.
+ */
 class UpdateRequestDto {
   @IsOptional() @IsEnum(MaintenanceStatus) status?: MaintenanceStatus;
   @IsOptional() @IsUUID() assignedAdminId?: string;
+}
+
+class AssignMaintenanceDto {
+  @IsUUID() assignedAdminId!: string;
+}
+
+class MaintenanceStatusDto {
+  @IsEnum(MaintenanceStatus) status!: MaintenanceStatus;
 }
 
 @Injectable()
@@ -135,7 +150,9 @@ class MaintenanceService {
 class MaintenanceController {
   constructor(private readonly svc: MaintenanceService) {}
 
-  // Categories — Admin
+  // Categories — Admin manages; CUSTOMER reads when filing a request, so
+  // the GET stays role-only (no @Permissions — gating it would lock
+  // customers out, since they can't have admin permission rows assigned).
   @Roles(UserRole.ADMIN, UserRole.CUSTOMER)
   @Get('maintenance-categories')
   listCategories() {
@@ -143,18 +160,20 @@ class MaintenanceController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:categories:manage')
   @Post('maintenance-categories')
   createCategory(@Body() dto: CreateCategoryDto) {
     return this.svc.createCategory(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:categories:manage')
   @Patch('maintenance-categories/:id')
   updateCategory(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateCategoryDto) {
     return this.svc.updateCategory(id, dto);
   }
 
-  // Requests — Customer creates
+  // Customer self-service — intentionally NOT permission-gated.
   @Roles(UserRole.CUSTOMER)
   @Post('me/maintenance-requests')
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateRequestDto) {
@@ -177,6 +196,7 @@ class MaintenanceController {
 
   // Admin manages all
   @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:read')
   @Get('maintenance-requests')
   list(
     @Query('status') status?: MaintenanceStatus,
@@ -194,10 +214,26 @@ class MaintenanceController {
     });
   }
 
+  // Assignment route — split from the removed PATCH multiplexer.
   @Roles(UserRole.ADMIN)
-  @Patch('maintenance-requests/:id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRequestDto) {
-    return this.svc.update(id, dto);
+  @Permissions('maintenance:assign')
+  @Post('maintenance-requests/:id/assign')
+  assignRequest(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AssignMaintenanceDto,
+  ) {
+    return this.svc.update(id, { assignedAdminId: dto.assignedAdminId });
+  }
+
+  // Status transition route — split from the removed PATCH multiplexer.
+  @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:resolve')
+  @Post('maintenance-requests/:id/status')
+  setRequestStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: MaintenanceStatusDto,
+  ) {
+    return this.svc.update(id, { status: dto.status });
   }
 }
 

@@ -5,7 +5,6 @@ import {
   IsLatitude,
   IsLongitude,
   IsNumber,
-  IsObject,
   IsOptional,
   IsString,
   ValidateNested,

@@ -30,6 +30,7 @@ import { Type } from 'class-transformer';
 import { DepositType, Prisma, PlanPaymentType, InstallmentStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { takeSkip } from '../../common/utils/pagination';
 
@@ -307,12 +308,14 @@ class DepositsController {
 
   // Admin-only recording per scope §5
   @Roles(UserRole.ADMIN)
+  @Permissions('deposits:register')
   @Post('deposits')
   record(@CurrentUser() user: AuthUser, @Body() dto: RecordDepositDto) {
     return this.svc.record(dto, user.sub);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('deposits:read')
   @Get('deposits')
   list(@Query() q: ListDepositsQueryDto) {
     return this.svc.list({
@@ -333,13 +336,16 @@ class DepositsController {
     });
   }
 
+  // Strict: even an ADMIN must hold deposits:verify explicitly. Segregation
+  // of duties — financial verification is a two-person-rule action.
   @Roles(UserRole.ADMIN)
+  @PermissionsStrict('deposits:verify')
   @Patch('deposits/:id/verify')
   verify(@Param('id', ParseUUIDPipe) id: string, @Body() dto: VerifyDepositDto) {
     return this.svc.verify(id, dto);
   }
 
-  // Customer read-only view
+  // Customer read-only view — intentionally NOT permission-gated.
   @Roles(UserRole.CUSTOMER)
   @Get('me/deposits')
   myDeposits(@CurrentUser() user: AuthUser) {

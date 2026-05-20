@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
 import { tx, formatCurrency } from '@/lib/format';
-import type { Paged, PortalLead, PortalUnit } from '@/lib/types';
+import type { PortalLead, PortalUnit } from '@/lib/types';
 import {
   createPortalReservationAction,
   type PortalReservationFormState,

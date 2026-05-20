@@ -9,8 +9,10 @@ import { configValidation } from './config/env.validation';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { LocaleInterceptor } from './common/interceptors/locale.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
+import { RequestLoggerInterceptor } from './common/interceptors/request-logger.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { PermissionsGuard } from './common/guards/permissions.guard';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
@@ -105,6 +107,11 @@ import { HealthController } from './modules/health/health.controller';
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Runs after RolesGuard: routes without @Permissions short-circuit to allow.
+    { provide: APP_GUARD, useClass: PermissionsGuard },
+    // Logger runs first so errors thrown by other interceptors still get
+    // logged + forwarded to Sentry.
+    { provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
     { provide: APP_INTERCEPTOR, useClass: LocaleInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],

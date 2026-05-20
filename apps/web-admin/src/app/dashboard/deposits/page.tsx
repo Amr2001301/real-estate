@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {
   DollarSign, CreditCard, Landmark, Hash,
   SlidersHorizontal, ReceiptText, Search,
-  CheckCircle2, XCircle, ExternalLink,
+  ExternalLink,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PagedDeposits, Deposit, DepositType, Paged } from '@/lib/types';

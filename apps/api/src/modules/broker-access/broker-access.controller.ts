@@ -10,6 +10,7 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { BrokerAccessService } from './broker-access.service';
 import {
   GrantBrokerProjectAccessDto,
@@ -22,12 +23,14 @@ export class BrokerAccessController {
   constructor(private readonly access: BrokerAccessService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_access:read')
   @Get('brokers/:id/access')
   list(@Param('id', ParseUUIDPipe) brokerId: string) {
     return this.access.listAccess(brokerId);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_access:manage')
   @Post('brokers/:id/access/projects')
   grantProject(
     @Param('id', ParseUUIDPipe) brokerId: string,
@@ -37,6 +40,7 @@ export class BrokerAccessController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_access:manage')
   @Delete('brokers/:id/access/projects/:projectId')
   revokeProject(
     @Param('id', ParseUUIDPipe) brokerId: string,
@@ -46,6 +50,7 @@ export class BrokerAccessController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_access:manage')
   @Post('brokers/:id/access/units')
   grantUnit(
     @Param('id', ParseUUIDPipe) brokerId: string,
@@ -55,6 +60,7 @@ export class BrokerAccessController {
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('broker_access:manage')
   @Delete('brokers/:id/access/units/:unitId')
   revokeUnit(
     @Param('id', ParseUUIDPipe) brokerId: string,

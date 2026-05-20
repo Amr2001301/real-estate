@@ -11,6 +11,10 @@ const ALLOWED = [
   /^\/broker-reports\/export\/top-brokers\.csv$/,
   /^\/broker-reports\/export\/broker\/[a-f0-9-]{36}\.csv$/,
   /^\/portal\/performance\/export\.csv$/,
+  /^\/reports\/sales\/export\.csv$/,
+  /^\/reports\/financial\/export\.csv$/,
+  /^\/reports\/operational\/export\.csv$/,
+  /^\/reports\/financial-dashboard\/export\.csv$/,
 ];
 
 export async function GET(req: NextRequest) {

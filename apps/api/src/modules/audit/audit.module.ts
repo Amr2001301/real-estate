@@ -14,6 +14,7 @@ import { Type } from 'class-transformer';
 import { IsDateString, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 
 const AUDIT_LOG_INCLUDE = {
@@ -246,18 +247,21 @@ class AuditController {
   constructor(private readonly svc: AuditService) {}
 
   @Roles(UserRole.ADMIN)
+  @Permissions('audit:read')
   @Get('audit-logs')
   list(@Query() query: AuditLogQueryDto) {
     return this.svc.list(query);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('audit:read')
   @Get('audit-logs/:id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.findOne(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('audit:read')
   @Get('operations/summary')
   summary() {
     return this.svc.summary();

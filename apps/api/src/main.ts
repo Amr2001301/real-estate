@@ -1,4 +1,9 @@
 import 'reflect-metadata';
+import { initSentry } from './common/observability/sentry';
+// Sentry must be initialised before any other application code so that the
+// SDK can patch http/express/etc. Safe to call when SENTRY_DSN is unset.
+initSentry();
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -7,10 +12,17 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
+import { JsonLoggerService } from './common/logging/json-logger.service';
+import { requestIdMiddleware } from './common/logging/request-id.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(new JsonLoggerService());
   const config = app.get(ConfigService);
+
+  // Run before any other middleware so the id is on every response header,
+  // including helmet's and CORS preflight responses.
+  app.use(requestIdMiddleware);
 
   app.use(helmet());
   app.use(cookieParser());
@@ -50,7 +62,6 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  // eslint-disable-next-line no-console
   console.error('Failed to start API', err);
   process.exit(1);
 });

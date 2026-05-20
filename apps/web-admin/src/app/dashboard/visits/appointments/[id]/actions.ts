@@ -10,13 +10,31 @@ export async function updateAppointmentStatusAction(appointmentId: string, formD
   const cancellationReason = formData.get('cancellationReason') as string | null;
   const noShowReason = formData.get('noShowReason') as string | null;
 
-  await api.patch(`/visits/appointments/${appointmentId}/status`, {
-    status,
-    salesNotes: salesNotes || undefined,
-    resultNotes: resultNotes || undefined,
-    cancellationReason: cancellationReason || undefined,
-    noShowReason: noShowReason || undefined,
-  });
+  // Routes to the new per-transition POST endpoints; the legacy PATCH
+  // multiplexer is removed. JSX/UI is unchanged — only the action body URLs.
+  if (status === 'CONFIRMED') {
+    await api.post(`/visits/appointments/${appointmentId}/confirm`, {
+      salesNotes: salesNotes || undefined,
+    });
+  } else if (status === 'COMPLETED') {
+    await api.post(`/visits/appointments/${appointmentId}/complete`, {
+      salesNotes: salesNotes || undefined,
+      resultNotes: resultNotes || undefined,
+    });
+  } else if (status === 'CANCELLED') {
+    await api.post(`/visits/appointments/${appointmentId}/cancel`, {
+      salesNotes: salesNotes || undefined,
+      cancellationReason: cancellationReason || undefined,
+    });
+  } else if (status === 'NO_SHOW') {
+    await api.post(`/visits/appointments/${appointmentId}/no-show`, {
+      salesNotes: salesNotes || undefined,
+      noShowReason: noShowReason || undefined,
+    });
+  } else {
+    throw new Error(`Unsupported appointment status transition: ${status}`);
+  }
+
   revalidatePath('/dashboard/visits');
   revalidatePath(`/dashboard/visits/appointments/${appointmentId}`);
 }

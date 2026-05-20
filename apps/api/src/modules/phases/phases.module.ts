@@ -1,11 +1,12 @@
 import { Body, Controller, Delete, Get, Module, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsObject, IsOptional, IsString, IsUUID, IsInt, Min, ValidateNested } from 'class-validator';
+import { IsOptional, IsString, IsUUID, IsInt, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { Permissions } from '../../common/decorators/permissions.decorator';
 import { UserRole } from '@prisma/client';
 
 class TranslatableDto {
@@ -88,30 +89,35 @@ class PhasesController {
   constructor(private readonly phases: PhasesService) {}
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('projects:read')
   @Get()
   list(@Query('projectId') projectId?: string) {
     return this.phases.list(projectId);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Permissions('projects:read')
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {
     return this.phases.get(id);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('phases:manage')
   @Post()
   create(@Body() dto: CreatePhaseDto) {
     return this.phases.create(dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('phases:manage')
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdatePhaseDto) {
     return this.phases.update(id, dto);
   }
 
   @Roles(UserRole.ADMIN)
+  @Permissions('phases:manage')
   @Delete(':id')
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.phases.remove(id);

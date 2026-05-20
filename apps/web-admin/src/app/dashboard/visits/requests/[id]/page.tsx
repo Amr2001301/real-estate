@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { Phone, Mail, Building2, User, ExternalLink, CalendarDays, AlertCircle } from 'lucide-react';
+import { Phone, Mail, Building2, User, ExternalLink, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, VisitRequest, VisitActivity, User as UserType } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/table';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { VisitTimelineCard } from '../../_components/visit-timeline';

@@ -57,8 +57,35 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
     },
   );
 
-  // Send each role to its own workspace.
-  redirect(result.user.role === 'BROKER' ? '/portal' : '/dashboard');
+  const from = String(formData.get('from') ?? '');
+  redirect(safeFromForRole(from, result.user.role));
+}
+
+/**
+ * Pick a post-login destination that honors the `from` query the middleware
+ * recorded — but only when it points to an allow-listed internal path that is
+ * compatible with the user's role. Anything else falls back to the role's
+ * default workspace.
+ *
+ * Rules (defence in depth — first failure picks the default):
+ *   1. Must start with a single '/'                  → reject '//evil.com'
+ *   2. Must not start with '/\' (browser normalises) → reject '/\evil.com'
+ *   3. Path root (before any ? or #) must be /dashboard or /portal
+ *   4. BROKER may only land in /portal; everyone else may only land in /dashboard
+ */
+function safeFromForRole(from: string, role: string): string {
+  const fallback = role === 'BROKER' ? '/portal' : '/dashboard';
+
+  if (!from || from.length > 2048) return fallback;
+  if (!from.startsWith('/')) return fallback;
+  if (from.startsWith('//') || from.startsWith('/\\')) return fallback;
+
+  const pathOnly = from.split(/[?#]/, 1)[0] ?? '';
+  const allowedRoot = role === 'BROKER' ? '/portal' : '/dashboard';
+  const matchesAllowedRoot =
+    pathOnly === allowedRoot || pathOnly.startsWith(`${allowedRoot}/`);
+
+  return matchesAllowedRoot ? from : fallback;
 }
 
 export async function logoutAction() {

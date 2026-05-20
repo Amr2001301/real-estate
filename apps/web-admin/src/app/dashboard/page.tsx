@@ -5,7 +5,6 @@ import {
   CalendarCheck2,
   Receipt,
   Wrench,
-  FileSignature,
   Banknote,
   AlertCircle,
   FileText,
