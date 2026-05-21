@@ -25,6 +25,9 @@ interface Props {
   currentSalesId: string;
   currentNotes: string | null;
   salesOptions: SalesUser[];
+  /** Approve/reject/cancel are admin/finance actions (strict permissions).
+   *  When false (e.g. SALES), only the edit action is offered. */
+  canManage?: boolean;
 }
 
 export function ReservationDetailActions({
@@ -33,6 +36,7 @@ export function ReservationDetailActions({
   currentSalesId,
   currentNotes,
   salesOptions,
+  canManage = false,
 }: Props) {
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
@@ -60,7 +64,7 @@ export function ReservationDetailActions({
   return (
     <div className="flex flex-col items-stretch sm:items-end gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        {isPending && (
+        {canManage && isPending && (
           <>
             <Button
               variant="primary"
@@ -85,14 +89,16 @@ export function ReservationDetailActions({
           </>
         )}
 
-        <Button
-          variant="outline"
-          size="md"
-          leftIcon={<Ban className="h-4 w-4" />}
-          onClick={() => setCancelOpen(true)}
-        >
-          إلغاء الحجز
-        </Button>
+        {canManage && (
+          <Button
+            variant="outline"
+            size="md"
+            leftIcon={<Ban className="h-4 w-4" />}
+            onClick={() => setCancelOpen(true)}
+          >
+            إلغاء الحجز
+          </Button>
+        )}
 
         {isPending && (
           <Button

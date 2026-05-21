@@ -5,6 +5,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { PagedDeposits, Deposit, DepositType, Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
@@ -137,6 +138,9 @@ export default async function DepositsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
+  // Registering + verifying deposits are admin/finance actions; SALES is read-only.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
   const page = Math.max(1, Number(sp.page ?? 1));
   const pageSize = 20;
 
@@ -185,12 +189,14 @@ export default async function DepositsPage({
           { label: 'الدفعات' },
         ]}
         actions={
-          <Link
-            href="/dashboard/deposits/new"
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 transition-colors shadow-xs"
-          >
-            + تسجيل دفعة
-          </Link>
+          isAdmin ? (
+            <Link
+              href="/dashboard/deposits/new"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 transition-colors shadow-xs"
+            >
+              + تسجيل دفعة
+            </Link>
+          ) : undefined
         }
       />
 
@@ -456,7 +462,19 @@ export default async function DepositsPage({
                         </td>
 
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
+                          {isAdmin ? (
+                            <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
+                          ) : (
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                d.verified
+                                  ? 'bg-success-100 text-success-700'
+                                  : 'bg-amber-100 text-amber-700'
+                              }`}
+                            >
+                              {d.verified ? 'متحقق' : 'غير متحقق'}
+                            </span>
+                          )}
                         </td>
 
                       </tr>

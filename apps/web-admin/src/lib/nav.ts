@@ -95,8 +95,11 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/inventory', label: 'المخزون', iconKey: 'Boxes' },
       { href: '/dashboard/units', label: 'الوحدات', iconKey: 'Home' },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', iconKey: 'Users' },
-      { href: '/dashboard/clients', label: 'المتصفّحون', iconKey: 'UserSquare2' },
-      { href: '/dashboard/customers', label: 'العملاء', iconKey: 'UserCheck' },
+      // Clients/customers read from the ADMIN-only /users API, so they would
+      // 403 for SALES — hidden from the SALES sidebar until a scoped endpoint
+      // exists. SALES works customer data through the CRM (leads) instead.
+      { href: '/dashboard/clients', label: 'المتصفّحون', iconKey: 'UserSquare2', admin: true },
+      { href: '/dashboard/customers', label: 'العملاء', iconKey: 'UserCheck', admin: true },
       { href: '/dashboard/visits', label: 'الزيارات', iconKey: 'CalendarClock' },
       { href: '/dashboard/reservations', label: 'الحجوزات', iconKey: 'BookmarkCheck' },
       { href: '/dashboard/contracts', label: 'العقود', iconKey: 'FileText' },

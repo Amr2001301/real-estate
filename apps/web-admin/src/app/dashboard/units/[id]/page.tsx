@@ -18,6 +18,7 @@ import {
   UserCog,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type {
   Paged,
   Reservation,
@@ -64,6 +65,9 @@ export default async function UnitDetailPage({
   }
 
   const unit = unitRes.data;
+  // Unit mutations (edit/status-change/delete) are ADMIN-only.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
   const projectName = tx(unit.building?.phase?.project?.name);
   const phaseName = tx(unit.building?.phase?.name);
   const buildingName = unit.building?.name;
@@ -102,7 +106,7 @@ export default async function UnitDetailPage({
           </>
         }
         actions={
-          <>
+          isAdmin ? (
             <Link href={`/dashboard/units/${id}/edit` as never}>
               <Button
                 variant="outline"
@@ -112,7 +116,7 @@ export default async function UnitDetailPage({
                 تعديل الوحدة
               </Button>
             </Link>
-          </>
+          ) : undefined
         }
       />
 
@@ -383,21 +387,23 @@ export default async function UnitDetailPage({
         <div className="space-y-6">
           <UnitMediaPanel unit={unit} />
 
-          <Card className="p-5">
-            <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
-              منطقة الخطر
-            </h3>
-            <p className="mt-2 text-xs text-slate-500">
-              حذف الوحدة سيؤدي إلى إزالتها نهائياً. لا يمكن التراجع.
-            </p>
-            <div className="mt-4">
-              <ConfirmButton
-                label="حذف الوحدة"
-                confirm="هل أنت متأكد من حذف هذه الوحدة؟"
-                action={deleteUnitAction.bind(null, id)}
-              />
-            </div>
-          </Card>
+          {isAdmin && (
+            <Card className="p-5">
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
+                منطقة الخطر
+              </h3>
+              <p className="mt-2 text-xs text-slate-500">
+                حذف الوحدة سيؤدي إلى إزالتها نهائياً. لا يمكن التراجع.
+              </p>
+              <div className="mt-4">
+                <ConfirmButton
+                  label="حذف الوحدة"
+                  confirm="هل أنت متأكد من حذف هذه الوحدة؟"
+                  action={deleteUnitAction.bind(null, id)}
+                />
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>

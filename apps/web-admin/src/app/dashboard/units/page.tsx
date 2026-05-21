@@ -13,6 +13,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { Paged, Unit, Project } from '@/lib/types';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,10 @@ export default async function UnitsPage({
 }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
+
+  // Unit mutations are ADMIN-only — SALES browses read-only.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
 
   const qs = new URLSearchParams({
     page: String(page),
@@ -110,16 +115,18 @@ export default async function UnitsPage({
           { label: 'الوحدات' },
         ]}
         actions={
-          <>
-            <IconButton label="تصدير التقرير" variant="outline" size="md">
-              <Download />
-            </IconButton>
-            <Link href={'/dashboard/units/new' as never}>
-              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                إضافة وحدة جديدة
-              </Button>
-            </Link>
-          </>
+          isAdmin ? (
+            <>
+              <IconButton label="تصدير التقرير" variant="outline" size="md">
+                <Download />
+              </IconButton>
+              <Link href={'/dashboard/units/new' as never}>
+                <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                  إضافة وحدة جديدة
+                </Button>
+              </Link>
+            </>
+          ) : undefined
         }
       />
 
@@ -255,15 +262,17 @@ export default async function UnitsPage({
                       title="لا توجد وحدات بعد"
                       description="ابدأ بإضافة أول وحدة إلى محفظة العقارات."
                       action={
-                        <Link href={'/dashboard/units/new' as never}>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            leftIcon={<Plus className="h-4 w-4" />}
-                          >
-                            إضافة وحدة
-                          </Button>
-                        </Link>
+                        isAdmin ? (
+                          <Link href={'/dashboard/units/new' as never}>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              leftIcon={<Plus className="h-4 w-4" />}
+                            >
+                              إضافة وحدة
+                            </Button>
+                          </Link>
+                        ) : undefined
                       }
                     />
                   </td>

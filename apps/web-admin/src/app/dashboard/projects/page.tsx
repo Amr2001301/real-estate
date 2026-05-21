@@ -9,6 +9,7 @@ import {
   Pencil,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { Paged, Project } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
@@ -65,6 +66,11 @@ export default async function ProjectsPage({
   const allProjects = snapshot?.data ?? [];
   const cities = Array.from(new Set(allProjects.map((p) => p.city).filter(Boolean)));
 
+  // Project mutations are ADMIN-only (projects:create/update/publish/delete).
+  // SALES browses read-only, so creation CTAs are hidden for them.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
+
   // KPI computation from real data (no fakes).
   const total = paged?.meta.total ?? allProjects.length;
   const published = allProjects.filter((p) => p.status === 'PUBLISHED').length;
@@ -81,11 +87,13 @@ export default async function ProjectsPage({
           { label: 'المشاريع' },
         ]}
         actions={
-          <Link href={'/dashboard/projects/new' as never}>
-            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              إضافة مشروع جديد
-            </Button>
-          </Link>
+          isAdmin ? (
+            <Link href={'/dashboard/projects/new' as never}>
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                إضافة مشروع جديد
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
 
@@ -168,15 +176,17 @@ export default async function ProjectsPage({
                       title="لا توجد مشاريع بعد"
                       description="ابدأ بإضافة أول مشروع لمحفظتك العقارية."
                       action={
-                        <Link href={'/dashboard/projects/new' as never}>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            leftIcon={<Plus className="h-4 w-4" />}
-                          >
-                            إضافة مشروع
-                          </Button>
-                        </Link>
+                        isAdmin ? (
+                          <Link href={'/dashboard/projects/new' as never}>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              leftIcon={<Plus className="h-4 w-4" />}
+                            >
+                              إضافة مشروع
+                            </Button>
+                          </Link>
+                        ) : undefined
                       }
                     />
                   </td>

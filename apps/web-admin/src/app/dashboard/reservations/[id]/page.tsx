@@ -92,6 +92,7 @@ export default async function ReservationDetailPage({
             currentSalesId={reservation.salesId}
             currentNotes={reservation.notes}
             salesOptions={salesOptions.map((s) => ({ id: s.id, fullName: s.fullName }))}
+            canManage={isAdmin}
           />
         }
       />

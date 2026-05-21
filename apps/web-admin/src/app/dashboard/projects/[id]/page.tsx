@@ -11,6 +11,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { Project, Paged, Unit } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
@@ -61,6 +62,10 @@ export default async function ProjectDetailPage({
   const units = unitsRes.data?.data ?? [];
   const cover = project.media?.[0]?.url;
 
+  // Project mutations are ADMIN-only — SALES views read-only.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
+
   // Aggregations from real data only.
   const phaseCount = project.phases?.length ?? 0;
   const buildingCount =
@@ -87,7 +92,7 @@ export default async function ProjectDetailPage({
   const assetActions: AssetAction[] = [
     {
       key: 'units',
-      label: 'إدارة الوحدات',
+      label: 'الوحدات',
       icon: <Building2 />,
       href: `/dashboard/units?projectId=${project.id}`,
     },
@@ -104,12 +109,17 @@ export default async function ProjectDetailPage({
       href: `https://www.google.com/maps/search/?api=1&query=${project.lat},${project.lng}`,
       external: true,
     },
-    {
-      key: 'edit',
-      label: 'تعديل بيانات المشروع',
-      icon: <Pencil />,
-      href: `/dashboard/projects/${project.id}/edit`,
-    },
+    // Editing the project is ADMIN-only.
+    ...(isAdmin
+      ? [
+          {
+            key: 'edit',
+            label: 'تعديل بيانات المشروع',
+            icon: <Pencil />,
+            href: `/dashboard/projects/${project.id}/edit`,
+          } as AssetAction,
+        ]
+      : []),
   ];
 
   return (
@@ -135,29 +145,31 @@ export default async function ProjectDetailPage({
           </>
         }
         actions={
-          <>
-            <Link href={`/dashboard/projects/${id}/edit` as never}>
-              <Button
-                variant="outline"
-                size="md"
-                leftIcon={<Pencil className="h-4 w-4" />}
-              >
-                تعديل المشروع
-              </Button>
-            </Link>
-            {project.status !== 'PUBLISHED' && (
-              <form action={publishProjectAction.bind(null, id)}>
+          isAdmin ? (
+            <>
+              <Link href={`/dashboard/projects/${id}/edit` as never}>
                 <Button
-                  type="submit"
-                  variant="primary"
+                  variant="outline"
                   size="md"
-                  leftIcon={<Send className="h-4 w-4" />}
+                  leftIcon={<Pencil className="h-4 w-4" />}
                 >
-                  نشر المشروع
+                  تعديل المشروع
                 </Button>
-              </form>
-            )}
-          </>
+              </Link>
+              {project.status !== 'PUBLISHED' && (
+                <form action={publishProjectAction.bind(null, id)}>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="md"
+                    leftIcon={<Send className="h-4 w-4" />}
+                  >
+                    نشر المشروع
+                  </Button>
+                </form>
+              )}
+            </>
+          ) : undefined
         }
       />
 
@@ -255,34 +267,36 @@ export default async function ProjectDetailPage({
                             ))}
                           </ul>
                         )}
-                        <details className="mt-3 group">
-                          <summary className="text-2xs font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1 hover:text-brand-800">
-                            <Plus className="h-3 w-3" /> إضافة مبنى
-                          </summary>
-                          <form
-                            action={createBuildingAction.bind(null, project.id)}
-                            className="mt-2 flex flex-wrap gap-2"
-                          >
-                            <input type="hidden" name="phaseId" value={ph.id} />
-                            <input
-                              name="name"
-                              required
-                              placeholder="اسم المبنى (A)"
-                              className="text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
-                            />
-                            <input
-                              name="totalFloors"
-                              type="number"
-                              min={1}
-                              defaultValue={1}
-                              placeholder="الطوابق"
-                              className="w-24 text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
-                            />
-                            <Button type="submit" variant="outline" size="sm">
-                              حفظ
-                            </Button>
-                          </form>
-                        </details>
+                        {isAdmin && (
+                          <details className="mt-3 group">
+                            <summary className="text-2xs font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1 hover:text-brand-800">
+                              <Plus className="h-3 w-3" /> إضافة مبنى
+                            </summary>
+                            <form
+                              action={createBuildingAction.bind(null, project.id)}
+                              className="mt-2 flex flex-wrap gap-2"
+                            >
+                              <input type="hidden" name="phaseId" value={ph.id} />
+                              <input
+                                name="name"
+                                required
+                                placeholder="اسم المبنى (A)"
+                                className="text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
+                              />
+                              <input
+                                name="totalFloors"
+                                type="number"
+                                min={1}
+                                defaultValue={1}
+                                placeholder="الطوابق"
+                                className="w-24 text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
+                              />
+                              <Button type="submit" variant="outline" size="sm">
+                                حفظ
+                              </Button>
+                            </form>
+                          </details>
+                        )}
                       </div>
                     </div>
                   );
@@ -290,39 +304,41 @@ export default async function ProjectDetailPage({
               </div>
             )}
 
-            <details className="mt-4 group">
-              <summary className="text-sm font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1.5 hover:text-brand-800">
-                <Plus className="h-4 w-4" /> إضافة مرحلة جديدة
-              </summary>
-              <form
-                action={createPhaseAction.bind(null, project.id)}
-                className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2"
-              >
-                <input
-                  name="name_ar"
-                  required
-                  dir="rtl"
-                  placeholder="اسم المرحلة (بالعربية)"
-                  className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
-                />
-                <input
-                  name="name_en"
-                  required
-                  dir="ltr"
-                  placeholder="Phase name (English)"
-                  className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
-                />
-                <input
-                  name="order"
-                  type="number"
-                  defaultValue={phaseCount}
-                  className="w-20 text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
-                />
-                <Button type="submit" variant="primary" size="sm">
-                  إضافة
-                </Button>
-              </form>
-            </details>
+            {isAdmin && (
+              <details className="mt-4 group">
+                <summary className="text-sm font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1.5 hover:text-brand-800">
+                  <Plus className="h-4 w-4" /> إضافة مرحلة جديدة
+                </summary>
+                <form
+                  action={createPhaseAction.bind(null, project.id)}
+                  className="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto_auto] gap-2"
+                >
+                  <input
+                    name="name_ar"
+                    required
+                    dir="rtl"
+                    placeholder="اسم المرحلة (بالعربية)"
+                    className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
+                  />
+                  <input
+                    name="name_en"
+                    required
+                    dir="ltr"
+                    placeholder="Phase name (English)"
+                    className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
+                  />
+                  <input
+                    name="order"
+                    type="number"
+                    defaultValue={phaseCount}
+                    className="w-20 text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
+                  />
+                  <Button type="submit" variant="primary" size="sm">
+                    إضافة
+                  </Button>
+                </form>
+              </details>
+            )}
           </Card>
 
           <Card className="p-5 sm:p-6">
@@ -388,29 +404,35 @@ export default async function ProjectDetailPage({
 
         <div className="space-y-6">
           <AssetActionCard
-            title="إدارة الأصول"
+            title={isAdmin ? 'إدارة الأصول' : 'الأصول'}
             actions={[
               ...assetActions,
-              {
-                key: 'archive-or-publish',
-                label: project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر',
-                icon: <Archive />,
-                tone: 'danger',
-                form: (
-                  <AssetActionForm
-                    label={
-                      project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر'
-                    }
-                    icon={<Archive />}
-                    tone="danger"
-                    action={
-                      project.status === 'ARCHIVED'
-                        ? publishProjectAction.bind(null, id)
-                        : archiveProjectAction.bind(null, id)
-                    }
-                  />
-                ),
-              },
+              // Publish/archive is an ADMIN-only mutation.
+              ...(isAdmin
+                ? [
+                    {
+                      key: 'archive-or-publish',
+                      label:
+                        project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر',
+                      icon: <Archive />,
+                      tone: 'danger' as const,
+                      form: (
+                        <AssetActionForm
+                          label={
+                            project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر'
+                          }
+                          icon={<Archive />}
+                          tone="danger"
+                          action={
+                            project.status === 'ARCHIVED'
+                              ? publishProjectAction.bind(null, id)
+                              : archiveProjectAction.bind(null, id)
+                          }
+                        />
+                      ),
+                    },
+                  ]
+                : []),
             ]}
           />
 
@@ -433,19 +455,21 @@ export default async function ProjectDetailPage({
             <ProjectMediaPanel project={project} />
           </div>
 
-          <Card className="p-5">
-            <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
-              منطقة الخطر
-            </h3>
-            <p className="text-xs text-slate-500 mb-3">
-              حذف المشروع سيؤدي إلى إزالته نهائياً مع جميع المراحل والمباني المرتبطة. لا يمكن التراجع.
-            </p>
-            <ConfirmButton
-              label="حذف المشروع"
-              confirm="هل أنت متأكد من حذف هذا المشروع؟ لا يمكن التراجع."
-              action={deleteProjectAction.bind(null, id)}
-            />
-          </Card>
+          {isAdmin && (
+            <Card className="p-5">
+              <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
+                منطقة الخطر
+              </h3>
+              <p className="text-xs text-slate-500 mb-3">
+                حذف المشروع سيؤدي إلى إزالته نهائياً مع جميع المراحل والمباني المرتبطة. لا يمكن التراجع.
+              </p>
+              <ConfirmButton
+                label="حذف المشروع"
+                confirm="هل أنت متأكد من حذف هذا المشروع؟ لا يمكن التراجع."
+                action={deleteProjectAction.bind(null, id)}
+              />
+            </Card>
+          )}
         </div>
       </div>
     </div>

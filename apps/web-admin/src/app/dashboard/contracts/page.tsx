@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Plus, FileText, CheckCircle2, Link2, Unlink } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
@@ -72,6 +73,10 @@ export default async function ContractsPage({
   const signedCount = contracts.filter((c) => c.signedAt).length;
   const withReservationCount = contracts.filter((c) => c.reservation).length;
 
+  // Manual contract creation (contracts:upload) is ADMIN-only; SALES reads.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -82,12 +87,14 @@ export default async function ContractsPage({
           { label: 'العقود' },
         ]}
         actions={
-          <Link href="/dashboard/contracts/new">
-            <Button variant="primary" size="md">
-              <Plus className="h-4 w-4 ml-2" />
-              عقد يدوي
-            </Button>
-          </Link>
+          isAdmin ? (
+            <Link href="/dashboard/contracts/new">
+              <Button variant="primary" size="md">
+                <Plus className="h-4 w-4 ml-2" />
+                عقد يدوي
+              </Button>
+            </Link>
+          ) : undefined
         }
       />
 

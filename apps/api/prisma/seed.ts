@@ -487,6 +487,48 @@ async function main() {
     });
   }
 
+  // ---- Grant the SALES default work/read tier to every SALES user ----
+  // SALES users have role access to the dashboard but need explicit permission
+  // codes (ADMIN bypasses; SALES does not). This is the read + CRM-workflow
+  // tier only — no strict financial/admin actions (approve/reject/sign/verify/
+  // pay, plan/project/unit mutations, users/permissions/settings) are granted.
+  // Idempotent via skipDuplicates; safe to re-run.
+  const SALES_DEFAULT_PERMISSIONS = [
+    // CRM
+    'leads:read', 'leads:create', 'leads:update', 'leads:note',
+    'leads:assign', 'leads:advance-stage',
+    // Visits
+    'visits:read', 'visits:create', 'visits:schedule', 'visits:confirm',
+    'visits:complete', 'visits:reschedule', 'visits:cancel', 'visits:no-show',
+    // Reservations (create/read/update only — strict transitions stay admin)
+    'reservations:read', 'reservations:create', 'reservations:update',
+    // Contracts (read only)
+    'contracts:read',
+    // Inventory / read-only references
+    'projects:read', 'units:read', 'installments:read', 'deposits:read',
+    // Compensation self-read (API self-scopes SALES to their own rows)
+    'bonus:entries:read', 'targets:read',
+    // Broker-attributed read surfaces SALES routes already allow
+    'broker_leads:read', 'broker_contracts:read', 'broker_reservations:read',
+  ];
+
+  const salesUsers = await prisma.user.findMany({
+    where: { role: UserRole.SALES },
+    select: { id: true },
+  });
+  if (salesUsers.length > 0) {
+    const salesPerms = await prisma.permission.findMany({
+      where: { code: { in: SALES_DEFAULT_PERMISSIONS } },
+      select: { id: true },
+    });
+    await prisma.userPermission.createMany({
+      data: salesUsers.flatMap((u) =>
+        salesPerms.map((p) => ({ userId: u.id, permissionId: p.id })),
+      ),
+      skipDuplicates: true,
+    });
+  }
+
   console.log('✅ Seed complete');
   console.log('   Admin:', adminEmail, '/', adminPassword);
   console.log('   Sales: sales@example.com / SalesPass123!');

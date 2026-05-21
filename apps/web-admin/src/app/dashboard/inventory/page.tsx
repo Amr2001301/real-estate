@@ -16,6 +16,7 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { Paged, Unit, Project, UnitStatus } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
@@ -87,6 +88,9 @@ export default async function InventoryPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  // SALES browses inventory read-only; the units link is read-only for them.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
   const q = (sp.q ?? '').trim();
   const status: StatusFilter =
     sp.status === 'AVAILABLE' || sp.status === 'RESERVED' || sp.status === 'SOLD'
@@ -269,7 +273,7 @@ export default async function InventoryPage({
                 size="md"
                 leftIcon={<SlidersHorizontal className="h-4 w-4" />}
               >
-                إدارة الوحدات
+                {isAdmin ? 'إدارة الوحدات' : 'عرض الوحدات'}
               </Button>
             </Link>
           </>

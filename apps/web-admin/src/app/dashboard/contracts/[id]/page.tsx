@@ -11,6 +11,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import type { Contract } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
@@ -59,6 +60,9 @@ export default async function ContractDetailPage({
   }
 
   const contract = r.data;
+  // Plan creation, payment recording, and signing are admin/finance actions.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
   const plan = contract.installmentPlan;
   const projectName = tx(contract.unit?.building?.phase?.project?.name) || '—';
   const displayNumber = contract.contractNumber ?? contract.id.slice(0, 8);
@@ -254,7 +258,10 @@ export default async function ContractDetailPage({
                             let installmentCounter = 0;
                             return plan.installments!.map((inst) => {
                               const s = INST_STATUS[inst.status] ?? INST_STATUS['PENDING']!;
-                              const canPay = inst.status === 'PENDING' || inst.status === 'OVERDUE';
+                              // Recording a payment is an admin/finance action (deposits:register).
+                              const canPay =
+                                isAdmin &&
+                                (inst.status === 'PENDING' || inst.status === 'OVERDUE');
                               const isInstallment = !inst.type || inst.type === 'INSTALLMENT';
                               if (isInstallment) installmentCounter++;
                               const rowLabel = isInstallment
@@ -314,37 +321,39 @@ export default async function ContractDetailPage({
                       لا توجد خطة تقسيط لهذا العقد. يمكنك إنشاؤها يدوياً أدناه.
                     </p>
                   )}
-                  <form action={createInstallmentPlanAction.bind(null, contract.id)} className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <input
-                        name="totalMonths"
-                        type="number"
-                        min={1}
-                        max={360}
-                        placeholder="عدد الأشهر"
-                        required
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-                      />
-                      <input
-                        name="monthlyAmount"
-                        type="number"
-                        step="any"
-                        min={0}
-                        placeholder="القسط الشهري"
-                        required
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-                      />
-                      <input
-                        name="startsAt"
-                        type="date"
-                        required
-                        className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
-                      />
-                    </div>
-                    <Button type="submit" variant="primary" size="sm">
-                      إنشاء الخطة
-                    </Button>
-                  </form>
+                  {isAdmin && (
+                    <form action={createInstallmentPlanAction.bind(null, contract.id)} className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <input
+                          name="totalMonths"
+                          type="number"
+                          min={1}
+                          max={360}
+                          placeholder="عدد الأشهر"
+                          required
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+                        />
+                        <input
+                          name="monthlyAmount"
+                          type="number"
+                          step="any"
+                          min={0}
+                          placeholder="القسط الشهري"
+                          required
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+                        />
+                        <input
+                          name="startsAt"
+                          type="date"
+                          required
+                          className="rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300"
+                        />
+                      </div>
+                      <Button type="submit" variant="primary" size="sm">
+                        إنشاء الخطة
+                      </Button>
+                    </form>
+                  )}
                 </div>
               )}
             </CardBody>
@@ -357,11 +366,13 @@ export default async function ContractDetailPage({
                 <CreditCard className="h-5 w-5 text-brand-600" />
                 <CardTitle>الدفعات المسجلة</CardTitle>
               </div>
-              <Link href={`/dashboard/deposits/new?contractId=${contract.id}`}>
-                <Button variant="secondary" size="sm" type="button">
-                  + تسجيل دفعة
-                </Button>
-              </Link>
+              {isAdmin && (
+                <Link href={`/dashboard/deposits/new?contractId=${contract.id}`}>
+                  <Button variant="secondary" size="sm" type="button">
+                    + تسجيل دفعة
+                  </Button>
+                </Link>
+              )}
             </CardHeader>
             <CardBody className="p-0">
               {contract.deposits && contract.deposits.length > 0 ? (
