@@ -2,10 +2,41 @@
 
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { api } from '@/lib/api';
+import { ApiError, api } from '@/lib/api';
 
 export interface ReservationFormState {
   error?: string;
+}
+
+export interface ReservationActionResult {
+  error?: string;
+  /** True when the failure was a 403 missing_permission. */
+  missingPermission?: boolean;
+  /** Permission codes the user is missing (when missingPermission is true). */
+  permissions?: string[];
+}
+
+/**
+ * Translate a thrown error into an action result. A missing_permission 403 is
+ * surfaced as a friendly Arabic message + codes so the UI can render an inline
+ * permission notice instead of letting the error reach the page error boundary.
+ */
+function toReservationActionError(
+  e: unknown,
+  actionLabel: string,
+): ReservationActionResult {
+  if (e instanceof ApiError && e.code === 'missing_permission') {
+    const codes = e.permissions ?? [];
+    return {
+      error:
+        codes.length > 0
+          ? `ليست لديك صلاحية ${actionLabel}. الصلاحية المطلوبة: ${codes.join('، ')}`
+          : `ليست لديك صلاحية ${actionLabel}.`,
+      missingPermission: true,
+      permissions: codes,
+    };
+  }
+  return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
 }
 
 export async function createReservationAction(
@@ -71,19 +102,36 @@ export async function createReservationAction(
   redirect(`/dashboard/reservations/${createdId}`);
 }
 
-export async function approveReservationAction(id: string) {
+export async function approveReservationAction(
+  id: string,
+): Promise<ReservationActionResult> {
   // Each status transition now has a dedicated strict-permission endpoint.
   // The legacy PATCH /reservations/:id/status route has been removed.
-  await api.post(`/reservations/${id}/approve`, {});
+  // Catch here so a missing reservations:approve renders inline instead of
+  // crashing the whole detail page via the error boundary.
+  try {
+    await api.post(`/reservations/${id}/approve`, {});
+  } catch (e) {
+    return toReservationActionError(e, 'اعتماد الحجز');
+  }
   revalidatePath('/dashboard/reservations');
   revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
 }
 
-export async function rejectReservationAction(id: string, formData: FormData) {
+export async function rejectReservationAction(
+  id: string,
+  formData: FormData,
+): Promise<ReservationActionResult> {
   const reason = String(formData.get('reason') ?? '').trim() || undefined;
-  await api.post(`/reservations/${id}/reject`, { reason });
+  try {
+    await api.post(`/reservations/${id}/reject`, { reason });
+  } catch (e) {
+    return toReservationActionError(e, 'رفض الحجز');
+  }
   revalidatePath('/dashboard/reservations');
   revalidatePath(`/dashboard/reservations/${id}`);
+  return {};
 }
 
 export async function cancelReservationAction(

@@ -33,3 +33,32 @@ export async function revokePermissionAction(id: string, formData: FormData) {
   }
   await patch(id, { removePermissionCodes: [code] });
 }
+
+export interface ApplyPermissionsResult {
+  ok?: boolean;
+  error?: string;
+}
+
+/**
+ * Grant/revoke one or many permission codes in a single call (the API accepts
+ * addPermissionCodes / removePermissionCodes arrays). Returns a result instead
+ * of redirecting so the client picker can update inline. Permission codes are
+ * never created or renamed here — only assigned/unassigned.
+ */
+export async function applyUserPermissions(
+  id: string,
+  add: string[],
+  remove: string[],
+): Promise<ApplyPermissionsResult> {
+  if (add.length === 0 && remove.length === 0) return { ok: true };
+  try {
+    await api.patch(`/users/${id}/permissions`, {
+      ...(add.length ? { addPermissionCodes: add } : {}),
+      ...(remove.length ? { removePermissionCodes: remove } : {}),
+    });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  revalidatePath(`/dashboard/users/${id}/permissions`);
+  return { ok: true };
+}

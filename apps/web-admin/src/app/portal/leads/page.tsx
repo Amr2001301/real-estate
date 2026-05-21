@@ -4,7 +4,6 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalLead } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
@@ -127,17 +126,18 @@ export default async function PortalLeadsPage({
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">المشروع</th>
+                <th className="text-start font-semibold py-3 px-4">التواصل</th>
+                <th className="text-start font-semibold py-3 px-4">المشروع / الوحدة</th>
                 <th className="text-start font-semibold py-3 px-4">المراجعة</th>
                 <th className="text-start font-semibold py-3 px-4">المرحلة</th>
-                <th className="text-start font-semibold py-3 px-4">المرسل</th>
+                <th className="text-start font-semibold py-3 px-4">التاريخ</th>
                 <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-0">
+                  <td colSpan={7} className="p-0">
                     <EmptyState
                       icon={<Users />}
                       title="لا توجد فرص بعد"
@@ -160,23 +160,35 @@ export default async function PortalLeadsPage({
               {rows.map((l) => (
                 <tr
                   key={l.id}
-                  className="border-t border-hairline align-top hover:bg-surface-muted/40 transition-colors"
+                  className="border-t border-hairline align-middle hover:bg-surface-muted/40 transition-colors"
                 >
                   <td className="py-3 ps-5 pe-4">
-                    <p className="font-semibold text-slate-900">{l.fullName}</p>
-                    <p className="text-2xs text-slate-500 mt-0.5 space-y-0.5" dir="ltr">
-                      <span className="inline-flex items-center gap-1 me-2">
-                        <Phone className="h-3 w-3 text-slate-400" /> {l.phone}
-                      </span>
-                      {l.email && (
-                        <span className="inline-flex items-center gap-1">
-                          <Mail className="h-3 w-3 text-slate-400" /> {l.email}
-                        </span>
-                      )}
-                    </p>
+                    <p className="font-semibold text-slate-900 truncate">{l.fullName}</p>
                   </td>
-                  <td className="py-3 px-4 text-slate-700">
-                    {l.projectInterest ? tx(l.projectInterest.name) : '—'}
+                  <td className="py-3 px-4">
+                    <div className="flex flex-col gap-0.5 text-2xs text-slate-500" dir="ltr">
+                      <a
+                        href={`tel:${l.phone}`}
+                        className="inline-flex items-center gap-1 hover:text-brand-700"
+                      >
+                        <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                        {l.phone}
+                      </a>
+                      {l.email && (
+                        <a
+                          href={`mailto:${l.email}`}
+                          className="inline-flex items-center gap-1 hover:text-brand-700"
+                        >
+                          <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[180px]">{l.email}</span>
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-4">
+                    <p className="text-slate-700 truncate max-w-[200px]">
+                      {l.projectInterest ? tx(l.projectInterest.name) : '—'}
+                    </p>
                     {l.unitInterest && (
                       <p className="text-2xs text-slate-400 font-mono mt-0.5" dir="ltr">
                         {l.unitInterest.code}
@@ -191,14 +203,19 @@ export default async function PortalLeadsPage({
                   <td className="py-3 px-4">
                     <LeadStageBadge stage={l.stage} />
                   </td>
-                  <td className="py-3 px-4 text-xs text-slate-500">
+                  <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
                     {formatDate(l.brokerSubmittedAt ?? l.createdAt)}
                   </td>
                   <td className="py-3 ps-4 pe-5">
                     <Link href={`/portal/leads/${l.id}` as never}>
-                      <IconButton label="عرض" variant="ghost" size="sm">
-                        <Eye />
-                      </IconButton>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={<Eye className="h-3.5 w-3.5" />}
+                      >
+                        عرض
+                      </Button>
                     </Link>
                   </td>
                 </tr>

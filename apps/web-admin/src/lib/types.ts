@@ -135,6 +135,17 @@ export interface Lead {
   assignedSales?: { id: string; fullName: string } | null;
   stage: LeadStage;
   createdAt: string;
+  // ── Broker attribution (present only for broker-origin leads) ──
+  brokerId?: string | null;
+  brokerApprovalStatus?: BrokerLeadStatus | null;
+  broker?: {
+    id: string;
+    companyName: string;
+    commercialName: string | null;
+    code: string;
+  } | null;
+  brokerAgentId?: string | null;
+  brokerAgent?: { id: string; fullName: string } | null;
   upcomingVisit?: { id: string; visitNumber: string; scheduledAt: string; status: AppointmentStatus } | null;
   notes?: LeadNote[];
 }

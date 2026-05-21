@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { AlertCircle, Info, X } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
@@ -20,6 +20,16 @@ interface Props {
   units: Paged<PortalUnit> | null;
 }
 
+/**
+ * Robust project-id resolver for a portal unit. The portal payload nests the
+ * project under building.phase, exposing both `projectId` and `project.id`;
+ * we fall back across the known shapes so a schema tweak can't silently break
+ * the project→unit filter again.
+ */
+function unitProjectId(u: PortalUnit): string {
+  return u.building?.phase?.projectId ?? u.building?.phase?.project?.id ?? '';
+}
+
 export default function PortalLeadForm({ projects, units }: Props) {
   const [state, formAction] = useActionState<PortalLeadFormState, FormData>(
     createPortalLeadAction,
@@ -27,6 +37,17 @@ export default function PortalLeadForm({ projects, units }: Props) {
   );
 
   const unitRows = units?.data ?? [];
+
+  // Selected project drives which units are offered. Until a project is
+  // picked we show all broker-visible units so the field still works on its
+  // own; once a project is chosen we scope to that project's units.
+  const [projectId, setProjectId] = useState('');
+  const [unitId, setUnitId] = useState('');
+
+  const visibleUnits = projectId
+    ? unitRows.filter((u) => unitProjectId(u) === projectId)
+    : unitRows;
+  const noUnitsForProject = projectId !== '' && visibleUnits.length === 0;
 
   return (
     <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
@@ -79,7 +100,17 @@ export default function PortalLeadForm({ projects, units }: Props) {
       <FormSection title="الاهتمام" description="حدد المشروع والوحدة التي يهتم بها العميل.">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="المشروع" name="projectInterestId" hint="من المشاريع المتاحة لك">
-            <Select id="projectInterestId" name="projectInterestId" defaultValue="">
+            <Select
+              id="projectInterestId"
+              name="projectInterestId"
+              value={projectId}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                // Reset the unit when the project changes so a stale unit from
+                // another project can't be submitted.
+                setUnitId('');
+              }}
+            >
               <option value="">— لاحقاً —</option>
               {projects.map((p) => (
                 <option key={p.project.id} value={p.project.id}>
@@ -89,13 +120,24 @@ export default function PortalLeadForm({ projects, units }: Props) {
             </Select>
           </Field>
           <Field label="الوحدة" name="unitInterestId" hint="اختياري">
-            <Select id="unitInterestId" name="unitInterestId" defaultValue="">
+            <Select
+              id="unitInterestId"
+              name="unitInterestId"
+              value={unitId}
+              onChange={(e) => setUnitId(e.target.value)}
+            >
               <option value="">— لا تحدد وحدة —</option>
-              {unitRows.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.code} • {tx(u.building.phase.project.name)} ({u.type})
+              {noUnitsForProject ? (
+                <option value="" disabled>
+                  لا توجد وحدات متاحة لهذا المشروع
                 </option>
-              ))}
+              ) : (
+                visibleUnits.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.code} • {tx(u.building.phase.project.name)} ({u.type})
+                  </option>
+                ))
+              )}
             </Select>
           </Field>
         </div>

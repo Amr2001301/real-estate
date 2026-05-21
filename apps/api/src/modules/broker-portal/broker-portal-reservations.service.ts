@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import {
   NotificationChannel,
+  PlanTemplateStatus,
   Prisma,
   ReservationActivityType,
   ReservationBookingPaymentStatus,
@@ -297,12 +298,40 @@ export class BrokerPortalReservationsService {
       increasePercentage: null,
     };
 
-    if (dto.installmentPlanTemplateId) {
+    // A broker reservation MUST carry a booking amount derived from an
+    // admin-controlled active installment plan. We never trust a client
+    // amount and never default to zero.
+    //   - explicit installmentPlanTemplateId  → validate & use it
+    //   - exactly one applicable active plan   → auto-select it
+    //   - multiple applicable plans            → require the broker to choose
+    //   - none                                 → block with a clear message
+    const applicablePlans = await this.listApplicablePlans(dto.unitId, projectId);
+    let resolvedPlanId = dto.installmentPlanTemplateId;
+    if (!resolvedPlanId) {
+      if (applicablePlans.length === 0) {
+        throw new BadRequestException(
+          'لا توجد خطة دفع فعّالة لهذه الوحدة. تواصل مع الإدارة قبل إنشاء الحجز.',
+        );
+      }
+      if (applicablePlans.length > 1) {
+        throw new BadRequestException(
+          'يوجد أكثر من خطة دفع فعّالة لهذه الوحدة. اختر خطة دفع قبل إنشاء الحجز.',
+        );
+      }
+      resolvedPlanId = applicablePlans[0]!.id;
+    }
+
+    {
       const plan = await this.reservations.validateBookingPlan(
-        dto.installmentPlanTemplateId,
+        resolvedPlanId,
         dto.unitId,
         projectId,
       );
+      if (plan.reservationAmount.lte(0)) {
+        throw new BadRequestException(
+          'مبلغ الحجز لخطة الدفع غير صالح. تواصل مع الإدارة قبل إنشاء الحجز.',
+        );
+      }
       bookingAmount = plan.reservationAmount;
       snapshot.downPaymentAmount = plan.downPaymentAmount;
       snapshot.finalPaymentAmount = plan.finalPaymentAmount;
@@ -371,8 +400,9 @@ export class BrokerPortalReservationsService {
           brokerAgentId: brokerAgentUserId,
           commissionLockedPct: commission.lockedPct,
           commissionLockedAmount: commission.lockedAmount,
-          // Plan + duration snapshot (when applicable).
-          installmentPlanTemplateId: dto.installmentPlanTemplateId ?? null,
+          // Plan + duration snapshot. resolvedPlanId is always set now — a
+          // reservation cannot be created without a booking plan.
+          installmentPlanTemplateId: resolvedPlanId,
           selectedDurationOptionId: dto.selectedDurationOptionId ?? null,
           selectedDurationMonths: snapshot.durationMonths,
           selectedIncreasePercentage: snapshot.increasePercentage,
@@ -468,6 +498,72 @@ export class BrokerPortalReservationsService {
   }
 
   // ── Internal helpers ────────────────────────────────────────────────────
+
+  /**
+   * Applicable active installment plans for a unit: a unit-specific plan, or a
+   * project-wide plan (unitId = null) for the unit's project, with a positive
+   * reservation amount. Unit-specific plans are returned first. This is the
+   * single source of truth for a reservation's booking amount.
+   */
+  private async listApplicablePlans(unitId: string, projectId: string) {
+    const plans = await this.prisma.installmentPlanTemplate.findMany({
+      where: {
+        status: PlanTemplateStatus.ACTIVE,
+        projectId,
+        reservationAmount: { gt: 0 },
+        OR: [{ unitId }, { unitId: null }],
+      },
+      select: {
+        id: true,
+        name: true,
+        unitId: true,
+        reservationAmount: true,
+        downPaymentAmount: true,
+        durationOptions: {
+          select: { id: true, durationMonths: true, increasePercentage: true },
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    // Unit-specific plans take precedence over project-wide ones.
+    return plans.sort((a, b) => {
+      if (a.unitId && !b.unitId) return -1;
+      if (!a.unitId && b.unitId) return 1;
+      return 0;
+    });
+  }
+
+  /**
+   * Read endpoint backing the broker reservation form: returns the active
+   * booking plans the broker may use for a unit so the booking amount is shown
+   * before submission. Reuses the same visibility check as create().
+   */
+  async listBookingPlansForUnit(scope: BrokerScopeContext, unitId: string) {
+    const unit = await this.prisma.unit.findUnique({
+      where: { id: unitId },
+      select: {
+        id: true,
+        building: { select: { phase: { select: { projectId: true } } } },
+      },
+    });
+    if (!unit) throw new NotFoundException('Unit not found');
+    const projectId = unit.building.phase.projectId;
+    await this.assertUnitVisible(scope.brokerId, unitId, projectId);
+
+    const plans = await this.listApplicablePlans(unitId, projectId);
+    return plans.map((p) => ({
+      id: p.id,
+      name: p.name,
+      reservationAmount: p.reservationAmount.toString(),
+      downPaymentAmount: p.downPaymentAmount.toString(),
+      durationOptions: p.durationOptions.map((o) => ({
+        id: o.id,
+        durationMonths: o.durationMonths,
+        increasePercentage: o.increasePercentage.toString(),
+      })),
+    }));
+  }
 
   private async assertUnitVisible(
     brokerId: string,

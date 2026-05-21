@@ -15,7 +15,10 @@ interface Props {
 export function NavLink({ href, label, icon, onNavigate }: Props) {
   const pathname = usePathname() ?? '';
   const isExact = pathname === href;
-  const isPrefix = href !== '/dashboard' && pathname.startsWith(href + '/');
+  // Workspace roots ('/dashboard', '/portal') must not prefix-match their
+  // children, otherwise the home link stays highlighted on every sub-route.
+  const isWorkspaceRoot = href === '/dashboard' || href === '/portal';
+  const isPrefix = !isWorkspaceRoot && pathname.startsWith(href + '/');
   const active = isExact || isPrefix;
 
   return (

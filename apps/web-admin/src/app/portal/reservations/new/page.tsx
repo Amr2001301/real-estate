@@ -13,8 +13,11 @@ export default async function NewPortalReservationPage() {
         '/portal/leads?brokerApprovalStatus=APPROVED&pageSize=200',
       ),
     ),
+    // pageSize is capped at 200 by PortalUnitsQueryDto (@Max(200)); requesting
+    // more returns a 400 and an empty list — which is why the unit dropdown
+    // showed no units. 200 covers a broker's available units in one page.
     safe(
-      api.get<Paged<PortalUnit>>('/portal/units?status=AVAILABLE&pageSize=500'),
+      api.get<Paged<PortalUnit>>('/portal/units?status=AVAILABLE&pageSize=200'),
     ),
   ]);
 

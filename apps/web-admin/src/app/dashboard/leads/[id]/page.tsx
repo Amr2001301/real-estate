@@ -11,6 +11,7 @@ import {
   Activity,
   ArrowLeft,
   ExternalLink,
+  Briefcase,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
@@ -469,14 +470,38 @@ export default async function LeadDetailPage({
                 )}
               </Row>
               <Row label="مصدر الفرصة" icon={<ArrowLeft className="h-3.5 w-3.5" />}>
-                {lead.source ? (
+                {lead.brokerId ? (
+                  <Badge tone="brand" variant="soft" size="sm">
+                    من وسيط
+                  </Badge>
+                ) : lead.source ? (
                   <Badge tone="info" variant="soft" size="sm">
                     {tx(lead.source.name)}
                   </Badge>
                 ) : (
-                  <span className="text-slate-400">—</span>
+                  <span className="text-slate-400">مباشر</span>
                 )}
               </Row>
+              {lead.brokerId && (
+                <>
+                  <Row label="الوسيط" icon={<Briefcase className="h-3.5 w-3.5" />}>
+                    {lead.broker ? (
+                      <span className="font-medium text-slate-900">
+                        {lead.broker.commercialName || lead.broker.companyName}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </Row>
+                  <Row label="مندوب الوسيط" icon={<UserCog className="h-3.5 w-3.5" />}>
+                    {lead.brokerAgent?.fullName ? (
+                      <span className="text-slate-700">{lead.brokerAgent.fullName}</span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </Row>
+                </>
+              )}
               <Row label="تاريخ الإنشاء" icon={<Calendar className="h-3.5 w-3.5" />}>
                 <span className="text-slate-700">{formatDateTime(lead.createdAt)}</span>
               </Row>

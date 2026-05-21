@@ -6,6 +6,7 @@ import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { PermissionDeniedState } from '@/components/permission-denied';
 import {
   approveBrokerLeadAction,
   rejectBrokerLeadAction,
@@ -18,8 +19,25 @@ interface SalesUser {
   fullName: string;
 }
 
-function Banner({ state }: { state: BrokerLeadActionState }) {
+function Banner({
+  state,
+  deniedTitle,
+}: {
+  state: BrokerLeadActionState;
+  /** Action-specific heading for the missing-permission case. */
+  deniedTitle?: string;
+}) {
   if (state.error) {
+    // 403 missing_permission → friendly, code-aware state instead of raw text.
+    if (state.missingPermission) {
+      return (
+        <PermissionDeniedState
+          variant="inline"
+          permissions={state.permissions ?? []}
+          title={deniedTitle}
+        />
+      );
+    }
     return (
       <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-sm">
         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -51,7 +69,7 @@ export function ApproveBrokerLeadForm({
   );
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <Banner state={state} />
+      <Banner state={state} deniedTitle="تحتاج صلاحية لاعتماد هذه الفرصة" />
       <Field label="تعيين مندوب مبيعات" name="assignedSalesId" hint="اختياري">
         <Select id={`assigned-${leadId}`} name="assignedSalesId" defaultValue="">
           <option value="">— لا تعيين الآن —</option>
@@ -79,7 +97,7 @@ export function RejectBrokerLeadForm({ leadId }: { leadId: string }) {
   );
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <Banner state={state} />
+      <Banner state={state} deniedTitle="تحتاج صلاحية لرفض هذه الفرصة" />
       <Field label="سبب الرفض" name="reason" required>
         <Textarea id={`reject-${leadId}`} name="reason" rows={3} required />
       </Field>
@@ -97,7 +115,7 @@ export function MarkDuplicateBrokerLeadForm({ leadId }: { leadId: string }) {
   );
   return (
     <form action={formAction} className="flex flex-col gap-3">
-      <Banner state={state} />
+      <Banner state={state} deniedTitle="تحتاج صلاحية لتعليم هذه الفرصة كمكررة" />
       <Field label="ملاحظة على التكرار" name="reason" hint="اختياري">
         <Textarea id={`dup-${leadId}`} name="reason" rows={2} />
       </Field>

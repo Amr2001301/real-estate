@@ -1,6 +1,6 @@
 import { LogOut } from 'lucide-react';
 import type { SessionUser, SessionRole } from '@/lib/session';
-import { filterNavForRole, type NavSection } from '@/lib/nav';
+import { filterNavForRole, NAV_ICONS, type NavSection } from '@/lib/nav';
 import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
 import { NavLink } from './nav-link';
@@ -43,7 +43,7 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
             </p>
             <div className="space-y-1">
               {section.items.map((item) => {
-                const Icon = item.icon;
+                const Icon = NAV_ICONS[item.iconKey];
                 return (
                   <NavLink
                     key={item.href}

@@ -10,7 +10,6 @@ import type {
 } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
@@ -221,37 +220,47 @@ export default async function AdminBrokerLeadsPage({
               {rows.map((l) => (
                 <tr
                   key={l.id}
-                  className="border-t border-hairline align-top hover:bg-surface-muted/40 transition-colors"
+                  className="border-t border-hairline align-middle hover:bg-surface-muted/40 transition-colors"
                 >
                   <td className="py-3 ps-5 pe-4">
-                    <p className="font-semibold text-slate-900">{l.fullName}</p>
-                    <p className="text-2xs text-slate-500 mt-0.5 space-y-0.5" dir="ltr">
-                      <span className="inline-flex items-center gap-1 me-2">
-                        <Phone className="h-3 w-3 text-slate-400" /> {l.phone}
+                    <p className="font-semibold text-slate-900 truncate max-w-[180px]">
+                      {l.fullName}
+                    </p>
+                    <div className="mt-0.5 flex flex-col gap-0.5 text-2xs text-slate-500" dir="ltr">
+                      <span className="inline-flex items-center gap-1">
+                        <Phone className="h-3 w-3 text-slate-400 shrink-0" /> {l.phone}
                       </span>
                       {l.email && (
-                        <span className="inline-flex items-center gap-1">
-                          <Mail className="h-3 w-3 text-slate-400" /> {l.email}
+                        <span className="inline-flex items-center gap-1 truncate">
+                          <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[160px]">{l.email}</span>
                         </span>
                       )}
-                    </p>
+                    </div>
                   </td>
                   <td className="py-3 px-4">
                     <Link
                       href={`/dashboard/brokers/${l.brokerId}` as never}
                       className="text-sm text-slate-900 hover:text-brand-700 inline-flex items-center gap-1.5"
                     >
-                      <Briefcase className="h-3.5 w-3.5 text-slate-400" />
-                      {l.broker?.companyName ?? '—'}
+                      <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                      <span className="truncate max-w-[160px]">{l.broker?.companyName ?? '—'}</span>
                     </Link>
                     {l.brokerAgent && (
-                      <p className="text-2xs text-slate-500 mt-0.5">
+                      <p className="text-2xs text-slate-500 mt-0.5 truncate max-w-[180px]">
                         {l.brokerAgent.fullName}
                       </p>
                     )}
                   </td>
-                  <td className="py-3 px-4 text-slate-700">
-                    {l.projectInterest ? tx(l.projectInterest.name) : '—'}
+                  <td className="py-3 px-4">
+                    <p className="text-slate-700 truncate max-w-[180px]">
+                      {l.projectInterest ? tx(l.projectInterest.name) : '—'}
+                    </p>
+                    {l.unitInterest && (
+                      <p className="text-2xs text-slate-400 font-mono mt-0.5" dir="ltr">
+                        {l.unitInterest.code}
+                      </p>
+                    )}
                   </td>
                   <td className="py-3 px-4">
                     {l.brokerApprovalStatus && (
@@ -261,17 +270,22 @@ export default async function AdminBrokerLeadsPage({
                   <td className="py-3 px-4">
                     <LeadStageBadge stage={l.stage} />
                   </td>
-                  <td className="py-3 px-4 text-xs text-slate-600">
+                  <td className="py-3 px-4 text-xs text-slate-600 truncate max-w-[140px]">
                     {l.assignedSales?.fullName ?? '—'}
                   </td>
-                  <td className="py-3 px-4 text-2xs text-slate-500">
+                  <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
                     {formatDate(l.brokerSubmittedAt ?? l.createdAt)}
                   </td>
                   <td className="py-3 ps-4 pe-5">
                     <Link href={`/dashboard/broker-leads/${l.id}` as never}>
-                      <IconButton label="عرض" variant="ghost" size="sm">
-                        <Eye />
-                      </IconButton>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        leftIcon={<Eye className="h-3.5 w-3.5" />}
+                      >
+                        عرض
+                      </Button>
                     </Link>
                   </td>
                 </tr>

@@ -28,10 +28,47 @@ import {
 } from 'lucide-react';
 import type { SessionRole } from './session';
 
+/**
+ * Serializable icon registry. Nav data carries a string `iconKey` (not a
+ * component) so nav sections can be passed as props from Server Components to
+ * Client Components (e.g. MobileNav) without tripping React's "Functions
+ * cannot be passed directly to Client Components" error. The render component
+ * maps the key back to the Lucide component via this registry.
+ */
+export const NAV_ICONS = {
+  LayoutDashboard,
+  Building2,
+  Home,
+  Users,
+  UserCheck,
+  UserSquare2,
+  CalendarClock,
+  BookmarkCheck,
+  FileText,
+  Wallet,
+  Receipt,
+  Wrench,
+  BadgePercent,
+  Briefcase,
+  FileEdit,
+  Bell,
+  BarChart3,
+  Boxes,
+  ShieldCheck,
+  ScrollText,
+  Settings,
+  UserCircle,
+  Activity,
+  Gauge,
+  Files,
+} satisfies Record<string, LucideIcon>;
+
+export type IconKey = keyof typeof NAV_ICONS;
+
 export interface NavItem {
   href: string;
   label: string;
-  icon: LucideIcon;
+  iconKey: IconKey;
   admin?: boolean;
 }
 
@@ -48,56 +85,56 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'نظرة عامة',
     items: [
-      { href: '/dashboard', label: 'لوحة التحكم', icon: LayoutDashboard },
+      { href: '/dashboard', label: 'لوحة التحكم', iconKey: 'LayoutDashboard' },
     ],
   },
   {
     title: 'المبيعات',
     items: [
-      { href: '/dashboard/projects', label: 'المشاريع', icon: Building2 },
-      { href: '/dashboard/inventory', label: 'المخزون', icon: Boxes },
-      { href: '/dashboard/units', label: 'الوحدات', icon: Home },
-      { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', icon: Users },
-      { href: '/dashboard/clients', label: 'المتصفّحون', icon: UserSquare2 },
-      { href: '/dashboard/customers', label: 'العملاء', icon: UserCheck },
-      { href: '/dashboard/visits', label: 'الزيارات', icon: CalendarClock },
-      { href: '/dashboard/reservations', label: 'الحجوزات', icon: BookmarkCheck },
-      { href: '/dashboard/contracts', label: 'العقود', icon: FileText },
+      { href: '/dashboard/projects', label: 'المشاريع', iconKey: 'Building2' },
+      { href: '/dashboard/inventory', label: 'المخزون', iconKey: 'Boxes' },
+      { href: '/dashboard/units', label: 'الوحدات', iconKey: 'Home' },
+      { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', iconKey: 'Users' },
+      { href: '/dashboard/clients', label: 'المتصفّحون', iconKey: 'UserSquare2' },
+      { href: '/dashboard/customers', label: 'العملاء', iconKey: 'UserCheck' },
+      { href: '/dashboard/visits', label: 'الزيارات', iconKey: 'CalendarClock' },
+      { href: '/dashboard/reservations', label: 'الحجوزات', iconKey: 'BookmarkCheck' },
+      { href: '/dashboard/contracts', label: 'العقود', iconKey: 'FileText' },
     ],
   },
   {
     title: 'العمليات',
     items: [
-      { href: '/dashboard/installments', label: 'خطط التقسيط', icon: Wallet },
-      { href: '/dashboard/deposits', label: 'الدفعات', icon: Receipt, admin: true },
-      { href: '/dashboard/maintenance', label: 'الصيانة', icon: Wrench, admin: true },
-      { href: '/dashboard/bonus', label: 'العمولات', icon: BadgePercent, admin: true },
+      { href: '/dashboard/installments', label: 'خطط التقسيط', iconKey: 'Wallet' },
+      { href: '/dashboard/deposits', label: 'الدفعات', iconKey: 'Receipt', admin: true },
+      { href: '/dashboard/maintenance', label: 'الصيانة', iconKey: 'Wrench', admin: true },
+      { href: '/dashboard/bonus', label: 'العمولات', iconKey: 'BadgePercent', admin: true },
     ],
   },
   {
     title: 'الوسطاء',
     items: [
-      { href: '/dashboard/brokers', label: 'الوسطاء', icon: Briefcase, admin: true },
-      { href: '/dashboard/broker-leads', label: 'فرص من الوسطاء', icon: Users, admin: true },
-      { href: '/dashboard/broker-reservations', label: 'حجوزات من الوسطاء', icon: BookmarkCheck, admin: true },
-      { href: '/dashboard/broker-contracts', label: 'عقود من الوسطاء', icon: FileText, admin: true },
-      { href: '/dashboard/broker-commissions', label: 'عمولات الوسطاء', icon: BadgePercent, admin: true },
-      { href: '/dashboard/broker-payouts', label: 'مدفوعات الوسطاء', icon: Wallet, admin: true },
-      { href: '/dashboard/broker-reports', label: 'تقارير الوسطاء', icon: BarChart3, admin: true },
+      { href: '/dashboard/brokers', label: 'الوسطاء', iconKey: 'Briefcase', admin: true },
+      { href: '/dashboard/broker-leads', label: 'فرص من الوسطاء', iconKey: 'Users', admin: true },
+      { href: '/dashboard/broker-reservations', label: 'حجوزات من الوسطاء', iconKey: 'BookmarkCheck', admin: true },
+      { href: '/dashboard/broker-contracts', label: 'عقود من الوسطاء', iconKey: 'FileText', admin: true },
+      { href: '/dashboard/broker-commissions', label: 'عمولات الوسطاء', iconKey: 'BadgePercent', admin: true },
+      { href: '/dashboard/broker-payouts', label: 'مدفوعات الوسطاء', iconKey: 'Wallet', admin: true },
+      { href: '/dashboard/broker-reports', label: 'تقارير الوسطاء', iconKey: 'BarChart3', admin: true },
     ],
   },
   {
     title: 'الإدارة',
     items: [
-      { href: '/dashboard/cms', label: 'المحتوى', icon: FileEdit, admin: true },
-      { href: '/dashboard/documents', label: 'المستندات', icon: Files, admin: true },
-      { href: '/dashboard/notifications', label: 'الإشعارات', icon: Bell, admin: true },
-      { href: '/dashboard/reports', label: 'التقارير', icon: BarChart3, admin: true },
-      { href: '/dashboard/users', label: 'المستخدمون', icon: ShieldCheck, admin: true },
-      { href: '/dashboard/permissions', label: 'الصلاحيات', icon: ShieldCheck, admin: true },
-      { href: '/dashboard/operations', label: 'مركز العمليات', icon: Gauge, admin: true },
-      { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', icon: ScrollText, admin: true },
-      { href: '/dashboard/settings', label: 'الإعدادات', icon: Settings, admin: true },
+      { href: '/dashboard/cms', label: 'المحتوى', iconKey: 'FileEdit', admin: true },
+      { href: '/dashboard/documents', label: 'المستندات', iconKey: 'Files', admin: true },
+      { href: '/dashboard/notifications', label: 'الإشعارات', iconKey: 'Bell', admin: true },
+      { href: '/dashboard/reports', label: 'التقارير', iconKey: 'BarChart3', admin: true },
+      { href: '/dashboard/users', label: 'المستخدمون', iconKey: 'ShieldCheck', admin: true },
+      { href: '/dashboard/permissions', label: 'الصلاحيات', iconKey: 'ShieldCheck', admin: true },
+      { href: '/dashboard/operations', label: 'مركز العمليات', iconKey: 'Gauge', admin: true },
+      { href: '/dashboard/audit-logs', label: 'سجلات التدقيق', iconKey: 'ScrollText', admin: true },
+      { href: '/dashboard/settings', label: 'الإعدادات', iconKey: 'Settings', admin: true },
     ],
   },
 ];
@@ -119,20 +156,20 @@ export const BROKER_NAV_SECTIONS: NavSection[] = [
   {
     title: 'البوابة',
     items: [
-      { href: '/portal', label: 'لوحة التحكم', icon: LayoutDashboard },
-      { href: '/portal/performance', label: 'الأداء', icon: BarChart3 },
-      { href: '/portal/projects', label: 'المشاريع', icon: Building2 },
-      { href: '/portal/units', label: 'الوحدات', icon: Home },
-      { href: '/portal/leads', label: 'الفرص', icon: Users },
-      { href: '/portal/visits', label: 'الزيارات', icon: CalendarClock },
-      { href: '/portal/reservations', label: 'الحجوزات', icon: BookmarkCheck },
-      { href: '/portal/contracts', label: 'العقود', icon: FileText },
-      { href: '/portal/commissions', label: 'العمولات', icon: BadgePercent },
-      { href: '/portal/payouts', label: 'المدفوعات', icon: Wallet },
-      { href: '/portal/activity', label: 'النشاط', icon: Activity },
-      { href: '/portal/notifications', label: 'الإشعارات', icon: Bell },
-      { href: '/portal/team', label: 'فريق العمل', icon: Users },
-      { href: '/portal/profile', label: 'الملف الشخصي', icon: UserCircle },
+      { href: '/portal', label: 'لوحة التحكم', iconKey: 'LayoutDashboard' },
+      { href: '/portal/performance', label: 'الأداء', iconKey: 'BarChart3' },
+      { href: '/portal/projects', label: 'المشاريع', iconKey: 'Building2' },
+      { href: '/portal/units', label: 'الوحدات', iconKey: 'Home' },
+      { href: '/portal/leads', label: 'الفرص', iconKey: 'Users' },
+      { href: '/portal/visits', label: 'الزيارات', iconKey: 'CalendarClock' },
+      { href: '/portal/reservations', label: 'الحجوزات', iconKey: 'BookmarkCheck' },
+      { href: '/portal/contracts', label: 'العقود', iconKey: 'FileText' },
+      { href: '/portal/commissions', label: 'العمولات', iconKey: 'BadgePercent' },
+      { href: '/portal/payouts', label: 'المدفوعات', iconKey: 'Wallet' },
+      { href: '/portal/activity', label: 'النشاط', iconKey: 'Activity' },
+      { href: '/portal/notifications', label: 'الإشعارات', iconKey: 'Bell' },
+      { href: '/portal/team', label: 'فريق العمل', iconKey: 'Users' },
+      { href: '/portal/profile', label: 'الملف الشخصي', iconKey: 'UserCircle' },
     ],
   },
 ];

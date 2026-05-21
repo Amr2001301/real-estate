@@ -81,6 +81,10 @@ export const PERMISSION_LABELS: Record<string, string> = {
   'cms:articles:manage': 'إدارة المقالات',
   'documents:manage': 'إدارة المستندات',
   'notifications:send': 'إرسال الإشعارات',
+  // Broker leads
+  'broker_leads:read': 'عرض فرص الوسطاء',
+  'broker_leads:approve': 'اعتماد فرص الوسطاء',
+  'broker_leads:reject': 'رفض فرص الوسطاء',
   // Broker payouts
   'broker_payouts:read': 'عرض مدفوعات الوسطاء',
   'broker_payouts:create': 'إنشاء مدفوعات الوسطاء',

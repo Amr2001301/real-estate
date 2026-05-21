@@ -9,6 +9,8 @@ interface Props {
   pendingLabel?: string;
   variant?: 'primary' | 'secondary' | 'danger';
   className?: string;
+  /** Disable the button independently of the form's pending state. */
+  disabled?: boolean;
 }
 
 export function SubmitButton({
@@ -16,6 +18,7 @@ export function SubmitButton({
   pendingLabel = 'جاري الحفظ…',
   variant = 'primary',
   className,
+  disabled = false,
 }: Props) {
   const { pending } = useFormStatus();
   return (
@@ -24,7 +27,7 @@ export function SubmitButton({
       variant={variant}
       size="md"
       loading={pending}
-      disabled={pending}
+      disabled={pending || disabled}
       className={className}
     >
       {pending ? pendingLabel : children}

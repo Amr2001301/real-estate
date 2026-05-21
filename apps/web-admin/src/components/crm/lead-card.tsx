@@ -1,5 +1,13 @@
 import Link from 'next/link';
-import { Building2, Phone, Mail, GripVertical, CalendarClock } from 'lucide-react';
+import {
+  Building2,
+  Phone,
+  Mail,
+  GripVertical,
+  CalendarClock,
+  Briefcase,
+  UserCog,
+} from 'lucide-react';
 import type { Lead, LeadStage } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
 import { tx } from '@/lib/format';
@@ -60,6 +68,10 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
   const name = lead.client?.fullName ?? lead.fullName;
   const phone = lead.client?.phone ?? lead.phone;
   const email = lead.client?.email ?? lead.email;
+  // Broker-origin leads are identified generically by brokerId != null.
+  const isBrokerLead = !!lead.brokerId;
+  const brokerName =
+    lead.broker?.commercialName || lead.broker?.companyName || lead.broker?.code || null;
   return (
     <div
       className={cn(
@@ -87,6 +99,28 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
           <span className="inline-flex items-center rounded-full bg-success-50 px-2 py-0.5 text-2xs font-semibold text-success-700 ring-1 ring-inset ring-success-200">
             عميل مسجل
           </span>
+        </div>
+      )}
+
+      {/* Broker attribution — generic for any broker-origin lead. */}
+      {isBrokerLead && (
+        <div className="mb-3 rounded-lg bg-brand-50/60 ring-1 ring-inset ring-brand-100 px-2.5 py-1.5">
+          <div className="flex items-center gap-1.5 text-2xs font-semibold text-brand-700">
+            <Briefcase className="h-3 w-3 shrink-0" />
+            <span>من وسيط</span>
+            {brokerName && (
+              <>
+                <span className="text-brand-300">·</span>
+                <span className="truncate text-slate-700 font-medium">{brokerName}</span>
+              </>
+            )}
+          </div>
+          {lead.brokerAgent?.fullName && (
+            <div className="mt-0.5 flex items-center gap-1.5 text-2xs text-slate-500">
+              <UserCog className="h-3 w-3 shrink-0 text-slate-400" />
+              <span className="truncate">المندوب: {lead.brokerAgent.fullName}</span>
+            </div>
+          )}
         </div>
       )}
 

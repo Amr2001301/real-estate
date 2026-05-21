@@ -169,6 +169,17 @@ export class BrokerPortalController {
     return this.portalReservations.create(scope, dto);
   }
 
+  // Declared before `reservations/:id` so the literal segment wins over the
+  // UUID param route. Returns the active booking plans for a unit so the
+  // broker form can show the booking amount before submitting.
+  @Get('reservations/plan-options')
+  reservationPlanOptions(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Query('unitId', ParseUUIDPipe) unitId: string,
+  ) {
+    return this.portalReservations.listBookingPlansForUnit(scope, unitId);
+  }
+
   @Get('reservations/:id')
   getReservation(
     @BrokerScope() scope: BrokerScopeContext,

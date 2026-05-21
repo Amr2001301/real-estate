@@ -209,6 +209,12 @@ export class LeadsService {
           assignedSales: { select: { id: true, fullName: true } },
           projectInterest: { select: { id: true, name: true } },
           unitInterest: { select: { id: true, code: true } },
+          // Broker attribution — present only for broker-origin leads
+          // (brokerId != null). Null for direct leads, so behavior is unchanged.
+          broker: {
+            select: { id: true, companyName: true, commercialName: true, code: true },
+          },
+          brokerAgent: { select: { id: true, fullName: true } },
           appointments: {
             where: {
               status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
@@ -263,6 +269,11 @@ export class LeadsService {
         source: true,
         assignedSales: { select: { id: true, fullName: true } },
         projectInterest: true,
+        // Broker attribution for the lead detail "مصدر الفرصة" section.
+        broker: {
+          select: { id: true, companyName: true, commercialName: true, code: true },
+        },
+        brokerAgent: { select: { id: true, fullName: true } },
         notes: {
           orderBy: { createdAt: 'desc' },
           include: { sales: { select: { id: true, fullName: true } } },
