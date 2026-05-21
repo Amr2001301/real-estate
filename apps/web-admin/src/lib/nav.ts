@@ -70,6 +70,9 @@ export interface NavItem {
   label: string;
   iconKey: IconKey;
   admin?: boolean;
+  /** Visible only to non-admin staff (SALES). Used for self-view pages that
+   *  would be redundant/mislabeled for ADMIN, who has the management screens. */
+  salesOnly?: boolean;
 }
 
 export interface NavSection {
@@ -112,6 +115,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/deposits', label: 'الدفعات', iconKey: 'Receipt', admin: true },
       { href: '/dashboard/maintenance', label: 'الصيانة', iconKey: 'Wrench', admin: true },
       { href: '/dashboard/bonus', label: 'العمولات', iconKey: 'BadgePercent', admin: true },
+      { href: '/dashboard/targets', label: 'أهداف المبيعات', iconKey: 'Gauge', admin: true },
+      { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', iconKey: 'Wallet', salesOnly: true },
     ],
   },
   {
@@ -147,7 +152,11 @@ export function filterNavForRole(role: SessionRole): NavSection[] {
   if (role === 'BROKER') return [];
   return NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => !item.admin || role === 'ADMIN'),
+    items: section.items.filter((item) => {
+      if (item.admin) return role === 'ADMIN';
+      if (item.salesOnly) return role !== 'ADMIN';
+      return true;
+    }),
   })).filter((section) => section.items.length > 0);
 }
 

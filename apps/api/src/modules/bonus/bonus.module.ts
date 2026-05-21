@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Injectable,
   Module,
   Param,
@@ -24,6 +25,7 @@ import {
 } from 'class-validator';
 import { Prisma, BonusEntryStatus, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { toCsv } from '../../common/utils/csv';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -102,6 +104,27 @@ class BonusService {
     });
   }
 
+  async entriesCsv(opts: { salesId?: string; status?: BonusEntryStatus; period?: string }) {
+    const entries = await this.listEntries(opts);
+    const statusLabel: Record<BonusEntryStatus, string> = {
+      [BonusEntryStatus.PENDING]: 'معلق',
+      [BonusEntryStatus.APPROVED]: 'معتمد',
+      [BonusEntryStatus.PAID]: 'مدفوع',
+    };
+    const rows = entries.map((e) => [
+      e.sales?.fullName ?? '',
+      e.period,
+      e.rule?.name ?? '',
+      Number(e.amount),
+      statusLabel[e.status],
+      e.paidAt ? e.paidAt.toISOString().slice(0, 10) : '',
+    ]);
+    return toCsv(
+      ['المندوب', 'الفترة', 'القاعدة', 'المبلغ', 'الحالة', 'تاريخ الدفع'],
+      rows,
+    );
+  }
+
   setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
     return this.prisma.bonusEntry.update({
       where: { id },
@@ -177,6 +200,21 @@ class BonusController {
   ) {
     const effectiveSalesId = user.role === UserRole.SALES ? user.sub : salesId;
     return this.svc.listEntries({ salesId: effectiveSalesId, status, period });
+  }
+
+  // CSV export mirrors the list read permission. ADMIN-only — this is the
+  // admin compensation export; SALES self-view (Batch 4) is out of scope.
+  @Roles(UserRole.ADMIN)
+  @Permissions('bonus:entries:read')
+  @Get('bonus-entries/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="bonus-entries.csv"')
+  entriesCsv(
+    @Query('salesId') salesId?: string,
+    @Query('status') status?: BonusEntryStatus,
+    @Query('period') period?: string,
+  ) {
+    return this.svc.entriesCsv({ salesId, status, period });
   }
 
   // Strict: approval recognises the bonus as payable. Segregation of duties

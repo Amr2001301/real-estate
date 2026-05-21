@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import { Button } from '@/components/ui/button';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { PageHeader } from '@/components/ui/page-header';
@@ -24,6 +25,7 @@ import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
 import { AlertList } from '@/components/dashboard/alert-list';
 import { ActivityTable } from '@/components/dashboard/activity-table';
 import { SupportCard } from '@/components/dashboard/support-card';
+import { SalesDashboard } from './_components/sales-home';
 
 interface Kpis {
   projects: number;
@@ -100,6 +102,14 @@ const ACTIVITIES = [
 ];
 
 export default async function DashboardHome() {
+  // Non-admin staff (SALES) get a sales-focused home built from endpoints they
+  // can access — the admin /reports/kpis call below is ADMIN-only and would
+  // 403 for them. ADMIN keeps the existing dashboard unchanged.
+  const session = await getSession();
+  if (session && session.role !== 'ADMIN') {
+    return <SalesDashboard userId={session.id} />;
+  }
+
   const r = await safe(api.get<Kpis>('/reports/kpis'));
   const kpis = r.data;
   const error = r.error;
