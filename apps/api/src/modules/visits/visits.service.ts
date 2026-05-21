@@ -15,7 +15,7 @@ import {
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
-import { teamSalesIds } from '../../common/utils/sales-scope';
+import { managerScopeIds, SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import {
   AssignSalesDto,
@@ -82,7 +82,7 @@ export class VisitsService {
       user.role === UserRole.SALES
         ? { assignedSalesId: user.sub }
         : user.role === UserRole.SALES_MANAGER
-          ? { assignedSalesId: { in: await teamSalesIds(this.prisma, user.sub) } }
+          ? { assignedSalesId: { in: await managerScopeIds(this.prisma, user.sub) } }
           : {};
 
     const [newRequests, totalRequests, todayVisits, weekVisits, scheduledVisits, pendingConfirmation] =
@@ -162,7 +162,7 @@ export class VisitsService {
       where.appointments = { some: { assignedSalesId: user.sub } };
     } else if (user.role === UserRole.SALES_MANAGER) {
       where.appointments = {
-        some: { assignedSalesId: { in: await teamSalesIds(this.prisma, user.sub) } },
+        some: { assignedSalesId: { in: await managerScopeIds(this.prisma, user.sub) } },
       };
     }
 
@@ -599,7 +599,7 @@ export class VisitsService {
     } else if (user.role === UserRole.SALES_MANAGER) {
       // Manager team scope overrides any requested assignedSalesId. Empty team
       // ⇒ matches nothing (never an all-sales fallback).
-      where.assignedSalesId = { in: await teamSalesIds(this.prisma, user.sub) };
+      where.assignedSalesId = { in: await managerScopeIds(this.prisma, user.sub) };
     }
 
     const [data, total] = await this.prisma.$transaction([
@@ -633,30 +633,30 @@ export class VisitsService {
     return appt;
   }
 
-  // Validates an assignment target: must be an active SALES user, and for a
-  // SALES_MANAGER it must be on their team. Returns the validated salesId.
+  // Validates an assignment target: must be an active sales actor (SALES or
+  // SALES_MANAGER). A SALES_MANAGER may only assign within their own scope
+  // (self + team). Returns the validated salesId.
   private async resolveAssignableSalesId(salesId: string, user: AuthUser): Promise<string> {
     const s = await this.prisma.user.findUnique({
       where: { id: salesId },
       select: { id: true, role: true, active: true },
     });
     if (!s) throw new BadRequestException('Sales person not found');
-    if (s.role !== UserRole.SALES) {
+    if (!SALES_ACTOR_ROLES.includes(s.role)) {
       throw new BadRequestException('Selected user is not a sales person');
     }
     if (!s.active) throw new BadRequestException('Selected sales person is inactive');
     if (user.role === UserRole.SALES_MANAGER) {
-      const team = await teamSalesIds(this.prisma, user.sub);
-      if (!team.includes(s.id)) {
-        throw new BadRequestException('Selected sales person is not on your team');
+      const scope = await managerScopeIds(this.prisma, user.sub);
+      if (!scope.includes(s.id)) {
+        throw new BadRequestException('Selected sales person is not in your team');
       }
     }
     return s.id;
   }
 
-  // Per-record ownership: SALES → own appointments; SALES_MANAGER → appointments
-  // assigned to a rep on their team. No-op for ADMIN. Throws Forbidden to match
-  // the existing visits style.
+  // Per-record ownership: SALES → own appointments; SALES_MANAGER → own +
+  // team appointments. No-op for ADMIN. Throws Forbidden to match visits style.
   private async assertApptInScope(
     appt: { assignedSalesId: string | null },
     user: AuthUser,
@@ -665,8 +665,8 @@ export class VisitsService {
       throw new ForbiddenException();
     }
     if (user.role === UserRole.SALES_MANAGER) {
-      const team = await teamSalesIds(this.prisma, user.sub);
-      if (!appt.assignedSalesId || !team.includes(appt.assignedSalesId)) {
+      const scope = await managerScopeIds(this.prisma, user.sub);
+      if (!appt.assignedSalesId || !scope.includes(appt.assignedSalesId)) {
         throw new ForbiddenException();
       }
     }

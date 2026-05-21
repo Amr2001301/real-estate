@@ -63,7 +63,7 @@ export default async function AdminBrokerLeadDetailPage({
   const { id } = await params;
   const [leadRes, salesRes] = await Promise.all([
     safe(api.get<AdminBrokerLead>(`/broker-leads/${id}`)),
-    safe(api.get<Paged<User>>('/users?role=SALES&pageSize=200')),
+    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=200')),
   ]);
   if (leadRes.error || !leadRes.data) notFound();
   const lead = leadRes.data;

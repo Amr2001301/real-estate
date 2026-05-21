@@ -5,12 +5,13 @@ import { Building2, User } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { scheduleVisitAction } from '../actions';
+import { salesActorLabel } from '@/lib/sales-actor';
 import type { Translatable } from '@/lib/types';
 import { tx } from '@/lib/format';
 
 interface Props {
   requestId: string;
-  salesOptions: { id: string; fullName: string }[];
+  salesOptions: { id: string; fullName: string; role?: 'SALES' | 'SALES_MANAGER' }[];
   open: boolean;
   onClose: () => void;
   project?: { name: Translatable } | null;
@@ -161,7 +162,7 @@ export function ScheduleModal({
               <option value="">غير محدد</option>
               {salesOptions.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.fullName}
+                  {salesActorLabel(s)}
                 </option>
               ))}
             </select>

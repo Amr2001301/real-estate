@@ -4,10 +4,11 @@ import { useActionState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { rescheduleVisitAction } from '../actions';
+import { salesActorLabel } from '@/lib/sales-actor';
 
 interface Props {
   appointmentId: string;
-  salesOptions: { id: string; fullName: string }[];
+  salesOptions: { id: string; fullName: string; role?: 'SALES' | 'SALES_MANAGER' }[];
   currentSalesId?: string | null;
   currentScheduledAt?: string;
   open: boolean;
@@ -87,7 +88,7 @@ export function RescheduleModal({
               <option value="">غير محدد</option>
               {salesOptions.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.fullName}
+                  {salesActorLabel(s)}
                 </option>
               ))}
             </select>

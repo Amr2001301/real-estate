@@ -24,6 +24,25 @@ export interface SalesScopeArgs {
   salesIds?: string[];
 }
 
+/**
+ * Internal sales-actor roles. A SALES_MANAGER is both a personal sales rep AND
+ * a team manager, so it counts as a sales actor anywhere the system means
+ * "internal salesperson who can own/be-assigned records". ADMIN is never a sales
+ * actor.
+ */
+export const SALES_ACTOR_ROLES: UserRole[] = [UserRole.SALES, UserRole.SALES_MANAGER];
+
+/** All internal sales actors (SALES + SALES_MANAGER). */
+export async function salesActorIds(prisma: PrismaService): Promise<string[]> {
+  const rows = await prisma.user.findMany({
+    where: { role: { in: SALES_ACTOR_ROLES } },
+    select: { id: true },
+  });
+  return rows.map((r) => r.id);
+}
+
+/** A manager's team members: SALES reps whose managerId is this manager.
+ *  Does NOT include the manager themselves. */
 export async function teamSalesIds(
   prisma: PrismaService,
   managerId: string,
@@ -35,6 +54,16 @@ export async function teamSalesIds(
   return rows.map((r) => r.id);
 }
 
+/** A manager's full visible/owning scope: themselves + their team members.
+ *  A manager with no team still scopes to at least themselves. */
+export async function managerScopeIds(
+  prisma: PrismaService,
+  managerId: string,
+): Promise<string[]> {
+  const team = await teamSalesIds(prisma, managerId);
+  return [managerId, ...team];
+}
+
 export async function resolveSalesScope(
   prisma: PrismaService,
   user: AuthUser,
@@ -44,7 +73,9 @@ export async function resolveSalesScope(
     return requestedSalesId ? { salesId: requestedSalesId } : {};
   }
   if (user.role === UserRole.SALES_MANAGER) {
-    const ids = await teamSalesIds(prisma, user.sub);
+    // Manager scope = self + team. A requested salesId is honoured only when in
+    // scope; out-of-scope (incl. another manager / another team) ⇒ empty set.
+    const ids = await managerScopeIds(prisma, user.sub);
     if (requestedSalesId) {
       return ids.includes(requestedSalesId) ? { salesId: requestedSalesId } : { salesIds: [] };
     }
@@ -61,8 +92,8 @@ export async function resolveSalesScope(
  * the caller's scope:
  *   - ADMIN          → always true.
  *   - SALES          → true only when the record is their own.
- *   - SALES_MANAGER  → true only when the owner is a SALES rep on their team.
- *                      A null/absent owner is out of scope for a manager.
+ *   - SALES_MANAGER  → true for their OWN records and their team members'
+ *                      records. A null/absent owner is out of scope.
  *   - other roles    → false.
  */
 export async function isSalesIdInScope(
@@ -74,7 +105,7 @@ export async function isSalesIdInScope(
   if (user.role === UserRole.SALES) return !!recordSalesId && recordSalesId === user.sub;
   if (user.role === UserRole.SALES_MANAGER) {
     if (!recordSalesId) return false;
-    const ids = await teamSalesIds(prisma, user.sub);
+    const ids = await managerScopeIds(prisma, user.sub);
     return ids.includes(recordSalesId);
   }
   return false;

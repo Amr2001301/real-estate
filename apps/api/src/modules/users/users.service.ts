@@ -57,10 +57,17 @@ export class UsersService {
     }
   }
 
-  async findAll(role?: UserRole, page = 1, pageSize = 20, q?: string) {
+  async findAll(role?: string, page = 1, pageSize = 20, q?: string) {
     const trimmed = q?.trim();
+    // `role` may be a single role or a comma-separated list (e.g.
+    // "SALES,SALES_MANAGER") for sales-actor dropdowns. Backward compatible.
+    const roles = role
+      ? (role.split(',').map((r) => r.trim()).filter(Boolean) as UserRole[])
+      : [];
+    const roleFilter: Prisma.UserWhereInput =
+      roles.length > 1 ? { role: { in: roles } } : roles.length === 1 ? { role: roles[0] } : {};
     const where: Prisma.UserWhereInput = {
-      ...(role ? { role } : {}),
+      ...roleFilter,
       ...(trimmed
         ? {
             OR: [

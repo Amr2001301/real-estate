@@ -36,7 +36,11 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { toCsv } from '../../common/utils/csv';
-import { resolveSalesScope, teamSalesIds } from '../../common/utils/sales-scope';
+import {
+  resolveSalesScope,
+  salesActorIds,
+  managerScopeIds,
+} from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -383,29 +387,17 @@ export class BonusService {
     const { start, end } = periodRange(period);
     const now = new Date();
 
-    // Rep scoping by role:
-    //   ADMIN         → any salesId, or all SALES users when none is given.
-    //   SALES_MANAGER → all SALES users, or a single SALES user when a salesId
-    //                   is given. Never includes non-SALES users (ADMIN/BROKER/
-    //                   CUSTOMER/CLIENT/SALES_MANAGER), so a non-SALES salesId
-    //                   yields no rows.
+    // Rep scoping by role (sales actors = SALES + SALES_MANAGER):
+    //   ADMIN         → any salesId, or all sales actors when none is given.
+    //   SALES_MANAGER → self + team, or a single in-scope actor when a salesId
+    //                   is given. Out-of-scope salesId ⇒ no rows.
     //   SALES (+ any other role) → self only; salesId is ignored.
-    const salesUserIds = async (): Promise<string[]> => {
-      const reps = await this.prisma.user.findMany({
-        where: { role: UserRole.SALES },
-        select: { id: true },
-      });
-      return reps.map((r) => r.id);
-    };
-
     let repIds: string[];
     if (opts.role === UserRole.ADMIN) {
-      repIds = opts.salesId ? [opts.salesId] : await salesUserIds();
+      repIds = opts.salesId ? [opts.salesId] : await salesActorIds(this.prisma);
     } else if (opts.role === UserRole.SALES_MANAGER) {
-      // Team scope: only SALES reps whose managerId is this manager. An empty
-      // team yields no rows (never an all-sales fallback).
-      const team = await teamSalesIds(this.prisma, opts.requesterId);
-      repIds = opts.salesId ? (team.includes(opts.salesId) ? [opts.salesId] : []) : team;
+      const scope = await managerScopeIds(this.prisma, opts.requesterId);
+      repIds = opts.salesId ? (scope.includes(opts.salesId) ? [opts.salesId] : []) : scope;
     } else {
       repIds = [opts.requesterId];
     }

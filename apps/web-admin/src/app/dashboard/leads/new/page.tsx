@@ -16,7 +16,7 @@ export default async function NewLeadPage({
   const [projectsRes, sourcesRes, salesRes, clientRes] = await Promise.all([
     safe(api.get<Paged<Project>>('/projects?pageSize=100')),
     safe(api.get<LeadSource[]>('/lead-sources')),
-    safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
+    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
     sp.clientId
       ? safe(api.get<User>(`/users/${sp.clientId}`))
       : Promise.resolve({ data: null, error: null } as { data: User | null; error: null }),

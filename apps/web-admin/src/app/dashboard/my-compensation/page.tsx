@@ -92,20 +92,28 @@ export default async function MyCompensationPage() {
   const session = await getSession();
   const nowIso = new Date().toISOString();
 
-  // Every read is self-scoped server-side. We deliberately do NOT pass salesId:
-  // the API scopes /bonus-entries and /sales-targets to the authenticated SALES
-  // user via the token. /visits/appointments is scoped by the user's own
-  // session id (not client input). No ADMIN-only endpoints are called.
+  // This is a strictly PERSONAL self-view. SALES is self-scoped by the token
+  // regardless, but a SALES_MANAGER is a sales actor whose unscoped reads return
+  // self + team — so we explicitly pass salesId=<own id> on every self-scopable
+  // read to narrow a manager to their OWN data (own id is always in scope).
+  // Harmless for SALES (the API ignores the param and still self-scopes).
+  const selfId = session?.id;
+  const selfParam = selfId ? `salesId=${selfId}` : '';
   const [bonusRes, targetsRes, leadsRes, reservationsRes, visitsRes] =
     await Promise.all([
-      safe(api.get<BonusEntry[] | Paged<BonusEntry>>('/bonus-entries')),
-      safe(api.get<SalesTarget[]>('/sales-targets')),
-      safe(api.get<Paged<Lead>>('/leads?pageSize=100')),
-      safe(api.get<Paged<Reservation>>('/reservations?pageSize=100')),
-      session
+      safe(api.get<BonusEntry[] | Paged<BonusEntry>>(`/bonus-entries${selfParam ? `?${selfParam}` : ''}`)),
+      safe(api.get<SalesTarget[]>(`/sales-targets${selfParam ? `?${selfParam}` : ''}`)),
+      safe(api.get<Paged<Lead>>(`/leads?pageSize=100${selfParam ? `&${selfParam}` : ''}`)),
+      safe(api.get<Paged<Reservation>>(`/reservations?pageSize=100${selfParam ? `&${selfParam}` : ''}`)),
+      selfId
         ? safe(
+            // NOTE: for a SALES_MANAGER the visits list endpoint overrides
+            // assignedSalesId with self+team scope, so this list may include team
+            // visits. It is only a fallback proxy — the upcoming-visits KPI below
+            // prefers the self-scoped performance figure. TODO: a self-only visits
+            // filter for managers if this list is ever displayed directly here.
             api.get<Paged<VisitAppointment>>(
-              `/visits/appointments?assignedSalesId=${session.id}&scheduledFrom=${nowIso}&pageSize=50`,
+              `/visits/appointments?assignedSalesId=${selfId}&scheduledFrom=${nowIso}&pageSize=50`,
             ),
           )
         : Promise.resolve({ data: undefined, error: 'لا توجد جلسة' as string }),
@@ -119,14 +127,19 @@ export default async function MyCompensationPage() {
   const reservations = reservationsRes.data?.data ?? [];
   const upcomingVisits = visitsRes.data?.data ?? [];
 
-  // Realized performance (self-scoped — no salesId passed). Fetch the current
-  // month for the summary plus each period present in the targets, so the
-  // targets section can show achieved-vs-target. The endpoint returns a single
-  // row for SALES; failures degrade to the reservation-based proxy below.
+  // Realized performance, scoped to the caller's OWN row (salesId=<own id>) so a
+  // SALES_MANAGER sees personal figures here, not team aggregates. Fetch the
+  // current month for the summary plus each period present in the targets.
   const currentPeriod = nowIso.slice(0, 7);
   const perfPeriods = [...new Set([currentPeriod, ...targets.map((t) => t.period)])];
   const perfResults = await Promise.all(
-    perfPeriods.map((p) => safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${p}`))),
+    perfPeriods.map((p) =>
+      safe(
+        api.get<PerformanceRow[]>(
+          `/sales-targets/performance?period=${p}${selfParam ? `&${selfParam}` : ''}`,
+        ),
+      ),
+    ),
   );
   const perfByPeriod = new Map<string, PerformanceRow>();
   perfResults.forEach((r, i) => {
@@ -163,7 +176,11 @@ export default async function MyCompensationPage() {
     <div className="space-y-5">
       <PageHeader
         title="مستحقاتي وأهدافي"
-        description="عرض خاص بك لمستحقات العمولات والمكافآت، وأهداف المبيعات، وملخّص أدائك. للعرض فقط."
+        description={
+          session?.role === 'SALES_MANAGER'
+            ? 'بياناتك الشخصية كمندوب مبيعات، منفصلة عن أداء الفريق. للعرض فقط.'
+            : 'عرض خاص بك لمستحقات العمولات والمكافآت، وأهداف المبيعات، وملخّص أدائك. للعرض فقط.'
+        }
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'مستحقاتي وأهدافي' },

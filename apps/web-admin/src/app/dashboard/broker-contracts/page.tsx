@@ -54,7 +54,7 @@ export default async function AdminBrokerContractsPage({
     safe(api.get<Paged<AdminBrokerContract>>(`/broker-contracts?${qs.toString()}`)),
     safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
-    safe(api.get<Paged<User>>('/users?role=SALES&pageSize=200')),
+    safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=200')),
   ]);
 
   const paged = contractsRes.data;

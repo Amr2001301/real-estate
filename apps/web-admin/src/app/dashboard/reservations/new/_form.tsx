@@ -13,6 +13,7 @@ import { FormFooter } from '@/components/ui/form-footer';
 import type { LeadStage } from '@/lib/types';
 import { computeDurationOption } from '@/lib/installment-calc';
 import { createReservationAction, type ReservationFormState } from '../actions';
+import { salesActorLabel } from '@/lib/sales-actor';
 
 interface Unit {
   id: string;
@@ -58,6 +59,7 @@ interface Client {
 interface SalesUser {
   id: string;
   fullName: string;
+  role?: string;
 }
 
 interface Props {
@@ -289,7 +291,7 @@ export default function NewReservationForm({
             <option value="">— اختر مندوباً —</option>
             {salesOptions.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.fullName}
+                {salesActorLabel(s)}
               </option>
             ))}
           </Select>

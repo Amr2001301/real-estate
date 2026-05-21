@@ -65,19 +65,20 @@ function makePrismaMock() {
     },
     user: {
       findMany: jest.fn().mockImplementation(
-        async ({ where }: { where: { role?: UserRole; managerId?: string } }) => {
-          if (where?.role === UserRole.SALES) {
-            // Team lookup (manager): SALES reps whose managerId = this manager.
-            if (where.managerId !== undefined) {
-              return where.managerId === MANAGER_ID ? [{ id: SALES_ID }] : [];
-            }
-            // "all sales reps" lookup (ADMIN, no salesId)
-            return [{ id: SALES_ID }, { id: OTHER_SALES_ID }];
+        async ({ where }: { where: { role?: UserRole | { in: UserRole[] }; managerId?: string } }) => {
+          // Team lookup (manager): SALES reps whose managerId = this manager.
+          if (where?.role === UserRole.SALES && where.managerId !== undefined) {
+            return where.managerId === MANAGER_ID ? [{ id: SALES_ID }] : [];
+          }
+          // "all sales actors" lookup (ADMIN, no salesId): role IN (SALES, SALES_MANAGER)
+          if (where?.role && typeof where.role === 'object' && 'in' in where.role) {
+            return [{ id: SALES_ID }, { id: OTHER_SALES_ID }, { id: MANAGER_ID }];
           }
           // name lookup (where: { id: { in: [...] } })
           return [
             { id: SALES_ID, fullName: 'مندوب أول' },
             { id: OTHER_SALES_ID, fullName: 'مندوب ثانٍ' },
+            { id: MANAGER_ID, fullName: 'مدير المبيعات' },
           ];
         },
       ),
@@ -157,11 +158,21 @@ describe('Bonus · sales performance report', () => {
     expect(res.body).toHaveLength(1);
     expect(res.body[0].salesId).toBe(SALES_ID);
     expect(res.body[0].period).toBe('2030-04');
-    // The "all sales reps" lookup (where.role = SALES) must NOT run.
-    const roleLookups = mock.user.findMany.mock.calls.filter(
-      (c) => (c[0] as { where?: { role?: UserRole } })?.where?.role === UserRole.SALES,
-    );
+    // The "all sales actors" lookup (where.role = { in: [...] }) must NOT run.
+    const roleLookups = mock.user.findMany.mock.calls.filter((c) => {
+      const role = (c[0] as { where?: { role?: unknown } })?.where?.role;
+      return role && typeof role === 'object' && 'in' in (role as object);
+    });
     expect(roleLookups).toHaveLength(0);
+  });
+
+  it('ADMIN with no salesId includes both SALES and SALES_MANAGER actors', async () => {
+    FakeAuthGuard.currentUser = { sub: ADMIN_ID, role: UserRole.ADMIN, codes: [] };
+    const res = await request(app.getHttpServer())
+      .get('/sales-targets/performance?period=2030-04')
+      .expect(200);
+    const ids = (res.body as Array<{ salesId: string }>).map((r) => r.salesId).sort();
+    expect(ids).toEqual([SALES_ID, OTHER_SALES_ID, MANAGER_ID].sort());
   });
 
   it('SALES is self-scoped and ignores a salesId pointing at another rep', async () => {
@@ -217,7 +228,7 @@ describe('Bonus · sales performance report', () => {
     expect(row.targetUnitsPercent).toBe(50);
   });
 
-  it('SALES_MANAGER gets only their team (not all SALES) when no salesId is given', async () => {
+  it('SALES_MANAGER gets self + their team (not all sales) when no salesId is given', async () => {
     FakeAuthGuard.currentUser = {
       sub: MANAGER_ID,
       role: UserRole.SALES_MANAGER,
@@ -226,8 +237,22 @@ describe('Bonus · sales performance report', () => {
     const res = await request(app.getHttpServer())
       .get('/sales-targets/performance?period=2030-04')
       .expect(200);
-    const ids = (res.body as Array<{ salesId: string }>).map((r) => r.salesId);
-    expect(ids).toEqual([SALES_ID]); // team is exactly [SALES_ID]; OTHER_SALES_ID excluded
+    const ids = (res.body as Array<{ salesId: string }>).map((r) => r.salesId).sort();
+    // self (MANAGER_ID) + team (SALES_ID); OTHER_SALES_ID (another team) excluded.
+    expect(ids).toEqual([MANAGER_ID, SALES_ID].sort());
+  });
+
+  it('SALES_MANAGER can query their own performance (self in scope)', async () => {
+    FakeAuthGuard.currentUser = {
+      sub: MANAGER_ID,
+      role: UserRole.SALES_MANAGER,
+      codes: ['targets:read'],
+    };
+    const res = await request(app.getHttpServer())
+      .get(`/sales-targets/performance?period=2030-04&salesId=${MANAGER_ID}`)
+      .expect(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].salesId).toBe(MANAGER_ID);
   });
 
   it('SALES_MANAGER with a salesId in their team gets that rep', async () => {
@@ -256,7 +281,7 @@ describe('Bonus · sales performance report', () => {
     expect(res.body).toEqual([]);
   });
 
-  it('SALES_MANAGER with no team gets empty rows', async () => {
+  it('SALES_MANAGER with no team still sees their own row', async () => {
     FakeAuthGuard.currentUser = {
       sub: EMPTY_MANAGER_ID,
       role: UserRole.SALES_MANAGER,
@@ -265,7 +290,8 @@ describe('Bonus · sales performance report', () => {
     const res = await request(app.getHttpServer())
       .get('/sales-targets/performance?period=2030-04')
       .expect(200);
-    expect(res.body).toEqual([]);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].salesId).toBe(EMPTY_MANAGER_ID);
   });
 
   it('returns null percentages when no target exists for the period', async () => {

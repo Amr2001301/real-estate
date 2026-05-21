@@ -40,7 +40,7 @@ export default async function VisitsPage({
 
   const [statsRes, salesRes] = await Promise.all([
     safe(api.get<Stats>('/visits/stats')),
-    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES&pageSize=100')),
+    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
   ]);
 
   const stats = statsRes.data;

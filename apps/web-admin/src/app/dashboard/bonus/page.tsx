@@ -60,6 +60,13 @@ const SOURCE_CLS: Record<EntrySource, string> = {
 interface SalesUser {
   id: string;
   fullName: string;
+  role?: 'SALES' | 'SALES_MANAGER';
+}
+
+// Sales actors include managers acting as reps; suffix the role so the two are
+// distinguishable in the dropdown.
+function salesActorLabel(u: SalesUser): string {
+  return u.role === 'SALES_MANAGER' ? `${u.fullName} — مدير مبيعات` : `${u.fullName} — مبيعات`;
 }
 
 const STATUS_LABEL: Record<EntryStatus, string> = {
@@ -166,7 +173,7 @@ export default async function BonusPage({
   const [rulesRes, entriesRes, salesRes] = await Promise.all([
     safe(api.get<BonusRule[]>('/bonus-rules')),
     safe(api.get<BonusEntry[] | Paged<BonusEntry>>(buildEntriesUrl(sp))),
-    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES&pageSize=200')),
+    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=200')),
   ]);
 
   const rules = rulesRes.data ?? [];
@@ -266,7 +273,7 @@ export default async function BonusPage({
             <Select id="salesId" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-44">
               <option value="">كل المندوبين</option>
               {salesUsers.map((u) => (
-                <option key={u.id} value={u.id}>{u.fullName}</option>
+                <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
               ))}
             </Select>
           </div>
@@ -317,7 +324,7 @@ export default async function BonusPage({
                 <label htmlFor="entry-salesId" className="text-[11px] font-medium text-slate-400">المندوب</label>
                 <Select id="entry-salesId" name="salesId" inputSize="sm" required className="w-44">
                   {salesUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{u.fullName}</option>
+                    <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
                   ))}
                 </Select>
               </div>

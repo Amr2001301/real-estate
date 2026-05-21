@@ -39,6 +39,7 @@ import {
 } from '@/components/badges';
 import { StageSegmented } from '@/components/crm/stage-segmented';
 import { addNoteAction, assignLeadAction } from '../actions';
+import { salesActorLabel } from '@/lib/sales-actor';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -62,7 +63,7 @@ export default async function LeadDetailPage({
   const [leadRes, salesRes, visitRequestsRes, appointmentsRes, reservationsRes] =
     await Promise.all([
       safe(api.get<LeadDetail>(`/leads/${id}`)),
-      safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
+      safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
       safe(api.get<Paged<VisitRequest>>(`/visits/requests?leadId=${id}&pageSize=10`)),
       safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?leadId=${id}&pageSize=10`)),
       safe(api.get<Paged<Reservation>>(`/reservations?leadId=${id}&pageSize=10`)),
@@ -402,7 +403,7 @@ export default async function LeadDetailPage({
                 <option value="">— اختر مندوب —</option>
                 {salesRes.data?.data.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.fullName}
+                    {salesActorLabel(s)}
                   </option>
                 ))}
               </Select>

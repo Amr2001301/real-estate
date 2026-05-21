@@ -13,6 +13,7 @@ import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
 import type { LeadStage, Project } from '@/lib/types';
 import { createVisitAction, type VisitFormState } from '../actions';
+import { salesActorLabel } from '@/lib/sales-actor';
 
 interface Unit {
   id: string;
@@ -39,6 +40,7 @@ interface Client {
 interface SalesUser {
   id: string;
   fullName: string;
+  role?: string;
 }
 
 interface Props {
@@ -344,7 +346,7 @@ export default function NewVisitForm({
               <option value="">— بدون تعيين —</option>
               {salesOptions.map((s) => (
                 <option key={s.id} value={s.id}>
-                  {s.fullName}
+                  {salesActorLabel(s)}
                 </option>
               ))}
             </Select>

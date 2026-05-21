@@ -4,10 +4,11 @@ import { useActionState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { assignSalesAction } from '../actions';
+import { salesActorLabel } from '@/lib/sales-actor';
 
 interface Props {
   appointmentId: string;
-  salesOptions: { id: string; fullName: string }[];
+  salesOptions: { id: string; fullName: string; role?: 'SALES' | 'SALES_MANAGER' }[];
   currentSalesId?: string | null;
   open: boolean;
   onClose: () => void;
@@ -71,7 +72,7 @@ export function AssignSalesModal({
             <option value="">اختر مندوباً</option>
             {salesOptions.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.fullName}
+                {salesActorLabel(s)}
               </option>
             ))}
           </select>

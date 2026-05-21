@@ -10,6 +10,9 @@ import {
   Percent,
   ArrowLeft,
   AlertCircle,
+  Plus,
+  CalendarPlus,
+  Wallet,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
@@ -17,6 +20,7 @@ import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   LeadStageBadge,
@@ -68,27 +72,11 @@ export async function SalesManagerDashboard() {
     safe(api.get<Paged<VisitAppointment>>(`/visits/appointments?scheduledFrom=${nowIso}&pageSize=50`)),
   ]);
 
+  // Performance now returns the manager's own row plus their team (self + team),
+  // so the dashboard is always usable — it shows at least the manager's own
+  // figures even with no team assigned. The per-rep section handles the rare
+  // empty/error case with its own fallback.
   const perf = perfRes.data ?? [];
-
-  // The performance endpoint returns one row per team member (zeros included),
-  // so an empty array with no error means the manager has no team assigned yet.
-  if (!perfRes.error && perf.length === 0) {
-    return (
-      <div className="space-y-5">
-        <PageHeader
-          title="لوحة مدير المبيعات"
-          description="نظرة شاملة على أداء فريق المبيعات."
-        />
-        <Card className="p-6">
-          <EmptyState
-            icon={<Users />}
-            title="لم يتم ربط أي مندوب مبيعات بهذا المدير بعد."
-            description="يقوم مدير النظام بربط مندوبي المبيعات بك من صفحة المستخدمين. بعد الربط ستظهر بيانات الفريق هنا."
-          />
-        </Card>
-      </div>
-    );
-  }
 
   const leads = leadsRes.data?.data ?? [];
   const reservations = reservationsRes.data?.data ?? [];
@@ -124,6 +112,30 @@ export async function SalesManagerDashboard() {
       <PageHeader
         title="لوحة مدير المبيعات"
         description="نظرة شاملة على أداء فريق المبيعات: الفرص والزيارات والحجوزات والعقود وتحقيق الأهداف لهذا الشهر."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/dashboard/leads/new">
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                إضافة فرصة
+              </Button>
+            </Link>
+            <Link href="/dashboard/visits/new">
+              <Button variant="outline" size="md" leftIcon={<CalendarPlus className="h-4 w-4" />}>
+                جدولة زيارة
+              </Button>
+            </Link>
+            <Link href="/dashboard/reservations/new">
+              <Button variant="outline" size="md" leftIcon={<BookmarkCheck className="h-4 w-4" />}>
+                إنشاء حجز
+              </Button>
+            </Link>
+            <Link href="/dashboard/my-compensation">
+              <Button variant="outline" size="md" leftIcon={<Wallet className="h-4 w-4" />}>
+                مستحقاتي وأهدافي
+              </Button>
+            </Link>
+          </div>
+        }
       />
 
       {/* Team KPI rollups */}
@@ -141,7 +153,7 @@ export async function SalesManagerDashboard() {
       {/* Per-rep performance */}
       <Card className="overflow-hidden">
         <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
-          <h3 className="text-sm font-semibold text-slate-900 tracking-tight">أداء المندوبين</h3>
+          <h3 className="text-sm font-semibold text-slate-900 tracking-tight">أداء فريق المبيعات</h3>
           <Link href={'/dashboard/targets' as never} className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800">
             الأهداف والأداء
             <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />

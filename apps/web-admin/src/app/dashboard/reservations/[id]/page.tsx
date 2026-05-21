@@ -52,7 +52,7 @@ export default async function ReservationDetailPage({
   const isAdmin = session?.role === 'ADMIN';
   const salesOptions =
     reservation.status === 'PENDING'
-      ? (await safe(api.get<Paged<UserType>>('/users?role=SALES&active=true&pageSize=100'))).data
+      ? (await safe(api.get<Paged<UserType>>('/users?role=SALES,SALES_MANAGER&active=true&pageSize=100'))).data
           ?.data ?? []
       : [];
   const clientName = reservation.client?.fullName ?? reservation.lead?.fullName ?? '—';

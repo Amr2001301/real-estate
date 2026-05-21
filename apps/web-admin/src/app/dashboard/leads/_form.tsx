@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { salesActorLabel } from '@/lib/sales-actor';
 import { ClientPicker } from '@/components/crm/client-picker';
 import type { Project, LeadSource, User } from '@/lib/types';
 import { tx } from '@/lib/format';
@@ -82,7 +83,7 @@ export default function LeadForm({ projects, sources, sales, initialClient }: Pr
             <option value="">— غير مسند —</option>
             {sales.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.fullName}
+                {salesActorLabel(s)}
               </option>
             ))}
           </Select>

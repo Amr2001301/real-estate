@@ -70,10 +70,10 @@ export interface NavItem {
   label: string;
   iconKey: IconKey;
   admin?: boolean;
-  /** Visible only to the SALES role. Used for self-view pages (e.g. personal
-   *  compensation) that are redundant/mislabeled for ADMIN and not yet
-   *  manager-aware for SALES_MANAGER. */
-  salesOnly?: boolean;
+  /** Visible only to sales actors (SALES + SALES_MANAGER), never ADMIN. Used for
+   *  personal self-view pages (e.g. own compensation) that are redundant for
+   *  ADMIN — a SALES_MANAGER is a sales actor, so it sees these too. */
+  salesActorOnly?: boolean;
   /** When set on an `admin` item, also surface it to SALES_MANAGER (manager
    *  team-view pages that are otherwise admin-managed). Has no effect unless
    *  `admin` is also true. */
@@ -121,7 +121,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/maintenance', label: 'الصيانة', iconKey: 'Wrench', admin: true },
       { href: '/dashboard/bonus', label: 'العمولات', iconKey: 'BadgePercent', admin: true },
       { href: '/dashboard/targets', label: 'أهداف وأداء المبيعات', iconKey: 'Gauge', admin: true, manager: true },
-      { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', iconKey: 'Wallet', salesOnly: true },
+      { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', iconKey: 'Wallet', salesActorOnly: true },
     ],
   },
   {
@@ -161,7 +161,7 @@ export function filterNavForRole(role: SessionRole): NavSection[] {
       if (item.admin) {
         return role === 'ADMIN' || (item.manager === true && role === 'SALES_MANAGER');
       }
-      if (item.salesOnly) return role === 'SALES';
+      if (item.salesActorOnly) return role === 'SALES' || role === 'SALES_MANAGER';
       return true;
     }),
   })).filter((section) => section.items.length > 0);

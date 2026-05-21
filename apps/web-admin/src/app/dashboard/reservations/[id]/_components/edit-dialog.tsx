@@ -7,10 +7,12 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Field } from '@/components/form/field';
 import { updateReservationAction } from '../../actions';
+import { salesActorLabel } from '@/lib/sales-actor';
 
 interface SalesUser {
   id: string;
   fullName: string;
+  role?: 'SALES' | 'SALES_MANAGER';
 }
 
 interface Props {
@@ -88,7 +90,7 @@ export function EditReservationDialog({
           >
             {salesOptions.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.fullName}
+                {salesActorLabel(s)}
               </option>
             ))}
           </Select>

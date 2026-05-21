@@ -8,6 +8,7 @@ import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { salesActorLabel } from '@/lib/sales-actor';
 import { Pagination } from '@/components/ui/pagination';
 import { DataTable } from '@/components/table';
 import { ReservationStatusBadge, ReservationBookingPaymentBadge } from '@/components/badges';
@@ -32,6 +33,7 @@ interface ProjectOption {
 interface SalesUser {
   id: string;
   fullName: string;
+  role?: 'SALES' | 'SALES_MANAGER';
 }
 
 export default async function ReservationsPage({
@@ -84,7 +86,7 @@ export default async function ReservationsPage({
     safe(api.get<Stats>('/reservations/stats')),
     safe(api.get<Paged<Reservation>>(`/reservations?${qs}`)),
     safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
-    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES&pageSize=100')),
+    safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
   ]);
 
   const stats = statsRes.data;
@@ -204,7 +206,7 @@ export default async function ReservationsPage({
                 <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
                   <option value="">الكل</option>
                   {salesOptions.map((s) => (
-                    <option key={s.id} value={s.id}>{s.fullName}</option>
+                    <option key={s.id} value={s.id}>{salesActorLabel(s)}</option>
                   ))}
                 </Select>
               </div>

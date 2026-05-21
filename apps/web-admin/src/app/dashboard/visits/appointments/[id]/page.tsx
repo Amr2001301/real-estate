@@ -24,7 +24,7 @@ export default async function AppointmentDetailPage({
 
   const [apptRes, salesRes] = await Promise.all([
     safe(api.get<AppointmentDetail>(`/visits/appointments/${id}`)),
-    safe(api.get<Paged<UserType>>('/users?role=SALES&pageSize=100')),
+    safe(api.get<Paged<UserType>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
   ]);
 
   if (apptRes.error || !apptRes.data) {

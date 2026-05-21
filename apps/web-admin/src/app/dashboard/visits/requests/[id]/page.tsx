@@ -34,7 +34,7 @@ export default async function VisitRequestDetailPage({
 
   const [reqRes, salesRes] = await Promise.all([
     safe(api.get<VisitRequestDetail>(`/visits/requests/${id}`)),
-    safe(api.get<Paged<UserType>>('/users?role=SALES&pageSize=100')),
+    safe(api.get<Paged<UserType>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
   ]);
 
   if (reqRes.error || !reqRes.data) {

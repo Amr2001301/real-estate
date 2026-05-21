@@ -29,7 +29,7 @@ export default async function NewVisitPage() {
       safe(api.get<Paged<LeadOption>>('/leads?pageSize=200')),
       safe(api.get<Paged<User>>('/users?role=CLIENT&pageSize=200')),
       safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=200')),
-      safe(api.get<Paged<User>>('/users?role=SALES&pageSize=100')),
+      safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
     ]);
 
   const clients = [

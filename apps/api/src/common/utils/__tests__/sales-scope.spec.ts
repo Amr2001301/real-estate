@@ -47,9 +47,10 @@ describe('sales-scope · isSalesIdInScope', () => {
     expect(await isSalesIdInScope(prismaMock(), sales, null)).toBe(false);
   });
 
-  it('SALES_MANAGER is in scope only for team members', async () => {
-    expect(await isSalesIdInScope(prismaMock(), manager, SALES_ID)).toBe(true);
-    expect(await isSalesIdInScope(prismaMock(), manager, OTHER_SALES_ID)).toBe(false);
+  it('SALES_MANAGER is in scope for self and team members', async () => {
+    expect(await isSalesIdInScope(prismaMock(), manager, MANAGER_ID)).toBe(true); // self
+    expect(await isSalesIdInScope(prismaMock(), manager, SALES_ID)).toBe(true); // team
+    expect(await isSalesIdInScope(prismaMock(), manager, OTHER_SALES_ID)).toBe(false); // other team
     expect(await isSalesIdInScope(prismaMock(), manager, null)).toBe(false);
   });
 
@@ -98,7 +99,12 @@ describe('sales-scope · resolveSalesScope (regression)', () => {
   it('manager in-team salesId narrows to that rep', async () => {
     expect(await resolveSalesScope(prismaMock(), manager, SALES_ID)).toEqual({ salesId: SALES_ID });
   });
-  it('manager with no salesId returns the whole team', async () => {
-    expect(await resolveSalesScope(prismaMock(), manager, undefined)).toEqual({ salesIds: [SALES_ID] });
+  it('manager own salesId narrows to self', async () => {
+    expect(await resolveSalesScope(prismaMock(), manager, MANAGER_ID)).toEqual({ salesId: MANAGER_ID });
+  });
+  it('manager with no salesId returns self + team', async () => {
+    expect(await resolveSalesScope(prismaMock(), manager, undefined)).toEqual({
+      salesIds: [MANAGER_ID, SALES_ID],
+    });
   });
 });
