@@ -28,14 +28,14 @@ import {
 export class BrokerLeadsController {
   constructor(private readonly brokerLeads: BrokerLeadsService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_leads:read')
   @Get()
   list(@Query() query: BrokerLeadsQueryDto) {
     return this.brokerLeads.list(query);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_leads:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {

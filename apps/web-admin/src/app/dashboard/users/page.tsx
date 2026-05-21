@@ -28,6 +28,15 @@ async function createUserAction(formData: FormData) {
   revalidatePath('/dashboard/users');
 }
 
+// ADMIN-only: assign/clear the SALES_MANAGER who owns a SALES rep. An empty
+// value clears the assignment (managerId = null).
+async function assignManagerAction(userId: string, formData: FormData) {
+  'use server';
+  const managerId = String(formData.get('managerId') ?? '') || null;
+  await api.patch(`/users/${userId}/manager`, { managerId });
+  revalidatePath('/dashboard/users');
+}
+
 export default async function UsersPage({
   searchParams,
 }: {
@@ -36,9 +45,21 @@ export default async function UsersPage({
   const sp = await searchParams;
   const qs = new URLSearchParams({ pageSize: '100' });
   if (sp.role) qs.set('role', sp.role);
-  const r = await safe(api.get<Paged<User>>(`/users?${qs}`));
+  const [r, managersRes] = await Promise.all([
+    safe(api.get<Paged<User>>(`/users?${qs}`)),
+    safe(api.get<Paged<User>>('/users?role=SALES_MANAGER&pageSize=100')),
+  ]);
+  const managers = managersRes.data?.data ?? [];
 
-  const ROLES: UserRole[] = ['ADMIN', 'SALES', 'CLIENT', 'CUSTOMER'];
+  const ROLES: UserRole[] = ['ADMIN', 'SALES', 'SALES_MANAGER', 'CLIENT', 'CUSTOMER'];
+  const ROLE_LABEL: Record<UserRole, string> = {
+    ADMIN: 'مدير النظام',
+    SALES: 'مبيعات',
+    SALES_MANAGER: 'مدير مبيعات',
+    CLIENT: 'متصفّح',
+    CUSTOMER: 'عميل',
+    BROKER: 'وسيط',
+  };
 
   return (
     <div className="space-y-6">
@@ -48,8 +69,9 @@ export default async function UsersPage({
         <h2 className="font-bold mb-3">إنشاء مستخدم (Admin / Sales)</h2>
         <form action={createUserAction} className="grid grid-cols-1 md:grid-cols-5 gap-2">
           <select name="role" defaultValue="SALES" className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
-            <option value="ADMIN">ADMIN</option>
-            <option value="SALES">SALES</option>
+            <option value="ADMIN">مدير النظام</option>
+            <option value="SALES">مبيعات</option>
+            <option value="SALES_MANAGER">مدير مبيعات</option>
           </select>
           <input
             name="fullName"
@@ -86,7 +108,7 @@ export default async function UsersPage({
             <option value="">الكل</option>
             {ROLES.map((rr) => (
               <option key={rr} value={rr}>
-                {rr}
+                {ROLE_LABEL[rr]}
               </option>
             ))}
           </select>
@@ -102,7 +124,30 @@ export default async function UsersPage({
           emptyMessage="لا يوجد مستخدمون"
           columns={[
             { key: 'name', header: 'الاسم', cell: (u) => u.fullName },
-            { key: 'role', header: 'الدور', cell: (u) => <span className="font-mono text-xs">{u.role}</span> },
+            { key: 'role', header: 'الدور', cell: (u) => <span className="text-xs">{ROLE_LABEL[u.role] ?? u.role}</span> },
+            {
+              key: 'manager',
+              header: 'مدير المبيعات',
+              // Manager assignment applies to SALES reps only.
+              cell: (u) =>
+                u.role === 'SALES' ? (
+                  <form action={assignManagerAction.bind(null, u.id)} className="flex items-center gap-1">
+                    <select
+                      name="managerId"
+                      defaultValue={u.managerId ?? ''}
+                      className="text-xs rounded border border-gray-300 px-1.5 py-0.5 max-w-[140px]"
+                    >
+                      <option value="">بدون مدير</option>
+                      {managers.map((m) => (
+                        <option key={m.id} value={m.id}>{m.fullName}</option>
+                      ))}
+                    </select>
+                    <button className="text-xs rounded bg-gray-800 text-white px-2 py-0.5">حفظ</button>
+                  </form>
+                ) : (
+                  <span className="text-xs text-gray-300">—</span>
+                ),
+            },
             { key: 'contact', header: 'تواصل', cell: (u) => <span dir="ltr" className="text-xs">{u.email || u.phone || '—'}</span> },
             { key: 'created', header: 'انضم', cell: (u) => formatDate(u.createdAt) },
             { key: 'last', header: 'آخر دخول', cell: (u) => formatDate(u.lastLoginAt) },

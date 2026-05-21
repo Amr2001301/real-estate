@@ -15,6 +15,7 @@ import {
 
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { teamSalesIds } from '../../common/utils/sales-scope';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import {
   AssignSalesDto,
@@ -76,7 +77,13 @@ export class VisitsService {
     const todayEnd = new Date(todayStart.getTime() + 86_400_000);
     const weekEnd = new Date(todayStart.getTime() + 7 * 86_400_000);
 
-    const salesFilter = user.role === UserRole.SALES ? { assignedSalesId: user.sub } : {};
+    // SALES → own appointments; SALES_MANAGER → their team (empty team ⇒ none).
+    const salesFilter =
+      user.role === UserRole.SALES
+        ? { assignedSalesId: user.sub }
+        : user.role === UserRole.SALES_MANAGER
+          ? { assignedSalesId: { in: await teamSalesIds(this.prisma, user.sub) } }
+          : {};
 
     const [newRequests, totalRequests, todayVisits, weekVisits, scheduledVisits, pendingConfirmation] =
       await this.prisma.$transaction([
@@ -149,9 +156,14 @@ export class VisitsService {
         : {}),
     };
 
-    // SALES can only see requests linked to their appointments
+    // SALES can only see requests linked to their appointments; SALES_MANAGER
+    // sees requests linked to their team's appointments (empty team ⇒ none).
     if (user.role === UserRole.SALES) {
       where.appointments = { some: { assignedSalesId: user.sub } };
+    } else if (user.role === UserRole.SALES_MANAGER) {
+      where.appointments = {
+        some: { assignedSalesId: { in: await teamSalesIds(this.prisma, user.sub) } },
+      };
     }
 
     const [data, total] = await this.prisma.$transaction([
@@ -398,16 +410,7 @@ export class VisitsService {
     if (user.role === UserRole.SALES) {
       effectiveSalesId = user.sub;
     } else if (dto.assignedSalesId) {
-      const s = await this.prisma.user.findUnique({
-        where: { id: dto.assignedSalesId },
-        select: { id: true, role: true, active: true, fullName: true },
-      });
-      if (!s) throw new BadRequestException('Sales person not found');
-      if (s.role !== UserRole.SALES) {
-        throw new BadRequestException('Selected user is not a sales person');
-      }
-      if (!s.active) throw new BadRequestException('Selected sales person is inactive');
-      effectiveSalesId = s.id;
+      effectiveSalesId = await this.resolveAssignableSalesId(dto.assignedSalesId, user);
     }
 
     const initialStatus =
@@ -593,6 +596,10 @@ export class VisitsService {
 
     if (user.role === UserRole.SALES) {
       where.assignedSalesId = user.sub;
+    } else if (user.role === UserRole.SALES_MANAGER) {
+      // Manager team scope overrides any requested assignedSalesId. Empty team
+      // ⇒ matches nothing (never an all-sales fallback).
+      where.assignedSalesId = { in: await teamSalesIds(this.prisma, user.sub) };
     }
 
     const [data, total] = await this.prisma.$transaction([
@@ -621,20 +628,55 @@ export class VisitsService {
     });
     if (!appt) throw new NotFoundException('Appointment not found');
 
+    await this.assertApptInScope(appt, user);
+
+    return appt;
+  }
+
+  // Validates an assignment target: must be an active SALES user, and for a
+  // SALES_MANAGER it must be on their team. Returns the validated salesId.
+  private async resolveAssignableSalesId(salesId: string, user: AuthUser): Promise<string> {
+    const s = await this.prisma.user.findUnique({
+      where: { id: salesId },
+      select: { id: true, role: true, active: true },
+    });
+    if (!s) throw new BadRequestException('Sales person not found');
+    if (s.role !== UserRole.SALES) {
+      throw new BadRequestException('Selected user is not a sales person');
+    }
+    if (!s.active) throw new BadRequestException('Selected sales person is inactive');
+    if (user.role === UserRole.SALES_MANAGER) {
+      const team = await teamSalesIds(this.prisma, user.sub);
+      if (!team.includes(s.id)) {
+        throw new BadRequestException('Selected sales person is not on your team');
+      }
+    }
+    return s.id;
+  }
+
+  // Per-record ownership: SALES → own appointments; SALES_MANAGER → appointments
+  // assigned to a rep on their team. No-op for ADMIN. Throws Forbidden to match
+  // the existing visits style.
+  private async assertApptInScope(
+    appt: { assignedSalesId: string | null },
+    user: AuthUser,
+  ) {
     if (user.role === UserRole.SALES && appt.assignedSalesId !== user.sub) {
       throw new ForbiddenException();
     }
-
-    return appt;
+    if (user.role === UserRole.SALES_MANAGER) {
+      const team = await teamSalesIds(this.prisma, user.sub);
+      if (!appt.assignedSalesId || !team.includes(appt.assignedSalesId)) {
+        throw new ForbiddenException();
+      }
+    }
   }
 
   async updateAppointmentStatus(id: string, dto: UpdateAppointmentStatusDto, user: AuthUser) {
     const appt = await this.prisma.visitAppointment.findUnique({ where: { id } });
     if (!appt) throw new NotFoundException('Appointment not found');
 
-    if (user.role === UserRole.SALES && appt.assignedSalesId !== user.sub) {
-      throw new ForbiddenException();
-    }
+    await this.assertApptInScope(appt, user);
 
     if (FINAL_STATUSES.includes(appt.status)) {
       throw new BadRequestException(`Cannot update appointment in status: ${appt.status}`);

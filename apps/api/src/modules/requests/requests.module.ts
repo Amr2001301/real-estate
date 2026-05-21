@@ -25,6 +25,7 @@ import {
 import type { Prisma } from '@prisma/client';
 import { UserRole, VisitRequestSource, VisitRequestStatus, VisitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveSalesScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
@@ -174,11 +175,16 @@ class RequestsService {
     pageSize: number;
     status?: VisitStatus;
     salesId?: string;
+    salesIds?: string[];
     userId?: string;
   }) {
     const where: Prisma.VisitRequestWhereInput = {
       ...(opts.status ? { status: opts.status } : {}),
-      ...(opts.salesId ? { assignedSalesId: opts.salesId } : {}),
+      ...(opts.salesIds
+        ? { assignedSalesId: { in: opts.salesIds } }
+        : opts.salesId
+          ? { assignedSalesId: opts.salesId }
+          : {}),
       ...(opts.userId ? { userId: opts.userId } : {}),
     };
     const [data, total] = await this.prisma.$transaction([
@@ -214,7 +220,10 @@ class RequestsService {
 @ApiTags('requests')
 @Controller()
 class RequestsController {
-  constructor(private readonly svc: RequestsService) {}
+  constructor(
+    private readonly svc: RequestsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // Public submission (guest or logged-in)
   @Public()
@@ -259,16 +268,16 @@ class RequestsController {
   }
 
   // Admin/Sales
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Get('info-requests')
   listInfo(@Query('page') page = 1, @Query('pageSize') pageSize = 20) {
     return this.svc.listInfoRequests({ page: Number(page), pageSize: Number(pageSize) });
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:read')
   @Get('visit-requests')
-  listVisits(
+  async listVisits(
     @CurrentUser() user: AuthUser,
     @Query('status') status?: VisitStatus,
     @Query('salesId') salesId?: string,
@@ -276,17 +285,20 @@ class RequestsController {
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
-    const effectiveSalesId =
-      user.role === UserRole.SALES ? user.sub : mine === '1' ? user.sub : salesId;
+    // SALES self / "mine" → self; ADMIN → requested or all; SALES_MANAGER → team.
+    const scope =
+      mine === '1' && user.role === UserRole.SALES
+        ? { salesId: user.sub }
+        : await resolveSalesScope(this.prisma, user, salesId);
     return this.svc.listVisitRequests({
       page: Number(page),
       pageSize: Number(pageSize),
       status,
-      salesId: effectiveSalesId,
+      ...scope,
     });
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:approve')
   @Patch('visit-requests/:id')
   updateVisit(

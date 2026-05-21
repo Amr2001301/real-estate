@@ -53,7 +53,7 @@ class NoShowAppointmentDto {
 export class VisitsController {
   constructor(private readonly visits: VisitsService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:read')
   @Get('visits/stats')
   stats(@CurrentUser() user: AuthUser) {
@@ -62,14 +62,14 @@ export class VisitsController {
 
   // ─── Visit Requests ───────────────────────────────────────────────────────
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:read')
   @Get('visits/requests')
   listRequests(@Query() dto: ListRequestsDto, @CurrentUser() user: AuthUser) {
     return this.visits.listRequests(dto, user);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:read')
   @Get('visits/requests/:id')
   getRequest(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
@@ -100,7 +100,7 @@ export class VisitsController {
 
   // ─── Appointments ─────────────────────────────────────────────────────────
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:create')
   @Post('visits/appointments')
   createDirect(
@@ -110,14 +110,14 @@ export class VisitsController {
     return this.visits.createDirectAppointment(dto, user);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:read')
   @Get('visits/appointments')
   listAppointments(@Query() dto: ListAppointmentsDto, @CurrentUser() user: AuthUser) {
     return this.visits.listAppointments(dto, user);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:read')
   @Get('visits/appointments/:id')
   getAppointment(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
@@ -131,7 +131,7 @@ export class VisitsController {
   // :cancel / :no-show were granted in bulk during rollout) and the existing
   // service-layer state-machine assertions still apply.
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:confirm')
   @Post('visits/appointments/:id/confirm')
   confirmAppointment(
@@ -146,7 +146,7 @@ export class VisitsController {
     );
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:complete')
   @Post('visits/appointments/:id/complete')
   completeAppointment(
@@ -161,7 +161,7 @@ export class VisitsController {
     );
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:cancel')
   @Post('visits/appointments/:id/cancel')
   cancelAppointment(
@@ -176,7 +176,7 @@ export class VisitsController {
     );
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('visits:no-show')
   @Post('visits/appointments/:id/no-show')
   noShowAppointment(

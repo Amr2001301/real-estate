@@ -27,7 +27,7 @@ export type VisitActivityType =
 export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED' | 'CONVERTED';
 export type ReservationBookingPaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'WAIVED';
 export type MaintenanceStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
-export type UserRole = 'ADMIN' | 'SALES' | 'CLIENT' | 'CUSTOMER' | 'BROKER';
+export type UserRole = 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'CLIENT' | 'CUSTOMER' | 'BROKER';
 export type MediaType = 'IMAGE' | 'VIDEO' | 'FLOORPLAN' | 'DOCUMENT';
 export type BrokerStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED';
 export type BrokerUserStatus = 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
@@ -543,6 +543,8 @@ export interface User {
   createdAt: string;
   updatedAt?: string;
   lastLoginAt: string | null;
+  managerId?: string | null;
+  manager?: { id: string; fullName: string } | null;
 }
 
 export interface PlanTemplateScheduleItem {

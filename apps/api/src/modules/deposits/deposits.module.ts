@@ -314,7 +314,7 @@ class DepositsController {
     return this.svc.record(dto, user.sub);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('deposits:read')
   @Get('deposits')
   list(@Query() q: ListDepositsQueryDto) {

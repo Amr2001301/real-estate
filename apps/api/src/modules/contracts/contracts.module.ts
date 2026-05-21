@@ -28,9 +28,12 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { teamSalesIds, assertSalesRecordInScope } from '../../common/utils/sales-scope';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { BrokerCommissionsModule } from '../broker-commissions/broker-commissions.module';
 import { BrokerCommissionsService } from '../broker-commissions/broker-commissions.service';
+import { BonusModule } from '../bonus/bonus.module';
+import { BonusService } from '../bonus/bonus.module';
 
 class CreateContractDto {
   // `signedAt` is intentionally NOT accepted here. Creation produces an
@@ -68,6 +71,7 @@ class ContractsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly brokerCommissions: BrokerCommissionsService,
+    private readonly bonus: BonusService,
   ) {}
 
   async create(dto: CreateContractDto, actorId: string) {
@@ -122,8 +126,13 @@ class ContractsService {
     hasReservation?: 'yes' | 'no';
     brokerId?: string;
     brokerAgentId?: string;
+    // Sales-team scope (SALES_MANAGER): contracts have no salesId column, so
+    // attribution is derived via the linked reservation's salesId. An empty
+    // team yields no rows; direct (reservation-less) contracts are excluded.
+    salesIds?: string[];
   }) {
     const where: Prisma.ContractWhereInput = {
+      ...(opts.salesIds ? { reservation: { salesId: { in: opts.salesIds } } } : {}),
       ...(opts.customerId ? { customerId: opts.customerId } : {}),
       ...(opts.brokerId ? { brokerId: opts.brokerId } : {}),
       ...(opts.brokerAgentId ? { brokerAgentId: opts.brokerAgentId } : {}),
@@ -342,6 +351,18 @@ class ContractsService {
       }
     }
 
+    // Materialize the automatic SALES commission for every newly-signed
+    // contract (broker or not). Best-effort: a failure here must never fail the
+    // sign request, and the generator self-skips when no eligible rule / sales
+    // rep exists. Idempotent via BonusEntry.contractId.
+    try {
+      await this.bonus.materializeFromSignedContract(id);
+    } catch (e) {
+      this.logger.warn(
+        `sales commission materialize(${id}) failed on sign: ${(e as Error).message}`,
+      );
+    }
+
     return updated;
   }
 }
@@ -349,7 +370,10 @@ class ContractsService {
 @ApiTags('contracts')
 @Controller('contracts')
 class ContractsController {
-  constructor(private readonly svc: ContractsService) {}
+  constructor(
+    private readonly svc: ContractsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Roles(UserRole.ADMIN)
   @Permissions('contracts:upload')
@@ -358,10 +382,11 @@ class ContractsController {
     return this.svc.create(dto, user.sub);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('contracts:read')
   @Get()
-  list(
+  async list(
+    @CurrentUser() user: AuthUser,
     @Query('customerId') customerId?: string,
     @Query('q') q?: string,
     @Query('signed') signed?: string,
@@ -371,6 +396,12 @@ class ContractsController {
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
+    // SALES_MANAGER is scoped to their team's contracts (via reservation.salesId);
+    // ADMIN/SALES are unscoped here (existing behavior).
+    const salesIds =
+      user.role === UserRole.SALES_MANAGER
+        ? await teamSalesIds(this.prisma, user.sub)
+        : undefined;
     return this.svc.list({
       page: Number(page),
       pageSize: Number(pageSize),
@@ -381,13 +412,23 @@ class ContractsController {
         hasReservation === 'yes' ? 'yes' : hasReservation === 'no' ? 'no' : undefined,
       brokerId,
       brokerAgentId,
+      salesIds,
     });
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('contracts:read')
   @Get(':id')
-  get(@Param('id', ParseUUIDPipe) id: string) {
+  async get(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    // SALES_MANAGER may only read a contract owned by a team rep (via the linked
+    // reservation's salesId). No-op for ADMIN; SALES behavior unchanged.
+    if (user.role === UserRole.SALES_MANAGER) {
+      const contract = await this.prisma.contract.findUnique({
+        where: { id },
+        select: { reservation: { select: { salesId: true } } },
+      });
+      await assertSalesRecordInScope(this.prisma, user, contract?.reservation?.salesId ?? null);
+    }
     return this.svc.findOne(id);
   }
 
@@ -425,7 +466,7 @@ class ContractsController {
 }
 
 @Module({
-  imports: [BrokerCommissionsModule],
+  imports: [BrokerCommissionsModule, BonusModule],
   controllers: [ContractsController],
   providers: [ContractsService],
   exports: [ContractsService],

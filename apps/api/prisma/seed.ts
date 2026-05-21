@@ -185,6 +185,32 @@ async function main() {
     update: { passwordHash: salesHash },
   });
 
+  // Demo SALES_MANAGER (idempotent by email; never overwrites a real user since
+  // it is keyed on this dedicated demo address). Role foundation only — its
+  // route access is intentionally limited until Batch 8.
+  const managerHash = await argon2.hash('ManagerPass123!');
+  const manager = await prisma.user.upsert({
+    where: { email: 'manager@example.com' },
+    create: {
+      email: 'manager@example.com',
+      passwordHash: managerHash,
+      fullName: 'Sara Manager',
+      role: UserRole.SALES_MANAGER,
+      locale: 'ar',
+    },
+    update: { passwordHash: managerHash },
+  });
+
+  // Link the demo SALES rep to the demo SALES_MANAGER so the team view has data.
+  // Idempotent: only sets managerId when not already pointing at this manager,
+  // and only touches the demo sales user (matched above by its email upsert).
+  if (sales.managerId !== manager.id) {
+    await prisma.user.update({
+      where: { id: sales.id },
+      data: { managerId: manager.id },
+    });
+  }
+
   // ---- Lead sources (find-or-create by en name; JSON column has no unique idx) ----
   for (const name of [
     { ar: 'فيسبوك', en: 'Facebook' },
@@ -529,9 +555,36 @@ async function main() {
     });
   }
 
+  // ---- Grant the SALES_MANAGER default tier to every SALES_MANAGER user ----
+  // The SALES work/read tier; team scoping (Batch 9) restricts the data each
+  // manager sees to their own reps. NO strict/admin/finance codes are granted.
+  // Reports (sales/operational) are intentionally NOT granted: those report
+  // endpoints aggregate ALL sales data and are not team-scoped, so they remain
+  // ADMIN-only until a team-scoped reporting surface exists. Idempotent via
+  // skipDuplicates.
+  const SALES_MANAGER_DEFAULT_PERMISSIONS = [...SALES_DEFAULT_PERMISSIONS];
+
+  const managerUsers = await prisma.user.findMany({
+    where: { role: UserRole.SALES_MANAGER },
+    select: { id: true },
+  });
+  if (managerUsers.length > 0) {
+    const managerPerms = await prisma.permission.findMany({
+      where: { code: { in: SALES_MANAGER_DEFAULT_PERMISSIONS } },
+      select: { id: true },
+    });
+    await prisma.userPermission.createMany({
+      data: managerUsers.flatMap((u) =>
+        managerPerms.map((p) => ({ userId: u.id, permissionId: p.id })),
+      ),
+      skipDuplicates: true,
+    });
+  }
+
   console.log('✅ Seed complete');
   console.log('   Admin:', adminEmail, '/', adminPassword);
   console.log('   Sales: sales@example.com / SalesPass123!');
+  console.log('   Manager: manager@example.com / ManagerPass123!');
 }
 
 main()

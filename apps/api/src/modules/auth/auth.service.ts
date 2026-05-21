@@ -33,7 +33,12 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { email } });
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
     if (!user.active) throw new ForbiddenException('Account inactive');
-    if (user.role !== 'ADMIN' && user.role !== 'SALES' && user.role !== 'BROKER') {
+    if (
+      user.role !== 'ADMIN' &&
+      user.role !== 'SALES' &&
+      user.role !== 'SALES_MANAGER' &&
+      user.role !== 'BROKER'
+    ) {
       throw new ForbiddenException('Email login is for staff and brokers only');
     }
     const ok = await argon2.verify(user.passwordHash, password);

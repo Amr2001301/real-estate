@@ -88,14 +88,14 @@ class PhasesService {
 class PhasesController {
   constructor(private readonly phases: PhasesService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('projects:read')
   @Get()
   list(@Query('projectId') projectId?: string) {
     return this.phases.list(projectId);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('projects:read')
   @Get(':id')
   get(@Param('id', ParseUUIDPipe) id: string) {

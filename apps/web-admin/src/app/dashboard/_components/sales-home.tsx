@@ -33,6 +33,9 @@ interface BonusEntryRow {
   amount: string | number;
   status: 'PENDING' | 'APPROVED' | 'PAID';
 }
+interface PerformanceRow {
+  signedContractsCount: number;
+}
 
 /**
  * Sales-focused dashboard home. Every data source is an endpoint SALES is
@@ -47,7 +50,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [leadsRes, reservationsRes, visitsRes, unitsRes, bonusRes] =
+  const [leadsRes, reservationsRes, visitsRes, unitsRes, bonusRes, perfRes] =
     await Promise.all([
       // /leads self-scopes to the SALES user's assigned leads.
       safe(api.get<Paged<Lead>>('/leads?pageSize=100')),
@@ -63,6 +66,8 @@ export async function SalesDashboard({ userId }: { userId: string }) {
       safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
       // Self-scoped pending compensation (best-effort).
       safe(api.get<BonusEntryRow[]>('/bonus-entries?status=PENDING')),
+      // Self-scoped current-month performance — signed contracts (best-effort).
+      safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${nowIso.slice(0, 7)}`)),
     ]);
 
   const leads = leadsRes.data?.data ?? [];
@@ -80,6 +85,11 @@ export async function SalesDashboard({ userId }: { userId: string }) {
     (r) => r.status === 'PENDING' || r.status === 'APPROVED',
   ).length;
   const convertedDeals = reservations.filter((r) => r.status === 'CONVERTED').length;
+  // Prefer signed contracts this month from the performance endpoint; fall back
+  // to the all-time converted-reservation proxy if it's unavailable.
+  const signedThisMonth = (perfRes.data ?? [])[0]?.signedContractsCount;
+  const closedDeals = signedThisMonth ?? convertedDeals;
+  const closedDealsSub = signedThisMonth !== undefined ? 'عقود موقّعة هذا الشهر' : 'محوّلة إلى عقود';
   const upcomingVisits = visits.length;
   const availableUnits = unitsRes.data?.meta.total ?? 0;
 
@@ -159,8 +169,8 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         />
         <PageKpiCard
           label="صفقاتي المكتملة"
-          value={convertedDeals}
-          sub="محوّلة إلى عقود"
+          value={closedDeals}
+          sub={closedDealsSub}
           icon={<FileText />}
           tone="info"
         />

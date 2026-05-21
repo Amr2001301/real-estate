@@ -677,7 +677,7 @@ class InstallmentsController {
     return this.svc.createPlan(dto);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('installments:read')
   @Get('contracts/:contractId/installment-plan')
   byContract(@Param('contractId', ParseUUIDPipe) contractId: string) {
@@ -692,7 +692,7 @@ class InstallmentsController {
 class PlanTemplatesController {
   constructor(private readonly svc: PlanTemplatesService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('installments:read')
   @Get()
   list(
@@ -720,7 +720,7 @@ class PlanTemplatesController {
     return this.svc.stats();
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('installments:read')
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) {

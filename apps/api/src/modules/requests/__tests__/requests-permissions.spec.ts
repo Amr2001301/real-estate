@@ -142,8 +142,12 @@ describe('Requests module · permissions enforcement (legacy admin surface)', ()
 
     it('listInfo (GET /info-requests) → no permission metadata (role-only, deferred)', () => {
       expect(getPermissions('listInfo')).toBeUndefined();
-      // Confirm it's still role-gated to ADMIN/SALES.
-      expect(getRoles('listInfo')).toEqual([UserRole.ADMIN, UserRole.SALES]);
+      // Confirm it's still role-gated to ADMIN/SALES/SALES_MANAGER.
+      expect(getRoles('listInfo')).toEqual([
+        UserRole.ADMIN,
+        UserRole.SALES,
+        UserRole.SALES_MANAGER,
+      ]);
     });
 
     it('publicInfo + publicVisit — @Public(), no permission metadata', () => {

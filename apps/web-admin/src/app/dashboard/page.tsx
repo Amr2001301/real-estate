@@ -26,6 +26,7 @@ import { AlertList } from '@/components/dashboard/alert-list';
 import { ActivityTable } from '@/components/dashboard/activity-table';
 import { SupportCard } from '@/components/dashboard/support-card';
 import { SalesDashboard } from './_components/sales-home';
+import { SalesManagerDashboard } from './_components/sales-manager-home';
 
 interface Kpis {
   projects: number;
@@ -106,8 +107,13 @@ export default async function DashboardHome() {
   // can access — the admin /reports/kpis call below is ADMIN-only and would
   // 403 for them. ADMIN keeps the existing dashboard unchanged.
   const session = await getSession();
-  if (session && session.role !== 'ADMIN') {
+  if (session && session.role === 'SALES') {
     return <SalesDashboard userId={session.id} />;
+  }
+  // SALES_MANAGER gets the all-sales team dashboard. Its endpoints are open to
+  // the role and self-scope nothing for managers; ADMIN keeps the admin home.
+  if (session && session.role === 'SALES_MANAGER') {
+    return <SalesManagerDashboard />;
   }
 
   const r = await safe(api.get<Kpis>('/reports/kpis'));

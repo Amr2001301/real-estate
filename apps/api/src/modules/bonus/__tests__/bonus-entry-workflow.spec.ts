@@ -93,13 +93,21 @@ function makePrismaMock() {
       findMany: jest.fn().mockResolvedValue([]),
     },
     bonusRule: {
-      create: jest.fn().mockResolvedValue({}),
+      create: jest.fn().mockImplementation(async ({ data }) => ({ id: RULE_ID, ...data })),
       findMany: jest.fn().mockResolvedValue([]),
+      findUnique: jest.fn().mockImplementation(async ({ where }) => ({ id: where.id })),
+      update: jest.fn().mockImplementation(async ({ where, data }) => ({ id: where.id, ...data })),
+      updateMany: jest.fn().mockResolvedValue({ count: 0 }),
     },
     salesTarget: {
       upsert: jest.fn().mockResolvedValue({}),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    $transaction: jest.fn().mockImplementation((arg: unknown) =>
+      typeof arg === 'function'
+        ? (arg as (tx: unknown) => Promise<unknown>)(mock)
+        : Promise.all(arg as Promise<unknown>[]),
+    ),
   };
 }
 
@@ -156,6 +164,10 @@ describe('Bonus · entry lifecycle workflow', () => {
     resetFixture();
     mock.bonusEntry.create.mockClear();
     mock.bonusEntry.update.mockClear();
+    mock.bonusRule.create.mockClear();
+    mock.bonusRule.update.mockClear();
+    mock.bonusRule.updateMany.mockClear();
+    mock.bonusRule.findUnique.mockClear();
   });
 
   // ── createEntry ─────────────────────────────────────────────────────────
@@ -182,6 +194,139 @@ describe('Bonus · entry lifecycle workflow', () => {
       .send({ salesId: SALES_ID, ruleId: RULE_ID, amount: -10, period: '2030-04' })
       .expect(400);
     expect(mock.bonusEntry.create).not.toHaveBeenCalled();
+  });
+
+  // Manual create must NOT accept auto-commission fields (forbidNonWhitelisted),
+  // so the admin UI can never mint a CONTRACT_AUTO / contract-linked entry.
+  it('createEntry rejects source / contractId (400, whitelist)', async () => {
+    await request(app.getHttpServer())
+      .post('/bonus-entries')
+      .send({ salesId: SALES_ID, ruleId: RULE_ID, amount: 100, period: '2030-04', source: 'CONTRACT_AUTO' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/bonus-entries')
+      .send({ salesId: SALES_ID, ruleId: RULE_ID, amount: 100, period: '2030-04', contractId: ENTRY_ID })
+      .expect(400);
+    expect(mock.bonusEntry.create).not.toHaveBeenCalled();
+  });
+
+  // ── createRule · autoApplyOnSignedContract flag (Batch A) ────────────────
+
+  it('createRule defaults autoApplyOnSignedContract to false', async () => {
+    await request(app.getHttpServer())
+      .post('/bonus-rules')
+      .send({ name: 'بيع وحدة', percentage: 2 })
+      .expect(201);
+    const args = mock.bonusRule.create.mock.calls[0]![0] as {
+      data: { autoApplyOnSignedContract: boolean };
+    };
+    expect(args.data.autoApplyOnSignedContract).toBe(false);
+  });
+
+  it('createRule persists autoApplyOnSignedContract = true when provided', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/bonus-rules')
+      .send({ name: 'بيع وحدة', percentage: 2, autoApplyOnSignedContract: true })
+      .expect(201);
+    const args = mock.bonusRule.create.mock.calls[0]![0] as {
+      data: { autoApplyOnSignedContract: boolean };
+    };
+    expect(args.data.autoApplyOnSignedContract).toBe(true);
+    expect(res.body).toMatchObject({ autoApplyOnSignedContract: true });
+  });
+
+  // ── createRule · single-auto invariant on create (Batch D) ───────────────
+
+  it('creating a rule with auto=true disables auto on all existing rules', async () => {
+    await request(app.getHttpServer())
+      .post('/bonus-rules')
+      .send({ name: 'بيع وحدة', percentage: 2, autoApplyOnSignedContract: true })
+      .expect(201);
+
+    expect(mock.bonusRule.updateMany).toHaveBeenCalledTimes(1);
+    const many = mock.bonusRule.updateMany.mock.calls[0]![0] as {
+      where: { autoApplyOnSignedContract: boolean };
+      data: { autoApplyOnSignedContract: boolean };
+    };
+    expect(many.where.autoApplyOnSignedContract).toBe(true);
+    expect(many.data.autoApplyOnSignedContract).toBe(false);
+    expect(mock.bonusRule.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('creating a rule with auto=false does not touch other rules (no updateMany)', async () => {
+    await request(app.getHttpServer())
+      .post('/bonus-rules')
+      .send({ name: 'مكافأة خاصة', percentage: 1 })
+      .expect(201);
+    expect(mock.bonusRule.updateMany).not.toHaveBeenCalled();
+    expect(mock.bonusRule.create).toHaveBeenCalledTimes(1);
+  });
+
+  // ── updateRule · PATCH /bonus-rules/:id (Batch C) ────────────────────────
+
+  it('updateRule toggles active without touching other rules', async () => {
+    await request(app.getHttpServer())
+      .patch(`/bonus-rules/${RULE_ID}`)
+      .send({ active: false })
+      .expect(200);
+    const args = mock.bonusRule.update.mock.calls[0]![0] as { data: { active: boolean } };
+    expect(args.data.active).toBe(false);
+    expect(mock.bonusRule.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('enabling auto on one rule disables auto on all other rules', async () => {
+    await request(app.getHttpServer())
+      .patch(`/bonus-rules/${RULE_ID}`)
+      .send({ autoApplyOnSignedContract: true })
+      .expect(200);
+
+    // Others turned off first…
+    expect(mock.bonusRule.updateMany).toHaveBeenCalledTimes(1);
+    const many = mock.bonusRule.updateMany.mock.calls[0]![0] as {
+      where: { id: { not: string }; autoApplyOnSignedContract: boolean };
+      data: { autoApplyOnSignedContract: boolean };
+    };
+    expect(many.where.id.not).toBe(RULE_ID);
+    expect(many.where.autoApplyOnSignedContract).toBe(true);
+    expect(many.data.autoApplyOnSignedContract).toBe(false);
+    // …then this rule turned on.
+    const one = mock.bonusRule.update.mock.calls[0]![0] as {
+      data: { autoApplyOnSignedContract: boolean };
+    };
+    expect(one.data.autoApplyOnSignedContract).toBe(true);
+  });
+
+  it('disabling auto leaves other rules unchanged (no updateMany)', async () => {
+    await request(app.getHttpServer())
+      .patch(`/bonus-rules/${RULE_ID}`)
+      .send({ autoApplyOnSignedContract: false })
+      .expect(200);
+    expect(mock.bonusRule.updateMany).not.toHaveBeenCalled();
+    const one = mock.bonusRule.update.mock.calls[0]![0] as {
+      data: { autoApplyOnSignedContract: boolean };
+    };
+    expect(one.data.autoApplyOnSignedContract).toBe(false);
+  });
+
+  it('updateRule rejects a negative percentage (400)', async () => {
+    await request(app.getHttpServer())
+      .patch(`/bonus-rules/${RULE_ID}`)
+      .send({ percentage: -5 })
+      .expect(400);
+    expect(mock.bonusRule.update).not.toHaveBeenCalled();
+  });
+
+  it('updateRule is blocked for non-admins at the role gate (403)', async () => {
+    FakeAuthGuard.currentUser = {
+      sub: 'sales-1',
+      role: UserRole.SALES,
+      codes: ['bonus:rules:manage'], // even with the code, @Roles(ADMIN) blocks
+    };
+    await request(app.getHttpServer())
+      .patch(`/bonus-rules/${RULE_ID}`)
+      .send({ active: false })
+      .expect(403);
+    expect(mock.bonusRule.update).not.toHaveBeenCalled();
   });
 
   // ── approveEntry ────────────────────────────────────────────────────────

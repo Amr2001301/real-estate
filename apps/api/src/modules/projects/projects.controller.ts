@@ -36,14 +36,14 @@ export class ProjectsController {
   }
 
   // ----- Admin/Sales -----
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('projects:read')
   @Get('projects')
   list(@Query() query: ProjectQueryDto) {
     return this.projects.findAll(query, false);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('projects:read')
   @Get('projects/:id')
   get(@Param('id', ParseUUIDPipe) id: string) {

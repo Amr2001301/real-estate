@@ -18,7 +18,7 @@ import { BrokerContractsQueryDto } from './dto/broker-contract.dto';
 export class BrokerContractsController {
   constructor(private readonly svc: BrokerContractsService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_contracts:read')
   @Get()
   list(
@@ -28,7 +28,7 @@ export class BrokerContractsController {
     return this.svc.list(query, user);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_contracts:read')
   @Get(':id')
   findOne(

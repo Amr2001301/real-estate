@@ -42,6 +42,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { resolveSalesScope, assertSalesRecordInScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -528,6 +529,7 @@ export class ReservationsService {
     pageSize: number;
     status?: ReservationStatus;
     salesId?: string;
+    salesIds?: string[];
     projectId?: string;
     unitId?: string;
     leadId?: string;
@@ -538,7 +540,11 @@ export class ReservationsService {
   }) {
     const where: Prisma.ReservationWhereInput = {
       ...(opts.status ? { status: opts.status } : {}),
-      ...(opts.salesId ? { salesId: opts.salesId } : {}),
+      ...(opts.salesIds
+        ? { salesId: { in: opts.salesIds } }
+        : opts.salesId
+          ? { salesId: opts.salesId }
+          : {}),
       ...(opts.unitId ? { unitId: opts.unitId } : {}),
       ...(opts.leadId ? { leadId: opts.leadId } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
@@ -1489,26 +1495,29 @@ class ReservationExpiryCron {
 @ApiTags('reservations')
 @Controller('reservations')
 class ReservationsController {
-  constructor(private readonly svc: ReservationsService) {}
+  constructor(
+    private readonly svc: ReservationsService,
+    private readonly prisma: PrismaService,
+  ) {}
 
-  @Roles(UserRole.SALES, UserRole.ADMIN)
+  @Roles(UserRole.SALES, UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('reservations:create')
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateReservationDto) {
     return this.svc.create(user, dto);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('reservations:read')
   @Get('stats')
   stats() {
     return this.svc.stats();
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('reservations:read')
   @Get()
-  list(
+  async list(
     @CurrentUser() user: AuthUser,
     @Query('status') status?: ReservationStatus,
     @Query('salesId') salesId?: string,
@@ -1522,12 +1531,12 @@ class ReservationsController {
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
-    const effectiveSalesId = user.role === UserRole.SALES ? user.sub : salesId;
+    const scope = await resolveSalesScope(this.prisma, user, salesId);
     return this.svc.list({
       page: Number(page),
       pageSize: Number(pageSize),
       status,
-      salesId: effectiveSalesId,
+      ...scope,
       projectId,
       unitId,
       leadId,
@@ -1538,7 +1547,7 @@ class ReservationsController {
     });
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('reservations:read')
   @Get('activities')
   listActivities(
@@ -1549,10 +1558,11 @@ class ReservationsController {
     return this.svc.listActivitiesForOwner({ clientId, leadId, limit: Number(pageSize) });
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('reservations:read')
   @Get(':id')
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: AuthUser) {
+    await this.assertReservationInScope(user, id);
     return this.svc.findOne(id);
   }
 
@@ -1569,14 +1579,27 @@ class ReservationsController {
 
   // Notes intentionally left without @Permissions — SALES users add notes
   // routinely while working a reservation; the @Roles gate is sufficient.
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Post(':id/notes')
-  addNote(
+  async addNote(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: AddNoteDto,
     @CurrentUser() user: AuthUser,
   ) {
+    await this.assertReservationInScope(user, id);
     return this.svc.addNote(id, dto, user.sub);
+  }
+
+  // SALES_MANAGER may only touch reservations owned by a rep on their team.
+  // No-op for ADMIN; SALES behavior unchanged (managersOnly).
+  private async assertReservationInScope(user: AuthUser, id: string) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id },
+      select: { salesId: true },
+    });
+    await assertSalesRecordInScope(this.prisma, user, reservation?.salesId ?? null, {
+      managersOnly: true,
+    });
   }
 
   // Strict: approval is the gate that lets a reservation proceed to contract

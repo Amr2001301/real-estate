@@ -20,6 +20,7 @@ enum UserRole {
   CLIENT
   CUSTOMER
   BROKER
+  SALES_MANAGER
 }
 
 enum Locale {
@@ -88,9 +89,17 @@ model User {
   brokerActivityLogs          BrokerActivityLog[]   @relation("BrokerActivityLogAgent")
   uploadedDocuments           Document[]            @relation("DocumentUploader")
 
+  // ── Sales team scoping (additive) ────────────────────────────────────────
+  // A SALES user may be assigned to a SALES_MANAGER via managerId. Nullable so
+  // existing users are unaffected; self-relation, no cascade.
+  managerId    String? @db.Uuid
+  manager      User?   @relation("SalesTeam", fields: [managerId], references: [id], onDelete: SetNull)
+  teamMembers  User[]  @relation("SalesTeam")
+
   @@index([role])
   @@index([phone])
   @@index([email])
+  @@index([managerId])
 }
 
 model RefreshToken {
@@ -768,6 +777,8 @@ model Contract {
   installmentPlan InstallmentPlan?
   deposits        Deposit[]
   brokerCommission BrokerCommission?
+  // At most one auto-generated sales commission entry (Batch B wires creation).
+  bonusEntry      BonusEntry?
 
   @@index([customerId])
   @@index([unitId])
@@ -935,12 +946,23 @@ enum BonusEntryStatus {
   PAID
 }
 
+// How a BonusEntry was created. MANUAL = admin-entered (existing v1 workflow).
+// CONTRACT_AUTO = generated from a signed contract (Batch B — not yet wired).
+enum BonusEntrySource {
+  MANUAL
+  CONTRACT_AUTO
+}
+
 model BonusRule {
   id         String       @id @default(uuid()) @db.Uuid
   name       String
   percentage Decimal      @default(0) @db.Decimal(5, 2)
   conditions Json         @default("{}") // e.g. { minUnits: 3 }
   active     Boolean      @default(true)
+  // Eligible for automatic sales-commission generation on contract signing.
+  // Generation (Batch B) requires exactly one ACTIVE rule with this flag; zero
+  // or multiple ⇒ skip. No generation happens from this flag alone in Batch A.
+  autoApplyOnSignedContract Boolean @default(false)
   createdAt  DateTime     @default(now())
   entries    BonusEntry[]
 }
@@ -956,6 +978,16 @@ model BonusEntry {
   status    BonusEntryStatus @default(PENDING)
   paidAt    DateTime?
   createdAt DateTime         @default(now())
+
+  // ── Auto-commission provenance (additive; manual entries leave these null) ──
+  // contractId is unique so at most one auto entry can exist per contract
+  // (Postgres allows multiple NULLs, so manual entries are unaffected). The FK
+  // is SET NULL on contract deletion to preserve the compensation record.
+  source       BonusEntrySource @default(MANUAL)
+  contractId   String?          @unique @db.Uuid
+  contract     Contract?        @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  basisAmount  Decimal?         @db.Decimal(14, 2)
+  commissionPct Decimal?        @db.Decimal(5, 2)
 
   @@index([salesId, period])
   @@index([status])

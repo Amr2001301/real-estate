@@ -12,6 +12,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { ContractsModule } from '../contracts.module';
 import { BrokerCommissionsService } from '../../broker-commissions/broker-commissions.service';
+import { BonusService } from '../../bonus/bonus.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -113,6 +114,12 @@ const brokerCommissionsMock = {
     .mockResolvedValue({ status: 'created' }),
 };
 
+const bonusServiceMock = {
+  materializeFromSignedContract: jest
+    .fn<Promise<{ status: string }>, [string]>()
+    .mockResolvedValue({ status: 'created' }),
+};
+
 let mock = makePrismaMock();
 
 describe('Contracts · signing workflow', () => {
@@ -138,6 +145,8 @@ describe('Contracts · signing workflow', () => {
     })
       .overrideProvider(BrokerCommissionsService)
       .useValue(brokerCommissionsMock)
+      .overrideProvider(BonusService)
+      .useValue(bonusServiceMock)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -170,6 +179,8 @@ describe('Contracts · signing workflow', () => {
     mock.notification.createMany.mockClear();
     brokerCommissionsMock.materializeFromContract.mockClear();
     brokerCommissionsMock.materializeFromContract.mockResolvedValue({ status: 'created' });
+    bonusServiceMock.materializeFromSignedContract.mockClear();
+    bonusServiceMock.materializeFromSignedContract.mockResolvedValue({ status: 'created' });
   });
 
   // ── Happy path: non-broker contract ─────────────────────────────────────
@@ -188,10 +199,47 @@ describe('Contracts · signing workflow', () => {
     expect(updateArgs.where.id).toBe(CONTRACT_ID);
     expect(updateArgs.data.signedAt).toBeInstanceOf(Date);
 
-    // No broker attribution → side effects don't fire.
+    // No broker attribution → broker side effects don't fire, but the SALES
+    // commission generation runs for every newly-signed contract (broker or not).
     expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
     expect(mock.brokerUser.findMany).not.toHaveBeenCalled();
     expect(mock.notification.createMany).not.toHaveBeenCalled();
+    expect(bonusServiceMock.materializeFromSignedContract).toHaveBeenCalledTimes(1);
+    expect(bonusServiceMock.materializeFromSignedContract).toHaveBeenCalledWith(CONTRACT_ID);
+  });
+
+  it('signing also triggers sales commission generation for a broker contract', async () => {
+    fixture.contract.brokerId = 'broker-1';
+    fixture.contract.reservationId = 'r-1';
+    fixture.contract.reservation = {
+      reservationNumber: 'RES-0001',
+      leadId: 'lead-1',
+      salesId: 'sales-1',
+    };
+
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    // Both ledgers materialize independently from the same signing event.
+    expect(brokerCommissionsMock.materializeFromContract).toHaveBeenCalledTimes(1);
+    expect(bonusServiceMock.materializeFromSignedContract).toHaveBeenCalledTimes(1);
+    expect(bonusServiceMock.materializeFromSignedContract).toHaveBeenCalledWith(CONTRACT_ID);
+  });
+
+  it('contract is signed even when sales commission generation throws (best-effort)', async () => {
+    bonusServiceMock.materializeFromSignedContract.mockRejectedValueOnce(
+      new Error('bonus downstream blew up'),
+    );
+
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    // Sign still succeeded and persisted signedAt.
+    expect(mock.contract.update).toHaveBeenCalledTimes(1);
   });
 
   // ── Idempotence on a contract that is already signed ────────────────────
@@ -212,6 +260,8 @@ describe('Contracts · signing workflow', () => {
     expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
     expect(mock.leadActivity.create).not.toHaveBeenCalled();
     expect(mock.notification.createMany).not.toHaveBeenCalled();
+    // Re-signing must not re-generate the sales commission.
+    expect(bonusServiceMock.materializeFromSignedContract).not.toHaveBeenCalled();
   });
 
   // ── Broker-attributed contract: commission materializes ─────────────────

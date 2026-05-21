@@ -1,5 +1,6 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import {
   BadgePercent,
   Clock,
@@ -33,16 +34,29 @@ interface BonusRule {
   name: string;
   percentage: string | number;
   active: boolean;
+  autoApplyOnSignedContract?: boolean;
 }
+type EntrySource = 'MANUAL' | 'CONTRACT_AUTO';
 interface BonusEntry {
   id: string;
   amount: string | number;
   period: string;
   status: EntryStatus;
   paidAt: string | null;
+  source?: EntrySource;
+  contractId?: string | null;
   sales?: { id: string; fullName: string };
   rule?: { name: string };
 }
+
+const SOURCE_LABEL: Record<EntrySource, string> = {
+  MANUAL: 'يدوي',
+  CONTRACT_AUTO: 'تلقائي من عقد',
+};
+const SOURCE_CLS: Record<EntrySource, string> = {
+  MANUAL: 'bg-slate-100 text-slate-600',
+  CONTRACT_AUTO: 'bg-info-100 text-info-700',
+};
 interface SalesUser {
   id: string;
   fullName: string;
@@ -86,8 +100,23 @@ async function createRuleAction(formData: FormData) {
     api.post('/bonus-rules', {
       name: String(formData.get('name') ?? ''),
       percentage: Number(formData.get('percentage') ?? 0),
+      autoApplyOnSignedContract: formData.get('autoApplyOnSignedContract') === 'on',
     }),
   );
+  if (res.error) redirectBack(formData, res.error);
+  revalidatePath('/dashboard/bonus');
+}
+
+// Toggle a single boolean field on a rule. `field` is bound server-side (never
+// from the client), so only active / autoApplyOnSignedContract can be flipped.
+async function toggleRuleAction(
+  ruleId: string,
+  field: 'active' | 'autoApplyOnSignedContract',
+  next: boolean,
+  formData: FormData,
+) {
+  'use server';
+  const res = await safe(api.patch(`/bonus-rules/${ruleId}`, { [field]: next }));
   if (res.error) redirectBack(formData, res.error);
   revalidatePath('/dashboard/bonus');
 }
@@ -141,6 +170,9 @@ export default async function BonusPage({
   ]);
 
   const rules = rulesRes.data ?? [];
+  // Active rules eligible for auto sales-commission generation. The generator
+  // requires exactly one; the banner below reflects zero / one / many.
+  const activeAutoRules = rules.filter((r) => r.active && r.autoApplyOnSignedContract);
   const entries = Array.isArray(entriesRes.data)
     ? entriesRes.data
     : (entriesRes.data?.data ?? []);
@@ -247,7 +279,7 @@ export default async function BonusPage({
           <div className="flex flex-col gap-1">
             <label htmlFor="status" className="text-[11px] font-medium text-slate-400">الحالة</label>
             <Select id="status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36">
-              <option value="">كل الحالات</option>
+              <option value="">الكل</option>
               <option value="PENDING">معلق</option>
               <option value="APPROVED">معتمد</option>
               <option value="PAID">مدفوع</option>
@@ -258,7 +290,7 @@ export default async function BonusPage({
             <Button type="submit" variant="primary" size="sm">تصفية</Button>
             {hasFilters && (
               <a href="/dashboard/bonus">
-                <Button type="button" variant="secondary" size="sm">إعادة تعيين</Button>
+                <Button type="button" variant="secondary" size="sm">مسح الفلاتر</Button>
               </a>
             )}
           </div>
@@ -322,23 +354,87 @@ export default async function BonusPage({
           </div>
         </CardHeader>
         <CardBody className="space-y-4">
-          <ul className="text-sm space-y-1">
-            {rules.map((r) => (
-              <li key={r.id} className="flex justify-between border-b border-hairline py-1">
-                <span className="text-slate-700">{r.name}</span>
-                <span className="text-slate-400 tabular-nums">{r.percentage}%</span>
-              </li>
-            ))}
-            {rules.length === 0 && <li className="text-xs text-slate-400">لا توجد قواعد</li>}
+          {/* Auto-commission status banner */}
+          {activeAutoRules.length === 0 ? (
+            <div className="rounded-lg bg-amber-50 text-amber-700 px-3 py-2 text-xs border border-amber-100">
+              لن يتم إنشاء عمولات تلقائية عند توقيع العقود حتى يتم تفعيل قاعدة واحدة.
+            </div>
+          ) : activeAutoRules.length === 1 ? (
+            <div className="rounded-lg bg-success-50 text-success-700 px-3 py-2 text-xs border border-success-100">
+              العمولات التلقائية مفعّلة باستخدام قاعدة: {activeAutoRules[0]!.name}
+            </div>
+          ) : (
+            <div className="rounded-lg bg-danger-50 text-danger-700 px-3 py-2 text-xs border border-danger-100">
+              يوجد أكثر من قاعدة تلقائية مفعّلة. لن يتم إنشاء عمولات تلقائية حتى يتم إصلاح الإعداد.
+            </div>
+          )}
+
+          <ul className="text-sm divide-y divide-hairline">
+            {rules.map((r) => {
+              const isAmbiguous = activeAutoRules.length > 1 && r.active && r.autoApplyOnSignedContract;
+              return (
+                <li
+                  key={r.id}
+                  className={cn(
+                    'flex flex-wrap items-center justify-between gap-2 py-2',
+                    isAmbiguous && 'bg-danger-50/50 -mx-1 px-1 rounded',
+                  )}
+                >
+                  <span className="inline-flex items-center gap-2 min-w-0">
+                    <span className="text-slate-700 truncate">{r.name}</span>
+                    <span className="text-slate-400 tabular-nums shrink-0">{r.percentage}%</span>
+                    {!r.active && (
+                      <span className="inline-block shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium leading-tight bg-slate-100 text-slate-500">
+                        غير نشطة
+                      </span>
+                    )}
+                    {r.autoApplyOnSignedContract && (
+                      <span className="inline-block shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium leading-tight bg-info-100 text-info-700">
+                        تلقائي عند التوقيع
+                      </span>
+                    )}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 shrink-0">
+                    <form action={toggleRuleAction.bind(null, r.id, 'active', !r.active)}>
+                      <input type="hidden" name="returnTo" value={returnTo} />
+                      <Button type="submit" variant="outline" size="sm">
+                        {r.active ? 'إيقاف' : 'تفعيل'}
+                      </Button>
+                    </form>
+                    <form action={toggleRuleAction.bind(null, r.id, 'autoApplyOnSignedContract', !r.autoApplyOnSignedContract)}>
+                      <input type="hidden" name="returnTo" value={returnTo} />
+                      <Button type="submit" variant={r.autoApplyOnSignedContract ? 'secondary' : 'primary'} size="sm">
+                        {r.autoApplyOnSignedContract ? 'إلغاء التلقائي' : 'تفعيل التلقائي'}
+                      </Button>
+                    </form>
+                  </span>
+                </li>
+              );
+            })}
+            {rules.length === 0 && <li className="text-xs text-slate-400 py-2">لا توجد قواعد</li>}
           </ul>
-          <form action={createRuleAction} className="flex flex-wrap items-center gap-2">
-            <input type="hidden" name="returnTo" value={returnTo} />
-            <Input name="name" required placeholder="اسم القاعدة" inputSize="sm" className="flex-1 min-w-[160px]" />
-            <Input name="percentage" type="number" step="any" min={0} required placeholder="النسبة %" inputSize="sm" className="w-28" />
-            <Button type="submit" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-              إضافة قاعدة
-            </Button>
+
+          <form action={createRuleAction} className="space-y-2 border-t border-hairline pt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="hidden" name="returnTo" value={returnTo} />
+              <Input name="name" required placeholder="اسم القاعدة" inputSize="sm" className="flex-1 min-w-[160px]" />
+              <Input name="percentage" type="number" step="any" min={0} required placeholder="النسبة %" inputSize="sm" className="w-28" />
+              <Button type="submit" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
+                إضافة قاعدة
+              </Button>
+            </div>
+            <label className="flex items-center gap-2 text-xs text-slate-600">
+              <input type="checkbox" name="autoApplyOnSignedContract" className="rounded border-gray-300" />
+              استخدام تلقائي عند توقيع العقد
+            </label>
           </form>
+
+          <p className="text-[11px] text-slate-400">
+            يجب أن تكون هناك قاعدة واحدة نشطة فقط مفعّلة للتطبيق التلقائي عند توقيع العقد. تفعيل التلقائي على قاعدة يُلغيه تلقائياً عن باقي القواعد.
+          </p>
+          <p className="text-[11px] text-slate-400">
+            تغيير القاعدة لا يغيّر المستحقات التي تم إنشاؤها سابقاً.
+          </p>
         </CardBody>
       </Card>
 
@@ -366,6 +462,7 @@ export default async function BonusPage({
                     <th className="px-4 py-2.5 text-right font-medium">المندوب</th>
                     <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الفترة</th>
                     <th className="px-4 py-2.5 text-right font-medium">القاعدة</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المصدر</th>
                     <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المبلغ</th>
                     <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الحالة</th>
                     <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">تاريخ الدفع</th>
@@ -378,6 +475,16 @@ export default async function BonusPage({
                       <td className="px-4 py-2.5 font-medium text-slate-800">{e.sales?.fullName ?? '—'}</td>
                       <td className="px-4 py-2.5 text-slate-500 tabular-nums whitespace-nowrap">{e.period}</td>
                       <td className="px-4 py-2.5 text-slate-600">{e.rule?.name ?? '—'}</td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', SOURCE_CLS[e.source ?? 'MANUAL'])}>
+                          {SOURCE_LABEL[e.source ?? 'MANUAL']}
+                        </span>
+                        {e.contractId && (
+                          <Link href={`/dashboard/contracts/${e.contractId}` as never} className="ms-2 text-[11px] text-brand-700 hover:underline">
+                            العقد
+                          </Link>
+                        )}
+                      </td>
                       <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">{formatCurrency(e.amount)}</td>
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', STATUS_CLS[e.status])}>

@@ -10,12 +10,16 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateUserDto) {
-    if ((dto.role === 'ADMIN' || dto.role === 'SALES') && !dto.password) {
+    if (
+      (dto.role === 'ADMIN' || dto.role === 'SALES' || dto.role === 'SALES_MANAGER') &&
+      !dto.password
+    ) {
       throw new BadRequestException('Password required for staff roles');
     }
     if (!dto.email && !dto.phone) {
       throw new BadRequestException('Either email or phone is required');
     }
+    if (dto.managerId) await this.assertIsManager(dto.managerId);
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
     return this.prisma.user.create({
       data: {
@@ -25,9 +29,32 @@ export class UsersService {
         phone: dto.phone ?? null,
         passwordHash,
         locale: dto.locale ?? 'ar',
+        managerId: dto.managerId ?? null,
       },
       select: this.publicSelect(),
     });
+  }
+
+  // ADMIN-only manager assignment. null clears it. A non-null managerId must
+  // reference an existing SALES_MANAGER user.
+  async assignManager(id: string, managerId: string | null) {
+    await this.assertExists(id);
+    if (managerId) await this.assertIsManager(managerId);
+    return this.prisma.user.update({
+      where: { id },
+      data: { managerId: managerId ?? null },
+      select: this.publicSelect(),
+    });
+  }
+
+  private async assertIsManager(managerId: string) {
+    const mgr = await this.prisma.user.findUnique({
+      where: { id: managerId },
+      select: { role: true },
+    });
+    if (!mgr || mgr.role !== UserRole.SALES_MANAGER) {
+      throw new BadRequestException('managerId must reference a SALES_MANAGER user');
+    }
   }
 
   async findAll(role?: UserRole, page = 1, pageSize = 20, q?: string) {
@@ -104,6 +131,8 @@ export class UsersService {
       createdAt: true,
       updatedAt: true,
       lastLoginAt: true,
+      managerId: true,
+      manager: { select: { id: true, fullName: true } },
     } as const;
   }
 

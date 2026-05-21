@@ -2,6 +2,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Target, Plus, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getSession } from '@/lib/session';
 import { formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
@@ -21,6 +22,18 @@ interface SalesTarget {
   amountTarget: string | number;
   unitsTarget: number;
   sales?: { id: string; fullName: string };
+}
+interface PerformanceRow {
+  salesId: string;
+  period: string;
+  achievedAmount: number;
+  achievedUnits: number;
+  targetAmountPercent: number | null;
+  targetUnitsPercent: number | null;
+}
+
+function pctLabel(value: number | null): string {
+  return value === null ? '—' : `${value.toLocaleString('ar-EG')}%`;
 }
 
 function redirectBack(formData: FormData, err?: string): never {
@@ -52,6 +65,10 @@ export default async function TargetsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
+  // Creating/updating targets is an ADMIN action (targets:manage). SALES_MANAGER
+  // sees this page as a read-only team targets + achievement view.
+  const session = await getSession();
+  const isAdmin = session?.role === 'ADMIN';
   const listUrl = sp.salesId
     ? `/sales-targets?salesId=${encodeURIComponent(sp.salesId)}`
     : '/sales-targets';
@@ -61,20 +78,52 @@ export default async function TargetsPage({
     safe(api.get<{ data: SalesUser[] }>('/users?role=SALES&pageSize=200')),
   ]);
 
-  const targets = targetsRes.data ?? [];
+  // The /sales-targets endpoint scopes by salesId only; the month filter is
+  // applied in-memory (the target list per rep is small) to avoid a backend
+  // change in this polish batch.
+  const allTargets = targetsRes.data ?? [];
+  const targets = sp.period
+    ? allTargets.filter((t) => t.period === sp.period)
+    : allTargets;
   const salesUsers = salesRes.data?.data ?? [];
-  const returnTo = sp.salesId
-    ? `/dashboard/targets?salesId=${encodeURIComponent(sp.salesId)}`
-    : '/dashboard/targets';
+
+  // Fetch realized performance once per distinct period present in the list and
+  // index it by salesId|period. Failures degrade gracefully — the achieved
+  // columns fall back to "—". ADMIN may pass salesId; the endpoint self-scopes.
+  const distinctPeriods = [...new Set(targets.map((t) => t.period))];
+  const perfResults = await Promise.all(
+    distinctPeriods.map((p) =>
+      safe(
+        api.get<PerformanceRow[]>(
+          `/sales-targets/performance?period=${p}${
+            sp.salesId ? `&salesId=${encodeURIComponent(sp.salesId)}` : ''
+          }`,
+        ),
+      ),
+    ),
+  );
+  const perfMap = new Map<string, PerformanceRow>();
+  for (const r of perfResults) {
+    for (const row of r.data ?? []) perfMap.set(`${row.salesId}|${row.period}`, row);
+  }
+
+  const hasFilters = !!(sp.salesId || sp.period);
+  const returnTo = (() => {
+    const p = new URLSearchParams();
+    if (sp.salesId) p.set('salesId', sp.salesId);
+    if (sp.period) p.set('period', sp.period);
+    const qs = p.toString();
+    return `/dashboard/targets${qs ? `?${qs}` : ''}`;
+  })();
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="أهداف المبيعات"
-        description="تحديد أهداف المبيعات الشهرية لكل مندوب (قيمة المبيعات وعدد الوحدات). تُستخدم لاحقاً لقياس الأداء واحتساب التعويضات."
+        title="أهداف وأداء المبيعات"
+        description="أهداف المبيعات الشهرية لكل مندوب مقابل القيمة والوحدات المحقّقة. الإضافة والتحديث متاحان للمشرف فقط."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'أهداف المبيعات' },
+          { label: 'أهداف وأداء المبيعات' },
         ]}
       />
 
@@ -100,18 +149,23 @@ export default async function TargetsPage({
               ))}
             </Select>
           </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="period" className="text-[11px] font-medium text-slate-400">الشهر</label>
+            <Input id="period" name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40" />
+          </div>
           <div className="flex items-center gap-1.5">
             <Button type="submit" variant="primary" size="sm">تصفية</Button>
-            {sp.salesId && (
+            {hasFilters && (
               <a href="/dashboard/targets">
-                <Button type="button" variant="secondary" size="sm">إعادة تعيين</Button>
+                <Button type="button" variant="secondary" size="sm">مسح الفلاتر</Button>
               </a>
             )}
           </div>
         </div>
       </form>
 
-      {/* ── Create / update target ─────────────────────────────────────────── */}
+      {/* ── Create / update target (ADMIN only) ───────────────────────────── */}
+      {isAdmin && (
       <Card>
         <CardHeader className="px-5 py-3.5">
           <div className="flex items-center gap-2">
@@ -155,6 +209,7 @@ export default async function TargetsPage({
           </p>
         </CardBody>
       </Card>
+      )}
 
       {/* ── Targets table ──────────────────────────────────────────────────── */}
       <Card>
@@ -170,30 +225,51 @@ export default async function TargetsPage({
           ) : targets.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-12 text-center">
               <Target className="h-8 w-8 text-slate-200" />
-              <p className="text-sm text-slate-400">لا توجد أهداف مسجّلة</p>
+              <p className="text-sm text-slate-400">
+                {hasFilters ? 'لا توجد أهداف تطابق الفلاتر المختارة' : 'لا توجد أهداف مسجّلة'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[560px]">
+              {/* Achieved value/units come from GET /sales-targets/performance
+                  (signed contracts in the period). Cells fall back to "—" when
+                  performance data is unavailable for a row. */}
+              <table className="w-full text-sm min-w-[860px]">
                 <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
                   <tr>
                     <th className="px-4 py-2.5 text-right font-medium">المندوب</th>
                     <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الشهر</th>
                     <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">هدف القيمة</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المحقق (قيمة)</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">نسبة تحقيق القيمة</th>
                     <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">هدف الوحدات</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المحقق (وحدات)</th>
+                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">نسبة تحقيق الوحدات</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
-                  {targets.map((t) => (
-                    <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-2.5 font-medium text-slate-800">{t.sales?.fullName ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500 tabular-nums whitespace-nowrap">{t.period}</td>
-                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">{formatCurrency(t.amountTarget)}</td>
-                      <td className="px-4 py-2.5 text-slate-600 tabular-nums whitespace-nowrap">{t.unitsTarget.toLocaleString('ar-EG')}</td>
-                    </tr>
-                  ))}
+                  {targets.map((t) => {
+                    const perf = t.sales?.id
+                      ? perfMap.get(`${t.sales.id}|${t.period}`)
+                      : undefined;
+                    return (
+                      <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="px-4 py-2.5 font-medium text-slate-800">{t.sales?.fullName ?? '—'}</td>
+                        <td className="px-4 py-2.5 text-slate-500 tabular-nums whitespace-nowrap">{t.period}</td>
+                        <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">{formatCurrency(t.amountTarget)}</td>
+                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-700">{perf ? formatCurrency(perf.achievedAmount) : <span className="text-slate-300">—</span>}</td>
+                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-600">{perf ? pctLabel(perf.targetAmountPercent) : <span className="text-slate-300">—</span>}</td>
+                        <td className="px-4 py-2.5 text-slate-600 tabular-nums whitespace-nowrap">{t.unitsTarget.toLocaleString('ar-EG')}</td>
+                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-700">{perf ? perf.achievedUnits.toLocaleString('ar-EG') : <span className="text-slate-300">—</span>}</td>
+                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-600">{perf ? pctLabel(perf.targetUnitsPercent) : <span className="text-slate-300">—</span>}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              <p className="px-4 py-3 text-[11px] text-slate-400 border-t border-hairline">
+                القيم المحققة محسوبة من العقود الموقّعة خلال الشهر لكل مندوب.
+              </p>
             </div>
           )}
         </CardBody>

@@ -23,7 +23,7 @@ import {
 export class BrokerReservationsController {
   constructor(private readonly svc: BrokerReservationsService) {}
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_reservations:read')
   @Get()
   list(
@@ -45,7 +45,7 @@ export class BrokerReservationsController {
     return this.svc.createOnBehalfOfBroker(user, dto);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('broker_reservations:read')
   @Get(':id')
   findOne(

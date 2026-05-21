@@ -166,6 +166,7 @@ export class LeadsService {
     pageSize?: number;
     stage?: LeadStage;
     salesId?: string;
+    salesIds?: string[];
     q?: string;
     assignedToMe?: string;
     clientId?: string;
@@ -174,7 +175,11 @@ export class LeadsService {
     const pageSize = opts.pageSize ?? 20;
     const where: Prisma.LeadWhereInput = {
       ...(opts.stage ? { stage: opts.stage } : {}),
-      ...(opts.salesId ? { assignedSalesId: opts.salesId } : {}),
+      ...(opts.salesIds
+        ? { assignedSalesId: { in: opts.salesIds } }
+        : opts.salesId
+          ? { assignedSalesId: opts.salesId }
+          : {}),
       ...(opts.assignedToMe ? { assignedSalesId: opts.assignedToMe } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
       ...(opts.q

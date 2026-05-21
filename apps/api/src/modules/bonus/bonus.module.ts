@@ -5,6 +5,7 @@ import {
   Header,
   Injectable,
   Module,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -20,12 +21,22 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   Max,
   Min,
 } from 'class-validator';
-import { Prisma, BonusEntryStatus, UserRole } from '@prisma/client';
+import {
+  Prisma,
+  BonusEntryStatus,
+  BonusEntrySource,
+  UserRole,
+  LeadStage,
+  AppointmentStatus,
+  ReservationStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { toCsv } from '../../common/utils/csv';
+import { resolveSalesScope, teamSalesIds } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -35,6 +46,17 @@ class CreateRuleDto {
   @IsNumber() @Min(0) @Max(100) percentage!: number;
   @IsOptional() @IsObject() conditions?: Record<string, unknown>;
   @IsOptional() @IsBoolean() active?: boolean;
+  // Marks the rule as eligible for auto sales-commission generation on contract
+  // signing (consumed in Batch B). Defaults false.
+  @IsOptional() @IsBoolean() autoApplyOnSignedContract?: boolean;
+}
+
+// All fields optional — partial update/toggle of an existing rule.
+class UpdateRuleDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsNumber() @Min(0) @Max(100) percentage?: number;
+  @IsOptional() @IsBoolean() active?: boolean;
+  @IsOptional() @IsBoolean() autoApplyOnSignedContract?: boolean;
 }
 
 class CreateEntryDto {
@@ -61,8 +83,61 @@ class CreateTargetDto {
   @IsNumber() @Min(0) unitsTarget!: number;
 }
 
+// Read-only sales performance report. period is validated to YYYY-MM; salesId
+// is honoured for ADMIN only (SALES is self-scoped server-side).
+class PerformanceQueryDto {
+  @IsOptional()
+  @Matches(/^\d{4}-(0[1-9]|1[0-2])$/, { message: 'period must be YYYY-MM' })
+  period?: string;
+
+  @IsOptional() @IsUUID() salesId?: string;
+}
+
+export interface SalesPerformanceRow {
+  salesId: string;
+  salesName: string;
+  period: string;
+  leadsCount: number;
+  openLeadsCount: number;
+  visitsCount: number;
+  upcomingVisitsCount: number;
+  reservationsCount: number;
+  activeReservationsCount: number;
+  convertedReservationsCount: number;
+  signedContractsCount: number;
+  realizedValue: number;
+  targetAmount: number | null;
+  targetUnits: number | null;
+  achievedAmount: number;
+  achievedUnits: number;
+  targetAmountPercent: number | null;
+  targetUnitsPercent: number | null;
+}
+
+function currentPeriod(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function periodRange(period: string): { start: Date; end: Date } {
+  const parts = period.split('-');
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  return { start: new Date(Date.UTC(y, m - 1, 1)), end: new Date(Date.UTC(y, m, 1)) };
+}
+
+function pct(achieved: number, target: number | null): number | null {
+  if (target === null || target <= 0) return null;
+  return Math.round((achieved / target) * 100);
+}
+
+export interface SalesCommissionResult {
+  status: 'created' | 'already_exists' | 'skipped';
+  entryId?: string;
+  reason?: 'not_signed' | 'no_reservation' | 'no_sales' | 'no_rule' | 'ambiguous_rules';
+}
+
 @Injectable()
-class BonusService {
+export class BonusService {
   constructor(private readonly prisma: PrismaService) {}
 
   // Rules
@@ -70,14 +145,59 @@ class BonusService {
     return this.prisma.bonusRule.findMany({ orderBy: { createdAt: 'desc' } });
   }
   createRule(dto: CreateRuleDto) {
-    return this.prisma.bonusRule.create({
-      data: {
-        name: dto.name,
-        percentage: new Prisma.Decimal(dto.percentage),
-        conditions: (dto.conditions ?? {}) as Prisma.InputJsonValue,
-        active: dto.active ?? true,
-      },
+    const data = {
+      name: dto.name,
+      percentage: new Prisma.Decimal(dto.percentage),
+      conditions: (dto.conditions ?? {}) as Prisma.InputJsonValue,
+      active: dto.active ?? true,
+      autoApplyOnSignedContract: dto.autoApplyOnSignedContract ?? false,
+    };
+    // Single-auto invariant (mirrors updateRule): creating a rule with auto ON
+    // disables auto on every existing rule first, in one transaction. `active`
+    // stays independent; no rules are deleted.
+    if (data.autoApplyOnSignedContract === true) {
+      return this.prisma.$transaction(async (tx) => {
+        await tx.bonusRule.updateMany({
+          where: { autoApplyOnSignedContract: true },
+          data: { autoApplyOnSignedContract: false },
+        });
+        return tx.bonusRule.create({ data });
+      });
+    }
+    return this.prisma.bonusRule.create({ data });
+  }
+
+  /**
+   * Partial update / toggle of a rule. Enforces the single-auto invariant: when
+   * autoApplyOnSignedContract is being turned ON, every OTHER rule's flag is
+   * turned OFF in the same transaction (so generation never sees ambiguity).
+   * Turning it OFF only touches this rule. Never mutates BonusEntry rows.
+   */
+  async updateRule(id: string, dto: UpdateRuleDto) {
+    const existing = await this.prisma.bonusRule.findUnique({
+      where: { id },
+      select: { id: true },
     });
+    if (!existing) throw new NotFoundException('Bonus rule not found');
+
+    const data: Prisma.BonusRuleUpdateInput = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.percentage !== undefined) data.percentage = new Prisma.Decimal(dto.percentage);
+    if (dto.active !== undefined) data.active = dto.active;
+    if (dto.autoApplyOnSignedContract !== undefined) {
+      data.autoApplyOnSignedContract = dto.autoApplyOnSignedContract;
+    }
+
+    if (dto.autoApplyOnSignedContract === true) {
+      return this.prisma.$transaction(async (tx) => {
+        await tx.bonusRule.updateMany({
+          where: { id: { not: id }, autoApplyOnSignedContract: true },
+          data: { autoApplyOnSignedContract: false },
+        });
+        return tx.bonusRule.update({ where: { id }, data });
+      });
+    }
+    return this.prisma.bonusRule.update({ where: { id }, data });
   }
 
   // Entries
@@ -92,10 +212,95 @@ class BonusService {
     });
   }
 
-  listEntries(opts: { salesId?: string; status?: BonusEntryStatus; period?: string }) {
+  /**
+   * Generate the automatic sales commission for a signed contract — mirrors
+   * BrokerCommissionsService.materializeFromContract. Read-only/skip for every
+   * unsafe case (never guesses, never throws for normal skips), and idempotent:
+   * BonusEntry.contractId is unique, so at most one CONTRACT_AUTO entry exists
+   * per contract. Generated entries are always PENDING; existing entries
+   * (incl. APPROVED/PAID) are never mutated.
+   */
+  async materializeFromSignedContract(contractId: string): Promise<SalesCommissionResult> {
+    const contract = await this.prisma.contract.findUnique({
+      where: { id: contractId },
+      select: {
+        id: true,
+        signedAt: true,
+        totalAmount: true,
+        reservationId: true,
+        reservation: { select: { salesId: true } },
+        bonusEntry: { select: { id: true } },
+      },
+    });
+    if (!contract) return { status: 'skipped', reason: 'no_reservation' };
+
+    // Idempotent: an auto entry already exists for this contract.
+    if (contract.bonusEntry) {
+      return { status: 'already_exists', entryId: contract.bonusEntry.id };
+    }
+    if (!contract.signedAt) return { status: 'skipped', reason: 'not_signed' };
+    if (!contract.reservationId || !contract.reservation) {
+      return { status: 'skipped', reason: 'no_reservation' };
+    }
+    const salesId = contract.reservation.salesId;
+    if (!salesId) return { status: 'skipped', reason: 'no_sales' };
+
+    // Exactly one active auto-apply rule may drive generation. Never guess.
+    const rules = await this.prisma.bonusRule.findMany({
+      where: { active: true, autoApplyOnSignedContract: true },
+      select: { id: true, percentage: true },
+    });
+    if (rules.length === 0) return { status: 'skipped', reason: 'no_rule' };
+    if (rules.length > 1) return { status: 'skipped', reason: 'ambiguous_rules' };
+    const rule = rules[0]!;
+
+    const basisAmount = contract.totalAmount;
+    const amount = basisAmount.mul(rule.percentage).div(100);
+    const period = contract.signedAt.toISOString().slice(0, 7);
+
+    try {
+      const created = await this.prisma.bonusEntry.create({
+        data: {
+          salesId,
+          ruleId: rule.id,
+          amount,
+          period,
+          status: BonusEntryStatus.PENDING,
+          source: BonusEntrySource.CONTRACT_AUTO,
+          contractId: contract.id,
+          basisAmount,
+          commissionPct: rule.percentage,
+          paidAt: null,
+        },
+        select: { id: true },
+      });
+      return { status: 'created', entryId: created.id };
+    } catch (e) {
+      // Race: a parallel sign materialized the same contract first.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
+        const existing = await this.prisma.bonusEntry.findUnique({
+          where: { contractId: contract.id },
+          select: { id: true },
+        });
+        if (existing) return { status: 'already_exists', entryId: existing.id };
+      }
+      throw e;
+    }
+  }
+
+  listEntries(opts: {
+    salesId?: string;
+    salesIds?: string[];
+    status?: BonusEntryStatus;
+    period?: string;
+  }) {
     return this.prisma.bonusEntry.findMany({
       where: {
-        ...(opts.salesId ? { salesId: opts.salesId } : {}),
+        ...(opts.salesIds
+          ? { salesId: { in: opts.salesIds } }
+          : opts.salesId
+            ? { salesId: opts.salesId }
+            : {}),
         ...(opts.status ? { status: opts.status } : {}),
         ...(opts.period ? { period: opts.period } : {}),
       },
@@ -152,19 +357,201 @@ class BonusService {
     });
   }
 
-  listTargets(salesId?: string) {
+  listTargets(opts: { salesId?: string; salesIds?: string[] }) {
     return this.prisma.salesTarget.findMany({
-      where: salesId ? { salesId } : {},
+      where: opts.salesIds
+        ? { salesId: { in: opts.salesIds } }
+        : opts.salesId
+          ? { salesId: opts.salesId }
+          : {},
       orderBy: { period: 'desc' },
       include: { sales: { select: { id: true, fullName: true } } },
     });
+  }
+
+  // Read-only performance report. Aggregates existing CRM/sales data per rep for
+  // a single period — no schema change, no commission generation. ADMIN may
+  // target any rep (or all reps when salesId is omitted); SALES is always scoped
+  // to itself (the salesId query param is ignored for SALES).
+  async salesPerformance(opts: {
+    role: UserRole;
+    requesterId: string;
+    salesId?: string;
+    period?: string;
+  }): Promise<SalesPerformanceRow[]> {
+    const period = opts.period ?? currentPeriod();
+    const { start, end } = periodRange(period);
+    const now = new Date();
+
+    // Rep scoping by role:
+    //   ADMIN         → any salesId, or all SALES users when none is given.
+    //   SALES_MANAGER → all SALES users, or a single SALES user when a salesId
+    //                   is given. Never includes non-SALES users (ADMIN/BROKER/
+    //                   CUSTOMER/CLIENT/SALES_MANAGER), so a non-SALES salesId
+    //                   yields no rows.
+    //   SALES (+ any other role) → self only; salesId is ignored.
+    const salesUserIds = async (): Promise<string[]> => {
+      const reps = await this.prisma.user.findMany({
+        where: { role: UserRole.SALES },
+        select: { id: true },
+      });
+      return reps.map((r) => r.id);
+    };
+
+    let repIds: string[];
+    if (opts.role === UserRole.ADMIN) {
+      repIds = opts.salesId ? [opts.salesId] : await salesUserIds();
+    } else if (opts.role === UserRole.SALES_MANAGER) {
+      // Team scope: only SALES reps whose managerId is this manager. An empty
+      // team yields no rows (never an all-sales fallback).
+      const team = await teamSalesIds(this.prisma, opts.requesterId);
+      repIds = opts.salesId ? (team.includes(opts.salesId) ? [opts.salesId] : []) : team;
+    } else {
+      repIds = [opts.requesterId];
+    }
+    if (repIds.length === 0) return [];
+
+    const inReps = { in: repIds };
+    const inPeriod = { gte: start, lt: end };
+
+    const [
+      users,
+      targets,
+      leadsPeriod,
+      openLeads,
+      visitsPeriod,
+      upcomingVisits,
+      reservationsPeriod,
+      activeReservations,
+      convertedReservations,
+      signedContracts,
+    ] = await Promise.all([
+      this.prisma.user.findMany({ where: { id: inReps }, select: { id: true, fullName: true } }),
+      this.prisma.salesTarget.findMany({ where: { salesId: inReps, period } }),
+      this.prisma.lead.groupBy({
+        by: ['assignedSalesId'],
+        where: { assignedSalesId: inReps, createdAt: inPeriod },
+        _count: { _all: true },
+      }),
+      this.prisma.lead.groupBy({
+        by: ['assignedSalesId'],
+        where: { assignedSalesId: inReps, stage: { notIn: [LeadStage.WON, LeadStage.LOST] } },
+        _count: { _all: true },
+      }),
+      this.prisma.visitAppointment.groupBy({
+        by: ['assignedSalesId'],
+        where: { assignedSalesId: inReps, scheduledAt: inPeriod },
+        _count: { _all: true },
+      }),
+      this.prisma.visitAppointment.groupBy({
+        by: ['assignedSalesId'],
+        where: {
+          assignedSalesId: inReps,
+          scheduledAt: { gte: now },
+          status: { in: [AppointmentStatus.SCHEDULED, AppointmentStatus.CONFIRMED] },
+        },
+        _count: { _all: true },
+      }),
+      this.prisma.reservation.groupBy({
+        by: ['salesId'],
+        where: { salesId: inReps, createdAt: inPeriod },
+        _count: { _all: true },
+      }),
+      this.prisma.reservation.groupBy({
+        by: ['salesId'],
+        where: { salesId: inReps, status: { in: [ReservationStatus.PENDING, ReservationStatus.APPROVED] } },
+        _count: { _all: true },
+      }),
+      this.prisma.reservation.groupBy({
+        by: ['salesId'],
+        where: { salesId: inReps, status: ReservationStatus.CONVERTED, convertedAt: inPeriod },
+        _count: { _all: true },
+      }),
+      // Contract has no direct salesId — attribute via its reservation. Signed
+      // contracts in the period give the realized value/units (primary signal);
+      // convertedReservationsCount is kept as a documented cross-check/fallback.
+      this.prisma.contract.findMany({
+        where: { signedAt: inPeriod, reservation: { salesId: inReps } },
+        select: { totalAmount: true, reservation: { select: { salesId: true } } },
+      }),
+    ]);
+
+    type Grouped<K extends string> = Array<Record<K, string | null> & { _count: { _all: number } }>;
+    const countMap = <K extends string>(rows: Grouped<K>, key: K): Map<string, number> => {
+      const m = new Map<string, number>();
+      for (const row of rows) {
+        const id = row[key];
+        if (id) m.set(id, row._count._all);
+      }
+      return m;
+    };
+
+    const leadsMap = countMap(leadsPeriod as Grouped<'assignedSalesId'>, 'assignedSalesId');
+    const openLeadsMap = countMap(openLeads as Grouped<'assignedSalesId'>, 'assignedSalesId');
+    const visitsMap = countMap(visitsPeriod as Grouped<'assignedSalesId'>, 'assignedSalesId');
+    const upcomingMap = countMap(upcomingVisits as Grouped<'assignedSalesId'>, 'assignedSalesId');
+    const resMap = countMap(reservationsPeriod as Grouped<'salesId'>, 'salesId');
+    const activeResMap = countMap(activeReservations as Grouped<'salesId'>, 'salesId');
+    const convertedMap = countMap(convertedReservations as Grouped<'salesId'>, 'salesId');
+
+    const signedCountMap = new Map<string, number>();
+    const realizedMap = new Map<string, number>();
+    for (const c of signedContracts as Array<{
+      totalAmount: Prisma.Decimal;
+      reservation: { salesId: string } | null;
+    }>) {
+      const sid = c.reservation?.salesId;
+      if (!sid) continue;
+      signedCountMap.set(sid, (signedCountMap.get(sid) ?? 0) + 1);
+      realizedMap.set(sid, (realizedMap.get(sid) ?? 0) + Number(c.totalAmount));
+    }
+
+    const targetMap = new Map<string, { amount: number; units: number }>();
+    for (const t of targets as Array<{ salesId: string; amountTarget: Prisma.Decimal; unitsTarget: number }>) {
+      targetMap.set(t.salesId, { amount: Number(t.amountTarget), units: t.unitsTarget });
+    }
+    const nameMap = new Map<string, string>();
+    for (const u of users) nameMap.set(u.id, u.fullName);
+
+    return repIds
+      .map((id): SalesPerformanceRow => {
+        const target = targetMap.get(id) ?? null;
+        const realizedValue = realizedMap.get(id) ?? 0;
+        const signedContractsCount = signedCountMap.get(id) ?? 0;
+        const targetAmount = target ? target.amount : null;
+        const targetUnits = target ? target.units : null;
+        return {
+          salesId: id,
+          salesName: nameMap.get(id) ?? '—',
+          period,
+          leadsCount: leadsMap.get(id) ?? 0,
+          openLeadsCount: openLeadsMap.get(id) ?? 0,
+          visitsCount: visitsMap.get(id) ?? 0,
+          upcomingVisitsCount: upcomingMap.get(id) ?? 0,
+          reservationsCount: resMap.get(id) ?? 0,
+          activeReservationsCount: activeResMap.get(id) ?? 0,
+          convertedReservationsCount: convertedMap.get(id) ?? 0,
+          signedContractsCount,
+          realizedValue,
+          targetAmount,
+          targetUnits,
+          achievedAmount: realizedValue,
+          achievedUnits: signedContractsCount,
+          targetAmountPercent: pct(realizedValue, targetAmount),
+          targetUnitsPercent: pct(signedContractsCount, targetUnits),
+        };
+      })
+      .sort((a, b) => a.salesName.localeCompare(b.salesName, 'ar'));
   }
 }
 
 @ApiTags('bonus')
 @Controller()
 class BonusController {
-  constructor(private readonly svc: BonusService) {}
+  constructor(
+    private readonly svc: BonusService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   // Rules
   @Roles(UserRole.ADMIN)
@@ -181,6 +568,13 @@ class BonusController {
     return this.svc.createRule(dto);
   }
 
+  @Roles(UserRole.ADMIN)
+  @Permissions('bonus:rules:manage')
+  @Patch('bonus-rules/:id')
+  updateRule(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateRuleDto) {
+    return this.svc.updateRule(id, dto);
+  }
+
   // Entries
   @Roles(UserRole.ADMIN)
   @Permissions('bonus:entries:create')
@@ -189,17 +583,17 @@ class BonusController {
     return this.svc.createEntry(dto);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('bonus:entries:read')
   @Get('bonus-entries')
-  listEntries(
+  async listEntries(
     @CurrentUser() user: AuthUser,
     @Query('salesId') salesId?: string,
     @Query('status') status?: BonusEntryStatus,
     @Query('period') period?: string,
   ) {
-    const effectiveSalesId = user.role === UserRole.SALES ? user.sub : salesId;
-    return this.svc.listEntries({ salesId: effectiveSalesId, status, period });
+    const scope = await resolveSalesScope(this.prisma, user, salesId);
+    return this.svc.listEntries({ ...scope, status, period });
   }
 
   // CSV export mirrors the list read permission. ADMIN-only — this is the
@@ -251,17 +645,32 @@ class BonusController {
     return this.svc.upsertTarget(dto);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('targets:read')
   @Get('sales-targets')
-  listTargets(@CurrentUser() user: AuthUser, @Query('salesId') salesId?: string) {
-    const effective = user.role === UserRole.SALES ? user.sub : salesId;
-    return this.svc.listTargets(effective);
+  async listTargets(@CurrentUser() user: AuthUser, @Query('salesId') salesId?: string) {
+    const scope = await resolveSalesScope(this.prisma, user, salesId);
+    return this.svc.listTargets(scope);
+  }
+
+  // Read-only target-achievement / performance report. Reuses targets:read so
+  // both ADMIN and SALES reach it; SALES is self-scoped in the service.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('targets:read')
+  @Get('sales-targets/performance')
+  salesPerformance(@CurrentUser() user: AuthUser, @Query() query: PerformanceQueryDto) {
+    return this.svc.salesPerformance({
+      role: user.role,
+      requesterId: user.sub,
+      salesId: query.salesId,
+      period: query.period,
+    });
   }
 }
 
 @Module({
   controllers: [BonusController],
   providers: [BonusService],
+  exports: [BonusService],
 })
 export class BonusModule {}

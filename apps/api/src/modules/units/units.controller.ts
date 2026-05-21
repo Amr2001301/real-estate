@@ -44,7 +44,7 @@ export class UnitsController {
 
   // Sales installment calculator (Sales-only feature per scope) — reads
   // unit pricing context, so gated under `units:read`.
-  @Roles(UserRole.SALES, UserRole.ADMIN)
+  @Roles(UserRole.SALES, UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('units:read')
   @Post('units/calc-installment')
   calc(@Body() dto: CalcInstallmentDto) {
@@ -52,14 +52,14 @@ export class UnitsController {
   }
 
   // Admin/Sales
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('units:read')
   @Get('units')
   list(@Query() query: UnitQueryDto) {
     return this.units.findAll(query);
   }
 
-  @Roles(UserRole.ADMIN, UserRole.SALES)
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('units:read')
   @Get('units/:id')
   get(@Param('id', ParseUUIDPipe) id: string) {

@@ -10,7 +10,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UsersService } from './users.service';
-import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
+import { AssignManagerDto, CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -64,6 +64,14 @@ export class UsersController {
   @Patch(':id')
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
     return this.users.update(id, dto);
+  }
+
+  // ADMIN-only team assignment. SALES_MANAGER cannot assign their own team yet.
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:update')
+  @Patch(':id/manager')
+  assignManager(@Param('id', ParseUUIDPipe) id: string, @Body() dto: AssignManagerDto) {
+    return this.users.assignManager(id, dto.managerId ?? null);
   }
 
   @Roles(UserRole.ADMIN)
