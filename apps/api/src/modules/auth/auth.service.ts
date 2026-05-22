@@ -37,6 +37,7 @@ export class AuthService {
       user.role !== 'ADMIN' &&
       user.role !== 'SALES' &&
       user.role !== 'SALES_MANAGER' &&
+      user.role !== 'MAINTENANCE_SUPERVISOR' &&
       user.role !== 'BROKER'
     ) {
       throw new ForbiddenException('Email login is for staff and brokers only');

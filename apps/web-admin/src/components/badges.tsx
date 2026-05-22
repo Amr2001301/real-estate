@@ -8,6 +8,9 @@ import type {
   ReservationStatus,
   ReservationBookingPaymentStatus,
   MaintenanceStatus,
+  MaintenancePriority,
+  MaintenanceReviewStatus,
+  WarrantyStatus,
   PlanTemplateStatus,
   BrokerStatus,
   BrokerUserStatus,
@@ -85,6 +88,37 @@ const MAINT: Record<MaintenanceStatus, { c: string; l: string }> = {
 };
 export function MaintenanceStatusBadge({ status }: { status: MaintenanceStatus }) {
   const x = MAINT[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const MAINT_PRIORITY: Record<MaintenancePriority, { c: string; l: string }> = {
+  LOW: { c: 'bg-gray-100 text-gray-600', l: 'منخفضة' },
+  MEDIUM: { c: 'bg-blue-100 text-blue-700', l: 'متوسطة' },
+  HIGH: { c: 'bg-amber-100 text-amber-700', l: 'عالية' },
+  URGENT: { c: 'bg-red-100 text-red-700', l: 'عاجلة' },
+};
+export function MaintenancePriorityBadge({ priority }: { priority: MaintenancePriority }) {
+  const x = MAINT_PRIORITY[priority];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const MAINT_REVIEW: Record<MaintenanceReviewStatus, { c: string; l: string }> = {
+  PENDING: { c: 'bg-amber-100 text-amber-700', l: 'قيد المراجعة' },
+  APPROVED: { c: 'bg-green-100 text-green-700', l: 'معتمد' },
+  REJECTED: { c: 'bg-red-100 text-red-700', l: 'مرفوض' },
+};
+export function MaintenanceReviewStatusBadge({ status }: { status: MaintenanceReviewStatus }) {
+  const x = MAINT_REVIEW[status];
+  return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
+}
+
+const WARRANTY: Record<WarrantyStatus, { c: string; l: string }> = {
+  IN_WARRANTY: { c: 'bg-green-100 text-green-700', l: 'تحت الضمان' },
+  OUT_OF_WARRANTY: { c: 'bg-red-100 text-red-700', l: 'خارج الضمان' },
+  UNKNOWN: { c: 'bg-gray-100 text-gray-600', l: 'غير معروف' },
+};
+export function WarrantyStatusBadge({ status }: { status: WarrantyStatus }) {
+  const x = WARRANTY[status];
   return <span className={`${PILL} ${x.c}`}>{x.l}</span>;
 }
 

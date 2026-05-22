@@ -72,6 +72,7 @@ function landingPathForUser(req: NextRequest): string {
   try {
     const parsed = JSON.parse(raw) as { role?: unknown };
     if (parsed && parsed.role === 'BROKER') return '/portal';
+    if (parsed && parsed.role === 'MAINTENANCE_SUPERVISOR') return '/maintenance-app';
   } catch {
     // fall through
   }

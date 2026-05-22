@@ -74,6 +74,9 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
  *   4. BROKER may only land in /portal; everyone else may only land in /dashboard
  */
 function safeFromForRole(from: string, role: string): string {
+  // Maintenance supervisors are mobile-only — never honor a /dashboard `from`.
+  if (role === 'MAINTENANCE_SUPERVISOR') return '/maintenance-app';
+
   const fallback = role === 'BROKER' ? '/portal' : '/dashboard';
 
   if (!from || from.length > 2048) return fallback;

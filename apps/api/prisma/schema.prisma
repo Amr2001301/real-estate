@@ -21,6 +21,7 @@ enum UserRole {
   CUSTOMER
   BROKER
   SALES_MANAGER
+  MAINTENANCE_SUPERVISOR
 }
 
 enum Locale {
@@ -269,6 +270,7 @@ model Unit {
   infoRequests        InfoRequest[]
   favorites           Favorite[]
   maintenanceRequests MaintenanceRequest[]
+  maintenanceItems    UnitMaintenanceItem[]
   appointments        VisitAppointment[]
   leadsInterested     Lead[]                    @relation("LeadUnitInterest")
   planTemplates       InstallmentPlanTemplate[] @relation("UnitPlanTemplates")
@@ -1017,13 +1019,80 @@ enum MaintenanceStatus {
   CLOSED
 }
 
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Warranty verdict, snapshotted onto a MaintenanceRequest at creation (request
+// integration lands in a later batch). On UnitMaintenanceItem it is computed
+// for display only and never persisted.
+enum WarrantyStatus {
+  IN_WARRANTY
+  OUT_OF_WARRANTY
+  UNKNOWN
+}
+
+// Admin review gate for a maintenance request. The SLA timer (dueAt) only
+// starts once a request is APPROVED. Existing rows default to APPROVED.
+enum MaintenanceReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model MaintenanceCategory {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String              @id @default(uuid()) @db.Uuid
+  // Normalized slug for duplicate prevention (e.g. "plumbing"). Nullable so
+  // existing rows are unaffected; new rows always get a code (unique).
+  code      String?             @unique
   name      Json // Translatable
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
+  active    Boolean             @default(true)
+  priority  MaintenancePriority @default(MEDIUM)
+  // Handling SLA: target resolution window in minutes (admin enters hours/days;
+  // stored as minutes). Nullable — a category may have no SLA.
+  slaDurationMinutes Int?
+  // Warranty duration in months (admin enters months/years; stored as months).
+  // Used to compute a unit item's warrantyEnd when a contract is signed.
+  warrantyDurationMonths Int?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt @default(now())
 
   requests MaintenanceRequest[]
+  maintenanceItems UnitMaintenanceItem[]
+  requestItems MaintenanceRequestItem[]
+}
+
+// A maintainable component of a unit (AC, plumbing, doors, ...) with an
+// optional warranty window and supplier/contractor attribution. Items hang off
+// the unit (not Unit.type). Soft-deactivated via `active`; never hard-deleted.
+model UnitMaintenanceItem {
+  id             String               @id @default(uuid()) @db.Uuid
+  unitId         String               @db.Uuid
+  unit           Unit                 @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  categoryId     String?              @db.Uuid
+  category       MaintenanceCategory? @relation(fields: [categoryId], references: [id])
+  name           Json // Translatable
+  warrantyStart  DateTime?
+  warrantyEnd    DateTime?
+  // The category warranty duration (months) frozen at contract-signing time, so
+  // later category edits never change an already-started warranty.
+  warrantyDurationMonthsSnapshot Int?
+  supplierName   String?
+  contractorName String?
+  notes          String?
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  requests     MaintenanceRequest[]
+  requestItems MaintenanceRequestItem[]
+
+  @@index([unitId])
+  @@index([categoryId])
+  @@index([active])
 }
 
 model MaintenanceRequest {
@@ -1036,13 +1105,57 @@ model MaintenanceRequest {
   category        MaintenanceCategory @relation(fields: [categoryId], references: [id])
   description     String
   status          MaintenanceStatus   @default(OPEN)
+  // Snapshot of the category's priority + computed due date at creation time,
+  // so later category edits don't retroactively change existing requests.
+  priority        MaintenancePriority?
+  dueAt           DateTime?
   assignedAdminId String?             @db.Uuid
   assignedAdmin   User?               @relation("MaintenanceAdmin", fields: [assignedAdminId], references: [id])
+  // Optional link to a maintainable item + warranty snapshot. All nullable;
+  // populated when request↔item integration lands in a later batch.
+  itemId              String?              @db.Uuid
+  item                UnitMaintenanceItem? @relation(fields: [itemId], references: [id])
+  warrantyStatus      WarrantyStatus?
+  warrantyEndSnapshot DateTime?
+  // Approval gate: the SLA timer (dueAt) only starts after APPROVED. Existing
+  // rows default to APPROVED; customer-created requests start PENDING.
+  reviewStatus                MaintenanceReviewStatus @default(APPROVED)
+  approvedAt                  DateTime?
+  rejectedAt                  DateTime?
+  // Max handling SLA (minutes) across the request's selected categories,
+  // snapshotted at approval; dueAt = approvedAt + this.
+  maxHandlingSlaMinutesSnapshot Int?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
+  items MaintenanceRequestItem[]
+
   @@index([customerId])
   @@index([status])
+  @@index([itemId])
+  @@index([reviewStatus])
+}
+
+// One selected category/component on a maintenance request. Snapshots the
+// category priority + handling SLA + the linked unit item's warranty at
+// creation, so later category/item edits never change an existing request.
+model MaintenanceRequestItem {
+  id                       String              @id @default(uuid()) @db.Uuid
+  requestId                String              @db.Uuid
+  request                  MaintenanceRequest  @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  itemId                   String?             @db.Uuid
+  item                     UnitMaintenanceItem? @relation(fields: [itemId], references: [id])
+  categoryId               String              @db.Uuid
+  category                 MaintenanceCategory @relation(fields: [categoryId], references: [id])
+  categoryPrioritySnapshot MaintenancePriority
+  handlingSlaMinutesSnapshot Int?
+  warrantyStatusSnapshot   WarrantyStatus      @default(UNKNOWN)
+  warrantyEndSnapshot      DateTime?
+  createdAt                DateTime            @default(now())
+
+  @@index([requestId])
+  @@index([categoryId])
+  @@index([itemId])
 }
 
 // =============================================================================
@@ -1425,6 +1538,7 @@ enum DocumentOwnerType {
   BROKER_COMMISSION
   BROKER_PAYOUT
   USER
+  MAINTENANCE_REQUEST
   OTHER
 }
 

@@ -12,7 +12,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getPermissionLabel } from '@/lib/permission-error';
+import {
+  getPermissionMeta,
+  PERMISSION_CATEGORIES,
+  PERMISSION_TYPE_CLS,
+  type PermissionType,
+} from '@/lib/permission-labels';
 import { cn } from '@/lib/cn';
 import { applyUserPermissions } from './actions';
 
@@ -29,51 +34,17 @@ interface Props {
   available: PermissionItem[];
 }
 
-/** Module label per code prefix (first `:`-segment). Unknown → "أخرى". */
-const MODULE_LABELS: Record<string, string> = {
-  reservations: 'الحجوزات',
-  contracts: 'العقود',
-  deposits: 'الدفعات',
-  installments: 'خطط التقسيط',
-  leads: 'فرص المبيعات',
-  lead_sources: 'مصادر الفرص',
-  visits: 'الزيارات',
-  projects: 'المشاريع',
-  units: 'الوحدات',
-  maintenance: 'الصيانة',
-  bonus: 'المكافآت',
-  targets: 'الأهداف',
-  brokers: 'الوسطاء',
-  broker_users: 'موظفو الوسطاء',
-  broker_access: 'صلاحيات وصول الوسطاء',
-  broker_leads: 'فرص الوسطاء',
-  broker_contracts: 'عقود الوسطاء',
-  broker_reservations: 'حجوزات الوسطاء',
-  broker_commissions: 'عمولات الوسطاء',
-  broker_payouts: 'مدفوعات الوسطاء',
-  broker_reports: 'تقارير الوسطاء',
-  reports: 'التقارير',
-  users: 'المستخدمون',
-  permissions: 'الصلاحيات',
-  settings: 'الإعدادات',
-  audit: 'سجل التدقيق',
-  'audit-logs': 'سجل التدقيق',
-  cms: 'المحتوى',
-  documents: 'المستندات',
-  notifications: 'الإشعارات',
-};
-
-function moduleKey(code: string): string {
-  return code.split(':')[0] ?? code;
-}
-function moduleLabel(code: string): string {
-  return MODULE_LABELS[moduleKey(code)] ?? 'أخرى';
-}
+// Display order index for category sections.
+const CATEGORY_ORDER = new Map<string, number>(
+  PERMISSION_CATEGORIES.map((c, i) => [c, i]),
+);
 
 interface Row extends PermissionItem {
   assigned: boolean;
   label: string;
+  desc: string;
   group: string;
+  type: PermissionType;
 }
 
 export function PermissionPicker({ userId, userName, assigned, available }: Props) {
@@ -89,12 +60,18 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
     const rows: Row[] = [
       ...assigned.map((p) => ({ ...p, assigned: true })),
       ...available.map((p) => ({ ...p, assigned: false })),
-    ].map((p) => ({
-      ...p,
-      label: getPermissionLabel(p.code),
-      group: moduleLabel(p.code),
-    }));
-    return rows.sort((a, b) => a.code.localeCompare(b.code));
+    ].map((p) => {
+      const meta = getPermissionMeta(p.code, p.description);
+      return {
+        ...p,
+        assigned: p.assigned,
+        label: meta.label,
+        desc: meta.description,
+        group: meta.category,
+        type: meta.type,
+      };
+    });
+    return rows.sort((a, b) => a.label.localeCompare(b.label, 'ar'));
   }, [assigned, available]);
 
   const assignedCount = assigned.length;
@@ -106,13 +83,13 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
     return allRows.filter(
       (r) =>
         r.code.toLowerCase().includes(q) ||
-        (r.description ?? '').toLowerCase().includes(q) ||
+        r.desc.toLowerCase().includes(q) ||
         r.label.toLowerCase().includes(q) ||
         r.group.toLowerCase().includes(q),
     );
   }, [allRows, query]);
 
-  // Group filtered rows by module label.
+  // Group filtered rows by business category, in the canonical display order.
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
     for (const r of filtered) {
@@ -120,7 +97,9 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
       list.push(r);
       map.set(r.group, list);
     }
-    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ar'));
+    return [...map.entries()].sort(
+      (a, b) => (CATEGORY_ORDER.get(a[0]) ?? 99) - (CATEGORY_ORDER.get(b[0]) ?? 99),
+    );
   }, [filtered]);
 
   function run(add: string[], remove: string[], busy: string | null) {
@@ -180,7 +159,7 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
             inputSize="sm"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="ابحث بالرمز أو الوصف..."
+            placeholder="ابحث بالاسم أو الوصف أو القسم أو الرمز..."
             leftAddon={<Search />}
           />
         </div>
@@ -223,53 +202,50 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
                 </span>
               </div>
               <ul className="divide-y divide-hairline">
-                {rows.map((row) => {
-                  const hasLabel = row.label !== row.code;
-                  return (
-                    <li key={row.id}>
-                      <label
-                        className={cn(
-                          'flex items-start gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-surface-muted/40',
-                          row.assigned && 'bg-brand-50/30',
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-0.5 h-4 w-4 rounded-md border-hairline text-brand-600 focus:ring-2 focus:ring-brand-600/30 disabled:opacity-50"
-                          checked={row.assigned}
-                          disabled={pending}
-                          onChange={() => toggle(row)}
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {hasLabel && (
-                              <span className="text-sm font-medium text-slate-800">
-                                {row.label}
-                              </span>
+                {rows.map((row) => (
+                  <li key={row.id}>
+                    <label
+                      className={cn(
+                        'flex items-start gap-3 px-4 py-2.5 cursor-pointer transition-colors hover:bg-surface-muted/40',
+                        row.assigned && 'bg-brand-50/30',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 rounded-md border-hairline text-brand-600 focus:ring-2 focus:ring-brand-600/30 disabled:opacity-50"
+                        checked={row.assigned}
+                        disabled={pending}
+                        onChange={() => toggle(row)}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium text-slate-800">{row.label}</span>
+                          <span
+                            className={cn(
+                              'inline-block px-2 py-0.5 rounded-full text-[10px] font-medium leading-tight',
+                              PERMISSION_TYPE_CLS[row.type],
                             )}
-                            <span className="font-mono text-2xs text-slate-500" dir="ltr">
-                              {row.code}
-                            </span>
-                            {busyCode === row.code && (
-                              <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
-                            )}
-                            {row.assigned && busyCode !== row.code && (
-                              <Badge tone="success" variant="soft" size="sm">
-                                ممنوحة
-                              </Badge>
-                            )}
-                          </div>
-                          {row.description && (
-                            <p className="text-2xs text-slate-500 mt-0.5">{row.description}</p>
+                          >
+                            {row.type}
+                          </span>
+                          {busyCode === row.code && (
+                            <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
+                          )}
+                          {row.assigned && busyCode !== row.code && (
+                            <Badge tone="success" variant="soft" size="sm">
+                              ممنوحة
+                            </Badge>
                           )}
                         </div>
-                        {row.assigned && (
-                          <CheckCircle2 className="h-4 w-4 text-success-500 shrink-0 mt-0.5" />
-                        )}
-                      </label>
-                    </li>
-                  );
-                })}
+                        <p className="text-2xs text-slate-500 mt-0.5">{row.desc}</p>
+                        <p className="font-mono text-2xs text-slate-400 mt-1" dir="ltr">{row.code}</p>
+                      </div>
+                      {row.assigned && (
+                        <CheckCircle2 className="h-4 w-4 text-success-500 shrink-0 mt-0.5" />
+                      )}
+                    </label>
+                  </li>
+                ))}
               </ul>
             </div>
           ))

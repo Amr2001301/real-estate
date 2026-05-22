@@ -265,6 +265,7 @@ class ContractsService {
         id: true,
         contractNumber: true,
         signedAt: true,
+        unitId: true,
         brokerId: true,
         brokerAgentId: true,
         reservationId: true,
@@ -289,6 +290,14 @@ class ContractsService {
       where: { id },
       data: { signedAt: signedAtDate },
     });
+
+    // Start warranties for the unit's selected maintenance items. Best-effort:
+    // a failure here must never fail the sign. Idempotent — only items with no
+    // warrantyStart yet are touched, and the per-item duration is snapshotted so
+    // later category edits never change an already-started warranty.
+    await this.startUnitWarranties(before.unitId, signedAtDate).catch((e) =>
+      this.logger.warn(`startUnitWarranties(${id}) failed on sign: ${(e as Error).message}`),
+    );
 
     if (before.brokerId) {
       // Broker portal activity timeline. Best-effort: failures are logged
@@ -364,6 +373,40 @@ class ContractsService {
     }
 
     return updated;
+  }
+
+  /**
+   * Start warranties for a sold unit's active maintenance items. For each item
+   * that has not yet started (warrantyStart == null), freeze the warranty
+   * duration (item snapshot if present, else the category's current duration)
+   * and set warrantyStart = signedAt, warrantyEnd = signedAt + duration months.
+   * Idempotent: items already started are left untouched, so a re-sign (or a
+   * later category-duration change) never mutates an existing warranty.
+   */
+  private async startUnitWarranties(unitId: string, signedAt: Date) {
+    const items = await this.prisma.unitMaintenanceItem.findMany({
+      where: { unitId, active: true, warrantyStart: null },
+      include: { category: { select: { warrantyDurationMonths: true } } },
+    });
+    for (const item of items) {
+      const months = item.warrantyDurationMonthsSnapshot ?? item.category?.warrantyDurationMonths ?? null;
+      const warrantyEnd =
+        months != null
+          ? (() => {
+              const d = new Date(signedAt);
+              d.setMonth(d.getMonth() + months);
+              return d;
+            })()
+          : null;
+      await this.prisma.unitMaintenanceItem.update({
+        where: { id: item.id },
+        data: {
+          warrantyStart: signedAt,
+          warrantyEnd,
+          warrantyDurationMonthsSnapshot: months,
+        },
+      });
+    }
   }
 }
 

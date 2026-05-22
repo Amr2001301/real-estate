@@ -11,7 +11,10 @@ export class UsersService {
 
   async create(dto: CreateUserDto) {
     if (
-      (dto.role === 'ADMIN' || dto.role === 'SALES' || dto.role === 'SALES_MANAGER') &&
+      (dto.role === 'ADMIN' ||
+        dto.role === 'SALES' ||
+        dto.role === 'SALES_MANAGER' ||
+        dto.role === 'MAINTENANCE_SUPERVISOR') &&
       !dto.password
     ) {
       throw new BadRequestException('Password required for staff roles');

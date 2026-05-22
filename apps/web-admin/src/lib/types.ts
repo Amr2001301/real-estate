@@ -27,7 +27,7 @@ export type VisitActivityType =
 export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED' | 'CONVERTED';
 export type ReservationBookingPaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'WAIVED';
 export type MaintenanceStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';
-export type UserRole = 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'CLIENT' | 'CUSTOMER' | 'BROKER';
+export type UserRole = 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'CLIENT' | 'CUSTOMER' | 'BROKER' | 'MAINTENANCE_SUPERVISOR';
 export type MediaType = 'IMAGE' | 'VIDEO' | 'FLOORPLAN' | 'DOCUMENT';
 export type BrokerStatus = 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'TERMINATED';
 export type BrokerUserStatus = 'INVITED' | 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
@@ -518,6 +518,51 @@ export interface ReservationActivity {
   createdAt: string;
 }
 
+export type MaintenancePriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+export type MaintenanceReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface MaintenanceCategory {
+  id: string;
+  code: string | null;
+  name: Translatable;
+  active: boolean;
+  priority: MaintenancePriority;
+  slaDurationMinutes: number | null;
+  warrantyDurationMonths: number | null;
+}
+
+export type WarrantyStatus = 'IN_WARRANTY' | 'OUT_OF_WARRANTY' | 'UNKNOWN';
+
+export interface UnitMaintenanceItem {
+  id: string;
+  unitId: string;
+  categoryId: string | null;
+  category: { id: string; code: string | null; name: Translatable; active: boolean } | null;
+  name: Translatable;
+  warrantyStart: string | null;
+  warrantyEnd: string | null;
+  // Display-only verdict computed by the API from warrantyEnd.
+  warrantyStatus: WarrantyStatus;
+  supplierName: string | null;
+  contractorName: string | null;
+  notes: string | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MaintenanceRequestItem {
+  id: string;
+  itemId: string | null;
+  categoryId: string;
+  category?: { id: string; name: Translatable };
+  categoryPrioritySnapshot: MaintenancePriority;
+  handlingSlaMinutesSnapshot: number | null;
+  warrantyStatusSnapshot: WarrantyStatus;
+  warrantyEndSnapshot: string | null;
+}
+
 export interface MaintenanceRequest {
   id: string;
   customerId: string;
@@ -528,8 +573,15 @@ export interface MaintenanceRequest {
   category?: { id: string; name: Translatable };
   description: string;
   status: MaintenanceStatus;
+  reviewStatus: MaintenanceReviewStatus;
+  priority: MaintenancePriority | null;
+  dueAt: string | null;
+  approvedAt: string | null;
+  rejectedAt: string | null;
+  maxHandlingSlaMinutesSnapshot: number | null;
   assignedAdminId: string | null;
   createdAt: string;
+  items?: MaintenanceRequestItem[];
 }
 
 export interface User {
@@ -1478,6 +1530,7 @@ export type DocumentOwnerType =
   | 'BROKER_COMMISSION'
   | 'BROKER_PAYOUT'
   | 'USER'
+  | 'MAINTENANCE_REQUEST'
   | 'OTHER';
 
 export type DocumentCategory =

@@ -161,7 +161,7 @@ const DOCUMENT_INCLUDE = {
 // ── Service ───────────────────────────────────────────────────────────────
 
 @Injectable()
-class DocumentsService {
+export class DocumentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
@@ -313,9 +313,14 @@ class DocumentsService {
    * recent non-deleted documents for the given owner. ADMIN-only at the
    * controller — for portal/broker access, see Phase 17 §E note.
    */
-  async listForOwner(ownerType: DocumentOwnerType, ownerId: string, limit = 5) {
+  async listForOwner(
+    ownerType: DocumentOwnerType,
+    ownerId: string,
+    limit = 5,
+    visibility?: DocumentVisibility,
+  ) {
     return this.prisma.document.findMany({
-      where: { ownerType, ownerId, deletedAt: null },
+      where: { ownerType, ownerId, deletedAt: null, ...(visibility ? { visibility } : {}) },
       orderBy: { createdAt: 'desc' },
       include: DOCUMENT_INCLUDE,
       take: limit,
@@ -358,6 +363,9 @@ class DocumentsService {
         break;
       case DocumentOwnerType.USER:
         await this.assertFound(this.prisma.user.findUnique({ where: { id: ownerId }, select: { id: true } }), 'User');
+        break;
+      case DocumentOwnerType.MAINTENANCE_REQUEST:
+        await this.assertFound(this.prisma.maintenanceRequest.findUnique({ where: { id: ownerId }, select: { id: true } }), 'MaintenanceRequest');
         break;
       case DocumentOwnerType.OTHER:
         // No validation for OTHER — caller is asserting an external identifier.

@@ -51,11 +51,12 @@ export default async function UsersPage({
   ]);
   const managers = managersRes.data?.data ?? [];
 
-  const ROLES: UserRole[] = ['ADMIN', 'SALES', 'SALES_MANAGER', 'CLIENT', 'CUSTOMER'];
+  const ROLES: UserRole[] = ['ADMIN', 'SALES', 'SALES_MANAGER', 'MAINTENANCE_SUPERVISOR', 'CLIENT', 'CUSTOMER'];
   const ROLE_LABEL: Record<UserRole, string> = {
     ADMIN: 'مدير النظام',
     SALES: 'مبيعات',
     SALES_MANAGER: 'مدير مبيعات',
+    MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
     CLIENT: 'متصفّح',
     CUSTOMER: 'عميل',
     BROKER: 'وسيط',
@@ -72,6 +73,7 @@ export default async function UsersPage({
             <option value="ADMIN">مدير النظام</option>
             <option value="SALES">مبيعات</option>
             <option value="SALES_MANAGER">مدير مبيعات</option>
+            <option value="MAINTENANCE_SUPERVISOR">مشرف الصيانة</option>
           </select>
           <input
             name="fullName"

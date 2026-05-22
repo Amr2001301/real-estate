@@ -35,6 +35,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { ReservationStatusBadge, UnitStatusBadge } from '@/components/badges';
 import { ConfirmButton } from '@/components/confirm-button';
 import { UnitMediaPanel } from './media-panel';
+import { MaintenanceItemsCard } from './maintenance-items-card';
 import { deleteUnitAction } from '../actions';
 
 export const dynamic = 'force-dynamic';
@@ -355,6 +356,9 @@ export default async function UnitDetailPage({
               </ul>
             </Card>
           )}
+
+          {/* Maintenance / warranty items (ADMIN-only API) */}
+          {isAdmin && <MaintenanceItemsCard unitId={id} />}
 
           {/* Activity / history timeline */}
           <Card className="p-5 sm:p-6">

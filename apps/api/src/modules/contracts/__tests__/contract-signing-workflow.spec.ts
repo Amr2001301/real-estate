@@ -40,6 +40,7 @@ interface ContractFixture {
   id: string;
   contractNumber: string | null;
   signedAt: Date | null;
+  unitId: string;
   brokerId: string | null;
   brokerAgentId: string | null;
   reservationId: string | null;
@@ -50,16 +51,26 @@ interface ContractFixture {
 
 const fixture: { contract: ContractFixture } = { contract: {} as never };
 
+// Unit maintenance items the warranty hook reads/updates on sign.
+type WarrantyItem = {
+  id: string;
+  warrantyDurationMonthsSnapshot: number | null;
+  category: { warrantyDurationMonths: number | null } | null;
+};
+const warrantyFixture: { items: WarrantyItem[] } = { items: [] };
+
 function resetFixture() {
   fixture.contract = {
     id: CONTRACT_ID,
     contractNumber: 'CT-0001',
     signedAt: null,
+    unitId: 'unit-1',
     brokerId: null,
     brokerAgentId: null,
     reservationId: null,
     reservation: null,
   };
+  warrantyFixture.items = [];
 }
 
 class FakeAuthGuard implements CanActivate {
@@ -99,6 +110,10 @@ function makePrismaMock() {
     brokerUser: { findMany: jest.fn().mockResolvedValue([]) },
     notification: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
     unit: { findUnique: jest.fn().mockResolvedValue({ id: 'u', status: 'AVAILABLE' }) },
+    unitMaintenanceItem: {
+      findMany: jest.fn().mockImplementation(async () => warrantyFixture.items),
+      update: jest.fn().mockImplementation(async ({ where, data }) => ({ id: where.id, ...data })),
+    },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       if (typeof ops === 'function') return (ops as (tx: unknown) => Promise<unknown>)(m);
@@ -174,6 +189,8 @@ describe('Contracts · signing workflow', () => {
     resetFixture();
     mock.contract.findUnique.mockClear();
     mock.contract.update.mockClear();
+    mock.unitMaintenanceItem.findMany.mockClear();
+    mock.unitMaintenanceItem.update.mockClear();
     mock.leadActivity.create.mockClear();
     mock.brokerUser.findMany.mockClear();
     mock.notification.createMany.mockClear();
@@ -240,6 +257,68 @@ describe('Contracts · signing workflow', () => {
 
     // Sign still succeeded and persisted signedAt.
     expect(mock.contract.update).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Warranty start on sign (Batch 13C) ─────────────────────────────────
+
+  it('starts warranties for the unit active items, freezing duration + computing end', async () => {
+    warrantyFixture.items = [
+      { id: 'ui-plumbing', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: 12 } },
+      { id: 'ui-electrical', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: 24 } },
+    ];
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+
+    expect(mock.unitMaintenanceItem.update).toHaveBeenCalledTimes(2);
+    const calls = mock.unitMaintenanceItem.update.mock.calls.map((c) => c[0] as { where: { id: string }; data: Record<string, unknown> });
+    const plumbing = calls.find((c) => c.where.id === 'ui-plumbing')!;
+    expect(new Date(plumbing.data.warrantyStart as Date).toISOString()).toBe('2030-05-19T00:00:00.000Z');
+    expect(plumbing.data.warrantyDurationMonthsSnapshot).toBe(12);
+    expect(new Date(plumbing.data.warrantyEnd as Date).toISOString()).toBe('2031-05-19T00:00:00.000Z');
+    const electrical = calls.find((c) => c.where.id === 'ui-electrical')!;
+    expect(new Date(electrical.data.warrantyEnd as Date).toISOString()).toBe('2032-05-19T00:00:00.000Z');
+  });
+
+  it('prefers an existing item duration snapshot over the category duration', async () => {
+    // Item already carries a frozen 2-year snapshot; category now says 3 years.
+    // The snapshot wins, so a later category change never alters a sold warranty.
+    warrantyFixture.items = [
+      { id: 'ui-1', warrantyDurationMonthsSnapshot: 24, category: { warrantyDurationMonths: 36 } },
+    ];
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    const call = mock.unitMaintenanceItem.update.mock.calls[0]![0] as { data: Record<string, unknown> };
+    expect(call.data.warrantyDurationMonthsSnapshot).toBe(24);
+    expect(new Date(call.data.warrantyEnd as Date).toISOString()).toBe('2032-05-19T00:00:00.000Z');
+  });
+
+  it('leaves warrantyEnd null when no duration is known', async () => {
+    warrantyFixture.items = [
+      { id: 'ui-1', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: null } },
+    ];
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    const call = mock.unitMaintenanceItem.update.mock.calls[0]![0] as { data: Record<string, unknown> };
+    expect(call.data.warrantyStart).toBeInstanceOf(Date);
+    expect(call.data.warrantyEnd ?? null).toBeNull();
+  });
+
+  it('signing twice does not re-snapshot (idempotent — already-signed returns early)', async () => {
+    fixture.contract.signedAt = new Date('2030-04-01T00:00:00Z');
+    warrantyFixture.items = [
+      { id: 'ui-1', warrantyDurationMonthsSnapshot: null, category: { warrantyDurationMonths: 12 } },
+    ];
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    expect(mock.unitMaintenanceItem.update).not.toHaveBeenCalled();
   });
 
   // ── Idempotence on a contract that is already signed ────────────────────

@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-export type SessionRole = 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'BROKER';
+export type SessionRole = 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'BROKER' | 'MAINTENANCE_SUPERVISOR';
 
 export interface SessionUser {
   id: string;
@@ -29,6 +29,8 @@ export async function requireAdmin(): Promise<SessionUser> {
   const user = await getSession();
   if (!user) redirect('/login');
   if (user.role === 'BROKER') redirect('/portal');
+  // Maintenance supervisors are mobile-only; they have no dashboard workspace.
+  if (user.role === 'MAINTENANCE_SUPERVISOR') redirect('/maintenance-app');
   if (user.role !== 'ADMIN' && user.role !== 'SALES' && user.role !== 'SALES_MANAGER') {
     redirect('/login');
   }

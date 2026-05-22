@@ -11,6 +11,7 @@ export const OWNER_TYPE_LABEL: Record<DocumentOwnerType, string> = {
   BROKER_COMMISSION: 'عمولة وسيط',
   BROKER_PAYOUT: 'دفعة وسيط',
   USER: 'مستخدم',
+  MAINTENANCE_REQUEST: 'طلب صيانة',
   OTHER: 'أخرى',
 };
 
@@ -55,6 +56,8 @@ export function ownerHref(ownerType: DocumentOwnerType, ownerId: string): string
       return `/dashboard/broker-payouts/${ownerId}`;
     case 'USER':
       return `/dashboard/users`;
+    case 'MAINTENANCE_REQUEST':
+      return `/dashboard/maintenance/${ownerId}`;
     case 'DEPOSIT':
     case 'OTHER':
       return null;

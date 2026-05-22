@@ -30,6 +30,7 @@ import { ContractsModule } from './modules/contracts/contracts.module';
 import { InstallmentsModule } from './modules/installments/installments.module';
 import { DepositsModule } from './modules/deposits/deposits.module';
 import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { UnitMaintenanceItemsModule } from './modules/maintenance/unit-maintenance-items.module';
 import { BonusModule } from './modules/bonus/bonus.module';
 import { CmsModule } from './modules/cms/cms.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -83,6 +84,7 @@ import { HealthController } from './modules/health/health.controller';
     InstallmentsModule,
     DepositsModule,
     MaintenanceModule,
+    UnitMaintenanceItemsModule,
     BonusModule,
     CmsModule,
     NotificationsModule,

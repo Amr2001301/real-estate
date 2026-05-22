@@ -201,6 +201,21 @@ async function main() {
     update: { passwordHash: managerHash },
   });
 
+  // Demo MAINTENANCE_SUPERVISOR (mobile-only staff role; no web dashboard).
+  // Idempotent by its dedicated demo email.
+  const supervisorHash = await argon2.hash('MaintenancePass123!');
+  await prisma.user.upsert({
+    where: { email: 'maintenance@example.com' },
+    create: {
+      email: 'maintenance@example.com',
+      passwordHash: supervisorHash,
+      fullName: 'Khaled Maintenance',
+      role: UserRole.MAINTENANCE_SUPERVISOR,
+      locale: 'ar',
+    },
+    update: { passwordHash: supervisorHash },
+  });
+
   // Link the demo SALES rep to the demo SALES_MANAGER so the team view has data.
   // Idempotent: only sets managerId when not already pointing at this manager,
   // and only touches the demo sales user (matched above by its email upsert).
@@ -320,6 +335,46 @@ async function main() {
         en_subject: 'Reservation expired',
         ar_body: 'انتهت صلاحية حجز الوحدة {{unitCode}}',
         en_body: 'Reservation for unit {{unitCode}} has expired',
+      },
+      {
+        code: 'maintenance_request_created',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'طلب صيانة جديد',
+        en_subject: 'New maintenance request',
+        ar_body: 'تم إنشاء طلب صيانة جديد للوحدة {{unitCode}}.',
+        en_body: 'A new maintenance request was created for unit {{unitCode}}.',
+      },
+      {
+        code: 'maintenance_request_assigned',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'تم إسناد طلب صيانة',
+        en_subject: 'Maintenance request assigned',
+        ar_body: 'تم إسناد طلب الصيانة للوحدة {{unitCode}} إليك.',
+        en_body: 'The maintenance request for unit {{unitCode}} was assigned to you.',
+      },
+      {
+        code: 'maintenance_request_status_changed',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'تحديث حالة طلب الصيانة',
+        en_subject: 'Maintenance status updated',
+        ar_body: 'تم تحديث حالة طلب الصيانة للوحدة {{unitCode}} إلى {{statusLabel}}.',
+        en_body: 'The maintenance request for unit {{unitCode}} is now {{statusLabel}}.',
+      },
+      {
+        code: 'maintenance_request_resolved',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'تم حل طلب الصيانة',
+        en_subject: 'Maintenance request resolved',
+        ar_body: 'تم وضع طلب الصيانة للوحدة {{unitCode}} كتم حله.',
+        en_body: 'The maintenance request for unit {{unitCode}} was marked resolved.',
+      },
+      {
+        code: 'maintenance_request_closed',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'تم إغلاق طلب الصيانة',
+        en_subject: 'Maintenance request closed',
+        ar_body: 'تم إغلاق طلب الصيانة للوحدة {{unitCode}}.',
+        en_body: 'The maintenance request for unit {{unitCode}} was closed.',
       },
     ].map((t) =>
       prisma.notificationTemplate.upsert({
@@ -459,6 +514,7 @@ async function main() {
     { code: 'maintenance:assign', description: 'Assign maintenance requests to admin staff' },
     { code: 'maintenance:resolve', description: 'Drive maintenance request status transitions' },
     { code: 'maintenance:categories:manage', description: 'Manage maintenance categories' },
+    { code: 'maintenance:items:manage', description: 'Manage unit maintenance/warranty items' },
     { code: 'projects:read', description: 'Read projects, phases, and buildings' },
     { code: 'projects:create', description: 'Create projects' },
     { code: 'projects:update', description: 'Update project details' },
@@ -581,10 +637,39 @@ async function main() {
     });
   }
 
+  // ---- Grant the MAINTENANCE_SUPERVISOR tier to every supervisor user ----
+  // Mobile-only staff. Scoped /me maintenance routes are role-gated, so this
+  // tier stays minimal: read maintenance + drive status transitions. NO admin/
+  // finance/security codes, and explicitly NOT maintenance:assign/create/
+  // categories:manage or any documents:* grant (supervisor uploads go through
+  // scoped /me routes, not the admin documents controller). Idempotent.
+  const MAINTENANCE_SUPERVISOR_DEFAULT_PERMISSIONS = [
+    'maintenance:read',
+    'maintenance:resolve',
+  ];
+
+  const supervisorUsers = await prisma.user.findMany({
+    where: { role: UserRole.MAINTENANCE_SUPERVISOR },
+    select: { id: true },
+  });
+  if (supervisorUsers.length > 0) {
+    const supervisorPerms = await prisma.permission.findMany({
+      where: { code: { in: MAINTENANCE_SUPERVISOR_DEFAULT_PERMISSIONS } },
+      select: { id: true },
+    });
+    await prisma.userPermission.createMany({
+      data: supervisorUsers.flatMap((u) =>
+        supervisorPerms.map((p) => ({ userId: u.id, permissionId: p.id })),
+      ),
+      skipDuplicates: true,
+    });
+  }
+
   console.log('✅ Seed complete');
   console.log('   Admin:', adminEmail, '/', adminPassword);
   console.log('   Sales: sales@example.com / SalesPass123!');
   console.log('   Manager: manager@example.com / ManagerPass123!');
+  console.log('   Maintenance Supervisor: maintenance@example.com / MaintenancePass123!');
 }
 
 main()

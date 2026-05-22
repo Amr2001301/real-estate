@@ -11,6 +11,7 @@ const ROLE_LABEL: Record<SessionRole, string> = {
   SALES: 'مبيعات',
   SALES_MANAGER: 'مدير مبيعات',
   BROKER: 'وسيط',
+  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
 };
 
 interface Props {

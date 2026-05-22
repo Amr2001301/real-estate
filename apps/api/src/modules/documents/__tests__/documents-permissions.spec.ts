@@ -46,7 +46,8 @@ class FakeAuthGuard implements CanActivate {
 
 const fixture: {
   ownerExists: boolean;
-} = { ownerExists: true };
+  maintenanceExists: boolean;
+} = { ownerExists: true, maintenanceExists: true };
 
 function makePrismaMock() {
   return {
@@ -98,6 +99,11 @@ function makePrismaMock() {
     brokerCommission: { findUnique: jest.fn().mockResolvedValue(null) },
     brokerPayout: { findUnique: jest.fn().mockResolvedValue(null) },
     user: { findUnique: jest.fn().mockResolvedValue(null) },
+    maintenanceRequest: {
+      findUnique: jest.fn().mockImplementation(async () =>
+        fixture.maintenanceExists ? { id: 'm1111111-1111-4111-8111-111111111111' } : null,
+      ),
+    },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       return ops;
@@ -153,11 +159,13 @@ describe('Documents module · permissions enforcement', () => {
   beforeEach(() => {
     FakeAuthGuard.currentUser = null;
     fixture.ownerExists = true;
+    fixture.maintenanceExists = true;
     mock.userPermission.findMany.mockClear();
     mock.document.findMany.mockClear();
     mock.document.create.mockClear();
     mock.document.update.mockClear();
     mock.project.findUnique.mockClear();
+    mock.maintenanceRequest.findUnique.mockClear();
     r2Mock.createPresignedUpload.mockClear();
   });
 
@@ -330,6 +338,38 @@ describe('Documents module · permissions enforcement', () => {
         })
         .expect(400);
       expect(mock.project.findUnique).toHaveBeenCalledTimes(1);
+      expect(mock.document.create).not.toHaveBeenCalled();
+    });
+
+    it('accepts an existing MAINTENANCE_REQUEST owner → document.create called', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      fixture.maintenanceExists = true;
+      await request(app.getHttpServer())
+        .post('/documents')
+        .send({
+          ownerType: 'MAINTENANCE_REQUEST',
+          ownerId: 'm1111111-1111-4111-8111-111111111111',
+          title: 'صورة قبل الإصلاح',
+          fileUrl: 'https://cdn.example.com/before.jpg',
+        })
+        .expect(201);
+      expect(mock.maintenanceRequest.findUnique).toHaveBeenCalledTimes(1);
+      expect(mock.document.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects a missing MAINTENANCE_REQUEST owner → 400; document.create NOT called', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      fixture.maintenanceExists = false;
+      await request(app.getHttpServer())
+        .post('/documents')
+        .send({
+          ownerType: 'MAINTENANCE_REQUEST',
+          ownerId: 'm1111111-1111-4111-8111-111111111111',
+          title: 'broken',
+          fileUrl: 'https://cdn.example.com/x.jpg',
+        })
+        .expect(400);
+      expect(mock.maintenanceRequest.findUnique).toHaveBeenCalledTimes(1);
       expect(mock.document.create).not.toHaveBeenCalled();
     });
   });
