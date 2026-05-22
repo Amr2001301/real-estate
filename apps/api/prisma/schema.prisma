@@ -1125,6 +1125,13 @@ model MaintenanceRequest {
   // Max handling SLA (minutes) across the request's selected categories,
   // snapshotted at approval; dueAt = approvedAt + this.
   maxHandlingSlaMinutesSnapshot Int?
+  // Lifecycle timestamps (set as side effects of status transitions). These
+  // represent the CURRENT lifecycle, not a historical audit — resolvedAt is
+  // cleared on a RESOLVED→IN_PROGRESS reopen and re-set on the next RESOLVED.
+  assignedAt        DateTime?
+  firstInProgressAt DateTime?
+  resolvedAt        DateTime?
+  closedAt          DateTime?
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -1134,6 +1141,8 @@ model MaintenanceRequest {
   @@index([status])
   @@index([itemId])
   @@index([reviewStatus])
+  @@index([resolvedAt])
+  @@index([closedAt])
 }
 
 // One selected category/component on a maintenance request. Snapshots the

@@ -61,12 +61,18 @@ const fixture: {
   requestStatus: MaintenanceStatus;
   assignedAdminId: string | null;
   reviewStatus: MaintenanceReviewStatus;
+  resolvedAt: Date | null;
+  firstInProgressAt: Date | null;
+  assignedAt: Date | null;
 } = {
   requestStatus: MaintenanceStatus.OPEN,
   assignedAdminId: null,
   // Default APPROVED so existing operational/supervisor tests behave as before;
   // approval-gate tests set this to PENDING/REJECTED explicitly.
   reviewStatus: MaintenanceReviewStatus.APPROVED,
+  resolvedAt: null,
+  firstInProgressAt: null,
+  assignedAt: null,
 };
 
 // Request-item rows the approval flow reads (handlingSlaMinutesSnapshot → dueAt).
@@ -193,6 +199,9 @@ function makePrismaMock() {
               dueAt: null,
               approvedAt: null,
               rejectedAt: null,
+              resolvedAt: fixture.resolvedAt,
+              firstInProgressAt: fixture.firstInProgressAt,
+              assignedAt: fixture.assignedAt,
               description: 'desc',
               createdAt: new Date(),
               updatedAt: new Date(),
@@ -281,6 +290,9 @@ describe('Maintenance module · permissions enforcement', () => {
     fixture.requestStatus = MaintenanceStatus.OPEN;
     fixture.assignedAdminId = null;
     fixture.reviewStatus = MaintenanceReviewStatus.APPROVED;
+    fixture.resolvedAt = null;
+    fixture.firstInProgressAt = null;
+    fixture.assignedAt = null;
     requestItemsFixture.rows = [];
     mock.maintenanceRequestItem.createMany.mockClear();
     mock.maintenanceRequestItem.findMany.mockClear();
@@ -1330,6 +1342,289 @@ describe('Maintenance module · permissions enforcement', () => {
         .send({ unitId: base.unitId, categoryId: CAT, description: base.description })
         .expect(201);
       expect(itemSnapshots()[0]!.warrantyStatusSnapshot).toBe('UNKNOWN');
+    });
+  });
+
+  // ── Admin list filters parity (Batch 17) ──────────────────────────────
+  describe('GET /maintenance-requests (from/to/categoryId filters)', () => {
+    function listWhere() {
+      // list() runs findMany inside $transaction([...]) — grab its where arg.
+      return (mock.maintenanceRequest.findMany.mock.calls[0]![0] as { where: Record<string, unknown> }).where;
+    }
+
+    it('filters by from (createdAt gte)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).get('/maintenance-requests?from=2030-01-01').expect(200);
+      const created = listWhere().createdAt as { gte?: Date; lte?: Date };
+      expect(created.gte).toBeInstanceOf(Date);
+      expect(created.lte).toBeUndefined();
+    });
+
+    it('filters by to (createdAt lte)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).get('/maintenance-requests?to=2030-12-31').expect(200);
+      const created = listWhere().createdAt as { gte?: Date; lte?: Date };
+      expect(created.lte).toBeInstanceOf(Date);
+      expect(created.gte).toBeUndefined();
+    });
+
+    it('filters by categoryId via request items OR legacy categoryId', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).get('/maintenance-requests?categoryId=cat-x').expect(200);
+      expect(listWhere().OR).toEqual([
+        { items: { some: { categoryId: 'cat-x' } } },
+        { categoryId: 'cat-x' },
+      ]);
+    });
+
+    it('ignores an unparseable date (no createdAt filter)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).get('/maintenance-requests?from=not-a-date').expect(200);
+      expect(listWhere().createdAt).toBeUndefined();
+    });
+
+    it('keeps existing status filter working alongside the new ones', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).get('/maintenance-requests?status=OPEN&from=2030-01-01').expect(200);
+      const where = listWhere();
+      expect(where.status).toBe('OPEN');
+      expect((where.createdAt as { gte?: Date }).gte).toBeInstanceOf(Date);
+    });
+  });
+
+  // ── Lifecycle timestamps (Batch 15) ───────────────────────────────────
+  describe('Lifecycle timestamps on status transitions', () => {
+    const ID = 'c3333333-3333-4333-8333-333333333333';
+    const STATUS = `/maintenance-requests/${ID}/status`;
+    const admin = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+
+    function updateData() {
+      return (mock.maintenanceRequest.update.mock.calls[0]![0] as { data: Record<string, unknown> }).data;
+    }
+
+    it('IN_PROGRESS → RESOLVED sets resolvedAt', async () => {
+      FakeAuthGuard.currentUser = admin;
+      fixture.requestStatus = MaintenanceStatus.IN_PROGRESS;
+      await request(app.getHttpServer()).post(STATUS).send({ status: 'RESOLVED' }).expect(201);
+      expect(updateData().resolvedAt).toBeInstanceOf(Date);
+    });
+
+    it('RESOLVED → IN_PROGRESS clears resolvedAt and sets firstInProgressAt', async () => {
+      FakeAuthGuard.currentUser = admin;
+      fixture.requestStatus = MaintenanceStatus.RESOLVED;
+      fixture.resolvedAt = new Date('2030-01-01T00:00:00Z');
+      await request(app.getHttpServer()).post(STATUS).send({ status: 'IN_PROGRESS' }).expect(201);
+      const data = updateData();
+      expect(data.resolvedAt).toBeNull();
+      expect(data.firstInProgressAt).toBeInstanceOf(Date);
+    });
+
+    it('reopen then re-resolve sets a fresh resolvedAt', async () => {
+      FakeAuthGuard.currentUser = admin;
+      fixture.requestStatus = MaintenanceStatus.IN_PROGRESS;
+      fixture.resolvedAt = null; // already cleared by a prior reopen
+      await request(app.getHttpServer()).post(STATUS).send({ status: 'RESOLVED' }).expect(201);
+      expect(updateData().resolvedAt).toBeInstanceOf(Date);
+    });
+
+    it('RESOLVED → CLOSED sets closedAt and keeps the existing resolvedAt', async () => {
+      FakeAuthGuard.currentUser = admin;
+      fixture.requestStatus = MaintenanceStatus.RESOLVED;
+      fixture.resolvedAt = new Date('2030-01-01T00:00:00Z');
+      await request(app.getHttpServer()).post(STATUS).send({ status: 'CLOSED' }).expect(201);
+      const data = updateData();
+      expect(data.closedAt).toBeInstanceOf(Date);
+      expect(data.resolvedAt).toBeUndefined(); // not overwritten
+    });
+
+    it('RESOLVED → CLOSED backfills resolvedAt when it was missing', async () => {
+      FakeAuthGuard.currentUser = admin;
+      fixture.requestStatus = MaintenanceStatus.RESOLVED;
+      fixture.resolvedAt = null;
+      await request(app.getHttpServer()).post(STATUS).send({ status: 'CLOSED' }).expect(201);
+      const data = updateData();
+      expect(data.closedAt).toBeInstanceOf(Date);
+      expect(data.resolvedAt).toBeInstanceOf(Date);
+    });
+
+    it('assign sets assignedAt the first time', async () => {
+      FakeAuthGuard.currentUser = admin;
+      fixture.requestStatus = MaintenanceStatus.OPEN;
+      fixture.assignedAt = null;
+      await request(app.getHttpServer())
+        .post(`/maintenance-requests/${ID}/assign`)
+        .send({ assignedAdminId: ADMIN_ASSIGNEE })
+        .expect(201);
+      expect(updateData().assignedAt).toBeInstanceOf(Date);
+    });
+  });
+
+  // ── Reporting summary (Batch 14) ──────────────────────────────────────
+  describe('GET /maintenance-requests/reports/summary', () => {
+    const PATH = '/maintenance-requests/reports/summary';
+    const past = new Date(Date.now() - 60_000);
+    const future = new Date(Date.now() + 60 * 60_000);
+
+    type ItemRow = { warrantyStatusSnapshot: string; categoryId: string; category: { id: string; name: unknown } | null };
+    function row(over: Partial<{ status: string; reviewStatus: string; dueAt: Date | null; approvedAt: Date | null; resolvedAt: Date | null; createdAt: Date; assignedAdminId: string | null; assignedAdmin: { id: string; fullName: string } | null; items: ItemRow[] }>) {
+      return {
+        id: 'r',
+        status: 'OPEN',
+        reviewStatus: 'PENDING',
+        dueAt: null,
+        approvedAt: null,
+        resolvedAt: null,
+        createdAt: new Date(),
+        assignedAdminId: null,
+        assignedAdmin: null,
+        items: [],
+        ...over,
+      };
+    }
+    const catA = { id: 'cat-a', name: { ar: 'سباكة', en: 'Plumbing' } };
+    const catB = { id: 'cat-b', name: { ar: 'كهرباء', en: 'Electrical' } };
+
+    function seedRequests() {
+      mock.maintenanceRequest.findMany.mockResolvedValueOnce([
+        // approved + in_progress + overdue, assigned to a supervisor
+        row({ reviewStatus: 'APPROVED', status: 'IN_PROGRESS', dueAt: past, assignedAdminId: 'sup-1', assignedAdmin: { id: 'sup-1', fullName: 'Khaled' }, items: [{ warrantyStatusSnapshot: 'OUT_OF_WARRANTY', categoryId: 'cat-a', category: catA }] }),
+        // approved + closed + past due → NOT overdue (closed); assigned to same supervisor
+        row({ reviewStatus: 'APPROVED', status: 'CLOSED', dueAt: past, assignedAdminId: 'sup-1', assignedAdmin: { id: 'sup-1', fullName: 'Khaled' }, items: [{ warrantyStatusSnapshot: 'IN_WARRANTY', categoryId: 'cat-a', category: catA }] }),
+        // pending + past due → NOT overdue (not approved)
+        row({ reviewStatus: 'PENDING', status: 'OPEN', dueAt: past, items: [{ warrantyStatusSnapshot: 'UNKNOWN', categoryId: 'cat-b', category: catB }] }),
+        // rejected + past due → NOT overdue
+        row({ reviewStatus: 'REJECTED', status: 'OPEN', dueAt: past, items: [] }),
+      ]);
+    }
+
+    it('aggregates review/operational status counts', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      seedRequests();
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      expect(res.body.totalRequests).toBe(4);
+      expect(res.body.pendingReviewCount).toBe(1);
+      expect(res.body.approvedCount).toBe(2);
+      expect(res.body.rejectedCount).toBe(1);
+      expect(res.body.inProgressCount).toBe(1);
+      expect(res.body.closedCount).toBe(1);
+      expect(res.body.openCount).toBe(2);
+      expect(res.body.avgResolutionHours).toBeNull();
+    });
+
+    it('counts overdue only for approved, non-closed, past-due requests', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      seedRequests();
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      expect(res.body.overdueCount).toBe(1);
+    });
+
+    it('counts warranty snapshots from request items', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      seedRequests();
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      expect(res.body.inWarrantyCount).toBe(1);
+      expect(res.body.outOfWarrantyCount).toBe(1);
+      expect(res.body.unknownWarrantyCount).toBe(1);
+    });
+
+    it('groups by category and by assignee', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      seedRequests();
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      const catAStats = res.body.byCategory.find((c: { categoryId: string }) => c.categoryId === 'cat-a');
+      expect(catAStats.count).toBe(2);
+      expect(catAStats.overdueCount).toBe(1);
+      expect(catAStats.outOfWarrantyCount).toBe(1);
+      const assignee = res.body.byAssignee.find((a: { userId: string }) => a.userId === 'sup-1');
+      expect(assignee.count).toBe(2);
+      expect(assignee.overdueCount).toBe(1);
+      expect(assignee.inProgressCount).toBe(1);
+    });
+
+    it('lists warranties expiring in the next 30 days', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      mock.maintenanceRequest.findMany.mockResolvedValueOnce([]);
+      mock.unitMaintenanceItem.findMany.mockResolvedValueOnce([
+        { id: 'ui-1', warrantyEnd: future, name: { ar: 'سباكة', en: 'Plumbing' }, unit: { code: 'A-101' }, category: { name: { ar: 'سباكة', en: 'Plumbing' } } },
+      ]);
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      expect(res.body.expiringWarranties).toHaveLength(1);
+      expect(res.body.expiringWarranties[0].unitCode).toBe('A-101');
+    });
+
+    it('computes avgResolutionHours + SLA attainment from approvedAt/resolvedAt/dueAt', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      const approvedAt = new Date('2030-01-01T00:00:00Z');
+      mock.maintenanceRequest.findMany.mockResolvedValueOnce([
+        // resolved 2h after approval, within the 3h SLA → within
+        row({ reviewStatus: 'APPROVED', status: 'RESOLVED', approvedAt, resolvedAt: new Date('2030-01-01T02:00:00Z'), dueAt: new Date('2030-01-01T03:00:00Z') }),
+        // resolved 6h after approval, 2h past the 4h SLA → overdue, delay 2h
+        row({ reviewStatus: 'APPROVED', status: 'CLOSED', approvedAt, resolvedAt: new Date('2030-01-01T06:00:00Z'), dueAt: new Date('2030-01-01T04:00:00Z') }),
+      ]);
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      expect(res.body.avgResolutionHours).toBe(4); // (2 + 6) / 2
+      expect(res.body.resolvedWithinSlaCount).toBe(1);
+      expect(res.body.resolvedOverdueCount).toBe(1);
+      expect(res.body.slaAttainmentPercent).toBe(50);
+      expect(res.body.avgDelayHours).toBe(2);
+    });
+
+    it('slaAttainmentPercent is null when nothing resolved has a dueAt', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      mock.maintenanceRequest.findMany.mockResolvedValueOnce([
+        row({ reviewStatus: 'APPROVED', status: 'OPEN' }),
+      ]);
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      expect(res.body.slaAttainmentPercent).toBeNull();
+      expect(res.body.avgResolutionHours).toBeNull();
+    });
+
+    it.each<[UserRole]>([
+      [UserRole.SALES],
+      [UserRole.SALES_MANAGER],
+      [UserRole.MAINTENANCE_SUPERVISOR],
+      [UserRole.CUSTOMER],
+    ])('%s is blocked from the report (403)', async (role) => {
+      FakeAuthGuard.currentUser = { sub: 'u-1', role, codes: ['maintenance:read'] };
+      await request(app.getHttpServer()).get(PATH).expect(403);
+    });
+  });
+
+  // ── CSV export (Batch 16) ─────────────────────────────────────────────
+  describe('GET /maintenance-requests/reports/summary.csv', () => {
+    const CSV = '/maintenance-requests/reports/summary.csv';
+
+    it('ADMIN downloads a CSV with BOM, headers, and key metrics', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      mock.maintenanceRequest.findMany.mockResolvedValueOnce([]);
+      const res = await request(app.getHttpServer()).get(CSV).expect(200);
+      expect(res.headers['content-type']).toContain('text/csv');
+      expect(res.headers['content-disposition']).toContain('maintenance-report.csv');
+      // UTF-8 BOM so Excel renders Arabic correctly.
+      expect(res.text.charCodeAt(0)).toBe(0xfeff);
+      expect(res.text).toContain('metric,label,value');
+      expect(res.text).toContain('totalRequests');
+      expect(res.text).toContain('slaAttainmentPercent');
+      expect(res.text).toContain('section,category,count,overdueCount,outOfWarrantyCount');
+    });
+
+    it('applies the same filters (forwards categoryId to the request query)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      mock.maintenanceRequest.findMany.mockResolvedValueOnce([]);
+      await request(app.getHttpServer()).get(`${CSV}?categoryId=cat-x&status=OPEN`).expect(200);
+      const call = mock.maintenanceRequest.findMany.mock.calls[0]![0] as { where: Record<string, unknown> };
+      expect(call.where.status).toBe('OPEN');
+      expect(call.where.items).toEqual({ some: { categoryId: 'cat-x' } });
+    });
+
+    it.each<[UserRole]>([
+      [UserRole.SALES],
+      [UserRole.SALES_MANAGER],
+      [UserRole.MAINTENANCE_SUPERVISOR],
+      [UserRole.CUSTOMER],
+    ])('%s is blocked from the CSV export (403)', async (role) => {
+      FakeAuthGuard.currentUser = { sub: 'u-1', role, codes: ['maintenance:read'] };
+      await request(app.getHttpServer()).get(CSV).expect(403);
     });
   });
 

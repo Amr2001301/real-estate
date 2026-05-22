@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   Injectable,
   Logger,
   Module,
@@ -40,6 +41,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { toCsv, type CsvCell } from '../../common/utils/csv';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
@@ -666,12 +668,16 @@ class MaintenanceService {
     if (current.status === MaintenanceStatus.OPEN) {
       data.status = MaintenanceStatus.ASSIGNED;
     }
+    if (current.assignedAt == null) data.assignedAt = new Date();
     const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data });
     await this.notifyAssigned(id);
     return updated;
   }
 
-  // Drive a status change through the allowed transition graph.
+  // Drive a status change through the allowed transition graph, applying the
+  // lifecycle-timestamp side effects. These track the CURRENT lifecycle (not a
+  // historical audit): a RESOLVED→IN_PROGRESS reopen clears resolvedAt, and the
+  // next RESOLVED sets a fresh one.
   async setStatus(id: string, next: MaintenanceStatus) {
     const current = await this.requireRequest(id);
     if (current.status === next) return current; // no-op
@@ -679,7 +685,19 @@ class MaintenanceService {
     if (!allowed.includes(next)) {
       throw new BadRequestException('Invalid maintenance status transition');
     }
-    const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data: { status: next } });
+    const now = new Date();
+    const data: Prisma.MaintenanceRequestUncheckedUpdateInput = { status: next };
+    if (next === MaintenanceStatus.IN_PROGRESS) {
+      if (current.firstInProgressAt == null) data.firstInProgressAt = now;
+      // Reopen from RESOLVED → the request is no longer resolved.
+      if (current.status === MaintenanceStatus.RESOLVED) data.resolvedAt = null;
+    } else if (next === MaintenanceStatus.RESOLVED) {
+      if (current.resolvedAt == null) data.resolvedAt = now;
+    } else if (next === MaintenanceStatus.CLOSED) {
+      data.closedAt = now;
+      if (current.resolvedAt == null) data.resolvedAt = now;
+    }
+    const updated = await this.prisma.maintenanceRequest.update({ where: { id }, data });
     await this.notifyStatus(id);
     return updated;
   }
@@ -835,6 +853,16 @@ class MaintenanceService {
     return req;
   }
 
+  // Build a createdAt range filter, ignoring unparseable dates (safe no-op).
+  private createdAtRange(from?: string, to?: string): Prisma.MaintenanceRequestWhereInput {
+    const start = from ? new Date(from) : null;
+    const end = to ? new Date(to) : null;
+    const gte = start && !Number.isNaN(start.getTime()) ? start : null;
+    const lte = end && !Number.isNaN(end.getTime()) ? end : null;
+    if (!gte && !lte) return {};
+    return { createdAt: { ...(gte ? { gte } : {}), ...(lte ? { lte } : {}) } };
+  }
+
   async list(opts: {
     page: number;
     pageSize: number;
@@ -842,12 +870,26 @@ class MaintenanceService {
     customerId?: string;
     assignedAdminId?: string;
     reviewStatus?: MaintenanceReviewStatus;
+    categoryId?: string;
+    from?: string;
+    to?: string;
   }) {
     const where: Prisma.MaintenanceRequestWhereInput = {
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.customerId ? { customerId: opts.customerId } : {}),
       ...(opts.assignedAdminId ? { assignedAdminId: opts.assignedAdminId } : {}),
       ...(opts.reviewStatus ? { reviewStatus: opts.reviewStatus } : {}),
+      // Category match: either a request item references it (new multi-category
+      // model) or the legacy single categoryId does (back-compat).
+      ...(opts.categoryId
+        ? {
+            OR: [
+              { items: { some: { categoryId: opts.categoryId } } },
+              { categoryId: opts.categoryId },
+            ],
+          }
+        : {}),
+      ...this.createdAtRange(opts.from, opts.to),
     };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.maintenanceRequest.findMany({
@@ -863,6 +905,266 @@ class MaintenanceService {
       this.prisma.maintenanceRequest.count({ where }),
     ]);
     return paginate(data, total, opts);
+  }
+
+  // Operational reporting summary for the admin dashboard. Read-only aggregate
+  // over maintenance requests (+ their item snapshots) and expiring unit
+  // warranties. avgResolutionHours is null: the schema has no resolvedAt/
+  // closedAt timestamp, so resolution duration can't be derived reliably
+  // (updatedAt is bumped by any edit). See Batch 14 report.
+  async reportsSummary(opts: {
+    from?: string;
+    to?: string;
+    assignedAdminId?: string;
+    categoryId?: string;
+    reviewStatus?: MaintenanceReviewStatus;
+    status?: MaintenanceStatus;
+  }) {
+    const where: Prisma.MaintenanceRequestWhereInput = {
+      ...(opts.status ? { status: opts.status } : {}),
+      ...(opts.reviewStatus ? { reviewStatus: opts.reviewStatus } : {}),
+      ...(opts.assignedAdminId ? { assignedAdminId: opts.assignedAdminId } : {}),
+      // A request "has" a category when one of its items references it.
+      ...(opts.categoryId ? { items: { some: { categoryId: opts.categoryId } } } : {}),
+      ...this.createdAtRange(opts.from, opts.to),
+    };
+
+    const requests = await this.prisma.maintenanceRequest.findMany({
+      where,
+      select: {
+        id: true,
+        status: true,
+        reviewStatus: true,
+        dueAt: true,
+        approvedAt: true,
+        resolvedAt: true,
+        createdAt: true,
+        assignedAdminId: true,
+        assignedAdmin: { select: { id: true, fullName: true } },
+        items: {
+          select: {
+            warrantyStatusSnapshot: true,
+            categoryId: true,
+            category: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    const now = Date.now();
+    const isOverdue = (r: (typeof requests)[number]) =>
+      r.reviewStatus === MaintenanceReviewStatus.APPROVED &&
+      r.status !== MaintenanceStatus.CLOSED &&
+      !!r.dueAt &&
+      r.dueAt.getTime() < now;
+
+    const summary = {
+      totalRequests: requests.length,
+      pendingReviewCount: 0,
+      approvedCount: 0,
+      rejectedCount: 0,
+      openCount: 0,
+      assignedCount: 0,
+      inProgressCount: 0,
+      resolvedCount: 0,
+      closedCount: 0,
+      overdueCount: 0,
+      inWarrantyCount: 0,
+      outOfWarrantyCount: 0,
+      unknownWarrantyCount: 0,
+      avgResolutionHours: null as number | null,
+      resolvedWithinSlaCount: 0,
+      resolvedOverdueCount: 0,
+      slaAttainmentPercent: null as number | null,
+      avgDelayHours: null as number | null,
+    };
+
+    // Accumulators for the resolution-time + SLA-attainment metrics.
+    const resolutionHours: number[] = [];
+    const delayHours: number[] = [];
+
+    const byCategory = new Map<
+      string,
+      { categoryId: string; categoryName: unknown; count: number; overdueCount: number; outOfWarrantyCount: number }
+    >();
+    const byAssignee = new Map<
+      string,
+      { userId: string; name: string; count: number; overdueCount: number; inProgressCount: number }
+    >();
+
+    for (const r of requests) {
+      if (r.reviewStatus === MaintenanceReviewStatus.PENDING) summary.pendingReviewCount++;
+      else if (r.reviewStatus === MaintenanceReviewStatus.APPROVED) summary.approvedCount++;
+      else if (r.reviewStatus === MaintenanceReviewStatus.REJECTED) summary.rejectedCount++;
+
+      if (r.status === MaintenanceStatus.OPEN) summary.openCount++;
+      else if (r.status === MaintenanceStatus.ASSIGNED) summary.assignedCount++;
+      else if (r.status === MaintenanceStatus.IN_PROGRESS) summary.inProgressCount++;
+      else if (r.status === MaintenanceStatus.RESOLVED) summary.resolvedCount++;
+      else if (r.status === MaintenanceStatus.CLOSED) summary.closedCount++;
+
+      const overdue = isOverdue(r);
+      if (overdue) summary.overdueCount++;
+
+      // Resolution-time + SLA attainment (resolved requests only).
+      if (r.resolvedAt) {
+        // Prefer approvedAt as the SLA clock start; fall back to createdAt for
+        // legacy/admin records where approvedAt may be null.
+        const start = (r.approvedAt ?? r.createdAt).getTime();
+        resolutionHours.push((r.resolvedAt.getTime() - start) / 3_600_000);
+        if (r.dueAt) {
+          if (r.resolvedAt.getTime() <= r.dueAt.getTime()) {
+            summary.resolvedWithinSlaCount++;
+          } else {
+            summary.resolvedOverdueCount++;
+            delayHours.push((r.resolvedAt.getTime() - r.dueAt.getTime()) / 3_600_000);
+          }
+        }
+      }
+
+      for (const it of r.items) {
+        if (it.warrantyStatusSnapshot === WarrantyStatus.IN_WARRANTY) summary.inWarrantyCount++;
+        else if (it.warrantyStatusSnapshot === WarrantyStatus.OUT_OF_WARRANTY) summary.outOfWarrantyCount++;
+        else summary.unknownWarrantyCount++;
+
+        const key = it.categoryId;
+        const c = byCategory.get(key) ?? {
+          categoryId: key,
+          categoryName: it.category?.name ?? null,
+          count: 0,
+          overdueCount: 0,
+          outOfWarrantyCount: 0,
+        };
+        c.count++;
+        if (overdue) c.overdueCount++;
+        if (it.warrantyStatusSnapshot === WarrantyStatus.OUT_OF_WARRANTY) c.outOfWarrantyCount++;
+        byCategory.set(key, c);
+      }
+
+      if (r.assignedAdminId) {
+        const a = byAssignee.get(r.assignedAdminId) ?? {
+          userId: r.assignedAdminId,
+          name: r.assignedAdmin?.fullName ?? '—',
+          count: 0,
+          overdueCount: 0,
+          inProgressCount: 0,
+        };
+        a.count++;
+        if (overdue) a.overdueCount++;
+        if (r.status === MaintenanceStatus.IN_PROGRESS) a.inProgressCount++;
+        byAssignee.set(r.assignedAdminId, a);
+      }
+    }
+
+    // Finalize derived averages/percentages.
+    const avg = (xs: number[]) =>
+      xs.length ? Math.round((xs.reduce((s, x) => s + x, 0) / xs.length) * 10) / 10 : null;
+    summary.avgResolutionHours = avg(resolutionHours);
+    summary.avgDelayHours = avg(delayHours);
+    const slaDenom = summary.resolvedWithinSlaCount + summary.resolvedOverdueCount;
+    summary.slaAttainmentPercent =
+      slaDenom > 0 ? Math.round((summary.resolvedWithinSlaCount / slaDenom) * 1000) / 10 : null;
+
+    // Warranties ending within the next 30 days (independent of request filters).
+    const horizon = new Date(now + 30 * 24 * 60 * 60 * 1000);
+    const expiringRows = await this.prisma.unitMaintenanceItem.findMany({
+      where: { active: true, warrantyEnd: { gte: new Date(now), lte: horizon } },
+      orderBy: { warrantyEnd: 'asc' },
+      take: 50,
+      select: {
+        id: true,
+        warrantyEnd: true,
+        name: true,
+        unit: { select: { code: true } },
+        category: { select: { name: true } },
+      },
+    });
+
+    return {
+      ...summary,
+      byCategory: [...byCategory.values()].sort((a, b) => b.count - a.count),
+      byAssignee: [...byAssignee.values()].sort((a, b) => b.count - a.count),
+      expiringWarranties: expiringRows.map((e) => ({
+        id: e.id,
+        unitCode: e.unit?.code ?? '—',
+        categoryName: e.category?.name ?? e.name ?? null,
+        warrantyEnd: e.warrantyEnd,
+      })),
+    };
+  }
+
+  // CSV export of the operational report — same filters, multi-section layout
+  // (summary KPIs, category breakdown, assignee breakdown, expiring warranties).
+  async reportsSummaryCsv(opts: {
+    from?: string;
+    to?: string;
+    assignedAdminId?: string;
+    categoryId?: string;
+    reviewStatus?: MaintenanceReviewStatus;
+    status?: MaintenanceStatus;
+  }) {
+    const r = await this.reportsSummary(opts);
+    const txAr = (v: unknown): string => {
+      if (!v) return '—';
+      if (typeof v === 'string') return v;
+      const t = v as { ar?: string; en?: string };
+      return t.ar || t.en || '—';
+    };
+    const fmtDate = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : '—');
+
+    const summaryRows: CsvCell[][] = [
+      ['totalRequests', 'إجمالي الطلبات', r.totalRequests],
+      ['pendingReviewCount', 'قيد المراجعة', r.pendingReviewCount],
+      ['approvedCount', 'معتمدة', r.approvedCount],
+      ['rejectedCount', 'مرفوضة', r.rejectedCount],
+      ['openCount', 'مفتوحة', r.openCount],
+      ['assignedCount', 'مسندة', r.assignedCount],
+      ['inProgressCount', 'قيد التنفيذ', r.inProgressCount],
+      ['resolvedCount', 'تم الحل', r.resolvedCount],
+      ['closedCount', 'مغلقة', r.closedCount],
+      ['overdueCount', 'متأخرة', r.overdueCount],
+      ['inWarrantyCount', 'تحت الضمان', r.inWarrantyCount],
+      ['outOfWarrantyCount', 'خارج الضمان', r.outOfWarrantyCount],
+      ['unknownWarrantyCount', 'ضمان غير معروف', r.unknownWarrantyCount],
+      ['avgResolutionHours', 'متوسط زمن المعالجة (ساعة)', r.avgResolutionHours ?? '—'],
+      ['resolvedWithinSlaCount', 'تم الحل ضمن المدة', r.resolvedWithinSlaCount],
+      ['resolvedOverdueCount', 'تم الحل بعد الموعد', r.resolvedOverdueCount],
+      ['slaAttainmentPercent', 'نسبة الالتزام بالمدة (٪)', r.slaAttainmentPercent ?? '—'],
+      ['avgDelayHours', 'متوسط التأخير (ساعة)', r.avgDelayHours ?? '—'],
+    ];
+
+    const categoryRows: CsvCell[][] = r.byCategory.map((c) => [
+      'category',
+      txAr(c.categoryName),
+      c.count,
+      c.overdueCount,
+      c.outOfWarrantyCount,
+    ]);
+
+    const assigneeRows: CsvCell[][] = r.byAssignee.map((a) => [
+      'assignee',
+      a.name,
+      a.count,
+      a.overdueCount,
+      a.inProgressCount,
+    ]);
+
+    const expiringRows: CsvCell[][] = r.expiringWarranties.map((e) => [
+      'expiring',
+      e.unitCode,
+      txAr(e.categoryName),
+      fmtDate(e.warrantyEnd),
+    ]);
+
+    return [
+      toCsv(['metric', 'label', 'value'], summaryRows),
+      '',
+      toCsv(['section', 'category', 'count', 'overdueCount', 'outOfWarrantyCount'], categoryRows),
+      '',
+      toCsv(['section', 'assignee', 'count', 'overdueCount', 'inProgressCount'], assigneeRows),
+      '',
+      toCsv(['section', 'unitCode', 'categoryName', 'warrantyEnd'], expiringRows),
+    ].join('\r\n');
   }
 }
 
@@ -996,6 +1298,9 @@ class MaintenanceController {
     @Query('customerId') customerId?: string,
     @Query('assignedAdminId') assignedAdminId?: string,
     @Query('reviewStatus') reviewStatus?: MaintenanceReviewStatus,
+    @Query('categoryId') categoryId?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -1006,7 +1311,44 @@ class MaintenanceController {
       customerId,
       assignedAdminId,
       reviewStatus,
+      categoryId,
+      from,
+      to,
     });
+  }
+
+  // Operational reporting summary. Declared before the `:id` route so the
+  // literal "reports/summary" path is never read as a request id.
+  @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:read')
+  @Get('maintenance-requests/reports/summary')
+  reportsSummary(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('assignedAdminId') assignedAdminId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('reviewStatus') reviewStatus?: MaintenanceReviewStatus,
+    @Query('status') status?: MaintenanceStatus,
+  ) {
+    return this.svc.reportsSummary({ from, to, assignedAdminId, categoryId, reviewStatus, status });
+  }
+
+  // CSV export of the same report. Declared before `:id` so the literal path
+  // is never read as a request id.
+  @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:read')
+  @Get('maintenance-requests/reports/summary.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="maintenance-report.csv"')
+  reportsSummaryCsv(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('assignedAdminId') assignedAdminId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('reviewStatus') reviewStatus?: MaintenanceReviewStatus,
+    @Query('status') status?: MaintenanceStatus,
+  ) {
+    return this.svc.reportsSummaryCsv({ from, to, assignedAdminId, categoryId, reviewStatus, status });
   }
 
   @Roles(UserRole.ADMIN)

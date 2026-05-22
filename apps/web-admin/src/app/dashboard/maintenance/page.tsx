@@ -1,19 +1,18 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import {
-  Wrench, FolderOpen, Loader2, CheckCircle2, Archive, Plus, ArrowLeft, AlertCircle,
-} from 'lucide-react';
+import { Wrench, Plus, ArrowLeft, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, MaintenanceRequest, MaintenanceCategory, MaintenanceStatus, MaintenanceReviewStatus, User } from '@/lib/types';
 import { formatDate, tx, maintenanceSlaLabel, warrantyMonthsLabel } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MaintenanceStatusBadge, MaintenancePriorityBadge, MaintenanceReviewStatusBadge } from '@/components/badges';
+import { CsvExportLink } from '@/components/csv-export-link';
+import { MaintenanceReports } from './maintenance-reports';
 
 // dueAt/overdue only apply once a request is approved (the SLA timer starts then).
 function isApproved(r: MaintenanceRequest): boolean {
@@ -69,36 +68,45 @@ async function createCategoryAction(formData: FormData) {
 export default async function MaintenancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; assignedAdminId?: string; reviewStatus?: string; catErr?: string }>;
+  searchParams: Promise<{ status?: string; assignedAdminId?: string; reviewStatus?: string; categoryId?: string; from?: string; to?: string; catErr?: string }>;
 }) {
   const sp = await searchParams;
+  // The list table and the report share the same filters.
   const listQs = new URLSearchParams({ pageSize: '100' });
   if (sp.status) listQs.set('status', sp.status);
   if (sp.assignedAdminId) listQs.set('assignedAdminId', sp.assignedAdminId);
   if (sp.reviewStatus) listQs.set('reviewStatus', sp.reviewStatus);
+  if (sp.categoryId) listQs.set('categoryId', sp.categoryId);
+  if (sp.from) listQs.set('from', sp.from);
+  if (sp.to) listQs.set('to', sp.to);
 
-  // Per-status totals for the KPI cards (lightweight count queries).
-  const countQs = (s: MaintenanceStatus) => `/maintenance-requests?status=${s}&pageSize=1`;
-
-  const [reqsRes, catsRes, adminsRes, ...countResults] = await Promise.all([
+  const [reqsRes, catsRes, adminsRes] = await Promise.all([
     safe(api.get<Paged<MaintenanceRequest>>(`/maintenance-requests?${listQs}`)),
     safe(api.get<MaintenanceCategory[]>('/maintenance-categories')),
     safe(api.get<Paged<User>>('/users?role=ADMIN&pageSize=100')),
-    ...STATUSES.map((s) => safe(api.get<Paged<MaintenanceRequest>>(countQs(s)))),
   ]);
-
-  const counts: Record<MaintenanceStatus, number> = {
-    OPEN: 0, ASSIGNED: 0, IN_PROGRESS: 0, RESOLVED: 0, CLOSED: 0,
-  };
-  STATUSES.forEach((s, i) => {
-    counts[s] = countResults[i]?.data?.meta.total ?? 0;
-  });
-  const total = STATUSES.reduce((sum, s) => sum + counts[s], 0);
 
   const rows = reqsRes.data?.data ?? [];
   const admins = adminsRes.data?.data ?? [];
   const cats = catsRes.data ?? [];
-  const hasFilters = !!(sp.status || sp.assignedAdminId || sp.reviewStatus);
+  const hasFilters = !!(sp.status || sp.assignedAdminId || sp.reviewStatus || sp.categoryId || sp.from || sp.to);
+  const reportFilters = {
+    status: sp.status,
+    reviewStatus: sp.reviewStatus,
+    assignedAdminId: sp.assignedAdminId,
+    categoryId: sp.categoryId,
+    from: sp.from,
+    to: sp.to,
+  };
+  // Forward only the truthy filters to the CSV export.
+  const csvParams: Record<string, string | undefined> = {
+    status: sp.status,
+    reviewStatus: sp.reviewStatus,
+    assignedAdminId: sp.assignedAdminId,
+    categoryId: sp.categoryId,
+    from: sp.from,
+    to: sp.to,
+  };
 
   return (
     <div className="space-y-5">
@@ -110,28 +118,43 @@ export default async function MaintenancePage({
           { label: 'الصيانة' },
         ]}
         actions={
-          <Link href="/dashboard/maintenance/new">
-            <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              طلب صيانة جديد
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <CsvExportLink
+              path="/maintenance-requests/reports/summary.csv"
+              filename="maintenance-report.csv"
+              params={csvParams}
+            />
+            <Link href="/dashboard/maintenance/new">
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                طلب صيانة جديد
+              </Button>
+            </Link>
+          </div>
         }
       />
-
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <PageKpiCard label="إجمالي الطلبات" value={total.toLocaleString('ar-EG')} icon={<Wrench />} tone="brand" />
-        <PageKpiCard label="مفتوحة" value={counts.OPEN.toLocaleString('ar-EG')} icon={<FolderOpen />} tone="neutral" />
-        <PageKpiCard label="قيد التنفيذ" value={counts.IN_PROGRESS.toLocaleString('ar-EG')} icon={<Loader2 />} tone="warning" />
-        <PageKpiCard label="تم الحل" value={counts.RESOLVED.toLocaleString('ar-EG')} icon={<CheckCircle2 />} tone="success" />
-        <PageKpiCard label="مغلقة" value={counts.CLOSED.toLocaleString('ar-EG')} icon={<Archive />} tone="info" />
-      </div>
 
       {/* Filters */}
       <form method="get" action="/dashboard/maintenance">
         <div className="flex flex-wrap items-end gap-3 bg-white rounded-xl border border-hairline shadow-xs px-4 py-3">
           <div className="flex flex-col gap-1">
-            <label htmlFor="status" className="text-[11px] font-medium text-slate-400">الحالة</label>
+            <label htmlFor="from" className="text-[11px] font-medium text-slate-400">من تاريخ</label>
+            <Input id="from" name="from" type="date" inputSize="sm" defaultValue={sp.from ?? ''} className="w-40" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="to" className="text-[11px] font-medium text-slate-400">إلى تاريخ</label>
+            <Input id="to" name="to" type="date" inputSize="sm" defaultValue={sp.to ?? ''} className="w-40" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="categoryId" className="text-[11px] font-medium text-slate-400">التصنيف</label>
+            <Select id="categoryId" name="categoryId" inputSize="sm" defaultValue={sp.categoryId ?? ''} className="w-44">
+              <option value="">كل التصنيفات</option>
+              {cats.map((c) => (
+                <option key={c.id} value={c.id}>{tx(c.name)}</option>
+              ))}
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="status" className="text-[11px] font-medium text-slate-400">الحالة التشغيلية</label>
             <Select id="status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40">
               <option value="">كل الحالات</option>
               {STATUSES.map((s) => (
@@ -140,7 +163,7 @@ export default async function MaintenancePage({
             </Select>
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="reviewStatus" className="text-[11px] font-medium text-slate-400">المراجعة</label>
+            <label htmlFor="reviewStatus" className="text-[11px] font-medium text-slate-400">حالة المراجعة</label>
             <Select id="reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40">
               <option value="">كل المراجعات</option>
               {REVIEW_STATUSES.map((s) => (
@@ -167,6 +190,9 @@ export default async function MaintenancePage({
           </div>
         </div>
       </form>
+
+      {/* Operational report (KPIs + panels) — respects the same filters. */}
+      <MaintenanceReports filters={reportFilters} />
 
       {reqsRes.error && (
         <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm flex items-start gap-2">

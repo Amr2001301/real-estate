@@ -24,6 +24,8 @@ interface MaintenanceDetail {
   approvedAt: string | null;
   rejectedAt: string | null;
   maxHandlingSlaMinutesSnapshot: number | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
   createdAt: string;
   updatedAt: string;
   customer?: { id: string; fullName: string; phone: string | null; email: string | null };
@@ -134,6 +136,12 @@ export default async function MaintenanceDetailPage({
   const transitions = NEXT_TRANSITIONS[m.status];
   const overdue = approved && !!m.dueAt && m.status !== 'CLOSED' && new Date(m.dueAt).getTime() < Date.now();
   const items = m.items ?? [];
+  const slaResult: 'within' | 'after' | null =
+    m.resolvedAt && m.dueAt
+      ? new Date(m.resolvedAt).getTime() <= new Date(m.dueAt).getTime()
+        ? 'within'
+        : 'after'
+      : null;
 
   return (
     <div className="space-y-5">
@@ -199,11 +207,23 @@ export default async function MaintenanceDetailPage({
                 <p className="text-sm text-slate-700">—</p>
               )}
             </div>
+            {slaResult && (
+              <div>
+                <p className="text-[11px] font-medium text-slate-400 mb-0.5">نتيجة المدة المستهدفة</p>
+                {slaResult === 'within' ? (
+                  <span className="inline-block rounded-full bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5">تم الحل ضمن المدة</span>
+                ) : (
+                  <span className="inline-block rounded-full bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5">تم الحل بعد الموعد</span>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3 pt-2 border-t border-hairline">
               <Field label="تاريخ الإنشاء" value={formatDateTime(m.createdAt)} />
               <Field label="آخر تحديث" value={formatDateTime(m.updatedAt)} />
               {m.approvedAt && <Field label="تاريخ الاعتماد" value={formatDateTime(m.approvedAt)} />}
               {m.rejectedAt && <Field label="تاريخ الرفض" value={formatDateTime(m.rejectedAt)} />}
+              {m.resolvedAt && <Field label="تاريخ الحل" value={formatDateTime(m.resolvedAt)} />}
+              {m.closedAt && <Field label="تاريخ الإغلاق" value={formatDateTime(m.closedAt)} />}
             </div>
           </CardBody>
         </Card>

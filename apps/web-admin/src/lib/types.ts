@@ -552,6 +552,47 @@ export interface UnitMaintenanceItem {
   updatedAt: string;
 }
 
+export interface MaintenanceReportSummary {
+  totalRequests: number;
+  pendingReviewCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  openCount: number;
+  assignedCount: number;
+  inProgressCount: number;
+  resolvedCount: number;
+  closedCount: number;
+  overdueCount: number;
+  inWarrantyCount: number;
+  outOfWarrantyCount: number;
+  unknownWarrantyCount: number;
+  avgResolutionHours: number | null;
+  resolvedWithinSlaCount: number;
+  resolvedOverdueCount: number;
+  slaAttainmentPercent: number | null;
+  avgDelayHours: number | null;
+  byCategory: Array<{
+    categoryId: string;
+    categoryName: Translatable | null;
+    count: number;
+    overdueCount: number;
+    outOfWarrantyCount: number;
+  }>;
+  byAssignee: Array<{
+    userId: string;
+    name: string;
+    count: number;
+    overdueCount: number;
+    inProgressCount: number;
+  }>;
+  expiringWarranties: Array<{
+    id: string;
+    unitCode: string;
+    categoryName: Translatable | null;
+    warrantyEnd: string | null;
+  }>;
+}
+
 export interface MaintenanceRequestItem {
   id: string;
   itemId: string | null;
