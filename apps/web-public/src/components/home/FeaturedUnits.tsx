@@ -1,12 +1,11 @@
-import { Home } from 'lucide-react';
+import Link from 'next/link';
+import { Home, ArrowLeft } from 'lucide-react';
 import type { ApiResult } from '@/lib/api';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
-import { Section, SectionHeading } from '@/components/ui/Section';
-import { ButtonLink } from '@/components/ui/Button';
+import { Section } from '@/components/ui/Section';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
-import { Reveal } from '@/components/motion/Reveal';
 import { Stagger } from '@/components/motion/Stagger';
 import { UnitCard } from './UnitCard';
 
@@ -14,21 +13,23 @@ export function FeaturedUnits({ result }: { result: ApiResult<Paginated<PublicUn
   const units = result.ok ? result.data.data : [];
 
   return (
-    <Section tone="soft" className="pt-2 sm:pt-3 lg:pt-4">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeading
-          eyebrow="وحدات مميزة"
-          title="وحدات فاخرة جاهزة لاستقبالك"
-          description="تشكيلة من الوحدات المتاحة بمواصفات راقية تناسب أسلوب حياتك واستثمارك."
-        />
-        <Reveal>
-          <ButtonLink href={routes.units} variant="outline" size="md">
-            كل الوحدات
-          </ButtonLink>
-        </Reveal>
+    <Section tone="soft" className="pt-14 sm:pt-16 lg:pt-20">
+      {/* Two-level header: title + subtitle (start) · text link (end) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-bold text-navy lg:text-4xl">الوحدات المختارة</h2>
+          <p className="mt-2 text-ink-muted">فرص سكنية وتجارية مختارة بعناية لتناسب احتياجك.</p>
+        </div>
+        <Link
+          href={routes.units}
+          className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-navy underline-offset-8 transition-colors hover:text-gold-600 hover:underline"
+        >
+          عرض كل الوحدات
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" aria-hidden />
+        </Link>
       </div>
 
-      <div className="mt-12">
+      <div className="mt-8">
         {!result.ok ? (
           <ErrorState
             title="لم نتمكن من تحميل الوحدات حاليًا"

@@ -20,7 +20,7 @@ interface SectionProps {
   children: React.ReactNode;
 }
 
-/** Editorial vertical band with generous, premium spacing. */
+/** Editorial vertical band — compact, premium default spacing across the site. */
 export function Section({
   tone = 'canvas',
   className,
@@ -29,7 +29,7 @@ export function Section({
   children,
 }: SectionProps) {
   return (
-    <section className={cn('py-14 sm:py-16 lg:py-24', TONES[tone], className)}>
+    <section className={cn('py-10 sm:py-12 lg:py-16', TONES[tone], className)}>
       {contained ? <Container className={containerClassName}>{children}</Container> : children}
     </section>
   );
@@ -70,9 +70,9 @@ export function SectionHeading({
           {eyebrow}
         </span>
       )}
-      <h2 className={cn('text-display-2', invert && 'text-white')}>{title}</h2>
+      <h2 className={cn('text-3xl font-bold lg:text-4xl', invert && 'text-white')}>{title}</h2>
       {description && (
-        <p className={cn('mt-4 text-lg leading-relaxed', invert ? 'text-white/75' : 'text-ink-muted')}>
+        <p className={cn('mt-2 leading-relaxed', invert ? 'text-white/75' : 'text-ink-muted')}>
           {description}
         </p>
       )}

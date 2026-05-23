@@ -21,24 +21,24 @@ export function HomeBanner() {
             <span className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-gold-400/12 blur-3xl" aria-hidden />
             <div className="relative flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div className="max-w-xl">
-                <span className="text-sm font-medium tracking-wide text-gold-200">فرص استثمارية</span>
-                <h2 className="mt-2 text-display-2 text-white">فرص عقارية مختارة لمستقبل أوضح</h2>
+                <span className="text-sm font-medium tracking-wide text-gold-200">ابدأ الآن</span>
+                <h2 className="mt-2 text-3xl font-bold text-white lg:text-4xl">ابدأ رحلتك العقارية بثقة</h2>
                 <p className="mt-3 leading-relaxed text-white/75">
-                  اختر من مشاريع ووحدات تناسب السكن والاستثمار، مع متابعة من مستشارينا في كل خطوة.
+                  اختر من مشاريع ووحدات مختارة بعناية، وتواصل مع مستشار يساعدك في القرار المناسب.
                 </p>
               </div>
               <div className="flex flex-wrap gap-3">
-                <ButtonLink href={routes.units} variant="gold" size="lg">
-                  استكشف الفرص
+                <ButtonLink href={routes.contact as Route} variant="gold" size="lg">
+                  تواصل مع مستشار
                   <ArrowLeft className="h-5 w-5" aria-hidden />
                 </ButtonLink>
                 <ButtonLink
-                  href={routes.contact as Route}
+                  href={routes.units}
                   variant="outline"
                   size="lg"
                   className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
                 >
-                  تواصل مع مستشار
+                  تصفح الوحدات
                 </ButtonLink>
               </div>
             </div>

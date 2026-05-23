@@ -20,7 +20,7 @@ export function HomeContact() {
           <div>
             <span className="text-sm font-medium tracking-wide text-gold-500">تواصل معنا</span>
             <Divider accent className="my-4" />
-            <h2 className="text-display-2 text-navy">اطلب استشارة عقارية مجانية</h2>
+            <h2 className="text-3xl font-bold text-navy lg:text-4xl">اطلب استشارة عقارية مجانية</h2>
             <p className="mt-4 max-w-lg text-lg leading-relaxed text-ink-muted">
               اترك بياناتك وأخبرنا عن اهتمامك، وسيتواصل معك أحد مستشارينا لمساعدتك على اختيار الأنسب لك.
             </p>

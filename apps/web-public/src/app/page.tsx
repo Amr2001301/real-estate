@@ -34,6 +34,7 @@ export default async function HomePage() {
     safeFetch<Paginated<PublicProjectListItem>>('/public/projects?pageSize=8', {
       revalidate: REVALIDATE,
     }),
+    // Homepage shows 6 featured units (two rows); the full catalogue lives on /units.
     safeFetch<Paginated<PublicUnit>>('/public/units?pageSize=6', { revalidate: REVALIDATE }),
   ]);
 

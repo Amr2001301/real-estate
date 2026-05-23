@@ -54,7 +54,7 @@ function PhoneMockup() {
 
 export function MobileAppPromo() {
   return (
-    <section className="py-14 sm:py-16 lg:py-24">
+    <section className="pt-6 pb-12 sm:pt-8 sm:pb-14 lg:pt-8 lg:pb-16">
       <Container>
         <div className="relative overflow-hidden rounded-4xl border border-hairline bg-surface-soft">
           {/* Decorative warm shapes */}
@@ -66,7 +66,7 @@ export function MobileAppPromo() {
             <Reveal>
               <div>
                 <Badge tone="gold">تجربة رقمية</Badge>
-                <h2 className="mt-5 text-display-2 text-navy">كل خطواتك العقارية في مكان واحد</h2>
+                <h2 className="mt-4 text-3xl font-bold text-navy lg:text-4xl">كل خطواتك العقارية في مكان واحد</h2>
                 <p className="mt-4 max-w-lg text-lg leading-relaxed text-ink-muted">
                   تصفّح المشاريع والوحدات، قارن بينها، احجز زيارة، وتواصل مع مستشارك — تجربة واضحة وسلسة من البداية للقرار.
                 </p>

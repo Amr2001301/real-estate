@@ -29,16 +29,16 @@ export function PageHero({ eyebrow, title, subtitle, stats }: PageHeroProps) {
       />
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-gold-400/10 blur-3xl" aria-hidden />
 
-      <Container className="relative pb-12 pt-28 sm:pb-14 sm:pt-32">
+      <Container className="relative pb-10 pt-24 sm:pb-12 sm:pt-28">
         <Reveal>
           <div className="max-w-2xl">
             {eyebrow && <span className="text-sm font-medium tracking-wide text-gold-200">{eyebrow}</span>}
-            <Divider accent className="mb-6 mt-3" />
+            <Divider accent className="mb-5 mt-3" />
             <h1 className="text-display-1 text-white">{title}</h1>
-            {subtitle && <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/75">{subtitle}</p>}
+            {subtitle && <p className="mt-4 max-w-xl text-lg leading-relaxed text-white/75">{subtitle}</p>}
 
             {stats && stats.length > 0 && (
-              <dl className="mt-10 flex flex-wrap gap-x-12 gap-y-6 border-t border-white/10 pt-7">
+              <dl className="mt-8 flex flex-wrap gap-x-12 gap-y-6 border-t border-white/10 pt-6">
                 {stats.map((s) => (
                   <div key={s.label}>
                     <dt className="font-display text-2xl text-gold-200">{s.value}</dt>

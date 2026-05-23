@@ -26,7 +26,7 @@ export function CtaBand({ eyebrow, title, description, children }: CtaBandProps)
           <span className="pointer-events-none absolute -left-16 top-0 h-56 w-56 rounded-full bg-gold-400/12 blur-3xl" aria-hidden />
           <div className="relative mx-auto max-w-2xl">
             {eyebrow && <span className="text-sm font-medium tracking-wide text-gold-200">{eyebrow}</span>}
-            <h2 className="mt-3 text-display-2 text-white">{title}</h2>
+            <h2 className="mt-3 text-3xl font-bold text-white lg:text-4xl">{title}</h2>
             {description && <p className="mt-4 leading-relaxed text-white/75">{description}</p>}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">{children}</div>
           </div>
