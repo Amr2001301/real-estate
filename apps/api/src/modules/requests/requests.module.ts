@@ -61,6 +61,24 @@ class RequestsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
+   * Find-or-create the "Website" LeadSource so leads originating from the
+   * public site are attributed correctly. The JSON `name` column has no unique
+   * index, so we match on the English label (mirrors the seed).
+   */
+  private async websiteLeadSourceId(): Promise<string> {
+    const existing = await this.prisma.leadSource.findFirst({
+      where: { name: { path: ['en'], equals: 'Website' } },
+      select: { id: true },
+    });
+    if (existing) return existing.id;
+    const created = await this.prisma.leadSource.create({
+      data: { name: { ar: 'موقع الويب', en: 'Website' } },
+      select: { id: true },
+    });
+    return created.id;
+  }
+
+  /**
    * Find-or-create the Client (User) that a Lead must point to. Used by the
    * public request endpoints when an unauthenticated visitor leaves their
    * phone — we want a single canonical contact record per phone, never
@@ -107,6 +125,8 @@ class RequestsService {
             phone: client.phone ?? dto.phone,
             email: client.email ?? dto.email ?? null,
             projectInterestId: dto.projectId ?? null,
+            unitInterestId: dto.unitId ?? null,
+            sourceId: await this.websiteLeadSourceId(),
           },
         });
         leadId = lead.id;
@@ -149,6 +169,8 @@ class RequestsService {
             fullName: client.fullName,
             phone: client.phone ?? dto.phone,
             projectInterestId: dto.projectId,
+            unitInterestId: dto.unitId ?? null,
+            sourceId: await this.websiteLeadSourceId(),
           },
         });
         leadId = lead.id;

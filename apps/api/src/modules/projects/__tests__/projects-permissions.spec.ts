@@ -112,6 +112,7 @@ function makePrismaMock() {
     },
     unit: {
       findUnique: jest.fn().mockResolvedValue({ id: 'u1' }),
+      findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
     },
     // Prisma surfaces consulted by ProjectsService.remove() for safety checks.

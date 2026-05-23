@@ -14,6 +14,7 @@ import {
   CalcInstallmentDto,
 } from './dto/unit.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { serializePublicUnit } from './public-unit.serializer';
 
 @Injectable()
 export class UnitsService {
@@ -44,7 +45,13 @@ export class UnitsService {
       ...(query.projectId
         ? { building: { phase: { projectId: query.projectId } } }
         : {}),
-      ...(query.status ? { status: query.status } : {}),
+      // Public listing defaults to AVAILABLE; an explicit status filter (any
+      // UnitStatus is a public-safe label) may override it.
+      ...(query.status
+        ? { status: query.status }
+        : publicOnly
+          ? { status: UnitStatus.AVAILABLE }
+          : {}),
       ...(publicOnly
         ? {
             building: {
@@ -86,6 +93,13 @@ export class UnitsService {
       this.prisma.unit.count({ where }),
     ]);
 
+    if (publicOnly) {
+      const serialized = data.map((u) =>
+        serializePublicUnit({ ...u, project: u.building.phase.project }),
+      );
+      return paginate(serialized, total, { page, pageSize });
+    }
+
     return paginate(data, total, { page, pageSize });
   }
 
@@ -95,12 +109,16 @@ export class UnitsService {
       include: {
         media: { orderBy: { order: 'asc' } },
         building: { include: { phase: { include: { project: true } } } },
-        history: { orderBy: { changedAt: 'desc' }, take: 10 },
+        // History carries actor + reason and is admin-only; skip for public.
+        ...(publicOnly ? {} : { history: { orderBy: { changedAt: 'desc' }, take: 10 } }),
       },
     });
     if (!unit) throw new NotFoundException('Unit not found');
     if (publicOnly && unit.building.phase.project.status !== 'PUBLISHED') {
       throw new NotFoundException('Unit not found');
+    }
+    if (publicOnly) {
+      return serializePublicUnit({ ...unit, project: unit.building.phase.project });
     }
     return unit;
   }

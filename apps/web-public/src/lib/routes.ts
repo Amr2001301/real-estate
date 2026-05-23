@@ -1,0 +1,28 @@
+/**
+ * Central route map for the public website. Pages that don't exist yet (W3+)
+ * still resolve here so the nav/footer can link to stable hrefs.
+ */
+export const routes = {
+  home: '/',
+  projects: '/projects',
+  project: (id: string) => `/projects/${id}`,
+  units: '/units',
+  unit: (id: string) => `/units/${id}`,
+  compare: '/compare',
+  contact: '/contact',
+  login: '/login',
+  register: '/register',
+} as const;
+
+export interface NavItem {
+  label: string;
+  href: string;
+}
+
+export const PRIMARY_NAV: NavItem[] = [
+  { label: 'الرئيسية', href: routes.home },
+  { label: 'المشاريع', href: routes.projects },
+  { label: 'الوحدات', href: routes.units },
+  { label: 'المقارنة', href: routes.compare },
+  { label: 'تواصل معنا', href: routes.contact },
+];

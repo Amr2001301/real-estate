@@ -3,6 +3,10 @@ import { Prisma, ProjectStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import {
+  serializePublicProjectDetail,
+  serializePublicProjectListItem,
+} from './public-project.serializer';
 
 @Injectable()
 export class ProjectsService {
@@ -54,7 +58,36 @@ export class ProjectsService {
       this.prisma.project.count({ where }),
     ]);
 
+    if (publicOnly) {
+      const counts = await this.availableUnitCounts(data.map((p) => p.id));
+      const serialized = data.map((p) =>
+        serializePublicProjectListItem(p, counts.get(p.id) ?? 0),
+      );
+      return paginate(serialized, total, { page, pageSize });
+    }
+
     return paginate(data, total, { page, pageSize });
+  }
+
+  /**
+   * Count AVAILABLE units per project in a single query (units have no direct
+   * projectId, so we walk building → phase → projectId and tally in JS).
+   */
+  private async availableUnitCounts(projectIds: string[]): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (projectIds.length === 0) return counts;
+    const units = await this.prisma.unit.findMany({
+      where: {
+        status: 'AVAILABLE',
+        building: { phase: { projectId: { in: projectIds } } },
+      },
+      select: { building: { select: { phase: { select: { projectId: true } } } } },
+    });
+    for (const u of units) {
+      const pid = u.building.phase.projectId;
+      counts.set(pid, (counts.get(pid) ?? 0) + 1);
+    }
+    return counts;
   }
 
   async findOne(id: string, publicOnly = false) {
@@ -70,6 +103,10 @@ export class ProjectsService {
     if (!project) throw new NotFoundException('Project not found');
     if (publicOnly && project.status !== ProjectStatus.PUBLISHED) {
       throw new NotFoundException('Project not found');
+    }
+    if (publicOnly) {
+      const counts = await this.availableUnitCounts([project.id]);
+      return serializePublicProjectDetail(project, counts.get(project.id) ?? 0);
     }
     return project;
   }
