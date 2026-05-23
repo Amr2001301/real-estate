@@ -10,6 +10,7 @@ export const routes = {
   unit: (id: string) => `/units/${id}`,
   compare: '/compare',
   contact: '/contact',
+  app: '/app',
   login: '/login',
   register: '/register',
   privacy: '/privacy',
