@@ -60,12 +60,15 @@ export class UpdateUnitDto {
 export class UnitQueryDto {
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() buildingId?: string;
+  @IsOptional() @IsString() city?: string;
+  @IsOptional() @IsString() type?: string;
   @IsOptional() @IsEnum(UnitStatus) status?: UnitStatus;
   @IsOptional() @IsNumber() priceMin?: number;
   @IsOptional() @IsNumber() priceMax?: number;
   @IsOptional() @IsNumber() areaMin?: number;
   @IsOptional() @IsNumber() areaMax?: number;
   @IsOptional() @IsInt() bedrooms?: number;
+  @IsOptional() @IsInt() bathrooms?: number;
   @IsOptional() @IsInt() page?: number;
   @IsOptional() @IsInt() pageSize?: number;
   @IsOptional() @IsBoolean() withoutPlan?: boolean;

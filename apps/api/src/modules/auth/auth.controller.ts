@@ -2,7 +2,14 @@ import { Body, Controller, Post } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
-import { LoginEmailDto, OtpRequestDto, OtpVerifyDto, RefreshDto } from './dto/auth.dto';
+import {
+  CustomerLoginDto,
+  CustomerRegisterDto,
+  LoginEmailDto,
+  OtpRequestDto,
+  OtpVerifyDto,
+  RefreshDto,
+} from './dto/auth.dto';
 import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('auth')
@@ -15,6 +22,21 @@ export class AuthController {
   @Post('login')
   login(@Body() dto: LoginEmailDto) {
     return this.auth.loginEmail(dto.email, dto.password);
+  }
+
+  // ── Public customer email/password ──────────────────────────────────────
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('customer/register')
+  customerRegister(@Body() dto: CustomerRegisterDto) {
+    return this.auth.registerCustomer(dto);
+  }
+
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 5 } })
+  @Post('customer/login')
+  customerLogin(@Body() dto: CustomerLoginDto) {
+    return this.auth.loginCustomer(dto.email, dto.password);
   }
 
   @Public()

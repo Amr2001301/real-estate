@@ -135,17 +135,189 @@ type UnitSeed = {
   floor: number;
   price: number;
   status?: UnitStatus;
+  media?: string[];
 };
+
+/**
+ * Attach demo images to a unit, but only when it has none — so re-seeding never
+ * duplicates media and never clobbers admin-added images.
+ */
+async function ensureUnitMedia(unitId: string, urls: string[]) {
+  if (urls.length === 0) return;
+  const existing = await prisma.unitMedia.count({ where: { unitId } });
+  if (existing > 0) return;
+  await prisma.unitMedia.createMany({
+    data: urls.map((url, i) => ({ unitId, url, type: MediaType.IMAGE, order: i })),
+  });
+}
 
 async function ensureUnits(buildingId: string, units: UnitSeed[]) {
   for (const u of units) {
-    await prisma.unit.upsert({
+    const { media, ...data } = u;
+    const unit = await prisma.unit.upsert({
       where: { buildingId_code: { buildingId, code: u.code } },
-      create: { buildingId, ...u },
+      create: { buildingId, ...data },
       // Don't overwrite admin-edited unit state on re-seed.
       update: {},
     });
+    if (media && media.length) await ensureUnitMedia(unit.id, media);
   }
+}
+
+// ============================================================================
+// Public website demo data (gated by SEED_PUBLIC_DEMO=true)
+//
+// Realistic PUBLISHED projects + AVAILABLE units so the public website can be
+// reviewed end-to-end. Fully idempotent: projects/phases/buildings are matched
+// by name, units by (buildingId, code), media only added when none exist. Never
+// deletes or overwrites existing/admin-edited data. Cities use the Arabic names
+// the website's city filter expects.
+// ============================================================================
+
+// Stable Unsplash real-estate/architecture images (render in plain <img>).
+const DEMO_IMG = {
+  apartment1: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
+  apartment2: 'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=1200',
+  interior1: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200',
+  highrise: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
+  villa1: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
+  villa2: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200',
+  modernHouse: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=1200',
+  officeExt: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
+  officeInt: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
+} as const;
+
+async function seedPublicDemo() {
+  if (process.env.SEED_PUBLIC_DEMO !== 'true') return;
+  console.log('🏙️  Seeding public website demo data (SEED_PUBLIC_DEMO=true)…');
+
+  // ── 1) Nile Crest Residences — luxury waterfront apartments (جدة, featured) ──
+  const nileCrest = await ensureProject({
+    nameAr: 'نايل كريست ريزيدنس',
+    nameEn: 'Nile Crest Residences',
+    descriptionAr:
+      'مجمع سكني فاخر على الواجهة البحرية يجمع بين الإطلالات الساحرة والتشطيبات الراقية، مع مرافق متكاملة تمنح سكانه تجربة حياة استثنائية تجمع بين الخصوصية والرفاهية.',
+    descriptionEn:
+      'A luxury waterfront residence blending captivating views with refined finishes and full-service amenities for an exceptional living experience.',
+    city: 'جدة',
+    lat: 21.5433,
+    lng: 39.1728,
+    status: ProjectStatus.PUBLISHED,
+    featured: true,
+    services: [
+      { ar: 'إطلالة بحرية', en: 'Sea View' },
+      { ar: 'حمام سباحة لا متناهي', en: 'Infinity Pool' },
+      { ar: 'نادي صحي', en: 'Health Club' },
+      { ar: 'أمن وحراسة على مدار الساعة', en: '24/7 Security' },
+      { ar: 'مواقف خاصة', en: 'Private Parking' },
+    ],
+    mediaUrls: [DEMO_IMG.apartment1, DEMO_IMG.apartment2, DEMO_IMG.interior1],
+  });
+  const ncPhase = await ensurePhase(nileCrest.id, 'المرحلة الأولى', 'Phase 1', 0);
+  const ncTowerA = await ensureBuilding(ncPhase.id, 'Nile Tower A', 20, 0);
+  const ncTowerB = await ensureBuilding(ncPhase.id, 'Nile Tower B', 18, 1);
+  await ensureUnits(ncTowerA.id, [
+    { code: 'NC-A-101', type: 'studio', area: 80, bedrooms: 1, bathrooms: 1, floor: 1, price: 1200000, media: [DEMO_IMG.interior1] },
+    { code: 'NC-A-102', type: '1BR', area: 95, bedrooms: 1, bathrooms: 1, floor: 1, price: 1450000, media: [DEMO_IMG.apartment2] },
+    { code: 'NC-A-201', type: '2BR', area: 130, bedrooms: 2, bathrooms: 2, floor: 2, price: 2100000, media: [DEMO_IMG.apartment1, DEMO_IMG.interior1] },
+    { code: 'NC-A-305', type: '3BR', area: 180, bedrooms: 3, bathrooms: 3, floor: 3, price: 3200000, media: [DEMO_IMG.apartment1] },
+  ]);
+  await ensureUnits(ncTowerB.id, [
+    { code: 'NC-B-210', type: '2BR', area: 125, bedrooms: 2, bathrooms: 2, floor: 2, price: 2050000, status: UnitStatus.RESERVED, media: [DEMO_IMG.apartment2] },
+  ]);
+
+  // ── 2) Palm District — villas & townhouses (الرياض, featured) ──
+  const palm = await ensureProject({
+    nameAr: 'حي النخيل',
+    nameEn: 'Palm District',
+    descriptionAr:
+      'مجتمع سكني متكامل من الفلل والتاون هاوس وسط مساحات خضراء واسعة وممرات للمشي، مصمم ليمنح العائلات الخصوصية والراحة ضمن بيئة عصرية متكاملة الخدمات.',
+    descriptionEn:
+      'An integrated community of villas and townhouses set amid generous green spaces and walkways, designed to give families privacy and comfort.',
+    city: 'الرياض',
+    lat: 24.7136,
+    lng: 46.6753,
+    status: ProjectStatus.PUBLISHED,
+    featured: true,
+    services: [
+      { ar: 'حدائق خاصة', en: 'Private Gardens' },
+      { ar: 'مسارات للمشي', en: 'Walking Trails' },
+      { ar: 'نادي للعائلات', en: 'Family Clubhouse' },
+      { ar: 'ملاعب أطفال', en: "Children's Playgrounds" },
+    ],
+    mediaUrls: [DEMO_IMG.villa1, DEMO_IMG.villa2, DEMO_IMG.modernHouse],
+  });
+  const palmPhase = await ensurePhase(palm.id, 'المرحلة الأولى', 'Phase 1', 0);
+  const palmCluster = await ensureBuilding(palmPhase.id, 'Palm Cluster A', 2, 0);
+  await ensureUnits(palmCluster.id, [
+    { code: 'PD-V-01', type: 'villa', area: 420, bedrooms: 5, bathrooms: 5, floor: 0, price: 6500000, media: [DEMO_IMG.villa1, DEMO_IMG.villa2] },
+    { code: 'PD-V-02', type: 'villa', area: 380, bedrooms: 4, bathrooms: 4, floor: 0, price: 5800000, media: [DEMO_IMG.villa2] },
+    { code: 'PD-T-01', type: 'townhouse', area: 260, bedrooms: 4, bathrooms: 3, floor: 0, price: 3900000, media: [DEMO_IMG.modernHouse] },
+    { code: 'PD-T-02', type: 'townhouse', area: 240, bedrooms: 3, bathrooms: 3, floor: 0, price: 3600000, status: UnitStatus.SOLD, media: [DEMO_IMG.modernHouse] },
+  ]);
+
+  // ── 3) The Avenue Business Hub — commercial / offices (الدمام) ──
+  const avenue = await ensureProject({
+    nameAr: 'ذا أفنيو للأعمال',
+    nameEn: 'The Avenue Business Hub',
+    descriptionAr:
+      'وجهة أعمال متكاملة تضم مكاتب ومساحات تجارية بمواصفات عالمية في موقع استراتيجي، مصممة لتلبية احتياجات الشركات الطموحة بمرونة وكفاءة.',
+    descriptionEn:
+      'A world-class business destination of offices and retail spaces in a strategic location, built for ambitious companies.',
+    city: 'الدمام',
+    lat: 26.4207,
+    lng: 50.0888,
+    status: ProjectStatus.PUBLISHED,
+    featured: false,
+    services: [
+      { ar: 'قاعات اجتماعات', en: 'Meeting Rooms' },
+      { ar: 'استقبال مشترك', en: 'Shared Reception' },
+      { ar: 'مواقف زوار', en: 'Visitor Parking' },
+      { ar: 'إنترنت فائق السرعة', en: 'High-Speed Internet' },
+    ],
+    mediaUrls: [DEMO_IMG.officeExt, DEMO_IMG.officeInt, DEMO_IMG.highrise],
+  });
+  const avPhase = await ensurePhase(avenue.id, 'المرحلة الأولى', 'Phase 1', 0);
+  const avTower = await ensureBuilding(avPhase.id, 'Business Tower', 24, 0);
+  await ensureUnits(avTower.id, [
+    { code: 'AV-O-101', type: 'office', area: 120, bedrooms: 0, bathrooms: 1, floor: 1, price: 1900000, media: [DEMO_IMG.officeInt] },
+    { code: 'AV-O-205', type: 'office', area: 180, bedrooms: 0, bathrooms: 2, floor: 2, price: 2800000, media: [DEMO_IMG.officeInt, DEMO_IMG.officeExt] },
+    { code: 'AV-R-001', type: 'retail', area: 90, bedrooms: 0, bathrooms: 1, floor: 0, price: 1600000, media: [DEMO_IMG.officeExt] },
+    { code: 'AV-O-310', type: 'office', area: 250, bedrooms: 0, bathrooms: 2, floor: 3, price: 3500000, media: [DEMO_IMG.officeInt] },
+  ]);
+
+  // ── 4) Solara Heights — modern high-rise apartments (مكة المكرمة) ──
+  const solara = await ensureProject({
+    nameAr: 'سولارا هايتس',
+    nameEn: 'Solara Heights',
+    descriptionAr:
+      'برج سكني عصري شاهق يوفر شققًا أنيقة بإطلالات بانورامية ومرافق راقية، في موقع حيوي يجمع بين سهولة الوصول وهدوء الحياة المرتفعة.',
+    descriptionEn:
+      'A modern high-rise offering elegant apartments with panoramic views and premium amenities in a vibrant, well-connected location.',
+    city: 'مكة المكرمة',
+    lat: 21.3891,
+    lng: 39.8579,
+    status: ProjectStatus.PUBLISHED,
+    featured: false,
+    services: [
+      { ar: 'إطلالات بانورامية', en: 'Panoramic Views' },
+      { ar: 'صالة رياضية', en: 'Fitness Center' },
+      { ar: 'منطقة شواء', en: 'BBQ Area' },
+      { ar: 'كونسيرج', en: 'Concierge' },
+    ],
+    mediaUrls: [DEMO_IMG.highrise, DEMO_IMG.apartment1, DEMO_IMG.interior1],
+  });
+  const solPhase = await ensurePhase(solara.id, 'المرحلة الأولى', 'Phase 1', 0);
+  const solTower = await ensureBuilding(solPhase.id, 'Solara Tower One', 30, 0);
+  await ensureUnits(solTower.id, [
+    { code: 'SH-101', type: '1BR', area: 90, bedrooms: 1, bathrooms: 1, floor: 1, price: 1300000, media: [DEMO_IMG.interior1] },
+    { code: 'SH-205', type: '2BR', area: 120, bedrooms: 2, bathrooms: 2, floor: 2, price: 1950000, media: [DEMO_IMG.apartment1] },
+    { code: 'SH-310', type: '2BR', area: 135, bedrooms: 2, bathrooms: 2, floor: 3, price: 2150000, media: [DEMO_IMG.apartment2] },
+    { code: 'SH-1201', type: '3BR', area: 175, bedrooms: 3, bathrooms: 3, floor: 12, price: 3400000, media: [DEMO_IMG.apartment1, DEMO_IMG.highrise] },
+    { code: 'SH-1505', type: 'studio', area: 70, bedrooms: 1, bathrooms: 1, floor: 15, price: 1100000, media: [DEMO_IMG.interior1] },
+  ]);
+
+  console.log('🏙️  Public demo data ready: 4 projects · 18 units.');
 }
 
 // ============================================================================
@@ -664,6 +836,9 @@ async function main() {
       skipDuplicates: true,
     });
   }
+
+  // Optional: realistic public-website demo data (dev/staging only).
+  await seedPublicDemo();
 
   console.log('✅ Seed complete');
   console.log('   Admin:', adminEmail, '/', adminPassword);

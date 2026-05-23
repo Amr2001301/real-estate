@@ -63,6 +63,7 @@ export function ParallaxImage({
       <img
         src={src}
         alt={alt}
+        decoding="async"
         style={{ transform: `translate3d(0, ${offset}px, 0) scale(${1 + intensity})` }}
         className={cn(
           'h-full w-full object-cover',

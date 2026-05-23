@@ -1,0 +1,281 @@
+import type { Route } from 'next';
+import { notFound } from 'next/navigation';
+import { MapPin, ArrowLeft, Building2, LayoutPanelTop } from 'lucide-react';
+import { buildMetadata } from '@/lib/seo';
+import { safeFetch } from '@/lib/api';
+import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
+import { routes } from '@/lib/routes';
+import type { PublicUnit } from '@/lib/api-types';
+import { Container } from '@/components/ui/Container';
+import { Section, SectionHeading } from '@/components/ui/Section';
+import { ButtonLink } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { PremiumCard } from '@/components/ui/PremiumCard';
+import { IconCircle } from '@/components/ui/IconCircle';
+import { ErrorState } from '@/components/states/ErrorState';
+import { Reveal } from '@/components/motion/Reveal';
+import { ProjectGallery } from '@/components/projects/ProjectGallery';
+import { UnitSpecs } from '@/components/units/UnitSpecs';
+import { UnitInquiryCard } from '@/components/units/UnitInquiryCard';
+import { CompareProvider, type CompareItem } from '@/components/compare/CompareContext';
+import { CompareToggle } from '@/components/compare/CompareToggle';
+import { CompareBar } from '@/components/compare/CompareBar';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { breadcrumbLd, unitProductLd } from '@/lib/jsonld';
+
+const REVALIDATE = 60;
+
+type StatusMeta = { label: string; tone: 'success' | 'warning' | 'neutral' };
+
+const STATUS: Record<string, StatusMeta> = {
+  AVAILABLE: { label: 'متاحة', tone: 'success' },
+  RESERVED: { label: 'محجوزة', tone: 'warning' },
+  SOLD: { label: 'مباعة', tone: 'neutral' },
+};
+
+const DEFAULT_STATUS: StatusMeta = { label: 'متاحة', tone: 'success' };
+
+type Params = Promise<{ id: string }>;
+
+function fetchUnit(id: string) {
+  return safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE });
+}
+
+function unitTitle(unit: PublicUnit): string {
+  return unit.type ? unitTypeLabel(unit.type) : `وحدة ${unit.code}`;
+}
+
+export async function generateMetadata({ params }: { params: Params }) {
+  const { id } = await params;
+  const result = await fetchUnit(id);
+  if (!result.ok) return buildMetadata({ title: 'تفاصيل الوحدة' });
+
+  const unit = result.data;
+  const project = unit.project ? pickAr(unit.project.name) : '';
+  const title = [unitTitle(unit), project].filter(Boolean).join(' · ');
+  const description = `${unitTitle(unit)}${project ? ` ضمن ${project}` : ''} — ${formatArea(unit.area)} · ${formatPrice(unit.price)}.`;
+  const image = unit.coverImage ?? unit.media?.[0]?.url;
+  return buildMetadata({ title, description, path: `/units/${id}`, ...(image ? { image } : {}) });
+}
+
+export default async function UnitDetailPage({ params }: { params: Params }) {
+  const { id } = await params;
+  const result = await fetchUnit(id);
+
+  if (!result.ok) {
+    if (result.error.status === 404) notFound();
+    return (
+      <Section tone="canvas" className="pt-36">
+        <ErrorState
+          title="تعذر تحميل تفاصيل الوحدة"
+          message="حاول مرة أخرى بعد لحظات، أو تصفح بقية الوحدات."
+          className="mx-auto max-w-2xl"
+        />
+        <div className="mt-8 text-center">
+          <ButtonLink href={routes.units} variant="outline" size="md">
+            العودة إلى الوحدات
+          </ButtonLink>
+        </div>
+      </Section>
+    );
+  }
+
+  const unit = result.data;
+  const title = unitTitle(unit);
+  const status = STATUS[unit.status] ?? DEFAULT_STATUS;
+  const projectName = unit.project ? pickAr(unit.project.name) : '';
+  const compareItem: CompareItem = {
+    id: unit.id,
+    label: [unit.type, projectName].filter(Boolean).join(' · ') || `وحدة ${unit.code}`,
+    price: unit.price,
+    coverImage: unit.coverImage,
+  };
+
+  const ldName = [title, projectName].filter(Boolean).join(' · ');
+
+  return (
+    <CompareProvider>
+      <JsonLd
+        data={breadcrumbLd([
+          { name: 'الرئيسية', path: '/' },
+          { name: 'الوحدات', path: '/units' },
+          { name: ldName, path: `/units/${unit.id}` },
+        ])}
+      />
+      <JsonLd
+        data={unitProductLd({
+          name: ldName,
+          price: unit.price,
+          status: unit.status,
+          image: unit.coverImage ?? unit.media?.[0]?.url ?? null,
+          path: `/units/${unit.id}`,
+        })}
+      />
+      {/* Cinematic gallery hero */}
+      <section className="bg-canvas pt-24 sm:pt-28">
+        <Container>
+          <ProjectGallery
+            media={unit.media}
+            alt={title}
+            overlay={
+              <Reveal>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Badge tone={status.tone}>{status.label}</Badge>
+                  {projectName && (
+                    <span className="inline-flex items-center gap-1.5 text-sm text-white/85">
+                      <MapPin className="h-4 w-4 text-gold-200" aria-hidden />
+                      {projectName}
+                      {unit.project?.city ? ` · ${unit.project.city}` : ''}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <h1 className="text-display-1 text-white">{title}</h1>
+                    <p className="mt-1 text-sm text-white/70">رمز الوحدة: {unit.code}</p>
+                  </div>
+                  <div className="text-end">
+                    <div className="text-sm text-white/70">السعر</div>
+                    <div className="font-display text-3xl text-gold-200">{formatPrice(unit.price)}</div>
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <ButtonLink href={`${routes.contact}?unitId=${unit.id}` as Route} variant="gold" size="md">
+                    طلب معلومات
+                  </ButtonLink>
+                  <ButtonLink
+                    href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route}
+                    variant="outline"
+                    size="md"
+                    className="border-white/30 text-white hover:border-white/60 hover:bg-white/5"
+                  >
+                    طلب زيارة
+                  </ButtonLink>
+                  <CompareToggle item={compareItem} />
+                </div>
+              </Reveal>
+            }
+          />
+        </Container>
+      </section>
+
+      {/* Body */}
+      <Section tone="canvas" className="pt-14 sm:pt-16">
+        <div className="grid gap-12 lg:grid-cols-3">
+          <div className="space-y-16 lg:col-span-2">
+            {/* Specs */}
+            <div>
+              <SectionHeading eyebrow="المواصفات" title="تفاصيل الوحدة" />
+              <div className="mt-8">
+                <UnitSpecs unit={unit} />
+              </div>
+            </div>
+
+            {/* About */}
+            <div>
+              <SectionHeading eyebrow="نبذة" title="عن الوحدة" />
+              <p className="mt-6 text-lg leading-loose text-ink-muted">
+                وحدة مختارة بعناية ضمن مشروع مميز، صُممت لتمنحك توازنًا بين الراحة والقيمة والموقع.
+              </p>
+            </div>
+
+            {/* Project relation */}
+            {unit.project && (
+              <div>
+                <SectionHeading eyebrow="المشروع" title="ضمن مشروع" />
+                <PremiumCard className="mt-8 p-7">
+                  <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-4">
+                      <IconCircle tone="gold">
+                        <Building2 className="h-6 w-6" aria-hidden />
+                      </IconCircle>
+                      <div>
+                        <h3 className="text-lg text-navy">{projectName}</h3>
+                        {unit.project.city && (
+                          <p className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-ink-muted">
+                            <MapPin className="h-4 w-4 text-gold-500" aria-hidden />
+                            {unit.project.city}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      <ButtonLink href={routes.project(unit.project.id) as Route} variant="primary" size="sm">
+                        عرض المشروع
+                      </ButtonLink>
+                      <ButtonLink href={`${routes.units}?projectId=${unit.project.id}` as Route} variant="outline" size="sm">
+                        عرض وحدات المشروع
+                      </ButtonLink>
+                    </div>
+                  </div>
+                </PremiumCard>
+              </div>
+            )}
+
+            {/* Floor plan placeholder (no floor-plan media in public shape) */}
+            <div>
+              <SectionHeading eyebrow="المخطط" title="مخطط الوحدة" />
+              <PremiumCard className="mt-8 p-9 text-center">
+                <IconCircle tone="soft" className="mx-auto">
+                  <LayoutPanelTop className="h-6 w-6" aria-hidden />
+                </IconCircle>
+                <p className="mt-4 text-ink-muted">المخطط التفصيلي غير متاح حاليًا.</p>
+                <div className="mt-5">
+                  <ButtonLink href={`${routes.contact}?unitId=${unit.id}` as Route} variant="outline" size="sm">
+                    تواصل مع مستشار للحصول على التفاصيل
+                  </ButtonLink>
+                </div>
+              </PremiumCard>
+            </div>
+
+            {/* Similar units CTA */}
+            {unit.project && (
+              <div>
+                <PremiumCard interactive>
+                  <ButtonLink
+                    href={`${routes.units}?projectId=${unit.project.id}` as Route}
+                    variant="ghost"
+                    size="lg"
+                    className="flex w-full items-center justify-between px-7 py-7"
+                  >
+                    <span className="text-lg text-navy">استكشف وحدات مشابهة في المشروع</span>
+                    <ArrowLeft className="h-5 w-5 text-navy" aria-hidden />
+                  </ButtonLink>
+                </PremiumCard>
+              </div>
+            )}
+          </div>
+
+          {/* Inquiry aside */}
+          <aside className="lg:col-span-1">
+            <div className="lg:sticky lg:top-28">
+              <UnitInquiryCard unitId={unit.id} price={unit.price} />
+            </div>
+          </aside>
+        </div>
+      </Section>
+
+      {/* Lead CTA band */}
+      <Section tone="navy">
+        <div className="flex flex-col items-center text-center">
+          <SectionHeading invert align="center" eyebrow="خطوتك التالية" title="هل ترغب في معاينة هذه الوحدة؟" />
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <ButtonLink href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route} variant="gold" size="lg">
+              طلب زيارة
+            </ButtonLink>
+            <ButtonLink
+              href={`${routes.contact}?unitId=${unit.id}` as Route}
+              variant="outline"
+              size="lg"
+              className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
+            >
+              تواصل مع مستشار
+            </ButtonLink>
+          </div>
+        </div>
+      </Section>
+
+      <CompareBar />
+    </CompareProvider>
+  );
+}

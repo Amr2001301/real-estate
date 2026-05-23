@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
@@ -42,6 +43,64 @@ export class AuthService {
     ) {
       throw new ForbiddenException('Email login is for staff and brokers only');
     }
+    const ok = await argon2.verify(user.passwordHash, password);
+    if (!ok) throw new UnauthorizedException('Invalid credentials');
+
+    await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    return this.issueTokens(user.id, user.role);
+  }
+
+  // ------------- Email + password (Public customer) -------------
+
+  /**
+   * Public customer registration. Role is forced to CLIENT server-side (the
+   * same role the OTP/lead flows use) — the payload can never choose a role, so
+   * self-escalation is impossible. Optional preference fields are accepted but
+   * not yet persisted (no CustomerProfile store).
+   */
+  async registerCustomer(dto: {
+    fullName: string;
+    phone: string;
+    email: string;
+    password: string;
+  }) {
+    const email = dto.email.trim().toLowerCase();
+    const phone = dto.phone.trim();
+
+    const [byEmail, byPhone] = await Promise.all([
+      this.prisma.user.findUnique({ where: { email }, select: { id: true } }),
+      this.prisma.user.findUnique({ where: { phone }, select: { id: true } }),
+    ]);
+    if (byEmail) throw new ConflictException({ code: 'email_taken' });
+    if (byPhone) throw new ConflictException({ code: 'phone_taken' });
+
+    const passwordHash = await argon2.hash(dto.password);
+    const user = await this.prisma.user.create({
+      data: {
+        role: 'CLIENT',
+        fullName: dto.fullName.trim(),
+        email,
+        phone,
+        passwordHash,
+        locale: 'ar',
+      },
+    });
+    return this.issueTokens(user.id, user.role);
+  }
+
+  /**
+   * Public customer login. Accepts only CLIENT/CUSTOMER accounts — staff and
+   * brokers are rejected here even with valid credentials, keeping the public
+   * surface isolated from the staff login gate.
+   */
+  async loginCustomer(rawEmail: string, password: string) {
+    const email = rawEmail.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
+    if (user.role !== 'CLIENT' && user.role !== 'CUSTOMER') {
+      throw new ForbiddenException({ code: 'not_customer' });
+    }
+    if (!user.active) throw new ForbiddenException('Account inactive');
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 

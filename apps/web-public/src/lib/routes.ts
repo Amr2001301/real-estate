@@ -12,6 +12,8 @@ export const routes = {
   contact: '/contact',
   login: '/login',
   register: '/register',
+  privacy: '/privacy',
+  terms: '/terms',
 } as const;
 
 export interface NavItem {

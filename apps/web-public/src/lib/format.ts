@@ -1,19 +1,17 @@
 /** Arabic-locale formatting helpers for the public website. */
 
-const SAR = new Intl.NumberFormat('ar-SA', {
-  style: 'currency',
-  currency: 'SAR',
-  maximumFractionDigits: 0,
-});
-
 const NUM = new Intl.NumberFormat('ar-SA');
 
-/** Format a price (number or Decimal-string from the API) as SAR. */
+/**
+ * Format a price (number or Decimal-string) as grouped digits + a clean
+ * "ر.س" suffix. Avoids the currency style's odd symbol/RLM spacing while
+ * keeping Arabic-Indic digits consistent with the rest of the UI.
+ */
 export function formatPrice(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === '') return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return '—';
-  return SAR.format(n);
+  return `${NUM.format(n)} ر.س`;
 }
 
 export function formatNumber(value: number | string | null | undefined): string {
@@ -27,6 +25,24 @@ export function formatArea(value: number | string | null | undefined): string {
   const n = typeof value === 'string' ? Number(value) : value;
   if (n === null || n === undefined || !Number.isFinite(n)) return '—';
   return `${NUM.format(n)} م²`;
+}
+
+const UNIT_TYPE_LABELS: Record<string, string> = {
+  studio: 'استوديو',
+  apartment: 'شقة',
+  '1br': 'شقة غرفة نوم',
+  '2br': 'شقة غرفتين',
+  '3br': 'شقة ثلاث غرف',
+  villa: 'فيلا',
+  townhouse: 'تاون هاوس',
+  office: 'مكتب',
+  retail: 'محل تجاري',
+};
+
+/** Map a backend unit `type` to an Arabic label; falls back to the raw value. */
+export function unitTypeLabel(type: string | null | undefined): string {
+  if (!type) return '—';
+  return UNIT_TYPE_LABELS[type.toLowerCase()] ?? type;
 }
 
 /** Pick the Arabic side of a translatable `{ ar, en }` JSON value. */

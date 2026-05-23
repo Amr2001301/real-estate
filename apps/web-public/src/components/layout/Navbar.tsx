@@ -13,7 +13,10 @@ import { Container } from '@/components/ui/Container';
 
 function Wordmark({ invert }: { invert: boolean }) {
   return (
-    <Link href={routes.home} className="flex items-center gap-2">
+    <Link
+      href={routes.home}
+      className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-0"
+    >
       <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold-400" aria-hidden />
       <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-navy')}>
         {SITE.name}
@@ -38,8 +41,11 @@ export function Navbar() {
     setOpen(false);
   }, [pathname]);
 
-  // Solid (light) once scrolled; transparent-over-hero at the top.
-  const solid = scrolled || open;
+  // Only the homepage has a dark hero behind the nav, so it may start
+  // transparent. Every other page starts on a light surface, so the nav must
+  // be solid immediately — otherwise white links vanish over the light bg.
+  const isHome = pathname === '/';
+  const solid = !isHome || scrolled || open;
 
   return (
     <header
@@ -58,13 +64,17 @@ export function Navbar() {
               <Link
                 key={item.href}
                 href={item.href as Route}
+                aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200',
+                  'relative px-4 py-2 text-sm font-medium transition-colors duration-200',
                   solid ? 'text-ink-muted hover:text-navy' : 'text-white/80 hover:text-white',
                   active && (solid ? 'text-navy' : 'text-white'),
                 )}
               >
                 {item.label}
+                {active && (
+                  <span className="absolute inset-x-4 -bottom-0.5 h-0.5 rounded-full bg-gold-400" aria-hidden />
+                )}
               </Link>
             );
           })}

@@ -155,15 +155,28 @@ describe('Public units · response contract', () => {
     expect(where.building.phase.project.status).toBe('PUBLISHED');
   });
 
-  it('list forwards projectId / type / price filters', async () => {
+  it('list forwards projectId / type / bathrooms / price / bedrooms filters', async () => {
     const projectId = 'c3333333-3333-4333-8333-333333333333';
     await request(app.getHttpServer())
-      .get(`/public/units?projectId=${projectId}&priceMin=500000&priceMax=900000&bedrooms=2`)
+      .get(
+        `/public/units?projectId=${projectId}&type=villa&bathrooms=3&priceMin=500000&priceMax=900000&bedrooms=2`,
+      )
       .expect(200);
     const where = mock.unit.findMany.mock.calls[0][0].where;
+    // projectId and the public PUBLISHED constraint compose together.
     expect(where.building.phase.projectId).toBe(projectId);
+    expect(where.building.phase.project.status).toBe('PUBLISHED');
+    expect(where.type).toBe('villa');
+    expect(where.bathrooms).toBe(3);
     expect(where.bedrooms).toBe(2);
     expect(where.price).toBeDefined();
+  });
+
+  it('list forwards a city filter through the project relation', async () => {
+    await request(app.getHttpServer()).get('/public/units?city=الرياض').expect(200);
+    const where = mock.unit.findMany.mock.calls[0][0].where;
+    expect(where.building.phase.project.city).toBe('الرياض');
+    expect(where.building.phase.project.status).toBe('PUBLISHED');
   });
 
   it('list item is comparison-ready and leaks nothing internal', async () => {

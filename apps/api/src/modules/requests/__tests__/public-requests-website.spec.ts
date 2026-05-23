@@ -197,4 +197,30 @@ describe('Public website · info/visit request intake', () => {
       .expect(400);
     expect(mock.visitRequest.create).not.toHaveBeenCalled();
   });
+
+  // ── Required-field validation (drives the contact form's error mapping) ──
+
+  it('info-request rejects a missing message', async () => {
+    await request(app.getHttpServer())
+      .post('/public/info-request')
+      .send({ name: 'X', phone: '+966500000004' })
+      .expect(400);
+    expect(mock.infoRequest.create).not.toHaveBeenCalled();
+  });
+
+  it('visit-request rejects a missing projectId', async () => {
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({ preferredDate: '2030-07-01', name: 'X', phone: '+966500000005' })
+      .expect(400);
+    expect(mock.visitRequest.create).not.toHaveBeenCalled();
+  });
+
+  it('visit-request rejects an invalid preferredDate', async () => {
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({ projectId: PROJECT_ID, preferredDate: 'not-a-date', name: 'X', phone: '+966500000006' })
+      .expect(400);
+    expect(mock.visitRequest.create).not.toHaveBeenCalled();
+  });
 });

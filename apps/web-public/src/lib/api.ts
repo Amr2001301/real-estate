@@ -18,6 +18,12 @@ export const FRIENDLY = {
 export interface ApiError {
   message: string;
   status: number;
+  /**
+   * Optional short machine code surfaced from a safe error body (e.g.
+   * `email_taken`). Only a plain string `code` field is read — never the raw
+   * message/body — so this can't leak backend internals to the UI.
+   */
+  code?: string;
 }
 
 export type ApiResult<T> =
@@ -49,27 +55,62 @@ function logDev(...args: unknown[]): void {
   }
 }
 
+/** Read a short, safe `code` string from an error response body (if any). */
+async function readSafeCode(res: Response): Promise<{ code?: string }> {
+  try {
+    const body = (await res.clone().json()) as { code?: unknown };
+    if (typeof body?.code === 'string' && body.code.length <= 40) return { code: body.code };
+  } catch {
+    /* not JSON / no code — ignore */
+  }
+  return {};
+}
+
 export async function safeFetch<T>(
   path: string,
   init?: RequestInit & { revalidate?: number },
 ): Promise<ApiResult<T>> {
   const { revalidate, ...rest } = init ?? {};
+  const url = resolveUrl(path);
   try {
-    const res = await fetch(resolveUrl(path), {
+    const res = await fetch(url, {
       ...rest,
       headers: { Accept: 'application/json', ...(rest.headers ?? {}) },
       ...(revalidate !== undefined ? { next: { revalidate } } : {}),
     });
 
     if (!res.ok) {
-      logDev(`${rest.method ?? 'GET'} ${path} → ${res.status}`);
-      return { ok: false, error: { message: friendlyForStatus(res.status), status: res.status } };
+      logDev(`${rest.method ?? 'GET'} ${path} → HTTP ${res.status} ${res.statusText}`);
+      return {
+        ok: false,
+        error: {
+          message: friendlyForStatus(res.status),
+          status: res.status,
+          ...(await readSafeCode(res)),
+        },
+      };
     }
 
-    const data = (await res.json()) as T;
-    return { ok: true, data };
+    const text = await res.text();
+    if (!text) {
+      logDev(`${path} → empty response body (HTTP ${res.status})`);
+      return { ok: false, error: { message: FRIENDLY.load, status: res.status } };
+    }
+    try {
+      return { ok: true, data: JSON.parse(text) as T };
+    } catch {
+      logDev(`${path} → invalid JSON (first 120 chars):`, text.slice(0, 120));
+      return { ok: false, error: { message: FRIENDLY.load, status: res.status } };
+    }
   } catch (err) {
-    logDev(`${path} threw`, err);
+    // Network-level failure (no HTTP response). Surface an actionable hint in dev.
+    const code = (err as { cause?: { code?: string }; code?: string })?.cause?.code ??
+      (err as { code?: string })?.code;
+    if (code === 'ECONNREFUSED') {
+      logDev(`${path} → connection refused at ${url} — is the API running? (pnpm --filter @rep/api dev)`);
+    } else {
+      logDev(`${path} → network error at ${url}`, code ?? err);
+    }
     return { ok: false, error: { message: FRIENDLY.load, status: 0 } };
   }
 }

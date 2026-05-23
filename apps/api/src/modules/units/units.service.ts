@@ -40,11 +40,24 @@ export class UnitsService {
     const page = Number(query.page ?? 1);
     const pageSize = Number(query.pageSize ?? 20);
 
+    // Build the building → phase → project filter in one place so that
+    // projectId, city, and the public PUBLISHED constraint compose correctly
+    // (the previous spread form could overwrite `phase`).
+    const projectWhere: Prisma.ProjectWhereInput = {
+      ...(publicOnly ? { status: 'PUBLISHED' } : {}),
+      ...(query.city ? { city: query.city } : {}),
+    };
+    const phaseWhere: Prisma.PhaseWhereInput = {
+      ...(query.projectId ? { projectId: query.projectId } : {}),
+      ...(Object.keys(projectWhere).length ? { project: projectWhere } : {}),
+    };
+    const buildingWhere: Prisma.BuildingWhereInput | undefined = Object.keys(phaseWhere).length
+      ? { phase: phaseWhere }
+      : undefined;
+
     const where: Prisma.UnitWhereInput = {
       ...(query.buildingId ? { buildingId: query.buildingId } : {}),
-      ...(query.projectId
-        ? { building: { phase: { projectId: query.projectId } } }
-        : {}),
+      ...(buildingWhere ? { building: buildingWhere } : {}),
       // Public listing defaults to AVAILABLE; an explicit status filter (any
       // UnitStatus is a public-safe label) may override it.
       ...(query.status
@@ -52,14 +65,8 @@ export class UnitsService {
         : publicOnly
           ? { status: UnitStatus.AVAILABLE }
           : {}),
-      ...(publicOnly
-        ? {
-            building: {
-              phase: { project: { status: 'PUBLISHED' } },
-              ...(query.projectId ? { phase: { projectId: query.projectId } } : {}),
-            },
-          }
-        : {}),
+      ...(query.type ? { type: query.type } : {}),
+      ...(query.bathrooms !== undefined ? { bathrooms: query.bathrooms } : {}),
       ...(query.priceMin !== undefined || query.priceMax !== undefined
         ? {
             price: {

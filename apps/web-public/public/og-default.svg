@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="دار الفخامة">
+  <defs>
+    <radialGradient id="bg" cx="80%" cy="0%" r="130%">
+      <stop offset="0%" stop-color="#24426A"/>
+      <stop offset="55%" stop-color="#14273F"/>
+      <stop offset="100%" stop-color="#0B1726"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="160" cy="210" r="220" fill="#C8A24B" opacity="0.10"/>
+  <g transform="translate(600,300)" text-anchor="middle" font-family="'IBM Plex Sans Arabic','Tajawal','Segoe UI',sans-serif">
+    <circle cx="0" cy="-150" r="14" fill="#C8A24B"/>
+    <text x="0" y="20" fill="#FFFFFF" font-size="92" font-weight="700">دار الفخامة</text>
+    <rect x="-90" y="60" width="180" height="3" fill="#C8A24B"/>
+    <text x="0" y="130" fill="#E2C792" font-size="38" font-weight="500">تجربة عقارية فاخرة تبدأ من هنا</text>
+  </g>
+</svg>

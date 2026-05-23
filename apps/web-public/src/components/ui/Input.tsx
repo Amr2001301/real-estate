@@ -46,20 +46,23 @@ Select.displayName = 'Select';
 
 interface FieldProps {
   label: string;
-  htmlFor?: string;
   required?: boolean;
   className?: string;
   children: React.ReactNode;
 }
 
-export function Field({ label, htmlFor, required, className, children }: FieldProps) {
+/**
+ * Wraps the control in a <label> for implicit association (clicking the label
+ * focuses the input; screen readers announce it) without needing per-field ids.
+ */
+export function Field({ label, required, className, children }: FieldProps) {
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
-      <label htmlFor={htmlFor} className="text-sm font-medium text-navy">
+    <label className={cn('flex flex-col gap-2', className)}>
+      <span className="text-sm font-medium text-navy">
         {label}
         {required && <span className="text-gold-500"> *</span>}
-      </label>
+      </span>
       {children}
-    </div>
+    </label>
   );
 }
