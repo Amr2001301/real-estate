@@ -1,5 +1,4 @@
-import type { Route } from 'next';
-import { Building2, CalendarDays, Bell, Headset, Apple, Play } from 'lucide-react';
+import { Building2, Scale, CalendarDays, Headset } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { Container } from '@/components/ui/Container';
 import { Badge } from '@/components/ui/Badge';
@@ -7,10 +6,10 @@ import { ButtonLink } from '@/components/ui/Button';
 import { Reveal } from '@/components/motion/Reveal';
 
 const FEATURES = [
-  { icon: Building2, label: 'متابعة العقارات' },
-  { icon: CalendarDays, label: 'طلبات الزيارة' },
-  { icon: Bell, label: 'التنبيهات' },
-  { icon: Headset, label: 'الدعم' },
+  { icon: Building2, label: 'تصفّح المشاريع والوحدات' },
+  { icon: Scale, label: 'مقارنة بين الوحدات' },
+  { icon: CalendarDays, label: 'طلب زيارة' },
+  { icon: Headset, label: 'تواصل مع مستشار' },
 ] as const;
 
 /** Decorative CSS phone mockup — no image asset / dependency. */
@@ -54,12 +53,8 @@ function PhoneMockup() {
 }
 
 export function MobileAppPromo() {
-  const appStore = process.env.NEXT_PUBLIC_APP_STORE_URL;
-  const googlePlay = process.env.NEXT_PUBLIC_GOOGLE_PLAY_URL;
-  const hasLinks = Boolean(appStore || googlePlay);
-
   return (
-    <section className="py-20 sm:py-24">
+    <section className="py-14 sm:py-16 lg:py-24">
       <Container>
         <div className="relative overflow-hidden rounded-4xl border border-hairline bg-surface-soft">
           {/* Decorative warm shapes */}
@@ -70,10 +65,10 @@ export function MobileAppPromo() {
             {/* Copy */}
             <Reveal>
               <div>
-                <Badge tone="gold">قريبًا</Badge>
-                <h2 className="mt-5 text-display-2 text-navy">تجربة دار الفخامة في تطبيق واحد</h2>
+                <Badge tone="gold">تجربة رقمية</Badge>
+                <h2 className="mt-5 text-display-2 text-navy">كل خطواتك العقارية في مكان واحد</h2>
                 <p className="mt-4 max-w-lg text-lg leading-relaxed text-ink-muted">
-                  تابع وحداتك، طلبات الزيارة، العقود، الدفعات، والصيانة من مكان واحد بتجربة مصممة لراحتك.
+                  تصفّح المشاريع والوحدات، قارن بينها، احجز زيارة، وتواصل مع مستشارك — تجربة واضحة وسلسة من البداية للقرار.
                 </p>
 
                 <div className="mt-7 flex flex-wrap gap-2.5">
@@ -89,42 +84,17 @@ export function MobileAppPromo() {
                 </div>
 
                 <div className="mt-8 flex flex-wrap items-center gap-4">
-                  {hasLinks ? (
-                    <>
-                      {appStore && (
-                        <ButtonLink href={appStore as Route} variant="primary" size="md">
-                          <Apple className="h-5 w-5" aria-hidden />
-                          App Store
-                        </ButtonLink>
-                      )}
-                      {googlePlay && (
-                        <ButtonLink href={googlePlay as Route} variant="primary" size="md">
-                          <Play className="h-5 w-5" aria-hidden />
-                          Google Play
-                        </ButtonLink>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <ButtonLink href={routes.contact} variant="primary" size="md">
-                        سجّل اهتمامك
-                      </ButtonLink>
-                      <ButtonLink href={routes.projects} variant="outline" size="md">
-                        تعرّف على التجربة
-                      </ButtonLink>
-                    </>
-                  )}
+                  <ButtonLink href={routes.units} variant="primary" size="md">
+                    ابدأ التصفّح
+                  </ButtonLink>
+                  <ButtonLink href={routes.contact} variant="outline" size="md">
+                    تحدث مع مستشار
+                  </ButtonLink>
                 </div>
-
-                {!hasLinks && (
-                  <p className="mt-4 text-xs text-ink-muted">
-                    سيتم تفعيل روابط التحميل عند إطلاق التطبيق.
-                  </p>
-                )}
               </div>
             </Reveal>
 
-            {/* Phone mockup */}
+            {/* Abstract experience mockup */}
             <Reveal delay={120}>
               <PhoneMockup />
             </Reveal>

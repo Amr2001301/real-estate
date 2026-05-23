@@ -29,7 +29,7 @@ export function PageHero({ eyebrow, title, subtitle, stats }: PageHeroProps) {
       />
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-gold-400/10 blur-3xl" aria-hidden />
 
-      <Container className="relative pb-16 pt-36 sm:pb-20 sm:pt-40">
+      <Container className="relative pb-12 pt-28 sm:pb-14 sm:pt-32">
         <Reveal>
           <div className="max-w-2xl">
             {eyebrow && <span className="text-sm font-medium tracking-wide text-gold-200">{eyebrow}</span>}

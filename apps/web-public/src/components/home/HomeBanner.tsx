@@ -1,0 +1,50 @@
+import type { Route } from 'next';
+import { ArrowLeft } from 'lucide-react';
+import { routes } from '@/lib/routes';
+import { Section } from '@/components/ui/Section';
+import { Container } from '@/components/ui/Container';
+import { ButtonLink } from '@/components/ui/Button';
+import { Reveal } from '@/components/motion/Reveal';
+
+/** Contained navy investment banner — a premium accent, not a full dark block. */
+export function HomeBanner() {
+  return (
+    <Section tone="canvas" contained={false} className="py-6 sm:py-7 lg:py-8">
+      <Container>
+        <Reveal>
+          <div className="relative overflow-hidden rounded-4xl bg-navy px-8 py-10 shadow-card sm:px-12 sm:py-12">
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{ background: 'radial-gradient(120% 160% at 85% 0%, #24426A 0%, #14273F 60%, #0B1726 100%)' }}
+              aria-hidden
+            />
+            <span className="pointer-events-none absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-gold-400/12 blur-3xl" aria-hidden />
+            <div className="relative flex flex-col items-start gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="max-w-xl">
+                <span className="text-sm font-medium tracking-wide text-gold-200">فرص استثمارية</span>
+                <h2 className="mt-2 text-display-2 text-white">فرص عقارية مختارة لمستقبل أوضح</h2>
+                <p className="mt-3 leading-relaxed text-white/75">
+                  اختر من مشاريع ووحدات تناسب السكن والاستثمار، مع متابعة من مستشارينا في كل خطوة.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <ButtonLink href={routes.units} variant="gold" size="lg">
+                  استكشف الفرص
+                  <ArrowLeft className="h-5 w-5" aria-hidden />
+                </ButtonLink>
+                <ButtonLink
+                  href={routes.contact as Route}
+                  variant="outline"
+                  size="lg"
+                  className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
+                >
+                  تواصل مع مستشار
+                </ButtonLink>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </Container>
+    </Section>
+  );
+}

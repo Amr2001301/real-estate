@@ -1,34 +1,37 @@
-import { Building2 } from 'lucide-react';
+import Link from 'next/link';
+import { Building2, ArrowLeft } from 'lucide-react';
 import type { ApiResult } from '@/lib/api';
 import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
-import { Section, SectionHeading } from '@/components/ui/Section';
-import { ButtonLink } from '@/components/ui/Button';
+import { Section } from '@/components/ui/Section';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
-import { Reveal } from '@/components/motion/Reveal';
-import { Stagger } from '@/components/motion/Stagger';
-import { ProjectCard } from './ProjectCard';
+import { ProjectsCarousel } from './ProjectsCarousel';
 
 export function FeaturedProjects({ result }: { result: ApiResult<Paginated<PublicProjectListItem>> }) {
   const projects = result.ok ? result.data.data : [];
 
   return (
-    <Section tone="canvas">
-      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <SectionHeading
-          eyebrow="مشاريع مختارة"
-          title="وجهات سكنية تستحق الاهتمام"
-          description="نخبة من المشاريع المنتقاة بعناية لتجمع بين الموقع المميز والتصميم الراقي."
-        />
-        <Reveal>
-          <ButtonLink href={routes.projects} variant="outline" size="md">
-            كل المشاريع
-          </ButtonLink>
-        </Reveal>
+    // Tight, intentional rhythm — small bottom padding so the banner sits close.
+    <Section tone="canvas" className="pt-8 pb-4 sm:pt-10 sm:pb-5 lg:pt-12 lg:pb-6">
+      {/* Two-level header: title + subtitle (start) · simple text link (end) */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <h2 className="text-3xl font-bold text-navy lg:text-4xl">المشاريع المختارة</h2>
+          <p className="mt-2 text-ink-muted">
+            مشاريع منتقاة تجمع بين الموقع، الجودة، وفرص الاستثمار الواعدة.
+          </p>
+        </div>
+        <Link
+          href={routes.projects}
+          className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-navy underline-offset-8 transition-colors hover:text-gold-600 hover:underline"
+        >
+          عرض جميع المشاريع
+          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" aria-hidden />
+        </Link>
       </div>
 
-      <div className="mt-12">
+      <div className="mt-6">
         {!result.ok ? (
           <ErrorState
             title="لم نتمكن من تحميل المشاريع حاليًا"
@@ -43,11 +46,7 @@ export function FeaturedProjects({ result }: { result: ApiResult<Paginated<Publi
             className="mx-auto max-w-2xl"
           />
         ) : (
-          <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={90}>
-            {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
-            ))}
-          </Stagger>
+          <ProjectsCarousel projects={projects} />
         )}
       </div>
     </Section>

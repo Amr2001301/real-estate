@@ -1,6 +1,6 @@
 import type { Route } from 'next';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Home } from 'lucide-react';
+import { MapPin, ArrowLeft, Home, Sparkles } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { pickAr } from '@/lib/format';
@@ -10,6 +10,7 @@ import { Container } from '@/components/ui/Container';
 import { Section, SectionHeading } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
+import { IconCircle } from '@/components/ui/IconCircle';
 import { ErrorState } from '@/components/states/ErrorState';
 import { EmptyState } from '@/components/states/EmptyState';
 import { InlineNotice } from '@/components/states/InlineNotice';
@@ -23,10 +24,44 @@ import { ProjectLocation } from '@/components/projects/ProjectLocation';
 import { UnitCard } from '@/components/home/UnitCard';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, projectResidenceLd } from '@/lib/jsonld';
+import { Accordion, type AccordionItem } from '@/components/ui/Accordion';
+import { CtaBand } from '@/components/marketing/CtaBand';
 
 const REVALIDATE = 60;
 
 type Params = Promise<{ id: string }>;
+
+// Factual "why" highlights derived from public data — no invented claims.
+function projectWhy(city: string, availableUnits: number, serviceCount: number) {
+  return [
+    { icon: MapPin, title: 'موقع متميّز', body: city ? `يقع المشروع في ${city} بموقع يسهل الوصول إليه.` : 'موقع مدروس يجمع بين الخصوصية وسهولة الوصول.' },
+    { icon: Home, title: 'وحدات متاحة', body: `${availableUnits} وحدة متاحة بخيارات متنوعة تناسب احتياجك.` },
+    { icon: Sparkles, title: 'مرافق وخدمات', body: serviceCount > 0 ? `${serviceCount} من المرافق والخدمات لراحة السكان.` : 'مرافق وخدمات مصممة لأسلوب حياة أرقى.' },
+  ];
+}
+
+// Generic, process-oriented FAQ — deliberately avoids project-specific claims
+// (prices, guarantees, dates) so nothing is fabricated.
+function projectFaq(name: string): AccordionItem[] {
+  return [
+    {
+      question: `كيف أحجز زيارة لمشروع ${name}؟`,
+      answer: 'يمكنك طلب زيارة عبر زر «طلب زيارة» في الصفحة، وسيتواصل معك أحد مستشارينا لتأكيد الموعد المناسب لك.',
+    },
+    {
+      question: 'كيف أحصل على تفاصيل الأسعار والوحدات المتاحة؟',
+      answer: 'استعرض الوحدات المتاحة ضمن المشروع من القسم المخصص، أو تواصل مع مستشارنا للحصول على أحدث التفاصيل والعروض.',
+    },
+    {
+      question: 'هل يمكنني مقارنة أكثر من وحدة؟',
+      answer: 'نعم، يمكنك إضافة حتى ٣ وحدات إلى المقارنة لاستعراض المواصفات والأسعار جنبًا إلى جنب قبل اتخاذ قرارك.',
+    },
+    {
+      question: 'كيف أتواصل مع فريق المبيعات؟',
+      answer: 'من صفحة «تواصل معنا» أو عبر بطاقة التواصل في هذه الصفحة، وسنعاود التواصل معك في أقرب وقت.',
+    },
+  ];
+}
 
 function fetchProject(id: string) {
   return safeFetch<PublicProjectDetail>(`/public/projects/${id}`, { revalidate: REVALIDATE });
@@ -82,6 +117,8 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
   const name = pickAr(project.name, 'مشروع');
   const description = pickAr(project.description);
   const hasCoords = project.lat !== 0 || project.lng !== 0;
+
+  const serviceCount = Array.isArray(project.services) ? project.services.length : 0;
 
   // Best-effort: a few units from this project. Never blocks the page.
   const unitsResult = await fetchProjectUnits(project.id);
@@ -142,25 +179,43 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         </Container>
       </section>
 
+      {/* Highlights strip — quick facts directly under the gallery */}
+      <Section tone="canvas" className="pb-0 pt-10 sm:pt-12">
+        <ProjectFacts
+          city={project.city}
+          availableUnitsCount={project.availableUnitsCount}
+          featured={project.featured}
+          hasCoords={hasCoords}
+        />
+      </Section>
+
       {/* Body: content + sticky inquiry aside */}
-      <Section tone="canvas" className="pt-14 sm:pt-16">
-        <div className="grid gap-12 lg:grid-cols-3">
-          <div className="space-y-16 lg:col-span-2">
+      <Section tone="canvas" className="pt-10 sm:pt-12">
+        <div className="grid gap-10 lg:grid-cols-3">
+          <div className="space-y-12 lg:col-span-2">
             {/* Overview */}
             <div>
               <SectionHeading eyebrow="نظرة عامة" title="عن المشروع" />
               {description ? (
-                <p className="mt-6 text-lg leading-loose text-ink-muted">{description}</p>
+                <p className="mt-5 text-lg leading-loose text-ink-muted">{description}</p>
               ) : (
-                <p className="mt-6 text-ink-muted">سيتم إضافة وصف تفصيلي لهذا المشروع قريبًا.</p>
+                <p className="mt-5 text-ink-muted">سيتم إضافة وصف تفصيلي لهذا المشروع قريبًا.</p>
               )}
-              <div className="mt-10">
-                <ProjectFacts
-                  city={project.city}
-                  availableUnitsCount={project.availableUnitsCount}
-                  featured={project.featured}
-                  hasCoords={hasCoords}
-                />
+            </div>
+
+            {/* Why this project — factual value props derived from public data */}
+            <div>
+              <SectionHeading eyebrow="لماذا هذا المشروع؟" title="ما الذي يميّزه" />
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {projectWhy(project.city, project.availableUnitsCount, serviceCount).map((w) => (
+                  <div key={w.title} className="rounded-3xl border border-hairline bg-surface p-6 shadow-soft">
+                    <IconCircle tone="gold" className="h-11 w-11">
+                      <w.icon className="h-5 w-5" aria-hidden />
+                    </IconCircle>
+                    <h3 className="mt-4 text-base text-navy">{w.title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-ink-muted">{w.body}</p>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -217,25 +272,34 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         </div>
       </Section>
 
-      {/* Lead CTA band */}
-      <Section tone="navy">
-        <div className="flex flex-col items-center text-center">
-          <SectionHeading invert align="center" eyebrow="خطوتك التالية" title="هل ترغب في معرفة المزيد عن هذا المشروع؟" />
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <ButtonLink href={`${routes.contact}?projectId=${project.id}` as Route} variant="gold" size="lg">
-              تواصل مع مستشار
-            </ButtonLink>
-            <ButtonLink
-              href={`${routes.units}?projectId=${project.id}` as Route}
-              variant="outline"
-              size="lg"
-              className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
-            >
-              استكشف الوحدات
-            </ButtonLink>
+      {/* FAQ — generic, process-oriented (no project-specific claims) */}
+      <Section tone="soft" className="pt-0">
+        <div className="mx-auto max-w-3xl">
+          <SectionHeading
+            align="center"
+            eyebrow="الأسئلة الشائعة"
+            title="إجابات سريعة قد تهمّك"
+            className="mx-auto"
+          />
+          <div className="mt-8">
+            <Accordion items={projectFaq(name)} defaultOpenFirst />
           </div>
         </div>
       </Section>
+
+      <CtaBand eyebrow="خطوتك التالية" title="هل ترغب في معرفة المزيد عن هذا المشروع؟">
+        <ButtonLink href={`${routes.contact}?projectId=${project.id}` as Route} variant="gold" size="lg">
+          تواصل مع مستشار
+        </ButtonLink>
+        <ButtonLink
+          href={`${routes.units}?projectId=${project.id}` as Route}
+          variant="outline"
+          size="lg"
+          className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
+        >
+          استكشف الوحدات
+        </ButtonLink>
+      </CtaBand>
     </>
   );
 }

@@ -14,7 +14,7 @@ export function FeaturedUnits({ result }: { result: ApiResult<Paginated<PublicUn
   const units = result.ok ? result.data.data : [];
 
   return (
-    <Section tone="soft">
+    <Section tone="soft" className="pt-2 sm:pt-3 lg:pt-4">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <SectionHeading
           eyebrow="وحدات مميزة"

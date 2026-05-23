@@ -32,8 +32,8 @@ export function Footer() {
     <footer className="relative bg-navy text-white/80">
       <div className="h-px w-full bg-gradient-to-l from-transparent via-gold-400/50 to-transparent" aria-hidden />
 
-      <Container className="py-10 lg:py-12">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-12 lg:gap-10">
+      <Container className="py-8 lg:py-10">
+        <div className="grid gap-x-8 gap-y-7 sm:grid-cols-2 lg:grid-cols-12 lg:gap-10">
           {/* Brand */}
           <div className="lg:col-span-5">
             <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export function Footer() {
         </div>
 
         {/* Slim legal row */}
-        <div className="mt-8 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-5 text-xs text-white/45 sm:flex-row">
+        <div className="mt-6 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-5 text-xs text-white/45 sm:flex-row">
           <p>© {YEAR} {SITE.name}. جميع الحقوق محفوظة.</p>
           <div className="flex items-center gap-5">
             <FooterLink href={routes.privacy} label="سياسة الخصوصية" />

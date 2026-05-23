@@ -5,7 +5,7 @@ import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
-import type { PublicUnit } from '@/lib/api-types';
+import type { PublicUnit, Paginated } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Section, SectionHeading } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
@@ -14,7 +14,10 @@ import { PremiumCard } from '@/components/ui/PremiumCard';
 import { IconCircle } from '@/components/ui/IconCircle';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Reveal } from '@/components/motion/Reveal';
+import { Stagger } from '@/components/motion/Stagger';
 import { ProjectGallery } from '@/components/projects/ProjectGallery';
+import { CtaBand } from '@/components/marketing/CtaBand';
+import { UnitCard } from '@/components/home/UnitCard';
 import { UnitSpecs } from '@/components/units/UnitSpecs';
 import { UnitInquiryCard } from '@/components/units/UnitInquiryCard';
 import { CompareProvider, type CompareItem } from '@/components/compare/CompareContext';
@@ -93,6 +96,16 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
 
   const ldName = [title, projectName].filter(Boolean).join(' · ');
 
+  // Best-effort: similar units from the same project (excluding this one).
+  let similarUnits: PublicUnit[] = [];
+  if (unit.project) {
+    const sim = await safeFetch<Paginated<PublicUnit>>(
+      `/public/units?projectId=${unit.project.id}&pageSize=4`,
+      { revalidate: REVALIDATE },
+    );
+    if (sim.ok) similarUnits = sim.data.data.filter((u) => u.id !== unit.id).slice(0, 3);
+  }
+
   return (
     <CompareProvider>
       <JsonLd
@@ -160,13 +173,13 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       </section>
 
       {/* Body */}
-      <Section tone="canvas" className="pt-14 sm:pt-16">
-        <div className="grid gap-12 lg:grid-cols-3">
-          <div className="space-y-16 lg:col-span-2">
+      <Section tone="canvas" className="pt-10 sm:pt-12">
+        <div className="grid gap-10 lg:grid-cols-3">
+          <div className="space-y-12 lg:col-span-2">
             {/* Specs */}
             <div>
               <SectionHeading eyebrow="المواصفات" title="تفاصيل الوحدة" />
-              <div className="mt-8">
+              <div className="mt-6">
                 <UnitSpecs unit={unit} />
               </div>
             </div>
@@ -174,7 +187,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
             {/* About */}
             <div>
               <SectionHeading eyebrow="نبذة" title="عن الوحدة" />
-              <p className="mt-6 text-lg leading-loose text-ink-muted">
+              <p className="mt-5 text-lg leading-loose text-ink-muted">
                 وحدة مختارة بعناية ضمن مشروع مميز، صُممت لتمنحك توازنًا بين الراحة والقيمة والموقع.
               </p>
             </div>
@@ -212,36 +225,56 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
               </div>
             )}
 
-            {/* Floor plan placeholder (no floor-plan media in public shape) */}
+            {/* Floor plan — intentional blueprint-style fallback (no plan media yet) */}
             <div>
               <SectionHeading eyebrow="المخطط" title="مخطط الوحدة" />
-              <PremiumCard className="mt-8 p-9 text-center">
-                <IconCircle tone="soft" className="mx-auto">
-                  <LayoutPanelTop className="h-6 w-6" aria-hidden />
-                </IconCircle>
-                <p className="mt-4 text-ink-muted">المخطط التفصيلي غير متاح حاليًا.</p>
-                <div className="mt-5">
+              <PremiumCard className="mt-6 overflow-hidden">
+                <div
+                  className="relative flex min-h-56 items-center justify-center border-b border-hairline"
+                  style={{
+                    backgroundColor: '#0F1E33',
+                    backgroundImage:
+                      'linear-gradient(rgba(200,162,75,0.18) 1px, transparent 1px), linear-gradient(90deg, rgba(200,162,75,0.18) 1px, transparent 1px)',
+                    backgroundSize: '28px 28px',
+                  }}
+                >
+                  {/* Stylised plan outline */}
+                  <div className="relative h-32 w-48 rounded-md border-2 border-gold-300/70">
+                    <div className="absolute inset-y-0 left-1/2 w-px bg-gold-300/40" />
+                    <div className="absolute inset-x-0 top-1/2 h-px bg-gold-300/40" />
+                    <span className="absolute -bottom-3 right-3 inline-flex h-6 w-6 items-center justify-center rounded-full bg-gold-400 text-navy">
+                      <LayoutPanelTop className="h-3.5 w-3.5" aria-hidden />
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col items-center gap-4 p-7 text-center sm:flex-row sm:justify-between sm:text-start">
+                  <p className="text-ink-muted">المخطط التفصيلي متاح عند الطلب — تواصل معنا للحصول عليه.</p>
                   <ButtonLink href={`${routes.contact}?unitId=${unit.id}` as Route} variant="outline" size="sm">
-                    تواصل مع مستشار للحصول على التفاصيل
+                    اطلب المخطط
                   </ButtonLink>
                 </div>
               </PremiumCard>
             </div>
 
-            {/* Similar units CTA */}
-            {unit.project && (
+            {/* Similar units from the same project (best-effort) */}
+            {unit.project && similarUnits.length > 0 && (
               <div>
-                <PremiumCard interactive>
-                  <ButtonLink
-                    href={`${routes.units}?projectId=${unit.project.id}` as Route}
-                    variant="ghost"
-                    size="lg"
-                    className="flex w-full items-center justify-between px-7 py-7"
-                  >
-                    <span className="text-lg text-navy">استكشف وحدات مشابهة في المشروع</span>
-                    <ArrowLeft className="h-5 w-5 text-navy" aria-hidden />
+                <SectionHeading
+                  eyebrow="وحدات مشابهة"
+                  title="وحدات أخرى في المشروع"
+                  description="اطّلع على خيارات أخرى ضمن نفس المشروع وقارن بينها."
+                />
+                <Stagger className="mt-8 grid gap-7 sm:grid-cols-2 xl:grid-cols-3" childClassName="h-full" step={80}>
+                  {similarUnits.map((u) => (
+                    <UnitCard key={u.id} unit={u} />
+                  ))}
+                </Stagger>
+                <div className="mt-8">
+                  <ButtonLink href={`${routes.units}?projectId=${unit.project.id}` as Route} variant="outline" size="md">
+                    عرض كل الوحدات في المشروع
+                    <ArrowLeft className="h-4 w-4" aria-hidden />
                   </ButtonLink>
-                </PremiumCard>
+                </div>
               </div>
             )}
           </div>
@@ -255,25 +288,19 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         </div>
       </Section>
 
-      {/* Lead CTA band */}
-      <Section tone="navy">
-        <div className="flex flex-col items-center text-center">
-          <SectionHeading invert align="center" eyebrow="خطوتك التالية" title="هل ترغب في معاينة هذه الوحدة؟" />
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <ButtonLink href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route} variant="gold" size="lg">
-              طلب زيارة
-            </ButtonLink>
-            <ButtonLink
-              href={`${routes.contact}?unitId=${unit.id}` as Route}
-              variant="outline"
-              size="lg"
-              className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
-            >
-              تواصل مع مستشار
-            </ButtonLink>
-          </div>
-        </div>
-      </Section>
+      <CtaBand eyebrow="خطوتك التالية" title="هل ترغب في معاينة هذه الوحدة؟">
+        <ButtonLink href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route} variant="gold" size="lg">
+          طلب زيارة
+        </ButtonLink>
+        <ButtonLink
+          href={`${routes.contact}?unitId=${unit.id}` as Route}
+          variant="outline"
+          size="lg"
+          className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
+        >
+          تواصل مع مستشار
+        </ButtonLink>
+      </CtaBand>
 
       <CompareBar />
     </CompareProvider>

@@ -29,7 +29,7 @@ export function Section({
   children,
 }: SectionProps) {
   return (
-    <section className={cn('py-20 sm:py-24 lg:py-32', TONES[tone], className)}>
+    <section className={cn('py-14 sm:py-16 lg:py-24', TONES[tone], className)}>
       {contained ? <Container className={containerClassName}>{children}</Container> : children}
     </section>
   );

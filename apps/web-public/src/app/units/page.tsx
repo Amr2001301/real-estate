@@ -3,7 +3,8 @@ import { safeFetch } from '@/lib/api';
 import { formatNumber } from '@/lib/format';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
-import { Section, SectionHeading } from '@/components/ui/Section';
+import { Section } from '@/components/ui/Section';
+import { CtaBand } from '@/components/marketing/CtaBand';
 import { ButtonLink } from '@/components/ui/Button';
 import { PageHero } from '@/components/layout/PageHero';
 import { ErrorState } from '@/components/states/ErrorState';
@@ -132,16 +133,11 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
         </div>
       </Section>
 
-      <Section tone="navy">
-        <div className="flex flex-col items-center text-center">
-          <SectionHeading invert align="center" eyebrow="بحاجة إلى مساعدة؟" title="دع مستشارينا يساعدونك في الاختيار" />
-          <div className="mt-8">
-            <ButtonLink href={routes.contact} variant="gold" size="lg">
-              تواصل مع مستشار
-            </ButtonLink>
-          </div>
-        </div>
-      </Section>
+      <CtaBand eyebrow="بحاجة إلى مساعدة؟" title="دع مستشارينا يساعدونك في الاختيار">
+        <ButtonLink href={routes.contact} variant="gold" size="lg">
+          تواصل مع مستشار
+        </ButtonLink>
+      </CtaBand>
     </>
   );
 }

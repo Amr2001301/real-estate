@@ -3,8 +3,9 @@ import { safeFetch } from '@/lib/api';
 import { formatNumber } from '@/lib/format';
 import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
-import { Section, SectionHeading } from '@/components/ui/Section';
+import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
+import { CtaBand } from '@/components/marketing/CtaBand';
 import { PageHero } from '@/components/layout/PageHero';
 import { ProjectsFilterBar } from '@/components/projects/ProjectsFilterBar';
 import { Pagination } from '@/components/projects/Pagination';
@@ -111,21 +112,11 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
         </div>
       </Section>
 
-      <Section tone="navy">
-        <div className="flex flex-col items-center text-center">
-          <SectionHeading
-            invert
-            align="center"
-            eyebrow="بحاجة إلى مساعدة؟"
-            title="دع مستشارينا يرشدونك إلى المشروع الأنسب"
-          />
-          <div className="mt-8">
-            <ButtonLink href={routes.contact} variant="gold" size="lg">
-              تواصل مع مستشار
-            </ButtonLink>
-          </div>
-        </div>
-      </Section>
+      <CtaBand eyebrow="بحاجة إلى مساعدة؟" title="دع مستشارينا يرشدونك إلى المشروع الأنسب">
+        <ButtonLink href={routes.contact} variant="gold" size="lg">
+          تواصل مع مستشار
+        </ButtonLink>
+      </CtaBand>
     </>
   );
 }
