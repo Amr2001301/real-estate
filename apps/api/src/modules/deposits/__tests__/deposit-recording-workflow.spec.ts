@@ -6,14 +6,26 @@ import {
   Module,
   ValidationPipe,
 } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { DepositsModule } from '../deposits.module';
+import { DocumentsService } from '../../documents/documents.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+
+// DepositsModule now imports DocumentsModule (for receipt-document linking).
+// Override the service so tests never touch R2; ConfigModule satisfies its deps.
+const documentsMock = {
+  create: jest.fn().mockImplementation(async (uploadedById: string, dto: Record<string, unknown>) => ({
+    id: 'doc-1',
+    uploadedById,
+    ...dto,
+  })),
+};
 
 /**
  * Deposits recording + verification workflow.
@@ -85,6 +97,14 @@ function makePrismaMock() {
       update: jest.fn().mockResolvedValue({}),
     },
     deposit: {
+      findUnique: jest.fn().mockImplementation(async ({ where }) => ({
+        id: where.id,
+        type: 'INSTALLMENT',
+        amount: '5000',
+        verified: false,
+        receiptUrl: null,
+        contractId: CONTRACT_ID,
+      })),
       create: jest.fn().mockImplementation(async ({ data }) => ({
         id: DEPOSIT_ID,
         ...data,
@@ -97,6 +117,9 @@ function makePrismaMock() {
         type: 'INSTALLMENT',
         verified: data.verified,
       })),
+    },
+    document: {
+      findFirst: jest.fn().mockResolvedValue(null),
     },
     $transaction: jest.fn(),
   };
@@ -127,13 +150,16 @@ describe('Deposits · recording + verification workflow', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, DepositsModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), MockPrismaModule, DepositsModule],
       providers: [
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
       ],
-    }).compile();
+    })
+      .overrideProvider(DocumentsService)
+      .useValue(documentsMock)
+      .compile();
 
     app = moduleRef.createNestApplication();
     app.useGlobalPipes(
@@ -163,6 +189,9 @@ describe('Deposits · recording + verification workflow', () => {
     mock.installment.update.mockClear();
     mock.deposit.create.mockClear();
     mock.deposit.update.mockClear();
+    mock.document.findFirst.mockClear();
+    mock.document.findFirst.mockResolvedValue(null);
+    documentsMock.create.mockClear();
   });
 
   // ── record() happy paths per installment type ──────────────────────────
@@ -302,5 +331,81 @@ describe('Deposits · recording + verification workflow', () => {
       .send({})
       .expect(400);
     expect(mock.deposit.update).not.toHaveBeenCalled();
+  });
+
+  // ── Receipt document linking (Batch B) ─────────────────────────────────
+
+  it('record() with receiptUrl links a DEPOSIT/RECEIPT document', async () => {
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({
+        contractId: CONTRACT_ID,
+        installmentId: INSTALLMENT_ID,
+        amount: 5000,
+        receiptUrl: 'https://cdn.example/receipt.pdf',
+      })
+      .expect(201);
+    expect(documentsMock.create).toHaveBeenCalledTimes(1);
+    const [uploadedById, dto] = documentsMock.create.mock.calls[0]!;
+    expect(uploadedById).toBe('admin-1');
+    expect(dto).toMatchObject({
+      ownerType: 'DEPOSIT',
+      ownerId: DEPOSIT_ID,
+      category: 'RECEIPT',
+      fileUrl: 'https://cdn.example/receipt.pdf',
+      visibility: 'ADMIN_ONLY',
+    });
+  });
+
+  it('record() without receiptUrl links no document', async () => {
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({ contractId: CONTRACT_ID, installmentId: INSTALLMENT_ID, amount: 5000 })
+      .expect(201);
+    expect(documentsMock.create).not.toHaveBeenCalled();
+  });
+
+  it('record() does not duplicate a receipt document that already exists', async () => {
+    mock.document.findFirst.mockResolvedValueOnce({ id: 'existing-doc' });
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({
+        contractId: CONTRACT_ID,
+        installmentId: INSTALLMENT_ID,
+        amount: 5000,
+        receiptUrl: 'https://cdn.example/receipt.pdf',
+      })
+      .expect(201);
+    expect(documentsMock.create).not.toHaveBeenCalled();
+  });
+
+  it('record() still succeeds when document linking throws (best-effort)', async () => {
+    documentsMock.create.mockRejectedValueOnce(new Error('docs down'));
+    await request(app.getHttpServer())
+      .post('/deposits')
+      .send({
+        contractId: CONTRACT_ID,
+        installmentId: INSTALLMENT_ID,
+        amount: 5000,
+        receiptUrl: 'https://cdn.example/receipt.pdf',
+      })
+      .expect(201);
+    expect(mock.deposit.create).toHaveBeenCalledTimes(1);
+  });
+
+  it('POST /deposits/:id/receipt updates receiptUrl and links a document', async () => {
+    const res = await request(app.getHttpServer())
+      .post(`/deposits/${DEPOSIT_ID}/receipt`)
+      .send({ receiptUrl: 'https://cdn.example/late-receipt.pdf', title: 'إيصال تحويل' })
+      .expect(201);
+    const updateArgs = mock.deposit.update.mock.calls[0]![0] as { data: Record<string, unknown> };
+    expect(updateArgs.data.receiptUrl).toBe('https://cdn.example/late-receipt.pdf');
+    expect(documentsMock.create).toHaveBeenCalledTimes(1);
+    expect(res.body.document).toBeDefined();
+  });
+
+  it('GET /deposits/:id returns the deposit detail', async () => {
+    const res = await request(app.getHttpServer()).get(`/deposits/${DEPOSIT_ID}`).expect(200);
+    expect(res.body.id).toBe(DEPOSIT_ID);
   });
 });

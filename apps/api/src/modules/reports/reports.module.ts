@@ -15,9 +15,15 @@ import {
   IsUUID,
 } from 'class-validator';
 import {
+  BonusEntryStatus,
+  BrokerCommissionStatus,
+  BrokerPayoutStatus,
   DepositType,
+  DocumentCategory,
+  DocumentOwnerType,
   InstallmentStatus,
   Prisma,
+  ReservationStatus,
   UnitStatus,
   UserRole,
 } from '@prisma/client';
@@ -408,6 +414,384 @@ class ReportsService {
 
     const zero = new Prisma.Decimal(0);
 
+    // ── F1: collection correctness, computed receivables, aging, booking ──────
+    // Aging thresholds, date-level relative to todayUTC. A due-today installment
+    // is NOT overdue (dueDate < todayUTC is required); it falls under due-soon.
+    const d30 = new Date(todayUTC.getTime() - 30 * 86_400_000);
+    const d60 = new Date(todayUTC.getTime() - 60 * 86_400_000);
+    const d90 = new Date(todayUTC.getTime() - 90 * 86_400_000);
+
+    // Booking-specific deposit filter: projectId + q + date (NOT the user
+    // `type`), scoped to BOOKING_AMOUNT. Built independently to avoid the
+    // user-type filter that baseDepAnd may carry.
+    const bookingDepAnd: Prisma.DepositWhereInput[] = [];
+    if (opts.projectId) {
+      bookingDepAnd.push({
+        OR: [
+          { contract: { unit: { building: { phase: { projectId: opts.projectId } } } } },
+          { reservation: { unit: { building: { phase: { projectId: opts.projectId } } } } },
+        ],
+      });
+    }
+    if (opts.q) {
+      bookingDepAnd.push({
+        OR: [
+          { contract: { customer: { fullName: { contains: opts.q, mode: Prisma.QueryMode.insensitive } } } },
+          { reservation: { client: { fullName: { contains: opts.q, mode: Prisma.QueryMode.insensitive } } } },
+          { reservation: { lead: { fullName: { contains: opts.q, mode: Prisma.QueryMode.insensitive } } } },
+        ],
+      });
+    }
+    if (opts.dateFrom || opts.dateTo) {
+      bookingDepAnd.push({
+        paidAt: {
+          ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
+          ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+        },
+      });
+    }
+    bookingDepAnd.push({ type: DepositType.BOOKING_AMOUNT });
+    const bookingDepWhere = (extra?: Prisma.DepositWhereInput): Prisma.DepositWhereInput => ({
+      AND: [...bookingDepAnd, ...(extra ? [extra] : [])],
+    });
+
+    // Reservation pipeline filter (projectId only; q/date not applied here —
+    // see Batch F1 report §8 limitations).
+    const resvWhere = (status: ReservationStatus): Prisma.ReservationWhereInput => ({
+      status,
+      ...(opts.projectId
+        ? { unit: { building: { phase: { projectId: opts.projectId } } } }
+        : {}),
+    });
+
+    // Unpaid = anything not PAID (covers PENDING + OVERDUE without trusting the
+    // possibly-stale stored OVERDUE flag).
+    const unpaid = { status: { not: InstallmentStatus.PAID } } as const;
+    const agingWhere = (range: Prisma.DateTimeFilter<'Installment'>): Prisma.InstallmentWhereInput =>
+      instWhere({ ...unpaid, dueDate: range });
+
+    const [
+      collectedVerifiedAgg,
+      byTypeGroups,
+      outstandingAgg,
+      dueSoonAgg,
+      overdueComputedAgg,
+      aging1Agg,
+      aging2Agg,
+      aging3Agg,
+      aging4Agg,
+      pendingResvCount,
+      approvedResvCount,
+      pendingResvAgg,
+      approvedResvAgg,
+      bookingCollectedVerifiedAgg,
+      bookingCollectedAllAgg,
+    ] = await Promise.all([
+      this.prisma.deposit.aggregate({ where: filteredDepWhere({ verified: true }), _sum: { amount: true } }),
+      this.prisma.deposit.groupBy({
+        by: ['type', 'verified'],
+        where: filteredDepWhere(),
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      this.prisma.installment.aggregate({ where: instWhere(unpaid), _sum: { amount: true } }),
+      this.prisma.installment.aggregate({
+        where: instWhere({ ...unpaid, dueDate: { gte: todayUTC, lt: weekEnd } }),
+        _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: instWhere({ ...unpaid, dueDate: { lt: todayUTC } }),
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      this.prisma.installment.aggregate({ where: agingWhere({ gte: d30, lt: todayUTC }), _sum: { amount: true }, _count: { _all: true } }),
+      this.prisma.installment.aggregate({ where: agingWhere({ gte: d60, lt: d30 }), _sum: { amount: true }, _count: { _all: true } }),
+      this.prisma.installment.aggregate({ where: agingWhere({ gte: d90, lt: d60 }), _sum: { amount: true }, _count: { _all: true } }),
+      this.prisma.installment.aggregate({ where: agingWhere({ lt: d90 }), _sum: { amount: true }, _count: { _all: true } }),
+      this.prisma.reservation.count({ where: resvWhere(ReservationStatus.PENDING) }),
+      this.prisma.reservation.count({ where: resvWhere(ReservationStatus.APPROVED) }),
+      this.prisma.reservation.aggregate({ where: resvWhere(ReservationStatus.PENDING), _sum: { bookingAmount: true } }),
+      this.prisma.reservation.aggregate({ where: resvWhere(ReservationStatus.APPROVED), _sum: { bookingAmount: true } }),
+      this.prisma.deposit.aggregate({ where: bookingDepWhere({ verified: true }), _sum: { amount: true } }),
+      this.prisma.deposit.aggregate({ where: bookingDepWhere(), _sum: { amount: true } }),
+    ]);
+
+    // Decimal-safe coercion for money arithmetic (aggregates are Decimal in
+    // prod; this also tolerates number/string inputs).
+    const D = (v: Prisma.Decimal | number | string | null | undefined) =>
+      new Prisma.Decimal(v ?? 0);
+
+    // Collection: verified-only is the bankable headline; all/unverified kept too.
+    const collectedAll = D(totalCollectedAgg._sum.amount);
+    const collectedVerified = D(collectedVerifiedAgg._sum.amount);
+    const collectedUnverified = collectedAll.minus(collectedVerified);
+
+    // Per-DepositType breakdown (respects active filters, incl. the user type
+    // filter if set), split into verified/unverified.
+    type TypeAcc = { count: number; all: Prisma.Decimal; verified: Prisma.Decimal; unverified: Prisma.Decimal };
+    const byType = new Map<DepositType, TypeAcc>();
+    for (const t of Object.values(DepositType)) {
+      byType.set(t, { count: 0, all: zero, verified: zero, unverified: zero });
+    }
+    for (const g of byTypeGroups) {
+      const acc = byType.get(g.type);
+      if (!acc) continue;
+      const amt = D(g._sum.amount);
+      acc.count += g._count?._all ?? 0;
+      acc.all = acc.all.plus(amt);
+      if (g.verified) acc.verified = acc.verified.plus(amt);
+      else acc.unverified = acc.unverified.plus(amt);
+    }
+    const collectionByType = Object.values(DepositType).map((t) => {
+      const acc = byType.get(t)!;
+      return {
+        type: t,
+        count: acc.count,
+        totalAll: acc.all.toString(),
+        totalVerified: acc.verified.toString(),
+        totalUnverified: acc.unverified.toString(),
+      };
+    });
+
+    const agingBucket = (
+      agg: { _sum: { amount: Prisma.Decimal | null }; _count?: { _all: number } },
+      label: string,
+    ) => ({ label, count: agg._count?._all ?? 0, amount: (agg._sum.amount ?? zero).toString() });
+    const aging = [
+      agingBucket(aging1Agg, '1-30'),
+      agingBucket(aging2Agg, '31-60'),
+      agingBucket(aging3Agg, '61-90'),
+      agingBucket(aging4Agg, '90+'),
+    ];
+
+    // Booking pipeline (active reservations only; never treated as revenue).
+    const pendingBooking = D(pendingResvAgg._sum.bookingAmount);
+    const approvedBooking = D(approvedResvAgg._sum.bookingAmount);
+    const bookingCollectedVerified = D(bookingCollectedVerifiedAgg._sum.amount);
+    const bookingCollectedAll = D(bookingCollectedAllAgg._sum.amount);
+    const uncollectedRaw = pendingBooking.plus(approvedBooking).minus(bookingCollectedVerified);
+    const bookingUncollectedEstimate = uncollectedRaw.lessThan(0) ? zero : uncollectedRaw;
+    const booking = {
+      pendingReservationsCount: pendingResvCount,
+      approvedReservationsCount: approvedResvCount,
+      pendingReservationsBookingAmount: pendingBooking.toString(),
+      approvedReservationsBookingAmount: approvedBooking.toString(),
+      bookingCollectedVerified: bookingCollectedVerified.toString(),
+      bookingCollectedAll: bookingCollectedAll.toString(),
+      bookingUncollectedEstimate: bookingUncollectedEstimate.toString(),
+    };
+
+    // ── F4: commissions & liabilities (what the company owes) ─────────────────
+    // Date range applied to: BonusEntry.createdAt, BrokerCommission.earnedAt,
+    // BrokerPayout.createdAt. projectId applies to BrokerCommission only (it has
+    // a projectId column); BonusEntry/BrokerPayout have no safe project relation
+    // — see Batch F4 report §4.
+    const dateRange = (field: 'createdAt' | 'earnedAt') =>
+      opts.dateFrom || opts.dateTo
+        ? {
+            [field]: {
+              ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
+              ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+            },
+          }
+        : {};
+
+    const bonusWhere = (status: BonusEntryStatus): Prisma.BonusEntryWhereInput => ({
+      status,
+      ...dateRange('createdAt'),
+    });
+    const bcBase: Prisma.BrokerCommissionWhereInput = {
+      ...(opts.projectId ? { projectId: opts.projectId } : {}),
+      ...dateRange('earnedAt'),
+    };
+    const bcWhere = (extra: Prisma.BrokerCommissionWhereInput): Prisma.BrokerCommissionWhereInput => ({
+      AND: [bcBase, extra],
+    });
+    // "Unpaid" broker commission = APPROVED and not settled through a PAID payout.
+    const bcUnpaidStatus: Prisma.BrokerCommissionWhereInput = {
+      status: BrokerCommissionStatus.APPROVED,
+      OR: [{ payoutId: null }, { payout: { status: { not: BrokerPayoutStatus.PAID } } }],
+    };
+    const bcPaidStatus: Prisma.BrokerCommissionWhereInput = {
+      status: BrokerCommissionStatus.APPROVED,
+      payout: { status: BrokerPayoutStatus.PAID },
+    };
+
+    const [
+      bonusPendingAgg,
+      bonusApprovedAgg,
+      bonusPaidAgg,
+      bcPendingAgg,
+      bcApprovedAgg,
+      bcPaidAgg,
+      bcUnpaidAgg,
+      payoutGroups,
+    ] = await Promise.all([
+      this.prisma.bonusEntry.aggregate({ where: bonusWhere(BonusEntryStatus.PENDING), _sum: { amount: true }, _count: { _all: true } }),
+      this.prisma.bonusEntry.aggregate({ where: bonusWhere(BonusEntryStatus.APPROVED), _sum: { amount: true }, _count: { _all: true } }),
+      this.prisma.bonusEntry.aggregate({ where: bonusWhere(BonusEntryStatus.PAID), _sum: { amount: true }, _count: { _all: true } }),
+      this.prisma.brokerCommission.aggregate({ where: bcWhere({ status: BrokerCommissionStatus.PENDING }), _sum: { netAmount: true }, _count: { _all: true } }),
+      this.prisma.brokerCommission.aggregate({ where: bcWhere({ status: BrokerCommissionStatus.APPROVED }), _sum: { netAmount: true }, _count: { _all: true } }),
+      this.prisma.brokerCommission.aggregate({ where: bcWhere(bcPaidStatus), _sum: { netAmount: true }, _count: { _all: true } }),
+      this.prisma.brokerCommission.aggregate({ where: bcWhere(bcUnpaidStatus), _sum: { netAmount: true }, _count: { _all: true } }),
+      this.prisma.brokerPayout.groupBy({
+        by: ['status'],
+        where: dateRange('createdAt'),
+        _sum: { totalNet: true },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const bonusPendingAmt = D(bonusPendingAgg._sum.amount);
+    const bonusApprovedAmt = D(bonusApprovedAgg._sum.amount);
+    const bonusUnpaidAmt = bonusPendingAmt.plus(bonusApprovedAmt);
+    const bonusUnpaidCount = (bonusPendingAgg._count?._all ?? 0) + (bonusApprovedAgg._count?._all ?? 0);
+    const bcUnpaidAmt = D(bcUnpaidAgg._sum.netAmount);
+
+    const payoutByStatus = new Map<BrokerPayoutStatus, { amount: Prisma.Decimal; count: number }>();
+    for (const st of Object.values(BrokerPayoutStatus)) payoutByStatus.set(st, { amount: zero, count: 0 });
+    for (const g of payoutGroups) {
+      payoutByStatus.set(g.status, { amount: D(g._sum.totalNet), count: g._count?._all ?? 0 });
+    }
+    const payoutAmt = (st: BrokerPayoutStatus) => payoutByStatus.get(st)!.amount.toString();
+    const payoutCnt = (st: BrokerPayoutStatus) => payoutByStatus.get(st)!.count;
+
+    const liabilities = {
+      salesBonus: {
+        pendingAmount: bonusPendingAmt.toString(),
+        approvedAmount: bonusApprovedAmt.toString(),
+        paidAmount: D(bonusPaidAgg._sum.amount).toString(),
+        unpaidAmount: bonusUnpaidAmt.toString(),
+        pendingCount: bonusPendingAgg._count?._all ?? 0,
+        approvedCount: bonusApprovedAgg._count?._all ?? 0,
+        paidCount: bonusPaidAgg._count?._all ?? 0,
+        unpaidCount: bonusUnpaidCount,
+      },
+      brokerCommissions: {
+        pendingAmount: D(bcPendingAgg._sum.netAmount).toString(),
+        approvedAmount: D(bcApprovedAgg._sum.netAmount).toString(),
+        // Approved commissions settled via a PAID payout.
+        paidAmount: D(bcPaidAgg._sum.netAmount).toString(),
+        // Approved & not settled through a PAID payout — the firm liability.
+        unpaidAmount: bcUnpaidAmt.toString(),
+        pendingCount: bcPendingAgg._count?._all ?? 0,
+        approvedCount: bcApprovedAgg._count?._all ?? 0,
+        paidCount: bcPaidAgg._count?._all ?? 0,
+        unpaidCount: bcUnpaidAgg._count?._all ?? 0,
+      },
+      brokerPayouts: {
+        draftAmount: payoutAmt(BrokerPayoutStatus.DRAFT),
+        approvedAmount: payoutAmt(BrokerPayoutStatus.APPROVED),
+        processingAmount: payoutAmt(BrokerPayoutStatus.PROCESSING),
+        paidAmount: payoutAmt(BrokerPayoutStatus.PAID),
+        draftCount: payoutCnt(BrokerPayoutStatus.DRAFT),
+        approvedCount: payoutCnt(BrokerPayoutStatus.APPROVED),
+        processingCount: payoutCnt(BrokerPayoutStatus.PROCESSING),
+        paidCount: payoutCnt(BrokerPayoutStatus.PAID),
+      },
+      // No double-count: payout totals are NOT added here — they represent the
+      // same broker commissions already captured in brokerCommissions.unpaid.
+      totalUnpaidLiabilities: bonusUnpaidAmt.plus(bcUnpaidAmt).toString(),
+    };
+
+    // ── F5: documents / receipts health ───────────────────────────────────────
+    // Document is polymorphic (ownerId is a bare UUID string, no FK relation),
+    // so we fetch the owner-ids that DO have a receipt/contract document, then
+    // exclude them via `notIn`. Existence is owner+category based — same-fileUrl
+    // matching is NOT enforced (see Batch F5 report §2/§9 limitation).
+    const [depReceiptDocs, contractDocs] = await Promise.all([
+      this.prisma.document.findMany({
+        where: { ownerType: DocumentOwnerType.DEPOSIT, category: DocumentCategory.RECEIPT, deletedAt: null },
+        select: { ownerId: true },
+        distinct: ['ownerId'],
+      }),
+      this.prisma.document.findMany({
+        where: { ownerType: DocumentOwnerType.CONTRACT, category: DocumentCategory.CONTRACT, deletedAt: null },
+        select: { ownerId: true },
+        distinct: ['ownerId'],
+      }),
+    ]);
+    const depDocOwnerIds = depReceiptDocs.map((d) => d.ownerId);
+    const contractDocOwnerIds = contractDocs.map((d) => d.ownerId);
+
+    // Contract filter blocks reuse the projectId/q `contractAnd`; signed-doc uses
+    // a signedAt range (date filter), legacy-pdf uses createdAt.
+    const contractDocWhere = (extra: Prisma.ContractWhereInput): Prisma.ContractWhereInput => ({
+      AND: [...contractAnd, extra],
+    });
+    const signedAtFilter: Prisma.DateTimeNullableFilter<'Contract'> = {
+      not: null,
+      ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
+      ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+    };
+
+    const [
+      depMissingReceiptAgg,
+      verifiedNoDocAgg,
+      legacyDepAgg,
+      signedNoDocAgg,
+      legacyContractAgg,
+    ] = await Promise.all([
+      // A. verified, no receiptUrl, and no RECEIPT document.
+      this.prisma.deposit.aggregate({
+        where: filteredDepWhere({
+          verified: true,
+          id: { notIn: depDocOwnerIds },
+          OR: [{ receiptUrl: null }, { receiptUrl: '' }],
+        }),
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      // B. verified, no RECEIPT document (regardless of receiptUrl).
+      this.prisma.deposit.aggregate({
+        where: filteredDepWhere({ verified: true, id: { notIn: depDocOwnerIds } }),
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      // C. legacy receiptUrl present but no RECEIPT document linked.
+      this.prisma.deposit.aggregate({
+        where: filteredDepWhere({ receiptUrl: { not: null }, id: { notIn: depDocOwnerIds } }),
+        _sum: { amount: true },
+        _count: { _all: true },
+      }),
+      // D. signed contract with no CONTRACT document.
+      this.prisma.contract.aggregate({
+        where: contractDocWhere({ signedAt: signedAtFilter, id: { notIn: contractDocOwnerIds } }),
+        _sum: { totalAmount: true },
+        _count: { _all: true },
+      }),
+      // E. legacy pdfUrl present but no CONTRACT document linked.
+      this.prisma.contract.aggregate({
+        where: contractDocWhere({
+          pdfUrl: { not: null },
+          ...(opts.dateFrom || opts.dateTo
+            ? {
+                createdAt: {
+                  ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
+                  ...(opts.dateTo ? { lte: new Date(opts.dateTo) } : {}),
+                },
+              }
+            : {}),
+          id: { notIn: contractDocOwnerIds },
+        }),
+        _sum: { totalAmount: true },
+        _count: { _all: true },
+      }),
+    ]);
+
+    const healthEntry = (
+      agg: { _sum: { amount?: Prisma.Decimal | null; totalAmount?: Prisma.Decimal | null }; _count?: { _all: number } },
+      field: 'amount' | 'totalAmount',
+    ) => ({ count: agg._count?._all ?? 0, amount: D(agg._sum[field]).toString() });
+
+    const documentsHealth = {
+      depositsMissingReceipt: healthEntry(depMissingReceiptAgg, 'amount'),
+      verifiedDepositsMissingReceiptDocument: healthEntry(verifiedNoDocAgg, 'amount'),
+      depositsWithLegacyReceiptUrlMissingDocument: healthEntry(legacyDepAgg, 'amount'),
+      signedContractsMissingDocument: healthEntry(signedNoDocAgg, 'totalAmount'),
+      contractsWithLegacyPdfUrlMissingDocument: healthEntry(legacyContractAgg, 'totalAmount'),
+    };
+
     // ── Cashflow trend: last 6 months (collected vs due) ──────────────────────
     const trendSlots = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(
@@ -455,6 +839,8 @@ class ReportsService {
         totalContractValue: (
           totalContractAgg._sum.totalAmount ?? zero
         ).toString(),
+        // Existing field kept = ALL deposits (verified + unverified) for
+        // back-compat. New verified-only figure is the bankable headline.
         totalCollected: (totalCollectedAgg._sum.amount ?? zero).toString(),
         totalRemaining: (totalRemainingAgg._sum.amount ?? zero).toString(),
         totalOverdue: (totalOverdueAgg._sum.amount ?? zero).toString(),
@@ -464,8 +850,22 @@ class ReportsService {
         dueThisMonth: (dueThisMonthAgg._sum.amount ?? zero).toString(),
         contractCount,
         depositCount,
+        // Stored-status overdue count (kept for back-compat).
         overdueInstallmentCount: overdueCount,
+        // ── F1 additions ──
+        totalCollectedAll: collectedAll.toString(),
+        totalCollectedVerified: collectedVerified.toString(),
+        totalCollectedUnverified: collectedUnverified.toString(),
+        totalOutstanding: (outstandingAgg._sum.amount ?? zero).toString(),
+        dueSoonAmount: (dueSoonAgg._sum.amount ?? zero).toString(),
+        overdueAmountComputed: (overdueComputedAgg._sum.amount ?? zero).toString(),
+        overdueInstallmentCountComputed: overdueComputedAgg._count?._all ?? 0,
       },
+      collectionByType,
+      aging,
+      booking,
+      liabilities,
+      documentsHealth,
       overdue: overdueRows,
       upcomingThisWeek: upcomingWeekRows,
       upcomingThisMonth: upcomingMonthRows,
@@ -553,17 +953,95 @@ class ReportsService {
     dateTo?: string;
   }): Promise<string> {
     const data = await this.financialDashboard(opts);
+    const s = data.summary;
 
+    // A. Summary — metric key (stable) + Arabic label + value.
     const summaryRows: CsvCell[][] = [
-      ['إجمالي قيمة العقود', data.summary.totalContractValue],
-      ['إجمالي المحصّل', data.summary.totalCollected],
-      ['المتبقي', data.summary.totalRemaining],
-      ['المتأخر', data.summary.totalOverdue],
-      ['المحصّل هذا الشهر', data.summary.collectedThisMonth],
-      ['المستحق هذا الشهر', data.summary.dueThisMonth],
-      ['عدد العقود', data.summary.contractCount],
-      ['عدد الدفعات', data.summary.depositCount],
-      ['أقساط متأخرة', data.summary.overdueInstallmentCount],
+      ['totalContractValue', 'إجمالي قيمة العقود', s.totalContractValue],
+      ['totalCollectedVerified', 'المحصّل المؤكد', s.totalCollectedVerified],
+      ['totalCollectedAll', 'إجمالي المحصّل المسجل', s.totalCollectedAll],
+      ['totalCollectedUnverified', 'المحصّل غير المؤكد', s.totalCollectedUnverified],
+      ['totalOutstanding', 'المتبقي للتحصيل', s.totalOutstanding],
+      ['dueSoonAmount', 'مستحق خلال 7 أيام', s.dueSoonAmount],
+      ['overdueAmountComputed', 'المتأخر المحسوب', s.overdueAmountComputed],
+      ['overdueInstallmentCountComputed', 'عدد الأقساط المتأخرة (محسوبة)', s.overdueInstallmentCountComputed],
+      ['totalRemaining', 'المتبقي (قديم)', s.totalRemaining],
+      ['totalOverdue', 'المتأخر (قديم)', s.totalOverdue],
+      ['collectedThisMonth', 'المحصّل هذا الشهر', s.collectedThisMonth],
+      ['dueThisMonth', 'المستحق هذا الشهر', s.dueThisMonth],
+      ['contractCount', 'عدد العقود', s.contractCount],
+      ['depositCount', 'عدد الدفعات', s.depositCount],
+    ];
+
+    // ── Arabic label maps for the new sections ──
+    const DEP_TYPE_LABEL: Record<string, string> = {
+      BOOKING_AMOUNT: 'مبلغ الحجز',
+      DOWN_PAYMENT: 'دفعة أولى',
+      INSTALLMENT: 'قسط شهري',
+      FINAL_PAYMENT: 'دفعة أخيرة',
+    };
+    const AGING_LABEL: Record<string, string> = {
+      '1-30': '1-30 يوم',
+      '31-60': '31-60 يوم',
+      '61-90': '61-90 يوم',
+      '90+': '90+ يوم',
+    };
+
+    // B. Collection by deposit type.
+    const byTypeRows: CsvCell[][] = data.collectionByType.map((c) => [
+      c.type,
+      DEP_TYPE_LABEL[c.type] ?? c.type,
+      c.count,
+      c.totalAll,
+      c.totalVerified,
+      c.totalUnverified,
+    ]);
+
+    // C. Aging buckets.
+    const agingRows: CsvCell[][] = data.aging.map((a) => [
+      AGING_LABEL[a.label] ?? a.label,
+      a.count,
+      a.amount,
+    ]);
+
+    // D. Booking pipeline.
+    const b = data.booking;
+    const bookingRows: CsvCell[][] = [
+      ['pendingReservationsCount', 'حجوزات قيد المراجعة (عدد)', b.pendingReservationsCount],
+      ['approvedReservationsCount', 'حجوزات معتمدة (عدد)', b.approvedReservationsCount],
+      ['pendingReservationsBookingAmount', 'مبالغ حجوزات قيد المراجعة', b.pendingReservationsBookingAmount],
+      ['approvedReservationsBookingAmount', 'مبالغ حجوزات معتمدة', b.approvedReservationsBookingAmount],
+      ['bookingCollectedVerified', 'مبالغ الحجز المؤكدة', b.bookingCollectedVerified],
+      ['bookingCollectedAll', 'مبالغ الحجز المسجلة', b.bookingCollectedAll],
+      ['bookingUncollectedEstimate', 'تقدير غير المحصّل', b.bookingUncollectedEstimate],
+    ];
+
+    // E. Commissions & liabilities.
+    const L = data.liabilities;
+    const liabilityRows: CsvCell[][] = [
+      ['salesBonus', 'pending', 'مستحقات المبيعات - معلّق', L.salesBonus.pendingCount, L.salesBonus.pendingAmount],
+      ['salesBonus', 'approved', 'مستحقات المبيعات - معتمد', L.salesBonus.approvedCount, L.salesBonus.approvedAmount],
+      ['salesBonus', 'paid', 'مستحقات المبيعات - مدفوع', L.salesBonus.paidCount, L.salesBonus.paidAmount],
+      ['salesBonus', 'unpaid', 'مستحقات المبيعات - غير مدفوع', L.salesBonus.unpaidCount, L.salesBonus.unpaidAmount],
+      ['brokerCommissions', 'pending', 'عمولات الوسطاء - معلّق', L.brokerCommissions.pendingCount, L.brokerCommissions.pendingAmount],
+      ['brokerCommissions', 'approved', 'عمولات الوسطاء - معتمد', L.brokerCommissions.approvedCount, L.brokerCommissions.approvedAmount],
+      ['brokerCommissions', 'paid', 'عمولات الوسطاء - مدفوع', L.brokerCommissions.paidCount, L.brokerCommissions.paidAmount],
+      ['brokerCommissions', 'unpaid', 'عمولات الوسطاء - غير مدفوع', L.brokerCommissions.unpaidCount, L.brokerCommissions.unpaidAmount],
+      ['brokerPayouts', 'draft', 'دفعات الوسطاء - مسودة', L.brokerPayouts.draftCount, L.brokerPayouts.draftAmount],
+      ['brokerPayouts', 'approved', 'دفعات الوسطاء - معتمدة', L.brokerPayouts.approvedCount, L.brokerPayouts.approvedAmount],
+      ['brokerPayouts', 'processing', 'دفعات الوسطاء - قيد المعالجة', L.brokerPayouts.processingCount, L.brokerPayouts.processingAmount],
+      ['brokerPayouts', 'paid', 'دفعات الوسطاء - مدفوعة', L.brokerPayouts.paidCount, L.brokerPayouts.paidAmount],
+      ['total', 'unpaid', 'إجمالي الالتزامات غير المدفوعة', '', L.totalUnpaidLiabilities],
+    ];
+
+    // F. Documents / receipts health.
+    const H = data.documentsHealth;
+    const healthRows: CsvCell[][] = [
+      ['depositsMissingReceipt', 'دفعات مؤكدة بدون إيصال', H.depositsMissingReceipt.count, H.depositsMissingReceipt.amount],
+      ['verifiedDepositsMissingReceiptDocument', 'دفعات مؤكدة بدون مستند إيصال', H.verifiedDepositsMissingReceiptDocument.count, H.verifiedDepositsMissingReceiptDocument.amount],
+      ['depositsWithLegacyReceiptUrlMissingDocument', 'إيصالات قديمة غير مربوطة كمستند', H.depositsWithLegacyReceiptUrlMissingDocument.count, H.depositsWithLegacyReceiptUrlMissingDocument.amount],
+      ['signedContractsMissingDocument', 'عقود موقعة بدون مستند عقد', H.signedContractsMissingDocument.count, H.signedContractsMissingDocument.amount],
+      ['contractsWithLegacyPdfUrlMissingDocument', 'ملفات عقود قديمة غير مربوطة كمستند', H.contractsWithLegacyPdfUrlMissingDocument.count, H.contractsWithLegacyPdfUrlMissingDocument.amount],
     ];
 
     // We use a permissive shape here — the report payload's nested selects
@@ -657,7 +1135,22 @@ class ReportsService {
 
     return [
       '# ملخص',
-      toCsv(['المؤشر', 'القيمة'], summaryRows),
+      toCsv(['المؤشر', 'البيان', 'القيمة'], summaryRows),
+      '',
+      '# التحصيل حسب النوع',
+      toCsv(['النوع', 'البيان', 'العدد', 'إجمالي مسجل', 'مؤكد', 'غير مؤكد'], byTypeRows),
+      '',
+      '# أعمار المتأخرات',
+      toCsv(['الفئة', 'العدد', 'المبلغ'], agingRows),
+      '',
+      '# خط الحجوزات',
+      toCsv(['المؤشر', 'البيان', 'القيمة'], bookingRows),
+      '',
+      '# العمولات والالتزامات',
+      toCsv(['القسم', 'الحالة', 'البيان', 'العدد', 'المبلغ'], liabilityRows),
+      '',
+      '# سلامة المستندات والإيصالات',
+      toCsv(['المؤشر', 'البيان', 'العدد', 'المبلغ'], healthRows),
       '',
       '# الأقساط المتأخرة',
       toCsv(instHeaders, overdueRows),

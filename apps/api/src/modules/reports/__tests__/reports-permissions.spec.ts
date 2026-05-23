@@ -65,9 +65,17 @@ function makePrismaMock() {
     lead: { count: zero() },
     visitRequest: { count: zero() },
     contract: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
-    deposit: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
+    deposit: { count: zero(), aggregate: sumZero(), findMany: emptyArr(), groupBy: emptyArr() },
     installment: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
-    reservation: { groupBy: jest.fn().mockResolvedValue([]) },
+    reservation: {
+      groupBy: jest.fn().mockResolvedValue([]),
+      count: zero(),
+      aggregate: jest.fn().mockResolvedValue({ _sum: { bookingAmount: 0 } }),
+    },
+    bonusEntry: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 }, _count: { _all: 0 } }) },
+    brokerCommission: { aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }) },
+    brokerPayout: { groupBy: jest.fn().mockResolvedValue([]) },
+    document: { findMany: emptyArr() },
     $queryRawUnsafe: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);

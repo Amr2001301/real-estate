@@ -61,6 +61,7 @@ export default async function ReservationDetailPage({
   const project = reservation.unit?.building?.phase?.project;
   const activities = reservation.activities ?? [];
   const notes = reservation.reservationNotes ?? [];
+  const bookingDeposits = reservation.deposits ?? [];
 
   const isExpired =
     reservation.status === 'PENDING' && new Date(reservation.expiresAt) < new Date();
@@ -222,6 +223,46 @@ export default async function ReservationDetailPage({
                   </div>
                 )}
               </dl>
+
+              {/* Booking-payment deposit(s) — proof/receipts live on the Deposit. */}
+              <div className="pt-3 border-t border-hairline">
+                <p className="text-xs font-semibold text-slate-700 mb-2">دفعة مبلغ الحجز</p>
+                {bookingDeposits.length === 0 ? (
+                  <p className="text-xs text-slate-400">لم يتم تسجيل دفعة حجز بعد.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {bookingDeposits.map((dep) => (
+                      <li key={dep.id} className="flex items-center justify-between gap-2 rounded-lg bg-surface-muted/50 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold tabular-nums" dir="ltr">
+                            {Number(dep.amount).toLocaleString('ar-SA')} ر.س
+                          </p>
+                          <p className="text-2xs text-slate-500 mt-0.5">
+                            {formatDate(dep.paidAt)} ·{' '}
+                            <span className={dep.verified ? 'text-success-700' : 'text-amber-700'}>
+                              {dep.verified ? 'متحقق' : 'غير متحقق'}
+                            </span>
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {dep.receiptUrl && (
+                            <a href={dep.receiptUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1">
+                              <ExternalLink className="h-3 w-3" /> إيصال
+                            </a>
+                          )}
+                          <Link href={`/dashboard/deposits/${dep.id}`} className="text-xs font-semibold text-brand-700 hover:text-brand-800">
+                            تفاصيل الدفعة
+                          </Link>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {bookingDeposits.length > 1 && (
+                  <p className="text-2xs text-amber-700 mt-2">تنبيه: يوجد أكثر من دفعة حجز مسجّلة لهذا الحجز.</p>
+                )}
+              </div>
+
               {isAdmin && (
                 <div className="pt-2 border-t border-hairline">
                   <BookingPaymentActions

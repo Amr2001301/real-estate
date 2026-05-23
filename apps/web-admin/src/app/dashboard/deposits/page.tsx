@@ -391,12 +391,25 @@ export default async function DepositsPage({
                       <tr key={d.id} className="hover:bg-slate-50/60 transition-colors">
 
                         <td className="px-4 py-2.5 whitespace-nowrap">
-                          <span className={cn(
-                            'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
-                            DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
-                          )}>
-                            {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
-                          </span>
+                          {isAdmin ? (
+                            <Link
+                              href={`/dashboard/deposits/${d.id}`}
+                              className={cn(
+                                'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight hover:opacity-80 transition-opacity',
+                                DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
+                              )}
+                              title="تفاصيل الدفعة"
+                            >
+                              {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
+                            </Link>
+                          ) : (
+                            <span className={cn(
+                              'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
+                              DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
+                            )}>
+                              {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
+                            </span>
+                          )}
                         </td>
 
                         <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">

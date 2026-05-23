@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {
   FileText, DollarSign, Clock, AlertTriangle,
   CalendarDays, CreditCard, Wallet, ReceiptText,
-  CheckCircle2, XCircle, BadgeCheck, Activity,
+  CheckCircle2, XCircle, BadgeCheck, Activity, Bookmark, Coins, FileWarning,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
@@ -318,10 +318,30 @@ export default async function FinancialReportsPage({
   const s        = dash?.summary;
   const projects = projectsRes.data?.data ?? [];
 
-  const collected   = decimal(s?.totalCollected);
-  const overdue     = decimal(s?.totalOverdue);
-  const remaining   = decimal(s?.totalRemaining);
+  // Corrected metrics (fall back to legacy fields for older API responses).
+  const collectedVerified = decimal(s?.totalCollectedVerified ?? s?.totalCollected);
+  const collectedAll = decimal(s?.totalCollectedAll ?? s?.totalCollected);
+  const collectedUnverified = decimal(
+    s?.totalCollectedUnverified ?? String(collectedAll - collectedVerified),
+  );
+  const outstanding = decimal(s?.totalOutstanding ?? s?.totalRemaining);
+  const overdueComputed = decimal(s?.overdueAmountComputed ?? s?.totalOverdue);
+  const overdueCountComputed = s?.overdueInstallmentCountComputed ?? s?.overdueInstallmentCount ?? 0;
+  const dueSoon = decimal(s?.dueSoonAmount);
   const contractVal = decimal(s?.totalContractValue);
+
+  const collectionByType = dash?.collectionByType ?? [];
+  const aging = dash?.aging ?? [];
+  const booking = dash?.booking;
+  const liabilities = dash?.liabilities;
+  const docsHealth = dash?.documentsHealth;
+
+  const AGING_LABELS: Record<string, string> = {
+    '1-30': '1-30 يوم',
+    '31-60': '31-60 يوم',
+    '61-90': '61-90 يوم',
+    '90+': '90+ يوم',
+  };
 
   return (
     <div className="space-y-5">
@@ -434,7 +454,7 @@ export default async function FinancialReportsPage({
         <div className="rounded-lg bg-red-50 text-red-700 p-4 text-sm">{dashRes.error}</div>
       )}
 
-      {/* ── Primary KPIs ────────────────────────────────────────────────────── */}
+      {/* ── A. Contracted Sales + B/C headline KPIs ──────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <PrimaryKpiCard
           tone="brand"
@@ -445,25 +465,290 @@ export default async function FinancialReportsPage({
         />
         <PrimaryKpiCard
           tone="success"
-          label="إجمالي المحصّل"
+          label="المحصّل المؤكد"
           icon={<DollarSign />}
-          value={formatCurrency(collected)}
-          sub={s ? `${s.depositCount} دفعة` : undefined}
+          value={formatCurrency(collectedVerified)}
+          sub={`إجمالي مسجل: ${formatCurrency(collectedAll)} · غير مؤكد: ${formatCurrency(collectedUnverified)}`}
         />
         <PrimaryKpiCard
           tone="info"
-          label="إجمالي المتبقي"
+          label="المتبقي للتحصيل"
           icon={<Clock />}
-          value={formatCurrency(remaining)}
+          value={formatCurrency(outstanding)}
         />
         <PrimaryKpiCard
           tone="danger"
-          label="إجمالي المتأخر"
+          label="المتأخر المحسوب"
           icon={<AlertTriangle />}
-          value={formatCurrency(overdue)}
-          sub={s ? `${s.overdueInstallmentCount} قسط` : undefined}
+          value={formatCurrency(overdueComputed)}
+          sub={`${overdueCountComputed.toLocaleString('ar-EG')} قسط · مستحق خلال 7 أيام: ${formatCurrency(dueSoon)}`}
         />
       </div>
+
+      {/* ── B. Cash Collection by type ───────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-brand-500 shrink-0" />
+            <CardTitle className="text-sm">التحصيل حسب نوع الدفعة</CardTitle>
+          </div>
+        </CardHeader>
+        <CardBody className="p-0">
+          {collectionByType.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <CreditCard className="h-7 w-7 text-slate-200" />
+              <p className="text-sm text-slate-400">لا توجد دفعات ضمن الفلاتر المختارة</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+                  <tr>
+                    <th className="px-4 py-2 text-right font-medium">نوع الدفعة</th>
+                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">العدد</th>
+                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">إجمالي مسجل</th>
+                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">مؤكد</th>
+                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">غير مؤكد</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {collectionByType.map((c) => (
+                    <tr key={c.type} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <span className={cn(
+                          'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
+                          DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600',
+                        )}>
+                          {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2.5 tabular-nums text-slate-500">{c.count.toLocaleString('ar-EG')}</td>
+                      <td className="px-4 py-2.5 tabular-nums font-semibold text-slate-800">{formatCurrency(c.totalAll)}</td>
+                      <td className="px-4 py-2.5 tabular-nums text-emerald-700">{formatCurrency(c.totalVerified)}</td>
+                      <td className="px-4 py-2.5 tabular-nums text-amber-600">{formatCurrency(c.totalUnverified)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="px-5 py-2.5 text-[11px] text-slate-400 border-t border-hairline">
+            المحصّل المؤكد يعتمد على الدفعات التي تم التحقق منها فقط.
+          </p>
+        </CardBody>
+      </Card>
+
+      {/* ── C. Receivables ───────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-brand-500 shrink-0" />
+            <CardTitle className="text-sm">المستحقات (الذمم المدينة)</CardTitle>
+          </div>
+        </CardHeader>
+        <CardBody className="space-y-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: 'المتبقي للتحصيل', value: formatCurrency(outstanding), cls: 'text-slate-800' },
+              { label: 'مستحق خلال 7 أيام', value: formatCurrency(dueSoon), cls: 'text-amber-600' },
+              { label: 'المتأخر المحسوب', value: formatCurrency(overdueComputed), cls: 'text-red-600' },
+              { label: 'عدد الأقساط المتأخرة', value: overdueCountComputed.toLocaleString('ar-EG'), cls: 'text-red-600' },
+            ].map((item) => (
+              <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
+                <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>
+                <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-400">
+            يتم احتساب المتأخرات بناءً على تاريخ الاستحقاق وحالة السداد، وليس على حالة OVERDUE المخزنة فقط.
+          </p>
+        </CardBody>
+      </Card>
+
+      {/* ── D. Overdue Aging buckets ─────────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="px-5 py-3.5">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
+            <CardTitle className="text-sm">أعمار المتأخرات</CardTitle>
+          </div>
+        </CardHeader>
+        <CardBody>
+          {aging.length === 0 || aging.every((b) => b.count === 0) ? (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <BadgeCheck className="h-7 w-7 text-slate-200" />
+              <p className="text-sm text-slate-400">لا توجد متأخرات</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {aging.map((b) => (
+                <div key={b.label} className="rounded-xl border border-hairline px-4 py-3">
+                  <p className="text-[11px] text-slate-400 mb-1 leading-tight">{AGING_LABELS[b.label] ?? b.label}</p>
+                  <p className="text-lg font-bold tabular-nums leading-tight text-red-600">{formatCurrency(b.amount)}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{b.count.toLocaleString('ar-EG')} قسط</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      {/* ── E. Booking Pipeline ──────────────────────────────────────────────── */}
+      {booking && (
+        <Card>
+          <CardHeader className="px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4 text-indigo-500 shrink-0" />
+              <CardTitle className="text-sm">خط الحجوزات</CardTitle>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'حجوزات قيد المراجعة', value: `${booking.pendingReservationsCount.toLocaleString('ar-EG')} · ${formatCurrency(booking.pendingReservationsBookingAmount)}`, cls: 'text-amber-600' },
+                { label: 'حجوزات معتمدة', value: `${booking.approvedReservationsCount.toLocaleString('ar-EG')} · ${formatCurrency(booking.approvedReservationsBookingAmount)}`, cls: 'text-slate-800' },
+                { label: 'مبالغ الحجز المؤكدة', value: formatCurrency(booking.bookingCollectedVerified), cls: 'text-emerald-700' },
+                { label: 'تقدير غير المحصّل', value: formatCurrency(booking.bookingUncollectedEstimate), cls: 'text-slate-800' },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
+                  <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>
+                  <p className={cn('text-base font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              الحجوزات ليست إيرادًا تعاقديًا حتى تتحول إلى عقد. (إجمالي مبالغ الحجز المسجلة: {formatCurrency(booking.bookingCollectedAll)})
+            </p>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* ── Commissions & Liabilities ────────────────────────────────────────── */}
+      {liabilities && (
+        <Card>
+          <CardHeader className="px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <Coins className="h-4 w-4 text-brand-500 shrink-0" />
+              <CardTitle className="text-sm">العمولات والالتزامات</CardTitle>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'مستحقات المبيعات غير المدفوعة', value: formatCurrency(liabilities.salesBonus.unpaidAmount), cls: 'text-amber-600' },
+                { label: 'عمولات الوسطاء غير المدفوعة', value: formatCurrency(liabilities.brokerCommissions.unpaidAmount), cls: 'text-amber-600' },
+                { label: 'إجمالي الالتزامات غير المدفوعة', value: formatCurrency(liabilities.totalUnpaidLiabilities), cls: 'text-red-600' },
+                { label: 'المدفوع من العمولات', value: formatCurrency(decimal(liabilities.salesBonus.paidAmount) + decimal(liabilities.brokerCommissions.paidAmount)), cls: 'text-emerald-700' },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
+                  <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>
+                  <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              {/* A. Sales bonus */}
+              <div className="rounded-xl border border-hairline overflow-hidden">
+                <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-600 border-b border-hairline">مستحقات المبيعات</div>
+                <div className="divide-y divide-hairline text-sm">
+                  {[
+                    { label: 'معلّق', amount: liabilities.salesBonus.pendingAmount, count: liabilities.salesBonus.pendingCount },
+                    { label: 'معتمد', amount: liabilities.salesBonus.approvedAmount, count: liabilities.salesBonus.approvedCount },
+                    { label: 'مدفوع', amount: liabilities.salesBonus.paidAmount, count: liabilities.salesBonus.paidCount },
+                  ].map((r) => (
+                    <div key={r.label} className="flex items-center justify-between px-4 py-2">
+                      <span className="text-slate-500 text-xs">{r.label} <span className="text-slate-300">({r.count.toLocaleString('ar-EG')})</span></span>
+                      <span className="font-semibold tabular-nums text-slate-800">{formatCurrency(r.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* B. Broker commissions */}
+              <div className="rounded-xl border border-hairline overflow-hidden">
+                <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-600 border-b border-hairline">عمولات الوسطاء</div>
+                <div className="divide-y divide-hairline text-sm">
+                  {[
+                    { label: 'معلّق', amount: liabilities.brokerCommissions.pendingAmount, count: liabilities.brokerCommissions.pendingCount },
+                    { label: 'معتمد', amount: liabilities.brokerCommissions.approvedAmount, count: liabilities.brokerCommissions.approvedCount },
+                    { label: 'مدفوع (عبر دفعة)', amount: liabilities.brokerCommissions.paidAmount, count: liabilities.brokerCommissions.paidCount },
+                    { label: 'غير مدفوع', amount: liabilities.brokerCommissions.unpaidAmount, count: liabilities.brokerCommissions.unpaidCount },
+                  ].map((r) => (
+                    <div key={r.label} className="flex items-center justify-between px-4 py-2">
+                      <span className="text-slate-500 text-xs">{r.label} <span className="text-slate-300">({r.count.toLocaleString('ar-EG')})</span></span>
+                      <span className="font-semibold tabular-nums text-slate-800">{formatCurrency(r.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* C. Broker payouts */}
+              <div className="rounded-xl border border-hairline overflow-hidden">
+                <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-600 border-b border-hairline">دفعات الوسطاء</div>
+                <div className="divide-y divide-hairline text-sm">
+                  {[
+                    { label: 'مسودة', amount: liabilities.brokerPayouts.draftAmount, count: liabilities.brokerPayouts.draftCount },
+                    { label: 'معتمدة', amount: liabilities.brokerPayouts.approvedAmount, count: liabilities.brokerPayouts.approvedCount },
+                    { label: 'قيد المعالجة', amount: liabilities.brokerPayouts.processingAmount, count: liabilities.brokerPayouts.processingCount },
+                    { label: 'مدفوعة', amount: liabilities.brokerPayouts.paidAmount, count: liabilities.brokerPayouts.paidCount },
+                  ].map((r) => (
+                    <div key={r.label} className="flex items-center justify-between px-4 py-2">
+                      <span className="text-slate-500 text-xs">{r.label} <span className="text-slate-300">({r.count.toLocaleString('ar-EG')})</span></span>
+                      <span className="font-semibold tabular-nums text-slate-800">{formatCurrency(r.amount)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400">
+              لا يتم جمع دفعات الوسطاء مرة أخرى داخل إجمالي الالتزامات لتجنب العد المزدوج.
+            </p>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* ── Documents / Receipts health ──────────────────────────────────────── */}
+      {docsHealth && (
+        <Card>
+          <CardHeader className="px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <FileWarning className="h-4 w-4 text-amber-500 shrink-0" />
+              <CardTitle className="text-sm">سلامة المستندات والإيصالات</CardTitle>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              {[
+                { label: 'دفعات مؤكدة بدون إيصال', entry: docsHealth.depositsMissingReceipt },
+                { label: 'دفعات مؤكدة بدون مستند إيصال', entry: docsHealth.verifiedDepositsMissingReceiptDocument },
+                { label: 'إيصالات قديمة غير مربوطة كمستند', entry: docsHealth.depositsWithLegacyReceiptUrlMissingDocument },
+                { label: 'عقود موقعة بدون مستند عقد', entry: docsHealth.signedContractsMissingDocument },
+                { label: 'ملفات عقود قديمة غير مربوطة كمستند', entry: docsHealth.contractsWithLegacyPdfUrlMissingDocument },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className={cn(
+                    'rounded-xl border px-4 py-3',
+                    item.entry.count > 0 ? 'border-amber-200 bg-amber-50/50' : 'border-hairline',
+                  )}
+                >
+                  <p className="text-[11px] text-slate-500 mb-1 leading-tight min-h-[28px]">{item.label}</p>
+                  <p className={cn('text-lg font-bold tabular-nums leading-tight', item.entry.count > 0 ? 'text-amber-700' : 'text-slate-400')}>
+                    {item.entry.count.toLocaleString('ar-EG')}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{formatCurrency(item.entry.amount)}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400">
+              هذه المؤشرات تساعد على مراجعة اكتمال مستندات الدفعات والعقود.
+            </p>
+          </CardBody>
+        </Card>
+      )}
 
       {/* ── Analytics row ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -500,18 +785,18 @@ export default async function FinancialReportsPage({
           </CardHeader>
           <CardBody className="px-5 py-4 flex flex-col gap-3 flex-1">
             <PaymentDonutChart
-              collected={collected}
-              overdue={overdue}
-              remaining={remaining}
+              collected={collectedVerified}
+              overdue={overdueComputed}
+              remaining={outstanding}
               contractValue={contractVal}
             />
             <div className="space-y-2 pt-1">
               {((): { label: string; amount: number; pct: number; dot: string; text: string }[] => {
-                const base = contractVal > 0 ? contractVal : collected + overdue + remaining || 1;
+                const base = contractVal > 0 ? contractVal : collectedVerified + overdueComputed + outstanding || 1;
                 return [
-                  { label: 'المحصّل', amount: collected, pct: Math.round((collected / base) * 100), dot: 'bg-emerald-500', text: 'text-emerald-700' },
-                  { label: 'المتأخر', amount: overdue,   pct: Math.round((overdue / base) * 100),   dot: 'bg-red-500',     text: 'text-red-700' },
-                  { label: 'المتبقي', amount: remaining,  pct: Math.round((remaining / base) * 100),  dot: 'bg-slate-300',   text: 'text-slate-600' },
+                  { label: 'المحصّل المؤكد', amount: collectedVerified, pct: Math.round((collectedVerified / base) * 100), dot: 'bg-emerald-500', text: 'text-emerald-700' },
+                  { label: 'المتأخر', amount: overdueComputed,   pct: Math.round((overdueComputed / base) * 100),   dot: 'bg-red-500',     text: 'text-red-700' },
+                  { label: 'المتبقي', amount: outstanding,  pct: Math.round((outstanding / base) * 100),  dot: 'bg-slate-300',   text: 'text-slate-600' },
                 ];
               })().map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-2">
@@ -546,7 +831,7 @@ export default async function FinancialReportsPage({
           { label: 'المستحق هذا الشهر',  value: formatCurrency(s?.dueThisMonth ?? 0),       cls: 'text-amber-600' },
           { label: 'عدد العقود',          value: (s?.contractCount ?? 0).toLocaleString('ar-EG'),             cls: 'text-slate-800' },
           { label: 'عدد الدفعات',         value: (s?.depositCount ?? 0).toLocaleString('ar-EG'),              cls: 'text-slate-800' },
-          { label: 'أقساط متأخرة',        value: (s?.overdueInstallmentCount ?? 0).toLocaleString('ar-EG'),  cls: 'text-red-600' },
+          { label: 'أقساط متأخرة (محسوبة)', value: overdueCountComputed.toLocaleString('ar-EG'),  cls: 'text-red-600' },
         ].map((item) => (
           <div key={item.label} className="bg-white rounded-xl border border-hairline shadow-xs px-4 py-3.5">
             <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>

@@ -385,6 +385,23 @@ describe('Reservations module · permissions enforcement', () => {
     });
   });
 
+  // ── Detail includes booking-payment deposits (Batch C) ────────────────
+
+  describe('GET /reservations/:id (booking deposit include)', () => {
+    const PATH = '/reservations/00000000-0000-0000-0000-000000000001';
+
+    it('ADMIN detail filters the deposits include to BOOKING_AMOUNT', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).get(PATH).expect(200);
+      // Find the findUnique call carrying the FULL_INCLUDE (the detail read).
+      const call = mock.reservation.findUnique.mock.calls
+        .map((c) => c[0] as { include?: { deposits?: { where?: { type?: string } } } })
+        .find((a) => a.include?.deposits);
+      expect(call).toBeDefined();
+      expect(call!.include!.deposits!.where!.type).toBe('BOOKING_AMOUNT');
+    });
+  });
+
   // ── Notes (no permission gate) ─────────────────────────────────────────
 
   describe('POST /reservations/:id/notes', () => {

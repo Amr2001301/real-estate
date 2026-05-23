@@ -1,12 +1,18 @@
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { DepositsModule } from '../deposits.module';
+import { DocumentsService } from '../../documents/documents.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+
+// DepositsModule imports DocumentsModule; override the service so tests never
+// touch R2, and ConfigModule satisfies the (unused-here) R2/Config deps.
+const documentsMock = { create: jest.fn().mockResolvedValue({ id: 'doc-1' }) };
 import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
@@ -88,14 +94,17 @@ describe('Deposits module · permissions enforcement', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, DepositsModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), MockPrismaModule, DepositsModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
       ],
-    }).compile();
+    })
+      .overrideProvider(DocumentsService)
+      .useValue(documentsMock)
+      .compile();
 
     reflector = moduleRef.get(Reflector);
     app = moduleRef.createNestApplication();
@@ -145,6 +154,38 @@ describe('Deposits module · permissions enforcement', () => {
     });
     it('myDeposits (GET /me/deposits) → no permission metadata (customer self-route)', () => {
       expect(getMeta('myDeposits')).toBeUndefined();
+    });
+    it('findOne (GET /deposits/:id) → deposits:read, adminBypass true', () => {
+      expect(getMeta('findOne')).toMatchObject({ codes: ['deposits:read'], adminBypass: true });
+    });
+    it('attachReceipt (POST /deposits/:id/receipt) → deposits:register, adminBypass true', () => {
+      expect(getMeta('attachReceipt')).toMatchObject({ codes: ['deposits:register'], adminBypass: true });
+    });
+  });
+
+  // ── New document routes — role gating ─────────────────────────────────
+  describe('Deposit document routes (Batch B)', () => {
+    const ID = '00000000-0000-0000-0000-000000000001';
+
+    it('SALES is blocked from POST /deposits/:id/receipt at @Roles (admin-only)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['deposits:register'] };
+      const res = await request(app.getHttpServer())
+        .post(`/deposits/${ID}/receipt`)
+        .send({ receiptUrl: 'https://cdn.example/r.pdf' })
+        .expect(403);
+      expect(res.body.message).toBe('Insufficient role');
+      expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
+    });
+
+    it('SALES is blocked from GET /deposits/:id at @Roles (detail is admin-only)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-2', role: UserRole.SALES, codes: ['deposits:read'] };
+      const res = await request(app.getHttpServer()).get(`/deposits/${ID}`).expect(403);
+      expect(res.body.message).toBe('Insufficient role');
+    });
+
+    it('CUSTOMER is blocked from GET /deposits/:id at @Roles', async () => {
+      FakeAuthGuard.currentUser = { sub: 'cust-1', role: UserRole.CUSTOMER, codes: [] };
+      await request(app.getHttpServer()).get(`/deposits/${ID}`).expect(403);
     });
   });
 

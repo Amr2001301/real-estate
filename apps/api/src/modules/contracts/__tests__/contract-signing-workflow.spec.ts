@@ -6,11 +6,13 @@ import {
   Module,
   ValidationPipe,
 } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { ContractsModule } from '../contracts.module';
+import { DocumentsService } from '../../documents/documents.module';
 import { BrokerCommissionsService } from '../../broker-commissions/broker-commissions.service';
 import { BonusService } from '../../bonus/bonus.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
@@ -44,6 +46,7 @@ interface ContractFixture {
   brokerId: string | null;
   brokerAgentId: string | null;
   reservationId: string | null;
+  pdfUrl: string | null;
   reservation:
     | { reservationNumber: string | null; leadId: string | null; salesId: string }
     | null;
@@ -65,6 +68,7 @@ function resetFixture() {
     contractNumber: 'CT-0001',
     signedAt: null,
     unitId: 'unit-1',
+    pdfUrl: null,
     brokerId: null,
     brokerAgentId: null,
     reservationId: null,
@@ -114,6 +118,9 @@ function makePrismaMock() {
       findMany: jest.fn().mockImplementation(async () => warrantyFixture.items),
       update: jest.fn().mockImplementation(async ({ where, data }) => ({ id: where.id, ...data })),
     },
+    document: {
+      findFirst: jest.fn().mockResolvedValue(null),
+    },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       if (typeof ops === 'function') return (ops as (tx: unknown) => Promise<unknown>)(m);
@@ -127,6 +134,15 @@ const brokerCommissionsMock = {
   materializeFromContract: jest
     .fn<Promise<{ status: string }>, [string]>()
     .mockResolvedValue({ status: 'created' }),
+};
+
+// ContractsModule imports DocumentsModule; override so tests never touch R2.
+const documentsMock = {
+  create: jest.fn().mockImplementation(async (uploadedById: string, dto: Record<string, unknown>) => ({
+    id: 'doc-1',
+    uploadedById,
+    ...dto,
+  })),
 };
 
 const bonusServiceMock = {
@@ -151,7 +167,7 @@ describe('Contracts · signing workflow', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, ContractsModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), MockPrismaModule, ContractsModule],
       providers: [
         { provide: APP_GUARD, useClass: FakeAuthGuard },
         { provide: APP_GUARD, useClass: RolesGuard },
@@ -162,6 +178,8 @@ describe('Contracts · signing workflow', () => {
       .useValue(brokerCommissionsMock)
       .overrideProvider(BonusService)
       .useValue(bonusServiceMock)
+      .overrideProvider(DocumentsService)
+      .useValue(documentsMock)
       .compile();
 
     app = moduleRef.createNestApplication();
@@ -191,6 +209,9 @@ describe('Contracts · signing workflow', () => {
     mock.contract.update.mockClear();
     mock.unitMaintenanceItem.findMany.mockClear();
     mock.unitMaintenanceItem.update.mockClear();
+    mock.document.findFirst.mockClear();
+    mock.document.findFirst.mockResolvedValue(null);
+    documentsMock.create.mockClear();
     mock.leadActivity.create.mockClear();
     mock.brokerUser.findMany.mockClear();
     mock.notification.createMany.mockClear();
@@ -319,6 +340,71 @@ describe('Contracts · signing workflow', () => {
       .send({ signedAt: '2030-05-19T00:00:00Z' })
       .expect(201);
     expect(mock.unitMaintenanceItem.update).not.toHaveBeenCalled();
+  });
+
+  // ── Contract PDF document linking (Batch A) ────────────────────────────
+
+  it('signing with an existing pdfUrl links a CONTRACT document', async () => {
+    fixture.contract.pdfUrl = 'https://cdn.example/contract.pdf';
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    expect(documentsMock.create).toHaveBeenCalledTimes(1);
+    const [uploadedById, dto] = documentsMock.create.mock.calls[0]!;
+    expect(uploadedById).toBe('admin-1');
+    expect(dto).toMatchObject({
+      ownerType: 'CONTRACT',
+      ownerId: CONTRACT_ID,
+      category: 'CONTRACT',
+      fileUrl: 'https://cdn.example/contract.pdf',
+      visibility: 'ADMIN_ONLY',
+    });
+  });
+
+  it('signing without a pdfUrl links no document', async () => {
+    fixture.contract.pdfUrl = null;
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    expect(documentsMock.create).not.toHaveBeenCalled();
+  });
+
+  it('signing does not duplicate a contract document that already exists', async () => {
+    fixture.contract.pdfUrl = 'https://cdn.example/contract.pdf';
+    mock.document.findFirst.mockResolvedValueOnce({ id: 'existing-doc' });
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    expect(documentsMock.create).not.toHaveBeenCalled();
+  });
+
+  it('signing still succeeds when document linking throws (best-effort)', async () => {
+    fixture.contract.pdfUrl = 'https://cdn.example/contract.pdf';
+    documentsMock.create.mockRejectedValueOnce(new Error('docs down'));
+    await request(app.getHttpServer())
+      .post(PATH_SIGN)
+      .send({ signedAt: '2030-05-19T00:00:00Z' })
+      .expect(201);
+    expect(mock.contract.update).toHaveBeenCalledTimes(1);
+  });
+
+  it('PATCH /contracts/:id with pdfUrl sets pdfUrl and links a CONTRACT document', async () => {
+    await request(app.getHttpServer())
+      .patch(`/contracts/${CONTRACT_ID}`)
+      .send({ pdfUrl: 'https://cdn.example/attached.pdf' })
+      .expect(200);
+    const updateArgs = mock.contract.update.mock.calls[0]![0] as { data: Record<string, unknown> };
+    expect(updateArgs.data.pdfUrl).toBe('https://cdn.example/attached.pdf');
+    expect(documentsMock.create).toHaveBeenCalledTimes(1);
+    expect(documentsMock.create.mock.calls[0]![1]).toMatchObject({
+      ownerType: 'CONTRACT',
+      ownerId: CONTRACT_ID,
+      category: 'CONTRACT',
+      fileUrl: 'https://cdn.example/attached.pdf',
+    });
   });
 
   // ── Idempotence on a contract that is already signed ────────────────────

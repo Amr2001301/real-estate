@@ -488,6 +488,16 @@ export interface Reservation {
   reservationNotes?: ReservationNote[];
   activities?: ReservationActivity[];
   contract?: { id: string; contractNumber: string | null } | null;
+  // Booking-payment deposits (type BOOKING_AMOUNT) linked to this reservation.
+  // The Deposit is the source of truth for payment proof/receipt documents.
+  deposits?: Array<{
+    id: string;
+    amount: string | number;
+    paidAt: string;
+    verified: boolean;
+    receiptUrl: string | null;
+    createdAt: string;
+  }>;
 }
 
 export interface ReservationNote {
@@ -1505,6 +1515,85 @@ export interface FinancialSummary {
   contractCount: number;
   depositCount: number;
   overdueInstallmentCount: number;
+  // F1 additions (optional for back-compat with older API responses).
+  totalCollectedAll?: string;
+  totalCollectedVerified?: string;
+  totalCollectedUnverified?: string;
+  totalOutstanding?: string;
+  dueSoonAmount?: string;
+  overdueAmountComputed?: string;
+  overdueInstallmentCountComputed?: number;
+}
+
+export interface FinancialCollectionByType {
+  type: DepositType;
+  count: number;
+  totalAll: string;
+  totalVerified: string;
+  totalUnverified: string;
+}
+
+export interface FinancialAgingBucket {
+  label: string;
+  count: number;
+  amount: string;
+}
+
+export interface FinancialBooking {
+  pendingReservationsCount: number;
+  approvedReservationsCount: number;
+  pendingReservationsBookingAmount: string;
+  approvedReservationsBookingAmount: string;
+  bookingCollectedVerified: string;
+  bookingCollectedAll: string;
+  bookingUncollectedEstimate: string;
+}
+
+export interface FinancialLiabilities {
+  salesBonus: {
+    pendingAmount: string;
+    approvedAmount: string;
+    paidAmount: string;
+    unpaidAmount: string;
+    pendingCount: number;
+    approvedCount: number;
+    paidCount: number;
+    unpaidCount: number;
+  };
+  brokerCommissions: {
+    pendingAmount: string;
+    approvedAmount: string;
+    paidAmount: string;
+    unpaidAmount: string;
+    pendingCount: number;
+    approvedCount: number;
+    paidCount: number;
+    unpaidCount: number;
+  };
+  brokerPayouts: {
+    draftAmount: string;
+    approvedAmount: string;
+    processingAmount: string;
+    paidAmount: string;
+    draftCount: number;
+    approvedCount: number;
+    processingCount: number;
+    paidCount: number;
+  };
+  totalUnpaidLiabilities: string;
+}
+
+export interface FinancialHealthEntry {
+  count: number;
+  amount: string;
+}
+
+export interface FinancialDocumentsHealth {
+  depositsMissingReceipt: FinancialHealthEntry;
+  verifiedDepositsMissingReceiptDocument: FinancialHealthEntry;
+  depositsWithLegacyReceiptUrlMissingDocument: FinancialHealthEntry;
+  signedContractsMissingDocument: FinancialHealthEntry;
+  contractsWithLegacyPdfUrlMissingDocument: FinancialHealthEntry;
 }
 
 export interface FinancialInstallmentRow {
@@ -1553,6 +1642,12 @@ export interface CashflowTrendPoint {
 
 export interface FinancialDashboard {
   summary: FinancialSummary;
+  // F1 additions (optional for back-compat with older API responses).
+  collectionByType?: FinancialCollectionByType[];
+  aging?: FinancialAgingBucket[];
+  booking?: FinancialBooking;
+  liabilities?: FinancialLiabilities;
+  documentsHealth?: FinancialDocumentsHealth;
   overdue: FinancialInstallmentRow[];
   upcomingThisWeek: FinancialInstallmentRow[];
   upcomingThisMonth: FinancialInstallmentRow[];

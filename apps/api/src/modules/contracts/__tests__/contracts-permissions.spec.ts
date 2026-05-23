@@ -6,15 +6,21 @@ import {
   Module,
   ValidationPipe,
 } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { ContractsModule } from '../contracts.module';
+import { DocumentsService } from '../../documents/documents.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { BrokerCommissionsService } from '../../broker-commissions/broker-commissions.service';
+
+// ContractsModule now imports DocumentsModule (for PDF document linking).
+// Override the service so tests never touch R2; ConfigModule satisfies its deps.
+const documentsMock = { create: jest.fn().mockResolvedValue({ id: 'doc-1' }) };
 import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
@@ -158,7 +164,7 @@ describe('Contracts module · permissions enforcement', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, ContractsModule],
+      imports: [ConfigModule.forRoot({ isGlobal: true }), MockPrismaModule, ContractsModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },
@@ -168,6 +174,8 @@ describe('Contracts module · permissions enforcement', () => {
     })
       .overrideProvider(BrokerCommissionsService)
       .useValue(brokerCommissionsMock)
+      .overrideProvider(DocumentsService)
+      .useValue(documentsMock)
       .compile();
 
     reflector = moduleRef.get(Reflector);

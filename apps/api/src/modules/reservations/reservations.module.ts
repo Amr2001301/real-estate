@@ -144,6 +144,20 @@ const FULL_INCLUDE = {
     select: { id: true, durationMonths: true, increasePercentage: true },
   },
   contract: { select: { id: true, contractNumber: true } },
+  // Booking-payment evidence lives on the related Deposit (source of truth).
+  // Surface the BOOKING_AMOUNT deposits so the detail page can link to them.
+  deposits: {
+    where: { type: DepositType.BOOKING_AMOUNT },
+    orderBy: { createdAt: 'desc' as const },
+    select: {
+      id: true,
+      amount: true,
+      paidAt: true,
+      verified: true,
+      receiptUrl: true,
+      createdAt: true,
+    },
+  },
   reservationNotes: {
     orderBy: { createdAt: 'desc' as const },
     include: { author: { select: { id: true, fullName: true } } },

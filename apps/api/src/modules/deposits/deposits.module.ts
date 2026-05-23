@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Injectable,
+  Logger,
   Module,
   NotFoundException,
   Param,
@@ -27,8 +28,18 @@ import {
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { DepositType, Prisma, PlanPaymentType, InstallmentStatus, UserRole } from '@prisma/client';
+import {
+  DepositType,
+  DocumentCategory,
+  DocumentOwnerType,
+  DocumentVisibility,
+  Prisma,
+  PlanPaymentType,
+  InstallmentStatus,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { DocumentsModule, DocumentsService } from '../documents/documents.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -44,6 +55,16 @@ class RecordDepositDto {
 
 class VerifyDepositDto {
   @IsBoolean() verified!: boolean;
+}
+
+// Attach (or replace) the payment proof for an existing deposit. Updates the
+// legacy receiptUrl AND links a first-class RECEIPT document.
+class AttachReceiptDto {
+  @IsString() receiptUrl!: string;
+  @IsOptional() @IsString() fileName?: string;
+  @IsOptional() @IsString() mimeType?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) sizeBytes?: number;
+  @IsOptional() @IsString() title?: string;
 }
 
 interface ListDepositsOpts {
@@ -90,7 +111,73 @@ const DEPOSIT_INCLUDE = {
 
 @Injectable()
 class DepositsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(DepositsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly documents: DocumentsService,
+  ) {}
+
+  // Link a payment proof as a first-class RECEIPT document. Idempotent: skips
+  // when a matching (deposit, RECEIPT, fileUrl) document already exists.
+  private async linkReceiptDocument(
+    depositId: string,
+    receiptUrl: string,
+    uploadedById: string,
+    meta?: { fileName?: string; mimeType?: string; sizeBytes?: number; title?: string },
+  ) {
+    const existing = await this.prisma.document.findFirst({
+      where: {
+        ownerType: DocumentOwnerType.DEPOSIT,
+        ownerId: depositId,
+        category: DocumentCategory.RECEIPT,
+        fileUrl: receiptUrl,
+        deletedAt: null,
+      },
+    });
+    if (existing) return existing;
+    return this.documents.create(uploadedById, {
+      ownerType: DocumentOwnerType.DEPOSIT,
+      ownerId: depositId,
+      category: DocumentCategory.RECEIPT,
+      title: meta?.title?.trim() || 'إيصال دفعة',
+      fileUrl: receiptUrl,
+      fileName: meta?.fileName,
+      mimeType: meta?.mimeType,
+      sizeBytes: meta?.sizeBytes,
+      visibility: DocumentVisibility.ADMIN_ONLY,
+    });
+  }
+
+  // Best-effort linking — a document failure must never fail deposit recording.
+  private async tryLinkReceiptDocument(depositId: string, receiptUrl: string, uploadedById: string) {
+    try {
+      await this.linkReceiptDocument(depositId, receiptUrl, uploadedById);
+    } catch (e) {
+      this.logger.warn(`linkReceiptDocument(${depositId}) failed: ${(e as Error).message}`);
+    }
+  }
+
+  async findOne(id: string) {
+    const deposit = await this.prisma.deposit.findUnique({ where: { id }, include: DEPOSIT_INCLUDE });
+    if (!deposit) throw new NotFoundException('Deposit not found');
+    return deposit;
+  }
+
+  // Attach/replace proof after creation. Updates legacy receiptUrl and links a
+  // RECEIPT document; document errors here ARE surfaced (it's the route's job).
+  async attachReceipt(id: string, dto: AttachReceiptDto, uploadedById: string) {
+    const deposit = await this.prisma.deposit.findUnique({ where: { id } });
+    if (!deposit) throw new NotFoundException('Deposit not found');
+    await this.prisma.deposit.update({ where: { id }, data: { receiptUrl: dto.receiptUrl } });
+    const document = await this.linkReceiptDocument(id, dto.receiptUrl, uploadedById, {
+      fileName: dto.fileName,
+      mimeType: dto.mimeType,
+      sizeBytes: dto.sizeBytes,
+      title: dto.title,
+    });
+    return { deposit: await this.findOne(id), document };
+  }
 
   async record(dto: RecordDepositDto, recordedById: string) {
     const contract = await this.prisma.contract.findUnique({ where: { id: dto.contractId } });
@@ -127,8 +214,8 @@ class DepositsService {
     };
     const depositType = depositTypeMap[installment.type] ?? DepositType.INSTALLMENT;
 
-    return this.prisma.$transaction(async (tx) => {
-      const deposit = await tx.deposit.create({
+    const deposit = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.deposit.create({
         data: {
           type: depositType,
           contractId: dto.contractId,
@@ -141,10 +228,16 @@ class DepositsService {
       });
       await tx.installment.update({
         where: { id: dto.installmentId },
-        data: { status: InstallmentStatus.PAID, paidAt: deposit.paidAt },
+        data: { status: InstallmentStatus.PAID, paidAt: created.paidAt },
       });
-      return deposit;
+      return created;
     });
+    // Mirror the receipt as a first-class document (best-effort; legacy
+    // receiptUrl is already persisted on the deposit).
+    if (dto.receiptUrl) {
+      await this.tryLinkReceiptDocument(deposit.id, dto.receiptUrl, recordedById);
+    }
+    return deposit;
   }
 
   async list(opts: ListDepositsOpts) {
@@ -336,6 +429,28 @@ class DepositsController {
     });
   }
 
+  // Single deposit detail (with contract/reservation/installment context).
+  // Declared before the parametric write routes; ADMIN read.
+  @Roles(UserRole.ADMIN)
+  @Permissions('deposits:read')
+  @Get('deposits/:id')
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.findOne(id);
+  }
+
+  // Attach/replace the payment proof after creation — links a RECEIPT document
+  // and mirrors the legacy receiptUrl. Uses the same write permission as record.
+  @Roles(UserRole.ADMIN)
+  @Permissions('deposits:register')
+  @Post('deposits/:id/receipt')
+  attachReceipt(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AttachReceiptDto,
+  ) {
+    return this.svc.attachReceipt(id, dto, user.sub);
+  }
+
   // Strict: even an ADMIN must hold deposits:verify explicitly. Segregation
   // of duties — financial verification is a two-person-rule action.
   @Roles(UserRole.ADMIN)
@@ -354,6 +469,7 @@ class DepositsController {
 }
 
 @Module({
+  imports: [DocumentsModule],
   controllers: [DepositsController],
   providers: [DepositsService],
 })

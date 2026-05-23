@@ -23,8 +23,17 @@ import {
   IsUUID,
   Min,
 } from 'class-validator';
-import { NotificationChannel, Prisma, UnitStatus, UserRole } from '@prisma/client';
+import {
+  DocumentCategory,
+  DocumentOwnerType,
+  DocumentVisibility,
+  NotificationChannel,
+  Prisma,
+  UnitStatus,
+  UserRole,
+} from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { DocumentsModule, DocumentsService } from '../documents/documents.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -72,7 +81,41 @@ class ContractsService {
     private readonly prisma: PrismaService,
     private readonly brokerCommissions: BrokerCommissionsService,
     private readonly bonus: BonusService,
+    private readonly documents: DocumentsService,
   ) {}
+
+  // Link a contract PDF as a first-class CONTRACT document. Idempotent: skips
+  // when a matching (contract, CONTRACT, fileUrl) document already exists.
+  private async linkContractDocument(contractId: string, pdfUrl: string, uploadedById: string) {
+    const existing = await this.prisma.document.findFirst({
+      where: {
+        ownerType: DocumentOwnerType.CONTRACT,
+        ownerId: contractId,
+        category: DocumentCategory.CONTRACT,
+        fileUrl: pdfUrl,
+        deletedAt: null,
+      },
+    });
+    if (existing) return existing;
+    return this.documents.create(uploadedById, {
+      ownerType: DocumentOwnerType.CONTRACT,
+      ownerId: contractId,
+      category: DocumentCategory.CONTRACT,
+      title: 'ملف العقد',
+      fileUrl: pdfUrl,
+      visibility: DocumentVisibility.ADMIN_ONLY,
+    });
+  }
+
+  // Best-effort linking — a document failure must never fail the PDF attach,
+  // contract creation, or signing.
+  private async tryLinkContractDocument(contractId: string, pdfUrl: string, uploadedById: string) {
+    try {
+      await this.linkContractDocument(contractId, pdfUrl, uploadedById);
+    } catch (e) {
+      this.logger.warn(`linkContractDocument(${contractId}) failed: ${(e as Error).message}`);
+    }
+  }
 
   async create(dto: CreateContractDto, actorId: string) {
     const unit = await this.prisma.unit.findUnique({ where: { id: dto.unitId } });
@@ -81,8 +124,8 @@ class ContractsService {
       throw new BadRequestException('Unit already sold');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      const contract = await tx.contract.create({
+    const contract = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.contract.create({
         data: {
           customerId: dto.customerId,
           unitId: dto.unitId,
@@ -110,11 +153,16 @@ class ContractsService {
           oldStatus: previous,
           newStatus: UnitStatus.SOLD,
           changedById: actorId,
-          reason: `Contract ${contract.id}`,
+          reason: `Contract ${created.id}`,
         },
       });
-      return contract;
+      return created;
     });
+    // Mirror a contract-created PDF as a first-class document (best-effort).
+    if (dto.pdfUrl) {
+      await this.tryLinkContractDocument(contract.id, dto.pdfUrl, actorId);
+    }
+    return contract;
   }
 
   async list(opts: {
@@ -234,7 +282,7 @@ class ContractsService {
     return contract;
   }
 
-  async update(id: string, dto: UpdateContractDto) {
+  async update(id: string, dto: UpdateContractDto, actorId: string) {
     // Generic update path — pdfUrl only. Signing is performed via sign().
     const exists = await this.prisma.contract.findUnique({
       where: { id },
@@ -242,12 +290,18 @@ class ContractsService {
     });
     if (!exists) throw new NotFoundException('Contract not found');
 
-    return this.prisma.contract.update({
+    const updated = await this.prisma.contract.update({
       where: { id },
       data: {
         pdfUrl: dto.pdfUrl ?? undefined,
       },
     });
+    // Mirror the attached PDF as a first-class document (best-effort; pdfUrl is
+    // already persisted on the contract for back-compat).
+    if (dto.pdfUrl) {
+      await this.tryLinkContractDocument(id, dto.pdfUrl, actorId);
+    }
+    return updated;
   }
 
   /**
@@ -258,7 +312,7 @@ class ContractsService {
    * Idempotent: signing an already-signed contract is a no-op and does NOT
    * re-fire side effects. The current contract state is returned.
    */
-  async sign(id: string, dto: SignContractDto) {
+  async sign(id: string, dto: SignContractDto, actorId: string) {
     const before = await this.prisma.contract.findUnique({
       where: { id },
       select: {
@@ -266,6 +320,7 @@ class ContractsService {
         contractNumber: true,
         signedAt: true,
         unitId: true,
+        pdfUrl: true,
         brokerId: true,
         brokerAgentId: true,
         reservationId: true,
@@ -298,6 +353,13 @@ class ContractsService {
     await this.startUnitWarranties(before.unitId, signedAtDate).catch((e) =>
       this.logger.warn(`startUnitWarranties(${id}) failed on sign: ${(e as Error).message}`),
     );
+
+    // Ensure the existing contract PDF (if any) is linked as a document. No PDF
+    // is generated on signing; this only mirrors an already-uploaded pdfUrl.
+    // Best-effort + idempotent.
+    if (before.pdfUrl) {
+      await this.tryLinkContractDocument(id, before.pdfUrl, actorId);
+    }
 
     if (before.brokerId) {
       // Broker portal activity timeline. Best-effort: failures are logged
@@ -493,8 +555,12 @@ class ContractsController {
   @Roles(UserRole.ADMIN)
   @Permissions('contracts:update')
   @Patch(':id')
-  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateContractDto) {
-    return this.svc.update(id, dto);
+  update(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateContractDto,
+  ) {
+    return this.svc.update(id, dto, user.sub);
   }
 
   // Strict: even an ADMIN must hold contracts:sign explicitly. Signing
@@ -503,13 +569,17 @@ class ContractsController {
   @Roles(UserRole.ADMIN)
   @PermissionsStrict('contracts:sign')
   @Post(':id/sign')
-  sign(@Param('id', ParseUUIDPipe) id: string, @Body() dto: SignContractDto) {
-    return this.svc.sign(id, dto);
+  sign(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SignContractDto,
+  ) {
+    return this.svc.sign(id, dto, user.sub);
   }
 }
 
 @Module({
-  imports: [BrokerCommissionsModule, BonusModule],
+  imports: [BrokerCommissionsModule, BonusModule, DocumentsModule],
   controllers: [ContractsController],
   providers: [ContractsService],
   exports: [ContractsService],

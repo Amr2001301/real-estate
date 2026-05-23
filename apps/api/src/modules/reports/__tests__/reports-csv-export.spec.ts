@@ -70,9 +70,17 @@ function makePrismaMock() {
     lead: { count: zero() },
     visitRequest: { count: zero() },
     contract: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
-    deposit: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
+    deposit: { count: zero(), aggregate: sumZero(), findMany: emptyArr(), groupBy: emptyArr() },
     installment: { count: zero(), aggregate: sumZero(), findMany: emptyArr() },
-    reservation: { groupBy: jest.fn().mockResolvedValue([]) },
+    reservation: {
+      groupBy: jest.fn().mockResolvedValue([]),
+      count: zero(),
+      aggregate: jest.fn().mockResolvedValue({ _sum: { bookingAmount: 0 } }),
+    },
+    bonusEntry: { aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 }, _count: { _all: 0 } }) },
+    brokerCommission: { aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }) },
+    brokerPayout: { groupBy: jest.fn().mockResolvedValue([]) },
+    document: { findMany: emptyArr() },
     $queryRawUnsafe: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
@@ -239,9 +247,33 @@ describe('Reports module · CSV export', () => {
         .get('/reports/financial-dashboard/export.csv')
         .expect(200);
       expect(res.headers['content-disposition']).toContain('financial-dashboard.csv');
+      // Multi-section layout leads with a section comment; the BOM is emitted by
+      // toCsv within the first data block (Excel still renders Arabic correctly).
+      expect(res.text).toContain(BOM);
+      // Existing sections preserved.
       expect(res.text).toContain('# ملخص');
       expect(res.text).toContain('# الأقساط المتأخرة');
       expect(res.text).toContain('# آخر الدفعات');
+      // New F1/F4/F5 sections present.
+      expect(res.text).toContain('# التحصيل حسب النوع');
+      expect(res.text).toContain('# أعمار المتأخرات');
+      expect(res.text).toContain('# خط الحجوزات');
+      expect(res.text).toContain('# العمولات والالتزامات');
+      expect(res.text).toContain('# سلامة المستندات والإيصالات');
+      // Stable metric keys + an Arabic label appear in the summary section.
+      expect(res.text).toContain('totalCollectedVerified');
+      expect(res.text).toContain('المحصّل المؤكد');
+    });
+
+    it('forwards the same filters to financialDashboard (projectId)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      const projectId = '11111111-1111-4111-8111-111111111111';
+      await request(app.getHttpServer())
+        .get(`/reports/financial-dashboard/export.csv?projectId=${projectId}`)
+        .expect(200);
+      // The contract aggregate (totalContractValue) carries the projectId filter.
+      const where = JSON.stringify(prismaMock.contract.aggregate.mock.calls.map((c) => c[0]));
+      expect(where).toContain(projectId);
     });
 
     it('non-admin without reports:financial:read receives structured 403', async () => {

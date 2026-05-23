@@ -18,6 +18,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ContractPdfPanel } from './pdf-panel';
+import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { createInstallmentPlanAction } from '../actions';
 import { RecordPaymentButton } from './record-payment-button';
 
@@ -379,7 +380,13 @@ export default async function ContractDetailPage({
                 <ul className="divide-y divide-hairline text-sm">
                   {contract.deposits.map((d) => (
                     <li key={d.id} className="px-6 py-3 flex justify-between items-center">
-                      <span className="font-semibold tabular-nums">{formatCurrency(d.amount)}</span>
+                      {isAdmin ? (
+                        <Link href={`/dashboard/deposits/${d.id}`} className="font-semibold tabular-nums text-brand-700 hover:text-brand-800">
+                          {formatCurrency(d.amount)}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold tabular-nums">{formatCurrency(d.amount)}</span>
+                      )}
                       <div className="flex items-center gap-3">
                         <span className="text-slate-400 text-xs">{formatDate(d.paidAt)}</span>
                         {d.receiptUrl && (
@@ -516,6 +523,19 @@ export default async function ContractDetailPage({
 
           {/* PDF */}
           <ContractPdfPanel contract={contract} />
+
+          {/* Contract documents (signed PDF + legal attachments) */}
+          <div className="space-y-1.5">
+            <p className="text-[11px] text-slate-400 px-1">
+              ارفع نسخة العقد الموقعة أو أي مرفقات قانونية مرتبطة بالعقد.
+            </p>
+            <OwnerDocumentsCard
+              ownerType="CONTRACT"
+              ownerId={contract.id}
+              title="مستندات العقد"
+              legacy={contract.pdfUrl ? [{ label: 'ملف العقد الحالي', href: contract.pdfUrl, hint: 'رابط محفوظ في العقد' }] : undefined}
+            />
+          </div>
         </aside>
       </div>
     </div>

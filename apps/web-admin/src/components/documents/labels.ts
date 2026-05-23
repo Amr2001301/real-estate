@@ -59,6 +59,7 @@ export function ownerHref(ownerType: DocumentOwnerType, ownerId: string): string
     case 'MAINTENANCE_REQUEST':
       return `/dashboard/maintenance/${ownerId}`;
     case 'DEPOSIT':
+      return `/dashboard/deposits/${ownerId}`;
     case 'OTHER':
       return null;
   }
