@@ -9,7 +9,6 @@ import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
 import { pickAr, formatPrice, formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
-import { Badge } from '@/components/ui/Badge';
 import { ButtonLink } from '@/components/ui/Button';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { writeCompareItems, type CompareItem } from './CompareContext';
@@ -85,8 +84,16 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
             <div key={u.id} className="flex h-full flex-col overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card">
               <div className="relative">
                 <CoverImage src={u.coverImage} alt={`وحدة ${u.code}`} className="aspect-[4/3]" />
-                <span className="absolute right-4 top-4">
-                  <Badge tone={status.tone}>{status.label}</Badge>
+                <span className="pointer-events-none absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-black/25 to-transparent" aria-hidden />
+                <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
+                  <span
+                    className={cn(
+                      'h-2 w-2 rounded-full',
+                      status.tone === 'success' ? 'bg-success' : status.tone === 'warning' ? 'bg-warning' : 'bg-ink-muted',
+                    )}
+                    aria-hidden
+                  />
+                  {status.label}
                 </span>
                 <button
                   type="button"
@@ -101,7 +108,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                 <div className="line-clamp-1 text-sm text-ink-muted">
                   {unitTypeLabel(u.type)}{project ? ` · ${project}` : ''}
                 </div>
-                <div className="mt-1 font-display text-xl text-navy">{formatPrice(u.price)}</div>
+                <div className="mt-1 font-display text-xl font-bold text-navy">{formatPrice(u.price)}</div>
                 <div className="mt-auto flex flex-wrap gap-2 pt-4">
                   <ButtonLink href={routes.unit(u.id) as Route} variant="primary" size="sm">
                     عرض التفاصيل
@@ -153,7 +160,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
           return (
             <div key={u.id} className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-soft">
               <div className="flex items-center gap-3 border-b border-hairline bg-surface-soft/50 px-5 py-4">
-                <span className="font-display text-navy">{u.type}</span>
+                <span className="font-display text-navy">{unitTypeLabel(u.type)}</span>
                 {project && (
                   <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
                     <MapPin className="h-3.5 w-3.5 text-gold-500" aria-hidden />
