@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Layers } from 'lucide-react';
+import { Search, X, Layers, ChevronDown } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
@@ -81,32 +81,44 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Field label="نوع العقار">
-          <Select value={type} onChange={(e) => setType(e.target.value)} aria-label="نوع العقار">
-            {TYPES.map((t) => (
-              <option key={t.value} value={t.value}>{t.label}</option>
-            ))}
-          </Select>
+          <div className="relative">
+            <Select value={type} onChange={(e) => setType(e.target.value)} aria-label="نوع العقار" className="h-12 pl-9">
+              {TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </Select>
+            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+          </div>
         </Field>
         <Field label="غرف النوم">
-          <Select value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} aria-label="غرف النوم">
-            {ROOMS.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </Select>
+          <div className="relative">
+            <Select value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} aria-label="غرف النوم" className="h-12 pl-9">
+              {ROOMS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </Select>
+            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+          </div>
         </Field>
         <Field label="دورات المياه">
-          <Select value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} aria-label="دورات المياه">
-            {ROOMS.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </Select>
+          <div className="relative">
+            <Select value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} aria-label="دورات المياه" className="h-12 pl-9">
+              {ROOMS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </Select>
+            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+          </div>
         </Field>
         <Field label="نطاق السعر">
-          <Select value={price} onChange={(e) => setPrice(e.target.value)} aria-label="نطاق السعر">
-            {PRICE_RANGES.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
-            ))}
-          </Select>
+          <div className="relative">
+            <Select value={price} onChange={(e) => setPrice(e.target.value)} aria-label="نطاق السعر" className="h-12 pl-9">
+              {PRICE_RANGES.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </Select>
+            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+          </div>
         </Field>
       </div>
 

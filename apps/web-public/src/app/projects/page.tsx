@@ -7,6 +7,7 @@ import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { PageHero } from '@/components/layout/PageHero';
+import { Container } from '@/components/ui/Container';
 import { ProjectsFilterBar } from '@/components/projects/ProjectsFilterBar';
 import { Pagination } from '@/components/projects/Pagination';
 import { ProjectCard } from '@/components/home/ProjectCard';
@@ -65,12 +66,15 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
         title="اكتشف مشاريعنا الاستثنائية"
         subtitle="مجموعة منتقاة من المشاريع السكنية والتجارية المصممة لأسلوب حياة أرقى."
         stats={meta ? [{ value: formatNumber(meta.total), label: 'مشروع متاح' }] : undefined}
+        overlap
       />
 
-      <Section tone="canvas">
+      {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
+      <Container className="relative z-10 -mt-12 sm:-mt-14">
         <ProjectsFilterBar initialQ={q} initialFeatured={featured} />
+      </Container>
 
-        <div className="mt-12">
+      <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">
           {!result.ok ? (
             <ErrorState
               title="لم نتمكن من تحميل المشاريع حاليًا"
@@ -109,7 +113,6 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
               {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}
             </>
           )}
-        </div>
       </Section>
 
       <CtaBand eyebrow="بحاجة إلى مساعدة؟" title="دع مستشارينا يرشدونك إلى المشروع الأنسب">

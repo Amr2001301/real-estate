@@ -7,6 +7,7 @@ import { Section } from '@/components/ui/Section';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { ButtonLink } from '@/components/ui/Button';
 import { PageHero } from '@/components/layout/PageHero';
+import { Container } from '@/components/ui/Container';
 import { ErrorState } from '@/components/states/ErrorState';
 import { EmptyState } from '@/components/states/EmptyState';
 import { Pagination } from '@/components/projects/Pagination';
@@ -86,12 +87,15 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
         title="وحدات فاخرة جاهزة لاختيارك"
         subtitle="اكتشف مجموعة مختارة من الشقق والفيلات المصممة لتناسب أسلوب حياتك واستثمارك."
         stats={meta ? [{ value: formatNumber(meta.total), label: 'وحدة متاحة' }] : undefined}
+        overlap
       />
 
-      <Section tone="canvas">
+      {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
+      <Container className="relative z-10 -mt-12 sm:-mt-14">
         <UnitsFilterBar initial={initialFilters} />
+      </Container>
 
-        <div className="mt-12">
+      <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">
           {!result.ok ? (
             <ErrorState
               title="لم نتمكن من تحميل الوحدات حاليًا"
@@ -130,7 +134,6 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
               {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}
             </>
           )}
-        </div>
       </Section>
 
       <CtaBand eyebrow="بحاجة إلى مساعدة؟" title="دع مستشارينا يساعدونك في الاختيار">
