@@ -149,9 +149,9 @@ function FloatingFeatureTag({
 }) {
   return (
     <div
-      className={`absolute hidden items-center gap-2 rounded-full border border-hairline bg-surface/95 px-3 py-2 shadow-lift backdrop-blur sm:inline-flex ${className}`}
+      className={`absolute hidden items-center gap-2 rounded-full border border-hairline bg-surface/95 px-3 py-1.5 shadow-[0_12px_30px_-12px_rgba(15,30,51,0.32)] ring-1 ring-black/5 backdrop-blur sm:inline-flex ${className}`}
     >
-      <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gold-100 text-gold-600">
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
         <Icon className="h-3.5 w-3.5" aria-hidden />
       </span>
       <span className="text-xs font-semibold text-navy">{label}</span>
@@ -168,7 +168,7 @@ function QrCard({ href }: { href: string }) {
       aria-label="ابدأ رحلتك العقارية — امسح الرمز"
       className="absolute -bottom-3 -left-6 hidden w-[124px] rounded-2xl border border-hairline bg-surface p-3 text-center shadow-lift transition-transform hover:-translate-y-0.5 sm:block"
     >
-      <span className="mx-auto block w-fit rounded-lg bg-white p-1.5 ring-1 ring-hairline">
+      <span className="mx-auto block w-fit rounded-lg bg-white p-1.5 ring-1 ring-gold-200/70">
         <QrCode value={href} size={64} className="h-16 w-16" />
       </span>
       <span className="mt-2 inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-navy">
@@ -234,8 +234,8 @@ export function MobileAppPromo() {
                   <PhoneMockup />
 
                   {/* Floating micro-cards */}
-                  <FloatingFeatureTag icon={Scale} label="مقارنة ذكية" className="-right-5 top-12" />
-                  <FloatingFeatureTag icon={CalendarDays} label="طلبات زيارة" className="-right-3 bottom-28" />
+                  <FloatingFeatureTag icon={Scale} label="مقارنة ذكية" className="-right-6 top-16" />
+                  <FloatingFeatureTag icon={CalendarDays} label="طلبات زيارة" className="-left-6 top-1/2 -translate-y-1/2" />
 
                   {/* Real, scannable QR → /app */}
                   <QrCard href={appUrl} />
