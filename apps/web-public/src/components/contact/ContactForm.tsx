@@ -22,6 +22,17 @@ export interface ContactContext {
 type Mode = 'info' | 'visit';
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
+interface TabDef {
+  mode: Mode;
+  label: string;
+}
+
+/** Default tabs (project/unit-aware contexts, e.g. the /contact page). */
+const DEFAULT_TABS: ReadonlyArray<TabDef> = [
+  { mode: 'info', label: 'طلب معلومات' },
+  { mode: 'visit', label: 'طلب زيارة' },
+];
+
 const PHONE_RE = /^[+\d][\d\s-]{6,}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -42,11 +53,24 @@ function mapError(status: number, hasContext: boolean): string {
 export function ContactForm({
   initialMode,
   context,
+  tabs = DEFAULT_TABS,
+  showTabs = true,
+  eyebrow,
 }: {
   initialMode: Mode;
   context: ContactContext;
+  /** Override the tab set (e.g. the /contact page keeps "طلب زيارة"). */
+  tabs?: ReadonlyArray<TabDef>;
+  /** Hide the tab switcher and lock to the initial mode (e.g. homepage). */
+  showTabs?: boolean;
+  /** Pill label shown in place of the tabs when showTabs is false. */
+  eyebrow?: string;
 }) {
-  const [mode, setMode] = useState<Mode>(initialMode);
+  const [activeTab, setActiveTab] = useState(() => {
+    const i = tabs.findIndex((t) => t.mode === initialMode);
+    return i >= 0 ? i : 0;
+  });
+  const mode: Mode = tabs[activeTab]?.mode ?? initialMode;
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -64,10 +88,15 @@ export function ContactForm({
   const visitNeedsProject = mode === 'visit' && !context.projectId;
   const today = new Date().toISOString().slice(0, 10);
 
-  function switchMode(next: Mode) {
-    setMode(next);
+  function switchTab(index: number) {
+    setActiveTab(index);
     setErrors({});
     if (status === 'error') setStatus('idle');
+  }
+
+  function switchToMode(next: Mode) {
+    const i = tabs.findIndex((t) => t.mode === next);
+    if (i >= 0) switchTab(i);
   }
 
   function validate(): boolean {
@@ -169,23 +198,29 @@ export function ContactForm({
 
   return (
     <PremiumCard className="p-6 sm:p-8">
-      {/* Mode tabs */}
-      <div className="inline-flex rounded-full border border-hairline bg-surface-soft p-1">
-        {(['info', 'visit'] as Mode[]).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => switchMode(m)}
-            aria-pressed={mode === m}
-            className={cn(
-              'rounded-full px-5 py-2 text-sm font-medium transition-colors',
-              mode === m ? 'bg-navy text-white shadow-soft' : 'text-ink-muted hover:text-navy',
-            )}
-          >
-            {m === 'info' ? 'طلب معلومات' : 'طلب زيارة'}
-          </button>
-        ))}
-      </div>
+      {/* Mode switcher — tabs, or a single-mode pill when locked (e.g. homepage) */}
+      {showTabs ? (
+        <div className="inline-flex rounded-full border border-hairline bg-surface-soft p-1">
+          {tabs.map((t, i) => (
+            <button
+              key={`${t.mode}-${i}`}
+              type="button"
+              onClick={() => switchTab(i)}
+              aria-pressed={i === activeTab}
+              className={cn(
+                'rounded-full px-5 py-2 text-sm font-medium transition-colors',
+                i === activeTab ? 'bg-navy text-white shadow-soft' : 'text-ink-muted hover:text-navy',
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <span className="inline-block rounded-full bg-gold-100/70 px-3.5 py-1.5 text-sm font-semibold text-gold-600">
+          {eyebrow ?? tabs[activeTab]?.label}
+        </span>
+      )}
 
       <h2 className="mt-6 text-2xl text-navy">{mode === 'info' ? 'أرسل استفسارك' : 'طلب زيارة'}</h2>
 
@@ -211,7 +246,7 @@ export function ContactForm({
             <ButtonLink href={routes.projects} variant="outline" size="sm">
               تصفّح المشاريع
             </ButtonLink>
-            <Button variant="ghost" size="sm" onClick={() => switchMode('info')}>
+            <Button variant="ghost" size="sm" onClick={() => switchToMode('info')}>
               إرسال استفسار عام
             </Button>
           </div>

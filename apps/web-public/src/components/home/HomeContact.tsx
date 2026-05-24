@@ -1,12 +1,12 @@
-import { Phone, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Headset } from 'lucide-react';
 import { Container } from '@/components/ui/Container';
 import { Badge } from '@/components/ui/Badge';
 import { ContactForm } from '@/components/contact/ContactForm';
 
 const POINTS = [
-  'مستشار مختص يرافقك في كل خطوة',
-  'ترشيحات تناسب احتياجك وميزانيتك',
-  'تنسيق زيارات ومتابعة سريعة',
+  'ترشيحات مناسبة حسب نوع العقار',
+  'مقارنة واضحة بين الوحدات والمشاريع',
+  'متابعة معك حتى اختيار القرار الأنسب',
 ] as const;
 
 // Subtle navy dot texture over the warm panel — keeps the gold from reading flat.
@@ -28,13 +28,10 @@ export function HomeContact() {
           <div className="relative grid items-center gap-8 lg:grid-cols-2 lg:gap-12">
             {/* Copy — right in RTL */}
             <div>
-              <Badge tone="navy">للتواصل</Badge>
-              <h2 className="mt-4 text-3xl font-bold leading-tight text-navy lg:text-4xl">تواصل معنا</h2>
-              <p className="mt-3 text-lg font-medium text-navy/80 sm:text-xl">
-                اكتشف خطوتك التالية في عالم العقارات
-              </p>
-              <p className="mt-3 max-w-md leading-relaxed text-ink-muted">
-                اترك بياناتك وسيتواصل معك أحد مستشارينا لمساعدتك في اختيار الأنسب لك.
+              <Badge tone="navy">استشارة مجانية</Badge>
+              <h2 className="mt-4 text-3xl font-bold leading-tight text-navy lg:text-4xl">خلّينا نرشح لك العقار الأنسب</h2>
+              <p className="mt-3 max-w-md text-base leading-relaxed text-ink-muted sm:text-lg">
+                اترك بياناتك، وسيساعدك مستشار عقاري في اختيار مشروع أو وحدة تناسب احتياجك وميزانيتك.
               </p>
 
               <ul className="mt-6 space-y-2.5">
@@ -48,17 +45,17 @@ export function HomeContact() {
 
               <a
                 href="tel:+966110000000"
-                dir="ltr"
-                className="mt-7 inline-flex items-center gap-2 font-display text-2xl text-navy transition-colors hover:text-gold-600"
+                className="mt-7 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-navy px-6 text-[15px] font-medium text-white shadow-soft transition-colors hover:bg-navy-700"
               >
-                <Phone className="h-5 w-5 text-gold-500" aria-hidden />
-                +966 11 000 0000
+                <Headset className="h-5 w-5 text-gold-300" aria-hidden />
+                تواصل مع مستشار
               </a>
             </div>
 
-            {/* Elevated white form card — left in RTL. Reuses the real lead form. */}
+            {/* Elevated white form card — left in RTL. Reuses the real lead form.
+                Homepage locks to a single consultation mode (no tabs, no visit booking). */}
             <div>
-              <ContactForm initialMode="info" context={{}} />
+              <ContactForm initialMode="info" context={{}} showTabs={false} eyebrow="طلب استشارة" />
             </div>
           </div>
         </div>
