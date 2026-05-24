@@ -60,7 +60,10 @@ export function Hero({ image }: HeroProps) {
           <Reveal delay={80}>
             <h1 className="mt-5 max-w-[620px] text-[2rem] font-bold leading-[1.28] text-white sm:text-4xl lg:text-5xl">
               <span className="block">استثمر في عقار</span>
-              <span className="block">مختار بعناية</span>
+              <span className="relative inline-block">
+                مختار بعناية
+                <span aria-hidden className="absolute inset-x-0 -bottom-1.5 h-2.5 rounded-full bg-gold-400/90 sm:h-3" />
+              </span>
             </h1>
           </Reveal>
           <Reveal delay={150}>
@@ -83,7 +86,7 @@ export function Hero({ image }: HeroProps) {
                 href={routes.contact}
                 variant="outline"
                 size="lg"
-                className="border-white/40 bg-white/5 text-white backdrop-blur-sm hover:border-white/60 hover:bg-white/10"
+                className="border-white/40 bg-white/10 text-white backdrop-blur-sm hover:border-white/60 hover:bg-white/[0.18]"
               >
                 <MessageCircle className="h-5 w-5" aria-hidden />
                 تحدث مع مستشار

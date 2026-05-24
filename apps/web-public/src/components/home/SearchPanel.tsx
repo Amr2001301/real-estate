@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search } from 'lucide-react';
+import { Search, ChevronDown } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
 import { PRICE_RANGES } from '@/lib/unit-filters';
@@ -91,22 +91,31 @@ export function SearchPanel() {
             className="h-12 pr-11"
           />
         </div>
-        <Select value={city} onChange={(e) => setCity(e.target.value)} aria-label="المدينة" className="h-12">
-          <option value="">المدينة</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </Select>
-        <Select value={price} onChange={(e) => setPrice(e.target.value)} aria-label="نطاق السعر" className="h-12">
-          {PRICE_RANGES.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </Select>
-        <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="الحالة" className="h-12">
-          {STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>{s.label}</option>
-          ))}
-        </Select>
+        <div className="relative">
+          <Select value={city} onChange={(e) => setCity(e.target.value)} aria-label="المدينة" className="h-12 pl-9">
+            <option value="">المدينة</option>
+            {CITIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </Select>
+          <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+        </div>
+        <div className="relative">
+          <Select value={price} onChange={(e) => setPrice(e.target.value)} aria-label="نطاق السعر" className="h-12 pl-9">
+            {PRICE_RANGES.map((r) => (
+              <option key={r.value} value={r.value}>{r.label}</option>
+            ))}
+          </Select>
+          <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+        </div>
+        <div className="relative">
+          <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="الحالة" className="h-12 pl-9">
+            {STATUSES.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
+            ))}
+          </Select>
+          <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
+        </div>
         <Button type="submit" size="md" className="h-12 w-full lg:w-auto">
           <Search className="h-5 w-5" aria-hidden />
           ابدأ البحث

@@ -50,8 +50,8 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        'fixed inset-x-0 top-0 z-50 transition-all duration-300 ease-smooth',
-        solid ? 'bg-canvas/90 shadow-soft backdrop-blur-md' : 'bg-transparent',
+        'fixed inset-x-0 top-0 z-50 border-b transition-all duration-300 ease-smooth',
+        solid ? 'border-hairline bg-canvas/90 shadow-soft backdrop-blur-md' : 'border-transparent bg-transparent',
       )}
     >
       <Container className="flex h-20 items-center justify-between py-4">
@@ -66,8 +66,8 @@ export function Navbar() {
                 href={item.href as Route}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'relative px-4 py-2 text-sm font-medium transition-colors duration-200',
-                  solid ? 'text-ink-muted hover:text-navy' : 'text-white/80 hover:text-white',
+                  'relative rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200',
+                  solid ? 'text-ink-muted hover:bg-navy/[0.05] hover:text-navy' : 'text-white/80 hover:bg-white/10 hover:text-white',
                   active && (solid ? 'text-navy' : 'text-white'),
                 )}
               >
