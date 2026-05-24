@@ -45,6 +45,25 @@ export function unitTypeLabel(type: string | null | undefined): string {
   return UNIT_TYPE_LABELS[type.toLowerCase()] ?? type;
 }
 
+const CITY_LABELS: Record<string, string> = {
+  riyadh: 'الرياض',
+  jeddah: 'جدة',
+  jiddah: 'جدة',
+  dammam: 'الدمام',
+  mecca: 'مكة المكرمة',
+  makkah: 'مكة المكرمة',
+  medina: 'المدينة المنورة',
+  madinah: 'المدينة المنورة',
+  khobar: 'الخبر',
+};
+
+/** Normalize a city to a consistent Arabic label; falls back to the raw value. */
+export function cityLabel(city: string | null | undefined): string {
+  const v = city?.trim();
+  if (!v) return 'موقع مميز';
+  return CITY_LABELS[v.toLowerCase()] ?? v;
+}
+
 /** Pick the Arabic side of a translatable `{ ar, en }` JSON value. */
 export function pickAr(value: unknown, fallback = ''): string {
   if (value && typeof value === 'object' && 'ar' in value) {

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { BedDouble, Bath, Maximize, Building2, Building, Briefcase, Store, Home, MapPin, ArrowLeft } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { formatPrice, formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
+import { formatPrice, formatNumber, pickAr, unitTypeLabel, cityLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
 import { cn } from '@/lib/cn';
 import { PremiumCard } from '@/components/ui/PremiumCard';
@@ -37,7 +37,7 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
   const TypeIcon = typeIcon(unit.type);
 
   const projectName = unit.project ? pickAr(unit.project.name) : '';
-  const location = unit.project?.city || 'موقع مميز';
+  const location = cityLabel(unit.project?.city);
 
   // Compact specs with light Arabic pluralization (singular at 1).
   const specs: Array<{ icon: typeof BedDouble; label: string; value: string }> = [];
