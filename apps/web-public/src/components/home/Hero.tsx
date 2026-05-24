@@ -30,40 +30,52 @@ export function Hero({ image }: HeroProps) {
         />
       )}
 
-      {/* Directional navy wash — heaviest on the RTL text side (right), clear photo on the left */}
+      {/* Directional navy wash — heaviest behind the RTL text (right), photo clear on the left */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'linear-gradient(to left, rgba(11,23,38,0.94) 0%, rgba(13,26,43,0.82) 32%, rgba(13,26,43,0.40) 66%, rgba(11,23,38,0.12) 100%)',
+            'linear-gradient(to left, rgba(11,23,38,0.95) 0%, rgba(13,26,43,0.84) 30%, rgba(13,26,43,0.42) 64%, rgba(11,23,38,0.10) 100%)',
         }}
+        aria-hidden
+      />
+      {/* Soft cinematic vignette */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: 'radial-gradient(120% 120% at 50% 42%, transparent 56%, rgba(11,23,38,0.45) 100%)' }}
         aria-hidden
       />
       {/* Top fade for navbar legibility */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-navy/70 to-transparent" aria-hidden />
-      {/* Soft gold ambient glow behind the content (subtle warmth, not clutter) */}
+      {/* Soft gold ambient glow behind the content */}
       <div className="pointer-events-none absolute -right-24 top-1/4 h-80 w-80 rounded-full bg-gold-400/10 blur-3xl" aria-hidden />
-      {/* Bottom fade so the SearchPanel blends into the hero base */}
+      {/* Bottom fade to anchor the SearchPanel */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-navy to-transparent" aria-hidden />
 
       <Container className="relative pb-28 pt-28 sm:pb-32 lg:pb-36">
         <div className="max-w-[660px]">
           <Reveal>
-            <Badge tone="gold">دار الفخامة</Badge>
+            <Badge tone="gold">عقارات مختارة بعناية</Badge>
           </Reveal>
           <Reveal delay={80}>
-            <h1 className="mt-5 text-balance text-[2rem] font-bold leading-[1.3] text-white sm:text-4xl lg:text-5xl">
-              استثمر في عقار مختار بعناية
+            <h1 className="mt-5 max-w-[620px] text-[2rem] font-bold leading-[1.28] text-white sm:text-4xl lg:text-5xl">
+              <span className="block">استثمر في عقار</span>
+              <span className="block">مختار بعناية</span>
             </h1>
           </Reveal>
           <Reveal delay={150}>
-            <p className="mt-5 max-w-[600px] text-[17px] leading-[1.8] text-white/80 sm:text-lg">
-              مشاريع ووحدات سكنية وتجارية مختارة بعناية لتناسب السكن والاستثمار.
+            <p className="mt-5 max-w-[540px] text-[17px] leading-[1.8] text-white/80 sm:text-lg">
+              وحدات ومشاريع سكنية وتجارية مختارة بعناية — تناسب السكن والاستثمار.
             </p>
           </Reveal>
           <Reveal delay={230}>
-            <div className="mt-9 flex flex-wrap items-center gap-4">
-              <ButtonLink href={routes.units} variant="gold" size="lg">
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <ButtonLink
+                href={routes.units}
+                variant="gold"
+                size="lg"
+                className="shadow-[0_14px_34px_-12px_rgba(200,162,75,0.55)]"
+              >
                 استكشف الوحدات
                 <ArrowLeft className="h-5 w-5" aria-hidden />
               </ButtonLink>
@@ -71,7 +83,7 @@ export function Hero({ image }: HeroProps) {
                 href={routes.contact}
                 variant="outline"
                 size="lg"
-                className="border-white/30 text-white hover:border-white/60 hover:bg-white/5"
+                className="border-white/40 bg-white/5 text-white backdrop-blur-sm hover:border-white/60 hover:bg-white/10"
               >
                 <MessageCircle className="h-5 w-5" aria-hidden />
                 تحدث مع مستشار

@@ -54,9 +54,9 @@ export function SearchPanel() {
   }
 
   return (
-    <div className="rounded-3xl border border-hairline bg-surface/95 p-2 shadow-card backdrop-blur-md">
-      {/* Category tabs */}
-      <div className="flex flex-wrap gap-1 border-b border-hairline px-2 pb-2 pt-1">
+    <div className="rounded-3xl border border-hairline bg-surface/95 p-3 shadow-[0_24px_64px_-24px_rgba(15,30,51,0.40)] backdrop-blur-md sm:p-4">
+      {/* Property-type segmented control (RTL-aligned) */}
+      <div className="mb-3 inline-flex flex-wrap gap-1 rounded-full bg-surface-soft p-1">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -64,7 +64,7 @@ export function SearchPanel() {
             onClick={() => setTab(t.key)}
             aria-pressed={tab === t.key}
             className={cn(
-              'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+              'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
               tab === t.key ? 'bg-navy text-white shadow-soft' : 'text-ink-muted hover:text-navy',
             )}
           >
@@ -79,7 +79,7 @@ export function SearchPanel() {
           e.preventDefault();
           onSearch();
         }}
-        className="grid gap-3 p-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_auto]"
+        className="grid gap-3 lg:grid-cols-[1.6fr_1fr_1fr_1fr_auto]"
       >
         <div className="relative">
           <Search className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-muted/60" aria-hidden />
@@ -88,26 +88,26 @@ export function SearchPanel() {
             onChange={(e) => setQ(e.target.value)}
             placeholder="ابحث باسم المشروع أو المدينة..."
             aria-label="بحث"
-            className="pr-11"
+            className="h-12 pr-11"
           />
         </div>
-        <Select value={city} onChange={(e) => setCity(e.target.value)} aria-label="المدينة">
+        <Select value={city} onChange={(e) => setCity(e.target.value)} aria-label="المدينة" className="h-12">
           <option value="">المدينة</option>
           {CITIES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
         </Select>
-        <Select value={price} onChange={(e) => setPrice(e.target.value)} aria-label="نطاق السعر">
+        <Select value={price} onChange={(e) => setPrice(e.target.value)} aria-label="نطاق السعر" className="h-12">
           {PRICE_RANGES.map((r) => (
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </Select>
-        <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="الحالة">
+        <Select value={status} onChange={(e) => setStatus(e.target.value)} aria-label="الحالة" className="h-12">
           {STATUSES.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </Select>
-        <Button type="submit" size="lg" className="w-full lg:w-auto">
+        <Button type="submit" size="md" className="h-12 w-full lg:w-auto">
           <Search className="h-5 w-5" aria-hidden />
           ابدأ البحث
         </Button>

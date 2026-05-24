@@ -51,7 +51,7 @@ export default async function HomePage() {
       <Hero image={heroImage} projectsCount={projectsCount} unitsCount={unitsCount} />
 
       {/* Premium search panel overlapping the hero's lower edge. */}
-      <Container className="relative z-10 -mt-14 sm:-mt-16">
+      <Container className="relative z-10 -mt-12 sm:-mt-14">
         <SearchPanel />
       </Container>
 
