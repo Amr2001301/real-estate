@@ -7,8 +7,8 @@ export function LeadCtaBand() {
   return (
     <CtaBand
       eyebrow="ابدأ الآن"
-      title="ابدأ رحلتك نحو منزل الأحلام اليوم"
-      description="فريق مستشارينا جاهز لمساعدتك في اختيار الوحدة أو المشروع الأنسب لك."
+      title="ابدأ رحلتك العقارية بثقة"
+      description="اختر من مشاريع ووحدات مختارة بعناية، وتواصل مع مستشار يساعدك في القرار المناسب."
     >
       <ButtonLink
         href={routes.contact}

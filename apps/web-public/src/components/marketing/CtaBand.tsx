@@ -18,12 +18,14 @@ const DOTS = {
 /**
  * Contained navy CTA card on a light section — deliberately NOT a full-bleed
  * navy band, so pages don't end with two stacked dark blocks (CTA + footer).
+ * Horizontal on desktop (copy on the RTL start, actions on the end), stacked
+ * and centered on mobile.
  */
 export function CtaBand({ eyebrow, title, description, children }: CtaBandProps) {
   return (
     <Section tone="canvas">
       <Reveal>
-        <div className="relative overflow-hidden rounded-4xl bg-navy px-6 py-12 text-center shadow-lift sm:px-12 sm:py-14">
+        <div className="relative overflow-hidden rounded-4xl bg-navy px-6 py-10 shadow-lift sm:px-10 sm:py-12 lg:px-14">
           {/* Depth + warmth */}
           <div
             className="pointer-events-none absolute inset-0"
@@ -36,15 +38,17 @@ export function CtaBand({ eyebrow, title, description, children }: CtaBandProps)
           {/* Top gold hairline accent */}
           <span className="pointer-events-none absolute inset-x-12 top-0 h-px bg-gradient-to-l from-transparent via-gold-400/55 to-transparent" aria-hidden />
 
-          <div className="relative mx-auto max-w-2xl">
-            {eyebrow && (
-              <span className="inline-flex items-center rounded-full bg-gold-400/15 px-3.5 py-1 text-sm font-semibold text-gold-200 ring-1 ring-gold-400/25 backdrop-blur">
-                {eyebrow}
-              </span>
-            )}
-            <h2 className="mt-4 text-3xl font-bold leading-tight text-white lg:text-4xl">{title}</h2>
-            {description && <p className="mt-4 leading-relaxed text-white/75">{description}</p>}
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">{children}</div>
+          <div className="relative flex flex-col items-center gap-8 text-center lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:text-right">
+            <div className="max-w-xl">
+              {eyebrow && (
+                <span className="inline-flex items-center rounded-full bg-gold-400/15 px-3.5 py-1 text-sm font-semibold text-gold-200 ring-1 ring-gold-400/25 backdrop-blur">
+                  {eyebrow}
+                </span>
+              )}
+              <h2 className="mt-4 text-3xl font-bold leading-tight text-white lg:text-4xl">{title}</h2>
+              {description && <p className="mt-4 leading-relaxed text-white/75">{description}</p>}
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-4 lg:shrink-0">{children}</div>
           </div>
         </div>
       </Reveal>
