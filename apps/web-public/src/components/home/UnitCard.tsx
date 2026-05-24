@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { BedDouble, Bath, Maximize, Layers, Building2, Building, Briefcase, Store, Home, MapPin } from 'lucide-react';
+import { BedDouble, Bath, Maximize, Building2, Building, Briefcase, Store, Home, MapPin, ArrowLeft } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { formatPrice, formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
@@ -39,10 +39,12 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
   const projectName = unit.project ? pickAr(unit.project.name) : '';
   const location = unit.project?.city || 'موقع مميز';
 
-  // Compact specs (no floor here — floor shows as its own line below the title).
+  // Compact specs with light Arabic pluralization (singular at 1).
   const specs: Array<{ icon: typeof BedDouble; label: string; value: string }> = [];
-  if (unit.bedrooms > 0) specs.push({ icon: BedDouble, label: 'غرف', value: formatNumber(unit.bedrooms) });
-  if (unit.bathrooms > 0) specs.push({ icon: Bath, label: 'حمام', value: formatNumber(unit.bathrooms) });
+  if (unit.bedrooms > 0)
+    specs.push({ icon: BedDouble, label: unit.bedrooms === 1 ? 'غرفة' : 'غرف', value: formatNumber(unit.bedrooms) });
+  if (unit.bathrooms > 0)
+    specs.push({ icon: Bath, label: unit.bathrooms === 1 ? 'حمام' : 'حمامات', value: formatNumber(unit.bathrooms) });
   if (unit.area > 0) specs.push({ icon: Maximize, label: 'م²', value: formatNumber(unit.area) });
 
   return (
@@ -53,65 +55,70 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
       <PremiumCard interactive className="flex h-full flex-col overflow-hidden">
         {/* Image */}
         <div className="relative">
-          <CoverImage src={unit.coverImage} alt={`${typeLabel} - ${unit.code}`} className="aspect-[4/3]" zoomOnHover />
-          {/* Status pill — top start */}
-          <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-surface/95 px-3 py-1 text-xs font-medium text-navy shadow-soft backdrop-blur">
+          <CoverImage src={unit.coverImage} alt={`${typeLabel} — ${unit.code}`} className="aspect-[4/3]" zoomOnHover />
+          {/* Soft scrim keeps the pills legible over any photo */}
+          <span className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/25 to-transparent" aria-hidden />
+          {/* Status — top start (right in RTL) */}
+          <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
             <span className={cn('h-2 w-2 rounded-full', status.dot)} aria-hidden />
             {status.label}
           </span>
-          {/* Project label — paired across the top (only when available) */}
+          {/* Project — top end (left in RTL) */}
           {projectName && (
-            <span className="absolute left-4 top-4 max-w-[55%] truncate rounded-full bg-navy/85 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-              {projectName}
+            <span className="absolute left-4 top-4 inline-flex max-w-[55%] items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
+              <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-300" aria-hidden />
+              <span className="truncate">{projectName}</span>
             </span>
           )}
         </div>
 
         {/* Content */}
         <div className="flex flex-1 flex-col p-5">
-          {/* Title + gold type tile */}
+          {/* Type tile + title + code chip */}
           <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600 transition-colors group-hover:bg-gold-400 group-hover:text-navy">
               <TypeIcon className="h-[18px] w-[18px]" aria-hidden />
             </span>
-            <h3 className="line-clamp-1 text-base font-semibold text-navy">
-              {typeLabel} - {unit.code}
-            </h3>
+            <h3 className="line-clamp-1 min-w-0 flex-1 text-base font-semibold text-navy">{typeLabel}</h3>
+            <span className="shrink-0 rounded-md bg-surface-soft px-2 py-0.5 text-[11px] font-medium tracking-tight text-ink-muted">
+              {unit.code}
+            </span>
           </div>
 
-          {/* Location directly under the title */}
-          <p className="mt-2 inline-flex items-center gap-1 text-xs text-ink-muted">
-            <MapPin className="h-3.5 w-3.5 text-gold-500" aria-hidden />
-            <span className="line-clamp-1">{location}</span>
+          {/* Location · floor — one muted line */}
+          <p className="mt-2.5 flex items-center gap-1.5 text-xs text-ink-muted">
+            <MapPin className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+            <span className="line-clamp-1">
+              {location}
+              {unit.floor > 0 ? ` · الطابق ${formatNumber(unit.floor)}` : ''}
+            </span>
           </p>
-
-          {/* Floor (instead of project name) — only when available */}
-          {unit.floor > 0 && (
-            <p className="mt-1 inline-flex items-center gap-1 text-xs text-ink-muted">
-              <Layers className="h-3.5 w-3.5 text-gold-500" aria-hidden />
-              الطابق {formatNumber(unit.floor)}
-            </p>
-          )}
 
           {/* Divider */}
           <div className="my-3 border-t border-hairline" />
 
-          {/* Compact specs row */}
+          {/* Specs */}
           {specs.length > 0 && (
-            <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-sm text-ink-muted">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-ink-muted">
               {specs.map((s, i) => (
                 <span key={i} className="inline-flex items-center gap-1.5">
                   <s.icon className="h-4 w-4 text-gold-500" aria-hidden />
-                  <span className="font-medium text-navy">{s.value}</span>
+                  <span className="font-semibold text-navy">{s.value}</span>
                   <span className="text-xs">{s.label}</span>
                 </span>
               ))}
             </div>
           )}
 
-          {/* Price — last element, anchored at the bottom */}
-          <div className="mt-auto pt-4">
+          {/* Price + subtle clickable affordance */}
+          <div className="mt-auto flex items-center justify-between pt-4">
             <div className="font-display text-xl font-bold text-navy">{formatPrice(unit.price)}</div>
+            <span
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft text-navy transition-colors group-hover:bg-gold-400 group-hover:text-navy"
+              aria-hidden
+            >
+              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            </span>
           </div>
         </div>
       </PremiumCard>
