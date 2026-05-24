@@ -37,20 +37,23 @@ export function HowWeHelp() {
           {STEPS.map(({ icon: Icon, num, title, body }) => (
             <div
               key={title}
-              className="group relative flex h-full min-h-[150px] flex-col overflow-hidden rounded-2xl border border-hairline bg-surface px-6 py-5 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-lift"
+              className="group relative flex h-full min-h-[148px] flex-col overflow-hidden rounded-2xl border border-hairline bg-surface px-5 py-5 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-lift"
             >
-              {/* Subtle gold step number — corner watermark, never dominant */}
+              {/* Clear gold step number */}
               <span
                 aria-hidden
-                className="pointer-events-none absolute end-5 top-4 font-display text-3xl font-bold leading-none text-gold-300/50"
+                className="pointer-events-none absolute end-5 top-4 font-display text-4xl font-bold leading-none text-gold-300"
               >
                 {num}
               </span>
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-200 transition-colors group-hover:bg-navy-700">
-                <Icon className="h-5 w-5" aria-hidden />
-              </span>
-              <h3 className="mt-4 text-base font-semibold text-navy">{title}</h3>
-              <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-ink-muted">{body}</p>
+              {/* Gold tile + title — matches WhyChooseUs; fills to deep gold on hover */}
+              <div className="relative flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <h3 className="text-base font-semibold text-navy">{title}</h3>
+              </div>
+              <p className="relative mt-3 text-sm leading-relaxed text-ink-muted">{body}</p>
             </div>
           ))}
         </Stagger>
