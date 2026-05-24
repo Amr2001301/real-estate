@@ -29,22 +29,26 @@ export function InvestmentCategories() {
           <p className="mt-2 text-ink-muted">حلول عقارية تناسب السكن، الاستثمار، والتشغيل.</p>
         </div>
 
-        <Stagger className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5" childClassName="h-full" step={60}>
+        <Stagger
+          className="mt-7 grid grid-cols-2 gap-4 sm:grid-cols-3 sm:gap-5 lg:grid-cols-5"
+          childClassName="h-full"
+          step={60}
+        >
           {CATEGORIES.map(({ icon: Icon, title, sub, href }) => (
             <Link
               key={title}
               href={href as Route}
-              className="group relative flex h-36 items-center justify-center overflow-hidden rounded-2xl border border-hairline bg-surface p-5 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.18),0_18px_48px_-16px_rgba(15,30,51,0.22)] sm:h-40"
+              className="group relative flex h-40 items-center justify-center overflow-hidden rounded-2xl border border-hairline bg-surface p-5 text-center shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:border-gold-300 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.18),0_18px_48px_-16px_rgba(15,30,51,0.22)] sm:h-44"
             >
               <span className="pointer-events-none absolute inset-0" style={GLOW} aria-hidden />
               {/* Four neatly stacked, centred elements */}
-              <div className="relative flex flex-col items-center gap-2 text-center">
-                <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gold-100 text-gold-600 transition-colors group-hover:bg-gold-400 group-hover:text-navy">
-                  <Icon className="h-6 w-6" aria-hidden />
+              <div className="relative flex flex-col items-center gap-2.5">
+                <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:scale-105 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
+                  <Icon className="h-7 w-7" aria-hidden />
                 </span>
                 <h3 className="text-lg font-bold leading-none text-navy">{title}</h3>
                 <p className="text-xs text-ink-muted">{sub}</p>
-                <span className="inline-flex items-center gap-1 text-xs font-medium text-gold-600">
+                <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-ink-muted transition-colors group-hover:text-gold-600">
                   تصفّح
                   <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" aria-hidden />
                 </span>
