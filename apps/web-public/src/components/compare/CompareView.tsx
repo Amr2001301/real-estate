@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { X, ArrowLeft, Plus, MapPin } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
-import { pickAr, formatPrice, formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
+import { pickAr, formatPrice, formatArea, formatNumber, unitTypeLabel, cityLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { CoverImage } from '@/components/ui/CoverImage';
@@ -23,19 +23,32 @@ const DEFAULT_STATUS = { label: 'متاحة', tone: 'success' as const };
 interface Row {
   label: string;
   value: (u: PublicUnit) => string;
+  /** When set, the standout value across the compared units is highlighted. */
+  metric?: (u: PublicUnit) => number;
+  dir?: 'min' | 'max';
 }
 
 const ROWS: Row[] = [
-  { label: 'السعر', value: (u) => formatPrice(u.price) },
-  { label: 'المساحة', value: (u) => formatArea(u.area) },
-  { label: 'غرف النوم', value: (u) => formatNumber(u.bedrooms) },
-  { label: 'دورات المياه', value: (u) => formatNumber(u.bathrooms) },
+  { label: 'السعر', value: (u) => formatPrice(u.price), metric: (u) => Number(u.price), dir: 'min' },
+  { label: 'المساحة', value: (u) => formatArea(u.area), metric: (u) => u.area, dir: 'max' },
+  { label: 'غرف النوم', value: (u) => formatNumber(u.bedrooms), metric: (u) => u.bedrooms, dir: 'max' },
+  { label: 'دورات المياه', value: (u) => formatNumber(u.bathrooms), metric: (u) => u.bathrooms, dir: 'max' },
   { label: 'الطابق', value: (u) => formatNumber(u.floor) },
   { label: 'النوع', value: (u) => unitTypeLabel(u.type) },
   { label: 'الحالة', value: (u) => (STATUS[u.status] ?? DEFAULT_STATUS).label },
   { label: 'المشروع', value: (u) => (u.project ? pickAr(u.project.name, '—') : '—') },
-  { label: 'المدينة', value: (u) => u.project?.city || '—' },
+  { label: 'المدينة', value: (u) => cityLabel(u.project?.city) },
 ];
+
+/** Winning metric value for a row, or null when there's no clear winner (all equal / no metric). */
+function bestValue(row: Row, units: PublicUnit[]): number | null {
+  if (!row.metric || !row.dir || units.length < 2) return null;
+  const vals = units.map((u) => row.metric!(u)).filter((n) => Number.isFinite(n) && n > 0);
+  if (vals.length < 2) return null;
+  const first = vals[0]!;
+  if (vals.every((v) => v === first)) return null;
+  return row.dir === 'min' ? Math.min(...vals) : Math.max(...vals);
+}
 
 function toItem(u: PublicUnit): CompareItem {
   const project = u.project ? pickAr(u.project.name) : '';
@@ -65,6 +78,8 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
   }
 
   const canAddMore = units.length < 3;
+  // Winning value per comparable row (null = no highlight).
+  const bests = ROWS.map((row) => bestValue(row, units));
 
   return (
     <div>
@@ -135,22 +150,60 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
         )}
       </div>
 
-      {/* Desktop matrix */}
-      <div className="mt-10 hidden overflow-hidden rounded-3xl border border-hairline bg-surface shadow-soft lg:block">
-        {ROWS.map((row, i) => (
-          <div
-            key={row.label}
-            className={cn('grid items-center', i % 2 === 1 && 'bg-surface-soft/50')}
-            style={{ gridTemplateColumns: `200px repeat(${units.length}, minmax(0, 1fr))` }}
-          >
-            <div className="border-e border-hairline px-6 py-4 text-sm font-medium text-ink-muted">{row.label}</div>
-            {units.map((u) => (
-              <div key={u.id} className="px-6 py-4 text-navy">
-                {row.value(u)}
+      {/* Best-value legend */}
+      {units.length >= 2 && (
+        <p className="mt-8 inline-flex items-center gap-2 text-xs text-ink-muted">
+          <span className="inline-block h-3 w-3 rounded bg-gold-100 ring-1 ring-gold-200" aria-hidden />
+          القيمة المميّزة في كل صف (الأقل سعرًا، الأكبر مساحةً، والأكثر غرفًا) مظللة بالذهبي.
+        </p>
+      )}
+
+      {/* Desktop comparison matrix */}
+      <div className="mt-4 hidden overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card lg:block">
+        {/* Column headers — anchor each unit so the matrix reads on its own */}
+        <div
+          className="grid border-b border-hairline bg-navy text-white"
+          style={{ gridTemplateColumns: `200px repeat(${units.length}, minmax(0, 1fr))` }}
+        >
+          <div className="px-6 py-4 text-sm font-bold">المواصفات</div>
+          {units.map((u) => {
+            const project = u.project ? pickAr(u.project.name) : '';
+            return (
+              <div key={u.id} className="border-s border-white/10 px-6 py-4 text-center">
+                <div className="line-clamp-1 text-sm font-bold">{unitTypeLabel(u.type)}</div>
+                {project && <div className="mt-0.5 line-clamp-1 text-xs text-white/65">{project}</div>}
               </div>
-            ))}
-          </div>
-        ))}
+            );
+          })}
+        </div>
+
+        {/* Attribute rows */}
+        {ROWS.map((row, i) => {
+          const best = bests[i];
+          return (
+            <div
+              key={row.label}
+              className="grid items-stretch border-b border-hairline last:border-b-0"
+              style={{ gridTemplateColumns: `200px repeat(${units.length}, minmax(0, 1fr))` }}
+            >
+              <div className="flex items-center bg-surface-soft/50 px-6 py-4 text-sm font-semibold text-navy">{row.label}</div>
+              {units.map((u) => {
+                const isBest = best != null && row.metric != null && row.metric(u) === best;
+                return (
+                  <div
+                    key={u.id}
+                    className={cn(
+                      'flex items-center justify-center border-s border-hairline px-6 py-4 text-center text-navy',
+                      isBest && 'bg-gold-100/70 font-semibold',
+                    )}
+                  >
+                    {row.value(u)}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
 
       {/* Mobile stacked cards */}
@@ -169,12 +222,16 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                 )}
               </div>
               <dl className="divide-y divide-hairline">
-                {ROWS.map((row) => (
-                  <div key={row.label} className="flex items-center justify-between px-5 py-3">
-                    <dt className="text-sm text-ink-muted">{row.label}</dt>
-                    <dd className="text-navy">{row.value(u)}</dd>
-                  </div>
-                ))}
+                {ROWS.map((row, i) => {
+                  const best = bests[i];
+                  const isBest = best != null && row.metric != null && row.metric(u) === best;
+                  return (
+                    <div key={row.label} className="flex items-center justify-between px-5 py-3">
+                      <dt className="text-sm text-ink-muted">{row.label}</dt>
+                      <dd className={cn('text-navy', isBest && 'font-semibold text-gold-600')}>{row.value(u)}</dd>
+                    </div>
+                  );
+                })}
               </dl>
             </div>
           );
