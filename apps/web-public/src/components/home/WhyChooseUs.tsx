@@ -17,7 +17,7 @@ const GLOW = { background: 'radial-gradient(circle at 100% 0%, rgba(200,162,75,0
 
 export function WhyChooseUs() {
   return (
-    <Section tone="canvas" className="pt-8 pb-8 sm:pt-10 sm:pb-10 lg:pt-12 lg:pb-10">
+    <Section tone="canvas" className="py-10 sm:py-12 lg:py-14">
       {/* Two-level heading — gold pill eyebrow + title + one-line subtitle */}
       <div className="mx-auto max-w-2xl text-center">
         <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 sm:text-base">

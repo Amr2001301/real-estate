@@ -23,7 +23,7 @@ const DOTS = {
  */
 export function CtaBand({ eyebrow, title, description, children }: CtaBandProps) {
   return (
-    <Section tone="canvas">
+    <Section tone="canvas" className="py-10 sm:py-12 lg:py-14">
       <Reveal>
         <div className="relative overflow-hidden rounded-4xl bg-navy px-6 py-10 shadow-lift sm:px-10 sm:py-12 lg:px-14">
           {/* Depth + warmth */}

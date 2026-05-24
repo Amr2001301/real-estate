@@ -18,7 +18,7 @@ const DOTS = {
 /** Premium lead-capture band — warm gold panel with an elevated white form card. */
 export function HomeContact() {
   return (
-    <section className="py-12 lg:py-16">
+    <section className="py-10 sm:py-12 lg:py-14">
       <Container>
         <div className="relative overflow-hidden rounded-3xl border border-gold-200/60 bg-gradient-to-bl from-gold-100 via-gold-50 to-surface-soft px-5 py-8 shadow-card sm:px-8 sm:py-10 lg:px-12 lg:py-12">
           {/* Texture + warm glow */}

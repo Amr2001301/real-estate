@@ -184,7 +184,7 @@ export function MobileAppPromo() {
   const appUrl = siteUrl(routes.app);
 
   return (
-    <section className="pt-2 pb-10 sm:pt-4 sm:pb-12 lg:pt-6 lg:pb-14">
+    <section className="py-10 sm:py-12 lg:py-14">
       <Container>
         <div className="relative overflow-hidden rounded-[1.75rem] border border-hairline bg-surface shadow-lift">
           {/* Warm beige glow behind the visual area */}

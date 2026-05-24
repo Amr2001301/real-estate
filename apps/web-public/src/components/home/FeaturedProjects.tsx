@@ -12,8 +12,7 @@ export function FeaturedProjects({ result }: { result: ApiResult<Paginated<Publi
   const projects = result.ok ? result.data.data : [];
 
   return (
-    // Tight, intentional rhythm — small bottom padding so the banner sits close.
-    <Section tone="canvas" className="pt-8 pb-4 sm:pt-10 sm:pb-5 lg:pt-12 lg:pb-6">
+    <Section tone="canvas" className="py-10 sm:py-12 lg:py-14">
       {/* Two-level header: title + subtitle (start) · simple text link (end) */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">

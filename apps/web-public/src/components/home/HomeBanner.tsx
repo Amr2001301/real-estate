@@ -9,7 +9,7 @@ import { Reveal } from '@/components/motion/Reveal';
 /** Contained navy investment banner — a premium accent, not a full dark block. */
 export function HomeBanner() {
   return (
-    <Section tone="canvas" contained={false} className="py-6 sm:py-7 lg:py-8">
+    <Section tone="canvas" contained={false} className="py-10 sm:py-12 lg:py-14">
       <Container>
         <Reveal>
           <div className="relative overflow-hidden rounded-4xl bg-navy px-8 py-10 shadow-card sm:px-12 sm:py-12">

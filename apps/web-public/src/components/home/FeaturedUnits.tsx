@@ -13,7 +13,7 @@ export function FeaturedUnits({ result }: { result: ApiResult<Paginated<PublicUn
   const units = result.ok ? result.data.data : [];
 
   return (
-    <Section tone="soft" className="pt-14 sm:pt-16 lg:pt-20">
+    <Section tone="soft" className="py-10 sm:py-12 lg:py-14">
       {/* Two-level header: title + subtitle (start) · text link (end) */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">

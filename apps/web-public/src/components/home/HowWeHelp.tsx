@@ -11,7 +11,7 @@ const STEPS = [
 
 export function HowWeHelp() {
   return (
-    <Section tone="canvas" className="pt-8 pb-12 sm:pt-10 lg:pt-12 lg:pb-14">
+    <Section tone="canvas" className="py-10 sm:py-12 lg:py-14">
       {/* Tight, centered header */}
       <div className="mx-auto max-w-2xl text-center">
         <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 sm:text-base">
