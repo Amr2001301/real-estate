@@ -1,6 +1,5 @@
 import { Gem, Layers, Scale, Users, Sparkles, Bell } from 'lucide-react';
 import { Section } from '@/components/ui/Section';
-import { Divider } from '@/components/ui/Divider';
 import { Stagger } from '@/components/motion/Stagger';
 
 const VALUES = [
@@ -11,6 +10,10 @@ const VALUES = [
   { icon: Sparkles, title: 'تجربة تصفّح راقية', body: 'واجهة واضحة تجعل البحث أسرع وأسهل.' },
   { icon: Bell, title: 'متابعة سريعة', body: 'تنسيق الزيارات والرد على استفساراتك بوضوح.' },
 ] as const;
+
+// Warm gold corner glow — matches the InvestmentCategories cards so the
+// homepage feature surfaces feel like one family.
+const GLOW = { background: 'radial-gradient(circle at 100% 0%, rgba(200,162,75,0.14), transparent 60%)' } as const;
 
 export function WhyChooseUs() {
   return (
@@ -28,14 +31,17 @@ export function WhyChooseUs() {
         {VALUES.map(({ icon: Icon, title, body }) => (
           <div
             key={title}
-            className="group flex h-full flex-col rounded-2xl border border-hairline bg-surface p-4 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-lift"
+            className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-hairline bg-surface p-5 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.16),0_18px_44px_-16px_rgba(15,30,51,0.20)]"
           >
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gold-100 text-gold-600 transition-colors group-hover:bg-gold-400 group-hover:text-navy">
-              <Icon className="h-5 w-5" aria-hidden />
-            </span>
-            <h3 className="mt-2.5 text-base font-semibold text-navy">{title}</h3>
-            <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-ink-muted">{body}</p>
-            <Divider accent className="mt-2.5" />
+            <span className="pointer-events-none absolute inset-0" style={GLOW} aria-hidden />
+            {/* Icon + title on one row so the card reads balanced, not top-heavy */}
+            <div className="relative flex items-center gap-3">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
+                <Icon className="h-5 w-5" aria-hidden />
+              </span>
+              <h3 className="text-base font-semibold leading-snug text-navy">{title}</h3>
+            </div>
+            <p className="relative mt-3 text-sm leading-relaxed text-ink-muted">{body}</p>
           </div>
         ))}
       </Stagger>
