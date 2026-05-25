@@ -1,6 +1,7 @@
 import type { Route } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Building2, LayoutPanelTop } from 'lucide-react';
+import { MapPin, ArrowLeft, ArrowRight, Building2, LayoutPanelTop } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
@@ -127,6 +128,13 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       {/* Cinematic gallery hero */}
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
+          <Link
+            href={routes.units}
+            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-navy"
+          >
+            <ArrowRight className="h-4 w-4" aria-hidden />
+            العودة إلى الوحدات
+          </Link>
           <ProjectGallery
             media={unit.media}
             alt={title}
@@ -255,28 +263,6 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 </div>
               </PremiumCard>
             </div>
-
-            {/* Similar units from the same project (best-effort) */}
-            {unit.project && similarUnits.length > 0 && (
-              <div>
-                <SectionHeading
-                  eyebrow="وحدات مشابهة"
-                  title="وحدات أخرى في المشروع"
-                  description="اطّلع على خيارات أخرى ضمن نفس المشروع وقارن بينها."
-                />
-                <Stagger className="mt-8 grid gap-7 sm:grid-cols-2 xl:grid-cols-3" childClassName="h-full" step={80}>
-                  {similarUnits.map((u) => (
-                    <UnitCard key={u.id} unit={u} />
-                  ))}
-                </Stagger>
-                <div className="mt-8">
-                  <ButtonLink href={`${routes.units}?projectId=${unit.project.id}` as Route} variant="outline" size="md">
-                    عرض كل الوحدات في المشروع
-                    <ArrowLeft className="h-4 w-4" aria-hidden />
-                  </ButtonLink>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Inquiry aside */}
@@ -287,6 +273,24 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
           </aside>
         </div>
       </Section>
+
+      {/* Similar units — full-width so cards breathe */}
+      {unit.project && similarUnits.length > 0 && (
+        <Section tone="soft">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <h2 className="text-3xl font-bold text-navy lg:text-4xl">وحدات أخرى في المشروع</h2>
+            <ButtonLink href={`${routes.units}?projectId=${unit.project.id}` as Route} variant="outline" size="sm">
+              عرض كل الوحدات
+              <ArrowLeft className="h-4 w-4" aria-hidden />
+            </ButtonLink>
+          </div>
+          <Stagger className="mt-8 grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
+            {similarUnits.map((u) => (
+              <UnitCard key={u.id} unit={u} />
+            ))}
+          </Stagger>
+        </Section>
+      )}
 
       <CtaBand eyebrow="خطوتك التالية" title="هل ترغب في معاينة هذه الوحدة؟">
         <ButtonLink href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route} variant="gold" size="lg">

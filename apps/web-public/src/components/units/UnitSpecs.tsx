@@ -1,5 +1,5 @@
-import { Coins, Maximize, BedDouble, Bath, Building2, Home, BadgeCheck } from 'lucide-react';
-import { formatPrice, formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
+import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck } from 'lucide-react';
+import { formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
 import { IconCircle } from '@/components/ui/IconCircle';
 
@@ -15,10 +15,12 @@ interface Spec {
   value: string;
 }
 
-/** Public-safe spec tiles. Missing/empty fields are skipped gracefully. */
+/**
+ * Public-safe spec tiles. Price is intentionally omitted here — it's shown
+ * prominently in the hero and the inquiry card. Missing fields are skipped.
+ */
 export function UnitSpecs({ unit }: { unit: PublicUnit }) {
   const specs: Spec[] = [];
-  if (unit.price) specs.push({ icon: Coins, label: 'السعر', value: formatPrice(unit.price) });
   if (Number.isFinite(unit.area) && unit.area > 0) specs.push({ icon: Maximize, label: 'المساحة', value: formatArea(unit.area) });
   specs.push({ icon: BedDouble, label: 'غرف النوم', value: formatNumber(unit.bedrooms) });
   specs.push({ icon: Bath, label: 'دورات المياه', value: formatNumber(unit.bathrooms) });
@@ -27,14 +29,19 @@ export function UnitSpecs({ unit }: { unit: PublicUnit }) {
   specs.push({ icon: BadgeCheck, label: 'الحالة', value: STATUS_LABEL[unit.status] ?? unit.status });
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
       {specs.map(({ icon: Icon, label, value }) => (
-        <div key={label} className="rounded-3xl border border-hairline bg-surface p-5 shadow-soft">
-          <IconCircle tone="soft" className="h-10 w-10">
+        <div
+          key={label}
+          className="flex items-center gap-3 rounded-2xl border border-hairline bg-surface p-4 shadow-soft"
+        >
+          <IconCircle tone="gold" className="h-11 w-11 shrink-0">
             <Icon className="h-5 w-5" />
           </IconCircle>
-          <div className="mt-4 text-sm text-ink-muted">{label}</div>
-          <div className="mt-1 font-display text-lg text-navy">{value}</div>
+          <div className="min-w-0">
+            <div className="text-xs text-ink-muted">{label}</div>
+            <div className="mt-0.5 truncate font-display text-base text-navy sm:text-lg">{value}</div>
+          </div>
         </div>
       ))}
     </div>
