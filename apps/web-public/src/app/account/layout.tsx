@@ -26,7 +26,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const roleLabel = ROLE_LABELS[session.role] ?? session.role;
 
   return (
-    <section className="min-h-screen bg-canvas pb-20 pt-28 sm:pt-32">
+    <section className="bg-canvas pb-20 pt-28 sm:pt-32">
       <Container>
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
           <AccountSidebar fullName={session.fullName} roleLabel={roleLabel} />

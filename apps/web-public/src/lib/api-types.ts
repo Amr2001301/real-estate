@@ -69,6 +69,39 @@ export interface Paginated<T> {
   meta: { page: number; pageSize: number; total: number; totalPages: number };
 }
 
+/**
+ * A saved favorite — shape of GET /v1/me/favorites items. The API includes the
+ * raw project/unit row (with its first media), so `name` is Translatable and
+ * `price` is a Decimal-as-string. Exactly one of project/unit is non-null.
+ */
+export interface FavoriteProjectRef {
+  id: string;
+  name: Translatable;
+  city: string | null;
+  media: { url: string }[];
+}
+
+export interface FavoriteUnitRef {
+  id: string;
+  code: string;
+  type: string;
+  area: number;
+  bedrooms: number;
+  bathrooms: number;
+  price: string;
+  status: string;
+  media: { url: string }[];
+}
+
+export interface FavoriteItem {
+  id: string;
+  projectId: string | null;
+  unitId: string | null;
+  createdAt: string;
+  project: FavoriteProjectRef | null;
+  unit: FavoriteUnitRef | null;
+}
+
 /** Authenticated user's own profile — shape of GET /v1/users/me. */
 export interface MeProfile {
   id: string;

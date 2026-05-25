@@ -8,6 +8,7 @@
  */
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { authFetch, AuthError } from '@/lib/api-auth';
 
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
@@ -53,4 +54,20 @@ export async function updateProfileAction(input: {
 
   revalidatePath('/account/profile');
   return { ok: true };
+}
+
+/**
+ * Remove one saved favorite → DELETE /v1/me/favorites/:id. The id is the
+ * FAVORITE record's id (never a project/unit id). Non-optimistic: on failure
+ * the item simply remains after revalidation. Designed to be used as a bound
+ * form action: removeFavoriteAction.bind(null, favorite.id).
+ */
+export async function removeFavoriteAction(favoriteId: string): Promise<void> {
+  try {
+    await authFetch(`/me/favorites/${favoriteId}`, { method: 'DELETE' });
+  } catch (e) {
+    if (e instanceof AuthError) redirect('/login');
+    // Other errors: do nothing — the item stays visible after revalidate.
+  }
+  revalidatePath('/account/favorites');
 }

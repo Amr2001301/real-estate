@@ -31,23 +31,37 @@ export default async function AccountPage() {
 
   return (
     <div className="space-y-6">
-      {/* Greeting + quick actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl text-ink-strong sm:text-3xl">
-            مرحبًا{session.fullName ? `، ${session.fullName}` : ''}
-          </h1>
-          <p className="mt-1.5 text-sm text-ink-muted">
-            تابع مفضلاتك وزياراتك وطلباتك، وحدّث بياناتك من مكان واحد.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          <ButtonLink href={routes.projects} variant="primary" size="md">
-            تصفّح المشاريع
-          </ButtonLink>
-          <ButtonLink href={routes.units} variant="outline" size="md">
-            استكشف الوحدات
-          </ButtonLink>
+      {/* Welcome banner — navy anchor for the content column */}
+      <div className="relative overflow-hidden rounded-3xl bg-navy p-7 text-white shadow-card sm:p-8">
+        <span className="pointer-events-none absolute -left-16 -top-16 h-48 w-48 rounded-full bg-gold-400/15 blur-3xl" aria-hidden />
+        <span
+          className="pointer-events-none absolute inset-0"
+          style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '22px 22px' }}
+          aria-hidden
+        />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <span className="text-sm font-medium tracking-wide text-gold-200">منطقة العميل</span>
+            <h1 className="mt-1.5 text-2xl text-white sm:text-3xl">
+              مرحبًا{session.fullName ? `، ${session.fullName}` : ''}
+            </h1>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-white/70">
+              تابع مفضلاتك وزياراتك وطلباتك، وحدّث بياناتك من مكان واحد.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 sm:shrink-0">
+            <ButtonLink href={routes.projects} variant="gold" size="md">
+              تصفّح المشاريع
+            </ButtonLink>
+            <ButtonLink
+              href={routes.units}
+              variant="outline"
+              size="md"
+              className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
+            >
+              استكشف الوحدات
+            </ButtonLink>
+          </div>
         </div>
       </div>
 
