@@ -86,7 +86,6 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
         eyebrow="الوحدات السكنية"
         title="وحدات فاخرة جاهزة لاختيارك"
         subtitle="اكتشف مجموعة مختارة من الشقق والفيلات المصممة لتناسب أسلوب حياتك واستثمارك."
-        stats={meta ? [{ value: formatNumber(meta.total), label: 'وحدة متاحة' }] : undefined}
         overlap
       />
 

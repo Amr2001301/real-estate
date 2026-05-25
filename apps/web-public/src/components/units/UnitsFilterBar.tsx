@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Layers, ChevronDown } from 'lucide-react';
+import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag } from 'lucide-react';
 import { routes } from '@/lib/routes';
-import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
-import { Select, Field } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Input';
 import { PRICE_RANGES, UNIT_TYPES as TYPES, ROOM_OPTIONS as ROOMS } from '@/lib/unit-filters';
 
 export interface UnitsFilterValues {
@@ -20,10 +19,41 @@ export interface UnitsFilterValues {
 }
 
 const STATUSES = [
+  { value: '', label: 'كل الحالات' },
   { value: 'AVAILABLE', label: 'متاحة' },
   { value: 'RESERVED', label: 'محجوزة' },
   { value: 'SOLD', label: 'مباعة' },
 ];
+
+/** Compact select: a leading icon (RTL start) plus the shared chevron, no stacked label. */
+function CompactSelect({
+  icon: Icon,
+  label,
+  value,
+  onChange,
+  children,
+}: {
+  icon: typeof Building2;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <Icon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
+      <Select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={label}
+        className="h-11 pr-9 pl-8 text-sm"
+      >
+        {children}
+      </Select>
+      <ChevronDown className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
+    </div>
+  );
+}
 
 export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
   const router = useRouter();
@@ -62,7 +92,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
     router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
   }
 
-  const hasFilters = Boolean(type || bedrooms || bathrooms || price || status);
+  const activeCount = [type, bedrooms, bathrooms, price, status].filter(Boolean).length;
 
   return (
     <form
@@ -70,101 +100,59 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
         e.preventDefault();
         pushWith({});
       }}
-      className="rounded-3xl border border-hairline bg-surface p-5 shadow-soft sm:p-6"
+      className="rounded-2xl border border-hairline bg-surface p-3 shadow-card sm:p-4"
     >
       {initial.projectId && (
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-gold-100 px-3 py-1.5 text-xs font-medium text-gold-600">
-          <Layers className="h-4 w-4" aria-hidden />
+        <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-medium text-gold-600">
+          <Layers className="h-3.5 w-3.5" aria-hidden />
           داخل مشروع محدد
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Field label="نوع العقار">
-          <div className="relative">
-            <Select value={type} onChange={(e) => setType(e.target.value)} aria-label="نوع العقار" className="h-12 pl-9">
-              {TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
-          </div>
-        </Field>
-        <Field label="غرف النوم">
-          <div className="relative">
-            <Select value={bedrooms} onChange={(e) => setBedrooms(e.target.value)} aria-label="غرف النوم" className="h-12 pl-9">
-              {ROOMS.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
-          </div>
-        </Field>
-        <Field label="دورات المياه">
-          <div className="relative">
-            <Select value={bathrooms} onChange={(e) => setBathrooms(e.target.value)} aria-label="دورات المياه" className="h-12 pl-9">
-              {ROOMS.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
-          </div>
-        </Field>
-        <Field label="نطاق السعر">
-          <div className="relative">
-            <Select value={price} onChange={(e) => setPrice(e.target.value)} aria-label="نطاق السعر" className="h-12 pl-9">
-              {PRICE_RANGES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
-            </Select>
-            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/60" aria-hidden />
-          </div>
-        </Field>
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center gap-2">
-        <span className="text-sm text-ink-muted">الحالة:</span>
-        {STATUSES.map((s) => {
-          const active = status === s.value;
-          return (
-            <button
-              key={s.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => {
-                const next = active ? '' : s.value;
-                setStatus(next);
-                pushWith({ status: next });
-              }}
-              className={cn(
-                'rounded-full border px-4 py-1.5 text-sm font-medium transition-colors',
-                active
-                  ? 'border-navy bg-navy text-white'
-                  : 'border-hairline text-ink-muted hover:border-navy/30 hover:text-navy',
-              )}
-            >
-              {s.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-5 flex items-center gap-3">
-        <Button type="submit" size="md">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
+        <CompactSelect icon={Building2} label="نوع العقار" value={type} onChange={setType}>
+          {TYPES.map((t) => (
+            <option key={t.value} value={t.value}>{t.label}</option>
+          ))}
+        </CompactSelect>
+        <CompactSelect icon={BedDouble} label="غرف النوم" value={bedrooms} onChange={setBedrooms}>
+          {ROOMS.map((r) => (
+            <option key={r.value} value={r.value}>{r.value ? `${r.label} غرف` : 'كل الغرف'}</option>
+          ))}
+        </CompactSelect>
+        <CompactSelect icon={Bath} label="دورات المياه" value={bathrooms} onChange={setBathrooms}>
+          {ROOMS.map((r) => (
+            <option key={r.value} value={r.value}>{r.value ? `${r.label} حمّام` : 'كل الحمّامات'}</option>
+          ))}
+        </CompactSelect>
+        <CompactSelect icon={Wallet} label="نطاق السعر" value={price} onChange={setPrice}>
+          {PRICE_RANGES.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </CompactSelect>
+        <CompactSelect icon={Tag} label="حالة الوحدة" value={status} onChange={setStatus}>
+          {STATUSES.map((s) => (
+            <option key={s.value || 'all'} value={s.value}>{s.label}</option>
+          ))}
+        </CompactSelect>
+        <Button type="submit" size="md" className="col-span-2 h-11 w-full sm:col-span-3 lg:col-auto lg:w-auto lg:px-6">
           <Search className="h-5 w-5" aria-hidden />
-          تحديث النتائج
+          بحث
         </Button>
-        {hasFilters && (
+      </div>
+
+      {activeCount > 0 && (
+        <div className="mt-2.5 flex justify-end text-sm">
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-navy"
+            className="inline-flex items-center gap-1 text-ink-muted transition-colors hover:text-navy"
           >
             <X className="h-4 w-4" aria-hidden />
-            مسح الفلاتر
+            مسح الكل
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </form>
   );
 }

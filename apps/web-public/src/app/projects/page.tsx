@@ -65,7 +65,6 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
         eyebrow="مشاريع مختارة"
         title="اكتشف مشاريعنا الاستثنائية"
         subtitle="مجموعة منتقاة من المشاريع السكنية والتجارية المصممة لأسلوب حياة أرقى."
-        stats={meta ? [{ value: formatNumber(meta.total), label: 'مشروع متاح' }] : undefined}
         overlap
       />
 
