@@ -102,6 +102,57 @@ export interface FavoriteItem {
   unit: FavoriteUnitRef | null;
 }
 
+/**
+ * A user's own visit request — item shape of GET /v1/me/visit-requests
+ * (paginated). Includes the raw project/unit rows and the assigned sales
+ * summary; only the fields the portal renders are typed here.
+ */
+export interface VisitProjectRef {
+  id: string;
+  name: Translatable;
+  city: string | null;
+}
+
+export interface VisitUnitRef {
+  id: string;
+  code: string;
+  type: string;
+}
+
+export interface AssignedSalesRef {
+  id: string;
+  fullName: string;
+}
+
+export interface MeVisitRequest {
+  id: string;
+  requestStatus: string;
+  status: string;
+  preferredDate: string | null;
+  scheduledAt: string | null;
+  notes: string | null;
+  projectId: string | null;
+  unitId: string | null;
+  project: VisitProjectRef | null;
+  unit: VisitUnitRef | null;
+  assignedSales: AssignedSalesRef | null;
+  createdAt: string;
+}
+
+/**
+ * A user's own info request / inquiry — item shape of GET /v1/me/info-requests
+ * (paginated). Reuses the project/unit ref shapes; only rendered fields typed.
+ */
+export interface MeInfoRequest {
+  id: string;
+  projectId: string | null;
+  unitId: string | null;
+  message: string;
+  createdAt: string;
+  project: VisitProjectRef | null;
+  unit: VisitUnitRef | null;
+}
+
 /** Authenticated user's own profile — shape of GET /v1/users/me. */
 export interface MeProfile {
   id: string;
