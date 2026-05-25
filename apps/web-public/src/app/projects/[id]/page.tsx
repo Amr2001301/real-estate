@@ -12,8 +12,8 @@ import { Section, SectionHeading } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorState } from '@/components/states/ErrorState';
-import { EmptyState } from '@/components/states/EmptyState';
 import { InlineNotice } from '@/components/states/InlineNotice';
+import { IconCircle } from '@/components/ui/IconCircle';
 import { Reveal } from '@/components/motion/Reveal';
 import { Stagger } from '@/components/motion/Stagger';
 import { ProjectGallery } from '@/components/projects/ProjectGallery';
@@ -238,13 +238,24 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
             </InlineNotice>
           </div>
         ) : previewUnits.length === 0 ? (
-          <div className="mt-8">
-            <EmptyState
-              title="لا توجد وحدات متاحة لهذا المشروع حاليًا"
-              message="تواصل مع مستشار لمعرفة أحدث الإتاحات."
-              icon={<Home className="h-6 w-6" aria-hidden />}
-              className="mx-auto max-w-2xl"
-            />
+          <div className="mt-8 flex flex-col items-center gap-5 rounded-3xl border border-hairline bg-surface p-6 text-center shadow-soft sm:flex-row sm:justify-between sm:text-start">
+            <div className="flex items-center gap-4">
+              <IconCircle tone="gold" className="h-12 w-12 shrink-0">
+                <Home className="h-6 w-6" aria-hidden />
+              </IconCircle>
+              <div>
+                <h3 className="text-base font-semibold text-navy">لا توجد وحدات متاحة لهذا المشروع حاليًا</h3>
+                <p className="mt-1 text-sm text-ink-muted">تواصل مع مستشار لمعرفة أحدث الإتاحات.</p>
+              </div>
+            </div>
+            <ButtonLink
+              href={`${routes.contact}?projectId=${project.id}` as Route}
+              variant="primary"
+              size="md"
+              className="w-full shrink-0 sm:w-auto"
+            >
+              تواصل مع مستشار
+            </ButtonLink>
           </div>
         ) : (
           <Stagger className="mt-8 grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
