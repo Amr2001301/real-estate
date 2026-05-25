@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Send, Building2, Home as HomeIcon, CalendarDays } from 'lucide-react';
+import { CheckCircle2, Send, Building2, Home as HomeIcon, CalendarDays, Clock3 } from 'lucide-react';
 import { safePost, type ApiResult } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
@@ -223,6 +223,10 @@ export function ContactForm({
       )}
 
       <h2 className="mt-6 text-2xl text-navy">{mode === 'info' ? 'أرسل استفسارك' : 'طلب زيارة'}</h2>
+      <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
+        <Clock3 className="h-4 w-4 text-gold-500" aria-hidden />
+        نرد عادةً خلال ساعة عمل واحدة.
+      </p>
 
       {/* Context chip */}
       {(context.unitLabel || context.projectName || context.unitId || context.projectId) && (
