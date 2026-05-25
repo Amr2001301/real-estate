@@ -51,7 +51,6 @@ async function resolveContext(projectId: string, unitId: string): Promise<Contac
 
 export default async function ContactPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  const initialMode = firstStr(sp.type) === 'visit' ? 'visit' : 'info';
   const context = await resolveContext(firstStr(sp.projectId), firstStr(sp.unitId));
 
   return (
@@ -65,7 +64,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
       <Section tone="canvas">
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <ContactForm initialMode={initialMode} context={context} />
+            <ContactForm context={context} />
           </div>
           <aside className="lg:col-span-1">
             <div className="lg:sticky lg:top-28">

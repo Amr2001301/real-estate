@@ -60,10 +60,9 @@ export function HomeContact() {
               </a>
             </div>
 
-            {/* Elevated white form card — left in RTL. Reuses the real lead form.
-                Homepage locks to a single consultation mode (no tabs, no visit booking). */}
+            {/* Elevated white form card — left in RTL. Reuses the real lead form. */}
             <div>
-              <ContactForm initialMode="info" context={{}} showTabs={false} eyebrow="طلب استشارة" />
+              <ContactForm context={{}} eyebrow="طلب استشارة" />
             </div>
           </div>
         </div>
