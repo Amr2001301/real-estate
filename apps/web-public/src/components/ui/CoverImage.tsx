@@ -1,3 +1,4 @@
+import { Building2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 interface CoverImageProps {
@@ -32,15 +33,19 @@ export function CoverImage({ src, alt, className, imgClassName, zoomOnHover }: C
         />
       ) : (
         <div
-          className="h-full w-full"
+          className="flex h-full w-full items-center justify-center"
           role="img"
           aria-label={alt}
           style={{
             background:
-              'linear-gradient(135deg, #1C3050 0%, #0F1E33 55%, #26405F 100%)',
+              'linear-gradient(135deg, #26405F 0%, #1C3050 55%, #0F1E33 100%)',
           }}
         >
-          <span className="pointer-events-none absolute -left-10 top-1/3 h-40 w-40 rounded-full bg-gold-400/15 blur-2xl" />
+          <span className="pointer-events-none absolute -left-10 top-1/3 h-40 w-40 rounded-full bg-gold-400/20 blur-2xl" />
+          {/* A clear building watermark so a media-less card reads as an
+              intentional placeholder rather than an empty void — matters most
+              on the dark theme, where the gradient alone blends into the page. */}
+          <Building2 className="h-12 w-12 text-white/25" strokeWidth={1.5} aria-hidden />
         </div>
       )}
     </div>

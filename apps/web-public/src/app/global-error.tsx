@@ -25,10 +25,10 @@ export default function GlobalError({
     <html lang="ar" dir="rtl">
       <body className="bg-canvas text-ink">
         <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-          <span className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-soft text-navy">
+          <span className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-surface-soft text-ink-strong">
             <span className="h-3 w-3 rounded-full bg-gold-400" />
           </span>
-          <h1 className="font-display text-3xl text-navy">حدث خطأ غير متوقع</h1>
+          <h1 className="font-display text-3xl text-ink-strong">حدث خطأ غير متوقع</h1>
           <p className="mt-3 max-w-md text-ink-muted">
             حدث خطأ غير متوقع، لكن تجربتك ما زالت آمنة. يرجى المحاولة مرة أخرى بعد لحظات.
           </p>

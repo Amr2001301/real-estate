@@ -65,7 +65,7 @@ export function SearchPanel() {
             aria-pressed={tab === t.key}
             className={cn(
               'rounded-full px-4 py-1.5 text-sm font-medium transition-colors',
-              tab === t.key ? 'bg-navy text-white shadow-soft' : 'text-ink-muted hover:text-navy',
+              tab === t.key ? 'bg-navy text-white shadow-soft' : 'text-ink-muted hover:text-ink-strong',
             )}
           >
             {t.label}

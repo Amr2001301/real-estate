@@ -73,7 +73,7 @@ export function ProjectsFilterBar({ initialQ, initialFeatured }: ProjectsFilterB
             'inline-flex h-12 items-center justify-center gap-2 rounded-full border px-5 text-sm font-medium transition-colors duration-200',
             featured
               ? 'border-gold-300 bg-gold-100 text-gold-600'
-              : 'border-hairline text-ink-muted hover:border-navy/30 hover:text-navy',
+              : 'border-hairline text-ink-muted hover:border-hairline/30 hover:text-ink-strong',
           )}
         >
           <Star className={cn('h-4 w-4', featured && 'fill-gold-400 text-gold-500')} aria-hidden />
@@ -88,7 +88,7 @@ export function ProjectsFilterBar({ initialQ, initialFeatured }: ProjectsFilterB
             <button
               type="button"
               onClick={reset}
-              className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-navy"
+              className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink-strong"
             >
               <X className="h-4 w-4" aria-hidden />
               مسح الفلاتر

@@ -12,8 +12,8 @@ const VARIANTS: Record<Variant, string> = {
   // Gold accent — used sparingly for premium emphasis.
   gold: 'bg-gold-400 text-navy shadow-soft hover:bg-gold-300 active:bg-gold-500',
   outline:
-    'border border-navy/20 text-navy bg-transparent hover:border-navy/40 hover:bg-navy/[0.03]',
-  ghost: 'text-navy hover:bg-navy/[0.05]',
+    'border border-hairline/20 text-ink-strong bg-transparent hover:border-hairline/40 hover:bg-navy/[0.03]',
+  ghost: 'text-ink-strong hover:bg-navy/[0.05]',
 };
 
 const SIZES: Record<Size, string> = {

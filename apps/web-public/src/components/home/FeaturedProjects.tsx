@@ -16,14 +16,14 @@ export function FeaturedProjects({ result }: { result: ApiResult<Paginated<Publi
       {/* Two-level header: title + subtitle (start) · simple text link (end) */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
-          <h2 className="text-3xl font-bold text-navy lg:text-4xl">المشاريع المختارة</h2>
+          <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">المشاريع المختارة</h2>
           <p className="mt-2 text-ink-muted">
             مشاريع منتقاة تجمع بين الموقع، الجودة، وفرص الاستثمار الواعدة.
           </p>
         </div>
         <Link
           href={routes.projects}
-          className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-navy underline-offset-8 transition-colors hover:text-gold-600 hover:underline"
+          className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-ink-strong underline-offset-8 transition-colors hover:text-gold-600 hover:underline"
         >
           عرض جميع المشاريع
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" aria-hidden />

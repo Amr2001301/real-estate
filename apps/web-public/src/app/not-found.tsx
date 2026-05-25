@@ -11,7 +11,7 @@ export default function NotFound() {
     <Container className="flex min-h-[78vh] flex-col items-center justify-center py-24 text-center">
       <span className="font-display text-hero leading-none text-gold-300">٤٠٤</span>
       <Divider accent className="my-8" />
-      <h1 className="text-display-2 text-navy">لم نتمكن من العثور على هذه الصفحة</h1>
+      <h1 className="text-display-2 text-ink-strong">لم نتمكن من العثور على هذه الصفحة</h1>
       <p className="mt-3 max-w-md text-ink-muted">
         ربما تم نقل الصفحة أو لم تعد متاحة. لكن لا تقلق — هناك الكثير لاستكشافه.
       </p>

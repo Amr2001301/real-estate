@@ -95,7 +95,7 @@ export function AuthShell({
                   <span className="h-2 w-2 rounded-full bg-gold-400" aria-hidden />
                   {eyebrow}
                 </span>
-                <h1 className="mt-3 text-display-2 text-navy">{title}</h1>
+                <h1 className="mt-3 text-display-2 text-ink-strong">{title}</h1>
                 <p className="mt-3 text-ink-muted">{subtitle}</p>
               </div>
 
@@ -105,7 +105,7 @@ export function AuthShell({
                 {switchPrompt}{' '}
                 <Link
                   href={switchHref as Route}
-                  className="font-semibold text-navy underline-offset-4 hover:text-gold-600 hover:underline"
+                  className="font-semibold text-ink-strong underline-offset-4 hover:text-gold-600 hover:underline"
                 >
                   {switchLabel}
                 </Link>

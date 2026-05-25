@@ -23,7 +23,7 @@ export function Accordion({ items, defaultOpenFirst = false, className }: Accord
     <div className={cn('divide-y divide-hairline overflow-hidden rounded-3xl border border-hairline bg-surface shadow-soft', className)}>
       {items.map((item, i) => (
         <details key={i} open={defaultOpenFirst && i === 0} className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-navy transition-colors hover:bg-surface-soft/60 [&::-webkit-details-marker]:hidden">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5 text-ink-strong transition-colors hover:bg-surface-soft/60 [&::-webkit-details-marker]:hidden">
             <span className="font-medium">{item.question}</span>
             <ChevronDown
               className="h-5 w-5 shrink-0 text-gold-500 transition-transform duration-300 group-open:rotate-180"

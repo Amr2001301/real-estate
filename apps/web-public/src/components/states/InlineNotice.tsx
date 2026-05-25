@@ -4,7 +4,7 @@ import { cn } from '@/lib/cn';
 type Tone = 'info' | 'success' | 'warning' | 'error';
 
 const TONES: Record<Tone, { wrap: string; icon: React.ReactNode }> = {
-  info: { wrap: 'bg-navy/[0.04] text-navy border-navy/10', icon: <Info className="h-5 w-5" aria-hidden /> },
+  info: { wrap: 'bg-navy/[0.04] text-ink-strong border-hairline/10', icon: <Info className="h-5 w-5" aria-hidden /> },
   success: { wrap: 'bg-success/10 text-success border-success/20', icon: <CheckCircle2 className="h-5 w-5" aria-hidden /> },
   warning: { wrap: 'bg-warning/10 text-warning border-warning/20', icon: <AlertTriangle className="h-5 w-5" aria-hidden /> },
   error: { wrap: 'bg-error/10 text-error border-error/20', icon: <XCircle className="h-5 w-5" aria-hidden /> },

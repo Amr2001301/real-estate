@@ -5,7 +5,7 @@ type Tone = 'gold' | 'navy' | 'soft';
 const TONES: Record<Tone, string> = {
   gold: 'bg-gold-100 text-gold-600',
   navy: 'bg-navy text-white',
-  soft: 'bg-surface-soft text-navy',
+  soft: 'bg-surface-soft text-ink-strong',
 };
 
 interface IconCircleProps {

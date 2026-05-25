@@ -105,7 +105,7 @@ export function ContactForm({
         <IconCircle tone="gold" className="mx-auto h-14 w-14">
           <CheckCircle2 className="h-7 w-7" aria-hidden />
         </IconCircle>
-        <h3 className="mt-5 text-2xl text-navy">تم الإرسال بنجاح</h3>
+        <h3 className="mt-5 text-2xl text-ink-strong">تم الإرسال بنجاح</h3>
         <p className="mx-auto mt-3 max-w-md text-ink-muted">{SUCCESS}</p>
         <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">سيتواصل معك مستشار خلال وقت قصير.</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
@@ -128,7 +128,7 @@ export function ContactForm({
         </span>
       )}
 
-      <h2 className={eyebrow ? 'mt-6 text-2xl text-navy' : 'text-2xl text-navy'}>أرسل استفسارك</h2>
+      <h2 className={eyebrow ? 'mt-6 text-2xl text-ink-strong' : 'text-2xl text-ink-strong'}>أرسل استفسارك</h2>
       <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
         <Clock3 className="h-4 w-4 text-gold-500" aria-hidden />
         نرد عادةً خلال ساعة عمل واحدة.

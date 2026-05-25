@@ -6,6 +6,39 @@
   :root {
     --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-arabic: 'IBM Plex Sans Arabic', system-ui, 'Segoe UI', Tahoma, sans-serif;
+
+    /* Warm Luxe (light) — structural color tokens as space-separated RGB
+       channels so Tailwind's `/opacity` modifiers keep working via
+       rgb(var(--token) / <alpha-value>). */
+    --c-canvas: 250 247 242; /* #FAF7F2 */
+    --c-surface: 255 255 255; /* #FFFFFF */
+    --c-surface-soft: 244 239 232; /* #F4EFE8 */
+    --c-hairline: 231 223 211; /* #E7DFD3 */
+    --c-ink: 26 34 48; /* #1A2230 — body text */
+    --c-ink-muted: 107 98 86; /* #6B6256 — secondary text */
+    --c-ink-strong: 15 30 51; /* #0F1E33 — headings / strong text */
+    --c-success: 62 124 90; /* #3E7C5A */
+    --c-warning: 201 138 43; /* #C98A2B */
+    --c-error: 178 59 59; /* #B23B3B */
+  }
+
+  /* Warm Luxe Noir (dark) — deep navy canvas keeps the brand hue; cards sit a
+     clear step ABOVE the canvas (raised), surface-soft a hair below (recessed),
+     and the hairline is intentionally bright because the navy-tinted box
+     shadows vanish on a dark page — borders carry the card definition instead.
+     Text turns warm off-white, status colors lift for AA contrast. The navy
+     and gold scales stay literal (see tailwind.config.ts). */
+  .dark {
+    --c-canvas: 14 26 46; /* #0E1A2E — base */
+    --c-surface: 26 40 64; /* #1A2840 — raised cards, clearly lighter than base */
+    --c-surface-soft: 18 29 49; /* #121D31 — recessed chips / inset */
+    --c-hairline: 51 68 95; /* #33445F — visible border, defines card edges */
+    --c-ink: 236 230 219; /* #ECE6DB — body text */
+    --c-ink-muted: 154 166 182; /* #9AA6B6 — secondary text */
+    --c-ink-strong: 245 241 234; /* #F5F1EA — headings / strong text */
+    --c-success: 91 173 130; /* #5BAD82 */
+    --c-warning: 226 173 80; /* #E2AD50 */
+    --c-error: 224 114 114; /* #E07272 */
   }
 
   html,
@@ -36,7 +69,7 @@
   h2,
   h3,
   h4 {
-    @apply font-display tracking-tight text-navy;
+    @apply font-display tracking-tight text-ink-strong;
     text-wrap: balance;
   }
 

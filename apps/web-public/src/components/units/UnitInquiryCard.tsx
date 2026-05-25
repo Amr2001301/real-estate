@@ -28,11 +28,11 @@ export function UnitInquiryCard({
         </IconCircle>
         <div className="text-end">
           <div className="text-xs text-ink-muted">السعر</div>
-          <div className="font-display text-2xl text-navy">{formatPrice(price)}</div>
+          <div className="font-display text-2xl text-ink-strong">{formatPrice(price)}</div>
         </div>
       </div>
 
-      <h3 className="mt-5 text-xl text-navy">مهتم بهذه الوحدة؟</h3>
+      <h3 className="mt-5 text-xl text-ink-strong">مهتم بهذه الوحدة؟</h3>
       <p className="mt-2 text-sm leading-relaxed text-ink-muted">
         تواصل معنا للحصول على مزيد من التفاصيل أو لحجز معاينة، وسيسعد أحد مستشارينا بمساعدتك.
       </p>

@@ -31,7 +31,7 @@ export default async function AppLandingPage() {
     <section className="py-16 sm:py-20 lg:py-24">
       <Container className="mx-auto max-w-2xl text-center">
         <Badge tone="gold">تجربة رقمية متكاملة</Badge>
-        <h1 className="mt-5 text-3xl font-bold leading-snug text-navy sm:text-4xl">
+        <h1 className="mt-5 text-3xl font-bold leading-snug text-ink-strong sm:text-4xl">
           ابدأ رحلتك العقارية مع دار الفخامة
         </h1>
         <p className="mt-4 text-base leading-relaxed text-ink-muted sm:text-lg">
@@ -54,7 +54,7 @@ export default async function AppLandingPage() {
               <a
                 href={GOOGLE_PLAY_URL}
                 rel="noopener"
-                className="inline-flex items-center gap-2.5 rounded-full border border-navy/20 px-6 py-3.5 text-[15px] font-medium text-navy transition-colors hover:border-navy/40 hover:bg-navy/[0.03]"
+                className="inline-flex items-center gap-2.5 rounded-full border border-hairline/20 px-6 py-3.5 text-[15px] font-medium text-ink-strong transition-colors hover:border-hairline/40 hover:bg-navy/[0.03]"
               >
                 <Play className="h-5 w-5" aria-hidden />
                 Google Play

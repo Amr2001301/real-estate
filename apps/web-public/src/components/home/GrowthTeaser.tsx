@@ -42,7 +42,7 @@ export function GrowthTeaser() {
                     <Icon className="h-6 w-6" aria-hidden />
                   </IconCircle>
                   <div>
-                    <h3 className="text-base text-navy">{title}</h3>
+                    <h3 className="text-base text-ink-strong">{title}</h3>
                     <p className="mt-1 text-sm text-ink-muted">{body}</p>
                   </div>
                 </div>

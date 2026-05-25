@@ -18,7 +18,7 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
       <IconCircle tone="navy">
         <Headset className="h-6 w-6" aria-hidden />
       </IconCircle>
-      <h3 className="mt-5 text-xl text-navy">هل أنت مهتم؟</h3>
+      <h3 className="mt-5 text-xl text-ink-strong">هل أنت مهتم؟</h3>
       <p className="mt-2 text-sm leading-relaxed text-ink-muted">
         تواصل معنا للحصول على تفاصيل {projectName} أو لحجز زيارة، وسيتواصل معك أحد مستشارينا.
       </p>

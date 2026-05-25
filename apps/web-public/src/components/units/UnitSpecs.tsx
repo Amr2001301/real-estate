@@ -40,7 +40,7 @@ export function UnitSpecs({ unit }: { unit: PublicUnit }) {
           </IconCircle>
           <div className="min-w-0">
             <div className="text-xs text-ink-muted">{label}</div>
-            <div className="mt-0.5 truncate font-display text-base text-navy sm:text-lg">{value}</div>
+            <div className="mt-0.5 truncate font-display text-base text-ink-strong sm:text-lg">{value}</div>
           </div>
         </div>
       ))}

@@ -25,7 +25,7 @@ export function InvestmentCategories() {
       {/* Contained editorial module on a warm surface */}
       <div className="rounded-3xl border border-hairline bg-surface-soft p-6 shadow-card sm:p-8 lg:p-10">
         <div className="max-w-2xl">
-          <h2 className="text-3xl font-bold text-navy lg:text-4xl">اختر مجال استثمارك</h2>
+          <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">اختر مجال استثمارك</h2>
           <p className="mt-2 text-ink-muted">حلول عقارية تناسب السكن، الاستثمار، والتشغيل.</p>
         </div>
 
@@ -46,7 +46,7 @@ export function InvestmentCategories() {
                 <span className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:scale-105 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
                   <Icon className="h-7 w-7" aria-hidden />
                 </span>
-                <h3 className="text-lg font-bold leading-none text-navy">{title}</h3>
+                <h3 className="text-lg font-bold leading-none text-ink-strong">{title}</h3>
                 <p className="text-xs text-ink-muted">{sub}</p>
                 <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-ink-muted transition-colors group-hover:text-gold-600">
                   تصفّح

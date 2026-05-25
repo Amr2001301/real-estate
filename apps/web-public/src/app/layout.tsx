@@ -4,6 +4,7 @@ import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -34,11 +35,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="ar"
       dir="rtl"
       className={`${inter.variable} ${plexArabic.variable} ${tajawal.variable}`}
+      suppressHydrationWarning
     >
       <body className="min-h-full">
-        <Navbar />
-        <main className="min-h-screen">{children}</main>
-        <Footer />
+        <ThemeProvider>
+          <Navbar />
+          <main className="min-h-screen">{children}</main>
+          <Footer />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -75,7 +75,7 @@ export function CompareBar() {
             <button
               type="button"
               onClick={clear}
-              className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-navy"
+              className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink-strong"
             >
               <X className="h-4 w-4" aria-hidden />
               إلغاء

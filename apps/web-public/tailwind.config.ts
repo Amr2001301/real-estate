@@ -6,18 +6,26 @@ import forms from '@tailwindcss/forms';
  * canvas for most surfaces, refined dark navy reserved for nav/footer/CTA
  * moments, gold used sparingly as an accent. Deliberately distinct from the
  * admin dashboard's cooler theme.
+ *
+ * Theming: structural roles (canvas / surface / hairline / ink / status) are
+ * driven by CSS custom properties defined in globals.css, so they flip between
+ * the light and dark ("Warm Luxe Noir") themes. The `navy` and `gold` scales
+ * stay literal — navy is the deliberate dark feature surface (nav/footer/hero)
+ * that should read dark in both themes, and gold's mid/bright accents already
+ * carry onto a dark canvas.
  */
 const config: Config = {
+  darkMode: 'class',
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        canvas: '#FAF7F2',
+        canvas: 'rgb(var(--c-canvas) / <alpha-value>)',
         surface: {
-          DEFAULT: '#FFFFFF',
-          soft: '#F4EFE8',
+          DEFAULT: 'rgb(var(--c-surface) / <alpha-value>)',
+          soft: 'rgb(var(--c-surface-soft) / <alpha-value>)',
         },
-        hairline: '#E7DFD3',
+        hairline: 'rgb(var(--c-hairline) / <alpha-value>)',
 
         navy: {
           DEFAULT: '#0F1E33',
@@ -36,13 +44,14 @@ const config: Config = {
         },
 
         ink: {
-          DEFAULT: '#1A2230',
-          muted: '#6B6256',
+          DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)',
+          muted: 'rgb(var(--c-ink-muted) / <alpha-value>)',
+          strong: 'rgb(var(--c-ink-strong) / <alpha-value>)',
         },
 
-        success: '#3E7C5A',
-        warning: '#C98A2B',
-        error: '#B23B3B',
+        success: 'rgb(var(--c-success) / <alpha-value>)',
+        warning: 'rgb(var(--c-warning) / <alpha-value>)',
+        error: 'rgb(var(--c-error) / <alpha-value>)',
       },
 
       fontFamily: {

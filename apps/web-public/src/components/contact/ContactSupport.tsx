@@ -77,7 +77,7 @@ export function ContactSupport() {
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-base font-semibold text-navy">ساعات العمل</h3>
+              <h3 className="text-base font-semibold text-ink-strong">ساعات العمل</h3>
               <OpenStatus />
             </div>
             <p className="mt-1 text-sm text-ink-muted">الأحد - الخميس</p>
@@ -93,7 +93,7 @@ export function ContactSupport() {
             <MapPin className="h-5 w-5" aria-hidden />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base font-semibold text-navy">مقر الشركة</h3>
+            <h3 className="text-base font-semibold text-ink-strong">مقر الشركة</h3>
             <p className="mt-1 text-sm text-ink-muted">الرياض، المملكة العربية السعودية</p>
             <a
               href={MAP_URL}

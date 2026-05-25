@@ -138,7 +138,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         <Container>
           <Link
             href={routes.projects}
-            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-navy"
+            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink-strong"
           >
             <ArrowRight className="h-4 w-4" aria-hidden />
             العودة إلى المشاريع
@@ -224,7 +224,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
       {/* Available units — full-width so cards breathe */}
       <Section tone="soft">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="text-3xl font-bold text-navy lg:text-4xl">الوحدات المتاحة</h2>
+          <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">الوحدات المتاحة</h2>
           <ButtonLink href={`${routes.units}?projectId=${project.id}` as Route} variant="outline" size="sm">
             عرض كل الوحدات
             <ArrowLeft className="h-4 w-4" aria-hidden />
@@ -244,7 +244,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                 <Home className="h-6 w-6" aria-hidden />
               </IconCircle>
               <div>
-                <h3 className="text-base font-semibold text-navy">لا توجد وحدات متاحة لهذا المشروع حاليًا</h3>
+                <h3 className="text-base font-semibold text-ink-strong">لا توجد وحدات متاحة لهذا المشروع حاليًا</h3>
                 <p className="mt-1 text-sm text-ink-muted">تواصل مع مستشار لمعرفة أحدث الإتاحات.</p>
               </div>
             </div>

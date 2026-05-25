@@ -58,7 +58,7 @@ interface FieldProps {
 export function Field({ label, required, className, children }: FieldProps) {
   return (
     <label className={cn('flex flex-col gap-2', className)}>
-      <span className="text-sm font-medium text-navy">
+      <span className="text-sm font-medium text-ink-strong">
         {label}
         {required && <span className="text-gold-500"> *</span>}
       </span>

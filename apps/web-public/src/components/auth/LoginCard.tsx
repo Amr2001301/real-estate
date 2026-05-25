@@ -18,7 +18,7 @@ export function LoginCard() {
         <button
           type="button"
           onClick={() => setMethod('password')}
-          className="block w-full text-center text-sm text-ink-muted transition-colors hover:text-navy"
+          className="block w-full text-center text-sm text-ink-muted transition-colors hover:text-ink-strong"
         >
           الدخول بالبريد الإلكتروني وكلمة المرور
         </button>

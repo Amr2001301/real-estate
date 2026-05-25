@@ -10,6 +10,7 @@ import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import { ButtonLink } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 function Wordmark({ invert }: { invert: boolean }) {
   return (
@@ -18,7 +19,7 @@ function Wordmark({ invert }: { invert: boolean }) {
       className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-0"
     >
       <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold-400" aria-hidden />
-      <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-navy')}>
+      <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-ink-strong')}>
         {SITE.name}
       </span>
     </Link>
@@ -67,8 +68,8 @@ export function Navbar() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'relative rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200',
-                  solid ? 'text-ink-muted hover:bg-navy/[0.05] hover:text-navy' : 'text-white/80 hover:bg-white/10 hover:text-white',
-                  active && (solid ? 'text-navy' : 'text-white'),
+                  solid ? 'text-ink-muted hover:bg-navy/[0.05] hover:text-ink-strong' : 'text-white/80 hover:bg-white/10 hover:text-white',
+                  active && (solid ? 'text-ink-strong' : 'text-white'),
                 )}
               >
                 {item.label}
@@ -80,24 +81,28 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="hidden lg:block">
+        <div className="hidden items-center gap-1 lg:flex">
+          <ThemeToggle className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
           <ButtonLink href={routes.login} variant={solid ? 'outline' : 'gold'} size="sm">
             تسجيل الدخول
           </ButtonLink>
         </div>
 
-        <button
-          type="button"
-          aria-label={open ? 'إغلاق القائمة' : 'فتح القائمة'}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className={cn(
-            'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors lg:hidden',
-            solid ? 'text-navy hover:bg-navy/5' : 'text-white hover:bg-white/10',
-          )}
-        >
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="flex items-center gap-1 lg:hidden">
+          <ThemeToggle className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
+          <button
+            type="button"
+            aria-label={open ? 'إغلاق القائمة' : 'فتح القائمة'}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className={cn(
+              'inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors',
+              solid ? 'text-ink-strong hover:bg-navy/5' : 'text-white hover:bg-white/10',
+            )}
+          >
+            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </Container>
 
       {open && <MobileMenu />}
@@ -114,7 +119,7 @@ function MobileMenu() {
             <Link
               key={item.href}
               href={item.href as Route}
-              className="rounded-2xl px-4 py-3 text-base font-medium text-navy transition-colors hover:bg-surface-soft"
+              className="rounded-2xl px-4 py-3 text-base font-medium text-ink-strong transition-colors hover:bg-surface-soft"
             >
               {item.label}
             </Link>

@@ -33,7 +33,7 @@ export function ProjectCard({ project }: { project: PublicProjectListItem }) {
             <MapPin className="h-4 w-4 text-gold-500" aria-hidden />
             {cityLabel(project.city)}
           </div>
-          <h3 className="mt-2 line-clamp-1 text-xl font-bold text-navy">{name}</h3>
+          <h3 className="mt-2 line-clamp-1 text-xl font-bold text-ink-strong">{name}</h3>
           {/* Reserve two lines so short descriptions don't shrink the card. */}
           <p className="mt-2 line-clamp-2 min-h-[2.75rem] text-sm leading-relaxed text-ink-muted">
             {description || ' '}
@@ -46,7 +46,7 @@ export function ProjectCard({ project }: { project: PublicProjectListItem }) {
             ) : (
               <Badge tone="neutral">لا وحدات متاحة</Badge>
             )}
-            <span className="inline-flex items-center gap-1 text-sm font-medium text-navy transition-colors group-hover:text-gold-600">
+            <span className="inline-flex items-center gap-1 text-sm font-medium text-ink-strong transition-colors group-hover:text-gold-600">
               تفاصيل المشروع
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" aria-hidden />
             </span>

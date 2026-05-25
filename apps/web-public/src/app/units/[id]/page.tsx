@@ -130,7 +130,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         <Container>
           <Link
             href={routes.units}
-            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-navy"
+            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink-strong"
           >
             <ArrowRight className="h-4 w-4" aria-hidden />
             العودة إلى الوحدات
@@ -211,7 +211,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                         <Building2 className="h-6 w-6" aria-hidden />
                       </IconCircle>
                       <div>
-                        <h3 className="text-lg text-navy">{projectName}</h3>
+                        <h3 className="text-lg text-ink-strong">{projectName}</h3>
                         {unit.project.city && (
                           <p className="mt-0.5 inline-flex items-center gap-1.5 text-sm text-ink-muted">
                             <MapPin className="h-4 w-4 text-gold-500" aria-hidden />
@@ -278,7 +278,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       {unit.project && similarUnits.length > 0 && (
         <Section tone="soft">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <h2 className="text-3xl font-bold text-navy lg:text-4xl">وحدات أخرى في المشروع</h2>
+            <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">وحدات أخرى في المشروع</h2>
             <ButtonLink href={`${routes.units}?projectId=${unit.project.id}` as Route} variant="outline" size="sm">
               عرض كل الوحدات
               <ArrowLeft className="h-4 w-4" aria-hidden />

@@ -28,7 +28,7 @@ export function EmptyState({
       <IconCircle tone="gold" className="mb-5 h-14 w-14">
         {icon ?? <Inbox className="h-6 w-6" aria-hidden />}
       </IconCircle>
-      <h3 className="text-xl text-navy">{title}</h3>
+      <h3 className="text-xl text-ink-strong">{title}</h3>
       <p className="mt-2 max-w-sm text-ink-muted">{message}</p>
       {action && <div className="mt-6">{action}</div>}
     </div>

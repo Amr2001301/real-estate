@@ -22,7 +22,7 @@ export function ProjectAmenities({ services }: { services: Translatable[] }) {
             <IconCircle tone="gold" className="h-10 w-10">
               <Check className="h-5 w-5" aria-hidden />
             </IconCircle>
-            <span className="text-navy">{item}</span>
+            <span className="text-ink-strong">{item}</span>
           </div>
         ))}
       </Stagger>

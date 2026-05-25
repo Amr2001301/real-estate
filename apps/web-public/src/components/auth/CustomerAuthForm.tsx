@@ -129,7 +129,7 @@ export function CustomerAuthForm({
 
   return (
     <PremiumCard className="p-6 sm:p-8">
-      <h2 className="hidden text-2xl text-navy lg:block">
+      <h2 className="hidden text-2xl text-ink-strong lg:block">
         {isRegister ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
       </h2>
 
@@ -203,9 +203,9 @@ export function CustomerAuthForm({
                 <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 h-5 w-5 rounded-md border-hairline text-gold-500 focus:ring-gold-400/40" />
                 <span>
                   أوافق على{' '}
-                  <a href={routes.terms} className="text-navy underline-offset-4 hover:underline">الشروط والأحكام</a>{' '}
+                  <a href={routes.terms} className="text-ink-strong underline-offset-4 hover:underline">الشروط والأحكام</a>{' '}
                   و{' '}
-                  <a href={routes.privacy} className="text-navy underline-offset-4 hover:underline">سياسة الخصوصية</a>.
+                  <a href={routes.privacy} className="text-ink-strong underline-offset-4 hover:underline">سياسة الخصوصية</a>.
                 </span>
               </label>
               <FormError>{errors.terms}</FormError>
@@ -225,7 +225,7 @@ export function CustomerAuthForm({
         </Button>
 
         {!isRegister && onUseOtp && (
-          <button type="button" onClick={onUseOtp} className="block w-full text-center text-sm text-ink-muted transition-colors hover:text-navy">
+          <button type="button" onClick={onUseOtp} className="block w-full text-center text-sm text-ink-muted transition-colors hover:text-ink-strong">
             الدخول برقم الجوال بدلاً من ذلك
           </button>
         )}

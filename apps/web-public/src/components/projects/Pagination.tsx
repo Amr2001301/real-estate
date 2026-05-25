@@ -21,7 +21,7 @@ export function Pagination({ page, totalPages, buildHref }: PaginationProps) {
   return (
     <nav className="mt-12 flex items-center justify-between gap-4" aria-label="تنقل بين الصفحات">
       {hasPrev ? (
-        <Link href={buildHref(page - 1) as Route} className={cn(linkBase, 'text-navy hover:border-navy/30')}>
+        <Link href={buildHref(page - 1) as Route} className={cn(linkBase, 'text-ink-strong hover:border-hairline/30')}>
           <ChevronRight className="h-4 w-4" aria-hidden />
           السابق
         </Link>
@@ -37,7 +37,7 @@ export function Pagination({ page, totalPages, buildHref }: PaginationProps) {
       </span>
 
       {hasNext ? (
-        <Link href={buildHref(page + 1) as Route} className={cn(linkBase, 'text-navy hover:border-navy/30')}>
+        <Link href={buildHref(page + 1) as Route} className={cn(linkBase, 'text-ink-strong hover:border-hairline/30')}>
           التالي
           <ChevronLeft className="h-4 w-4" aria-hidden />
         </Link>

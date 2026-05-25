@@ -13,7 +13,7 @@ export function StatCard({ value, label, invert = false, className }: StatCardPr
       <div
         className={cn(
           'font-display text-display-2 leading-none',
-          invert ? 'text-gold-200' : 'text-navy',
+          invert ? 'text-gold-200' : 'text-ink-strong',
         )}
       >
         {value}

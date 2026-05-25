@@ -146,7 +146,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-1 text-ink-muted transition-colors hover:text-navy"
+            className="inline-flex items-center gap-1 text-ink-muted transition-colors hover:text-ink-strong"
           >
             <X className="h-4 w-4" aria-hidden />
             مسح الكل

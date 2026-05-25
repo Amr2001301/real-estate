@@ -30,7 +30,7 @@ export function ErrorState({
       <IconCircle tone="soft" className="mb-5 h-14 w-14">
         <AlertTriangle className="h-6 w-6" aria-hidden />
       </IconCircle>
-      <h3 className="text-xl text-navy">{title}</h3>
+      <h3 className="text-xl text-ink-strong">{title}</h3>
       <p className="mt-2 max-w-sm text-ink-muted">{message}</p>
       {onRetry && (
         <Button variant="outline" size="sm" className="mt-6" onClick={onRetry}>

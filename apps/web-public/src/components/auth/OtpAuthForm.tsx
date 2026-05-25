@@ -107,7 +107,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
 
   return (
     <PremiumCard className="p-6 sm:p-8">
-      <h2 className="hidden text-2xl text-navy lg:block">
+      <h2 className="hidden text-2xl text-ink-strong lg:block">
         {isRegister ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
       </h2>
 
@@ -150,9 +150,9 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
                 />
                 <span>
                   أوافق على{' '}
-                  <a href={routes.terms} className="text-navy underline-offset-4 hover:underline">الشروط والأحكام</a>{' '}
+                  <a href={routes.terms} className="text-ink-strong underline-offset-4 hover:underline">الشروط والأحكام</a>{' '}
                   و{' '}
-                  <a href={routes.privacy} className="text-navy underline-offset-4 hover:underline">سياسة الخصوصية</a>.
+                  <a href={routes.privacy} className="text-ink-strong underline-offset-4 hover:underline">سياسة الخصوصية</a>.
                 </span>
               </label>
               <FormError>{errors.terms}</FormError>
@@ -173,7 +173,7 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
       ) : (
         <form onSubmit={onVerify} noValidate className="mt-6 space-y-5">
           <p className="text-sm text-ink-muted">
-            أدخل رمز التحقق المكوّن من ٦ أرقام المُرسل إلى <span dir="ltr" className="font-medium text-navy">{normalizePhone(phone)}</span>.
+            أدخل رمز التحقق المكوّن من ٦ أرقام المُرسل إلى <span dir="ltr" className="font-medium text-ink-strong">{normalizePhone(phone)}</span>.
           </p>
 
           <Field label="رمز التحقق" required>
@@ -201,13 +201,13 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
           </Button>
 
           <div className="flex items-center justify-between text-sm">
-            <button type="button" onClick={resend} disabled={pending} className="text-navy hover:text-gold-600 disabled:opacity-50">
+            <button type="button" onClick={resend} disabled={pending} className="text-ink-strong hover:text-gold-600 disabled:opacity-50">
               إعادة إرسال الرمز
             </button>
             <button
               type="button"
               onClick={() => { setStep('request'); setCode(''); setTopError(''); setErrors({}); }}
-              className="inline-flex items-center gap-1 text-ink-muted hover:text-navy"
+              className="inline-flex items-center gap-1 text-ink-muted hover:text-ink-strong"
             >
               تغيير الرقم
               <ArrowRight className="h-4 w-4" aria-hidden />

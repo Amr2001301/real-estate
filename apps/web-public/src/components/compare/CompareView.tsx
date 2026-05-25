@@ -114,7 +114,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                   type="button"
                   aria-label="إزالة من المقارنة"
                   onClick={() => removeUnit(u.id)}
-                  className="absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface/90 text-navy shadow-soft backdrop-blur-md transition-colors hover:bg-surface"
+                  className="absolute left-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full bg-surface/90 text-ink-strong shadow-soft backdrop-blur-md transition-colors hover:bg-surface"
                 >
                   <X className="h-4 w-4" aria-hidden />
                 </button>
@@ -123,7 +123,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                 <div className="line-clamp-1 text-sm text-ink-muted">
                   {unitTypeLabel(u.type)}{project ? ` · ${project}` : ''}
                 </div>
-                <div className="mt-1 font-display text-xl font-bold text-navy">{formatPrice(u.price)}</div>
+                <div className="mt-1 font-display text-xl font-bold text-ink-strong">{formatPrice(u.price)}</div>
                 <div className="mt-auto flex flex-wrap gap-2 pt-4">
                   <ButtonLink href={routes.unit(u.id) as Route} variant="primary" size="sm">
                     عرض التفاصيل
@@ -140,7 +140,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
         {canAddMore && (
           <Link
             href={routes.units as Route}
-            className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-hairline bg-surface-soft/60 p-6 text-center text-ink-muted transition-colors hover:border-navy/30 hover:text-navy"
+            className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-hairline bg-surface-soft/60 p-6 text-center text-ink-muted transition-colors hover:border-hairline/30 hover:text-ink-strong"
           >
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-gold-500 shadow-soft">
               <Plus className="h-6 w-6" aria-hidden />
@@ -186,14 +186,14 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
               className="grid items-stretch border-b border-hairline last:border-b-0"
               style={{ gridTemplateColumns: `200px repeat(${units.length}, minmax(0, 1fr))` }}
             >
-              <div className="flex items-center bg-surface-soft/50 px-6 py-4 text-sm font-semibold text-navy">{row.label}</div>
+              <div className="flex items-center bg-surface-soft/50 px-6 py-4 text-sm font-semibold text-ink-strong">{row.label}</div>
               {units.map((u) => {
                 const isBest = best != null && row.metric != null && row.metric(u) === best;
                 return (
                   <div
                     key={u.id}
                     className={cn(
-                      'flex items-center justify-center border-s border-hairline px-6 py-4 text-center text-navy',
+                      'flex items-center justify-center border-s border-hairline px-6 py-4 text-center text-ink-strong',
                       isBest && 'bg-gold-100/70 font-semibold',
                     )}
                   >
@@ -213,7 +213,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
           return (
             <div key={u.id} className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-soft">
               <div className="flex items-center gap-3 border-b border-hairline bg-surface-soft/50 px-5 py-4">
-                <span className="font-display text-navy">{unitTypeLabel(u.type)}</span>
+                <span className="font-display text-ink-strong">{unitTypeLabel(u.type)}</span>
                 {project && (
                   <span className="inline-flex items-center gap-1 text-xs text-ink-muted">
                     <MapPin className="h-3.5 w-3.5 text-gold-500" aria-hidden />
@@ -228,7 +228,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
                   return (
                     <div key={row.label} className="flex items-center justify-between px-5 py-3">
                       <dt className="text-sm text-ink-muted">{row.label}</dt>
-                      <dd className={cn('text-navy', isBest && 'font-semibold text-gold-600')}>{row.value(u)}</dd>
+                      <dd className={cn('text-ink-strong', isBest && 'font-semibold text-gold-600')}>{row.value(u)}</dd>
                     </div>
                   );
                 })}

@@ -35,14 +35,14 @@ export function CompareTeaser() {
           <PremiumCard className="overflow-hidden p-7">
             <div className="grid grid-cols-3 gap-3 text-center text-xs font-medium text-ink-muted">
               <span className="text-start">المقارنة</span>
-              <span className="rounded-xl bg-surface-soft py-2 text-navy">وحدة ١</span>
+              <span className="rounded-xl bg-surface-soft py-2 text-ink-strong">وحدة ١</span>
               <span className="rounded-xl bg-gold-100 py-2 text-gold-600">وحدة ٢</span>
             </div>
             <div className="mt-3 space-y-2">
               {ROWS.map((row) => (
                 <div key={row} className="grid grid-cols-3 items-center gap-3 rounded-xl border border-hairline px-3 py-2.5 text-sm">
                   <span className="text-start text-ink-muted">{row}</span>
-                  <span className="flex justify-center text-navy/40">
+                  <span className="flex justify-center text-ink-strong/40">
                     <Check className="h-4 w-4" aria-hidden />
                   </span>
                   <span className="flex justify-center text-gold-500">

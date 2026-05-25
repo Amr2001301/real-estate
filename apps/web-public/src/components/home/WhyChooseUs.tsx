@@ -23,7 +23,7 @@ export function WhyChooseUs() {
         <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 sm:text-base">
           لماذا دار الفخامة
         </span>
-        <h2 className="mt-4 text-3xl font-bold text-navy lg:text-4xl">تجربة عقارية تمنحك الثقة</h2>
+        <h2 className="mt-4 text-3xl font-bold text-ink-strong lg:text-4xl">تجربة عقارية تمنحك الثقة</h2>
         <p className="mt-2 text-ink-muted">اختيارات منتقاة، مقارنة واضحة، ومتابعة تساعدك قبل القرار.</p>
       </div>
 
@@ -39,7 +39,7 @@ export function WhyChooseUs() {
               <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
                 <Icon className="h-5 w-5" aria-hidden />
               </span>
-              <h3 className="text-base font-semibold leading-snug text-navy">{title}</h3>
+              <h3 className="text-base font-semibold leading-snug text-ink-strong">{title}</h3>
             </div>
             <p className="relative mt-3 text-sm leading-relaxed text-ink-muted">{body}</p>
           </div>

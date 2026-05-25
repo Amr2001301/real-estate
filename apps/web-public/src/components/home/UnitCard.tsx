@@ -79,7 +79,7 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
             <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600 transition-colors group-hover:bg-gold-400 group-hover:text-navy">
               <TypeIcon className="h-[18px] w-[18px]" aria-hidden />
             </span>
-            <h3 className="line-clamp-1 min-w-0 flex-1 text-base font-semibold text-navy">{typeLabel}</h3>
+            <h3 className="line-clamp-1 min-w-0 flex-1 text-base font-semibold text-ink-strong">{typeLabel}</h3>
             <span className="shrink-0 rounded-md bg-surface-soft px-2 py-0.5 text-[11px] font-medium tracking-tight text-ink-muted">
               {unit.code}
             </span>
@@ -103,7 +103,7 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
               {specs.map((s, i) => (
                 <span key={i} className="inline-flex items-center gap-1.5">
                   <s.icon className="h-4 w-4 text-gold-500" aria-hidden />
-                  <span className="font-semibold text-navy">{s.value}</span>
+                  <span className="font-semibold text-ink-strong">{s.value}</span>
                   <span className="text-xs">{s.label}</span>
                 </span>
               ))}
@@ -112,9 +112,9 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
 
           {/* Price + subtle clickable affordance */}
           <div className="mt-auto flex items-center justify-between pt-4">
-            <div className="font-display text-xl font-bold text-navy">{formatPrice(unit.price)}</div>
+            <div className="font-display text-xl font-bold text-ink-strong">{formatPrice(unit.price)}</div>
             <span
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft text-navy transition-colors group-hover:bg-gold-400 group-hover:text-navy"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface-soft text-ink-strong transition-colors group-hover:bg-gold-400 group-hover:text-navy"
               aria-hidden
             >
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />

@@ -26,7 +26,7 @@ function AppPreviewScreen() {
   return (
     <div className="flex h-full flex-col bg-canvas">
       {/* Status bar */}
-      <div className="flex items-center justify-between px-5 pb-1 pt-3 text-[10px] font-semibold text-navy/55">
+      <div className="flex items-center justify-between px-5 pb-1 pt-3 text-[10px] font-semibold text-ink-strong/55">
         <span>٩:٤١</span>
         <span className="flex items-center gap-1">
           <span className="h-2 w-3 rounded-[2px] bg-navy/30" />
@@ -100,7 +100,7 @@ function AppPreviewScreen() {
           aria-hidden
         />
         <div className="flex-1 py-0.5">
-          <span className="block text-[10px] font-semibold text-navy">شقة فاخرة · حي السفارات</span>
+          <span className="block text-[10px] font-semibold text-ink-strong">شقة فاخرة · حي السفارات</span>
           <span className="mt-1 block text-[10px] font-bold text-gold-600">١٬٢٠٠٬٠٠٠ ر.س</span>
         </div>
       </div>
@@ -111,9 +111,9 @@ function AppPreviewScreen() {
       {/* Bottom nav */}
       <div className="flex items-center justify-around border-t border-hairline bg-surface px-4 py-2.5">
         <Home className="h-4 w-4 text-gold-500" aria-hidden />
-        <Search className="h-4 w-4 text-navy/30" aria-hidden />
-        <Heart className="h-4 w-4 text-navy/30" aria-hidden />
-        <User className="h-4 w-4 text-navy/30" aria-hidden />
+        <Search className="h-4 w-4 text-ink-strong/30" aria-hidden />
+        <Heart className="h-4 w-4 text-ink-strong/30" aria-hidden />
+        <User className="h-4 w-4 text-ink-strong/30" aria-hidden />
       </div>
     </div>
   );
@@ -154,7 +154,7 @@ function FloatingFeatureTag({
       <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
         <Icon className="h-3.5 w-3.5" aria-hidden />
       </span>
-      <span className="text-xs font-semibold text-navy">{label}</span>
+      <span className="text-xs font-semibold text-ink-strong">{label}</span>
     </div>
   );
 }
@@ -171,7 +171,7 @@ function QrCard({ href }: { href: string }) {
       <span className="mx-auto block w-fit rounded-lg bg-white p-1.5 ring-1 ring-gold-200/70">
         <QrCode value={href} size={64} className="h-16 w-16" />
       </span>
-      <span className="mt-2 inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-navy">
+      <span className="mt-2 inline-flex items-center justify-center gap-1 text-[11px] font-semibold text-ink-strong">
         <ScanLine className="h-3.5 w-3.5 text-gold-500" aria-hidden />
         امسح الرمز
       </span>
@@ -197,7 +197,7 @@ export function MobileAppPromo() {
               <Reveal>
                 <div className="max-w-xl">
                   <Badge tone="gold">تجربة رقمية متكاملة</Badge>
-                  <h2 className="mt-5 text-3xl font-bold leading-snug text-navy sm:text-4xl lg:text-[2.6rem]">
+                  <h2 className="mt-5 text-3xl font-bold leading-snug text-ink-strong sm:text-4xl lg:text-[2.6rem]">
                     كل خطواتك العقارية في{' '}
                     <span className="relative inline-block whitespace-nowrap">
                       مكان واحد

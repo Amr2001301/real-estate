@@ -26,7 +26,7 @@ export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }:
 
   return (
     <PremiumCard className="p-6">
-      <h3 className="text-base font-semibold text-navy">تفاصيل المشروع</h3>
+      <h3 className="text-base font-semibold text-ink-strong">تفاصيل المشروع</h3>
       <dl className="mt-4 divide-y divide-hairline">
         {facts.map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
@@ -34,7 +34,7 @@ export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }:
               <Icon className="h-5 w-5" />
             </IconCircle>
             <dt className="text-sm text-ink-muted">{label}</dt>
-            <dd className="ms-auto text-end font-display text-navy">{value}</dd>
+            <dd className="ms-auto text-end font-display text-ink-strong">{value}</dd>
           </div>
         ))}
       </dl>
