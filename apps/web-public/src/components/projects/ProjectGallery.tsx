@@ -30,12 +30,12 @@ export function ProjectGallery({ media, alt, overlay }: ProjectGalleryProps) {
   return (
     <div
       className={cn(
-        'grid gap-3',
-        hasThumbs && 'lg:h-[clamp(380px,50vw,580px)] lg:grid-cols-[minmax(0,1fr)_232px]',
+        'grid gap-3 lg:h-[clamp(340px,44vw,520px)]',
+        hasThumbs && 'lg:grid-cols-[minmax(0,1fr)_232px]',
       )}
     >
-      {/* Main image */}
-      <div className="relative h-[62vw] min-h-[300px] overflow-hidden rounded-[2rem] shadow-card sm:h-[46vw] lg:h-full">
+      {/* Main image — capped aspect on small screens, fixed height on desktop */}
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-card sm:aspect-[16/9] lg:aspect-auto lg:h-full">
         <CoverImage src={current} alt={alt} className="h-full w-full" />
         <div className="pointer-events-none absolute inset-0" style={{ background: SCRIM }} aria-hidden />
         {overlay && <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">{overlay}</div>}
