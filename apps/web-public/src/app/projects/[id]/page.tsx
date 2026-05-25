@@ -1,6 +1,7 @@
 import type { Route } from 'next';
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Home } from 'lucide-react';
+import { MapPin, ArrowLeft, ArrowRight, Home } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { pickAr } from '@/lib/format';
@@ -135,6 +136,13 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
       {/* Cinematic gallery hero */}
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
+          <Link
+            href={routes.projects}
+            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-navy"
+          >
+            <ArrowRight className="h-4 w-4" aria-hidden />
+            العودة إلى المشاريع
+          </Link>
           <ProjectGallery
             media={project.media}
             alt={name}
@@ -188,6 +196,14 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
               lat={hasCoords ? project.lat : null}
               lng={hasCoords ? project.lng : null}
             />
+
+            {/* FAQ — under the map, same column width, scrolls with the content */}
+            <div>
+              <SectionHeading eyebrow="الأسئلة الشائعة" title="إجابات سريعة قد تهمّك" />
+              <div className="mt-8">
+                <Accordion items={projectFaq(name)} defaultOpenFirst />
+              </div>
+            </div>
           </div>
 
           {/* Sticky aside: inquiry CTA + quick facts */}
@@ -237,21 +253,6 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
             ))}
           </Stagger>
         )}
-      </Section>
-
-      {/* FAQ — generic, process-oriented (no project-specific claims) */}
-      <Section tone="canvas">
-        <div className="mx-auto max-w-3xl">
-          <SectionHeading
-            align="center"
-            eyebrow="الأسئلة الشائعة"
-            title="إجابات سريعة قد تهمّك"
-            className="mx-auto"
-          />
-          <div className="mt-8">
-            <Accordion items={projectFaq(name)} defaultOpenFirst />
-          </div>
-        </div>
       </Section>
 
       <CtaBand eyebrow="خطوتك التالية" title="هل ترغب في معرفة المزيد عن هذا المشروع؟">
