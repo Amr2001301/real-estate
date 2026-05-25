@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getSession, isPortalRole, type SessionRole } from '@/lib/session';
 import { Container } from '@/components/ui/Container';
+import { PageHero } from '@/components/layout/PageHero';
 import { AccountSidebar } from '@/components/account/AccountSidebar';
 
 const ROLE_LABELS: Partial<Record<SessionRole, string>> = {
@@ -26,13 +27,19 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const roleLabel = ROLE_LABELS[session.role] ?? session.role;
 
   return (
-    <section className="bg-canvas pb-20 pt-28 sm:pt-32">
-      <Container>
+    <>
+      <PageHero
+        eyebrow="منطقة العميل"
+        title={session.fullName ? `مرحبًا، ${session.fullName}` : 'حسابك'}
+        subtitle="تابع مفضلاتك وزياراتك وطلباتك، وحدّث بياناتك من مكان واحد."
+        overlap
+      />
+      <Container className="relative z-10 -mt-16 pb-20 sm:-mt-20">
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
           <AccountSidebar fullName={session.fullName} roleLabel={roleLabel} />
           <div className="min-w-0">{children}</div>
         </div>
       </Container>
-    </section>
+    </>
   );
 }
