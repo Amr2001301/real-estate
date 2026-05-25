@@ -35,15 +35,17 @@ export function ProjectGallery({ media, alt, overlay }: ProjectGalleryProps) {
       )}
     >
       {/* Main image — capped aspect on small screens, fixed height on desktop */}
-      <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-card sm:aspect-[16/9] lg:aspect-auto lg:h-full">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[2rem] shadow-card sm:aspect-[16/9] lg:aspect-auto lg:h-full lg:min-h-0">
         <CoverImage src={current} alt={alt} className="h-full w-full" />
         <div className="pointer-events-none absolute inset-0" style={{ background: SCRIM }} aria-hidden />
         {overlay && <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">{overlay}</div>}
       </div>
 
-      {/* Thumbnail rail */}
+      {/* Thumbnail rail: horizontal filmstrip on mobile, vertical column on desktop.
+          lg:min-h-0 lets the flex children actually divide the rail's height
+          (without it, items keep their intrinsic image height and overflow). */}
       {hasThumbs && (
-        <div className="flex gap-3 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+        <div className="flex gap-3 overflow-x-auto pb-1 lg:h-full lg:min-h-0 lg:flex-col lg:overflow-visible lg:pb-0">
           {list.map((m, i) => (
             <button
               key={`${m.url}-${i}`}
@@ -52,7 +54,7 @@ export function ProjectGallery({ media, alt, overlay }: ProjectGalleryProps) {
               aria-label={`صورة ${i + 1}`}
               aria-current={i === active}
               className={cn(
-                'relative h-20 w-28 shrink-0 overflow-hidden rounded-2xl ring-2 transition-all duration-200 lg:h-auto lg:w-full lg:flex-1',
+                'relative h-20 w-28 shrink-0 overflow-hidden rounded-2xl ring-2 transition-all duration-200 lg:h-auto lg:w-full lg:min-h-0 lg:flex-1',
                 i === active
                   ? 'ring-gold-400'
                   : 'ring-transparent opacity-70 hover:opacity-100 hover:ring-white/40',
