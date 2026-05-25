@@ -11,9 +11,9 @@ const TONE_CLASS: Record<Tone, string> = {
 };
 
 /**
- * Arabic labels + tones for both the VisitRequestStatus (request lifecycle)
- * and VisitStatus (scheduling) enums. Unknown values fall back to a neutral
- * pill showing the raw value rather than throwing.
+ * Arabic labels + tones for visit, maintenance, and review/priority enums.
+ * Generic status → pill map; unknown values fall back to a neutral pill showing
+ * the raw value rather than throwing.
  */
 const STATUS_MAP: Record<string, { label: string; tone: Tone }> = {
   // VisitRequestStatus
@@ -26,6 +26,17 @@ const STATUS_MAP: Record<string, { label: string; tone: Tone }> = {
   APPROVED: { label: 'تمت الموافقة', tone: 'success' },
   SCHEDULED: { label: 'محدد', tone: 'accent' },
   COMPLETED: { label: 'مكتمل', tone: 'success' },
+  // MaintenanceStatus
+  OPEN: { label: 'مفتوح', tone: 'neutral' },
+  ASSIGNED: { label: 'تم الإسناد', tone: 'accent' },
+  IN_PROGRESS: { label: 'قيد التنفيذ', tone: 'accent' },
+  RESOLVED: { label: 'تم الحل', tone: 'success' },
+  CLOSED: { label: 'مغلق', tone: 'muted' },
+  // MaintenancePriority
+  LOW: { label: 'أولوية منخفضة', tone: 'muted' },
+  MEDIUM: { label: 'أولوية متوسطة', tone: 'neutral' },
+  HIGH: { label: 'أولوية عالية', tone: 'accent' },
+  URGENT: { label: 'عاجلة', tone: 'error' },
   // Shared
   CANCELLED: { label: 'ملغى', tone: 'muted' },
 };

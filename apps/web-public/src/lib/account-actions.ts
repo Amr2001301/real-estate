@@ -57,6 +57,71 @@ export async function updateProfileAction(input: {
 }
 
 /**
+ * Mark one notification as read → PATCH /v1/me/notifications/:id/read.
+ * Idempotent server-side (already-read is a no-op). Bound form action:
+ * markNotificationReadAction.bind(null, id).
+ */
+export async function markNotificationReadAction(id: string): Promise<void> {
+  try {
+    await authFetch(`/me/notifications/${id}/read`, { method: 'PATCH' });
+  } catch (e) {
+    if (e instanceof AuthError) redirect('/login');
+    // Non-auth failure: leave as-is; revalidate re-renders current state.
+  }
+  revalidatePath('/account/notifications');
+}
+
+/** Mark all notifications as read → PATCH /v1/me/notifications/read-all. */
+export async function markAllNotificationsReadAction(): Promise<void> {
+  try {
+    await authFetch('/me/notifications/read-all', { method: 'PATCH' });
+  } catch (e) {
+    if (e instanceof AuthError) redirect('/login');
+  }
+  revalidatePath('/account/notifications');
+}
+
+export type MaintenanceActionResult =
+  | { ok: true }
+  | { ok: false; error: string; field?: 'unitId' | 'categoryId' | 'description' };
+
+/**
+ * Create a maintenance request → POST /v1/me/maintenance-requests. Sends a
+ * single `categoryId` (the DTO accepts categoryId | categoryIds; single is the
+ * simplest backend-compatible payload). Unit ownership is enforced by the
+ * backend — we never trust the client. On success the caller navigates to the
+ * list (which we revalidate here).
+ */
+export async function createMaintenanceRequestAction(input: {
+  unitId: string;
+  categoryId: string;
+  description: string;
+}): Promise<MaintenanceActionResult> {
+  const unitId = input.unitId?.trim() ?? '';
+  const categoryId = input.categoryId?.trim() ?? '';
+  const description = input.description?.trim() ?? '';
+
+  if (!unitId) return { ok: false, error: 'يرجى اختيار الوحدة.', field: 'unitId' };
+  if (!categoryId) return { ok: false, error: 'يرجى اختيار فئة الصيانة.', field: 'categoryId' };
+  if (description.length < 5) {
+    return { ok: false, error: 'يرجى كتابة وصف للمشكلة لا يقل عن ٥ أحرف.', field: 'description' };
+  }
+
+  try {
+    await authFetch('/me/maintenance-requests', {
+      method: 'POST',
+      body: JSON.stringify({ unitId, categoryId, description }),
+    });
+  } catch (e) {
+    if (e instanceof AuthError) return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+    return { ok: false, error: 'تعذّر إرسال الطلب حاليًا. حاول مرة أخرى بعد لحظات.' };
+  }
+
+  revalidatePath('/account/maintenance');
+  return { ok: true };
+}
+
+/**
  * Remove one saved favorite → DELETE /v1/me/favorites/:id. The id is the
  * FAVORITE record's id (never a project/unit id). Non-optimistic: on failure
  * the item simply remains after revalidation. Designed to be used as a bound

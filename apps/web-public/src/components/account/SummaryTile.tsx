@@ -4,19 +4,22 @@ import type { LucideIcon } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
 
 /**
- * Dashboard summary tile. Shows a REAL count when available; when the count
- * couldn't be loaded (`value === null`) it degrades to a neutral "عرض القسم"
- * CTA instead of a fabricated number.
+ * Dashboard summary tile. Shows a REAL value when available; when it couldn't
+ * be loaded it degrades to a neutral "عرض القسم" CTA instead of a fabricated
+ * number. `valueText` (e.g. a formatted currency total) takes precedence over
+ * the numeric `value`.
  */
 export function SummaryTile({
   icon: Icon,
   label,
   value,
+  valueText,
   href,
 }: {
   icon: LucideIcon;
   label: string;
   value: number | null;
+  valueText?: string | null;
   href: string;
 }) {
   return (
@@ -28,7 +31,9 @@ export function SummaryTile({
         <Icon className="h-5 w-5" aria-hidden />
       </span>
       <div className="min-w-0">
-        {value !== null ? (
+        {valueText != null ? (
+          <div className="font-display text-2xl font-bold leading-none text-ink-strong">{valueText}</div>
+        ) : value !== null ? (
           <div className="font-display text-2xl font-bold leading-none text-ink-strong">{formatNumber(value)}</div>
         ) : (
           <div className="text-sm font-medium text-gold-600">عرض القسم</div>

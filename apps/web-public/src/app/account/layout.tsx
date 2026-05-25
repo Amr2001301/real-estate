@@ -36,7 +36,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
       />
       <Container className="relative z-10 -mt-16 pb-20 sm:-mt-20">
         <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
-          <AccountSidebar fullName={session.fullName} roleLabel={roleLabel} />
+          <AccountSidebar fullName={session.fullName} roleLabel={roleLabel} isCustomer={session.role === 'CUSTOMER'} />
           <div className="min-w-0">{children}</div>
         </div>
       </Container>

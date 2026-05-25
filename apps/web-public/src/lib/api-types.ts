@@ -153,6 +153,129 @@ export interface MeInfoRequest {
   unit: VisitUnitRef | null;
 }
 
+/**
+ * A customer's own contract — item shape of GET /v1/contracts/me/contracts
+ * (paginated). Amounts are Decimal-as-string; project name is Translatable.
+ * Broker/reservation fields exist on the API but are intentionally NOT typed
+ * or rendered in the customer portal.
+ */
+export interface ContractProjectRef {
+  id: string;
+  name: Translatable;
+}
+
+export interface ContractUnitRef {
+  id: string;
+  code: string;
+  type: string;
+  building: { phase: { project: ContractProjectRef | null } | null } | null;
+}
+
+export interface ContractInstallmentPlan {
+  id: string;
+  totalMonths: number;
+  monthlyAmount: string;
+  startsAt: string | null;
+  frequency: string;
+}
+
+export interface MeContract {
+  id: string;
+  contractNumber: string | null;
+  totalAmount: string;
+  downPayment: string;
+  pdfUrl: string | null;
+  signedAt: string | null;
+  unit: ContractUnitRef | null;
+  installmentPlan: ContractInstallmentPlan | null;
+}
+
+/**
+ * A customer's own deposit — item shape of GET /v1/me/deposits. Amounts are
+ * Decimal-as-string. Reservation is returned by the API but not rendered.
+ */
+export interface MeDeposit {
+  id: string;
+  type: string;
+  amount: string;
+  paidAt: string | null;
+  receiptUrl: string | null;
+  verified: boolean;
+  contract: { id: string; contractNumber: string | null } | null;
+  installment: { id: string; dueDate: string | null; amount: string; type: string } | null;
+}
+
+export interface DepositTotals {
+  totalAmount: string;
+  bookingAmount: string;
+  downPayment: string;
+  installment: string;
+  finalPayment: string;
+  count: number;
+}
+
+/** GET /v1/me/deposits — paginated-like with an extra `totals` block. */
+export interface MeDepositsResponse {
+  data: MeDeposit[];
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+  totals: DepositTotals;
+}
+
+/**
+ * A customer's own maintenance request. List item shape of
+ * GET /v1/me/maintenance-requests; the detail endpoint adds `documents`.
+ * `priority` is nullable (snapshot may be absent); category `name` is Translatable.
+ */
+export interface MaintenanceCategoryRef {
+  id: string;
+  name: Translatable;
+}
+
+export interface MaintenanceUnitRef {
+  id: string;
+  code: string;
+  type: string;
+}
+
+export interface MeMaintenanceRequest {
+  id: string;
+  status: string;
+  priority: string | null;
+  reviewStatus: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+  unit: MaintenanceUnitRef | null;
+  category: MaintenanceCategoryRef | null;
+}
+
+export interface MaintenanceDocument {
+  id: string;
+  title: string;
+  fileUrl: string;
+  fileName: string | null;
+  mimeType: string | null;
+  createdAt: string;
+}
+
+export interface MeMaintenanceRequestDetail extends MeMaintenanceRequest {
+  documents: MaintenanceDocument[];
+}
+
+/**
+ * A user's own notification — item shape of GET /v1/me/notifications (plain
+ * array, limit 100). Records carry only templateCode + payload (no title/body),
+ * so the UI maps templateCode → Arabic label with a generic fallback.
+ */
+export interface MeNotification {
+  id: string;
+  templateCode: string;
+  payload: Record<string, unknown> | null;
+  channel: string;
+  readAt: string | null;
+  createdAt: string;
+}
+
 /** Authenticated user's own profile — shape of GET /v1/users/me. */
 export interface MeProfile {
   id: string;
