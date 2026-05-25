@@ -13,7 +13,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { Pagination } from '@/components/projects/Pagination';
 import { UnitsFilterBar, type UnitsFilterValues } from '@/components/units/UnitsFilterBar';
 import { UnitsExplorer } from '@/components/units/UnitsExplorer';
-import { derivePriceValue } from '@/lib/unit-filters';
+import { derivePriceValue, deriveAreaValue } from '@/lib/unit-filters';
 
 export const metadata = buildMetadata({
   path: '/units',
@@ -41,6 +41,8 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const status = firstStr(sp.status);
   const priceMin = firstStr(sp.priceMin);
   const priceMax = firstStr(sp.priceMax);
+  const areaMin = firstStr(sp.areaMin);
+  const areaMax = firstStr(sp.areaMax);
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
 
   const apiParams = new URLSearchParams({ pageSize: String(PAGE_SIZE), page: String(page) });
@@ -52,6 +54,8 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (status) apiParams.set('status', status);
   if (priceMin) apiParams.set('priceMin', priceMin);
   if (priceMax) apiParams.set('priceMax', priceMax);
+  if (areaMin) apiParams.set('areaMin', areaMin);
+  if (areaMax) apiParams.set('areaMax', areaMax);
 
   const result = await safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, {
     revalidate: REVALIDATE,
@@ -59,7 +63,9 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
 
   const units = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
-  const hasFilters = Boolean(type || bedrooms || bathrooms || status || priceMin || priceMax || city || projectId);
+  const hasFilters = Boolean(
+    type || bedrooms || bathrooms || status || priceMin || priceMax || areaMin || areaMax || city || projectId,
+  );
 
   const initialFilters: UnitsFilterValues = {
     projectId,
@@ -68,6 +74,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
     bedrooms,
     bathrooms,
     price: derivePriceValue(priceMin, priceMax),
+    area: deriveAreaValue(areaMin, areaMax),
     status,
   };
 

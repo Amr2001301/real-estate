@@ -1,10 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { LogIn, UserPlus } from 'lucide-react';
-import { safePost } from '@/lib/api';
-import { saveSession, type AuthResponse } from '@/lib/auth';
+import { customerLoginAction, customerRegisterAction } from '@/lib/auth-actions';
 import { routes } from '@/lib/routes';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
@@ -16,7 +16,16 @@ type Mode = 'login' | 'register';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
-const REDIRECT = routes.projects; // TODO: customer dashboard once the portal exists (W10+).
+
+/**
+ * Read a post-login `from` target from the current URL (client-only, at submit
+ * time — avoids a useSearchParams Suspense boundary). The server action
+ * re-validates it stays inside /account, so this is only a hint.
+ */
+function readFrom(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return new URLSearchParams(window.location.search).get('from') ?? undefined;
+}
 
 const CITIES = ['الرياض', 'جدة', 'الدمام', 'مكة المكرمة', 'المدينة المنورة'];
 const INTERESTS = [
@@ -97,32 +106,33 @@ export function CustomerAuthForm({
     setPending(true);
     setTopError('');
 
+    const from = readFrom();
     const res = isRegister
-      ? await safePost<AuthResponse>('/auth/customer/register', {
+      ? await customerRegisterAction({
           fullName: fullName.trim(),
           phone: phone.trim().replace(/[\s-]/g, ''),
           email: email.trim(),
           password,
-          acceptTerms: true,
+          acceptTerms: terms,
           ...(city ? { city } : {}),
           ...(interestType ? { interestType } : {}),
           ...(budgetRange ? { budgetRange } : {}),
           ...(preferredContactMethod ? { preferredContactMethod } : {}),
+          from,
         })
-      : await safePost<AuthResponse>('/auth/customer/login', {
-          email: email.trim(),
-          password,
-        });
+      : await customerLoginAction({ email: email.trim(), password, from });
 
-    setPending(false);
     if (res.ok) {
-      saveSession(res.data);
-      router.push(REDIRECT as never);
+      // Cookies are already set by the server action; navigate and refresh so
+      // server components pick up the new session. Tokens never touch JS here.
+      router.push(res.redirectTo as Route);
+      router.refresh();
     } else {
+      setPending(false);
       setTopError(
         isRegister
-          ? mapRegisterError(res.error.status, res.error.code)
-          : mapLoginError(res.error.status, res.error.code),
+          ? mapRegisterError(res.status, res.code)
+          : mapLoginError(res.status, res.code),
       );
     }
   }

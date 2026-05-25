@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag } from 'lucide-react';
+import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
-import { PRICE_RANGES, UNIT_TYPES as TYPES, ROOM_OPTIONS as ROOMS } from '@/lib/unit-filters';
+import { PRICE_RANGES, AREA_RANGES, UNIT_TYPES as TYPES, ROOM_OPTIONS as ROOMS } from '@/lib/unit-filters';
 
 export interface UnitsFilterValues {
   projectId: string;
@@ -15,6 +15,7 @@ export interface UnitsFilterValues {
   bedrooms: string;
   bathrooms: string;
   price: string;
+  area: string;
   status: string;
 }
 
@@ -61,10 +62,11 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
   const [bedrooms, setBedrooms] = useState(initial.bedrooms);
   const [bathrooms, setBathrooms] = useState(initial.bathrooms);
   const [price, setPrice] = useState(initial.price);
+  const [area, setArea] = useState(initial.area);
   const [status, setStatus] = useState(initial.status);
 
   function pushWith(next: Partial<UnitsFilterValues>) {
-    const v = { type, bedrooms, bathrooms, price, status, ...next };
+    const v = { type, bedrooms, bathrooms, price, area, status, ...next };
     const params = new URLSearchParams();
     if (initial.projectId) params.set('projectId', initial.projectId);
     if (initial.city) params.set('city', initial.city);
@@ -75,6 +77,9 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
     const range = PRICE_RANGES.find((r) => r.value === v.price);
     if (range?.min) params.set('priceMin', range.min);
     if (range?.max) params.set('priceMax', range.max);
+    const arange = AREA_RANGES.find((r) => r.value === v.area);
+    if (arange?.min) params.set('areaMin', arange.min);
+    if (arange?.max) params.set('areaMax', arange.max);
     const qs = params.toString();
     router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
   }
@@ -84,6 +89,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
     setBedrooms('');
     setBathrooms('');
     setPrice('');
+    setArea('');
     setStatus('');
     const params = new URLSearchParams();
     if (initial.projectId) params.set('projectId', initial.projectId);
@@ -92,7 +98,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
     router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
   }
 
-  const activeCount = [type, bedrooms, bathrooms, price, status].filter(Boolean).length;
+  const activeCount = [type, bedrooms, bathrooms, price, area, status].filter(Boolean).length;
 
   return (
     <form
@@ -109,7 +115,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(5,minmax(0,1fr))_auto]">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(6,minmax(0,1fr))_auto]">
         <CompactSelect icon={Building2} label="نوع العقار" value={type} onChange={setType}>
           {TYPES.map((t) => (
             <option key={t.value} value={t.value}>{t.label}</option>
@@ -127,6 +133,11 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
         </CompactSelect>
         <CompactSelect icon={Wallet} label="نطاق السعر" value={price} onChange={setPrice}>
           {PRICE_RANGES.map((r) => (
+            <option key={r.value} value={r.value}>{r.label}</option>
+          ))}
+        </CompactSelect>
+        <CompactSelect icon={Ruler} label="المساحة" value={area} onChange={setArea}>
+          {AREA_RANGES.map((r) => (
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </CompactSelect>

@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { Phone, KeyRound, ArrowRight } from 'lucide-react';
 import { safePost } from '@/lib/api';
-import { saveSession, type AuthResponse } from '@/lib/auth';
+import { otpVerifyAction } from '@/lib/auth-actions';
 import { routes } from '@/lib/routes';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
@@ -16,11 +17,16 @@ type Mode = 'login' | 'register';
 type Step = 'request' | 'verify';
 
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
-const REDIRECT = routes.projects;
 
 function normalizePhone(raw: string): string {
   const trimmed = raw.trim().replace(/[\s-]/g, '');
   return trimmed;
+}
+
+/** Read a post-login `from` hint from the URL at submit time (re-validated server-side). */
+function readFrom(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  return new URLSearchParams(window.location.search).get('from') ?? undefined;
 }
 
 function mapRequestError(status: number): string {
@@ -83,17 +89,19 @@ export function OtpAuthForm({ mode }: { mode: Mode }) {
 
     setPending(true);
     setTopError('');
-    const res = await safePost<AuthResponse>('/auth/otp/verify', {
+    const res = await otpVerifyAction({
       phone: normalizePhone(phone),
       code: code.trim(),
       ...(isRegister && fullName.trim() ? { fullName: fullName.trim() } : {}),
+      from: readFrom(),
     });
-    setPending(false);
     if (res.ok) {
-      saveSession(res.data);
-      router.push(REDIRECT as never);
+      // Cookies set by the server action; navigate + refresh for server components.
+      router.push(res.redirectTo as Route);
+      router.refresh();
     } else {
-      setTopError(mapVerifyError(res.error.status));
+      setPending(false);
+      setTopError(mapVerifyError(res.status));
     }
   }
 

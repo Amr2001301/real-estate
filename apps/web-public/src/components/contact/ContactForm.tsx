@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { CheckCircle2, Send, Building2, Home as HomeIcon, Clock3 } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { CheckCircle2, Send, Building2, Home as HomeIcon, Clock3, CalendarClock } from 'lucide-react';
 import { safePost, type ApiResult } from '@/lib/api';
 import { routes } from '@/lib/routes';
 import { PremiumCard } from '@/components/ui/PremiumCard';
@@ -34,11 +34,27 @@ function mapError(status: number, hasContext: boolean): string {
   return 'تعذر إرسال الطلب حاليًا. يرجى المحاولة مرة أخرى أو التواصل معنا مباشرة.';
 }
 
+/**
+ * Local datetime string (YYYY-MM-DDTHH:mm) for tomorrow at 09:00 — used as the
+ * `min` of the visit date/time picker. Computed after mount to avoid any
+ * SSR/client hydration drift on the attribute.
+ */
+function tomorrowAtNine(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  d.setHours(9, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function ContactForm({
   context,
+  mode = 'info',
   eyebrow,
 }: {
   context: ContactContext;
+  /** 'visit' switches the form to a visit-request (needs a project + date). */
+  mode?: 'info' | 'visit';
   /** Optional pill label shown above the heading (e.g. homepage). */
   eyebrow?: string;
 }) {
@@ -50,6 +66,17 @@ export function ContactForm({
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
+  const [preferredDate, setPreferredDate] = useState('');
+  const [minDate, setMinDate] = useState('');
+
+  // A visit request requires a projectId (CreateVisitRequestDto). When the form
+  // is in visit mode but no project context resolved, we safely fall back to an
+  // info-request rather than POSTing a guaranteed-400 visit request.
+  const isVisit = mode === 'visit' && Boolean(context.projectId);
+
+  useEffect(() => {
+    setMinDate(tomorrowAtNine());
+  }, []);
 
   function validate(): boolean {
     const e: Record<string, string> = {};
@@ -58,6 +85,10 @@ export function ContactForm({
     else if (!PHONE_RE.test(phone.trim())) e.phone = 'يرجى إدخال رقم هاتف صحيح.';
     if (email.trim() && !EMAIL_RE.test(email.trim())) e.email = 'صيغة البريد الإلكتروني غير صحيحة.';
     if (message.trim().length < 2) e.message = 'يرجى كتابة رسالتك.';
+    if (isVisit) {
+      if (!preferredDate) e.preferredDate = 'يرجى اختيار موعد الزيارة.';
+      else if (minDate && preferredDate < minDate) e.preferredDate = 'يرجى اختيار موعد ابتداءً من الغد.';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -68,7 +99,7 @@ export function ContactForm({
     setStatus('submitting');
     setErrorMsg('');
 
-    const res = await submitInfo();
+    const res = isVisit ? await submitVisit() : await submitInfo();
 
     if (res.ok) {
       setStatus('success');
@@ -87,6 +118,19 @@ export function ContactForm({
       ...(email.trim() ? { email: email.trim() } : {}),
       ...(context.projectId ? { projectId: context.projectId } : {}),
       ...(context.unitId ? { unitId: context.unitId } : {}),
+    });
+  }
+
+  /** Visit request → POST /public/visit-request. Only called when isVisit. */
+  function submitVisit(): Promise<ApiResult<unknown>> {
+    return safePost('/public/visit-request', {
+      // context.projectId is guaranteed present here (see isVisit).
+      projectId: context.projectId,
+      ...(context.unitId ? { unitId: context.unitId } : {}),
+      preferredDate: new Date(preferredDate).toISOString(),
+      notes: message.trim(),
+      name: fullName.trim(),
+      phone: phone.trim(),
     });
   }
 
@@ -128,10 +172,12 @@ export function ContactForm({
         </span>
       )}
 
-      <h2 className={eyebrow ? 'mt-6 text-2xl text-ink-strong' : 'text-2xl text-ink-strong'}>أرسل استفسارك</h2>
+      <h2 className={eyebrow ? 'mt-6 text-2xl text-ink-strong' : 'text-2xl text-ink-strong'}>
+        {isVisit ? 'احجز زيارة' : 'أرسل استفسارك'}
+      </h2>
       <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
         <Clock3 className="h-4 w-4 text-gold-500" aria-hidden />
-        نرد عادةً خلال ساعة عمل واحدة.
+        {isVisit ? 'اختر الموعد المناسب وسنؤكّد زيارتك قريبًا.' : 'نرد عادةً خلال ساعة عمل واحدة.'}
       </p>
 
       {/* Context chip */}
@@ -195,6 +241,20 @@ export function ContactForm({
           <FormError>{errors.message}</FormError>
         </Field>
 
+        {isVisit && (
+          <Field label="موعد الزيارة المفضل" required>
+            <Input
+              type="datetime-local"
+              value={preferredDate}
+              onChange={(e) => setPreferredDate(e.target.value)}
+              invalid={!!errors.preferredDate}
+              min={minDate || undefined}
+              dir="ltr"
+            />
+            <FormError>{errors.preferredDate}</FormError>
+          </Field>
+        )}
+
         {status === 'error' && <InlineNotice tone="error">{errorMsg}</InlineNotice>}
 
         <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={status === 'submitting'}>
@@ -202,8 +262,8 @@ export function ContactForm({
             'جارٍ الإرسال...'
           ) : (
             <>
-              <Send className="h-5 w-5" aria-hidden />
-              إرسال الطلب
+              {isVisit ? <CalendarClock className="h-5 w-5" aria-hidden /> : <Send className="h-5 w-5" aria-hidden />}
+              {isVisit ? 'تأكيد طلب الزيارة' : 'إرسال الطلب'}
             </>
           )}
         </Button>

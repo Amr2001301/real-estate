@@ -11,6 +11,7 @@ export const routes = {
   compare: '/compare',
   contact: '/contact',
   app: '/app',
+  account: '/account',
   login: '/login',
   register: '/register',
   privacy: '/privacy',

@@ -4,13 +4,21 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, UserCircle2, LogOut } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import { ButtonLink } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { logoutAction } from '@/lib/auth-actions';
+import { readClientUser, type ClientUser } from '@/lib/client-user';
+
+/** First name for a light, friendly nav label; falls back to "حسابي". */
+function accountLabel(user: ClientUser | null): string {
+  const first = user?.fullName?.trim().split(/\s+/)[0];
+  return first || 'حسابي';
+}
 
 function Wordmark({ invert }: { invert: boolean }) {
   return (
@@ -30,6 +38,10 @@ export function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  // UI hint only: read the non-httpOnly `user` cookie AFTER mount so the first
+  // client render matches SSR (guest) and no hydration mismatch occurs. Tokens
+  // are httpOnly and never read here.
+  const [user, setUser] = useState<ClientUser | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -40,6 +52,8 @@ export function Navbar() {
 
   useEffect(() => {
     setOpen(false);
+    // Re-read on every navigation so login/logout reflect immediately.
+    setUser(readClientUser());
   }, [pathname]);
 
   // Only the homepage has a dark hero behind the nav, so it may start
@@ -83,9 +97,37 @@ export function Navbar() {
 
         <div className="hidden items-center gap-1 lg:flex">
           <ThemeToggle className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
-          <ButtonLink href={routes.login} variant={solid ? 'outline' : 'gold'} size="sm">
-            تسجيل الدخول
-          </ButtonLink>
+          {user ? (
+            <>
+              <Link
+                href={routes.account}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200',
+                  solid ? 'text-ink-muted hover:bg-navy/[0.05] hover:text-ink-strong' : 'text-white/80 hover:bg-white/10 hover:text-white',
+                )}
+              >
+                <UserCircle2 className="h-4 w-4" aria-hidden />
+                {accountLabel(user)}
+              </Link>
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  aria-label="تسجيل الخروج"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200',
+                    solid ? 'text-ink-muted hover:bg-navy/[0.05] hover:text-ink-strong' : 'text-white/80 hover:bg-white/10 hover:text-white',
+                  )}
+                >
+                  <LogOut className="h-4 w-4" aria-hidden />
+                  خروج
+                </button>
+              </form>
+            </>
+          ) : (
+            <ButtonLink href={routes.login} variant={solid ? 'outline' : 'gold'} size="sm">
+              تسجيل الدخول
+            </ButtonLink>
+          )}
         </div>
 
         <div className="flex items-center gap-1 lg:hidden">
@@ -105,12 +147,12 @@ export function Navbar() {
         </div>
       </Container>
 
-      {open && <MobileMenu />}
+      {open && <MobileMenu user={user} />}
     </header>
   );
 }
 
-function MobileMenu() {
+function MobileMenu({ user }: { user: ClientUser | null }) {
   return (
     <div className="lg:hidden">
       <Container className="pb-6 pt-2">
@@ -124,9 +166,30 @@ function MobileMenu() {
               {item.label}
             </Link>
           ))}
-          <ButtonLink href={routes.login} variant="primary" size="md" className="mt-2 w-full">
-            تسجيل الدخول
-          </ButtonLink>
+          {user ? (
+            <>
+              <Link
+                href={routes.account}
+                className="mt-1 inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-base font-medium text-ink-strong transition-colors hover:bg-surface-soft"
+              >
+                <UserCircle2 className="h-5 w-5" aria-hidden />
+                {accountLabel(user)}
+              </Link>
+              <form action={logoutAction} className="mt-1">
+                <button
+                  type="submit"
+                  className="inline-flex w-full items-center gap-2 rounded-2xl px-4 py-3 text-base font-medium text-ink-muted transition-colors hover:bg-surface-soft"
+                >
+                  <LogOut className="h-5 w-5" aria-hidden />
+                  تسجيل الخروج
+                </button>
+              </form>
+            </>
+          ) : (
+            <ButtonLink href={routes.login} variant="primary" size="md" className="mt-2 w-full">
+              تسجيل الدخول
+            </ButtonLink>
+          )}
         </nav>
       </Container>
     </div>

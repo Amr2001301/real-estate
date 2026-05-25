@@ -268,7 +268,12 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
           {/* Inquiry aside */}
           <aside className="lg:col-span-1">
             <div className="lg:sticky lg:top-28">
-              <UnitInquiryCard unitId={unit.id} price={unit.price} />
+              <UnitInquiryCard
+                unitId={unit.id}
+                price={unit.price}
+                unitCode={unit.code}
+                projectName={unit.project ? pickAr(unit.project.name) : ''}
+              />
             </div>
           </aside>
         </div>
