@@ -1,6 +1,6 @@
 import type { Route } from 'next';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Home, Sparkles } from 'lucide-react';
+import { MapPin, ArrowLeft, Home } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { pickAr } from '@/lib/format';
@@ -10,7 +10,6 @@ import { Container } from '@/components/ui/Container';
 import { Section, SectionHeading } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { IconCircle } from '@/components/ui/IconCircle';
 import { ErrorState } from '@/components/states/ErrorState';
 import { EmptyState } from '@/components/states/EmptyState';
 import { InlineNotice } from '@/components/states/InlineNotice';
@@ -30,15 +29,6 @@ import { CtaBand } from '@/components/marketing/CtaBand';
 const REVALIDATE = 60;
 
 type Params = Promise<{ id: string }>;
-
-// Factual "why" highlights derived from public data — no invented claims.
-function projectWhy(city: string, availableUnits: number, serviceCount: number) {
-  return [
-    { icon: MapPin, title: 'موقع متميّز', body: city ? `يقع المشروع في ${city} بموقع يسهل الوصول إليه.` : 'موقع مدروس يجمع بين الخصوصية وسهولة الوصول.' },
-    { icon: Home, title: 'وحدات متاحة', body: `${availableUnits} وحدة متاحة بخيارات متنوعة تناسب احتياجك.` },
-    { icon: Sparkles, title: 'مرافق وخدمات', body: serviceCount > 0 ? `${serviceCount} من المرافق والخدمات لراحة السكان.` : 'مرافق وخدمات مصممة لأسلوب حياة أرقى.' },
-  ];
-}
 
 // Generic, process-oriented FAQ — deliberately avoids project-specific claims
 // (prices, guarantees, dates) so nothing is fabricated.
@@ -118,8 +108,6 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
   const description = pickAr(project.description);
   const hasCoords = project.lat !== 0 || project.lng !== 0;
 
-  const serviceCount = Array.isArray(project.services) ? project.services.length : 0;
-
   // Best-effort: a few units from this project. Never blocks the page.
   const unitsResult = await fetchProjectUnits(project.id);
   const previewUnits = unitsResult.ok ? unitsResult.data.data : [];
@@ -179,20 +167,10 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         </Container>
       </section>
 
-      {/* Highlights strip — quick facts directly under the gallery */}
-      <Section tone="canvas" className="pb-0 pt-10 sm:pt-12">
-        <ProjectFacts
-          city={project.city}
-          availableUnitsCount={project.availableUnitsCount}
-          featured={project.featured}
-          hasCoords={hasCoords}
-        />
-      </Section>
-
-      {/* Body: content + sticky inquiry aside */}
-      <Section tone="canvas" className="pt-10 sm:pt-12">
-        <div className="grid gap-10 lg:grid-cols-3">
-          <div className="space-y-12 lg:col-span-2">
+      {/* Body: overview + amenities + location, with a sticky inquiry/details aside */}
+      <Section tone="canvas" className="pt-10 sm:pt-12 lg:pt-14">
+        <div className="grid gap-8 lg:grid-cols-3 lg:gap-10">
+          <div className="space-y-10 lg:col-span-2 lg:space-y-12">
             {/* Overview */}
             <div>
               <SectionHeading eyebrow="نظرة عامة" title="عن المشروع" />
@@ -203,77 +181,66 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
               )}
             </div>
 
-            {/* Why this project — factual value props derived from public data */}
-            <div>
-              <SectionHeading eyebrow="لماذا هذا المشروع؟" title="ما الذي يميّزه" />
-              <div className="mt-6 grid gap-4 sm:grid-cols-3">
-                {projectWhy(project.city, project.availableUnitsCount, serviceCount).map((w) => (
-                  <div key={w.title} className="rounded-3xl border border-hairline bg-surface p-6 shadow-soft">
-                    <IconCircle tone="gold" className="h-11 w-11">
-                      <w.icon className="h-5 w-5" aria-hidden />
-                    </IconCircle>
-                    <h3 className="mt-4 text-base text-navy">{w.title}</h3>
-                    <p className="mt-1 text-sm leading-relaxed text-ink-muted">{w.body}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <ProjectAmenities services={project.services} />
 
-            <ProjectLocation city={project.city} lat={hasCoords ? project.lat : null} lng={hasCoords ? project.lng : null} />
-
-            {/* Available units preview from this project (best-effort) */}
-            <div>
-              <SectionHeading
-                eyebrow="الوحدات"
-                title="وحدات متاحة داخل المشروع"
-                description="استعرض نماذج مختارة من الوحدات المتاحة وقارن بينها."
-              />
-
-              {!unitsResult.ok ? (
-                <div className="mt-8">
-                  <InlineNotice tone="warning">
-                    تعذر تحميل وحدات المشروع حاليًا، يمكنك استعراضها من صفحة الوحدات.
-                  </InlineNotice>
-                </div>
-              ) : previewUnits.length === 0 ? (
-                <div className="mt-8">
-                  <EmptyState
-                    title="لا توجد وحدات متاحة لهذا المشروع حاليًا"
-                    message="تواصل مع مستشار لمعرفة أحدث الإتاحات."
-                    icon={<Home className="h-6 w-6" aria-hidden />}
-                    className="mx-auto max-w-2xl"
-                  />
-                </div>
-              ) : (
-                <Stagger className="mt-8 grid gap-7 sm:grid-cols-2 xl:grid-cols-3" childClassName="h-full" step={80}>
-                  {previewUnits.map((unit) => (
-                    <UnitCard key={unit.id} unit={unit} />
-                  ))}
-                </Stagger>
-              )}
-
-              <div className="mt-8">
-                <ButtonLink href={`${routes.units}?projectId=${project.id}` as Route} variant="outline" size="md">
-                  عرض كل الوحدات في المشروع
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                </ButtonLink>
-              </div>
-            </div>
+            <ProjectLocation
+              city={project.city}
+              lat={hasCoords ? project.lat : null}
+              lng={hasCoords ? project.lng : null}
+            />
           </div>
 
-          {/* Inquiry aside */}
+          {/* Sticky aside: inquiry CTA + quick facts */}
           <aside className="lg:col-span-1">
-            <div className="lg:sticky lg:top-28">
+            <div className="space-y-5 lg:sticky lg:top-28">
               <InquiryCard projectId={project.id} projectName={name} />
+              <ProjectFacts
+                city={project.city}
+                availableUnitsCount={project.availableUnitsCount}
+                featured={project.featured}
+                hasCoords={hasCoords}
+              />
             </div>
           </aside>
         </div>
       </Section>
 
+      {/* Available units — full-width so cards breathe */}
+      <Section tone="soft">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <h2 className="text-3xl font-bold text-navy lg:text-4xl">الوحدات المتاحة</h2>
+          <ButtonLink href={`${routes.units}?projectId=${project.id}` as Route} variant="outline" size="sm">
+            عرض كل الوحدات
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+          </ButtonLink>
+        </div>
+
+        {!unitsResult.ok ? (
+          <div className="mt-8">
+            <InlineNotice tone="warning">
+              تعذر تحميل وحدات المشروع حاليًا، يمكنك استعراضها من صفحة الوحدات.
+            </InlineNotice>
+          </div>
+        ) : previewUnits.length === 0 ? (
+          <div className="mt-8">
+            <EmptyState
+              title="لا توجد وحدات متاحة لهذا المشروع حاليًا"
+              message="تواصل مع مستشار لمعرفة أحدث الإتاحات."
+              icon={<Home className="h-6 w-6" aria-hidden />}
+              className="mx-auto max-w-2xl"
+            />
+          </div>
+        ) : (
+          <Stagger className="mt-8 grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
+            {previewUnits.map((unit) => (
+              <UnitCard key={unit.id} unit={unit} />
+            ))}
+          </Stagger>
+        )}
+      </Section>
+
       {/* FAQ — generic, process-oriented (no project-specific claims) */}
-      <Section tone="soft" className="pt-0">
+      <Section tone="canvas">
         <div className="mx-auto max-w-3xl">
           <SectionHeading
             align="center"

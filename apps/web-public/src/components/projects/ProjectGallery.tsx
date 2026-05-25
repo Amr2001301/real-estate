@@ -12,34 +12,38 @@ interface ProjectGalleryProps {
   overlay?: React.ReactNode;
 }
 
+const SCRIM = 'linear-gradient(to top, rgba(11,23,38,0.80) 0%, rgba(11,23,38,0.18) 45%, transparent 70%)';
+
 /**
- * Cinematic main image + thumbnail strip. No carousel dependency — clicking a
- * thumbnail swaps the main image. Falls back to the premium gradient when no
- * media exists (CoverImage handles that).
+ * Cinematic split gallery: a large main image with a thumbnail rail — a
+ * vertical column beside it on desktop, a horizontal filmstrip on mobile.
+ * Clicking a thumbnail swaps the main image (no carousel dependency). Falls
+ * back to the premium gradient when no media exists (CoverImage handles that).
  */
 export function ProjectGallery({ media, alt, overlay }: ProjectGalleryProps) {
   const images = media.filter((m) => m.type === 'IMAGE' || !m.type);
   const list = images.length > 0 ? images : media;
   const [active, setActive] = useState(0);
   const current = list[active]?.url ?? null;
+  const hasThumbs = list.length > 1;
 
   return (
-    <div>
-      <div className="relative overflow-hidden rounded-4xl shadow-card">
-        <CoverImage src={current} alt={alt} className="aspect-[16/10] sm:aspect-[16/9]" />
-        {/* Readability scrim for the overlaid title. */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'linear-gradient(to top, rgba(11,23,38,0.78) 0%, rgba(11,23,38,0.15) 45%, transparent 70%)' }}
-          aria-hidden
-        />
-        {overlay && (
-          <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">{overlay}</div>
-        )}
+    <div
+      className={cn(
+        'grid gap-3',
+        hasThumbs && 'lg:h-[clamp(380px,50vw,580px)] lg:grid-cols-[minmax(0,1fr)_232px]',
+      )}
+    >
+      {/* Main image */}
+      <div className="relative h-[62vw] min-h-[300px] overflow-hidden rounded-[2rem] shadow-card sm:h-[46vw] lg:h-full">
+        <CoverImage src={current} alt={alt} className="h-full w-full" />
+        <div className="pointer-events-none absolute inset-0" style={{ background: SCRIM }} aria-hidden />
+        {overlay && <div className="absolute inset-x-0 bottom-0 p-6 sm:p-10">{overlay}</div>}
       </div>
 
-      {list.length > 1 && (
-        <div className="mt-4 flex gap-3 overflow-x-auto pb-1 scrollbar-thin">
+      {/* Thumbnail rail */}
+      {hasThumbs && (
+        <div className="flex gap-3 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
           {list.map((m, i) => (
             <button
               key={`${m.url}-${i}`}
@@ -48,8 +52,10 @@ export function ProjectGallery({ media, alt, overlay }: ProjectGalleryProps) {
               aria-label={`صورة ${i + 1}`}
               aria-current={i === active}
               className={cn(
-                'relative h-20 w-28 shrink-0 overflow-hidden rounded-2xl border-2 transition-all duration-200',
-                i === active ? 'border-gold-400' : 'border-transparent opacity-70 hover:opacity-100',
+                'relative h-20 w-28 shrink-0 overflow-hidden rounded-2xl ring-2 transition-all duration-200 lg:h-auto lg:w-full lg:flex-1',
+                i === active
+                  ? 'ring-gold-400'
+                  : 'ring-transparent opacity-70 hover:opacity-100 hover:ring-white/40',
               )}
             >
               <CoverImage src={m.url} alt={`${alt} ${i + 1}`} className="h-full w-full" />
