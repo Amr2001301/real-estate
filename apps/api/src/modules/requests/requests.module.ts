@@ -151,6 +151,25 @@ class RequestsService {
     });
   }
 
+  /**
+   * A user's OWN info requests, paginated — mirrors listVisitRequests. Scoped
+   * strictly by userId so a CLIENT/CUSTOMER never sees others' inquiries (unlike
+   * the admin listInfoRequests, which is global).
+   */
+  async listMyInfoRequests(opts: { userId: string; page: number; pageSize: number }) {
+    const where: Prisma.InfoRequestWhereInput = { userId: opts.userId };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.infoRequest.findMany({
+        where,
+        ...takeSkip(opts),
+        orderBy: { createdAt: 'desc' },
+        include: { project: true, unit: true },
+      }),
+      this.prisma.infoRequest.count({ where }),
+    ]);
+    return paginate(data, total, opts);
+  }
+
   // ---- Visit requests ----
   async createVisitRequest(
     dto: CreateVisitRequestDto,
@@ -286,6 +305,20 @@ class RequestsController {
       page: Number(page),
       pageSize: Number(pageSize),
       userId: user.sub,
+    });
+  }
+
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Get('me/info-requests')
+  myInfoRequests(
+    @CurrentUser() user: AuthUser,
+    @Query('page') page = 1,
+    @Query('pageSize') pageSize = 20,
+  ) {
+    return this.svc.listMyInfoRequests({
+      userId: user.sub,
+      page: Number(page),
+      pageSize: Number(pageSize),
     });
   }
 

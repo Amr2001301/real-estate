@@ -68,3 +68,18 @@ export interface Paginated<T> {
   data: T[];
   meta: { page: number; pageSize: number; total: number; totalPages: number };
 }
+
+/** Authenticated user's own profile — shape of GET /v1/users/me. */
+export interface MeProfile {
+  id: string;
+  role: string;
+  fullName: string;
+  email: string | null;
+  phone: string | null;
+  locale: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLoginAt: string | null;
+  managerId: string | null;
+}

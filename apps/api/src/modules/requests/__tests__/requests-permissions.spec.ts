@@ -157,8 +157,8 @@ describe('Requests module · permissions enforcement (legacy admin surface)', ()
       expect(isPublic('publicVisit')).toBe(true);
     });
 
-    it('meInfo + meVisit + myVisits — role-only (CLIENT/CUSTOMER), no permission metadata', () => {
-      for (const method of ['meInfo', 'meVisit', 'myVisits']) {
+    it('meInfo + meVisit + myVisits + myInfoRequests — role-only (CLIENT/CUSTOMER), no permission metadata', () => {
+      for (const method of ['meInfo', 'meVisit', 'myVisits', 'myInfoRequests']) {
         expect(getPermissions(method)).toBeUndefined();
         expect(getRoles(method)).toEqual([UserRole.CLIENT, UserRole.CUSTOMER]);
       }
@@ -208,6 +208,36 @@ describe('Requests module · permissions enforcement (legacy admin surface)', ()
       // Permissions DB was never consulted because the route has no
       // @Permissions metadata.
       expect(mock.userPermission.findMany).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── GET /me/info-requests — CLIENT/CUSTOMER own records only ──────────
+  describe('GET /me/info-requests (self-scoped)', () => {
+    beforeEach(() => {
+      mock.infoRequest.findMany.mockClear();
+    });
+
+    it('CLIENT → 200 and query is scoped to their own userId', async () => {
+      FakeAuthGuard.currentUser = { sub: 'client-1', role: UserRole.CLIENT, codes: [] };
+      await request(app.getHttpServer()).get('/me/info-requests').expect(200);
+      expect(mock.infoRequest.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { userId: 'client-1' } }),
+      );
+    });
+
+    it('CUSTOMER → 200', async () => {
+      FakeAuthGuard.currentUser = { sub: 'cust-1', role: UserRole.CUSTOMER, codes: [] };
+      await request(app.getHttpServer()).get('/me/info-requests').expect(200);
+    });
+
+    it('SALES → 403 (not a portal role)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: [] };
+      await request(app.getHttpServer()).get('/me/info-requests').expect(403);
+    });
+
+    it('unauthenticated → 403', async () => {
+      FakeAuthGuard.currentUser = null;
+      await request(app.getHttpServer()).get('/me/info-requests').expect(403);
     });
   });
 });
