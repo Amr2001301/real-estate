@@ -5,6 +5,7 @@ import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/
 import { ButtonLink } from '@/components/ui/Button';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { IconCircle } from '@/components/ui/IconCircle';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
 /**
  * Premium inquiry card. The info/visit CTAs deep-link to /contact; the Call and
@@ -40,6 +41,8 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
         <ButtonLink href={routes.contact} variant="outline" size="md" className="w-full">
           تحدث مع مستشار
         </ButtonLink>
+
+        <FavoriteButton kind="project" id={projectId} variant="inline" />
 
         {(contactPhone || whatsappPhone) && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

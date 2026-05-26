@@ -91,7 +91,21 @@ export class UpdateProjectDto {
   services?: TranslatableDto[];
 }
 
+/**
+ * Whitelisted public sort options. Maps only to real, safe scalar fields
+ * (createdAt). Project has no price column and `name` is JSON (not orderable by
+ * Prisma), so price/name sorts are intentionally unsupported.
+ */
+export enum ProjectSort {
+  newest = 'newest',
+  oldest = 'oldest',
+}
+
 export class ProjectQueryDto {
+  @IsOptional()
+  @IsEnum(ProjectSort)
+  sort?: ProjectSort;
+
   @IsOptional()
   @IsString()
   city?: string;

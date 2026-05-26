@@ -3,6 +3,7 @@ import type { Route } from 'next';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
+import { getContactPhone } from '@/lib/contact';
 import { Container } from '@/components/ui/Container';
 
 const YEAR = new Date().getFullYear();
@@ -13,11 +14,7 @@ const ACCOUNT_LINKS: Array<{ label: string; href: string }> = [
   { label: 'تواصل معنا', href: routes.contact },
 ];
 
-const CONTACT = [
-  { icon: Phone, text: '+966 11 000 0000', dir: 'ltr' as const },
-  { icon: Mail, text: 'hello@dar-alfakhama.sa', dir: 'ltr' as const },
-  { icon: MapPin, text: 'الرياض، المملكة العربية السعودية', dir: 'rtl' as const },
-];
+type ContactRow = { icon: typeof Phone; text: string; dir: 'ltr' | 'rtl' };
 
 // Faint texture so the footer reads with depth, not as a flat dark block.
 const DOTS = {
@@ -41,6 +38,13 @@ function ColumnHeading({ children }: { children: React.ReactNode }) {
 }
 
 export function Footer() {
+  // Phone is env-driven (hidden when unset); email/address stay informational.
+  const contactPhone = getContactPhone();
+  const contact: ContactRow[] = [
+    ...(contactPhone ? [{ icon: Phone, text: contactPhone, dir: 'ltr' as const }] : []),
+    { icon: Mail, text: 'hello@dar-alfakhama.sa', dir: 'ltr' as const },
+    { icon: MapPin, text: 'الرياض، المملكة العربية السعودية', dir: 'rtl' as const },
+  ];
   return (
     <footer className="relative overflow-hidden bg-navy text-white/80">
       <div className="h-px w-full bg-gradient-to-l from-transparent via-gold-400/50 to-transparent" aria-hidden />
@@ -80,7 +84,7 @@ export function Footer() {
           {/* Contact mini block */}
           <div className="flex flex-col gap-3 lg:col-span-3">
             <ColumnHeading>تواصل معنا</ColumnHeading>
-            {CONTACT.map(({ icon: Icon, text, dir }) => (
+            {contact.map(({ icon: Icon, text, dir }) => (
               <div key={text} className="flex items-center gap-2.5 text-sm text-white/65">
                 <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5 text-gold-200 ring-1 ring-white/10">
                   <Icon className="h-3.5 w-3.5" aria-hidden />

@@ -25,7 +25,7 @@ export const metadata = buildMetadata({
 const PAGE_SIZE = 9;
 const REVALIDATE = 60;
 
-type SearchParams = Promise<{ q?: string; featured?: string; page?: string }>;
+type SearchParams = Promise<{ q?: string; featured?: string; sort?: string; page?: string }>;
 
 function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
@@ -35,11 +35,13 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   const sp = await searchParams;
   const q = firstStr(sp.q).trim();
   const featured = firstStr(sp.featured) === 'true';
+  const sort = firstStr(sp.sort);
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
 
   const params = new URLSearchParams({ pageSize: String(PAGE_SIZE), page: String(page) });
   if (q) params.set('q', q);
   if (featured) params.set('featured', 'true');
+  if (sort) params.set('sort', sort);
 
   const result = await safeFetch<Paginated<PublicProjectListItem>>(
     `/public/projects?${params.toString()}`,
@@ -54,6 +56,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
     const p = new URLSearchParams();
     if (q) p.set('q', q);
     if (featured) p.set('featured', 'true');
+    if (sort) p.set('sort', sort);
     if (nextPage > 1) p.set('page', String(nextPage));
     const qs = p.toString();
     return qs ? `${routes.projects}?${qs}` : routes.projects;
@@ -70,7 +73,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
 
       {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
       <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <ProjectsFilterBar initialQ={q} initialFeatured={featured} />
+        <ProjectsFilterBar initialQ={q} initialFeatured={featured} initialSort={sort} />
       </Container>
 
       <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">

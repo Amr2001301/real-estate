@@ -5,6 +5,7 @@ import { routes } from '@/lib/routes';
 import { pickAr, formatNumber, cityLabel } from '@/lib/format';
 import type { PublicProjectListItem } from '@/lib/api-types';
 import { CoverImage } from '@/components/ui/CoverImage';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
 /**
  * Image-first showcase card: content overlaid on the cover image. `featured`
@@ -15,6 +16,7 @@ export function ProjectShowcaseCard({ project }: { project: PublicProjectListIte
   const name = pickAr(project.name, 'مشروع');
 
   return (
+    <div className="relative h-full">
     <Link
       href={routes.project(project.id) as Route}
       className="group relative block h-full overflow-hidden rounded-3xl shadow-card outline-none transition-shadow duration-300 hover:shadow-lift focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
@@ -50,5 +52,7 @@ export function ProjectShowcaseCard({ project }: { project: PublicProjectListIte
         </div>
       </div>
     </Link>
+      <FavoriteButton kind="project" id={project.id} className="absolute left-4 top-4 z-20" />
+    </div>
   );
 }

@@ -1,7 +1,11 @@
 import { SITE, siteUrl } from './seo';
+import { getContactPhone } from './contact';
 
 /** RealEstateAgent/Organization schema for the homepage. */
 export function organizationLd() {
+  // Sourced from NEXT_PUBLIC_CONTACT_PHONE; omitted entirely when unset
+  // (never a fake placeholder number).
+  const phone = getContactPhone();
   return {
     '@context': 'https://schema.org',
     '@type': 'RealEstateAgent',
@@ -9,7 +13,7 @@ export function organizationLd() {
     url: siteUrl('/'),
     description: SITE.description,
     areaServed: 'SA',
-    telephone: '+966110000000',
+    ...(phone ? { telephone: phone } : {}),
     address: {
       '@type': 'PostalAddress',
       addressCountry: 'SA',

@@ -1,18 +1,6 @@
 import { Section } from '@/components/ui/Section';
 import { PageHero } from '@/components/layout/PageHero';
-
-function CardSkeleton() {
-  return (
-    <div className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-soft">
-      <div className="aspect-[4/3] w-full bg-surface-soft" />
-      <div className="space-y-3 p-7">
-        <div className="h-3 w-1/3 rounded-full bg-surface-soft" />
-        <div className="h-7 w-1/2 rounded-full bg-surface-soft" />
-        <div className="mt-5 h-3 w-2/3 rounded-full bg-surface-soft" />
-      </div>
-    </div>
-  );
-}
+import { Skeleton, SkeletonCard } from '@/components/ui/skeleton';
 
 export default function UnitsLoading() {
   return (
@@ -23,10 +11,13 @@ export default function UnitsLoading() {
         subtitle="اكتشف مجموعة مختارة من الشقق والفيلات المصممة لتناسب أسلوب حياتك واستثمارك."
       />
       <Section tone="canvas">
-        <div className="h-40 rounded-3xl border border-hairline bg-surface shadow-soft" />
-        <div className="mt-12 grid animate-pulse gap-7 md:grid-cols-2 lg:grid-cols-3">
+        <span className="sr-only">جارٍ التحميل…</span>
+        {/* Filter bar (taller — more controls) */}
+        <Skeleton className="h-40 w-full rounded-3xl" />
+        {/* Card grid */}
+        <div className="mt-12 grid gap-7 md:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
-            <CardSkeleton key={i} />
+            <SkeletonCard key={i} />
           ))}
         </div>
       </Section>

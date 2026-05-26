@@ -7,6 +7,7 @@ import type { PublicProjectListItem } from '@/lib/api-types';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Badge } from '@/components/ui/Badge';
 import { CoverImage } from '@/components/ui/CoverImage';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
 export function ProjectCard({ project }: { project: PublicProjectListItem }) {
   const name = pickAr(project.name, 'مشروع');
@@ -14,6 +15,7 @@ export function ProjectCard({ project }: { project: PublicProjectListItem }) {
   const units = project.availableUnitsCount;
 
   return (
+    <div className="relative h-full">
     <Link
       href={routes.project(project.id) as Route}
       className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
@@ -54,5 +56,7 @@ export function ProjectCard({ project }: { project: PublicProjectListItem }) {
         </div>
       </PremiumCard>
     </Link>
+      <FavoriteButton kind="project" id={project.id} className="absolute left-3 top-3 z-20" />
+    </div>
   );
 }

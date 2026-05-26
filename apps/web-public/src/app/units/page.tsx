@@ -43,6 +43,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const priceMax = firstStr(sp.priceMax);
   const areaMin = firstStr(sp.areaMin);
   const areaMax = firstStr(sp.areaMax);
+  const sort = firstStr(sp.sort);
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
 
   const apiParams = new URLSearchParams({ pageSize: String(PAGE_SIZE), page: String(page) });
@@ -56,6 +57,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (priceMax) apiParams.set('priceMax', priceMax);
   if (areaMin) apiParams.set('areaMin', areaMin);
   if (areaMax) apiParams.set('areaMax', areaMax);
+  if (sort) apiParams.set('sort', sort);
 
   const result = await safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, {
     revalidate: REVALIDATE,
@@ -76,6 +78,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
     price: derivePriceValue(priceMin, priceMax),
     area: deriveAreaValue(areaMin, areaMax),
     status,
+    sort,
   };
 
   function buildHref(nextPage: number): string {

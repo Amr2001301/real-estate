@@ -57,7 +57,19 @@ export class UpdateUnitDto {
   @IsOptional() @IsEnum(UnitStatus) status?: UnitStatus;
 }
 
+/** Whitelisted public sort options — each maps to a real scalar Unit column. */
+export enum UnitSort {
+  newest = 'newest',
+  price_asc = 'price_asc',
+  price_desc = 'price_desc',
+  area_asc = 'area_asc',
+  area_desc = 'area_desc',
+  bedrooms_asc = 'bedrooms_asc',
+  bedrooms_desc = 'bedrooms_desc',
+}
+
 export class UnitQueryDto {
+  @IsOptional() @IsEnum(UnitSort) sort?: UnitSort;
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() buildingId?: string;
   @IsOptional() @IsString() city?: string;

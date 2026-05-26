@@ -20,6 +20,8 @@
     --c-success: 62 124 90; /* #3E7C5A */
     --c-warning: 201 138 43; /* #C98A2B */
     --c-error: 178 59 59; /* #B23B3B */
+    /* Skeleton shimmer sweep highlight (over surface-soft). */
+    --skeleton-highlight: rgb(255 255 255 / 0.55);
   }
 
   /* Warm Luxe Noir (dark) — deep navy canvas keeps the brand hue; cards sit a
@@ -39,6 +41,8 @@
     --c-success: 91 173 130; /* #5BAD82 */
     --c-warning: 226 173 80; /* #E2AD50 */
     --c-error: 224 114 114; /* #E07272 */
+    /* Subtle on the dark navy surface-soft. */
+    --skeleton-highlight: rgb(255 255 255 / 0.07);
   }
 
   html,
@@ -98,5 +102,35 @@
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Skeleton base: recessed surface block with a gradient sweep overlay.
+     The sweep is decorative; under reduced-motion it's removed (static block). */
+  .skeleton {
+    @apply relative overflow-hidden bg-surface-soft;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background-image: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--skeleton-highlight) 50%,
+      transparent 100%
+    );
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      display: none;
+    }
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
   }
 }

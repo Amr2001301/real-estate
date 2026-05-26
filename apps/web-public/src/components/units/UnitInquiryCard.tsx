@@ -6,6 +6,7 @@ import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/
 import { ButtonLink } from '@/components/ui/Button';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { IconCircle } from '@/components/ui/IconCircle';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
 /**
  * Premium inquiry card for a unit. The info/visit CTAs deep-link to /contact;
@@ -59,6 +60,8 @@ export function UnitInquiryCard({
         <ButtonLink href={routes.contact} variant="outline" size="md" className="w-full">
           تحدث مع مستشار
         </ButtonLink>
+
+        <FavoriteButton kind="unit" id={unitId} variant="inline" />
 
         {(contactPhone || whatsappPhone) && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

@@ -1,7 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, ProjectStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
-import { CreateProjectDto, ProjectQueryDto, UpdateProjectDto } from './dto/project.dto';
+import { CreateProjectDto, ProjectQueryDto, ProjectSort, UpdateProjectDto } from './dto/project.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import {
   serializePublicProjectDetail,
@@ -48,11 +48,18 @@ export class ProjectsService {
         : {}),
     };
 
+    // Default (and explicit `newest`): featured first, then most recent.
+    // `oldest` maps to createdAt ascending. No price/name sort (see ProjectSort).
+    const orderBy: Prisma.ProjectOrderByWithRelationInput[] =
+      query.sort === ProjectSort.oldest
+        ? [{ createdAt: 'asc' }]
+        : [{ featured: 'desc' }, { createdAt: 'desc' }];
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.project.findMany({
         where,
         ...takeSkip({ page, pageSize }),
-        orderBy: [{ featured: 'desc' }, { createdAt: 'desc' }],
+        orderBy,
         include: { media: { orderBy: { order: 'asc' }, take: 1 } },
       }),
       this.prisma.project.count({ where }),

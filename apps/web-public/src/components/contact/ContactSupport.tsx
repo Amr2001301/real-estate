@@ -1,17 +1,17 @@
-import type { Route } from 'next';
 import { Phone, Mail, MessageCircle, Clock, MapPin, Navigation } from 'lucide-react';
+import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { OpenStatus } from './OpenStatus';
 
-const PHONE = '+966 11 000 0000';
-const PHONE_TEL = '+966110000000';
 const EMAIL = 'hello@dar-alfakhama.sa';
 const MAP_URL = 'https://maps.google.com/?q=الرياض،+المملكة+العربية+السعودية';
+const WHATSAPP_MESSAGE = 'مرحبًا، أرغب في الاستفسار عن خدماتكم العقارية.';
 
 /** Side support block: instant help, working hours, and HQ location. */
 export function ContactSupport() {
-  const whatsapp = process.env.NEXT_PUBLIC_WHATSAPP_URL;
+  const contactPhone = getContactPhone();
+  const whatsappPhone = getWhatsappPhone();
 
   return (
     <div className="space-y-5">
@@ -30,20 +30,22 @@ export function ContactSupport() {
 
           {/* Tappable contact rows */}
           <div className="mt-5 space-y-2.5">
-            <a
-              href={`tel:${PHONE_TEL}`}
-              className="group flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 transition-colors hover:bg-white/[0.1]"
-            >
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-400/15 text-gold-200">
-                <Phone className="h-4 w-4" aria-hidden />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-xs text-white/55">اتصل بنا</span>
-                <span dir="ltr" className="block font-display text-lg leading-tight text-gold-100 group-hover:text-white">
-                  {PHONE}
+            {contactPhone && (
+              <a
+                href={telHref(contactPhone)}
+                className="group flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 transition-colors hover:bg-white/[0.1]"
+              >
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-400/15 text-gold-200">
+                  <Phone className="h-4 w-4" aria-hidden />
                 </span>
-              </span>
-            </a>
+                <span className="min-w-0">
+                  <span className="block text-xs text-white/55">اتصل بنا</span>
+                  <span dir="ltr" className="block font-display text-lg leading-tight text-gold-100 group-hover:text-white">
+                    {contactPhone}
+                  </span>
+                </span>
+              </a>
+            )}
             <a
               href={`mailto:${EMAIL}`}
               className="group flex items-center gap-3 rounded-2xl bg-white/[0.06] p-3 ring-1 ring-white/10 transition-colors hover:bg-white/[0.1]"
@@ -60,8 +62,8 @@ export function ContactSupport() {
             </a>
           </div>
 
-          {whatsapp && (
-            <ButtonLink href={whatsapp as Route} variant="gold" size="md" className="mt-4 w-full">
+          {whatsappPhone && (
+            <ButtonLink href={whatsappHref(whatsappPhone, WHATSAPP_MESSAGE)} variant="gold" size="md" className="mt-4 w-full">
               <MessageCircle className="h-5 w-5" aria-hidden />
               تواصل عبر واتساب
             </ButtonLink>

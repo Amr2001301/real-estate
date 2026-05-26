@@ -2,15 +2,17 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Star, X } from 'lucide-react';
+import { Search, Star, X, ArrowDownUp, ChevronDown } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { Input, Select } from '@/components/ui/Input';
+import { PROJECT_SORT_OPTIONS } from '@/lib/sort-options';
 
 interface ProjectsFilterBarProps {
   initialQ: string;
   initialFeatured: boolean;
+  initialSort: string;
 }
 
 /**
@@ -18,17 +20,20 @@ interface ProjectsFilterBarProps {
  * featured) — both already supported by the public projects endpoint. `q`
  * also matches city server-side, so it doubles as a location search.
  */
-export function ProjectsFilterBar({ initialQ, initialFeatured }: ProjectsFilterBarProps) {
+export function ProjectsFilterBar({ initialQ, initialFeatured, initialSort }: ProjectsFilterBarProps) {
   const router = useRouter();
   const [q, setQ] = useState(initialQ);
   const [featured, setFeatured] = useState(initialFeatured);
+  const [sort, setSort] = useState(initialSort);
 
-  function apply(next: { q?: string; featured?: boolean }) {
+  function apply(next: { q?: string; featured?: boolean; sort?: string }) {
     const params = new URLSearchParams();
     const nextQ = next.q ?? q;
     const nextFeatured = next.featured ?? featured;
+    const nextSort = next.sort ?? sort;
     if (nextQ.trim()) params.set('q', nextQ.trim());
     if (nextFeatured) params.set('featured', 'true');
+    if (nextSort) params.set('sort', nextSort);
     const qs = params.toString();
     router.push((qs ? `${routes.projects}?${qs}` : routes.projects) as never);
   }
@@ -36,10 +41,11 @@ export function ProjectsFilterBar({ initialQ, initialFeatured }: ProjectsFilterB
   function reset() {
     setQ('');
     setFeatured(false);
+    setSort('');
     router.push(routes.projects as never);
   }
 
-  const hasFilters = q.trim() !== '' || featured;
+  const hasFilters = q.trim() !== '' || featured || sort !== '';
 
   return (
     <form
@@ -79,6 +85,24 @@ export function ProjectsFilterBar({ initialQ, initialFeatured }: ProjectsFilterB
           <Star className={cn('h-4 w-4', featured && 'fill-gold-400 text-gold-500')} aria-hidden />
           مشاريع مميزة
         </button>
+
+        <div className="relative">
+          <ArrowDownUp className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
+          <Select
+            value={sort}
+            onChange={(e) => {
+              setSort(e.target.value);
+              apply({ sort: e.target.value });
+            }}
+            aria-label="ترتيب حسب"
+            className="h-12 pr-11 pl-9"
+          >
+            {PROJECT_SORT_OPTIONS.map((o) => (
+              <option key={o.value || 'default'} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+          <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
+        </div>
 
         <div className="flex items-center gap-3">
           <Button type="submit" size="md">

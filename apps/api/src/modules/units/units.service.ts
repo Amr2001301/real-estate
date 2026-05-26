@@ -9,12 +9,39 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import {
   CreateUnitDto,
   UnitQueryDto,
+  UnitSort,
   UpdateUnitDto,
   UpdateUnitStatusDto,
   CalcInstallmentDto,
 } from './dto/unit.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
+
+/**
+ * Map a whitelisted UnitSort to a Prisma orderBy. Each adds a stable `id`
+ * tiebreaker for deterministic pagination. No sort → the existing default
+ * (available first, then cheapest) is preserved.
+ */
+function unitOrderBy(sort?: UnitSort): Prisma.UnitOrderByWithRelationInput[] {
+  switch (sort) {
+    case UnitSort.newest:
+      return [{ createdAt: 'desc' }, { id: 'asc' }];
+    case UnitSort.price_asc:
+      return [{ price: 'asc' }, { id: 'asc' }];
+    case UnitSort.price_desc:
+      return [{ price: 'desc' }, { id: 'asc' }];
+    case UnitSort.area_asc:
+      return [{ area: 'asc' }, { id: 'asc' }];
+    case UnitSort.area_desc:
+      return [{ area: 'desc' }, { id: 'asc' }];
+    case UnitSort.bedrooms_asc:
+      return [{ bedrooms: 'asc' }, { id: 'asc' }];
+    case UnitSort.bedrooms_desc:
+      return [{ bedrooms: 'desc' }, { id: 'asc' }];
+    default:
+      return [{ status: 'asc' }, { price: 'asc' }];
+  }
+}
 
 @Injectable()
 export class UnitsService {
@@ -91,7 +118,7 @@ export class UnitsService {
       this.prisma.unit.findMany({
         where,
         ...takeSkip({ page, pageSize }),
-        orderBy: [{ status: 'asc' }, { price: 'asc' }],
+        orderBy: unitOrderBy(query.sort),
         include: {
           media: { orderBy: { order: 'asc' }, take: 1 },
           building: { include: { phase: { include: { project: true } } } },

@@ -7,6 +7,7 @@ import type { PublicUnit } from '@/lib/api-types';
 import { cn } from '@/lib/cn';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { CoverImage } from '@/components/ui/CoverImage';
+import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
 const STATUS: Record<string, { label: string; dot: string }> = {
   AVAILABLE: { label: 'متاحة', dot: 'bg-success' },
@@ -48,6 +49,7 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
   if (unit.area > 0) specs.push({ icon: Maximize, label: 'م²', value: formatNumber(unit.area) });
 
   return (
+    <div className="relative h-full">
     <Link
       href={routes.unit(unit.id) as Route}
       className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
@@ -65,7 +67,7 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
           </span>
           {/* Project — top end (left in RTL) */}
           {projectName && (
-            <span className="absolute left-4 top-4 inline-flex max-w-[55%] items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
+            <span className="absolute bottom-4 left-4 inline-flex max-w-[55%] items-center gap-1.5 rounded-full bg-navy/55 px-3 py-1 text-xs font-medium text-white ring-1 ring-white/15 backdrop-blur-md">
               <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-300" aria-hidden />
               <span className="truncate">{projectName}</span>
             </span>
@@ -123,5 +125,7 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
         </div>
       </PremiumCard>
     </Link>
+      <FavoriteButton kind="unit" id={unit.id} className="absolute left-3 top-3 z-20" />
+    </div>
   );
 }

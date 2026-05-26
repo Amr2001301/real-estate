@@ -2,6 +2,7 @@ import { Check, Headset } from 'lucide-react';
 import { Container } from '@/components/ui/Container';
 import { Badge } from '@/components/ui/Badge';
 import { ContactForm } from '@/components/contact/ContactForm';
+import { getContactPhone, telHref } from '@/lib/contact';
 
 const POINTS = [
   'ترشيحات مناسبة حسب نوع العقار',
@@ -17,6 +18,7 @@ const DOTS = {
 
 /** Premium lead-capture band — warm gold panel with an elevated white form card. */
 export function HomeContact() {
+  const contactPhone = getContactPhone();
   return (
     <section className="py-10 sm:py-12 lg:py-14">
       <Container>
@@ -51,13 +53,15 @@ export function HomeContact() {
                 ))}
               </ul>
 
-              <a
-                href="tel:+966110000000"
-                className="mt-9 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-navy px-6 text-[15px] font-medium text-white shadow-soft transition-all hover:-translate-y-0.5 hover:bg-navy-700"
-              >
-                <Headset className="h-5 w-5 text-gold-300" aria-hidden />
-                تواصل مع مستشار
-              </a>
+              {contactPhone && (
+                <a
+                  href={telHref(contactPhone)}
+                  className="mt-9 inline-flex h-12 items-center justify-center gap-2 rounded-full bg-navy px-6 text-[15px] font-medium text-white shadow-soft transition-all hover:-translate-y-0.5 hover:bg-navy-700"
+                >
+                  <Headset className="h-5 w-5 text-gold-300" aria-hidden />
+                  تواصل مع مستشار
+                </a>
+              )}
             </div>
 
             {/* Elevated white form card — left in RTL. Reuses the real lead form. */}

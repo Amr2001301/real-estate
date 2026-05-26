@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler } from 'lucide-react';
+import { Search, X, Layers, ChevronDown, Building2, BedDouble, Bath, Wallet, Tag, Ruler, ArrowDownUp } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { PRICE_RANGES, AREA_RANGES, UNIT_TYPES as TYPES, ROOM_OPTIONS as ROOMS } from '@/lib/unit-filters';
+import { UNIT_SORT_OPTIONS } from '@/lib/sort-options';
 
 export interface UnitsFilterValues {
   projectId: string;
@@ -17,6 +18,7 @@ export interface UnitsFilterValues {
   price: string;
   area: string;
   status: string;
+  sort: string;
 }
 
 const STATUSES = [
@@ -64,9 +66,10 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
   const [price, setPrice] = useState(initial.price);
   const [area, setArea] = useState(initial.area);
   const [status, setStatus] = useState(initial.status);
+  const [sort, setSort] = useState(initial.sort);
 
   function pushWith(next: Partial<UnitsFilterValues>) {
-    const v = { type, bedrooms, bathrooms, price, area, status, ...next };
+    const v = { type, bedrooms, bathrooms, price, area, status, sort, ...next };
     const params = new URLSearchParams();
     if (initial.projectId) params.set('projectId', initial.projectId);
     if (initial.city) params.set('city', initial.city);
@@ -80,6 +83,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
     const arange = AREA_RANGES.find((r) => r.value === v.area);
     if (arange?.min) params.set('areaMin', arange.min);
     if (arange?.max) params.set('areaMax', arange.max);
+    if (v.sort) params.set('sort', v.sort);
     const qs = params.toString();
     router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
   }
@@ -91,6 +95,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
     setPrice('');
     setArea('');
     setStatus('');
+    setSort('');
     const params = new URLSearchParams();
     if (initial.projectId) params.set('projectId', initial.projectId);
     if (initial.city) params.set('city', initial.city);
@@ -98,7 +103,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
     router.push((qs ? `${routes.units}?${qs}` : routes.units) as never);
   }
 
-  const activeCount = [type, bedrooms, bathrooms, price, area, status].filter(Boolean).length;
+  const activeCount = [type, bedrooms, bathrooms, price, area, status, sort].filter(Boolean).length;
 
   return (
     <form
@@ -115,7 +120,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(6,minmax(0,1fr))_auto]">
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(7,minmax(0,1fr))_auto]">
         <CompactSelect icon={Building2} label="نوع العقار" value={type} onChange={setType}>
           {TYPES.map((t) => (
             <option key={t.value} value={t.value}>{t.label}</option>
@@ -144,6 +149,11 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
         <CompactSelect icon={Tag} label="حالة الوحدة" value={status} onChange={setStatus}>
           {STATUSES.map((s) => (
             <option key={s.value || 'all'} value={s.value}>{s.label}</option>
+          ))}
+        </CompactSelect>
+        <CompactSelect icon={ArrowDownUp} label="ترتيب حسب" value={sort} onChange={setSort}>
+          {UNIT_SORT_OPTIONS.map((o) => (
+            <option key={o.value || 'default'} value={o.value}>{o.label}</option>
           ))}
         </CompactSelect>
         <Button type="submit" size="md" className="col-span-2 h-11 w-full sm:col-span-3 lg:col-auto lg:w-auto lg:px-6">
