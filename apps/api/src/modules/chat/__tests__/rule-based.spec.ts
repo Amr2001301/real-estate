@@ -7,6 +7,7 @@ import {
   extractPropertyType,
 } from '../providers/rule-based/slots';
 import { detectIntent, detectFaqTopic } from '../providers/rule-based/intents';
+import { detectGuidedAction } from '../providers/rule-based/guided';
 import { FAQ_ANSWERS } from '../providers/rule-based/responses';
 import { RuleBasedChatProvider } from '../providers/rule-based.provider';
 import type { AssistantOutput } from '../providers/chat-provider';
@@ -707,5 +708,91 @@ describe('FreeAI polish: city/type recognition + smarter guided flow', () => {
     expect(catalog.unitCalls[0]?.city).toBe('جدة');
     expect(catalog.unitCalls[0]?.propertyType).toBeUndefined();
     expect(out.cards?.length).toBeGreaterThan(0);
+  });
+});
+
+describe('FreeAI guided assistant: generalized vague-input handling', () => {
+  let catalog: FakeCatalogTool;
+  let conversion: FakeConversionTool;
+  let provider: RuleBasedChatProvider;
+  const turn = (userMessage: string, context: AssistantOutput['context'] | null = null) =>
+    provider.generateReply({ locale: 'ar', messages: [], userMessage, context });
+
+  beforeEach(() => {
+    catalog = new FakeCatalogTool();
+    conversion = new FakeConversionTool();
+    provider = new RuleBasedChatProvider(catalog, conversion);
+  });
+
+  it('maps vague/help phrases to broad guided actions (not exact matches)', () => {
+    expect(detectGuidedAction(normalizeArabic('مش عارف'))).toBe('HELP_ME_CHOOSE');
+    expect(detectGuidedAction(normalizeArabic('اختارلي اللي يناسبني'))).toBe('HELP_ME_CHOOSE');
+    expect(detectGuidedAction(normalizeArabic('رشحلي'))).toBe('RECOMMEND');
+    expect(detectGuidedAction(normalizeArabic('اي المناطق المتاحه'))).toBe('SHOW_AVAILABLE_CITIES');
+    expect(detectGuidedAction(normalizeArabic('الانواع المتاحه'))).toBe('SHOW_AVAILABLE_TYPES');
+    expect(detectGuidedAction(normalizeArabic('عرض كل المتاح'))).toBe('SHOW_ALL_IN_CITY');
+    expect(detectGuidedAction(normalizeArabic('بدون ميزانية'))).toBe('RELAX_BUDGET');
+    expect(detectGuidedAction(normalizeArabic('ابدأ من جديد'))).toBe('START_OVER');
+    expect(detectGuidedAction(normalizeArabic('شقة في جدة'))).toBeNull(); // concrete → not guided
+  });
+
+  it('"عايز مكتب في مكان حلو" keeps the office type and asks for a city with chips', async () => {
+    const out = await turn('عايز مكتب في مكان حلو');
+    expect(out.missingFields).toEqual(['city']);
+    expect(out.quickReplies).toContain('الرياض'); // real catalog cities
+    expect((out.context as { slots: { propertyType?: string } }).slots.propertyType).toBe('office');
+  });
+
+  it('"اي المناطق المتاحه" while city is pending shows city options (not the same question)', async () => {
+    const t1 = await turn('ابحث عن وحدة'); // → ask city
+    expect(t1.missingFields).toEqual(['city']);
+    const t2 = await turn('اي المناطق المتاحه', t1.context);
+    expect(t2.content).toContain('المدن المتاحة');
+    expect(t2.content).not.toBe(t1.content);
+    expect(t2.quickReplies).toContain('جدة');
+  });
+
+  it('"مش عارف" while type is pending shows the available types', async () => {
+    const t1 = await turn('في جدة'); // city → ask type
+    expect(t1.missingFields).toEqual(['propertyType']);
+    const t2 = await turn('مش عارف', t1.context);
+    expect(t2.content).toContain('الأنواع المتاحة');
+    expect(t2.quickReplies && t2.quickReplies.length).toBeGreaterThan(0);
+  });
+
+  it('completes a search via a city chip then a type chip', async () => {
+    catalog.unitResult = { total: 1, cards: [{ type: 'unit', id: 'u1', title: 'شقة', href: '/units/u1' }] };
+    const t1 = await turn('ابحث عن وحدة');
+    const t2 = await turn('جدة', t1.context); // city chip
+    expect(t2.missingFields).toEqual(['propertyType']);
+    const t3 = await turn('شقة', t2.context); // type chip → search
+    expect(t3.cards).toHaveLength(1);
+    expect(catalog.unitCalls.at(-1)).toMatchObject({ city: 'جدة', propertyType: 'apartment' });
+  });
+
+  it('"عرض كل المتاح في جدة" searches the city with the type dropped', async () => {
+    catalog.unitResult = { total: 4, cards: [{ type: 'unit', id: 'u1', title: 'شقة', href: '/units/u1' }] };
+    const out = await turn('عرض كل المتاح في جدة');
+    expect(catalog.unitCalls).toHaveLength(1);
+    expect(catalog.unitCalls[0]?.city).toBe('جدة');
+    expect(catalog.unitCalls[0]?.propertyType).toBeUndefined();
+    expect(out.cards?.length).toBeGreaterThan(0);
+  });
+
+  it('"ابدأ من جديد" clears guided search state and shows a fresh menu', async () => {
+    catalog.unitResult = { total: 1, cards: [{ type: 'unit', id: 'u1', title: 'فيلا', href: '/units/u1' }] };
+    const t1 = await turn('فيلا في الرياض'); // builds up slots + a search
+    const out = await turn('ابدأ من جديد', t1.context);
+    const ctx = out.context as { slots: Record<string, unknown>; lastResultIds?: string[] };
+    expect(Object.keys(ctx.slots)).toHaveLength(0); // slots cleared
+    expect(ctx.lastResultIds).toBeUndefined();
+    expect(out.quickReplies).toContain('الرياض');
+  });
+
+  it('repeated unrecognized input escalates instead of repeating the same fallback', async () => {
+    const t1 = await turn('asdkjfh');
+    const t2 = await turn('qwerty zzz', t1.context);
+    expect(t2.content).not.toBe(t1.content); // different message
+    expect(t2.ctas?.some((c) => c.kind === 'whatsapp')).toBe(true); // offers a human
   });
 });

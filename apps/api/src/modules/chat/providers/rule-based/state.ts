@@ -21,6 +21,8 @@ export interface ChatState {
   lastResultIds?: string[];
   /** Active lead-capture flow (info/visit), if any. */
   conversion?: ConversionState | null;
+  /** Consecutive unrecognized turns, so the fallback can escalate (not repeat). */
+  unknownStreak?: number;
   turnCount: number;
 }
 
@@ -41,6 +43,7 @@ export function loadState(raw: Record<string, unknown> | null | undefined): Chat
     lastSearchFilters: r.lastSearchFilters ?? null,
     lastResultIds: Array.isArray(r.lastResultIds) ? r.lastResultIds : undefined,
     conversion: r.conversion ?? null,
+    unknownStreak: typeof r.unknownStreak === 'number' ? r.unknownStreak : 0,
     turnCount: typeof r.turnCount === 'number' ? r.turnCount : 0,
   };
 }

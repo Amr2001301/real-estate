@@ -8,6 +8,7 @@ import {
 import { normalizeArabic } from './rule-based/normalize';
 import { detectIntent, detectFaqTopic, type Intent } from './rule-based/intents';
 import { extractSlots, detectSlotReset, type SlotField, type Slots } from './rule-based/slots';
+import { detectGuidedAction, type GuidedAction } from './rule-based/guided';
 import { loadState, mergeSlots, type ChatState } from './rule-based/state';
 import {
   CatalogSearchTool,
@@ -65,6 +66,11 @@ export class RuleBasedChatProvider extends ChatProvider {
       return this.handleConversion(state, norm, input.userMessage);
     }
 
+    // Track consecutive unrecognized turns so the fallback escalates, never
+    // repeats. Optimistically reset; only the unknown branch re-raises it.
+    const priorUnknown = state.unknownStreak ?? 0;
+    state.unknownStreak = 0;
+
     const hasActiveSearch = SEARCH_INTENTS.has((state.intent ?? 'unknown') as Intent);
 
     // During an active search, "غيّر الميزانية/المدينة" clears one slot and
@@ -74,14 +80,17 @@ export class RuleBasedChatProvider extends ChatProvider {
       if (reset) return this.askForReset(reset, state);
     }
 
-    // "اعرض كل الوحدات [في X]" — browse a whole city: drop the type constraint
-    // and search by city only (keeps an active search from feeling stuck).
-    if (/كل الوحدات|كل العقارات|اعرض الكل|عرض الكل|الكل في/.test(norm) && (incoming.city || state.slots.city)) {
+    // "أكثر من ٥ مليون" while choosing budget → no upper cap (not a ≤ filter).
+    if (state.pendingField === 'budgetMax' && /اكثر من|اكتر من/.test(norm)) {
+      state.slots.budgetMax = undefined;
       state.intent = 'search_units';
-      state.slots = mergeSlots(state.slots, incoming);
-      state.slots.propertyType = undefined;
-      return this.runUnitSearch(state);
+      return this.routeSearch(state);
     }
+
+    // Broad guided actions (vague/help language) → always respond with real
+    // catalog options instead of a brittle phrase match or a dead end.
+    const guided = detectGuidedAction(norm);
+    if (guided) return this.handleGuided(guided, state, incoming);
 
     const intent = detectIntent(norm, hasActiveSearch);
 
@@ -112,10 +121,87 @@ export class RuleBasedChatProvider extends ChatProvider {
         return this.startSearch('search_units', state, incoming);
 
       default:
-        return this.reply(copy.UNKNOWN_REPLY, this.resetFlow(state), {
-          quickReplies: copy.HOME_QUICK_REPLIES,
-        });
+        return this.handleUnknown(state, priorUnknown);
     }
+  }
+
+  /** Route a broad guided action to real options, in the current context. */
+  private async handleGuided(
+    action: GuidedAction,
+    state: ChatState,
+    incoming: Slots,
+  ): Promise<AssistantOutput> {
+    // Fold in any concrete criteria the user did include (e.g. "مكتب في مكان حلو").
+    state.slots = mergeSlots(state.slots, incoming);
+
+    switch (action) {
+      case 'START_OVER':
+        state.slots = {};
+        state.intent = 'search_units';
+        state.pendingField = null;
+        state.lastSearchIntent = null;
+        state.lastSearchFilters = null;
+        state.lastResultIds = undefined;
+        return this.guidedMenu(state);
+
+      case 'CONTACT_CONSULTANT':
+        return this.reply(copy.HUMAN_HANDOFF, state, { ctas: [this.whatsappCta()] });
+
+      case 'SHOW_AVAILABLE_CITIES':
+        return this.showCities(state);
+
+      case 'SHOW_AVAILABLE_TYPES':
+        return this.showTypes(state);
+
+      case 'RELAX_BUDGET':
+        state.slots.budgetMax = undefined;
+        state.intent = 'search_units';
+        return this.routeSearch(state);
+
+      case 'RELAX_TYPE':
+      case 'SHOW_ALL_IN_CITY':
+        state.slots.propertyType = undefined;
+        state.intent = 'search_units';
+        if (state.slots.city) return this.runUnitSearch(state);
+        return this.askCity(state);
+
+      case 'HELP_ME_CHOOSE':
+      case 'RECOMMEND':
+      case 'SHOW_OPTIONS':
+      default:
+        return this.guidedAssist(state);
+    }
+  }
+
+  /**
+   * "ساعدني / مش عارف / اختارلي" — answer with options for whatever we're waiting
+   * on; otherwise advance the search if we already have enough, else guide.
+   */
+  private async guidedAssist(state: ChatState): Promise<AssistantOutput> {
+    if (state.pendingField === 'city') return this.showCities(state);
+    if (state.pendingField === 'propertyType') return this.showTypes(state);
+    if (state.pendingField === 'budgetMax') return this.askBudget(state);
+
+    state.intent = 'search_units';
+    const s = state.slots;
+    if (s.city || s.propertyType || s.budgetMax !== undefined || s.minRooms !== undefined) {
+      return this.routeSearch(state);
+    }
+    return this.guidedMenu(state);
+  }
+
+  private async handleUnknown(state: ChatState, priorUnknown: number): Promise<AssistantOutput> {
+    state.unknownStreak = priorUnknown + 1;
+    this.resetFlow(state);
+    // First miss: short menu. Repeated misses: escalate with real cities + human.
+    if (state.unknownStreak >= 2) {
+      const cities = await this.cityChips();
+      return this.reply(copy.escalatedUnknownReply(cities), state, {
+        quickReplies: [...cities.slice(0, 3), 'تواصل مع مستشار'],
+        ctas: [this.whatsappCta()],
+      });
+    }
+    return this.reply(copy.UNKNOWN_REPLY, state, { quickReplies: copy.HOME_QUICK_REPLIES });
   }
 
   /**
@@ -132,11 +218,18 @@ export class RuleBasedChatProvider extends ChatProvider {
   ): Promise<AssistantOutput> {
     state.intent = intent;
     state.slots = mergeSlots(state.slots, incoming);
-    const s = state.slots;
+    return this.routeSearch(state, leadText);
+  }
 
+  /**
+   * Decide the next step from the current slots: ask city → (projects: search;
+   * units: ask type unless we already have type/budget/rooms) → search.
+   */
+  private async routeSearch(state: ChatState, leadText?: string): Promise<AssistantOutput> {
+    const s = state.slots;
     if (!s.city) return this.askCity(state, leadText);
 
-    if (intent === 'search_projects') {
+    if (state.intent === 'search_projects') {
       state.pendingField = null;
       return this.runProjectSearch(state);
     }
@@ -149,6 +242,7 @@ export class RuleBasedChatProvider extends ChatProvider {
   }
 
   private async askCity(state: ChatState, leadText?: string): Promise<AssistantOutput> {
+    state.intent = state.intent ?? 'search_units';
     state.pendingField = 'city';
     const cities = await this.cityChips();
     const prompt = leadText ? `${leadText}\n${copy.SLOT_PROMPTS.city}` : copy.SLOT_PROMPTS.city;
@@ -159,6 +253,44 @@ export class RuleBasedChatProvider extends ChatProvider {
     state.pendingField = 'propertyType';
     const types = await this.typeChips();
     return this.reply(copy.TYPE_PROMPT, state, { missingFields: ['propertyType'], quickReplies: types });
+  }
+
+  private async askBudget(state: ChatState): Promise<AssistantOutput> {
+    state.pendingField = 'budgetMax';
+    return this.reply(copy.BUDGET_PROMPT, state, {
+      missingFields: ['budgetMax'],
+      quickReplies: copy.BUDGET_QUICK_REPLIES,
+    });
+  }
+
+  /** Fresh guided opener (city chips), used by help/start-over with no criteria. */
+  private async guidedMenu(state: ChatState): Promise<AssistantOutput> {
+    state.intent = 'search_units';
+    state.pendingField = 'city';
+    const cities = await this.cityChips();
+    return this.reply(copy.GUIDED_MENU, state, { missingFields: ['city'], quickReplies: cities });
+  }
+
+  /** List real available cities and wait for a city pick. */
+  private async showCities(state: ChatState): Promise<AssistantOutput> {
+    state.intent = 'search_units';
+    state.pendingField = 'city';
+    const cities = await this.cityChips();
+    return this.reply(copy.availableCitiesReply(cities), state, {
+      missingFields: ['city'],
+      quickReplies: cities,
+    });
+  }
+
+  /** List real available types and wait for a type pick. */
+  private async showTypes(state: ChatState): Promise<AssistantOutput> {
+    state.intent = 'search_units';
+    state.pendingField = 'propertyType';
+    const types = await this.typeChips();
+    return this.reply(copy.availableTypesReply(types), state, {
+      missingFields: ['propertyType'],
+      quickReplies: types,
+    });
   }
 
   private async runUnitSearch(state: ChatState): Promise<AssistantOutput> {

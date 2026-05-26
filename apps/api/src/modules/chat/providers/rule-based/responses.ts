@@ -159,7 +159,7 @@ export const CONVERSION_INVALID = {
 } as const;
 
 export function choosePropertyPrompt(count: number): string {
-  return `أي عقار من النتائج السابقة تريد تحديد موعد لزيارته؟ اكتب رقمه (من 1 إلى ${count}).`;
+  return `أي عقار من النتائج تريد تحديد موعد لزيارته؟ اكتب رقمه من 1 إلى ${count} (مثلاً: 1).`;
 }
 
 export const NEED_PROPERTY_FIRST =
@@ -208,6 +208,38 @@ export const NO_PROJECT_RESULTS =
 
 /** Asked after a city is known and no type/budget was given (one follow-up). */
 export const TYPE_PROMPT = 'تفضّل شقة، فيلا، استوديو، دوبلكس، أم تاون هاوس؟';
+
+// ---- Guided mode (vague input → real options) ----
+
+/** Warm opener when the user asks for help/recommendations with no criteria. */
+export const GUIDED_MENU =
+  'بكل سرور، خليني أساعدك تلاقي الأنسب 👌 اختر مدينة للبدء، أو اكتب نوع العقار الذي يناسبك:';
+
+export function availableCitiesReply(cities: string[]): string {
+  if (cities.length === 0) return 'اكتب اسم المدينة التي تريد البحث فيها، أو تواصل مع مستشار.';
+  return `المدن المتاحة حاليًا: ${cities.join('، ')}. أي مدينة تفضّل؟`;
+}
+
+export function availableTypesReply(types: string[]): string {
+  if (types.length === 0) return TYPE_PROMPT;
+  return `الأنواع المتاحة حاليًا: ${types.join('، ')}. أي نوع يناسبك؟`;
+}
+
+/** Budget question + chips (used when the user resets/relaxes the budget). */
+export const BUDGET_PROMPT = 'ما ميزانيتك التقريبية؟ اختر نطاقًا أو اكتب «بدون ميزانية محددة».';
+export const BUDGET_QUICK_REPLIES = [
+  'أقل من ١ مليون',
+  '١ - ٣ مليون',
+  '٣ - ٥ مليون',
+  'أكثر من ٥ مليون',
+  'بدون ميزانية محددة',
+];
+
+/** Escalated fallback after repeated unrecognized input (varies the reply). */
+export function escalatedUnknownReply(cities: string[]): string {
+  const list = cities.length ? ` جرّب إحدى المدن: ${cities.slice(0, 4).join('، ')}،` : '';
+  return `خليني أوصلك أسرع 🙂${list} أو اكتب نوع العقار، أو تواصل مع مستشار وسيسعده مساعدتك.`;
+}
 
 /** Fallbacks used only if the live catalog facet lookup is unavailable. */
 export const FALLBACK_CITIES = ['الرياض', 'جدة', 'الدمام', 'مكة المكرمة'];
