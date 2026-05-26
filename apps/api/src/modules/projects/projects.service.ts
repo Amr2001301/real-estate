@@ -34,7 +34,11 @@ export class ProjectsService {
 
     const where: Prisma.ProjectWhereInput = {
       ...(publicOnly ? { status: ProjectStatus.PUBLISHED } : {}),
-      ...(query.city ? { city: query.city } : {}),
+      ...(query.cityIn?.length
+        ? { city: { in: query.cityIn } }
+        : query.city
+          ? { city: query.city }
+          : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.featured !== undefined ? { featured: query.featured } : {}),
       ...(query.q

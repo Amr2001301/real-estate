@@ -72,7 +72,11 @@ export class UnitsService {
     // (the previous spread form could overwrite `phase`).
     const projectWhere: Prisma.ProjectWhereInput = {
       ...(publicOnly ? { status: 'PUBLISHED' } : {}),
-      ...(query.city ? { city: query.city } : {}),
+      ...(query.cityIn?.length
+        ? { city: { in: query.cityIn } }
+        : query.city
+          ? { city: query.city }
+          : {}),
     };
     const phaseWhere: Prisma.PhaseWhereInput = {
       ...(query.projectId ? { projectId: query.projectId } : {}),
@@ -92,7 +96,7 @@ export class UnitsService {
         : publicOnly
           ? { status: UnitStatus.AVAILABLE }
           : {}),
-      ...(query.type ? { type: query.type } : {}),
+      ...(query.typeIn?.length ? { type: { in: query.typeIn } } : query.type ? { type: query.type } : {}),
       ...(query.bathrooms !== undefined ? { bathrooms: query.bathrooms } : {}),
       ...(query.priceMin !== undefined || query.priceMax !== undefined
         ? {

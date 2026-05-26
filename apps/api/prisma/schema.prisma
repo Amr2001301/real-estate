@@ -1596,3 +1596,81 @@ model Document {
   @@index([deletedAt])
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────
+// AI Chat (public assistant). v1 is public-only; userId/leadId are reserved
+// (plain columns, no relations yet) for a future authenticated assistant and
+// conversion linking. Transcripts are low-sensitivity (catalog Q&A + consented
+// lead data captured in later chunks). Retention: ~90 days (purge cron later).
+// ─────────────────────────────────────────────────────────────────────────
+enum ChatSource {
+  WEB
+  MOBILE
+}
+
+enum ChatRole {
+  USER
+  ASSISTANT
+  TOOL
+  SYSTEM
+}
+
+enum ChatStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum ChatFeedbackRating {
+  UP
+  DOWN
+}
+
+model ChatSession {
+  id            String     @id @default(uuid()) @db.Uuid
+  source        ChatSource @default(WEB)
+  locale        Locale     @default(ar)
+  anonymousId   String
+  // Reserved for the future authenticated assistant; no relation in v1.
+  userId        String?    @db.Uuid
+  status        ChatStatus @default(ACTIVE)
+  // Reserved for conversion linking (info/visit request → Lead); no relation in v1.
+  leadId        String?    @db.Uuid
+  metadata      Json?
+  lastMessageAt DateTime   @default(now())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  messages ChatMessage[]
+  feedback ChatFeedback[]
+
+  @@index([anonymousId])
+  @@index([lastMessageAt])
+}
+
+model ChatMessage {
+  id         String      @id @default(uuid()) @db.Uuid
+  sessionId  String      @db.Uuid
+  session    ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role       ChatRole
+  content    String
+  // Populated in later chunks when tool-calling lands; trimmed summaries only.
+  toolCalls  Json?
+  toolResult Json?
+  tokensIn   Int?
+  tokensOut  Int?
+  createdAt  DateTime    @default(now())
+
+  @@index([sessionId, createdAt])
+}
+
+model ChatFeedback {
+  id        String             @id @default(uuid()) @db.Uuid
+  sessionId String             @db.Uuid
+  session   ChatSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  messageId String?            @db.Uuid
+  rating    ChatFeedbackRating
+  comment   String?
+  createdAt DateTime           @default(now())
+
+  @@index([sessionId])
+}

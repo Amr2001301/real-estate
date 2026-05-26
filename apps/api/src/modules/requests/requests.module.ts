@@ -57,7 +57,7 @@ class UpdateVisitStatusDto {
 }
 
 @Injectable()
-class RequestsService {
+export class RequestsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
@@ -371,5 +371,8 @@ class RequestsController {
 @Module({
   controllers: [RequestsController],
   providers: [RequestsService],
+  // Exported so ChatModule's conversion flow can create info/visit requests
+  // through the same authoritative service the public endpoints use.
+  exports: [RequestsService],
 })
 export class RequestsModule {}

@@ -49,6 +49,7 @@ import { BrokerContractsModule } from './modules/broker-contracts/broker-contrac
 import { BrokerCommissionsModule } from './modules/broker-commissions/broker-commissions.module';
 import { BrokerPayoutsModule } from './modules/broker-payouts/broker-payouts.module';
 import { BrokerReportsModule } from './modules/broker-reports/broker-reports.module';
+import { ChatModule } from './modules/chat/chat.module';
 import { HealthController } from './modules/health/health.controller';
 
 @Module({
@@ -103,6 +104,7 @@ import { HealthController } from './modules/health/health.controller';
     BrokerCommissionsModule,
     BrokerPayoutsModule,
     BrokerReportsModule,
+    ChatModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsEnum,
   IsInt,
@@ -73,7 +74,11 @@ export class UnitQueryDto {
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() buildingId?: string;
   @IsOptional() @IsString() city?: string;
+  /** Match any of these project cities (e.g. Arabic + English spellings). */
+  @IsOptional() @IsArray() @IsString({ each: true }) cityIn?: string[];
   @IsOptional() @IsString() type?: string;
+  /** Match any of these unit types (e.g. a category that spans 1BR/2BR/3BR). */
+  @IsOptional() @IsArray() @IsString({ each: true }) typeIn?: string[];
   @IsOptional() @IsEnum(UnitStatus) status?: UnitStatus;
   @IsOptional() @IsNumber() priceMin?: number;
   @IsOptional() @IsNumber() priceMax?: number;

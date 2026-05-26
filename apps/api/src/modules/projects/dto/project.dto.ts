@@ -110,6 +110,12 @@ export class ProjectQueryDto {
   @IsString()
   city?: string;
 
+  /** Match any of these cities (e.g. Arabic + English spellings). */
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  cityIn?: string[];
+
   @IsOptional()
   @IsEnum(ProjectStatus)
   status?: ProjectStatus;
