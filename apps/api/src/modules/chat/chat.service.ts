@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { ChatRole, ChatSource, Locale, Prisma } from '@prisma/client';
+import { ChatRole, ChatSource, ChatStatus, Locale, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { ChatProvider, type ChatTurn } from './providers/chat-provider';
 import { CreateSessionDto, FeedbackDto, SendMessageDto } from './dto/chat.dto';
@@ -113,6 +113,19 @@ export class ChatService {
       },
       messages,
     };
+  }
+
+  /**
+   * Mark a session CLOSED (e.g. user started a new chat). Ownership-checked.
+   * Messages are kept — this only flips status; history stays in the DB.
+   */
+  async closeSession(id: string, anonymousId: string) {
+    await this.requireOwnedSession(id, anonymousId);
+    await this.prisma.chatSession.update({
+      where: { id },
+      data: { status: ChatStatus.CLOSED },
+    });
+    return { ok: true };
   }
 
   async addFeedback(id: string, dto: FeedbackDto) {

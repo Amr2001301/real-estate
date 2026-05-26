@@ -105,6 +105,18 @@ export function getChatSession(
   );
 }
 
+/** Mark the current session CLOSED server-side (history is kept in the DB). */
+export function closeChatSession(
+  sessionId: string,
+  anonymousId: string,
+): Promise<ApiResult<{ ok: boolean }>> {
+  return safeFetch<{ ok: boolean }>(`/chat/sessions/${sessionId}/close`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ anonymousId }),
+  });
+}
+
 export function sendChatFeedback(
   sessionId: string,
   anonymousId: string,

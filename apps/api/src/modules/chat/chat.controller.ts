@@ -1,9 +1,15 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Public } from '../../common/decorators/public.decorator';
 import { ChatService } from './chat.service';
-import { CreateSessionDto, FeedbackDto, GetSessionQueryDto, SendMessageDto } from './dto/chat.dto';
+import {
+  CloseSessionDto,
+  CreateSessionDto,
+  FeedbackDto,
+  GetSessionQueryDto,
+  SendMessageDto,
+} from './dto/chat.dto';
 
 /**
  * Public AI Chat API (v1). No auth — identity is a client-generated
@@ -41,5 +47,13 @@ export class ChatController {
   @Post('sessions/:id/feedback')
   feedback(@Param('id', ParseUUIDPipe) id: string, @Body() dto: FeedbackDto) {
     return this.chat.addFeedback(id, dto);
+  }
+
+  /** Mark a session CLOSED (user started a new chat). Messages are kept. */
+  @Public()
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  @Patch('sessions/:id/close')
+  close(@Param('id', ParseUUIDPipe) id: string, @Body() dto: CloseSessionDto) {
+    return this.chat.closeSession(id, dto.anonymousId);
   }
 }

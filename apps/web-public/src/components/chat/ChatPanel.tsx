@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { Send, Sparkles, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { MoreVertical, Send, Sparkles, SquarePen, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/cn';
@@ -22,12 +22,15 @@ interface ChatPanelProps {
   onRetry: () => void;
   onQuickReply: (text: string) => void;
   onFeedback: (messageId: string, rating: FeedbackRating) => void;
+  onNewChat: () => void;
+  onClearChat: () => void;
 }
 
 export function ChatPanel(props: ChatPanelProps) {
   const { open, onClose, messages, quickReplies, pending, restoring, error } = props;
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Autoscroll to the newest message / typing indicator.
   useEffect(() => {
@@ -77,6 +80,61 @@ export function ChatPanel(props: ChatPanelProps) {
             <p className="text-[15px] font-semibold text-ink-strong">المساعد العقاري</p>
             <p className="truncate text-xs text-ink-muted">مساعد ذكي مجاني للبحث والاستفسار</p>
           </div>
+
+          {/* Session menu: new chat / clear chat (kept compact to avoid clutter) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-label="خيارات المحادثة"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              className="rounded-full p-1.5 text-ink-muted transition-colors hover:bg-navy/[0.05] hover:text-ink-strong"
+            >
+              <MoreVertical className="h-5 w-5" aria-hidden />
+            </button>
+            {menuOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-hidden
+                  tabIndex={-1}
+                  onClick={() => setMenuOpen(false)}
+                  className="fixed inset-0 z-[1] cursor-default"
+                />
+                <div
+                  role="menu"
+                  className="absolute end-0 top-full z-[2] mt-1 min-w-44 overflow-hidden rounded-2xl border border-hairline bg-surface py-1 shadow-lift"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      props.onNewChat();
+                    }}
+                    className="flex w-full items-center gap-2 px-3.5 py-2 text-[13px] text-ink-strong transition-colors hover:bg-navy/[0.05]"
+                  >
+                    <SquarePen className="h-4 w-4 text-gold-600" aria-hidden />
+                    محادثة جديدة
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      props.onClearChat();
+                    }}
+                    className="flex w-full items-center gap-2 px-3.5 py-2 text-[13px] text-error transition-colors hover:bg-error/5"
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden />
+                    مسح المحادثة
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             type="button"
             onClick={onClose}

@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import { FRIENDLY } from '@/lib/api';
 import {
   clearStoredSessionId,
+  closeChatSession,
   createChatSession,
   getAnonymousId,
   getChatSession,
@@ -161,6 +162,34 @@ export function ChatWidget() {
     void sendChatFeedback(sid, anon(), messageId, rating); // fire-and-forget
   };
 
+  /** Reset the local widget to an empty state; closes the old session in the DB
+   *  (status only — messages are kept). Keeps the stable anonymousId. */
+  const resetLocal = () => {
+    const sid = sessionIdRef.current;
+    if (sid) void closeChatSession(sid, anon()); // fire-and-forget; history stays
+    clearStoredSessionId();
+    sessionIdRef.current = null;
+    lastFailed.current = null;
+    initialized.current = false;
+    setMessages([]);
+    setQuickReplies([]);
+    setError(null);
+    setInput('');
+  };
+
+  /** "محادثة جديدة" — clear locally and immediately start a fresh session. */
+  const handleNewChat = () => {
+    resetLocal();
+    void initialize();
+  };
+
+  /** "مسح المحادثة" — hide this chat on this device only (DB untouched). A new
+   *  session is created lazily on the next message/open. */
+  const handleClearChat = () => {
+    if (!window.confirm('سيتم إخفاء هذه المحادثة من هذا الجهاز فقط. هل تريد المتابعة؟')) return;
+    resetLocal();
+  };
+
   if (isHiddenRoute(pathname)) return null;
 
   return (
@@ -194,6 +223,8 @@ export function ChatWidget() {
         onRetry={handleRetry}
         onQuickReply={send}
         onFeedback={handleFeedback}
+        onNewChat={handleNewChat}
+        onClearChat={handleClearChat}
       />
     </>
   );

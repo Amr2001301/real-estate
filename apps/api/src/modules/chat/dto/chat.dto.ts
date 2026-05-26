@@ -25,6 +25,10 @@ export class GetSessionQueryDto {
   @IsString() @MinLength(1) @MaxLength(200) anonymousId!: string;
 }
 
+export class CloseSessionDto {
+  @IsString() @MinLength(1) @MaxLength(200) anonymousId!: string;
+}
+
 export class FeedbackDto {
   @IsString() @MinLength(1) @MaxLength(200) anonymousId!: string;
   @IsOptional() @IsUUID() messageId?: string;

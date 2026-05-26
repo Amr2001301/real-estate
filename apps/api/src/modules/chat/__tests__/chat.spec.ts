@@ -121,6 +121,21 @@ describe('ChatService (AI-1, MockProvider)', () => {
     expect(res).toEqual({ ok: true });
     expect(prisma._state.feedback).toHaveLength(1);
   });
+
+  it('closeSession sets status CLOSED for the owner and keeps messages', async () => {
+    const { sessionId } = await svc.createSession({ anonymousId: 'anon-1' });
+    await svc.sendMessage(sessionId, { anonymousId: 'anon-1', content: 'مرحبا' });
+    const res = await svc.closeSession(sessionId, 'anon-1');
+    expect(res).toEqual({ ok: true });
+    expect(prisma._state.sessions.get(sessionId)).toMatchObject({ status: 'CLOSED' });
+    // messages are NOT deleted (history stays in the DB)
+    expect(prisma._state.messages.filter((m) => m.sessionId === sessionId)).toHaveLength(2);
+  });
+
+  it('closeSession with a wrong anonymousId throws 404 (no deletion)', async () => {
+    const { sessionId } = await svc.createSession({ anonymousId: 'anon-1' });
+    await expect(svc.closeSession(sessionId, 'attacker')).rejects.toBeInstanceOf(NotFoundException);
+  });
 });
 
 describe('Chat DTO validation', () => {
