@@ -17,6 +17,7 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "tsx prisma/seed.ts",
     "prisma:studio": "prisma studio",
+    "openapi:export": "tsx scripts/export-openapi.ts",
     "smoke:broker": "tsx scripts/smoke-broker-module.ts",
     "dedupe:generic-leads:dry-run": "tsx scripts/dedupe-generic-leads.ts",
     "backfill:broker-commissions:dry-run": "tsx scripts/backfill-broker-commissions.ts",

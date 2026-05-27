@@ -2,7 +2,9 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Injectable,
+  Logger,
   Module,
   Param,
   ParseUUIDPipe,
@@ -24,6 +26,9 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
+import { paginate, takeSkip } from '../../common/utils/pagination';
+import { FirebaseService } from '../../common/firebase/firebase.service';
+import { PushService } from './push.service';
 
 class UpsertTemplateDto {
   @IsString() code!: string;
@@ -47,9 +52,44 @@ class RegisterDeviceDto {
   @IsString() platform!: string; // ios | android | web
 }
 
+type Locale = 'ar' | 'en';
+
+function pickLocale(header?: string): Locale {
+  return (header ?? 'ar').toLowerCase().startsWith('en') ? 'en' : 'ar';
+}
+
+/** Fills `{{var}}` placeholders from the notification payload. */
+function interpolate(template: string, payload: Record<string, unknown>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key: string) => {
+    const v = payload[key];
+    return v === null || v === undefined ? '' : String(v);
+  });
+}
+
+interface TranslatableText {
+  ar?: string;
+  en?: string;
+}
+
+function resolveText(
+  text: Prisma.JsonValue | null | undefined,
+  payload: Record<string, unknown>,
+  locale: Locale,
+  fallback: string,
+): string {
+  const t = (text ?? {}) as TranslatableText;
+  const raw = t[locale] ?? t.ar ?? t.en ?? fallback;
+  return interpolate(raw, payload);
+}
+
 @Injectable()
 class NotificationsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(NotificationsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly push: PushService,
+  ) {}
 
   upsertTemplate(dto: UpsertTemplateDto) {
     return this.prisma.notificationTemplate.upsert({
@@ -80,26 +120,86 @@ class NotificationsService {
     });
     if (!tpl) throw new Error(`Template ${dto.templateCode} not found`);
     const channel = dto.channel ?? tpl.channel;
-    return this.prisma.notification.create({
+    const payload = (dto.payload ?? {}) as Record<string, unknown>;
+
+    const notification = await this.prisma.notification.create({
       data: {
         userId: dto.userId,
         templateCode: dto.templateCode,
-        payload: (dto.payload ?? {}) as Prisma.InputJsonValue,
+        payload: payload as Prisma.InputJsonValue,
         channel,
         sentAt: new Date(),
       },
     });
+
+    // Best-effort push in the recipient's locale; never fail the write on it.
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: { id: dto.userId },
+        select: { locale: true },
+      });
+      const locale = pickLocale(user?.locale ?? 'ar');
+      await this.push.sendToUser(dto.userId, {
+        title: resolveText(tpl.subject, payload, locale, dto.templateCode),
+        body: resolveText(tpl.body, payload, locale, ''),
+        data: { templateCode: dto.templateCode, notificationId: notification.id },
+      });
+    } catch (err) {
+      this.logger.warn(
+        `Push delivery failed for ${dto.templateCode}: ${(err as Error).message}`,
+      );
+    }
+
+    return notification;
   }
 
-  listMine(userId: string, unreadOnly = false) {
-    return this.prisma.notification.findMany({
-      where: {
-        userId,
-        ...(unreadOnly ? { readAt: null } : {}),
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 100,
+  async listMine(
+    userId: string,
+    opts: { unreadOnly: boolean; page: number; pageSize: number; locale: Locale },
+  ) {
+    const where: Prisma.NotificationWhereInput = {
+      userId,
+      ...(opts.unreadOnly ? { readAt: null } : {}),
+    };
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        ...takeSkip(opts),
+      }),
+      this.prisma.notification.count({ where }),
+    ]);
+
+    // Resolve titles/bodies from templates (batched) in the requested locale.
+    const codes = [...new Set(rows.map((r) => r.templateCode))];
+    const templates = await this.prisma.notificationTemplate.findMany({
+      where: { code: { in: codes } },
     });
+    const byCode = new Map(templates.map((t) => [t.code, t]));
+
+    const data = rows.map((r) => {
+      const tpl = byCode.get(r.templateCode);
+      const payload = (r.payload ?? {}) as Record<string, unknown>;
+      return {
+        id: r.id,
+        templateCode: r.templateCode,
+        title: resolveText(tpl?.subject, payload, opts.locale, r.templateCode),
+        body: resolveText(tpl?.body, payload, opts.locale, ''),
+        payload: r.payload,
+        channel: r.channel,
+        read: r.readAt !== null,
+        createdAt: r.createdAt,
+      };
+    });
+
+    return paginate(data, total, opts);
+  }
+
+  async unreadCount(userId: string): Promise<{ count: number }> {
+    const count = await this.prisma.notification.count({
+      where: { userId, readAt: null },
+    });
+    return { count };
   }
 
   markRead(userId: string, id: string) {
@@ -158,9 +258,22 @@ class NotificationsController {
   @Get('me/notifications')
   myList(
     @CurrentUser() user: AuthUser,
+    @Headers('accept-language') acceptLanguage?: string,
     @Query('unreadOnly') unreadOnly?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.svc.listMine(user.sub, unreadOnly === '1');
+    return this.svc.listMine(user.sub, {
+      unreadOnly: unreadOnly === '1',
+      page: Number(page) || 1,
+      pageSize: Number(pageSize) || 20,
+      locale: pickLocale(acceptLanguage),
+    });
+  }
+
+  @Get('me/notifications/unread-count')
+  unreadCount(@CurrentUser() user: AuthUser) {
+    return this.svc.unreadCount(user.sub);
   }
 
   @Patch('me/notifications/:id/read')
@@ -181,7 +294,7 @@ class NotificationsController {
 
 @Module({
   controllers: [NotificationsController],
-  providers: [NotificationsService],
+  providers: [NotificationsService, PushService, FirebaseService],
   exports: [NotificationsService],
 })
 export class NotificationsModule {}

@@ -61,6 +61,18 @@ class FavoritesService {
   remove(userId: string, id: string) {
     return this.prisma.favorite.deleteMany({ where: { id, userId } });
   }
+
+  // Mobile-friendly favorite status: the project/unit ids the user has saved.
+  async listIds(userId: string): Promise<{ projectIds: string[]; unitIds: string[] }> {
+    const favs = await this.prisma.favorite.findMany({
+      where: { userId },
+      select: { projectId: true, unitId: true },
+    });
+    return {
+      projectIds: favs.map((f) => f.projectId).filter((v): v is string => v !== null),
+      unitIds: favs.map((f) => f.unitId).filter((v): v is string => v !== null),
+    };
+  }
 }
 
 @ApiTags('favorites')
@@ -72,6 +84,12 @@ class FavoritesController {
   @Get()
   list(@CurrentUser() user: AuthUser) {
     return this.svc.list(user.sub);
+  }
+
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Get('ids')
+  ids(@CurrentUser() user: AuthUser) {
+    return this.svc.listIds(user.sub);
   }
 
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)

@@ -7,6 +7,7 @@ import { NotificationsModule } from '../notifications.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { FirebaseService } from '../../../common/firebase/firebase.service';
 import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
@@ -70,11 +71,15 @@ function makePrismaMock() {
     },
     notification: {
       findMany: jest.fn().mockResolvedValue([]),
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: 'notif-new',
         ...data,
       })),
       updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({ locale: 'ar' }),
     },
     deviceToken: {
       upsert: jest.fn().mockImplementation(async ({ where, create, update }) => ({
@@ -113,7 +118,11 @@ describe('Notifications module · permissions enforcement', () => {
         { provide: APP_GUARD, useClass: RolesGuard },
         { provide: APP_GUARD, useClass: PermissionsGuard },
       ],
-    }).compile();
+    })
+      // FirebaseService needs ConfigService at runtime; stub it as disabled.
+      .overrideProvider(FirebaseService)
+      .useValue({ enabled: false, messaging: () => null })
+      .compile();
 
     reflector = moduleRef.get(Reflector);
     app = moduleRef.createNestApplication();

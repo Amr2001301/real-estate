@@ -9,7 +9,7 @@ export class SmsService {
   async sendOtp(phone: string, code: string): Promise<void> {
     const provider = this.config.get<string>('OTP_PROVIDER') ?? 'console';
     if (provider === 'console') {
-      this.logger.warn(`[OTP] -> ${phone}: ${code}`);
+      this.logOtpForDev(phone, code);
       return;
     }
     if (provider === 'twilio') {
@@ -18,8 +18,8 @@ export class SmsService {
       const token = this.config.get<string>('TWILIO_AUTH_TOKEN');
       const from = this.config.get<string>('TWILIO_FROM');
       if (!sid || !token || !from) {
-        this.logger.error('Twilio creds missing — falling back to console');
-        this.logger.warn(`[OTP] -> ${phone}: ${code}`);
+        this.logger.error('Twilio creds missing — cannot send OTP');
+        this.logOtpForDev(phone, code);
         return;
       }
       const url = `https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`;
@@ -42,5 +42,14 @@ export class SmsService {
         this.logger.error(`Twilio send failed: ${res.status} ${text}`);
       }
     }
+  }
+
+  // Logs the OTP code only outside production so it never leaks in prod logs.
+  private logOtpForDev(phone: string, code: string): void {
+    if (this.config.get<string>('NODE_ENV') === 'production') {
+      this.logger.warn(`[OTP] code generated for ${phone} (hidden in production)`);
+      return;
+    }
+    this.logger.warn(`[OTP] -> ${phone}: ${code}`);
   }
 }

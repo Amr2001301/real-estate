@@ -1,6 +1,11 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
 
@@ -61,9 +66,51 @@ export class R2Service {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
+  /**
+   * Short-lived signed GET URL for a private object download. Sets a safe
+   * attachment filename + content type. Throws if storage isn't configured.
+   */
+  async createPresignedDownload(opts: {
+    key: string;
+    fileName?: string | null;
+    contentType?: string | null;
+    expiresIn?: number;
+  }): Promise<{ url: string; expiresIn: number }> {
+    if (!this.client || !this.bucket) {
+      throw new ServiceUnavailableException('Storage not configured');
+    }
+    const expiresIn = opts.expiresIn ?? 60 * 5;
+    const safeName = this.safeFileName(opts.fileName);
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: opts.key,
+      ResponseContentDisposition: `attachment; filename="${safeName}"`,
+      ...(opts.contentType ? { ResponseContentType: opts.contentType } : {}),
+    });
+    const url = await getSignedUrl(this.client, command, { expiresIn });
+    return { url, expiresIn };
+  }
+
   publicUrlFor(key: string): string {
     if (this.publicUrl) return `${this.publicUrl.replace(/\/$/, '')}/${key}`;
     return key;
+  }
+
+  // Derives the storage key from a stored public URL (inverse of publicUrlFor).
+  keyFromPublicUrl(url: string): string {
+    if (this.publicUrl) {
+      const base = `${this.publicUrl.replace(/\/$/, '')}/`;
+      if (url.startsWith(base)) return url.slice(base.length);
+    }
+    // Already a key, or an unexpected URL — return as-is (download will 404 if wrong).
+    return url.replace(/^https?:\/\/[^/]+\//, '');
+  }
+
+  private safeFileName(name?: string | null): string {
+    const fallback = 'document';
+    if (!name) return fallback;
+    const cleaned = name.replace(/[^\w.\-() ]+/g, '_').trim();
+    return cleaned.length > 0 ? cleaned : fallback;
   }
 
   private guessExtension(ct: string): string {

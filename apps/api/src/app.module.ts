@@ -39,6 +39,8 @@ import { AuditModule } from './modules/audit/audit.module';
 import { SettingsModule } from './modules/settings/settings.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { DocumentsModule } from './modules/documents/documents.module';
+import { MeDocumentsModule } from './modules/documents/me-documents.module';
+import { OwnershipModule } from './common/ownership/ownership.module';
 import { BrokersModule } from './modules/brokers/brokers.module';
 import { BrokerUsersModule } from './modules/broker-users/broker-users.module';
 import { BrokerAccessModule } from './modules/broker-access/broker-access.module';
@@ -68,6 +70,7 @@ import { HealthController } from './modules/health/health.controller';
       }),
     }),
     PrismaModule,
+    OwnershipModule,
 
     AuthModule,
     UsersModule,
@@ -94,6 +97,7 @@ import { HealthController } from './modules/health/health.controller';
     SettingsModule,
     PermissionsModule,
     DocumentsModule,
+    MeDocumentsModule,
     BrokersModule,
     BrokerUsersModule,
     BrokerAccessModule,
