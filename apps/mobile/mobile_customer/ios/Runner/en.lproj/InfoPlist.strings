@@ -1,0 +1,4 @@
+/* Permission prompts for maintenance photo attachments (image_picker). */
+"NSCameraUsageDescription" = "Allow camera access to attach a photo to your maintenance request.";
+"NSPhotoLibraryUsageDescription" = "Allow photo access to attach images to your maintenance request.";
+"NSPhotoLibraryAddUsageDescription" = "Allow photo access to save images related to your maintenance request.";

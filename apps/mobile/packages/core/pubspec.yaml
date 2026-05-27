@@ -1,0 +1,54 @@
+name: core
+description: Shared foundation (design system, theme, l10n, network, auth, widgets) for the Real Estate mobile apps.
+version: 0.0.1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_bloc: ^8.1.6
+  bloc: ^8.1.4
+  equatable: ^2.0.7
+
+  # Network
+  dio: ^5.7.0
+
+  # Models / serialization (annotations only; codegen in dev_dependencies)
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # UI foundation
+  skeletonizer: ^2.1.0
+  flutter_animate: ^4.5.0
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.4.1
+
+  # Platform integrations
+  url_launcher: ^6.3.1
+
+  # Platform
+  flutter_secure_storage: ^9.2.2
+  shared_preferences: ^2.3.3
+  intl: ^0.20.2
+  uuid: ^4.5.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  bloc_test: ^9.1.7
+
+flutter:
+  generate: true
+  uses-material-design: true

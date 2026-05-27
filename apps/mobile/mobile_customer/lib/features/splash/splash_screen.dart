@@ -1,0 +1,41 @@
+import 'package:core/core.dart';
+import 'package:flutter/material.dart';
+
+/// Branded splash shown while the persisted session is resolving. The router
+/// redirects away as soon as auth state is known.
+class SplashScreen extends StatelessWidget {
+  const SplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Scaffold(
+      backgroundColor: colors.brandNavy,
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.apartment_rounded, size: 56, color: colors.brandGold),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              context.l10n.customerAppTitle,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(color: Colors.white),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            SizedBox(
+              height: 22,
+              width: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colors.brandGold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

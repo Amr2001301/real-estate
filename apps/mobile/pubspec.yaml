@@ -1,0 +1,45 @@
+# Dart pub-workspace root for the Real Estate mobile apps.
+# This is NOT part of the outer pnpm/turbo JS monorepo (pnpm only globs
+# apps/api, apps/web-public, apps/web-admin and top-level packages/*).
+#
+# All member packages declare `resolution: workspace` and share a single
+# lockfile resolved from here. Use Melos for scripts (see melos.yaml).
+name: real_estate_mobile_workspace
+publish_to: none
+
+environment:
+  sdk: ^3.10.7
+
+workspace:
+  - packages/core
+  - mobile_customer
+  - mobile_staff
+
+dev_dependencies:
+  melos: ^7.0.0
+
+# Melos 7 reads its config from here (not melos.yaml). Packages are auto-detected
+# from the `workspace:` field above.
+melos:
+  scripts:
+    analyze:
+      description: Analyze all packages.
+      exec: flutter analyze
+    format:
+      description: Format all Dart code.
+      exec: dart format .
+    test:
+      description: Run tests where a test/ dir exists.
+      exec: flutter test
+      packageFilters:
+        dirExists: test
+    gen:
+      description: Run build_runner where applicable.
+      exec: dart run build_runner build --delete-conflicting-outputs
+      packageFilters:
+        dependsOn: build_runner
+    l10n:
+      description: Generate localizations where l10n.yaml exists.
+      exec: flutter gen-l10n
+      packageFilters:
+        fileExists: l10n.yaml

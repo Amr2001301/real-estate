@@ -1,0 +1,4 @@
+/* مطالبات الأذونات لإرفاق صور طلب الصيانة (image_picker). */
+"NSCameraUsageDescription" = "اسمح بالوصول إلى الكاميرا لإرفاق صورة بطلب الصيانة.";
+"NSPhotoLibraryUsageDescription" = "اسمح بالوصول إلى الصور لإرفاق صور بطلب الصيانة.";
+"NSPhotoLibraryAddUsageDescription" = "اسمح بالوصول إلى الصور لحفظ الصور المتعلقة بطلب الصيانة.";
