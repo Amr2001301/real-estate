@@ -538,18 +538,31 @@ class ContractsController {
   }
 
   // Customer view of their own contracts — intentionally NOT permission-gated.
+  //
+  // SECURITY: the underlying Contract row carries a permanent `pdfUrl`
+  // (raw R2 public URL). Customers must reach the file ONLY through the
+  // signed-download endpoint (`GET /v1/me/documents/:id/download`) where
+  // the URL is short-lived (≤5 min) and ownership-guarded just-in-time.
+  // We redact the field to `null` here so the customer surface can never
+  // expose a permanent storage URL. Admin / sales / broker contract
+  // listings are unchanged — they go through `@Get()` / `@Get(':id')`
+  // above, not this method.
   @Roles(UserRole.CUSTOMER)
   @Get('me/contracts')
-  myContracts(
+  async myContracts(
     @CurrentUser() user: AuthUser,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
-    return this.svc.list({
+    const result = await this.svc.list({
       page: Number(page),
       pageSize: Number(pageSize),
       customerId: user.sub,
     });
+    return {
+      ...result,
+      data: result.data.map((row) => ({ ...row, pdfUrl: null })),
+    };
   }
 
   @Roles(UserRole.ADMIN)

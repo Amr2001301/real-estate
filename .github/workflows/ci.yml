@@ -11,6 +11,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Detect which directories changed so the heavier jobs below can self-skip
+  # on PRs that don't touch them. GitHub Actions has no built-in job-level
+  # `paths` filter — `dorny/paths-filter` produces boolean outputs we gate on.
+  # ─────────────────────────────────────────────────────────────────────────────
+  changes:
+    name: detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+      webAdmin: ${{ steps.filter.outputs.webAdmin }}
+      webPublic: ${{ steps.filter.outputs.webPublic }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/shared-types/**'
+              - 'packages/tsconfig/**'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/ci.yml'
+            mobile:
+              - 'apps/mobile/**'
+              - '.github/workflows/ci.yml'
+            webAdmin:
+              - 'apps/web-admin/**'
+              - 'packages/shared-types/**'
+              - 'packages/tsconfig/**'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/ci.yml'
+            webPublic:
+              - 'apps/web-public/**'
+              - 'packages/shared-types/**'
+              - 'packages/tsconfig/**'
+              - 'pnpm-lock.yaml'
+              - '.github/workflows/ci.yml'
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Existing always-run gate: lint + typecheck + build the whole workspace.
+  # ─────────────────────────────────────────────────────────────────────────────
   build:
     name: lint · typecheck · build
     runs-on: ubuntu-latest
@@ -80,3 +125,317 @@ jobs:
 
       - name: Build
         run: pnpm -r build
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Backend Jest unit tests (mocked Prisma). Fast. Only runs when api/ changes.
+  # ─────────────────────────────────────────────────────────────────────────────
+  api-unit:
+    name: api · jest (unit)
+    needs: [changes, build]
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+      - name: Run unit tests
+        working-directory: apps/api
+        run: pnpm test
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
+          JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Backend Jest e2e (real ephemeral Postgres, real Nest app, real auth flow).
+  # See apps/api/test/globalSetup.ts for the DB-safety guards — TEST_DATABASE_URL
+  # MUST point at a database whose name contains "e2e" or "test", which the
+  # service container's "realestate_e2e" name satisfies.
+  # ─────────────────────────────────────────────────────────────────────────────
+  api-e2e:
+    name: api · jest (e2e, real Postgres)
+    needs: [changes, build]
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realestate_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      # The actual e2e DB pointer — the jest globalSetup will validate it
+      # and then rewrite process.env.DATABASE_URL to it before any spec boots.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      # DATABASE_URL is required by env.validation; a placeholder satisfies
+      # the schema check at import time before globalSetup rewrites it.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
+      JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+      - name: Run e2e tests (real DB, jest globalSetup applies migrations + seed)
+        working-directory: apps/api
+        run: pnpm test:e2e
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Mobile static analysis + unit/widget tests across all 3 packages.
+  # No emulator → no integration_test in CI (deferred).
+  # ─────────────────────────────────────────────────────────────────────────────
+  mobile-static:
+    name: mobile · analyze + unit tests
+    needs: [changes, build]
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.38.x'
+      - name: Resolve workspace deps
+        working-directory: apps/mobile
+        run: flutter pub get
+      - name: Analyze core
+        working-directory: apps/mobile/packages/core
+        run: flutter analyze
+      - name: Test core
+        working-directory: apps/mobile/packages/core
+        run: flutter test
+      - name: Analyze customer
+        working-directory: apps/mobile/mobile_customer
+        run: flutter analyze
+      - name: Test customer
+        working-directory: apps/mobile/mobile_customer
+        run: flutter test
+      - name: Analyze staff
+        working-directory: apps/mobile/mobile_staff
+        run: flutter analyze
+      - name: Test staff
+        working-directory: apps/mobile/mobile_staff
+        run: flutter test
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Phase 7F — Web Admin Playwright suite.
+  # Boots a Postgres + API + web-admin and runs the admin Playwright suite.
+  # Auth-state pattern (Phase 7E) keeps the suite under the 5-req/min login
+  # throttle no matter how the suite grows. The Flow B admin spec auto-skips
+  # when `E2E_FLOW_B_NAME` is unset; the cross-app data path is covered by
+  # the backend Flow B e2e spec, so this skip is documented and accepted.
+  # Runs when the admin app OR the API changes (admin depends on the API).
+  # ─────────────────────────────────────────────────────────────────────────────
+  web-admin-e2e:
+    name: web-admin · playwright
+    needs: [changes, build]
+    if: needs.changes.outputs.webAdmin == 'true' || needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realestate_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      # The API process below uses this DB. The TEST_DATABASE_URL safety guards
+      # in `apps/api/test/globalSetup.ts` are NOT involved here (jest doesn't
+      # run); we run `prisma migrate deploy + prisma:seed:e2e` manually instead.
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
+      JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+      # API port is the default 4000 in CI (matches Playwright config's API
+      # expectations); web-admin sits on 3001.
+      API_BASE_URL: http://localhost:4000
+      E2E_BASE_URL: http://localhost:3001
+      E2E_NO_WEBSERVER: '1' # webServer not needed — we start it manually below
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+
+      - name: Apply migrations + seed e2e fixtures
+        working-directory: apps/api
+        run: |
+          npx prisma migrate deploy
+          pnpm prisma:seed:e2e
+
+      - name: Build apps (Next.js prod builds are more stable for CI)
+        run: pnpm -r build
+
+      - name: Install Playwright Chromium
+        working-directory: apps/web-admin
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start API (background, port 4000)
+        working-directory: apps/api
+        run: |
+          PORT=4000 node dist/main.js &
+          echo $! > /tmp/api.pid
+          # Wait for /health
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:4000/health > /dev/null; then echo "API up"; break; fi
+            sleep 2
+          done
+          curl -fs http://localhost:4000/health
+
+      - name: Start web-admin (background, port 3001)
+        working-directory: apps/web-admin
+        run: |
+          PORT=3001 pnpm start &
+          echo $! > /tmp/web-admin.pid
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:3001/login > /dev/null; then echo "web-admin up"; break; fi
+            sleep 2
+          done
+          curl -fs http://localhost:3001/login
+
+      - name: Run admin Playwright suite
+        working-directory: apps/web-admin
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-admin-playwright-report
+          path: apps/web-admin/playwright-report/
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Phase 7F — Web Public Playwright suite.
+  # Same shape as web-admin-e2e. The Flow B public spec submits the form
+  # (it doesn't require admin coordination); the backend Flow B e2e is the
+  # canonical "form → DB → admin sees it" assertion. The customer-portal
+  # signed-download proof (Phase 7E) needs the e2e seed's contract / deposit
+  # / maintenance rows, which the seed step above provides.
+  # ─────────────────────────────────────────────────────────────────────────────
+  web-public-e2e:
+    name: web-public · playwright
+    needs: [changes, build]
+    if: needs.changes.outputs.webPublic == 'true' || needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: realestate_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/realestate_e2e?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-placeholder-1234567890
+      JWT_REFRESH_SECRET: ci-refresh-secret-placeholder-1234567890
+      API_BASE_URL: http://localhost:4000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3002
+      E2E_BASE_URL: http://localhost:3002
+      E2E_NO_WEBSERVER: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 9.12.0, run_install: false }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma:generate
+
+      - name: Apply migrations + seed e2e fixtures
+        working-directory: apps/api
+        run: |
+          npx prisma migrate deploy
+          pnpm prisma:seed:e2e
+
+      - name: Build apps
+        run: pnpm -r build
+
+      - name: Install Playwright Chromium
+        working-directory: apps/web-public
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Start API (background, port 4000)
+        working-directory: apps/api
+        run: |
+          PORT=4000 node dist/main.js &
+          echo $! > /tmp/api.pid
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:4000/health > /dev/null; then echo "API up"; break; fi
+            sleep 2
+          done
+          curl -fs http://localhost:4000/health
+
+      - name: Start web-public (background, port 3002)
+        working-directory: apps/web-public
+        run: |
+          PORT=3002 pnpm start &
+          echo $! > /tmp/web-public.pid
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:3002/ > /dev/null; then echo "web-public up"; break; fi
+            sleep 2
+          done
+          curl -fs http://localhost:3002/
+
+      - name: Run public Playwright suite
+        working-directory: apps/web-public
+        run: pnpm exec playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-public-playwright-report
+          path: apps/web-public/playwright-report/
+          retention-days: 7

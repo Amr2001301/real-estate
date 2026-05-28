@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ArrowRight, Home, Tag, FileText, Download } from 'lucide-react';
+import { ArrowRight, Home, Tag } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { authFetch, AuthError } from '@/lib/api-auth';
@@ -10,6 +10,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { ErrorState } from '@/components/states/ErrorState';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
+import { DocumentDownloadById } from '@/components/account/DocumentDownloadById';
 
 export const metadata = buildMetadata({
   title: 'تفاصيل طلب الصيانة',
@@ -114,20 +115,10 @@ export default async function AccountMaintenanceDetailPage({
           <ul className="mt-4 space-y-2">
             {req.documents.map((doc) => (
               <li key={doc.id}>
-                <a
-                  href={doc.fileUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between gap-3 rounded-xl border border-hairline bg-surface px-4 py-3 transition-colors hover:border-gold-300"
-                >
-                  <span className="flex min-w-0 items-center gap-2.5">
-                    <FileText className="h-5 w-5 shrink-0 text-gold-500" aria-hidden />
-                    <span className="line-clamp-1 text-sm font-medium text-ink-strong">
-                      {doc.title || doc.fileName || 'مرفق'}
-                    </span>
-                  </span>
-                  <Download className="h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
-                </a>
+                {/* Signed-download — Phase 7E. The customer-facing detail
+                    endpoint no longer embeds `fileUrl`; the client mints a
+                    short-lived signed URL just-in-time on click. */}
+                <DocumentDownloadById documentId={doc.id} title={doc.title || doc.fileName || 'مرفق'} />
               </li>
             ))}
           </ul>

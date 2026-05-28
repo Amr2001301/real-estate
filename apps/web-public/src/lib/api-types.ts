@@ -252,7 +252,9 @@ export interface MeMaintenanceRequest {
 export interface MaintenanceDocument {
   id: string;
   title: string;
-  fileUrl: string;
+  // Phase 7D removed the permanent `fileUrl` from customer-facing responses.
+  // The customer reaches the file ONLY through the signed-download endpoint
+  // (see `DocumentDownloadById`), keyed by `id`.
   fileName: string | null;
   mimeType: string | null;
   createdAt: string;

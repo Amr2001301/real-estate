@@ -1,8 +1,9 @@
-import { Wallet, Download, CheckCircle2, Clock } from 'lucide-react';
+import { Wallet, CheckCircle2, Clock } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatPrice } from '@/lib/format';
 import type { MeDeposit } from '@/lib/api-types';
 import { PremiumCard } from '@/components/ui/PremiumCard';
+import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
 const TYPE_LABELS: Record<string, string> = {
   BOOKING_AMOUNT: 'دفعة حجز',
@@ -65,19 +66,13 @@ export function DepositCard({ deposit }: { deposit: MeDeposit }) {
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3 text-xs text-ink-muted">
         <span>تاريخ الدفع: {formatDate(deposit.paidAt)}</span>
-        {deposit.receiptUrl ? (
-          <a
-            href={deposit.receiptUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 font-medium text-gold-600 transition-colors hover:text-gold-500"
-          >
-            <Download className="h-3.5 w-3.5" aria-hidden />
-            تحميل الإيصال
-          </a>
-        ) : (
-          <span className="text-ink-muted/70">الإيصال غير متاح بعد</span>
-        )}
+        <DocumentDownloadByOwner
+          ownerType="DEPOSIT"
+          ownerId={deposit.id}
+          label="تحميل الإيصال"
+          emptyLabel="الإيصال غير متاح بعد"
+          variant="inline"
+        />
       </div>
     </PremiumCard>
   );

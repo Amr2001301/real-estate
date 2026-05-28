@@ -18,7 +18,9 @@ promotion. The architecture/contract reference is
 apps/mobile/
   packages/core/           # shared: theme, l10n (ar/en), Dio, AppFailure, widgets, Session
   mobile_customer/         # Guest / Client / Customer app
-    lib/main_dev.dart      # → EnvConfig(dev),     base = http://10.0.2.2:3000
+    lib/main_dev.dart      # → EnvConfig(dev),     base = http://localhost:4000/v1
+                           #   (override per-run with --dart-define=API_BASE_URL=...
+                           #    for Android emulator → host loopback, use 10.0.2.2:4000)
     lib/main_staging.dart  # → EnvConfig(staging), base = configurable via --dart-define
     lib/main_prod.dart     # → EnvConfig(prod),    base = https://api.realestate.example
   mobile_staff/            # Sales / Sales Manager / Maintenance Sup. / Broker
@@ -46,12 +48,21 @@ cd ../mobile_staff
 flutter run -t lib/main_dev.dart
 ```
 
-The dev base URL is `http://10.0.2.2:3000` (Android emulator → host loopback).
-For a physical iOS device pointed at a Mac dev server, override:
+The dev base URL baked into `EnvConfig.dev` is `http://localhost:4000/v1`
+(matches the backend `apps/api` default). Common overrides:
 
 ```bash
+# Android emulator → host loopback (Postgres + API on the Mac):
 flutter run -t lib/main_dev.dart \
-  --dart-define=API_BASE_URL=http://192.168.x.x:3000
+  --dart-define=API_BASE_URL=http://10.0.2.2:4000/v1
+
+# Physical iOS device pointed at the Mac dev server:
+flutter run -t lib/main_dev.dart \
+  --dart-define=API_BASE_URL=http://192.168.x.x:4000/v1
+
+# Staging API:
+flutter run -t lib/main_staging.dart \
+  --dart-define=API_BASE_URL=https://staging-api.example.com/v1
 ```
 
 `EnvConfig.initialize` reads `API_BASE_URL` (and friends) as
@@ -233,6 +244,28 @@ with English UI. **30–40 minutes total** per app once you're warm.
       (not a Dio stack trace).
 
 ---
+
+## 6.1 One-shot local release verification (Phase 7F)
+
+After the per-app daily commands in §2, run the consolidated
+verification script before tagging a release candidate:
+
+```bash
+# Quick gate (no DB/services needed — 6 sections; Playwright + e2e skip):
+bash scripts/release-verify.sh
+
+# Full gate — start Postgres + API + both web apps first, then:
+export TEST_DATABASE_URL=postgresql://postgres@localhost:5432/realestate_e2e?schema=public
+bash scripts/release-verify.sh
+```
+
+The script walks 8 sections (backend unit, backend e2e, web-admin
+Playwright, web-public Playwright, mobile analyze+test, zero
+Riverpod, Clean Architecture boundaries, no-secrets grep) and exits
+non-zero if any required gate fails. Sections gracefully skip with
+a clear "what's needed" message when their prereqs (`TEST_DATABASE_URL`,
+running services) aren't met. Full description in
+[`docs/system-qa-strategy.md`](system-qa-strategy.md) §0.7.
 
 ## 7. Sign-off gates
 

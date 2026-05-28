@@ -1,9 +1,10 @@
-import { Home, Building2, Wrench, Download } from 'lucide-react';
+import { Home, Building2, Wrench } from 'lucide-react';
 import { formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { MeContract } from '@/lib/api-types';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
+import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -70,21 +71,12 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
           </ButtonLink>
         ) : null}
 
-        {contract.pdfUrl ? (
-          <a
-            href={contract.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600"
-          >
-            <Download className="h-4 w-4" aria-hidden />
-            عرض العقد PDF
-          </a>
-        ) : (
-          <span className="rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted">
-            العقد غير متاح بعد
-          </span>
-        )}
+        <DocumentDownloadByOwner
+          ownerType="CONTRACT"
+          ownerId={contract.id}
+          label="عرض العقد PDF"
+          emptyLabel="العقد غير متاح بعد"
+        />
       </div>
     </PremiumCard>
   );

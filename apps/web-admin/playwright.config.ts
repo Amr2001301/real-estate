@@ -20,6 +20,11 @@ const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:3001';
 
 export default defineConfig({
   testDir: './e2e',
+  // Phase 7E — log in each role once before any spec runs and persist the
+  // resulting storage state to ./e2e/.auth/<role>.json. Specs attach via
+  // `test.use({ storageState: ADMIN_STORAGE })` (etc.) instead of going
+  // through the form per-test, keeping the per-IP login throttle headroom.
+  globalSetup: './e2e/global-setup.ts',
   // Fail the build on CI if test.only is committed.
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

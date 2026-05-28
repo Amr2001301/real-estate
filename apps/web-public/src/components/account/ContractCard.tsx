@@ -1,7 +1,8 @@
-import { FileText, Download, Building2, Home } from 'lucide-react';
+import { FileText, Building2, Home } from 'lucide-react';
 import { formatPrice, formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeContract } from '@/lib/api-types';
 import { PremiumCard } from '@/components/ui/PremiumCard';
+import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
 const FREQUENCY_LABELS: Record<string, string> = {
   MONTHLY: 'شهري',
@@ -57,22 +58,15 @@ export function ContractCard({ contract }: { contract: MeContract }) {
           </div>
         </div>
 
-        {/* Download (display/download only — no editing/signing/payment) */}
-        {contract.pdfUrl ? (
-          <a
-            href={contract.pdfUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600"
-          >
-            <Download className="h-4 w-4" aria-hidden />
-            تحميل العقد PDF
-          </a>
-        ) : (
-          <span className="shrink-0 rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted">
-            العقد غير متاح بعد
-          </span>
-        )}
+        {/* Signed-download — Phase 7E. Customer never receives a permanent
+            R2 URL. On click the component mints a short-lived signed URL
+            just-in-time and opens it in a new tab. */}
+        <DocumentDownloadByOwner
+          ownerType="CONTRACT"
+          ownerId={contract.id}
+          label="تحميل العقد PDF"
+          emptyLabel="العقد غير متاح بعد"
+        />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 border-t border-hairline pt-4 sm:grid-cols-3">

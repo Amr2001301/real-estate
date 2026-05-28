@@ -486,6 +486,36 @@ one-time Xcode "add Arabic localization" step on the Customer Runner.
 Full list with status in
 [`docs/mobile-store-readiness.md`](mobile-store-readiness.md) §1–§7.
 
+## 14. Phase 7A — System QA Foundation + Flow A proof (2026-05-28)
+
+Cross-platform testing kickoff: documented test users, additive
+idempotent e2e seed, real-Postgres jest-e2e harness with hard DB
+safety guards, **Flow A — Catalog Sync** end-to-end (18 backend cases
+proving admin/public/sales/broker1/broker2/RBAC consistency), 3
+Playwright proof cases (web-public + web-admin) validated via `--list`,
+mobile `integration_test` scaffolds (local-only), and CI extension
+(api-unit + api-e2e + mobile-static, gated by per-area path filters via
+`dorny/paths-filter`).
+
+See [`docs/system-qa-strategy.md`](system-qa-strategy.md) for the full
+strategy (test environments, role matrix, automation/manual split,
+Phase 7B carry-forward) and
+[`docs/manual-qa-checklists.md`](manual-qa-checklists.md) for the per-
+platform manual run-throughs (mobile manual checklists stay in
+`mobile-release-guide.md` §6).
+
+**Verification:** 984 backend unit tests pass; **20 backend e2e tests
+pass** against a fresh seeded Postgres (and re-running the seed is a
+no-op — proven via row counts); 231 mobile tests pass; both debug APKs
+build clean; analyze clean ×3; DB-safety guards proven by negative
+runs (missing TEST_DATABASE_URL / equal-to-DATABASE_URL / DB-name
+without "e2e" or "test" → suite refuses to start with a loud message).
+
+Flows B–H are documented in `system-qa-strategy.md` §10 (carry-forward
+to Phase 7B). Cross-app Playwright + mobile-emulator CI deliberately
+deferred — Phase 7A's CI surface is "what's stable and fast today,"
+not "everything we could possibly run."
+
 ## Sequencing
 
 Per the approved plan (parallel track): start **OpenAPI export** and **FCM wiring** now,

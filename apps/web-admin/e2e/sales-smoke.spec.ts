@@ -1,11 +1,14 @@
 import { test, expect } from '@playwright/test';
-import { loginAsSales } from './helpers/auth';
 import {
   assertRouteLoads,
   assertNavLinksHidden,
   ADMIN_ONLY_NAV_LABELS,
   type RouteCheck,
 } from './helpers/assert';
+import { SALES_STORAGE } from './global-setup';
+
+// Phase 7E — attach the sales storage state instead of logging in per-test.
+test.use({ storageState: SALES_STORAGE });
 
 /**
  * SALES browser-level smoke.
@@ -28,10 +31,6 @@ const SALES_ROUTES: RouteCheck[] = [
 ];
 
 test.describe('SALES smoke', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsSales(page);
-  });
-
   test('lands on the sales dashboard home', async ({ page }) => {
     await page.goto('/dashboard');
     await expect(page).not.toHaveURL(/\/login(\?|$)/);

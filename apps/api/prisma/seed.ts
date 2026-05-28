@@ -847,9 +847,19 @@ async function main() {
   console.log('   Maintenance Supervisor: maintenance@example.com / MaintenancePass123!');
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+// Auto-run only when invoked directly (e.g. `tsx prisma/seed.ts` /
+// `pnpm prisma:seed`). When this module is *imported* by `seed-e2e.ts`,
+// importing it must NOT trigger a write — the e2e seed calls `main()`
+// itself, with `SEED_PUBLIC_DEMO=true` forced so it can find projects to
+// grant broker access to. Idempotent either way.
+export { main };
+export { prisma as _prismaSeedClient };
+
+if (require.main === module) {
+  main()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(() => prisma.$disconnect());
+}

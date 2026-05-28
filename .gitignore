@@ -61,3 +61,6 @@ test-results/
 playwright-report/
 playwright/.cache/
 .last-run.json
+
+# Playwright storage-state (Phase 7E) — JWT tokens; never commit
+**/e2e/.auth/

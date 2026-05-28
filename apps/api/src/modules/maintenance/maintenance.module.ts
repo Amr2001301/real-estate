@@ -797,7 +797,20 @@ class MaintenanceService {
       50,
       DocumentVisibility.CUSTOMER_VISIBLE,
     );
-    return { ...req, documents };
+    // SECURITY: same posture as /me/documents — never return the permanent
+    // `fileUrl` to a customer-facing response. The customer reaches the file
+    // through `GET /v1/me/documents/:id/download`, which mints a short-lived
+    // signed URL per click. Map to the same safe metadata shape that
+    // `MeDocumentsController.list` returns.
+    const safeDocs = documents.map((d) => ({
+      id: d.id,
+      title: d.title,
+      fileName: d.fileName,
+      mimeType: d.mimeType,
+      category: d.category,
+      createdAt: d.createdAt,
+    }));
+    return { ...req, documents: safeDocs };
   }
 
   async customerPresign(userId: string, id: string, dto: MaintenanceDocPresignDto) {

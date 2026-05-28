@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { loginAsAdmin } from './helpers/auth';
 import { assertRouteLoads, type RouteCheck } from './helpers/assert';
+import { ADMIN_STORAGE } from './global-setup';
+
+// Phase 7E — attach the admin storage state (cookies + JWT) instead of
+// logging in per-test, so the suite stays under the per-IP login throttle.
+test.use({ storageState: ADMIN_STORAGE });
 
 /**
  * Dashboard smoke test — admin browser-level coverage.
@@ -20,13 +24,10 @@ const ROUTES: RouteCheck[] = [
 ];
 
 test.describe('Dashboard smoke', () => {
-  test.beforeEach(async ({ page }) => {
-    await loginAsAdmin(page);
-  });
-
   test('admin can load every core dashboard route without auth redirect or error', async ({
     page,
   }) => {
+    await page.goto('/dashboard');
     await expect(page.getByText('مرحباً بك في المجلس الرقمي').first()).toBeVisible();
     for (const route of ROUTES) {
       await assertRouteLoads(page, route);

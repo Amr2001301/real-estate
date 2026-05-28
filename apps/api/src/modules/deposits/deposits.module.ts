@@ -461,10 +461,20 @@ class DepositsController {
   }
 
   // Customer read-only view — intentionally NOT permission-gated.
+  //
+  // SECURITY: the underlying Deposit row carries a permanent `receiptUrl`
+  // (raw R2 public URL). Same posture as `/me/contracts` — customers
+  // reach the receipt ONLY through the signed-download endpoint
+  // (`GET /v1/me/documents/:id/download`). Admin views go through
+  // `@Get('deposits')` / `@Get('deposits/:id')` above, not this method.
   @Roles(UserRole.CUSTOMER)
   @Get('me/deposits')
-  myDeposits(@CurrentUser() user: AuthUser) {
-    return this.svc.list({ page: 1, pageSize: 100, customerId: user.sub });
+  async myDeposits(@CurrentUser() user: AuthUser) {
+    const result = await this.svc.list({ page: 1, pageSize: 100, customerId: user.sub });
+    return {
+      ...result,
+      data: result.data.map((row) => ({ ...row, receiptUrl: null })),
+    };
   }
 }
 
