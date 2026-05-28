@@ -1,0 +1,36 @@
+# Defense-in-depth ignores for the mobile tree.
+#
+# The Flutter-generated `android/.gitignore` per app already covers
+# `key.properties`, `**/*.keystore`, and `**/*.jks`, plus most build artefacts;
+# this file is the workspace-level safety net so a stray drop at the canonical
+# Firebase / signing paths is *physically* impossible to commit by accident.
+#
+# `*.example` placeholders are intentionally NOT ignored — they document the
+# expected file layout and are safe to track.
+
+# --- Firebase config (real files only; .example files stay tracked) ---
+**/google-services.json
+!**/google-services.json.example
+**/GoogleService-Info.plist
+!**/GoogleService-Info.plist.example
+
+# --- Android signing material (belt-and-braces; per-app android/.gitignore already covers these) ---
+**/key.properties
+!**/key.properties.example
+**/*.jks
+**/*.keystore
+**/*.kdb
+**/keystore/
+
+# --- Apple signing material (never enters the repo) ---
+**/*.p8
+**/*.p12
+**/*.mobileprovision
+**/*.cer
+
+# --- Generic env / secret droppings ---
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/secrets/

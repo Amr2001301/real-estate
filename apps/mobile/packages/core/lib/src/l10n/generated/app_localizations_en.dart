@@ -885,4 +885,517 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get maintenanceFinishAnyway => 'Done';
+
+  @override
+  String get navClients => 'Clients';
+
+  @override
+  String get navProjects => 'Projects';
+
+  @override
+  String get navProfile => 'Profile';
+
+  @override
+  String get navUnits => 'Units';
+
+  @override
+  String get staffLoginSubtitle => 'Sign in to your staff account';
+
+  @override
+  String get roleSales => 'Sales';
+
+  @override
+  String get roleSalesManager => 'Sales Manager';
+
+  @override
+  String get roleBroker => 'Broker';
+
+  @override
+  String get roleAdmin => 'Admin';
+
+  @override
+  String get roleMaintenance => 'Maintenance';
+
+  @override
+  String get roleStaff => 'Staff';
+
+  @override
+  String get brokerComingSoonTitle => 'Broker workspace coming soon';
+
+  @override
+  String get brokerComingSoonMessage =>
+      'Your broker tools are on the way. You\'ll be able to manage submissions and commissions here soon.';
+
+  @override
+  String get dashboardLeads => 'Leads';
+
+  @override
+  String get dashboardTodayVisits => 'Today\'s visits';
+
+  @override
+  String get dashboardScheduledVisits => 'Scheduled visits';
+
+  @override
+  String get dashboardReservations => 'Reservations';
+
+  @override
+  String get dashboardPipeline => 'Pipeline';
+
+  @override
+  String get leadStageNew => 'New';
+
+  @override
+  String get leadStageInterested => 'Interested';
+
+  @override
+  String get leadStageVisit => 'Visit';
+
+  @override
+  String get leadStageNegotiation => 'Negotiation';
+
+  @override
+  String get leadStageWon => 'Won';
+
+  @override
+  String get leadStageLost => 'Lost';
+
+  @override
+  String get leadsSearchHint => 'Search by name or phone';
+
+  @override
+  String get leadsFilterAll => 'All';
+
+  @override
+  String get leadsMine => 'My leads';
+
+  @override
+  String get leadsEmptyTitle => 'No leads';
+
+  @override
+  String get leadsEmptyMessage => 'Leads assigned to you will appear here.';
+
+  @override
+  String get leadInterest => 'Interested in';
+
+  @override
+  String get leadAssignedTo => 'Assigned to';
+
+  @override
+  String get leadChangeStage => 'Change stage';
+
+  @override
+  String get leadAddNote => 'Add a note';
+
+  @override
+  String get leadNoteHint => 'Write a note…';
+
+  @override
+  String get leadTimeline => 'Timeline';
+
+  @override
+  String get leadTimelineEmpty => 'No activity yet.';
+
+  @override
+  String get leadActivityCall => 'Call logged';
+
+  @override
+  String get leadActivityEmail => 'Email logged';
+
+  @override
+  String get leadActivityStatusChange => 'Stage changed';
+
+  @override
+  String get leadActivityVisit => 'Visit';
+
+  @override
+  String get leadActivityNote => 'Note added';
+
+  @override
+  String get leadActivityReservation => 'Reservation';
+
+  @override
+  String get clientsSearchHint => 'Search clients';
+
+  @override
+  String get clientsEmptyTitle => 'No clients';
+
+  @override
+  String get clientsEmptyMessage => 'Clients from your leads will appear here.';
+
+  @override
+  String clientsLeadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count leads',
+      one: '1 lead',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clientLeads => 'Leads';
+
+  @override
+  String get projectsEmptyTitle => 'No projects';
+
+  @override
+  String get projectsEmptyMessage => 'Projects will appear here.';
+
+  @override
+  String get projectStatusPublished => 'Published';
+
+  @override
+  String get projectStatusDraft => 'Draft';
+
+  @override
+  String get projectStatusArchived => 'Archived';
+
+  @override
+  String get unitsEmptyMessage => 'No units in this project yet.';
+
+  @override
+  String get unitType => 'Type';
+
+  @override
+  String get unitBedrooms => 'Bedrooms';
+
+  @override
+  String get unitArea => 'Area';
+
+  @override
+  String get unitPrice => 'Price';
+
+  @override
+  String get unitStatusAvailable => 'Available';
+
+  @override
+  String get unitStatusReserved => 'Reserved';
+
+  @override
+  String get unitStatusSold => 'Sold';
+
+  @override
+  String get navVisits => 'Visits';
+
+  @override
+  String get navReservations => 'Reservations';
+
+  @override
+  String get dashboardQuickActions => 'Quick actions';
+
+  @override
+  String get visitsToday => 'Today';
+
+  @override
+  String get visitsEmptyTitle => 'No visits';
+
+  @override
+  String get visitsEmptyMessage => 'Scheduled visits will appear here.';
+
+  @override
+  String get visitNew => 'Schedule visit';
+
+  @override
+  String get visitCreate => 'Create visit';
+
+  @override
+  String get visitCreated => 'Visit scheduled.';
+
+  @override
+  String get visitProject => 'Project';
+
+  @override
+  String get visitProjectRequired => 'Please select a project.';
+
+  @override
+  String get visitSelectProject => 'Select a project';
+
+  @override
+  String get visitWhen => 'Date & time';
+
+  @override
+  String get visitPickDateTime => 'Pick date & time';
+
+  @override
+  String get visitScheduleRequired => 'Please pick a date & time.';
+
+  @override
+  String get visitLocation => 'Location';
+
+  @override
+  String get visitNotes => 'Notes';
+
+  @override
+  String get visitUpdateStatus => 'Update status';
+
+  @override
+  String get visitActionConfirm => 'Confirm';
+
+  @override
+  String get visitActionComplete => 'Complete';
+
+  @override
+  String get visitActionCancel => 'Cancel';
+
+  @override
+  String get visitActionNoShow => 'No-show';
+
+  @override
+  String get visitReasonTitle => 'Add a reason';
+
+  @override
+  String get visitReasonHint => 'Optional reason';
+
+  @override
+  String get visitStatusConfirmed => 'Confirmed';
+
+  @override
+  String get visitStatusNoShow => 'No-show';
+
+  @override
+  String get visitStatusRescheduled => 'Rescheduled';
+
+  @override
+  String get reservationsEmptyTitle => 'No reservations';
+
+  @override
+  String get reservationsEmptyMessage => 'Reservations will appear here.';
+
+  @override
+  String get reservationNew => 'New reservation';
+
+  @override
+  String get reservationCreate => 'Reserve unit';
+
+  @override
+  String get reservationCreated => 'Reservation created.';
+
+  @override
+  String get reservationUnit => 'Unit';
+
+  @override
+  String get reservationUnitRequired => 'Please select a unit.';
+
+  @override
+  String get reservationSelectUnit => 'Select a unit';
+
+  @override
+  String get reservationPickProjectFirst =>
+      'Select a project to see its units.';
+
+  @override
+  String get reservationBooking => 'Booking amount';
+
+  @override
+  String get reservationPlan => 'Plan';
+
+  @override
+  String get reservationExpiresOn => 'Expires';
+
+  @override
+  String get reservationExpiredOn => 'Expired';
+
+  @override
+  String get reservationStatusPending => 'Pending';
+
+  @override
+  String get reservationStatusApproved => 'Approved';
+
+  @override
+  String get reservationStatusRejected => 'Rejected';
+
+  @override
+  String get reservationStatusCancelled => 'Cancelled';
+
+  @override
+  String get reservationStatusExpired => 'Expired';
+
+  @override
+  String get reservationStatusConverted => 'Converted';
+
+  @override
+  String get calculatorTitle => 'Installment calculator';
+
+  @override
+  String get calculatorPlans => 'Plan presets';
+
+  @override
+  String get calculatorPrice => 'Unit price';
+
+  @override
+  String get calculatorDownPayment => 'Down payment';
+
+  @override
+  String get calculatorReservation => 'Reservation amount';
+
+  @override
+  String get calculatorMonths => 'Number of months';
+
+  @override
+  String get calculatorMonthsShort => 'mo';
+
+  @override
+  String get calculatorIncrease => 'Increase %';
+
+  @override
+  String get calculatorInvalid =>
+      'Please check the values: months ≥ 1, and down payment + reservation must not exceed the price.';
+
+  @override
+  String get calculatorCompute => 'Calculate';
+
+  @override
+  String get calculatorResult => 'Result';
+
+  @override
+  String get calculatorFinanced => 'Financed amount';
+
+  @override
+  String get calculatorTotal => 'Total payable';
+
+  @override
+  String calculatorMonthlyN(int months) {
+    return 'Monthly ($months months)';
+  }
+
+  @override
+  String get summaryUnavailable => 'Unavailable';
+
+  @override
+  String get bonusTitle => 'Bonus & commission';
+
+  @override
+  String get bonusEmptyTitle => 'No bonus entries';
+
+  @override
+  String get bonusEmptyMessage =>
+      'Your bonus and commission entries will appear here.';
+
+  @override
+  String get bonusPaid => 'Paid';
+
+  @override
+  String get bonusPending => 'Pending';
+
+  @override
+  String get bonusStatusPending => 'Pending';
+
+  @override
+  String get bonusStatusApproved => 'Approved';
+
+  @override
+  String get bonusStatusPaid => 'Paid';
+
+  @override
+  String get targetsTitle => 'Targets';
+
+  @override
+  String get targetsNone => 'No target set for this period.';
+
+  @override
+  String get targetsHistory => 'Target history';
+
+  @override
+  String get targetsActivity => 'This period';
+
+  @override
+  String get targetsSignedContracts => 'Signed contracts';
+
+  @override
+  String get targetAmount => 'Sales amount';
+
+  @override
+  String get targetUnits => 'Units sold';
+
+  @override
+  String targetsUnitsN(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count units',
+      one: '1 unit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePerformance => 'Performance';
+
+  @override
+  String get profileActiveLeads => 'Active leads';
+
+  @override
+  String get navCommissions => 'Commissions';
+
+  @override
+  String get brokerDashLeads => 'Total leads';
+
+  @override
+  String get brokerDashApprovedLeads => 'Approved leads';
+
+  @override
+  String get brokerDashApprovedReservations => 'Approved reservations';
+
+  @override
+  String get brokerRecentLeads => 'Recent leads';
+
+  @override
+  String get brokerRecentReservations => 'Recent reservations';
+
+  @override
+  String get brokerCommissionPct => 'Commission';
+
+  @override
+  String get brokerProjectsEmptyMessage =>
+      'You don\'t have access to any projects yet.';
+
+  @override
+  String get brokerLeadsEmptyMessage => 'Leads you submit will appear here.';
+
+  @override
+  String get brokerLeadNew => 'Add lead';
+
+  @override
+  String get brokerLeadCreated => 'Lead submitted.';
+
+  @override
+  String get brokerLeadName => 'Full name';
+
+  @override
+  String get brokerLeadPhone => 'Phone';
+
+  @override
+  String get brokerLeadEmail => 'Email (optional)';
+
+  @override
+  String get brokerLeadNote => 'Note (optional)';
+
+  @override
+  String get brokerLeadSubmit => 'Submit lead';
+
+  @override
+  String get brokerSelectLead => 'Select a lead';
+
+  @override
+  String get brokerLeadStatusPending => 'Pending review';
+
+  @override
+  String get brokerLeadStatusApproved => 'Approved';
+
+  @override
+  String get brokerLeadStatusRejected => 'Rejected';
+
+  @override
+  String get brokerLeadStatusDuplicate => 'Duplicate';
+
+  @override
+  String get brokerLeadStatusExpired => 'Expired';
+
+  @override
+  String get brokerCommissionsEmptyTitle => 'No commissions';
+
+  @override
+  String get brokerCommissionsEmptyMessage =>
+      'Your commissions will appear here.';
 }

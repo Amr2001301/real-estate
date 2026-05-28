@@ -117,21 +117,37 @@ class MaintenanceRemoteDataSourceImpl implements MaintenanceRemoteDataSource {
     required String contentType,
     void Function(double progress)? onProgress,
   }) async {
-    await _uploadClient.put<void>(
-      uploadUrl,
-      data: Stream<List<int>>.fromIterable([bytes]),
-      options: Options(
-        headers: {
-          Headers.contentTypeHeader: contentType,
-          Headers.contentLengthHeader: bytes.length,
-        },
-      ),
-      onSendProgress: onProgress == null
-          ? null
-          : (sent, total) {
-              if (total > 0) onProgress(sent / total);
-            },
-    );
+    try {
+      await _uploadClient.put<void>(
+        uploadUrl,
+        data: Stream<List<int>>.fromIterable([bytes]),
+        options: Options(
+          headers: {
+            Headers.contentTypeHeader: contentType,
+            Headers.contentLengthHeader: bytes.length,
+          },
+        ),
+        onSendProgress: onProgress == null
+            ? null
+            : (sent, total) {
+                if (total > 0) onProgress(sent / total);
+              },
+      );
+    } on DioException catch (e) {
+      // Re-throw with the signed URL redacted so it can never reach an
+      // AppFailure's technicalMessage / log line. The failure TYPE is preserved
+      // (a redacted RequestOptions path) so error mapping stays accurate.
+      throw DioException(
+        requestOptions: RequestOptions(path: '[r2-upload]'),
+        type: e.type,
+        response: e.response == null
+            ? null
+            : Response(
+                requestOptions: RequestOptions(path: '[r2-upload]'),
+                statusCode: e.response!.statusCode,
+              ),
+      );
+    }
   }
 
   @override

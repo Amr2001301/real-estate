@@ -50,10 +50,17 @@ abstract final class DioClientFactory {
     ]);
 
     if (env.enableLogging && kDebugMode) {
+      // Debug-only, and deliberately minimal: log the request line + response
+      // status, but NEVER headers (bearer token) or bodies (login password,
+      // OTP codes, signed URLs, financial data).
       client.interceptors.add(
         LogInterceptor(
-          requestBody: true,
+          request: true,
+          requestHeader: false,
+          requestBody: false,
+          responseHeader: false,
           responseBody: false,
+          error: true,
           logPrint: (Object o) => debugPrint(o.toString()),
         ),
       );

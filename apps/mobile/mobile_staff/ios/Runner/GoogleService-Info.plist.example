@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PLACEHOLDER ONLY — DO NOT use this file at runtime.
+
+  To enable Firebase / FCM on the Staff iOS app:
+
+  1. In the same Firebase project as the Android Staff app, register an iOS
+     app with the FINAL production bundle ID from
+     `ios/Runner.xcodeproj/project.pbxproj` `PRODUCT_BUNDLE_IDENTIFIER`
+     (TODO Phase 6).
+  2. Download `GoogleService-Info.plist` from the Firebase console.
+  3. Drop it at `apps/mobile/mobile_staff/ios/Runner/GoogleService-Info.plist`
+     (NEXT TO this file). That path is gitignored — see
+     `apps/mobile/.gitignore` — so the real file will never be committed.
+  4. Open `ios/Runner.xcworkspace` in Xcode and ADD the file to the Runner
+     target (drag into the project navigator, tick "Copy items if needed"
+     and the Runner target). It must appear in `Build Phases > Copy Bundle
+     Resources` for Firebase to find it.
+  5. Upload an APNs `.p8` key to Firebase Console → Project Settings →
+     Cloud Messaging → Apple app configuration. APNs key file + Team ID +
+     Key ID stay OUTSIDE this repo.
+  6. Add `firebase_core` + `firebase_messaging` to
+     `apps/mobile/mobile_staff/pubspec.yaml`, run `pod install` from
+     `ios/`, and replace `NoopPushTokenProvider` in `bootstrap.dart`.
+  7. Enable Push Notifications + Background Modes (Remote notifications)
+     capabilities on the Runner target in Xcode.
+  8. Verify on a real iOS device with a Production APNs token — never claim
+     push works without an observed delivery.
+
+  See `docs/mobile-release-guide.md` §9 and `docs/mobile-store-readiness.md`
+  for the full integration checklist.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>_comment</key>
+    <string>This is a placeholder. The real GoogleService-Info.plist is downloaded from the Firebase console and dropped at the path above. Do NOT paste real values here.</string>
+</dict>
+</plist>

@@ -1,0 +1,16 @@
+# Copy this file to `key.properties` in the SAME directory (apps/mobile/mobile_customer/android/)
+# and fill in real values. The real file is gitignored — see android/.gitignore.
+#
+# `storeFile` is resolved relative to the `app/` Gradle module (i.e. paths like
+# `keystore/upload-keystore.jks` point at `app/keystore/upload-keystore.jks`).
+# Keep the keystore itself OUTSIDE the repo on a developer machine, and inject
+# it in CI from a secret store — never commit a `.jks` / `.keystore` file.
+#
+# After dropping the real `key.properties` + keystore, verify with:
+#   flutter build appbundle --release -t lib/main_prod.dart
+# and confirm the AAB is signed with your upload key (not the debug key).
+
+storePassword=REPLACE_ME
+keyPassword=REPLACE_ME
+keyAlias=upload
+storeFile=keystore/upload-keystore.jks

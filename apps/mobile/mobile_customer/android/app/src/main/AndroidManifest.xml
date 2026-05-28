@@ -1,4 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required for all network calls (Dio → backend API, signed R2 uploads,
+         FCM when wired). Flutter auto-injects this for debug builds but the
+         release manifest strips it, so we declare it explicitly. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
         android:label="mobile_customer"
         android:name="${applicationName}"

@@ -875,4 +875,515 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maintenanceFinishAnyway => 'تم';
+
+  @override
+  String get navClients => 'العملاء';
+
+  @override
+  String get navProjects => 'المشاريع';
+
+  @override
+  String get navProfile => 'الملف الشخصي';
+
+  @override
+  String get navUnits => 'الوحدات';
+
+  @override
+  String get staffLoginSubtitle => 'سجّل الدخول إلى حساب الموظف';
+
+  @override
+  String get roleSales => 'مبيعات';
+
+  @override
+  String get roleSalesManager => 'مدير مبيعات';
+
+  @override
+  String get roleBroker => 'وسيط';
+
+  @override
+  String get roleAdmin => 'مشرف';
+
+  @override
+  String get roleMaintenance => 'صيانة';
+
+  @override
+  String get roleStaff => 'موظف';
+
+  @override
+  String get brokerComingSoonTitle => 'مساحة الوسيط قريبًا';
+
+  @override
+  String get brokerComingSoonMessage =>
+      'أدوات الوسيط في الطريق. ستتمكن قريبًا من إدارة الطلبات والعمولات من هنا.';
+
+  @override
+  String get dashboardLeads => 'العملاء المحتملون';
+
+  @override
+  String get dashboardTodayVisits => 'زيارات اليوم';
+
+  @override
+  String get dashboardScheduledVisits => 'الزيارات المجدولة';
+
+  @override
+  String get dashboardReservations => 'الحجوزات';
+
+  @override
+  String get dashboardPipeline => 'مسار المبيعات';
+
+  @override
+  String get leadStageNew => 'جديد';
+
+  @override
+  String get leadStageInterested => 'مهتم';
+
+  @override
+  String get leadStageVisit => 'زيارة';
+
+  @override
+  String get leadStageNegotiation => 'تفاوض';
+
+  @override
+  String get leadStageWon => 'مكتمل';
+
+  @override
+  String get leadStageLost => 'خاسر';
+
+  @override
+  String get leadsSearchHint => 'ابحث بالاسم أو الهاتف';
+
+  @override
+  String get leadsFilterAll => 'الكل';
+
+  @override
+  String get leadsMine => 'عملائي';
+
+  @override
+  String get leadsEmptyTitle => 'لا يوجد عملاء محتملون';
+
+  @override
+  String get leadsEmptyMessage => 'سيظهر هنا العملاء المحتملون المسندون إليك.';
+
+  @override
+  String get leadInterest => 'مهتم بـ';
+
+  @override
+  String get leadAssignedTo => 'مُسند إلى';
+
+  @override
+  String get leadChangeStage => 'تغيير المرحلة';
+
+  @override
+  String get leadAddNote => 'إضافة ملاحظة';
+
+  @override
+  String get leadNoteHint => 'اكتب ملاحظة…';
+
+  @override
+  String get leadTimeline => 'السجل الزمني';
+
+  @override
+  String get leadTimelineEmpty => 'لا يوجد نشاط بعد.';
+
+  @override
+  String get leadActivityCall => 'تم تسجيل مكالمة';
+
+  @override
+  String get leadActivityEmail => 'تم تسجيل بريد';
+
+  @override
+  String get leadActivityStatusChange => 'تغيّرت المرحلة';
+
+  @override
+  String get leadActivityVisit => 'زيارة';
+
+  @override
+  String get leadActivityNote => 'أُضيفت ملاحظة';
+
+  @override
+  String get leadActivityReservation => 'حجز';
+
+  @override
+  String get clientsSearchHint => 'ابحث عن عميل';
+
+  @override
+  String get clientsEmptyTitle => 'لا يوجد عملاء';
+
+  @override
+  String get clientsEmptyMessage => 'سيظهر هنا العملاء من قائمتك.';
+
+  @override
+  String clientsLeadCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count عملاء محتملون',
+      one: 'عميل محتمل واحد',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get clientLeads => 'العملاء المحتملون';
+
+  @override
+  String get projectsEmptyTitle => 'لا توجد مشاريع';
+
+  @override
+  String get projectsEmptyMessage => 'ستظهر المشاريع هنا.';
+
+  @override
+  String get projectStatusPublished => 'منشور';
+
+  @override
+  String get projectStatusDraft => 'مسودة';
+
+  @override
+  String get projectStatusArchived => 'مؤرشف';
+
+  @override
+  String get unitsEmptyMessage => 'لا توجد وحدات في هذا المشروع بعد.';
+
+  @override
+  String get unitType => 'النوع';
+
+  @override
+  String get unitBedrooms => 'غرف النوم';
+
+  @override
+  String get unitArea => 'المساحة';
+
+  @override
+  String get unitPrice => 'السعر';
+
+  @override
+  String get unitStatusAvailable => 'متاحة';
+
+  @override
+  String get unitStatusReserved => 'محجوزة';
+
+  @override
+  String get unitStatusSold => 'مباعة';
+
+  @override
+  String get navVisits => 'الزيارات';
+
+  @override
+  String get navReservations => 'الحجوزات';
+
+  @override
+  String get dashboardQuickActions => 'إجراءات سريعة';
+
+  @override
+  String get visitsToday => 'اليوم';
+
+  @override
+  String get visitsEmptyTitle => 'لا توجد زيارات';
+
+  @override
+  String get visitsEmptyMessage => 'ستظهر الزيارات المجدولة هنا.';
+
+  @override
+  String get visitNew => 'جدولة زيارة';
+
+  @override
+  String get visitCreate => 'إنشاء زيارة';
+
+  @override
+  String get visitCreated => 'تمت جدولة الزيارة.';
+
+  @override
+  String get visitProject => 'المشروع';
+
+  @override
+  String get visitProjectRequired => 'يرجى اختيار مشروع.';
+
+  @override
+  String get visitSelectProject => 'اختر مشروعًا';
+
+  @override
+  String get visitWhen => 'التاريخ والوقت';
+
+  @override
+  String get visitPickDateTime => 'اختر التاريخ والوقت';
+
+  @override
+  String get visitScheduleRequired => 'يرجى اختيار التاريخ والوقت.';
+
+  @override
+  String get visitLocation => 'الموقع';
+
+  @override
+  String get visitNotes => 'ملاحظات';
+
+  @override
+  String get visitUpdateStatus => 'تحديث الحالة';
+
+  @override
+  String get visitActionConfirm => 'تأكيد';
+
+  @override
+  String get visitActionComplete => 'إكمال';
+
+  @override
+  String get visitActionCancel => 'إلغاء';
+
+  @override
+  String get visitActionNoShow => 'لم يحضر';
+
+  @override
+  String get visitReasonTitle => 'أضف سببًا';
+
+  @override
+  String get visitReasonHint => 'سبب اختياري';
+
+  @override
+  String get visitStatusConfirmed => 'مؤكدة';
+
+  @override
+  String get visitStatusNoShow => 'لم يحضر';
+
+  @override
+  String get visitStatusRescheduled => 'أُعيد جدولتها';
+
+  @override
+  String get reservationsEmptyTitle => 'لا توجد حجوزات';
+
+  @override
+  String get reservationsEmptyMessage => 'ستظهر الحجوزات هنا.';
+
+  @override
+  String get reservationNew => 'حجز جديد';
+
+  @override
+  String get reservationCreate => 'حجز الوحدة';
+
+  @override
+  String get reservationCreated => 'تم إنشاء الحجز.';
+
+  @override
+  String get reservationUnit => 'الوحدة';
+
+  @override
+  String get reservationUnitRequired => 'يرجى اختيار وحدة.';
+
+  @override
+  String get reservationSelectUnit => 'اختر وحدة';
+
+  @override
+  String get reservationPickProjectFirst => 'اختر مشروعًا لعرض وحداته.';
+
+  @override
+  String get reservationBooking => 'مبلغ الحجز';
+
+  @override
+  String get reservationPlan => 'الخطة';
+
+  @override
+  String get reservationExpiresOn => 'تنتهي';
+
+  @override
+  String get reservationExpiredOn => 'انتهت';
+
+  @override
+  String get reservationStatusPending => 'قيد الانتظار';
+
+  @override
+  String get reservationStatusApproved => 'موافَق عليه';
+
+  @override
+  String get reservationStatusRejected => 'مرفوض';
+
+  @override
+  String get reservationStatusCancelled => 'ملغى';
+
+  @override
+  String get reservationStatusExpired => 'منتهٍ';
+
+  @override
+  String get reservationStatusConverted => 'محوّل';
+
+  @override
+  String get calculatorTitle => 'حاسبة الأقساط';
+
+  @override
+  String get calculatorPlans => 'خطط جاهزة';
+
+  @override
+  String get calculatorPrice => 'سعر الوحدة';
+
+  @override
+  String get calculatorDownPayment => 'الدفعة المقدمة';
+
+  @override
+  String get calculatorReservation => 'مبلغ الحجز';
+
+  @override
+  String get calculatorMonths => 'عدد الأشهر';
+
+  @override
+  String get calculatorMonthsShort => 'شهر';
+
+  @override
+  String get calculatorIncrease => 'نسبة الزيادة %';
+
+  @override
+  String get calculatorInvalid =>
+      'يرجى التحقق من القيم: عدد الأشهر ١ على الأقل، وألا يتجاوز مجموع الدفعة المقدمة والحجز سعر الوحدة.';
+
+  @override
+  String get calculatorCompute => 'احسب';
+
+  @override
+  String get calculatorResult => 'النتيجة';
+
+  @override
+  String get calculatorFinanced => 'المبلغ المموّل';
+
+  @override
+  String get calculatorTotal => 'الإجمالي المستحق';
+
+  @override
+  String calculatorMonthlyN(int months) {
+    return 'القسط الشهري ($months شهرًا)';
+  }
+
+  @override
+  String get summaryUnavailable => 'غير متاح';
+
+  @override
+  String get bonusTitle => 'المكافآت والعمولات';
+
+  @override
+  String get bonusEmptyTitle => 'لا توجد مكافآت';
+
+  @override
+  String get bonusEmptyMessage => 'ستظهر مكافآتك وعمولاتك هنا.';
+
+  @override
+  String get bonusPaid => 'مدفوع';
+
+  @override
+  String get bonusPending => 'معلّق';
+
+  @override
+  String get bonusStatusPending => 'معلّق';
+
+  @override
+  String get bonusStatusApproved => 'معتمد';
+
+  @override
+  String get bonusStatusPaid => 'مدفوع';
+
+  @override
+  String get targetsTitle => 'المستهدفات';
+
+  @override
+  String get targetsNone => 'لا يوجد مستهدف لهذه الفترة.';
+
+  @override
+  String get targetsHistory => 'سجل المستهدفات';
+
+  @override
+  String get targetsActivity => 'هذه الفترة';
+
+  @override
+  String get targetsSignedContracts => 'العقود الموقّعة';
+
+  @override
+  String get targetAmount => 'قيمة المبيعات';
+
+  @override
+  String get targetUnits => 'الوحدات المباعة';
+
+  @override
+  String targetsUnitsN(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count وحدات',
+      one: 'وحدة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get profilePerformance => 'الأداء';
+
+  @override
+  String get profileActiveLeads => 'عملاء محتملون نشطون';
+
+  @override
+  String get navCommissions => 'العمولات';
+
+  @override
+  String get brokerDashLeads => 'إجمالي العملاء المحتملين';
+
+  @override
+  String get brokerDashApprovedLeads => 'العملاء المعتمدون';
+
+  @override
+  String get brokerDashApprovedReservations => 'الحجوزات المعتمدة';
+
+  @override
+  String get brokerRecentLeads => 'أحدث العملاء المحتملين';
+
+  @override
+  String get brokerRecentReservations => 'أحدث الحجوزات';
+
+  @override
+  String get brokerCommissionPct => 'العمولة';
+
+  @override
+  String get brokerProjectsEmptyMessage =>
+      'ليس لديك صلاحية الوصول إلى أي مشاريع بعد.';
+
+  @override
+  String get brokerLeadsEmptyMessage =>
+      'سيظهر هنا العملاء المحتملون الذين تضيفهم.';
+
+  @override
+  String get brokerLeadNew => 'إضافة عميل محتمل';
+
+  @override
+  String get brokerLeadCreated => 'تم إرسال العميل المحتمل.';
+
+  @override
+  String get brokerLeadName => 'الاسم الكامل';
+
+  @override
+  String get brokerLeadPhone => 'الهاتف';
+
+  @override
+  String get brokerLeadEmail => 'البريد الإلكتروني (اختياري)';
+
+  @override
+  String get brokerLeadNote => 'ملاحظة (اختياري)';
+
+  @override
+  String get brokerLeadSubmit => 'إرسال العميل المحتمل';
+
+  @override
+  String get brokerSelectLead => 'اختر عميلاً محتملاً';
+
+  @override
+  String get brokerLeadStatusPending => 'قيد المراجعة';
+
+  @override
+  String get brokerLeadStatusApproved => 'معتمد';
+
+  @override
+  String get brokerLeadStatusRejected => 'مرفوض';
+
+  @override
+  String get brokerLeadStatusDuplicate => 'مكرر';
+
+  @override
+  String get brokerLeadStatusExpired => 'منتهٍ';
+
+  @override
+  String get brokerCommissionsEmptyTitle => 'لا توجد عمولات';
+
+  @override
+  String get brokerCommissionsEmptyMessage => 'ستظهر عمولاتك هنا.';
 }

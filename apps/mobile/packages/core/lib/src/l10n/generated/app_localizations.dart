@@ -1705,6 +1705,984 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Done'**
   String get maintenanceFinishAnyway;
+
+  /// No description provided for @navClients.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients'**
+  String get navClients;
+
+  /// No description provided for @navProjects.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get navProjects;
+
+  /// No description provided for @navProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get navProfile;
+
+  /// No description provided for @navUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Units'**
+  String get navUnits;
+
+  /// No description provided for @staffLoginSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to your staff account'**
+  String get staffLoginSubtitle;
+
+  /// No description provided for @roleSales.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales'**
+  String get roleSales;
+
+  /// No description provided for @roleSalesManager.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales Manager'**
+  String get roleSalesManager;
+
+  /// No description provided for @roleBroker.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker'**
+  String get roleBroker;
+
+  /// No description provided for @roleAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin'**
+  String get roleAdmin;
+
+  /// No description provided for @roleMaintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance'**
+  String get roleMaintenance;
+
+  /// No description provided for @roleStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'Staff'**
+  String get roleStaff;
+
+  /// No description provided for @brokerComingSoonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Broker workspace coming soon'**
+  String get brokerComingSoonTitle;
+
+  /// No description provided for @brokerComingSoonMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your broker tools are on the way. You\'ll be able to manage submissions and commissions here soon.'**
+  String get brokerComingSoonMessage;
+
+  /// No description provided for @dashboardLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get dashboardLeads;
+
+  /// No description provided for @dashboardTodayVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s visits'**
+  String get dashboardTodayVisits;
+
+  /// No description provided for @dashboardScheduledVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled visits'**
+  String get dashboardScheduledVisits;
+
+  /// No description provided for @dashboardReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservations'**
+  String get dashboardReservations;
+
+  /// No description provided for @dashboardPipeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Pipeline'**
+  String get dashboardPipeline;
+
+  /// No description provided for @leadStageNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get leadStageNew;
+
+  /// No description provided for @leadStageInterested.
+  ///
+  /// In en, this message translates to:
+  /// **'Interested'**
+  String get leadStageInterested;
+
+  /// No description provided for @leadStageVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get leadStageVisit;
+
+  /// No description provided for @leadStageNegotiation.
+  ///
+  /// In en, this message translates to:
+  /// **'Negotiation'**
+  String get leadStageNegotiation;
+
+  /// No description provided for @leadStageWon.
+  ///
+  /// In en, this message translates to:
+  /// **'Won'**
+  String get leadStageWon;
+
+  /// No description provided for @leadStageLost.
+  ///
+  /// In en, this message translates to:
+  /// **'Lost'**
+  String get leadStageLost;
+
+  /// No description provided for @leadsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by name or phone'**
+  String get leadsSearchHint;
+
+  /// No description provided for @leadsFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get leadsFilterAll;
+
+  /// No description provided for @leadsMine.
+  ///
+  /// In en, this message translates to:
+  /// **'My leads'**
+  String get leadsMine;
+
+  /// No description provided for @leadsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No leads'**
+  String get leadsEmptyTitle;
+
+  /// No description provided for @leadsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads assigned to you will appear here.'**
+  String get leadsEmptyMessage;
+
+  /// No description provided for @leadInterest.
+  ///
+  /// In en, this message translates to:
+  /// **'Interested in'**
+  String get leadInterest;
+
+  /// No description provided for @leadAssignedTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned to'**
+  String get leadAssignedTo;
+
+  /// No description provided for @leadChangeStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Change stage'**
+  String get leadChangeStage;
+
+  /// No description provided for @leadAddNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note'**
+  String get leadAddNote;
+
+  /// No description provided for @leadNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a note…'**
+  String get leadNoteHint;
+
+  /// No description provided for @leadTimeline.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline'**
+  String get leadTimeline;
+
+  /// No description provided for @leadTimelineEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No activity yet.'**
+  String get leadTimelineEmpty;
+
+  /// No description provided for @leadActivityCall.
+  ///
+  /// In en, this message translates to:
+  /// **'Call logged'**
+  String get leadActivityCall;
+
+  /// No description provided for @leadActivityEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email logged'**
+  String get leadActivityEmail;
+
+  /// No description provided for @leadActivityStatusChange.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage changed'**
+  String get leadActivityStatusChange;
+
+  /// No description provided for @leadActivityVisit.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit'**
+  String get leadActivityVisit;
+
+  /// No description provided for @leadActivityNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note added'**
+  String get leadActivityNote;
+
+  /// No description provided for @leadActivityReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation'**
+  String get leadActivityReservation;
+
+  /// No description provided for @clientsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search clients'**
+  String get clientsSearchHint;
+
+  /// No description provided for @clientsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No clients'**
+  String get clientsEmptyTitle;
+
+  /// No description provided for @clientsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Clients from your leads will appear here.'**
+  String get clientsEmptyMessage;
+
+  /// No description provided for @clientsLeadCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 lead} other{{count} leads}}'**
+  String clientsLeadCount(int count);
+
+  /// No description provided for @clientLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads'**
+  String get clientLeads;
+
+  /// No description provided for @projectsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects'**
+  String get projectsEmptyTitle;
+
+  /// No description provided for @projectsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects will appear here.'**
+  String get projectsEmptyMessage;
+
+  /// No description provided for @projectStatusPublished.
+  ///
+  /// In en, this message translates to:
+  /// **'Published'**
+  String get projectStatusPublished;
+
+  /// No description provided for @projectStatusDraft.
+  ///
+  /// In en, this message translates to:
+  /// **'Draft'**
+  String get projectStatusDraft;
+
+  /// No description provided for @projectStatusArchived.
+  ///
+  /// In en, this message translates to:
+  /// **'Archived'**
+  String get projectStatusArchived;
+
+  /// No description provided for @unitsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No units in this project yet.'**
+  String get unitsEmptyMessage;
+
+  /// No description provided for @unitType.
+  ///
+  /// In en, this message translates to:
+  /// **'Type'**
+  String get unitType;
+
+  /// No description provided for @unitBedrooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Bedrooms'**
+  String get unitBedrooms;
+
+  /// No description provided for @unitArea.
+  ///
+  /// In en, this message translates to:
+  /// **'Area'**
+  String get unitArea;
+
+  /// No description provided for @unitPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Price'**
+  String get unitPrice;
+
+  /// No description provided for @unitStatusAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get unitStatusAvailable;
+
+  /// No description provided for @unitStatusReserved.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserved'**
+  String get unitStatusReserved;
+
+  /// No description provided for @unitStatusSold.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get unitStatusSold;
+
+  /// No description provided for @navVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits'**
+  String get navVisits;
+
+  /// No description provided for @navReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservations'**
+  String get navReservations;
+
+  /// No description provided for @dashboardQuickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get dashboardQuickActions;
+
+  /// No description provided for @visitsToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get visitsToday;
+
+  /// No description provided for @visitsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No visits'**
+  String get visitsEmptyTitle;
+
+  /// No description provided for @visitsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled visits will appear here.'**
+  String get visitsEmptyMessage;
+
+  /// No description provided for @visitNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule visit'**
+  String get visitNew;
+
+  /// No description provided for @visitCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create visit'**
+  String get visitCreate;
+
+  /// No description provided for @visitCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit scheduled.'**
+  String get visitCreated;
+
+  /// No description provided for @visitProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get visitProject;
+
+  /// No description provided for @visitProjectRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a project.'**
+  String get visitProjectRequired;
+
+  /// No description provided for @visitSelectProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a project'**
+  String get visitSelectProject;
+
+  /// No description provided for @visitWhen.
+  ///
+  /// In en, this message translates to:
+  /// **'Date & time'**
+  String get visitWhen;
+
+  /// No description provided for @visitPickDateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick date & time'**
+  String get visitPickDateTime;
+
+  /// No description provided for @visitScheduleRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please pick a date & time.'**
+  String get visitScheduleRequired;
+
+  /// No description provided for @visitLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get visitLocation;
+
+  /// No description provided for @visitNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get visitNotes;
+
+  /// No description provided for @visitUpdateStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Update status'**
+  String get visitUpdateStatus;
+
+  /// No description provided for @visitActionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get visitActionConfirm;
+
+  /// No description provided for @visitActionComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete'**
+  String get visitActionComplete;
+
+  /// No description provided for @visitActionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get visitActionCancel;
+
+  /// No description provided for @visitActionNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'No-show'**
+  String get visitActionNoShow;
+
+  /// No description provided for @visitReasonTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a reason'**
+  String get visitReasonTitle;
+
+  /// No description provided for @visitReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional reason'**
+  String get visitReasonHint;
+
+  /// No description provided for @visitStatusConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed'**
+  String get visitStatusConfirmed;
+
+  /// No description provided for @visitStatusNoShow.
+  ///
+  /// In en, this message translates to:
+  /// **'No-show'**
+  String get visitStatusNoShow;
+
+  /// No description provided for @visitStatusRescheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescheduled'**
+  String get visitStatusRescheduled;
+
+  /// No description provided for @reservationsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No reservations'**
+  String get reservationsEmptyTitle;
+
+  /// No description provided for @reservationsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservations will appear here.'**
+  String get reservationsEmptyMessage;
+
+  /// No description provided for @reservationNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New reservation'**
+  String get reservationNew;
+
+  /// No description provided for @reservationCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Reserve unit'**
+  String get reservationCreate;
+
+  /// No description provided for @reservationCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation created.'**
+  String get reservationCreated;
+
+  /// No description provided for @reservationUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get reservationUnit;
+
+  /// No description provided for @reservationUnitRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a unit.'**
+  String get reservationUnitRequired;
+
+  /// No description provided for @reservationSelectUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a unit'**
+  String get reservationSelectUnit;
+
+  /// No description provided for @reservationPickProjectFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a project to see its units.'**
+  String get reservationPickProjectFirst;
+
+  /// No description provided for @reservationBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking amount'**
+  String get reservationBooking;
+
+  /// No description provided for @reservationPlan.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan'**
+  String get reservationPlan;
+
+  /// No description provided for @reservationExpiresOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expires'**
+  String get reservationExpiresOn;
+
+  /// No description provided for @reservationExpiredOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get reservationExpiredOn;
+
+  /// No description provided for @reservationStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get reservationStatusPending;
+
+  /// No description provided for @reservationStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get reservationStatusApproved;
+
+  /// No description provided for @reservationStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get reservationStatusRejected;
+
+  /// No description provided for @reservationStatusCancelled.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get reservationStatusCancelled;
+
+  /// No description provided for @reservationStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get reservationStatusExpired;
+
+  /// No description provided for @reservationStatusConverted.
+  ///
+  /// In en, this message translates to:
+  /// **'Converted'**
+  String get reservationStatusConverted;
+
+  /// No description provided for @calculatorTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Installment calculator'**
+  String get calculatorTitle;
+
+  /// No description provided for @calculatorPlans.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan presets'**
+  String get calculatorPlans;
+
+  /// No description provided for @calculatorPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit price'**
+  String get calculatorPrice;
+
+  /// No description provided for @calculatorDownPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get calculatorDownPayment;
+
+  /// No description provided for @calculatorReservation.
+  ///
+  /// In en, this message translates to:
+  /// **'Reservation amount'**
+  String get calculatorReservation;
+
+  /// No description provided for @calculatorMonths.
+  ///
+  /// In en, this message translates to:
+  /// **'Number of months'**
+  String get calculatorMonths;
+
+  /// No description provided for @calculatorMonthsShort.
+  ///
+  /// In en, this message translates to:
+  /// **'mo'**
+  String get calculatorMonthsShort;
+
+  /// No description provided for @calculatorIncrease.
+  ///
+  /// In en, this message translates to:
+  /// **'Increase %'**
+  String get calculatorIncrease;
+
+  /// No description provided for @calculatorInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Please check the values: months ≥ 1, and down payment + reservation must not exceed the price.'**
+  String get calculatorInvalid;
+
+  /// No description provided for @calculatorCompute.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculate'**
+  String get calculatorCompute;
+
+  /// No description provided for @calculatorResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result'**
+  String get calculatorResult;
+
+  /// No description provided for @calculatorFinanced.
+  ///
+  /// In en, this message translates to:
+  /// **'Financed amount'**
+  String get calculatorFinanced;
+
+  /// No description provided for @calculatorTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total payable'**
+  String get calculatorTotal;
+
+  /// No description provided for @calculatorMonthlyN.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly ({months} months)'**
+  String calculatorMonthlyN(int months);
+
+  /// No description provided for @summaryUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get summaryUnavailable;
+
+  /// No description provided for @bonusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bonus & commission'**
+  String get bonusTitle;
+
+  /// No description provided for @bonusEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No bonus entries'**
+  String get bonusEmptyTitle;
+
+  /// No description provided for @bonusEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your bonus and commission entries will appear here.'**
+  String get bonusEmptyMessage;
+
+  /// No description provided for @bonusPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bonusPaid;
+
+  /// No description provided for @bonusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get bonusPending;
+
+  /// No description provided for @bonusStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get bonusStatusPending;
+
+  /// No description provided for @bonusStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get bonusStatusApproved;
+
+  /// No description provided for @bonusStatusPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get bonusStatusPaid;
+
+  /// No description provided for @targetsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Targets'**
+  String get targetsTitle;
+
+  /// No description provided for @targetsNone.
+  ///
+  /// In en, this message translates to:
+  /// **'No target set for this period.'**
+  String get targetsNone;
+
+  /// No description provided for @targetsHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Target history'**
+  String get targetsHistory;
+
+  /// No description provided for @targetsActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'This period'**
+  String get targetsActivity;
+
+  /// No description provided for @targetsSignedContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contracts'**
+  String get targetsSignedContracts;
+
+  /// No description provided for @targetAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales amount'**
+  String get targetAmount;
+
+  /// No description provided for @targetUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Units sold'**
+  String get targetUnits;
+
+  /// No description provided for @targetsUnitsN.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 unit} other{{count} units}}'**
+  String targetsUnitsN(int count);
+
+  /// No description provided for @profilePerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Performance'**
+  String get profilePerformance;
+
+  /// No description provided for @profileActiveLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Active leads'**
+  String get profileActiveLeads;
+
+  /// No description provided for @navCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Commissions'**
+  String get navCommissions;
+
+  /// No description provided for @brokerDashLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Total leads'**
+  String get brokerDashLeads;
+
+  /// No description provided for @brokerDashApprovedLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved leads'**
+  String get brokerDashApprovedLeads;
+
+  /// No description provided for @brokerDashApprovedReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved reservations'**
+  String get brokerDashApprovedReservations;
+
+  /// No description provided for @brokerRecentLeads.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent leads'**
+  String get brokerRecentLeads;
+
+  /// No description provided for @brokerRecentReservations.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent reservations'**
+  String get brokerRecentReservations;
+
+  /// No description provided for @brokerCommissionPct.
+  ///
+  /// In en, this message translates to:
+  /// **'Commission'**
+  String get brokerCommissionPct;
+
+  /// No description provided for @brokerProjectsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have access to any projects yet.'**
+  String get brokerProjectsEmptyMessage;
+
+  /// No description provided for @brokerLeadsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Leads you submit will appear here.'**
+  String get brokerLeadsEmptyMessage;
+
+  /// No description provided for @brokerLeadNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Add lead'**
+  String get brokerLeadNew;
+
+  /// No description provided for @brokerLeadCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead submitted.'**
+  String get brokerLeadCreated;
+
+  /// No description provided for @brokerLeadName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get brokerLeadName;
+
+  /// No description provided for @brokerLeadPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get brokerLeadPhone;
+
+  /// No description provided for @brokerLeadEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email (optional)'**
+  String get brokerLeadEmail;
+
+  /// No description provided for @brokerLeadNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Note (optional)'**
+  String get brokerLeadNote;
+
+  /// No description provided for @brokerLeadSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit lead'**
+  String get brokerLeadSubmit;
+
+  /// No description provided for @brokerSelectLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a lead'**
+  String get brokerSelectLead;
+
+  /// No description provided for @brokerLeadStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get brokerLeadStatusPending;
+
+  /// No description provided for @brokerLeadStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get brokerLeadStatusApproved;
+
+  /// No description provided for @brokerLeadStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get brokerLeadStatusRejected;
+
+  /// No description provided for @brokerLeadStatusDuplicate.
+  ///
+  /// In en, this message translates to:
+  /// **'Duplicate'**
+  String get brokerLeadStatusDuplicate;
+
+  /// No description provided for @brokerLeadStatusExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get brokerLeadStatusExpired;
+
+  /// No description provided for @brokerCommissionsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No commissions'**
+  String get brokerCommissionsEmptyTitle;
+
+  /// No description provided for @brokerCommissionsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your commissions will appear here.'**
+  String get brokerCommissionsEmptyMessage;
 }
 
 class _AppLocalizationsDelegate

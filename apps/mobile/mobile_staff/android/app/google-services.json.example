@@ -1,0 +1,25 @@
+// PLACEHOLDER ONLY — DO NOT use this file at runtime.
+//
+// To enable Firebase / FCM on the Staff Android app:
+//
+// 1. Create a Firebase project (or reuse the existing brand-shared one).
+// 2. Register an Android app under that project with the FINAL production
+//    `applicationId` from `app/build.gradle.kts` (TODO Phase 6).
+// 3. Download the generated `google-services.json` from the Firebase console.
+// 4. Drop it at `apps/mobile/mobile_staff/android/app/google-services.json`
+//    (NEXT TO this file). That path is gitignored — see
+//    `apps/mobile/.gitignore` — so the real file will never be committed.
+// 5. Add the `firebase_core` + `firebase_messaging` packages to
+//    `apps/mobile/mobile_staff/pubspec.yaml` AND apply the
+//    `com.google.gms.google-services` Gradle plugin in
+//    `apps/mobile/mobile_staff/android/app/build.gradle.kts`.
+// 6. Replace the NoopPushTokenProvider wired in `bootstrap.dart` with a real
+//    FirebaseMessaging-backed implementation.
+// 7. Verify on a real Android device (not the emulator) — never claim push
+//    works without an observed delivery.
+//
+// See `docs/mobile-release-guide.md` §9 and `docs/mobile-store-readiness.md`
+// for the full integration checklist.
+{
+  "_comment": "This is a placeholder. The real google-services.json is downloaded from the Firebase console and dropped at the path above. Do NOT paste real values here."
+}
