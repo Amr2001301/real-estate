@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useRef } from 'react';
-import { Building2, User } from 'lucide-react';
+import { Building2, MessageSquare, User } from 'lucide-react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { scheduleVisitAction } from '../actions';
@@ -18,6 +18,15 @@ interface Props {
   unit?: { code: string; type: string } | null;
   customerName?: string | null;
   defaultSalesId?: string | null;
+  /** Customer's submitted preferred datetime — seeds the date input. */
+  preferredDate?: string | null;
+  /** Customer's submitted preferred HH:mm — seeds the time select. Falls back
+   *  to the time portion of `preferredDate` when null. */
+  preferredTime?: string | null;
+  /** Customer's free-text message — rendered read-only above the form so the
+   *  admin can see context without leaving the dialog. Mirrors the field on
+   *  the request detail view. */
+  customerMessage?: string | null;
 }
 
 // 30-minute Arabic time slots 06:00 – 22:00
@@ -40,6 +49,30 @@ const TIME_SLOTS: { value: string; label: string }[] = (() => {
 
 const INITIAL = { error: null as string | null };
 
+/** Extract a YYYY-MM-DD string from an ISO timestamp for the date input.
+ *  Returns '' when the input isn't parseable so the form falls back to empty. */
+function dateInputValue(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Extract HH:mm in 30-minute increments, snapped to the nearest slot the form
+ *  exposes so the customer's preferred time matches a selectable option. */
+function snapToHalfHour(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const totalMinutes = d.getHours() * 60 + d.getMinutes();
+  const snapped = Math.round(totalMinutes / 30) * 30;
+  const h = Math.floor(snapped / 60);
+  const m = snapped % 60;
+  if (h < 6 || h > 22 || (h === 22 && m > 0)) return '';
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
 export function ScheduleModal({
   requestId,
   salesOptions,
@@ -49,9 +82,20 @@ export function ScheduleModal({
   unit,
   customerName,
   defaultSalesId,
+  preferredDate,
+  preferredTime,
+  customerMessage,
 }: Props) {
   const dateRef = useRef<HTMLInputElement>(null);
   const timeRef = useRef<HTMLSelectElement>(null);
+
+  // Seed the date+time pickers from what the customer asked for. Admin can
+  // edit either before submitting; if customer didn't supply anything (e.g.
+  // walk-in created by sales) both stay empty.
+  const defaultDate = dateInputValue(preferredDate);
+  const defaultTime =
+    (preferredTime && /^\d{2}:\d{2}$/.test(preferredTime) ? preferredTime : '') ||
+    snapToHalfHour(preferredDate);
 
   const action = scheduleVisitAction.bind(null, requestId);
   const [state, dispatch, pending] = useActionState(
@@ -112,6 +156,12 @@ export function ScheduleModal({
               </span>
             </div>
           )}
+          {customerMessage && (
+            <div className="flex items-start gap-2 text-slate-700 pt-2 border-t border-slate-200/60">
+              <MessageSquare className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
+              <span className="whitespace-pre-wrap leading-relaxed">{customerMessage}</span>
+            </div>
+          )}
         </div>
 
         {state.error && (
@@ -129,6 +179,7 @@ export function ScheduleModal({
               name="_date"
               type="date"
               required
+              defaultValue={defaultDate}
               className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30"
             />
           </div>
@@ -140,7 +191,7 @@ export function ScheduleModal({
               ref={timeRef}
               name="_time"
               required
-              defaultValue=""
+              defaultValue={defaultTime}
               className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30 bg-white"
             >
               <option value="" disabled>اختر الوقت</option>

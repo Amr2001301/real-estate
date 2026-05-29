@@ -223,4 +223,64 @@ describe('Public website · info/visit request intake', () => {
       .expect(400);
     expect(mock.visitRequest.create).not.toHaveBeenCalled();
   });
+
+  // ── Bug-#1 regression: customer's message and HH:mm reach the admin view ──
+  // Pre-fix the public path wrote only the legacy `notes` field and never
+  // populated `preferredTime`, so admin tooling (which renders `requestNotes`
+  // and `preferredTime` as separate columns) showed both as blank. The visit
+  // submission now mirrors the message to both columns and derives HH:mm from
+  // the submitted datetime.
+
+  it('visit-request mirrors customer message to both notes and requestNotes', async () => {
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({
+        projectId: PROJECT_ID,
+        preferredDate: '2030-07-01T14:30:00.000Z',
+        notes: 'Please ring the doorbell twice',
+        name: 'Visitor',
+        phone: '+966500000010',
+      })
+      .expect(201);
+
+    const visit = mock.visitRequest.create.mock.calls[0][0].data;
+    expect(visit.notes).toBe('Please ring the doorbell twice');
+    expect(visit.requestNotes).toBe('Please ring the doorbell twice');
+  });
+
+  it('visit-request derives preferredTime (HH:mm) from a submitted datetime', async () => {
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({
+        projectId: PROJECT_ID,
+        preferredDate: '2030-07-01T09:15:00',
+        name: 'Visitor',
+        phone: '+966500000011',
+      })
+      .expect(201);
+
+    const visit = mock.visitRequest.create.mock.calls[0][0].data;
+    expect(typeof visit.preferredTime).toBe('string');
+    expect(visit.preferredTime).toMatch(/^\d{2}:\d{2}$/);
+    // Locale-independent assertion: the service uses local time; we only
+    // require some HH:mm value is written (was null prior to the fix).
+  });
+
+  it('visit-request accepts an explicit preferredTime override and a customer email', async () => {
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({
+        projectId: PROJECT_ID,
+        preferredDate: '2030-07-01T09:15:00',
+        preferredTime: '11:30',
+        email: 'visitor@example.com',
+        name: 'Visitor',
+        phone: '+966500000012',
+      })
+      .expect(201);
+
+    const visit = mock.visitRequest.create.mock.calls[0][0].data;
+    expect(visit.preferredTime).toBe('11:30');
+    expect(visit.customerEmail).toBe('visitor@example.com');
+  });
 });

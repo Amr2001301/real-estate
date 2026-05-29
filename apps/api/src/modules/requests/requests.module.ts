@@ -32,6 +32,14 @@ import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 
+/** Format a Date's local hours+minutes as HH:mm — used to mirror a customer's
+ *  submitted datetime into the `preferredTime` column so admin tooling renders
+ *  date and time as separate cells. */
+function formatHourMinute(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 class CreateInfoRequestDto {
   @IsString() @MinLength(2) message!: string;
   @IsOptional() @IsUUID() projectId?: string;
@@ -45,9 +53,13 @@ class CreateVisitRequestDto {
   @IsUUID() projectId!: string;
   @IsOptional() @IsUUID() unitId?: string;
   @IsDateString() preferredDate!: string;
+  // Optional HH:mm. When omitted the service derives it from preferredDate so
+  // admin tooling that renders date + time as separate cells stays populated.
+  @IsOptional() @IsString() preferredTime?: string;
   @IsOptional() @IsString() notes?: string;
   @IsOptional() @IsString() name?: string;
   @IsOptional() @IsString() phone?: string;
+  @IsOptional() @IsString() email?: string;
 }
 
 class UpdateVisitStatusDto {
@@ -195,18 +207,31 @@ export class RequestsService {
         leadId = lead.id;
       }
     }
+    const preferredDate = new Date(dto.preferredDate);
+    // Derive HH:mm from the submitted datetime when the client didn't send a
+    // separate preferredTime — keeps the existing single `datetime-local` form
+    // working AND populates the column that admin tooling renders.
+    const preferredTime = dto.preferredTime?.trim() || formatHourMinute(preferredDate);
+    // Customer's message is mirrored to both `notes` (legacy, read by the
+    // customer-facing /me responses) and `requestNotes` (read by the admin
+    // dashboard request detail). Mirroring keeps both surfaces accurate
+    // without a data backfill.
+    const customerMessage = dto.notes?.trim() || null;
     return this.prisma.visitRequest.create({
       data: {
         userId: actor.userId ?? null,
         leadId,
         projectId: dto.projectId,
         unitId: dto.unitId ?? null,
-        preferredDate: new Date(dto.preferredDate),
-        notes: dto.notes ?? null,
+        preferredDate,
+        preferredTime,
+        notes: customerMessage,
+        requestNotes: customerMessage,
         requestStatus: VisitRequestStatus.NEW,
         source: VisitRequestSource.WEBSITE,
         customerName: dto.name ?? null,
         customerPhone: dto.phone ?? null,
+        customerEmail: dto.email ?? null,
       },
     });
   }

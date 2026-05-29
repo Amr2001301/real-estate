@@ -64,6 +64,7 @@ export function ContactForm({
   mode = 'info',
   eyebrow,
   initialValues,
+  isAuthenticatedCustomer = false,
 }: {
   context: ContactContext;
   /** 'visit' switches the form to a visit-request (needs a project + date). */
@@ -77,6 +78,14 @@ export function ContactForm({
    * are seeded into `useState` once.
    */
   initialValues?: ContactPrefill;
+  /**
+   * When true, the form posts to the authenticated `/me/*` endpoints instead
+   * of `/public/*` so the resulting row is linked to the user via `userId`.
+   * Without this, a logged-in customer's submission stays orphaned and never
+   * appears under /account/visits or /account/requests. Pages resolve this
+   * server-side from the session — guests render with the flag off.
+   */
+  isAuthenticatedCustomer?: boolean;
 }) {
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -131,7 +140,10 @@ export function ContactForm({
   }
 
   function submitInfo(): Promise<ApiResult<unknown>> {
-    return safePost('/public/info-request', {
+    // Logged-in CLIENT/CUSTOMER → `/me/info-requests` so the row gets
+    // `userId` and shows up under /account/requests. Guests post to /public.
+    const path = isAuthenticatedCustomer ? '/me/info-requests' : '/public/info-request';
+    return safePost(path, {
       message: message.trim(),
       name: fullName.trim(),
       phone: phone.trim(),
@@ -141,9 +153,10 @@ export function ContactForm({
     });
   }
 
-  /** Visit request → POST /public/visit-request. Only called when isVisit. */
+  /** Visit request → /public/visit-request or /me/visit-requests. Only called when isVisit. */
   function submitVisit(): Promise<ApiResult<unknown>> {
-    return safePost('/public/visit-request', {
+    const path = isAuthenticatedCustomer ? '/me/visit-requests' : '/public/visit-request';
+    return safePost(path, {
       // context.projectId is guaranteed present here (see isVisit).
       projectId: context.projectId,
       ...(context.unitId ? { unitId: context.unitId } : {}),
@@ -151,6 +164,7 @@ export function ContactForm({
       notes: message.trim(),
       name: fullName.trim(),
       phone: phone.trim(),
+      ...(email.trim() ? { email: email.trim() } : {}),
     });
   }
 

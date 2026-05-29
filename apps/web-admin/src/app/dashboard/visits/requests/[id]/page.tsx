@@ -111,10 +111,13 @@ export default async function VisitRequestDetailPage({
                   <p className="font-medium">{formatDateTime(req.convertedAt)}</p>
                 </div>
               )}
-              {req.requestNotes && (
+              {/* Customer's submitted message. Pre-this-fix rows have only
+                  `notes` populated; new rows have `requestNotes` too. Fall
+                  back to either so legacy records render correctly. */}
+              {(req.requestNotes ?? req.notes) && (
                 <div className="col-span-2">
                   <p className="text-slate-500 mb-0.5">ملاحظات العميل</p>
-                  <p className="text-slate-700">{req.requestNotes}</p>
+                  <p className="text-slate-700 whitespace-pre-wrap">{req.requestNotes ?? req.notes}</p>
                 </div>
               )}
               {req.adminNotes && (

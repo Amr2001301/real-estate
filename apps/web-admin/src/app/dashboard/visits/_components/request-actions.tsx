@@ -83,6 +83,9 @@ export function RequestActions({ request, salesOptions }: Props) {
         unit={request.unit}
         customerName={request.customerName ?? request.user?.fullName ?? request.lead?.fullName}
         defaultSalesId={request.assignedSalesId}
+        preferredDate={request.preferredDate}
+        preferredTime={request.preferredTime}
+        customerMessage={request.requestNotes ?? request.notes ?? null}
       />
     </div>
   );

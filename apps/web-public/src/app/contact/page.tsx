@@ -3,6 +3,7 @@ import { safeFetch } from '@/lib/api';
 import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit, PublicProjectDetail } from '@/lib/api-types';
 import { resolveContactPrefill } from '@/lib/contact-prefill';
+import { getSession, isPortalRole } from '@/lib/session';
 import { Section } from '@/components/ui/Section';
 import { PageHero } from '@/components/layout/PageHero';
 import { ContactForm, type ContactContext } from '@/components/contact/ContactForm';
@@ -52,13 +53,18 @@ async function resolveContext(projectId: string, unitId: string): Promise<Contac
 
 export default async function ContactPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
-  // Context resolution and the profile prefill have no dependency on each
-  // other — run them in parallel so logged-in users don't pay an extra RTT.
-  const [context, initialValues] = await Promise.all([
+  // Context resolution, the profile prefill, and the session lookup have no
+  // dependency on each other — run them in parallel so logged-in users don't
+  // pay extra RTTs.
+  const [context, initialValues, session] = await Promise.all([
     resolveContext(firstStr(sp.projectId), firstStr(sp.unitId)),
     resolveContactPrefill(),
+    getSession(),
   ]);
   const mode = firstStr(sp.type) === 'visit' ? 'visit' : 'info';
+  // Only portal roles (CLIENT/CUSTOMER) can call /me/* — staff roles browsing
+  // /contact stay on the public path so they don't 403.
+  const isAuthenticatedCustomer = Boolean(session && isPortalRole(session.role));
 
   return (
     <>
@@ -71,7 +77,12 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
       <Section tone="canvas">
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <ContactForm context={context} mode={mode} initialValues={initialValues} />
+            <ContactForm
+              context={context}
+              mode={mode}
+              initialValues={initialValues}
+              isAuthenticatedCustomer={isAuthenticatedCustomer}
+            />
           </div>
           <aside className="lg:col-span-1">
             <div className="lg:sticky lg:top-28">
