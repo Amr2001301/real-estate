@@ -32,6 +32,10 @@ const CLIENT_ITEMS: NavItem[] = [
   { href: routes.accountFavorites, label: 'المفضلة', icon: Heart },
   { href: routes.accountVisits, label: 'الزيارات', icon: CalendarClock },
   { href: routes.accountRequests, label: 'الطلبات', icon: MessageSquareText },
+  // P5 — notifications are now reachable by every portal role (CLIENT +
+  // CUSTOMER). The page used to live in the (customer) route group and was
+  // unreachable to CLIENT.
+  { href: routes.accountNotifications, label: 'الإشعارات', icon: Bell },
 ];
 
 // Post-purchase sections — shown only to CUSTOMER.
@@ -40,7 +44,6 @@ const CUSTOMER_ITEMS: NavItem[] = [
   { href: routes.accountContracts, label: 'العقود', icon: FileText },
   { href: routes.accountDeposits, label: 'الدفعات', icon: Wallet },
   { href: routes.accountMaintenance, label: 'الصيانة', icon: Wrench },
-  { href: routes.accountNotifications, label: 'الإشعارات', icon: Bell },
 ];
 
 function isActive(pathname: string, href: string): boolean {

@@ -3,7 +3,7 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { authFetch, AuthError } from '@/lib/api-auth';
-import type { MeNotification } from '@/lib/api-types';
+import type { MeNotification, Paginated } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
@@ -38,11 +38,31 @@ function Header({ unreadCount }: { unreadCount: number }) {
   );
 }
 
+/**
+ * Normalise the API response to an array. The backend now returns
+ * `Paginated<MeNotification>` (`{ data, meta }`) but legacy comments in this
+ * file assumed a plain array — calling `.filter()` on the wrapped response
+ * crashed the page. The helper tolerates either shape (defence-in-depth) and
+ * any other surprise becomes an empty list rather than a runtime error.
+ */
+function extractItems(value: unknown): MeNotification[] {
+  if (Array.isArray(value)) return value as MeNotification[];
+  if (
+    value &&
+    typeof value === 'object' &&
+    Array.isArray((value as { data?: unknown }).data)
+  ) {
+    return (value as { data: MeNotification[] }).data;
+  }
+  return [];
+}
+
 export default async function AccountNotificationsPage() {
-  let notifications: MeNotification[];
+  let raw: Paginated<MeNotification> | MeNotification[];
   try {
-    // Plain array (limit 100), newest first per the API.
-    notifications = await authFetch<MeNotification[]>('/me/notifications');
+    raw = await authFetch<Paginated<MeNotification> | MeNotification[]>(
+      '/me/notifications',
+    );
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
@@ -57,6 +77,7 @@ export default async function AccountNotificationsPage() {
     );
   }
 
+  const notifications = extractItems(raw);
   const unreadCount = notifications.filter((n) => n.readAt === null).length;
 
   return (
