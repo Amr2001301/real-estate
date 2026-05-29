@@ -27,14 +27,28 @@ const PROJECT_ID = 'a1111111-1111-4111-8111-111111111111';
 const UNIT_ID = 'b2222222-2222-4222-8222-222222222222';
 
 class FakeAuthGuard implements CanActivate {
+  /** When set, optionally-authenticated routes resolve req.user from this. */
+  static currentUser: { sub: string; role: string } | null = null;
   canActivate(context: ExecutionContext): boolean {
     const reflector = new Reflector();
-    return Boolean(
+    const isPublic = Boolean(
       reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
         context.getHandler(),
         context.getClass(),
       ]),
     );
+    // Optional auth: when a fake user is set, plant it on req.user. Routes
+    // without @OptionalAuth still pass through (the fake guard treats public
+    // routes as fully open) — current production behaviour is preserved.
+    if (FakeAuthGuard.currentUser) {
+      const req = context.switchToHttp().getRequest<{ user?: unknown }>();
+      req.user = {
+        ...FakeAuthGuard.currentUser,
+        email: null,
+        phone: null,
+      };
+    }
+    return isPublic;
   }
 }
 
@@ -136,6 +150,7 @@ describe('Public website · info/visit request intake', () => {
     mock.infoRequest.create.mockClear();
     mock.visitRequest.create.mockClear();
     mock.leadSource.findFirst.mockClear();
+    FakeAuthGuard.currentUser = null;
   });
 
   it('info-request accepts project/unit and stamps the Website source on the lead', async () => {
@@ -295,5 +310,89 @@ describe('Public website · info/visit request intake', () => {
     const visit = mock.visitRequest.create.mock.calls[0][0].data;
     expect(visit.preferredTime).toBe('11:30');
     expect(visit.customerEmail).toBe('visitor@example.com');
+  });
+
+  // ── P3.1 — defensive userId self-heal on the public endpoints ─────────────
+  // The public submission endpoints accept a Bearer when the visitor happens
+  // to be signed in. CLIENT/CUSTOMER auto-attribute the row so the customer
+  // sees it under /account/visits and /account/requests; other roles stay
+  // anonymous-on-public so admins/sales/brokers can't accidentally pollute
+  // their own users by hitting the wrong endpoint.
+
+  it('visit-request without Bearer: row stays anonymous (userId=undefined)', async () => {
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({
+        projectId: PROJECT_ID,
+        preferredDate: '2030-07-01',
+        name: 'Visitor',
+        phone: '+966500000020',
+      })
+      .expect(201);
+    const visit = mock.visitRequest.create.mock.calls[0][0].data;
+    // The Prisma `userId: undefined` shape means Prisma writes NULL — same as
+    // explicit null. We assert it is not set to a real id.
+    expect(visit.userId).toBeFalsy();
+  });
+
+  it('visit-request with CUSTOMER Bearer: userId is attached', async () => {
+    FakeAuthGuard.currentUser = {
+      sub: 'cust-1',
+      role: 'CUSTOMER',
+    };
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({
+        projectId: PROJECT_ID,
+        preferredDate: '2030-07-01',
+        name: 'Visitor',
+        phone: '+966500000021',
+      })
+      .expect(201);
+    const visit = mock.visitRequest.create.mock.calls[0][0].data;
+    expect(visit.userId).toBe('cust-1');
+  });
+
+  it('visit-request with CLIENT Bearer: userId is attached', async () => {
+    FakeAuthGuard.currentUser = { sub: 'client-1', role: 'CLIENT' };
+    await request(app.getHttpServer())
+      .post('/public/visit-request')
+      .send({
+        projectId: PROJECT_ID,
+        preferredDate: '2030-07-01',
+        name: 'Visitor',
+        phone: '+966500000022',
+      })
+      .expect(201);
+    const visit = mock.visitRequest.create.mock.calls[0][0].data;
+    expect(visit.userId).toBe('client-1');
+  });
+
+  it.each(['ADMIN', 'SALES', 'SALES_MANAGER', 'BROKER', 'MAINTENANCE_SUPERVISOR'])(
+    'visit-request with %s Bearer: userId stays unset (only portal roles self-attribute)',
+    async (role) => {
+      FakeAuthGuard.currentUser = { sub: `${role.toLowerCase()}-1`, role };
+      await request(app.getHttpServer())
+        .post('/public/visit-request')
+        .send({
+          projectId: PROJECT_ID,
+          preferredDate: '2030-07-01',
+          name: 'Visitor',
+          phone: `+96650000${role.length.toString().padStart(4, '0')}`,
+        })
+        .expect(201);
+      const visit = mock.visitRequest.create.mock.calls[0][0].data;
+      expect(visit.userId).toBeFalsy();
+    },
+  );
+
+  it('info-request inherits the same self-heal contract', async () => {
+    FakeAuthGuard.currentUser = { sub: 'cust-2', role: 'CUSTOMER' };
+    await request(app.getHttpServer())
+      .post('/public/info-request')
+      .send({ message: 'hello', name: 'C', phone: '+966500000030' })
+      .expect(201);
+    const info = mock.infoRequest.create.mock.calls[0][0].data;
+    expect(info.userId).toBe('cust-2');
   });
 });

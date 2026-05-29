@@ -29,6 +29,7 @@ import { resolveSalesScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
+import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import {
@@ -42,6 +43,22 @@ import {
 function formatHourMinute(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/**
+ * Return the userId for the `actor.userId` field when the optionally-resolved
+ * Bearer token belongs to a customer-side role (CLIENT or CUSTOMER). Any other
+ * role (ADMIN, SALES, SALES_MANAGER, BROKER, MAINTENANCE_SUPERVISOR) — or no
+ * user at all — yields `undefined` so the row stays guest-attributed. This
+ * guards against an admin or sales rep accidentally creating an
+ * `actor=admin@…` row when they hit the public endpoint while logged in.
+ */
+function portalUserId(user: AuthUser | undefined): string | undefined {
+  if (!user) return undefined;
+  if (user.role === UserRole.CLIENT || user.role === UserRole.CUSTOMER) {
+    return user.sub;
+  }
+  return undefined;
 }
 
 class CreateInfoRequestDto {
@@ -363,19 +380,34 @@ class RequestsController {
     private readonly prisma: PrismaService,
   ) {}
 
-  // Public submission (guest or logged-in)
+  // Public submission. `@OptionalAuth()` means the route stays open to
+  // anonymous visitors but, when the browser happens to send a valid Bearer,
+  // the resulting row is attributed to that user — so a logged-in customer
+  // whose ContactForm mis-routed (cookie race, third-party cookie block,
+  // intermediary stripping headers) still gets the submission linked instead
+  // of orphaned. CLIENT and CUSTOMER are the only roles whose submissions
+  // should auto-attribute; staff / admin / broker submissions are explicit
+  // back-office flows and stay anonymous-on-public.
   @Public()
+  @OptionalAuth()
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Post('public/info-request')
-  publicInfo(@Body() dto: CreateInfoRequestDto) {
-    return this.svc.createInfoRequest(dto, {});
+  publicInfo(
+    @CurrentUser() user: AuthUser | undefined,
+    @Body() dto: CreateInfoRequestDto,
+  ) {
+    return this.svc.createInfoRequest(dto, { userId: portalUserId(user) });
   }
 
   @Public()
+  @OptionalAuth()
   @Throttle({ default: { ttl: 60_000, limit: 10 } })
   @Post('public/visit-request')
-  publicVisit(@Body() dto: CreateVisitRequestDto) {
-    return this.svc.createVisitRequest(dto, {});
+  publicVisit(
+    @CurrentUser() user: AuthUser | undefined,
+    @Body() dto: CreateVisitRequestDto,
+  ) {
+    return this.svc.createVisitRequest(dto, { userId: portalUserId(user) });
   }
 
   // Logged-in clients

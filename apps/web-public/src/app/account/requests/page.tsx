@@ -27,8 +27,17 @@ function firstStr(v: string | string[] | undefined): string {
 function Header() {
   return (
     <div>
-      <h1 className="text-2xl text-ink-strong">الطلبات</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">استفساراتك وطلبات المعلومات التي أرسلتها.</p>
+      <h1 className="text-2xl text-ink-strong">طلبات الاستفسار</h1>
+      <p className="mt-1.5 text-sm text-ink-muted">
+        رسائل الاستفسار التي أرسلتها فقط — طلبات الزيارة تظهر في{' '}
+        <a
+          href={routes.accountVisits}
+          className="font-medium text-gold-600 underline decoration-gold-300 underline-offset-2 hover:text-gold-500"
+        >
+          صفحة الزيارات
+        </a>
+        .
+      </p>
     </div>
   );
 }
@@ -68,16 +77,16 @@ export default async function AccountRequestsPage({ searchParams }: { searchPara
 
       {requests.length === 0 ? (
         <EmptyState
-          title="لا توجد استفسارات بعد"
-          message="تصفّح المشاريع والوحدات وأرسل استفسارك، وستظهر طلباتك هنا لمتابعتها."
+          title="لا توجد رسائل استفسار بعد"
+          message="تصفّح المشاريع والوحدات وأرسل استفسارك، وستظهر هنا. إن كنت تبحث عن طلبات زيارة، انتقل إلى صفحة الزيارات."
           icon={<MessageSquareText className="h-6 w-6" aria-hidden />}
           action={
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <ButtonLink href={routes.projects} variant="primary" size="md">
-                تصفّح المشاريع
+              <ButtonLink href={routes.accountVisits} variant="primary" size="md">
+                عرض طلبات الزيارة
               </ButtonLink>
-              <ButtonLink href={routes.units} variant="outline" size="md">
-                استكشف الوحدات
+              <ButtonLink href={routes.projects} variant="outline" size="md">
+                تصفّح المشاريع
               </ButtonLink>
               <ButtonLink href={routes.contact} variant="ghost" size="md">
                 تواصل معنا
