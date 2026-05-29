@@ -23,12 +23,13 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
     context.read<VisitDetailCubit>().load();
   }
 
-  /// Transitions allowed from the current status (Sales subset).
-  List<VisitTransition> _allowed(String status) => switch (status) {
-        'SCHEDULED' => [VisitTransition.confirm, VisitTransition.cancel, VisitTransition.noShow],
-        'CONFIRMED' => [VisitTransition.complete, VisitTransition.cancel, VisitTransition.noShow],
-        _ => const [],
-      };
+  /// True when the visit carries anything the customer originally asked for —
+  /// gates rendering the "ما طلبه العميل" panel so it doesn't appear as an
+  /// empty card on walk-in / sales-created visits.
+  bool _hasCustomerRequestContext(Visit visit) =>
+      visit.requestPreferredDate != null ||
+      (visit.requestPreferredTime?.isNotEmpty ?? false) ||
+      (visit.requestNotes?.isNotEmpty ?? false);
 
   Future<void> _apply(VisitTransition t) async {
     final cubit = context.read<VisitDetailCubit>();
@@ -101,7 +102,7 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
     final lang = Localizations.localeOf(context).languageCode;
     final detail = state.detail!;
     final v = detail.visit;
-    final allowed = _allowed(v.status);
+    final allowed = allowedVisitTransitions(v);
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -140,6 +141,60 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
             ],
           ),
         ),
+        if (_hasCustomerRequestContext(v)) ...[
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            elevation: AppCardElevation.soft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.customerMessageLabel,
+                    style: Theme.of(context).textTheme.titleSmall),
+                if (v.requestPreferredDate != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.visitOn(DateFormatter.mediumDate(
+                        v.requestPreferredDate!,
+                        languageCode: lang)),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+                if (v.requestPreferredTime != null &&
+                    v.requestPreferredTime!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    '${l10n.preferredTimeLabel}: ${v.requestPreferredTime}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted),
+                  ),
+                ],
+                if (v.requestNotes != null && v.requestNotes!.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(v.requestNotes!,
+                      style: Theme.of(context).textTheme.bodyMedium),
+                ],
+              ],
+            ),
+          ),
+        ],
+        if (v.status == 'PENDING_RESCHEDULE' &&
+            v.customerFeedback != null &&
+            v.customerFeedback!.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.md),
+          AppCard(
+            elevation: AppCardElevation.soft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.customerRescheduleReasonLabel,
+                    style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: AppSpacing.xs),
+                Text(v.customerFeedback!,
+                    style: Theme.of(context).textTheme.bodyMedium),
+              ],
+            ),
+          ),
+        ],
         if (allowed.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
           Text(l10n.visitUpdateStatus, style: Theme.of(context).textTheme.titleMedium),

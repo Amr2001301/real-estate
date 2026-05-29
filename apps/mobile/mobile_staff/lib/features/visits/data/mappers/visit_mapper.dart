@@ -13,6 +13,10 @@ extension VisitDtoMapper on VisitDto {
         unitCode: unitCode,
         location: location,
         leadId: leadId,
+        customerFeedback: customerFeedback,
+        requestPreferredDate: DateTime.tryParse(requestPreferredDate ?? ''),
+        requestPreferredTime: requestPreferredTime,
+        requestNotes: requestNotes,
       );
 }
 

@@ -2228,6 +2228,114 @@ abstract class AppLocalizations {
   /// **'Rescheduled'**
   String get visitStatusRescheduled;
 
+  /// No description provided for @visitStatusPendingReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule requested'**
+  String get visitStatusPendingReschedule;
+
+  /// No description provided for @appointmentStatusAwaitingCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting your confirmation'**
+  String get appointmentStatusAwaitingCustomer;
+
+  /// No description provided for @appointmentStatusConfirmedByCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed by you'**
+  String get appointmentStatusConfirmedByCustomer;
+
+  /// No description provided for @appointmentStatusPendingRescheduleCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'You requested a reschedule'**
+  String get appointmentStatusPendingRescheduleCustomer;
+
+  /// No description provided for @appointmentStatusAwaitingCustomerStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'Awaiting customer confirmation'**
+  String get appointmentStatusAwaitingCustomerStaff;
+
+  /// No description provided for @appointmentStatusConfirmedByCustomerStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer confirmed'**
+  String get appointmentStatusConfirmedByCustomerStaff;
+
+  /// No description provided for @appointmentStatusPendingRescheduleStaff.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer requested reschedule'**
+  String get appointmentStatusPendingRescheduleStaff;
+
+  /// No description provided for @appointmentActionConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm appointment'**
+  String get appointmentActionConfirm;
+
+  /// No description provided for @appointmentActionRequestReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Request reschedule'**
+  String get appointmentActionRequestReschedule;
+
+  /// No description provided for @appointmentRescheduleReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason for reschedule (optional)'**
+  String get appointmentRescheduleReasonLabel;
+
+  /// No description provided for @appointmentRescheduleReasonHint.
+  ///
+  /// In en, this message translates to:
+  /// **'E.g. I have another commitment at that time.'**
+  String get appointmentRescheduleReasonHint;
+
+  /// No description provided for @appointmentSendReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Send request'**
+  String get appointmentSendReschedule;
+
+  /// No description provided for @appointmentConfirmSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit confirmed. We\'ll see you on the agreed date.'**
+  String get appointmentConfirmSuccess;
+
+  /// No description provided for @appointmentRescheduleSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Your reschedule request was sent.'**
+  String get appointmentRescheduleSuccess;
+
+  /// No description provided for @appointmentProposedDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Proposed date'**
+  String get appointmentProposedDateLabel;
+
+  /// No description provided for @preferredTimeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred time'**
+  String get preferredTimeLabel;
+
+  /// No description provided for @customerMessageLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer message'**
+  String get customerMessageLabel;
+
+  /// No description provided for @customerRescheduleReasonLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule reason'**
+  String get customerRescheduleReasonLabel;
+
   /// No description provided for @reservationsEmptyTitle.
   ///
   /// In en, this message translates to:

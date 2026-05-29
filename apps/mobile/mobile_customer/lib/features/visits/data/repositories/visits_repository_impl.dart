@@ -29,4 +29,19 @@ class VisitsRepositoryImpl implements VisitsRepository {
       return dtoPage.map((dto) => dto.toEntity());
     });
   }
+
+  @override
+  Future<Result<void>> confirmAppointment(String appointmentId) {
+    return guardApiCall(() => _remote.confirmAppointment(appointmentId));
+  }
+
+  @override
+  Future<Result<void>> requestReschedule(
+    String appointmentId, {
+    String? reason,
+  }) {
+    return guardApiCall(
+      () => _remote.requestReschedule(appointmentId, reason: reason),
+    );
+  }
 }

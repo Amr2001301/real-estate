@@ -1157,6 +1157,67 @@ class AppLocalizationsEn extends AppLocalizations {
   String get visitStatusRescheduled => 'Rescheduled';
 
   @override
+  String get visitStatusPendingReschedule => 'Reschedule requested';
+
+  @override
+  String get appointmentStatusAwaitingCustomer => 'Awaiting your confirmation';
+
+  @override
+  String get appointmentStatusConfirmedByCustomer => 'Confirmed by you';
+
+  @override
+  String get appointmentStatusPendingRescheduleCustomer =>
+      'You requested a reschedule';
+
+  @override
+  String get appointmentStatusAwaitingCustomerStaff =>
+      'Awaiting customer confirmation';
+
+  @override
+  String get appointmentStatusConfirmedByCustomerStaff => 'Customer confirmed';
+
+  @override
+  String get appointmentStatusPendingRescheduleStaff =>
+      'Customer requested reschedule';
+
+  @override
+  String get appointmentActionConfirm => 'Confirm appointment';
+
+  @override
+  String get appointmentActionRequestReschedule => 'Request reschedule';
+
+  @override
+  String get appointmentRescheduleReasonLabel =>
+      'Reason for reschedule (optional)';
+
+  @override
+  String get appointmentRescheduleReasonHint =>
+      'E.g. I have another commitment at that time.';
+
+  @override
+  String get appointmentSendReschedule => 'Send request';
+
+  @override
+  String get appointmentConfirmSuccess =>
+      'Visit confirmed. We\'ll see you on the agreed date.';
+
+  @override
+  String get appointmentRescheduleSuccess =>
+      'Your reschedule request was sent.';
+
+  @override
+  String get appointmentProposedDateLabel => 'Proposed date';
+
+  @override
+  String get preferredTimeLabel => 'Preferred time';
+
+  @override
+  String get customerMessageLabel => 'Customer message';
+
+  @override
+  String get customerRescheduleReasonLabel => 'Reschedule reason';
+
+  @override
   String get reservationsEmptyTitle => 'No reservations';
 
   @override

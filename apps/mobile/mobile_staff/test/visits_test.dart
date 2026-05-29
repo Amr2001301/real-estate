@@ -1,6 +1,8 @@
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile_staff/common/visit_status_label.dart';
 import 'package:mobile_staff/features/visits/data/dtos/visit_dtos.dart';
 import 'package:mobile_staff/features/visits/data/mappers/visit_mapper.dart';
 import 'package:mobile_staff/features/visits/data/datasources/visits_remote_data_source.dart';
@@ -147,6 +149,131 @@ void main() {
       await cubit.apply(VisitTransition.confirm);
       expect(remote.applied, contains(VisitTransition.confirm));
       expect(cubit.state.working, isFalse);
+    });
+  });
+
+  // ─── P2 — Two-sided confirmation surface on Staff App ────────────────────
+
+  group('VisitDto → entity (P2 new fields)', () {
+    test('reads parent visitRequest preferred date/time and request notes', () {
+      final v = VisitDto.fromJson({
+        ..._row(status: 'SCHEDULED'),
+        'visitRequest': {
+          'id': 'r1',
+          'preferredDate': '2026-06-01T08:00:00.000Z',
+          'preferredTime': '08:00',
+          'requestNotes': 'Customer message from P2 form',
+          'customerName': 'Mona',
+          'customerPhone': '+201',
+        },
+      }).toEntity();
+      expect(v.requestPreferredDate, isNotNull);
+      expect(v.requestPreferredTime, '08:00');
+      expect(v.requestNotes, 'Customer message from P2 form');
+    });
+
+    test('falls back to legacy `notes` on the visitRequest for pre-P2 rows', () {
+      final v = VisitDto.fromJson({
+        ..._row(),
+        'visitRequest': {'id': 'r1', 'notes': 'legacy message'},
+      }).toEntity();
+      expect(v.requestNotes, 'legacy message');
+    });
+
+    test('reads customerFeedback (customer reschedule reason)', () {
+      final v = VisitDto.fromJson({
+        ..._row(status: 'PENDING_RESCHEDULE'),
+        'customerFeedback': 'work conflict',
+      }).toEntity();
+      expect(v.customerFeedback, 'work conflict');
+      expect(v.status, 'PENDING_RESCHEDULE');
+    });
+
+    test('handles missing visitRequest gracefully', () {
+      final v = VisitDto.fromJson(_row()).toEntity();
+      expect(v.requestPreferredDate, isNull);
+      expect(v.requestPreferredTime, isNull);
+      expect(v.requestNotes, isNull);
+    });
+  });
+
+  // The label/tone helpers are pure switches; verify the new wires.
+  group('visitStatusLabel / visitStatusTone', () {
+    late AppLocalizations l10n;
+
+    setUpAll(() async {
+      l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    });
+
+    test('PENDING_RESCHEDULE label is the staff-side variant', () {
+      expect(visitStatusLabel(l10n, 'PENDING_RESCHEDULE'),
+          l10n.appointmentStatusPendingRescheduleStaff);
+    });
+
+    test('SCHEDULED is awaiting-customer (P2 semantics)', () {
+      expect(visitStatusLabel(l10n, 'SCHEDULED'),
+          l10n.appointmentStatusAwaitingCustomerStaff);
+    });
+
+    test('CONFIRMED is confirmed-by-customer', () {
+      expect(visitStatusLabel(l10n, 'CONFIRMED'),
+          l10n.appointmentStatusConfirmedByCustomerStaff);
+    });
+
+    test('PENDING_RESCHEDULE tone is warning', () {
+      expect(visitStatusTone('PENDING_RESCHEDULE'), BadgeTone.warning);
+    });
+
+    test('unknown wire value falls through to the raw string', () {
+      expect(visitStatusLabel(l10n, 'SOMETHING_NEW'), 'SOMETHING_NEW');
+    });
+  });
+
+  group('allowedVisitTransitions', () {
+    // Anchors so "past" / "future" don't drift across midnight while tests run.
+    final now = DateTime.utc(2026, 6, 1, 12, 0);
+    final past = now.subtract(const Duration(hours: 1));
+    final future = now.add(const Duration(hours: 1));
+
+    test('SCHEDULED → only cancel (waiting on customer)', () {
+      final v = Visit(id: 'v', status: 'SCHEDULED', scheduledAt: future);
+      expect(allowedVisitTransitions(v, now: now), [VisitTransition.cancel]);
+    });
+
+    test('CONFIRMED with future scheduledAt → complete + cancel (no-show hidden)',
+        () {
+      final v = Visit(id: 'v', status: 'CONFIRMED', scheduledAt: future);
+      expect(allowedVisitTransitions(v, now: now),
+          [VisitTransition.complete, VisitTransition.cancel]);
+    });
+
+    test('CONFIRMED with past scheduledAt → complete + cancel + no-show', () {
+      final v = Visit(id: 'v', status: 'CONFIRMED', scheduledAt: past);
+      expect(allowedVisitTransitions(v, now: now), [
+        VisitTransition.complete,
+        VisitTransition.cancel,
+        VisitTransition.noShow,
+      ]);
+    });
+
+    test('PENDING_RESCHEDULE → only cancel (admin must reschedule)', () {
+      final v = Visit(id: 'v', status: 'PENDING_RESCHEDULE');
+      expect(
+          allowedVisitTransitions(v, now: now), [VisitTransition.cancel]);
+    });
+
+    test('terminal states → no transitions', () {
+      for (final s in const ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED']) {
+        final v = Visit(id: 'v', status: s, scheduledAt: past);
+        expect(allowedVisitTransitions(v, now: now), isEmpty,
+            reason: 'no transitions allowed from $s');
+      }
+    });
+
+    test('CONFIRMED with null scheduledAt → no-show stays hidden', () {
+      final v = Visit(id: 'v', status: 'CONFIRMED');
+      expect(allowedVisitTransitions(v, now: now),
+          [VisitTransition.complete, VisitTransition.cancel]);
     });
   });
 }

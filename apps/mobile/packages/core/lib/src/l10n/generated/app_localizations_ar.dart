@@ -1147,6 +1147,64 @@ class AppLocalizationsAr extends AppLocalizations {
   String get visitStatusRescheduled => 'أُعيد جدولتها';
 
   @override
+  String get visitStatusPendingReschedule => 'طُلب إعادة الجدولة';
+
+  @override
+  String get appointmentStatusAwaitingCustomer => 'بانتظار تأكيدك';
+
+  @override
+  String get appointmentStatusConfirmedByCustomer => 'مؤكدة';
+
+  @override
+  String get appointmentStatusPendingRescheduleCustomer => 'طلبت إعادة الجدولة';
+
+  @override
+  String get appointmentStatusAwaitingCustomerStaff => 'بانتظار تأكيد العميل';
+
+  @override
+  String get appointmentStatusConfirmedByCustomerStaff => 'أكد العميل';
+
+  @override
+  String get appointmentStatusPendingRescheduleStaff =>
+      'طلب العميل إعادة الجدولة';
+
+  @override
+  String get appointmentActionConfirm => 'تأكيد الموعد';
+
+  @override
+  String get appointmentActionRequestReschedule => 'طلب إعادة جدولة';
+
+  @override
+  String get appointmentRescheduleReasonLabel =>
+      'سبب طلب إعادة الجدولة (اختياري)';
+
+  @override
+  String get appointmentRescheduleReasonHint =>
+      'مثلاً: لدي ارتباط آخر في هذا الوقت.';
+
+  @override
+  String get appointmentSendReschedule => 'إرسال الطلب';
+
+  @override
+  String get appointmentConfirmSuccess =>
+      'تم تأكيد الزيارة. نلقاك في الموعد المتفق عليه.';
+
+  @override
+  String get appointmentRescheduleSuccess => 'تم إرسال طلب إعادة الجدولة.';
+
+  @override
+  String get appointmentProposedDateLabel => 'الموعد المقترح';
+
+  @override
+  String get preferredTimeLabel => 'الوقت المفضل';
+
+  @override
+  String get customerMessageLabel => 'رسالة العميل';
+
+  @override
+  String get customerRescheduleReasonLabel => 'سبب إعادة الجدولة';
+
+  @override
   String get reservationsEmptyTitle => 'لا توجد حجوزات';
 
   @override

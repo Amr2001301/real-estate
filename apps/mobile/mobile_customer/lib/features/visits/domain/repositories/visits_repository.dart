@@ -17,8 +17,19 @@ class CreateVisitParams {
 
 abstract interface class VisitsRepository {
   Future<Result<void>> createVisitRequest(CreateVisitParams params);
+
   Future<Result<Paginated<VisitRequest>>> getMyVisitRequests({
     int page,
     int pageSize,
+  });
+
+  /// P2 — confirm a proposed appointment as its owning customer.
+  Future<Result<void>> confirmAppointment(String appointmentId);
+
+  /// P2 — ask the admin to reschedule a proposed appointment. `reason` is
+  /// optional free text (≤ 500 chars on the backend).
+  Future<Result<void>> requestReschedule(
+    String appointmentId, {
+    String? reason,
   });
 }

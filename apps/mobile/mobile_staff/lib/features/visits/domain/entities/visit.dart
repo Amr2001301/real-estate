@@ -1,7 +1,7 @@
 import 'package:core/core_domain.dart';
 
 /// A scheduled visit appointment (list projection). `status` is the wire value
-/// (SCHEDULED/CONFIRMED/COMPLETED/CANCELLED/NO_SHOW/RESCHEDULED).
+/// (SCHEDULED/CONFIRMED/PENDING_RESCHEDULE/COMPLETED/CANCELLED/NO_SHOW/RESCHEDULED).
 class Visit extends Equatable {
   const Visit({
     required this.id,
@@ -14,6 +14,10 @@ class Visit extends Equatable {
     this.unitCode,
     this.location,
     this.leadId,
+    this.customerFeedback,
+    this.requestPreferredDate,
+    this.requestPreferredTime,
+    this.requestNotes,
   });
 
   final String id;
@@ -26,6 +30,17 @@ class Visit extends Equatable {
   final String? unitCode;
   final String? location;
   final String? leadId;
+
+  /// Customer's reschedule reason (P2 two-sided confirmation). Non-null only
+  /// when the customer used `request-reschedule` and the backend mirrored the
+  /// reason into the appointment's `customerFeedback` column.
+  final String? customerFeedback;
+
+  /// What the customer originally asked for at submission — surfaced from the
+  /// parent `visitRequest` so sales can compare proposed vs requested.
+  final DateTime? requestPreferredDate;
+  final String? requestPreferredTime;
+  final String? requestNotes;
 
   @override
   List<Object?> get props => [id, status, visitNumber, scheduledAt, clientName];

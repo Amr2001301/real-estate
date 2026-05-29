@@ -77,8 +77,10 @@ import '../features/profile/presentation/profile_cubit.dart';
 import '../features/profile/presentation/profile_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/visits/domain/repositories/visits_repository.dart';
+import '../features/visits/domain/usecases/confirm_visit_appointment.dart';
 import '../features/visits/domain/usecases/create_visit_request.dart';
 import '../features/visits/domain/usecases/get_my_visit_requests.dart';
+import '../features/visits/domain/usecases/request_visit_reschedule.dart';
 import '../features/visits/presentation/my_requests_screen.dart';
 import '../features/visits/presentation/my_visits_cubit.dart';
 import '../features/visits/presentation/visit_request_cubit.dart';
@@ -140,8 +142,14 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
       GoRoute(
         path: '/account/requests',
         builder: (context, _) => BlocProvider(
-          create: (ctx) =>
-              MyVisitsCubit(GetMyVisitRequests(ctx.read<VisitsRepository>())),
+          create: (ctx) {
+            final repo = ctx.read<VisitsRepository>();
+            return MyVisitsCubit(
+              GetMyVisitRequests(repo),
+              confirmVisitAppointment: ConfirmVisitAppointment(repo),
+              requestVisitReschedule: RequestVisitReschedule(repo),
+            );
+          },
           child: const MyRequestsScreen(),
         ),
       ),
