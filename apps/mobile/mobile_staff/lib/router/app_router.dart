@@ -59,6 +59,10 @@ import '../features/leads/domain/repositories/leads_repository.dart';
 import '../features/leads/domain/usecases/lead_use_cases.dart';
 import '../features/leads/presentation/cubit/lead_detail_cubit.dart';
 import '../features/leads/presentation/screens/lead_detail_screen.dart';
+import '../features/notifications/domain/repositories/notifications_repository.dart';
+import '../features/notifications/domain/usecases/notification_use_cases.dart';
+import '../features/notifications/presentation/cubit/notifications_cubit.dart';
+import '../features/notifications/presentation/screens/notifications_screen.dart';
 import '../features/installments/domain/repositories/installments_repository.dart';
 import '../features/installments/domain/usecases/installment_use_cases.dart';
 import '../features/installments/presentation/cubit/calculator_cubit.dart';
@@ -97,10 +101,16 @@ String? staffRedirect(SessionState session, String loc) {
   final isStaff = session.isAuthenticated && role.isStaffSide;
   if (!isStaff) return loc == '/login' ? null : '/login';
 
-  // Broker workspace: brokers may only navigate within `/broker/*`.
+  // `/notifications` is a shared inbox; the backend scopes results to the
+  // signed-in user regardless of role.
+  const sharedPaths = {'/notifications'};
+
+  // Broker workspace: brokers may only navigate within `/broker/*` (+ shared).
   if (role.isBroker) {
     if (loc == '/login' || loc == '/splash') return '/broker/home';
-    if (!loc.startsWith('/broker')) return '/broker/home';
+    if (!loc.startsWith('/broker') && !sharedPaths.contains(loc)) {
+      return '/broker/home';
+    }
     return null;
   }
 
@@ -413,6 +423,23 @@ GoRouter createStaffRouter(SessionCubit sessionCubit) {
       ),
 
       GoRoute(path: '/gallery', builder: (_, _) => const ComponentGalleryScreen()),
+
+      // ── Notifications inbox (shared by Sales / Manager / Admin / Broker /
+      // Maintenance Supervisor — backend scopes results to the signed-in user)
+      GoRoute(
+        path: '/notifications',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) {
+            final repo = ctx.read<NotificationsRepository>();
+            return NotificationsCubit(
+              GetNotifications(repo),
+              MarkNotificationRead(repo),
+              MarkAllNotificationsRead(repo),
+            );
+          },
+          child: const NotificationsScreen(),
+        ),
+      ),
     ],
   );
 }

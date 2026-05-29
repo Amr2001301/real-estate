@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/lead_stage_label.dart';
 import '../../../bonus/presentation/cubit/bonus_summary_cubit.dart';
+import '../../../notifications/presentation/widgets/notifications_bell.dart';
 import '../../../performance/presentation/cubit/target_summary_cubit.dart';
 import '../../domain/entities/sales_dashboard.dart';
 import '../cubit/dashboard_cubit.dart';
@@ -39,7 +40,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navDashboard)),
+      appBar: AppBar(
+        title: Text(l10n.navDashboard),
+        actions: const [NotificationsBell()],
+      ),
       body: BlocBuilder<DashboardCubit, DashboardState>(
         builder: (context, state) {
           switch (state.status) {

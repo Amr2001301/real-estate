@@ -45,6 +45,11 @@ import 'features/installments/domain/repositories/installments_repository.dart';
 import 'features/leads/data/datasources/leads_remote_data_source.dart';
 import 'features/leads/data/repositories/leads_repository_impl.dart';
 import 'features/leads/domain/repositories/leads_repository.dart';
+import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
+import 'features/notifications/data/repositories/notifications_repository_impl.dart';
+import 'features/notifications/domain/repositories/notifications_repository.dart';
+import 'features/notifications/domain/usecases/notification_use_cases.dart';
+import 'features/notifications/presentation/cubit/unread_count_cubit.dart';
 import 'features/performance/data/datasources/performance_remote_data_source.dart';
 import 'features/performance/data/repositories/performance_repository_impl.dart';
 import 'features/performance/domain/repositories/performance_repository.dart';
@@ -87,6 +92,11 @@ class StaffApp extends StatelessWidget {
         ),
         RepositoryProvider<LeadsRepository>(
           create: (ctx) => LeadsRepositoryImpl(LeadsRemoteDataSourceImpl(ctx.read<Dio>())),
+        ),
+        RepositoryProvider<NotificationsRepository>(
+          create: (ctx) => NotificationsRepositoryImpl(
+            NotificationsRemoteDataSourceImpl(ctx.read<Dio>()),
+          ),
         ),
         RepositoryProvider<ClientsRepository>(
           create: (ctx) =>
@@ -152,6 +162,11 @@ class StaffApp extends StatelessWidget {
               );
             },
           ),
+          BlocProvider<UnreadCountCubit>(
+            create: (ctx) => UnreadCountCubit(
+              GetUnreadCount(ctx.read<NotificationsRepository>()),
+            ),
+          ),
         ],
         child: const _StaffRoot(),
       ),
@@ -196,16 +211,26 @@ class _StaffRootState extends State<_StaffRoot> {
     final locale = context.watch<LocaleCubit>().state;
     final isArabic = locale.languageCode == 'ar';
 
-    return MaterialApp.router(
-      onGenerateTitle: (ctx) => ctx.l10n.staffAppTitle,
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(isArabic: isArabic),
-      darkTheme: AppTheme.dark(isArabic: isArabic),
-      themeMode: themeMode,
-      locale: locale,
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      routerConfig: router,
+    return BlocListener<SessionCubit, SessionState>(
+      listenWhen: (a, b) => a.isAuthenticated != b.isAuthenticated,
+      listener: (context, state) {
+        if (state.isAuthenticated) {
+          context.read<UnreadCountCubit>().load();
+        } else {
+          context.read<UnreadCountCubit>().clear();
+        }
+      },
+      child: MaterialApp.router(
+        onGenerateTitle: (ctx) => ctx.l10n.staffAppTitle,
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(isArabic: isArabic),
+        darkTheme: AppTheme.dark(isArabic: isArabic),
+        themeMode: themeMode,
+        locale: locale,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        routerConfig: router,
+      ),
     );
   }
 }

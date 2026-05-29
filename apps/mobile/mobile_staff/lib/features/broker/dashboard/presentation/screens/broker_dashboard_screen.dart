@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../common/broker_status_label.dart';
 import '../../../../../common/reservation_status_label.dart';
 import '../../../../dashboard/presentation/widgets/kpi_card.dart';
+import '../../../../notifications/presentation/widgets/notifications_bell.dart';
 import '../../../profile/presentation/cubit/broker_profile_cubit.dart';
 import '../../domain/entities/broker_dashboard.dart';
 import '../cubit/broker_dashboard_cubit.dart';
@@ -30,7 +31,10 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navDashboard)),
+      appBar: AppBar(
+        title: Text(l10n.navDashboard),
+        actions: const [NotificationsBell()],
+      ),
       body: BlocBuilder<BrokerDashboardCubit, BrokerDashboardState>(
         builder: (context, state) {
           switch (state.status) {
