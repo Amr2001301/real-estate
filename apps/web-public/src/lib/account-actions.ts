@@ -136,3 +136,62 @@ export async function removeFavoriteAction(favoriteId: string): Promise<void> {
   }
   revalidatePath('/account/favorites');
 }
+
+// ─── Two-sided visit confirmation (P2) ───────────────────────────────────
+
+export type VisitActionResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+/**
+ * Customer confirms an admin-proposed appointment → POST
+ * /v1/me/visit-appointments/:id/confirm. Backend enforces ownership (404 for
+ * cross-account access) and state (only SCHEDULED → CONFIRMED). Errors are
+ * mapped to friendly Arabic; raw backend detail never reaches the UI.
+ */
+export async function confirmVisitAppointmentAction(
+  appointmentId: string,
+): Promise<VisitActionResult> {
+  try {
+    await authFetch(`/me/visit-appointments/${appointmentId}/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  } catch (e) {
+    if (e instanceof AuthError) {
+      return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+    }
+    return { ok: false, error: 'تعذّر تأكيد الزيارة حاليًا. حاول مرة أخرى بعد لحظات.' };
+  }
+  revalidatePath('/account/visits');
+  return { ok: true };
+}
+
+/**
+ * Customer asks to reschedule an admin-proposed appointment → POST
+ * /v1/me/visit-appointments/:id/request-reschedule. Optional reason flows
+ * through to the backend, where it's stored on the appointment and the
+ * VisitActivity audit row. Ownership + state guards match the confirm action.
+ */
+export async function requestVisitRescheduleAction(
+  appointmentId: string,
+  reason: string,
+): Promise<VisitActionResult> {
+  const trimmed = (reason ?? '').trim().slice(0, 500);
+  try {
+    await authFetch(`/me/visit-appointments/${appointmentId}/request-reschedule`, {
+      method: 'POST',
+      body: JSON.stringify({ reason: trimmed || undefined }),
+    });
+  } catch (e) {
+    if (e instanceof AuthError) {
+      return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
+    }
+    return {
+      ok: false,
+      error: 'تعذّر إرسال طلب إعادة الجدولة حاليًا. حاول مرة أخرى بعد لحظات.',
+    };
+  }
+  revalidatePath('/account/visits');
+  return { ok: true };
+}

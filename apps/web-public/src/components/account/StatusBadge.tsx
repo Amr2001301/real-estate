@@ -41,7 +41,18 @@ const STATUS_MAP: Record<string, { label: string; tone: Tone }> = {
   CANCELLED: { label: 'ملغى', tone: 'muted' },
 };
 
-export function StatusBadge({ status, className }: { status: string; className?: string }) {
+export function StatusBadge({
+  status,
+  label,
+  className,
+}: {
+  status: string;
+  /** Optional Arabic label override — lets callers reuse the tone-mapping
+   *  while supplying context-specific wording (e.g. an appointment SCHEDULED
+   *  reads "بانتظار تأكيدك" to the customer, not the generic "محدد"). */
+  label?: string;
+  className?: string;
+}) {
   const entry = STATUS_MAP[status] ?? { label: status, tone: 'neutral' as Tone };
   return (
     <span
@@ -51,7 +62,7 @@ export function StatusBadge({ status, className }: { status: string; className?:
         className,
       )}
     >
-      {entry.label}
+      {label ?? entry.label}
     </span>
   );
 }

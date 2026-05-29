@@ -1,14 +1,27 @@
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Building2, Home, CalendarClock, CalendarCheck, UserRound, ArrowLeft } from 'lucide-react';
+import { Building2, Home, CalendarClock, CalendarCheck, UserRound, ArrowLeft, MessageSquare } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
-import type { MeVisitRequest } from '@/lib/api-types';
+import type { MeVisitRequest, MeAppointmentSummary } from '@/lib/api-types';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
+import { VisitConfirmActions } from '@/components/account/VisitConfirmActions';
 
 /** Visit statuses worth surfacing as a secondary chip beside the request status. */
 const PROGRESSED = new Set(['APPROVED', 'SCHEDULED', 'COMPLETED']);
+
+/** Arabic label for the appointment lifecycle state — must stay in lockstep
+ *  with the admin badges to give the customer the same vocabulary. */
+const APPOINTMENT_LABEL: Record<MeAppointmentSummary['status'], string> = {
+  SCHEDULED: 'بانتظار تأكيدك',
+  CONFIRMED: 'مؤكدة',
+  PENDING_RESCHEDULE: 'طلبت إعادة الجدولة',
+  COMPLETED: 'مكتملة',
+  CANCELLED: 'ملغاة',
+  NO_SHOW: 'لم تحضر',
+  RESCHEDULED: 'أُعيدت جدولتها',
+};
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
@@ -31,6 +44,14 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
       ? (routes.project(visit.project.id) as Route)
       : null;
 
+  // P2 — the customer's view of the appointment lifecycle. The backend now
+  // includes the latest appointment; if `appointments[0]` is SCHEDULED, the
+  // customer is being asked to confirm or request a reschedule. Other states
+  // surface as informational chips only.
+  const appointment = visit.appointments?.[0] ?? null;
+  const awaitingCustomer = appointment?.status === 'SCHEDULED';
+  const pendingReschedule = appointment?.status === 'PENDING_RESCHEDULE';
+
   return (
     <PremiumCard className="p-5">
       <div className="flex items-start justify-between gap-3">
@@ -45,7 +66,11 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           <StatusBadge status={visit.requestStatus} />
-          {PROGRESSED.has(visit.status) && <StatusBadge status={visit.status} />}
+          {appointment ? (
+            <StatusBadge status={appointment.status} label={APPOINTMENT_LABEL[appointment.status]} />
+          ) : (
+            PROGRESSED.has(visit.status) && <StatusBadge status={visit.status} />
+          )}
         </div>
       </div>
 
@@ -54,7 +79,13 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
           <CalendarClock className="h-4 w-4 text-gold-500" aria-hidden />
           الموعد المفضل: <span className="font-medium text-ink-strong">{formatDateTime(visit.preferredDate)}</span>
         </span>
-        {visit.scheduledAt && (
+        {appointment?.scheduledAt && (
+          <span className="inline-flex items-center gap-1.5">
+            <CalendarCheck className="h-4 w-4 text-gold-500" aria-hidden />
+            الموعد المقترح: <span className="font-medium text-ink-strong">{formatDateTime(appointment.scheduledAt)}</span>
+          </span>
+        )}
+        {!appointment && visit.scheduledAt && (
           <span className="inline-flex items-center gap-1.5">
             <CalendarCheck className="h-4 w-4 text-gold-500" aria-hidden />
             موعد محدد: <span className="font-medium text-ink-strong">{formatDateTime(visit.scheduledAt)}</span>
@@ -72,6 +103,19 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
         <p className="mt-3 rounded-xl bg-surface-soft px-3.5 py-2.5 text-sm leading-relaxed text-ink-muted">
           {visit.notes}
         </p>
+      )}
+
+      {pendingReschedule && appointment?.customerFeedback && (
+        <p className="mt-3 inline-flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm leading-relaxed text-amber-800">
+          <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
+          <span>
+            سبب طلب إعادة الجدولة: <span className="font-medium">{appointment.customerFeedback}</span>
+          </span>
+        </p>
+      )}
+
+      {awaitingCustomer && appointment && (
+        <VisitConfirmActions appointmentId={appointment.id} />
       )}
 
       {detailHref && (

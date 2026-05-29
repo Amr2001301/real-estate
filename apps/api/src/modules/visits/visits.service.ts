@@ -20,6 +20,7 @@ import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
+  CustomerRequestRescheduleDto,
   ListAppointmentsDto,
   ListRequestsDto,
   RescheduleVisitDto,
@@ -683,6 +684,32 @@ export class VisitsService {
     }
 
     const now = new Date();
+
+    // ── Workflow guards (P2) ────────────────────────────────────────────────
+    // Two-sided confirmation: a visit may only be COMPLETED after the customer
+    // has actively CONFIRMED, unless an ADMIN explicitly opts into a force
+    // override (e.g. customer walked in without confirming online). SALES /
+    // SALES_MANAGER never get the override — they must wait.
+    if (dto.status === AppointmentStatus.COMPLETED) {
+      if (appt.status !== AppointmentStatus.CONFIRMED) {
+        const allowOverride = dto.force === true && user.role === UserRole.ADMIN;
+        if (!allowOverride) {
+          throw new BadRequestException(
+            'Cannot complete an unconfirmed appointment. The customer must confirm first, or an admin must use the explicit override.',
+          );
+        }
+      }
+    }
+    // NO_SHOW can only be marked after the scheduled time has passed —
+    // prevents pre-emptively stamping a no-show before the visit was due.
+    if (dto.status === AppointmentStatus.NO_SHOW) {
+      if (appt.scheduledAt.getTime() > now.getTime()) {
+        throw new BadRequestException(
+          'Cannot mark a no-show before the scheduled visit time.',
+        );
+      }
+    }
+
     const timestamps: Record<string, Date> = {};
     if (dto.status === AppointmentStatus.CONFIRMED) timestamps.confirmedAt = now;
     if (dto.status === AppointmentStatus.COMPLETED) timestamps.completedAt = now;
@@ -712,6 +739,15 @@ export class VisitsService {
         include: APPOINTMENT_INCLUDE,
       });
 
+      // When an admin completes an unconfirmed visit, mark the override on
+      // the activity so the timeline can render "tabbed as admin override"
+      // without trying to parse free text.
+      const overrideApplied =
+        dto.status === AppointmentStatus.COMPLETED &&
+        appt.status !== AppointmentStatus.CONFIRMED &&
+        dto.force === true &&
+        user.role === UserRole.ADMIN;
+
       await tx.visitActivity.create({
         data: {
           visitRequestId: appt.visitRequestId,
@@ -721,7 +757,9 @@ export class VisitsService {
           actorRole: user.role,
           type: activityType[dto.status] ?? VisitActivityType.VISIT_CONFIRMED,
           oldValue: { status: appt.status },
-          newValue: { status: dto.status },
+          newValue: overrideApplied
+            ? { status: dto.status, override: 'completed_without_customer_confirmation' }
+            : { status: dto.status },
           note: dto.salesNotes ?? dto.cancellationReason ?? dto.noShowReason,
         },
       });
@@ -861,6 +899,131 @@ export class VisitsService {
         },
       });
 
+      return updated;
+    });
+  }
+
+  // ─── Customer-side endpoints (two-sided confirmation, P2) ────────────────
+
+  /**
+   * Load an appointment that the given customer is allowed to act on. Ownership
+   * matches when either the parent VisitRequest carries the user's id OR the
+   * appointment's `clientId` does. Anything else throws NotFound so we don't
+   * leak that the appointment exists.
+   */
+  private async loadAppointmentForCustomer(
+    appointmentId: string,
+    customerUserId: string,
+  ) {
+    const appt = await this.prisma.visitAppointment.findUnique({
+      where: { id: appointmentId },
+      include: { visitRequest: { select: { userId: true } } },
+    });
+    if (!appt) throw new NotFoundException('Appointment not found');
+    const owns =
+      appt.clientId === customerUserId ||
+      appt.visitRequest?.userId === customerUserId;
+    if (!owns) throw new NotFoundException('Appointment not found');
+    return appt;
+  }
+
+  /**
+   * Customer confirms a SCHEDULED appointment. Idempotent for already-CONFIRMED
+   * rows (returns the current appointment) but rejects any other state so the
+   * customer can't override a cancellation or completion.
+   */
+  async customerConfirmAppointment(appointmentId: string, user: AuthUser) {
+    const appt = await this.loadAppointmentForCustomer(appointmentId, user.sub);
+
+    if (appt.status === AppointmentStatus.CONFIRMED) {
+      return this.prisma.visitAppointment.findUnique({
+        where: { id: appointmentId },
+        include: APPOINTMENT_INCLUDE,
+      });
+    }
+    if (appt.status !== AppointmentStatus.SCHEDULED) {
+      throw new BadRequestException(
+        `Cannot confirm an appointment in status: ${appt.status}`,
+      );
+    }
+
+    const now = new Date();
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.visitAppointment.update({
+        where: { id: appointmentId },
+        data: { status: AppointmentStatus.CONFIRMED, confirmedAt: now },
+        include: APPOINTMENT_INCLUDE,
+      });
+      await tx.visitActivity.create({
+        data: {
+          visitRequestId: appt.visitRequestId,
+          visitId: appointmentId,
+          leadId: appt.leadId,
+          actorId: user.sub,
+          actorRole: user.role,
+          type: VisitActivityType.CUSTOMER_CONFIRMED,
+          oldValue: { status: appt.status },
+          newValue: { status: AppointmentStatus.CONFIRMED },
+        },
+      });
+      return updated;
+    });
+  }
+
+  /**
+   * Customer asks to reschedule a SCHEDULED appointment. Stores the optional
+   * reason as `customerFeedback` (reused from the existing free-text column)
+   * so admins see it on the appointment detail without an extra column. The
+   * appointment goes to PENDING_RESCHEDULE; the admin reschedule flow takes it
+   * back to SCHEDULED (via the standard reschedule endpoint, which creates a
+   * fresh appointment row).
+   */
+  async customerRequestReschedule(
+    appointmentId: string,
+    dto: CustomerRequestRescheduleDto,
+    user: AuthUser,
+  ) {
+    const appt = await this.loadAppointmentForCustomer(appointmentId, user.sub);
+
+    if (appt.status === AppointmentStatus.PENDING_RESCHEDULE) {
+      // Idempotent: customer hit the button twice — return current row.
+      return this.prisma.visitAppointment.findUnique({
+        where: { id: appointmentId },
+        include: APPOINTMENT_INCLUDE,
+      });
+    }
+    if (appt.status !== AppointmentStatus.SCHEDULED) {
+      throw new BadRequestException(
+        `Cannot request reschedule on an appointment in status: ${appt.status}`,
+      );
+    }
+
+    const reason = dto.reason?.trim() || null;
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.visitAppointment.update({
+        where: { id: appointmentId },
+        data: {
+          status: AppointmentStatus.PENDING_RESCHEDULE,
+          // Mirror the reason into customerFeedback so admin tooling that
+          // already renders feedback picks it up; existing feedback is
+          // preserved when the customer didn't supply a new reason.
+          customerFeedback: reason ?? appt.customerFeedback,
+        },
+        include: APPOINTMENT_INCLUDE,
+      });
+      await tx.visitActivity.create({
+        data: {
+          visitRequestId: appt.visitRequestId,
+          visitId: appointmentId,
+          leadId: appt.leadId,
+          actorId: user.sub,
+          actorRole: user.role,
+          type: VisitActivityType.CUSTOMER_RESCHEDULE_REQUESTED,
+          oldValue: { status: appt.status },
+          newValue: { status: AppointmentStatus.PENDING_RESCHEDULE },
+          note: reason,
+        },
+      });
       return updated;
     });
   }

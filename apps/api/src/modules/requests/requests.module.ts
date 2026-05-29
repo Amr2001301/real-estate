@@ -262,6 +262,23 @@ export class RequestsService {
           project: true,
           unit: true,
           assignedSales: { select: { id: true, fullName: true } },
+          // P2 — the customer-side card needs the latest appointment so it can
+          // render confirm / request-reschedule buttons against it. Limit to
+          // the most recent appointment (RESCHEDULED rows get superseded by
+          // their replacement, so the front edge is what matters).
+          appointments: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              id: true,
+              status: true,
+              scheduledAt: true,
+              durationMinutes: true,
+              location: true,
+              meetingPoint: true,
+              customerFeedback: true,
+            },
+          },
         },
       }),
       this.prisma.visitRequest.count({ where }),

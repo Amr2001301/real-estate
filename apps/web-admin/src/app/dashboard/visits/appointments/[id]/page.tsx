@@ -127,8 +127,15 @@ export default async function AppointmentDetailPage({
               )}
               {appt.customerFeedback && (
                 <div className="col-span-2">
-                  <p className="text-slate-500 mb-0.5">تقييم العميل</p>
-                  <p className="text-slate-700">{appt.customerFeedback}</p>
+                  {/* When the appointment is awaiting an admin reschedule the
+                      customer's reason was mirrored into customerFeedback.
+                      Relabel accordingly so admins know what they're reading. */}
+                  <p className="text-slate-500 mb-0.5">
+                    {appt.status === 'PENDING_RESCHEDULE'
+                      ? 'سبب طلب العميل لإعادة الجدولة'
+                      : 'تقييم العميل'}
+                  </p>
+                  <p className="text-slate-700 whitespace-pre-wrap">{appt.customerFeedback}</p>
                 </div>
               )}
             </CardBody>

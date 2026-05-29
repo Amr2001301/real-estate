@@ -1,10 +1,12 @@
 import {
+  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
   Min,
 } from 'class-validator';
 import {
@@ -72,6 +74,22 @@ export class UpdateAppointmentStatusDto {
   @IsOptional() @IsString() cancellationReason?: string;
   @IsOptional() @IsString() noShowReason?: string;
   @IsOptional() @IsString() customerFeedback?: string;
+  /**
+   * ADMIN-only override that lets an admin mark a visit COMPLETED even when
+   * the customer hasn't confirmed (e.g. they showed up to the appointment
+   * without responding online). Ignored for SALES / SALES_MANAGER actors —
+   * those callers must wait for CONFIRMED.
+   */
+  @IsOptional() @IsBoolean() force?: boolean;
+}
+
+/**
+ * Customer-initiated request to reschedule a proposed appointment. The reason
+ * is optional but limited so it can't be used to smuggle large free-text into
+ * the activity log.
+ */
+export class CustomerRequestRescheduleDto {
+  @IsOptional() @IsString() @MaxLength(500) reason?: string;
 }
 
 export class AssignSalesDto {

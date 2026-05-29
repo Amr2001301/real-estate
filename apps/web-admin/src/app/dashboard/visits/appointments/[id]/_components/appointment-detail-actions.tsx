@@ -33,7 +33,8 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
         </form>
       )}
 
-      {(appointment.status === 'SCHEDULED' || appointment.status === 'CONFIRMED') && (
+      {/* "تمت الزيارة" — backend guard requires CONFIRMED first. */}
+      {appointment.status === 'CONFIRMED' && (
         <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
           <input type="hidden" name="status" value="COMPLETED" />
           <Button
@@ -65,18 +66,21 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
         تغيير المندوب
       </Button>
 
-      <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
-        <input type="hidden" name="status" value="NO_SHOW" />
-        <Button
-          type="submit"
-          variant="outline"
-          size="md"
-          leftIcon={<UserX className="h-4 w-4" />}
-          className="text-amber-600 border-amber-200 hover:bg-amber-50"
-        >
-          لم يحضر
-        </Button>
-      </form>
+      {/* "لم يحضر" — backend rejects no-show before scheduledAt. */}
+      {new Date(appointment.scheduledAt).getTime() <= Date.now() && (
+        <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
+          <input type="hidden" name="status" value="NO_SHOW" />
+          <Button
+            type="submit"
+            variant="outline"
+            size="md"
+            leftIcon={<UserX className="h-4 w-4" />}
+            className="text-amber-600 border-amber-200 hover:bg-amber-50"
+          >
+            لم يحضر
+          </Button>
+        </form>
+      )}
 
       <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
         <input type="hidden" name="status" value="CANCELLED" />

@@ -32,6 +32,10 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
 
       {!isFinal && (
         <>
+          {/* "تأكيد" — admin-side confirm. Available only for SCHEDULED rows,
+              and only useful to acknowledge a customer who can't use the
+              portal; the new workflow expects the customer to confirm
+              themselves via /me/visit-appointments/:id/confirm. */}
           {appointment.status === 'SCHEDULED' && (
             <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
               <input type="hidden" name="status" value="CONFIRMED" />
@@ -41,7 +45,10 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
             </form>
           )}
 
-          {(appointment.status === 'CONFIRMED' || appointment.status === 'SCHEDULED') && (
+          {/* "تمت" (Complete) — backend guard now requires CONFIRMED. Hiding
+              the button on SCHEDULED / PENDING_RESCHEDULE keeps the UI in
+              lockstep with the server-side rule (no surprise 400). */}
+          {appointment.status === 'CONFIRMED' && (
             <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
               <input type="hidden" name="status" value="COMPLETED" />
               <Button type="submit" variant="ghost" size="sm" className="text-success-700 hover:bg-success-50">
@@ -68,18 +75,22 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
             المندوب
           </Button>
 
-          <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
-            <input type="hidden" name="status" value="NO_SHOW" />
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              leftIcon={<UserX className="h-3.5 w-3.5" />}
-              className="text-amber-600 hover:bg-amber-50"
-            >
-              لم يحضر
-            </Button>
-          </form>
+          {/* "لم يحضر" — backend guard rejects no-show before scheduledAt.
+              Hide the button until the visit time has actually passed. */}
+          {new Date(appointment.scheduledAt).getTime() <= Date.now() && (
+            <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
+              <input type="hidden" name="status" value="NO_SHOW" />
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                leftIcon={<UserX className="h-3.5 w-3.5" />}
+                className="text-amber-600 hover:bg-amber-50"
+              >
+                لم يحضر
+              </Button>
+            </form>
+          )}
 
           <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
             <input type="hidden" name="status" value="CANCELLED" />

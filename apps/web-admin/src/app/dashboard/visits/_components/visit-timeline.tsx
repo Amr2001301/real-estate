@@ -15,6 +15,11 @@ const TYPE_LABELS: Record<VisitActivityType, string> = {
   VISIT_RESCHEDULED: 'تمت إعادة جدولة الزيارة',
   SALES_ASSIGNED: 'تم تعيين مندوب',
   NOTE_ADDED: 'تمت إضافة ملاحظة',
+  // P2 — two-sided confirmation activity labels
+  CUSTOMER_CONFIRMED: 'أكد العميل الزيارة',
+  CUSTOMER_RESCHEDULE_REQUESTED: 'طلب العميل إعادة الجدولة',
+  REMINDER_SENT: 'تم إرسال تذكير',
+  SALES_REASSIGNED: 'تم تغيير المندوب',
 };
 
 const TYPE_COLORS: Partial<Record<VisitActivityType, string>> = {
@@ -24,6 +29,10 @@ const TYPE_COLORS: Partial<Record<VisitActivityType, string>> = {
   REQUEST_REJECTED: 'bg-danger-400',
   VISIT_SCHEDULED: 'bg-brand-500',
   VISIT_CONFIRMED: 'bg-purple-500',
+  CUSTOMER_CONFIRMED: 'bg-purple-600',
+  CUSTOMER_RESCHEDULE_REQUESTED: 'bg-amber-500',
+  REMINDER_SENT: 'bg-blue-400',
+  SALES_REASSIGNED: 'bg-slate-500',
 };
 
 interface Props {

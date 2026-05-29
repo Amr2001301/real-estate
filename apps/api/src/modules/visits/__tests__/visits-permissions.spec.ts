@@ -53,10 +53,11 @@ const fixture: {
   appointment: {
     id: string;
     visitNumber: string;
-    status: 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED';
+    status: 'SCHEDULED' | 'CONFIRMED' | 'PENDING_RESCHEDULE' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED';
     assignedSalesId: string | null;
     leadId: string | null;
     visitRequestId: string | null;
+    scheduledAt: Date;
     salesNotes: string | null;
     resultNotes: string | null;
     cancellationReason: string | null;
@@ -71,6 +72,9 @@ const fixture: {
     assignedSalesId: null,
     leadId: 'lead-1',
     visitRequestId: 'b2222222-2222-4222-8222-222222222222',
+    // Default: 1h in the future. Per-transition tests override this when they
+    // need a past time (e.g. NO_SHOW happy path).
+    scheduledAt: new Date(Date.now() + 60 * 60 * 1000),
     salesNotes: null,
     resultNotes: null,
     cancellationReason: null,
@@ -212,6 +216,7 @@ describe('Visits module · permissions enforcement', () => {
       assignedSalesId: null,
       leadId: 'lead-1',
       visitRequestId: 'b2222222-2222-4222-8222-222222222222',
+      scheduledAt: new Date(Date.now() + 60 * 60 * 1000),
       salesNotes: null,
       resultNotes: null,
       cancellationReason: null,
@@ -425,8 +430,20 @@ describe('Visits module · permissions enforcement', () => {
   ])('POST /visits/appointments/:id/%s', (action, code, status) => {
     const PATH = `/visits/appointments/a1111111-1111-4111-8111-111111111111/${action}`;
 
+    // P2 guards: COMPLETED requires CONFIRMED first, NO_SHOW requires the
+    // visit's scheduledAt to be in the past. Seed the fixture per action so
+    // each happy-path test exercises a legal transition.
+    function seedHappyPathFixture() {
+      if (status === 'COMPLETED') fixture.appointment.status = 'CONFIRMED';
+      if (status === 'NO_SHOW') {
+        fixture.appointment.status = 'CONFIRMED';
+        fixture.appointment.scheduledAt = new Date(Date.now() - 60 * 60 * 1000);
+      }
+    }
+
     it(`ADMIN bypasses → 201; appointment updated with status=${status}`, async () => {
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      seedHappyPathFixture();
       await request(app.getHttpServer()).post(PATH).send({}).expect(201);
       const call = mock.visitAppointment.update.mock.calls[0]![0] as {
         data: { status: string };
@@ -441,6 +458,7 @@ describe('Visits module · permissions enforcement', () => {
         role: UserRole.SALES,
         codes: [code],
       };
+      seedHappyPathFixture();
       fixture.appointment.assignedSalesId = 'sales-1';
       await request(app.getHttpServer()).post(PATH).send({}).expect(201);
       expect(mock.visitAppointment.update).toHaveBeenCalled();

@@ -18,6 +18,7 @@ import { VisitsService } from './visits.service';
 import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
+  CustomerRequestRescheduleDto,
   ListAppointmentsDto,
   ListRequestsDto,
   RescheduleVisitDto,
@@ -211,5 +212,29 @@ export class VisitsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.visits.assignSales(id, dto, user);
+  }
+
+  // ─── Customer-side (two-sided confirmation, P2) ──────────────────────────
+  // Routes a logged-in customer uses to react to a proposed appointment. The
+  // service enforces ownership — anything that isn't theirs returns 404 (no
+  // existence leak), matching the OwnershipService convention used elsewhere.
+
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Post('me/visit-appointments/:id/confirm')
+  meConfirm(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.visits.customerConfirmAppointment(id, user);
+  }
+
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Post('me/visit-appointments/:id/request-reschedule')
+  meRequestReschedule(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CustomerRequestRescheduleDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.visits.customerRequestReschedule(id, dto, user);
   }
 }

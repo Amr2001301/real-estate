@@ -19,11 +19,13 @@ export type LeadStage = 'NEW' | 'INTERESTED' | 'VISIT' | 'NEGOTIATION' | 'WON' |
 export type VisitStatus = 'PENDING' | 'APPROVED' | 'SCHEDULED' | 'COMPLETED' | 'CANCELLED';
 export type VisitRequestStatus = 'NEW' | 'UNDER_REVIEW' | 'CONVERTED' | 'REJECTED' | 'CANCELLED';
 export type VisitRequestSource = 'WEBSITE' | 'MOBILE_APP' | 'SALES' | 'PHONE' | 'WHATSAPP' | 'OTHER';
-export type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED';
+export type AppointmentStatus = 'SCHEDULED' | 'CONFIRMED' | 'PENDING_RESCHEDULE' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW' | 'RESCHEDULED';
 export type VisitActivityType =
   | 'REQUEST_CREATED' | 'REQUEST_REVIEWED' | 'REQUEST_REJECTED' | 'REQUEST_CANCELLED'
   | 'VISIT_SCHEDULED' | 'VISIT_CONFIRMED' | 'VISIT_COMPLETED' | 'VISIT_CANCELLED'
-  | 'VISIT_NO_SHOW' | 'VISIT_RESCHEDULED' | 'SALES_ASSIGNED' | 'NOTE_ADDED';
+  | 'VISIT_NO_SHOW' | 'VISIT_RESCHEDULED' | 'SALES_ASSIGNED' | 'NOTE_ADDED'
+  // P2 — two-sided confirmation activity types
+  | 'CUSTOMER_CONFIRMED' | 'CUSTOMER_RESCHEDULE_REQUESTED' | 'REMINDER_SENT' | 'SALES_REASSIGNED';
 export type ReservationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED' | 'CONVERTED';
 export type ReservationBookingPaymentStatus = 'UNPAID' | 'PENDING' | 'PAID' | 'WAIVED';
 export type MaintenanceStatus = 'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED';

@@ -135,8 +135,9 @@ export function VisitRequestStatusBadge({ status }: { status: VisitRequestStatus
 }
 
 const APPOINTMENT: Record<AppointmentStatus, { c: string; l: string }> = {
-  SCHEDULED: { c: 'bg-blue-100 text-blue-700', l: 'مجدولة' },
-  CONFIRMED: { c: 'bg-purple-100 text-purple-700', l: 'مؤكدة' },
+  SCHEDULED: { c: 'bg-blue-100 text-blue-700', l: 'مجدولة — بانتظار تأكيد العميل' },
+  CONFIRMED: { c: 'bg-purple-100 text-purple-700', l: 'أكدها العميل' },
+  PENDING_RESCHEDULE: { c: 'bg-amber-100 text-amber-700', l: 'طلب العميل إعادة جدولة' },
   COMPLETED: { c: 'bg-green-100 text-green-700', l: 'مكتملة' },
   CANCELLED: { c: 'bg-red-100 text-red-700', l: 'ملغاة' },
   NO_SHOW: { c: 'bg-amber-100 text-amber-700', l: 'لم يحضر' },

@@ -124,11 +124,35 @@ export interface AssignedSalesRef {
   fullName: string;
 }
 
+/**
+ * The latest visit appointment for a request (added by P2). Surfaces the
+ * two-sided confirmation lifecycle to the customer: `status` is the appointment
+ * state (SCHEDULED awaits the customer's confirm/reschedule action; CONFIRMED
+ * is locked in; PENDING_RESCHEDULE means the customer asked to move it).
+ */
+export interface MeAppointmentSummary {
+  id: string;
+  status:
+    | 'SCHEDULED'
+    | 'CONFIRMED'
+    | 'PENDING_RESCHEDULE'
+    | 'COMPLETED'
+    | 'CANCELLED'
+    | 'NO_SHOW'
+    | 'RESCHEDULED';
+  scheduledAt: string;
+  durationMinutes: number | null;
+  location: string | null;
+  meetingPoint: string | null;
+  customerFeedback: string | null;
+}
+
 export interface MeVisitRequest {
   id: string;
   requestStatus: string;
   status: string;
   preferredDate: string | null;
+  preferredTime: string | null;
   scheduledAt: string | null;
   notes: string | null;
   projectId: string | null;
@@ -136,6 +160,7 @@ export interface MeVisitRequest {
   project: VisitProjectRef | null;
   unit: VisitUnitRef | null;
   assignedSales: AssignedSalesRef | null;
+  appointments: MeAppointmentSummary[];
   createdAt: string;
 }
 
