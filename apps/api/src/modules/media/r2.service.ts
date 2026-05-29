@@ -23,14 +23,31 @@ export class R2Service {
     this.bucket = config.get<string>('R2_BUCKET') ?? '';
     this.publicUrl = config.get<string>('R2_PUBLIC_URL') ?? '';
 
-    if (accountId && accessKeyId && secretAccessKey) {
+    // S3_ENDPOINT lets local dev point at a MinIO (or any S3-compatible)
+    // server without changing code. When set, it wins over the R2 endpoint
+    // construction below, and forcePathStyle defaults on (MinIO needs it).
+    // Production R2 leaves S3_ENDPOINT unset → unchanged behavior.
+    const s3Endpoint = config.get<string>('S3_ENDPOINT');
+    const forcePathStyle =
+      (config.get<string>('S3_FORCE_PATH_STYLE') ?? '').toLowerCase() === 'true' ||
+      (!!s3Endpoint && config.get<string>('S3_FORCE_PATH_STYLE') === undefined);
+    const region = config.get<string>('S3_REGION') ?? 'auto';
+
+    if (s3Endpoint && accessKeyId && secretAccessKey) {
+      this.client = new S3Client({
+        region,
+        endpoint: s3Endpoint,
+        credentials: { accessKeyId, secretAccessKey },
+        forcePathStyle,
+      });
+    } else if (accountId && accessKeyId && secretAccessKey) {
       this.client = new S3Client({
         region: 'auto',
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
         credentials: { accessKeyId, secretAccessKey },
       });
     } else {
-      this.logger.warn('R2 not configured — media uploads will be rejected');
+      this.logger.warn('Object storage not configured — media uploads will be rejected');
     }
   }
 

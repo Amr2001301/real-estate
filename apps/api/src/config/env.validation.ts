@@ -38,6 +38,13 @@ const EnvSchema = z.object({
   R2_BUCKET: z.string().optional(),
   R2_PUBLIC_URL: z.string().optional(),
 
+  // Generic S3-compatible endpoint (MinIO, LocalStack, …). When set, the
+  // media service uses it instead of constructing the Cloudflare R2
+  // endpoint from R2_ACCOUNT_ID. Production R2 leaves these unset.
+  S3_ENDPOINT: z.string().url().optional(),
+  S3_REGION: z.string().optional(),
+  S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).optional(),
+
   FIREBASE_PROJECT_ID: z.string().optional(),
   FIREBASE_CLIENT_EMAIL: z.string().optional(),
   FIREBASE_PRIVATE_KEY: z.string().optional(),

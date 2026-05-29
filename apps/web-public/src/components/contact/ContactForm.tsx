@@ -18,6 +18,18 @@ export interface ContactContext {
   unitLabel?: string;
 }
 
+/**
+ * Best-effort prefill from the signed-in user's profile. Each field is
+ * optional — when a field is missing the input stays empty so the user can
+ * type in the missing piece. Guest renders pass `undefined` (or omit) and
+ * the form starts blank, as before.
+ */
+export interface ContactPrefill {
+  fullName?: string;
+  phone?: string;
+  email?: string;
+}
+
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
 const PHONE_RE = /^[+\d][\d\s-]{6,}$/;
@@ -51,20 +63,28 @@ export function ContactForm({
   context,
   mode = 'info',
   eyebrow,
+  initialValues,
 }: {
   context: ContactContext;
   /** 'visit' switches the form to a visit-request (needs a project + date). */
   mode?: 'info' | 'visit';
   /** Optional pill label shown above the heading (e.g. homepage). */
   eyebrow?: string;
+  /**
+   * Per-field prefill from the signed-in user's profile. Pages resolve this
+   * on the server; the form treats each entry as optional so missing fields
+   * stay editable. Identity stable across renders is not required — values
+   * are seeded into `useState` once.
+   */
+  initialValues?: ContactPrefill;
 }) {
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+  const [fullName, setFullName] = useState(initialValues?.fullName ?? '');
+  const [phone, setPhone] = useState(initialValues?.phone ?? '');
+  const [email, setEmail] = useState(initialValues?.email ?? '');
   const [message, setMessage] = useState('');
   const [preferredDate, setPreferredDate] = useState('');
   const [minDate, setMinDate] = useState('');
@@ -135,10 +155,13 @@ export function ContactForm({
   }
 
   function resetForAnother() {
-    setFullName('');
-    setPhone('');
-    setEmail('');
+    // Keep identity fields seeded so a logged-in user doesn't retype their
+    // name/phone/email between requests. Guests get empty strings either way.
+    setFullName(initialValues?.fullName ?? '');
+    setPhone(initialValues?.phone ?? '');
+    setEmail(initialValues?.email ?? '');
     setMessage('');
+    setPreferredDate('');
     setErrors({});
     setStatus('idle');
   }
