@@ -5,12 +5,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  BrokerCommissionStatus,
-  NotificationChannel,
-  Prisma,
-} from '@prisma/client';
+import { BrokerCommissionStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import {
@@ -94,7 +91,10 @@ export interface CommissionMaterializeResult {
 export class BrokerCommissionsService {
   private readonly logger = new Logger(BrokerCommissionsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // ── Materialize on signed broker contract ──────────────────────────────
 
@@ -241,13 +241,14 @@ export class BrokerCommissionsService {
         return created;
       });
 
+      // P4 — safe payload: reference + commissionId + contractNumber only.
+      // Recipients are filtered to canViewCommissions broker users, so the
+      // amounts they're authorised to see are surfaced in the dashboard,
+      // not the notification body.
       await this.notify(commission.brokerId, 'broker_commission_earned', {
         commissionId: commission.id,
-        commissionNumber,
-        contractId: contract.id,
+        reference: commissionNumber,
         contractNumber: contract.contractNumber,
-        grossAmount: grossAmount.toString(),
-        netAmount: netAmount.toString(),
       });
 
       return {
@@ -361,8 +362,7 @@ export class BrokerCommissionsService {
     });
     await this.notify(updated.brokerId, 'broker_commission_approved', {
       commissionId: id,
-      commissionNumber: updated.commissionNumber,
-      contractId: updated.contractId,
+      reference: updated.commissionNumber,
     });
 
     return updated;
@@ -396,8 +396,7 @@ export class BrokerCommissionsService {
     });
     await this.notify(updated.brokerId, 'broker_commission_rejected', {
       commissionId: id,
-      commissionNumber: updated.commissionNumber,
-      contractId: updated.contractId,
+      reference: updated.commissionNumber,
       reason,
     });
 
@@ -457,8 +456,7 @@ export class BrokerCommissionsService {
     });
     await this.notify(updated.brokerId, 'broker_commission_cancelled', {
       commissionId: id,
-      commissionNumber: updated.commissionNumber,
-      contractId: updated.contractId,
+      reference: updated.commissionNumber,
       reason,
     });
 
@@ -543,6 +541,12 @@ export class BrokerCommissionsService {
     }
   }
 
+  /**
+   * P4 — Broker-side commission events. Only delivered to broker users
+   * with `canViewCommissions = true`; commissions are financial data and
+   * shouldn't fan out to broker reps who don't have visibility on them.
+   * Routed through NotificationsService so push fires when FCM is on.
+   */
   private async notify(
     brokerId: string,
     templateCode: string,
@@ -550,19 +554,14 @@ export class BrokerCommissionsService {
   ): Promise<void> {
     try {
       const recipients = await this.prisma.brokerUser.findMany({
-        where: { brokerId, status: 'ACTIVE' },
+        where: { brokerId, status: 'ACTIVE', canViewCommissions: true },
         select: { userId: true },
       });
-      if (recipients.length === 0) return;
-      await this.prisma.notification.createMany({
-        data: recipients.map((r) => ({
-          userId: r.userId,
-          templateCode,
-          payload: payload as Prisma.InputJsonValue,
-          channel: NotificationChannel.IN_APP,
-          sentAt: new Date(),
-        })),
-      });
+      await this.notifications.sendToUsers(
+        recipients.map((r) => r.userId),
+        templateCode,
+        payload,
+      );
     } catch (e) {
       this.logger.warn(
         `notify(${templateCode}) for broker ${brokerId} failed: ${(e as Error).message}`,

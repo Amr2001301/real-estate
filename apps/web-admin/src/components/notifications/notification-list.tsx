@@ -39,6 +39,20 @@ const TEMPLATE_LABEL: Record<string, string> = {
   visit_cancelled: 'تم إلغاء الزيارة',
   visit_no_show: 'تسجيل عدم حضور',
   visit_day_reminder: 'تذكير بزيارة اليوم',
+  // P4 — staff-facing labels for the new non-visit events.
+  reservation_submitted_admin: 'حجز جديد بانتظار الموافقة',
+  reservation_status_changed: 'تحديث حالة حجز',
+  reservation_booking_paid: 'تم تأكيد دفعة حجز',
+  contract_created_customer: 'تم إنشاء عقد',
+  contract_signed_customer: 'تم توقيع عقد',
+  deposit_recorded: 'تم تسجيل دفعة',
+  deposit_verified: 'تم اعتماد دفعة',
+  installment_plan_created: 'خطة تقسيط جديدة',
+  broker_lead_marked_duplicate: 'تصنيف فرصة مكررة',
+  broker_commission_cancelled: 'إلغاء عمولة',
+  broker_commission_paid: 'صرف عمولة',
+  broker_payout_processing: 'دفعة قيد المعالجة',
+  broker_payout_cancelled: 'إلغاء دفعة',
 };
 
 interface RelatedLink {

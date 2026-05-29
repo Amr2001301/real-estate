@@ -40,6 +40,10 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
+import {
+  NotificationsModule,
+  NotificationsService,
+} from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -116,6 +120,7 @@ class DepositsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly documents: DocumentsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // Link a payment proof as a first-class RECEIPT document. Idempotent: skips
@@ -237,6 +242,17 @@ class DepositsService {
     if (dto.receiptUrl) {
       await this.tryLinkReceiptDocument(deposit.id, dto.receiptUrl, recordedById);
     }
+    // P4 — event: deposit recorded. Notify the customer (contract owner).
+    // Safe payload: amount (high-level string) only — no card data, no
+    // receipt URL, no internal ids beyond contractId for routing.
+    await this.notifications.sendToUser(
+      contract.customerId,
+      'deposit_recorded',
+      {
+        contractId: deposit.contractId,
+        amount: deposit.amount.toString(),
+      },
+    );
     return deposit;
   }
 
@@ -369,11 +385,26 @@ class DepositsService {
     };
   }
 
-  verify(id: string, dto: VerifyDepositDto) {
-    return this.prisma.deposit.update({
+  async verify(id: string, dto: VerifyDepositDto) {
+    const updated = await this.prisma.deposit.update({
       where: { id },
       data: { verified: dto.verified },
+      include: { contract: { select: { customerId: true } } },
     });
+    // P4 — only fire the verified notification when this is a positive
+    // verification (verified=true). Un-verifying is a back-office correction
+    // and the customer shouldn't be told they "passed verification" twice.
+    if (dto.verified) {
+      await this.notifications.sendToUser(
+        updated.contract?.customerId,
+        'deposit_verified',
+        {
+          contractId: updated.contractId,
+          amount: updated.amount.toString(),
+        },
+      );
+    }
+    return updated;
   }
 }
 
@@ -479,7 +510,7 @@ class DepositsController {
 }
 
 @Module({
-  imports: [DocumentsModule],
+  imports: [DocumentsModule, NotificationsModule],
   controllers: [DepositsController],
   providers: [DepositsService],
 })

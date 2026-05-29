@@ -9,10 +9,10 @@ import {
   BrokerActivityType,
   BrokerCommissionStatus,
   BrokerPayoutStatus,
-  NotificationChannel,
   Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import {
@@ -84,7 +84,10 @@ const PAYOUT_INCLUDE = {
 export class BrokerPayoutsService {
   private readonly logger = new Logger(BrokerPayoutsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // ── List + Detail ──────────────────────────────────────────────────────
 
@@ -246,7 +249,7 @@ export class BrokerPayoutsService {
     });
     await this.notify(dto.brokerId, 'broker_payout_created', {
       payoutId: result,
-      payoutNumber,
+      reference: payoutNumber,
     });
 
     return this.findOne(result);
@@ -318,12 +321,12 @@ export class BrokerPayoutsService {
     });
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_APPROVED, id, {
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
       by: actor.sub,
     });
     await this.notify(payout.brokerId, 'broker_payout_approved', {
       payoutId: id,
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
     });
     return updated;
   }
@@ -344,12 +347,12 @@ export class BrokerPayoutsService {
     });
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_PROCESSING, id, {
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
       by: actor.sub,
     });
     await this.notify(payout.brokerId, 'broker_payout_processing', {
       payoutId: id,
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
     });
     return updated;
   }
@@ -371,14 +374,14 @@ export class BrokerPayoutsService {
     });
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_PAID, id, {
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
       paymentMethod: dto.paymentMethod,
       paidAt: paidAt.toISOString(),
       by: actor.sub,
     });
     await this.notify(payout.brokerId, 'broker_payout_paid', {
       payoutId: id,
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
       paidAt: paidAt.toISOString(),
     });
     return updated;
@@ -421,13 +424,13 @@ export class BrokerPayoutsService {
     });
 
     await this.writeActivity(payout.brokerId, BrokerActivityType.PAYOUT_CANCELLED, id, {
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
       reason,
       by: actor.sub,
     });
     await this.notify(payout.brokerId, 'broker_payout_cancelled', {
       payoutId: id,
-      payoutNumber: updated.payoutNumber,
+      reference: updated.payoutNumber,
       reason,
     });
 
@@ -577,6 +580,11 @@ export class BrokerPayoutsService {
     }
   }
 
+  /**
+   * P4 — Broker payout events. Like commissions, payouts are financial data
+   * so we only deliver to broker users with `canViewCommissions = true`.
+   * Routed through NotificationsService for push + template resolution.
+   */
   private async notify(
     brokerId: string,
     templateCode: string,
@@ -584,19 +592,14 @@ export class BrokerPayoutsService {
   ): Promise<void> {
     try {
       const recipients = await this.prisma.brokerUser.findMany({
-        where: { brokerId, status: 'ACTIVE' },
+        where: { brokerId, status: 'ACTIVE', canViewCommissions: true },
         select: { userId: true },
       });
-      if (recipients.length === 0) return;
-      await this.prisma.notification.createMany({
-        data: recipients.map((r) => ({
-          userId: r.userId,
-          templateCode,
-          payload: payload as Prisma.InputJsonValue,
-          channel: NotificationChannel.IN_APP,
-          sentAt: new Date(),
-        })),
-      });
+      await this.notifications.sendToUsers(
+        recipients.map((r) => r.userId),
+        templateCode,
+        payload,
+      );
     } catch (e) {
       this.logger.warn(
         `notify(${templateCode}) for broker ${brokerId} failed: ${(e as Error).message}`,

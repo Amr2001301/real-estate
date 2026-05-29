@@ -24,6 +24,12 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   maintenance_request_status_changed: 'تحديث حالة طلب الصيانة',
   maintenance_request_resolved: 'تم حل طلب الصيانة',
   maintenance_request_closed: 'تم إغلاق طلب الصيانة',
+  // P4 — customer-facing labels for the new event codes.
+  reservation_status_changed: 'تحديث حالة الحجز',
+  reservation_booking_paid: 'تم تأكيد دفعة الحجز',
+  contract_created_customer: 'تم إنشاء عقدك',
+  contract_signed_customer: 'تم توقيع عقدك',
+  deposit_verified: 'تم اعتماد دفعتك',
 };
 
 export function notificationTitle(code: string): string {

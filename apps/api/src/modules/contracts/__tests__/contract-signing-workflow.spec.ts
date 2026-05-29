@@ -43,6 +43,7 @@ interface ContractFixture {
   contractNumber: string | null;
   signedAt: Date | null;
   unitId: string;
+  customerId: string;
   brokerId: string | null;
   brokerAgentId: string | null;
   reservationId: string | null;
@@ -68,6 +69,7 @@ function resetFixture() {
     contractNumber: 'CT-0001',
     signedAt: null,
     unitId: 'unit-1',
+    customerId: 'cust-1',
     pdfUrl: null,
     brokerId: null,
     brokerAgentId: null,
@@ -112,7 +114,17 @@ function makePrismaMock() {
     },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([]) },
-    notification: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    notification: {
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      // P4 — NotificationsService.send uses prisma.notification.create.
+      create: jest.fn().mockResolvedValue({ id: 'n-1', sentAt: new Date() }),
+    },
+    notificationTemplate: {
+      findUnique: jest.fn().mockResolvedValue({
+        code: 'tpl', channel: 'IN_APP',
+        subject: { ar: 's', en: 's' }, body: { ar: 'b', en: 'b' },
+      }),
+    },
     unit: { findUnique: jest.fn().mockResolvedValue({ id: 'u', status: 'AVAILABLE' }) },
     unitMaintenanceItem: {
       findMany: jest.fn().mockImplementation(async () => warrantyFixture.items),
@@ -214,7 +226,7 @@ describe('Contracts · signing workflow', () => {
     documentsMock.create.mockClear();
     mock.leadActivity.create.mockClear();
     mock.brokerUser.findMany.mockClear();
-    mock.notification.createMany.mockClear();
+    mock.notification.create.mockClear();
     brokerCommissionsMock.materializeFromContract.mockClear();
     brokerCommissionsMock.materializeFromContract.mockResolvedValue({ status: 'created' });
     bonusServiceMock.materializeFromSignedContract.mockClear();
@@ -241,7 +253,7 @@ describe('Contracts · signing workflow', () => {
     // commission generation runs for every newly-signed contract (broker or not).
     expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
     expect(mock.brokerUser.findMany).not.toHaveBeenCalled();
-    expect(mock.notification.createMany).not.toHaveBeenCalled();
+    expect(mock.notification.create).not.toHaveBeenCalled();
     expect(bonusServiceMock.materializeFromSignedContract).toHaveBeenCalledTimes(1);
     expect(bonusServiceMock.materializeFromSignedContract).toHaveBeenCalledWith(CONTRACT_ID);
   });
@@ -424,7 +436,7 @@ describe('Contracts · signing workflow', () => {
     expect(mock.contract.update).not.toHaveBeenCalled();
     expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
     expect(mock.leadActivity.create).not.toHaveBeenCalled();
-    expect(mock.notification.createMany).not.toHaveBeenCalled();
+    expect(mock.notification.create).not.toHaveBeenCalled();
     // Re-signing must not re-generate the sales commission.
     expect(bonusServiceMock.materializeFromSignedContract).not.toHaveBeenCalled();
   });
@@ -477,16 +489,22 @@ describe('Contracts · signing workflow', () => {
     expect(actArgs.data.type).toBe('broker_contract_signed');
     expect(actArgs.data.leadId).toBe('lead-1');
 
-    // Notifications go to the 2 broker users + the salesId (3 total).
-    expect(mock.notification.createMany).toHaveBeenCalledTimes(1);
-    const notifArgs = mock.notification.createMany.mock.calls[0]![0] as {
-      data: Array<{ userId: string; templateCode: string }>;
-    };
-    expect(notifArgs.data).toHaveLength(3);
-    expect(new Set(notifArgs.data.map((n) => n.userId))).toEqual(
+    // P4 — notifications now flow through NotificationsService.send which
+    // creates ONE row per recipient. Expected for a broker contract sign:
+    // 3 broker_contract_signed (2 broker users + sales) + 1 contract_signed_customer.
+    const notifyCalls = mock.notification.create.mock.calls.map(
+      (c: unknown[]) => (c[0] as { data: { userId: string; templateCode: string } }).data,
+    );
+    const brokerCalls = notifyCalls.filter(
+      (d) => d.templateCode === 'broker_contract_signed',
+    );
+    expect(brokerCalls).toHaveLength(3);
+    expect(new Set(brokerCalls.map((n) => n.userId))).toEqual(
       new Set(['broker-user-a', 'broker-user-b', 'sales-1']),
     );
-    expect(notifArgs.data.every((n) => n.templateCode === 'broker_contract_signed')).toBe(true);
+    expect(notifyCalls.some((d) => d.templateCode === 'contract_signed_customer')).toBe(
+      true,
+    );
   });
 
   // ── Best-effort: commission materialization failure does NOT break sign ─

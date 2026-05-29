@@ -115,7 +115,20 @@ function makePrismaMock() {
     },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([{ userId: 'broker-user-1' }]) },
-    notification: { createMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    notification: {
+      createMany: jest.fn().mockResolvedValue({ count: 1 }),
+      // P4 — NotificationsService.send uses prisma.notification.create
+      // (singular) per recipient, so tests assert on this instead.
+      create: jest.fn().mockResolvedValue({ id: 'n-1', sentAt: new Date() }),
+    },
+    notificationTemplate: {
+      findUnique: jest.fn().mockResolvedValue({
+        code: 'tpl',
+        channel: 'IN_APP',
+        subject: { ar: 's', en: 's' },
+        body: { ar: 'b', en: 'b' },
+      }),
+    },
     // Expose tx-scope mocks so tests can assert what create() did.
     _tx: {
       contractCreate: txContractCreate,
@@ -202,7 +215,7 @@ describe('Contracts module · permissions enforcement', () => {
     prismaMock.userPermission.findMany.mockClear();
     prismaMock.contract.update.mockClear();
     prismaMock.leadActivity.create.mockClear();
-    prismaMock.notification.createMany.mockClear();
+    prismaMock.notification.create.mockClear();
     prismaMock._tx.contractCreate.mockClear();
     prismaMock._tx.userUpdateMany.mockClear();
     prismaMock._tx.unitUpdate.mockClear();
@@ -307,8 +320,14 @@ describe('Contracts module · permissions enforcement', () => {
       expect(createArgs.data.signedAt).toBeNull();
       // No signing side effects.
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
       expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
+      // P4 — `create` now fires a single `contract_created_customer`
+      // notification to the customer. The signing fan-out doesn't fire here.
+      expect(prismaMock.notification.create).toHaveBeenCalledTimes(1);
+      const notifyArgs = prismaMock.notification.create.mock.calls[0]![0] as {
+        data: { templateCode: string };
+      };
+      expect(notifyArgs.data.templateCode).toBe('contract_created_customer');
     });
 
     it('POST /contracts with signedAt is rejected by ValidationPipe (400); no contract created', async () => {
@@ -321,7 +340,7 @@ describe('Contracts module · permissions enforcement', () => {
       expect(prismaMock._tx.contractCreate).not.toHaveBeenCalled();
       // And, crucially, NO signing side effects either.
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(prismaMock.notification.create).not.toHaveBeenCalled();
       expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
     });
 
@@ -402,7 +421,7 @@ describe('Contracts module · permissions enforcement', () => {
       // None of the side effects ran.
       expect(prismaMock.contract.update).not.toHaveBeenCalled();
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(prismaMock.notification.create).not.toHaveBeenCalled();
       expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
     });
 
@@ -415,7 +434,7 @@ describe('Contracts module · permissions enforcement', () => {
       await request(app.getHttpServer()).post(PATH).send(BODY).expect(201);
       expect(prismaMock.contract.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.leadActivity.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(prismaMock.notification.create).toHaveBeenCalled();
       expect(brokerCommissionsMock.materializeFromContract).toHaveBeenCalledTimes(1);
     });
 
@@ -429,7 +448,7 @@ describe('Contracts module · permissions enforcement', () => {
       await request(app.getHttpServer()).post(PATH).send(BODY).expect(201);
       expect(prismaMock.contract.update).not.toHaveBeenCalled();
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(prismaMock.notification.create).not.toHaveBeenCalled();
       expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
     });
 

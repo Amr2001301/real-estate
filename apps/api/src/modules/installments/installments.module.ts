@@ -43,6 +43,10 @@ import {
   PlanPaymentType,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  NotificationsModule,
+  NotificationsService,
+} from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { computeDurationOption } from './duration-calc';
@@ -325,7 +329,10 @@ function enrichDurationOptions(
 
 @Injectable()
 class PlanTemplatesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async list(query: {
     page: number;
@@ -516,7 +523,38 @@ class PlanTemplatesService {
     // findOne must run AFTER the transaction commits — running it inside the
     // $transaction callback uses `this.prisma` (a different connection) which
     // cannot see the not-yet-committed writes, and would falsely 404.
-    return this.findOne(createdId);
+    const created = await this.findOne(createdId);
+
+    // P4 — event: a new ACTIVE plan template is now visible to sales and
+    // sales managers. Only fire when the plan is actually ACTIVE — DRAFT
+    // plans are admin-only WIP and shouldn't ping sales. Project name is
+    // resolved from the related project; failure to resolve doesn't block.
+    if (created.status === PlanTemplateStatus.ACTIVE) {
+      await this.notifyPlanCreated(createdId);
+    }
+
+    return created;
+  }
+
+  /** Resolve project name + send `installment_plan_created` to all SALES
+   *  and SALES_MANAGER users. Errors are silently swallowed by the helper. */
+  private async notifyPlanCreated(planId: string): Promise<void> {
+    let projectName = '';
+    try {
+      const plan = await this.prisma.installmentPlanTemplate.findUnique({
+        where: { id: planId },
+        select: { project: { select: { name: true } } },
+      });
+      const n = plan?.project?.name as { ar?: string; en?: string } | undefined;
+      projectName = n?.ar || n?.en || '';
+    } catch {
+      // Best-effort context; missing project name just renders as empty.
+    }
+    await this.notifications.sendToRoles(
+      [UserRole.SALES, UserRole.SALES_MANAGER],
+      'installment_plan_created',
+      { planTemplateId: planId, projectName },
+    );
   }
 
   async update(id: string, dto: UpdatePlanTemplateDto) {
@@ -643,11 +681,17 @@ class PlanTemplatesService {
   }
 
   async setStatus(id: string, status: PlanTemplateStatus) {
-    await this.findOne(id);
-    return this.prisma.installmentPlanTemplate.update({
+    const previous = await this.findOne(id);
+    const updated = await this.prisma.installmentPlanTemplate.update({
       where: { id },
       data: { status },
     });
+    // P4 — fire installment_plan_created on the DRAFT/INACTIVE → ACTIVE edge
+    // so re-activating a plan after a content review still pings sales.
+    if (status === PlanTemplateStatus.ACTIVE && previous.status !== PlanTemplateStatus.ACTIVE) {
+      await this.notifyPlanCreated(id);
+    }
+    return updated;
   }
 }
 
@@ -766,6 +810,7 @@ class PlanTemplatesController {
 // ─── Module ───────────────────────────────────────────────────────────────────
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [InstallmentsController, PlanTemplatesController],
   providers: [InstallmentsService, InstallmentsCron, PlanTemplatesService],
   exports: [InstallmentsService, PlanTemplatesService],

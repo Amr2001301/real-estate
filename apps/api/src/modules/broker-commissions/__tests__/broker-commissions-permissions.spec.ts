@@ -1,6 +1,8 @@
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
+import { NotificationsService } from '../../notifications/notifications.module';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { BrokerCommissionsController } from '../broker-commissions.controller';
@@ -117,6 +119,12 @@ function makePrismaMock() {
   };
 }
 
+const notificationsMock = {
+  sendToUser: jest.fn().mockResolvedValue(undefined),
+  sendToUsers: jest.fn().mockResolvedValue(undefined),
+  sendToRoles: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('Broker-commissions module · permissions enforcement', () => {
   let app: INestApplication;
   let prismaMock: ReturnType<typeof makePrismaMock>;
@@ -135,7 +143,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
     @Module({
       imports: [MockPrismaModule],
       controllers: [BrokerCommissionsController],
-      providers: [BrokerCommissionsService],
+      providers: [{ provide: NotificationsService, useValue: notificationsMock }, BrokerCommissionsService],
     })
     class TestBrokerCommissionsModule {}
 
@@ -164,7 +172,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
     prismaMock.brokerCommission.update.mockClear();
     prismaMock.brokerPayout.findUnique.mockClear();
     prismaMock.leadActivity.create.mockClear();
-    prismaMock.notification.createMany.mockClear();
+    notificationsMock.sendToUsers.mockClear();
     // Reset fixtures.
     commissionStore.current = {
       id: '00000000-0000-0000-0000-000000000001',
@@ -270,7 +278,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
       });
       expect(prismaMock.brokerCommission.update).not.toHaveBeenCalled();
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH broker_commissions:approve → 200; side effects fire', async () => {
@@ -282,7 +290,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
       await request(app.getHttpServer()).patch(PATH).send({}).expect(200);
       expect(prismaMock.brokerCommission.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.leadActivity.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
 
     it('SALES even with broker_commissions:approve → 403 from @Roles', async () => {
@@ -313,7 +321,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
       });
       expect(prismaMock.brokerCommission.update).not.toHaveBeenCalled();
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH broker_commissions:reject → 200; side effects fire', async () => {
@@ -325,7 +333,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
       await request(app.getHttpServer()).patch(PATH).send(BODY).expect(200);
       expect(prismaMock.brokerCommission.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.leadActivity.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
   });
 
@@ -347,7 +355,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
       expect(prismaMock.brokerPayout.findUnique).not.toHaveBeenCalled();
       expect(prismaMock.brokerCommission.update).not.toHaveBeenCalled();
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH broker_commissions:cancel, commission unlinked → 200; side effects fire', async () => {
@@ -359,7 +367,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
       await request(app.getHttpServer()).patch(PATH).send(BODY).expect(200);
       expect(prismaMock.brokerCommission.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.leadActivity.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
 
     it('ADMIN WITH the code, but commission linked to PAID payout → 409 (business logic runs after permission passes)', async () => {
@@ -378,7 +386,7 @@ describe('Broker-commissions module · permissions enforcement', () => {
       // No state mutation, no side effects.
       expect(prismaMock.brokerCommission.update).not.toHaveBeenCalled();
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
   });
 });

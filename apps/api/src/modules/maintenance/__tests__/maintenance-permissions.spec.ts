@@ -156,6 +156,15 @@ function makePrismaMock() {
     },
     notification: {
       createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      // P4 — NotificationsService.send uses prisma.notification.create
+      // (singular) per recipient.
+      create: jest.fn().mockResolvedValue({ id: 'n-1', sentAt: new Date() }),
+    },
+    notificationTemplate: {
+      findUnique: jest.fn().mockResolvedValue({
+        code: 'tpl', channel: 'IN_APP',
+        subject: { ar: 's', en: 's' }, body: { ar: 'b', en: 'b' },
+      }),
     },
     maintenanceCategory: {
       findMany: jest.fn().mockResolvedValue([]),
@@ -315,8 +324,8 @@ describe('Maintenance module · permissions enforcement', () => {
     mock.maintenanceCategory.update.mockClear();
     mock.user.findUnique.mockClear();
     mock.user.findMany.mockClear();
-    mock.notification.createMany.mockClear();
-    mock.notification.createMany.mockResolvedValue({ count: 0 });
+    mock.notification.create.mockClear();
+    mock.notification.create.mockResolvedValue({ count: 0 });
   });
 
   // ── Metadata — controller is internal to the module ───────────────────
@@ -606,9 +615,11 @@ describe('Maintenance module · permissions enforcement', () => {
   });
 
   // ── Notifications (best-effort fan-out) ────────────────────────────────
+  // P4 — fan-out is routed through NotificationsService.send, which writes
+  // one row per recipient via `prisma.notification.create` (singular).
   function templatesSent(): string[] {
-    return mock.notification.createMany.mock.calls.flatMap(
-      (c) => (c[0] as { data: Array<{ templateCode: string }> }).data.map((d) => d.templateCode),
+    return mock.notification.create.mock.calls.map(
+      (c) => (c[0] as { data: { templateCode: string } }).data.templateCode,
     );
   }
 
@@ -677,13 +688,13 @@ describe('Maintenance module · permissions enforcement', () => {
       fixture.requestStatus = MaintenanceStatus.IN_PROGRESS;
       await request(app.getHttpServer()).post(`${CREATE}/${ID}/status`).send({ status: 'IN_PROGRESS' }).expect(201);
       expect(mock.maintenanceRequest.update).not.toHaveBeenCalled();
-      expect(mock.notification.createMany).not.toHaveBeenCalled();
+      expect(mock.notification.create).not.toHaveBeenCalled();
     });
 
     it('notification failure does NOT fail the maintenance action', async () => {
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
       fixture.requestStatus = MaintenanceStatus.IN_PROGRESS;
-      mock.notification.createMany.mockRejectedValueOnce(new Error('notify blew up'));
+      mock.notification.create.mockRejectedValueOnce(new Error('notify blew up'));
       // Status change still succeeds (201) despite the notification failure.
       await request(app.getHttpServer()).post(`${CREATE}/${ID}/status`).send({ status: 'RESOLVED' }).expect(201);
       expect(mock.maintenanceRequest.update).toHaveBeenCalledTimes(1);

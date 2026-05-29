@@ -8,6 +8,8 @@ import {
 } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
+import { NotificationsService } from '../../notifications/notifications.module';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { BrokerLeadsController } from '../broker-leads.controller';
@@ -97,6 +99,12 @@ function makePrismaMock() {
   return m;
 }
 
+const notificationsMock = {
+  sendToUser: jest.fn().mockResolvedValue(undefined),
+  sendToUsers: jest.fn().mockResolvedValue(undefined),
+  sendToRoles: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('Broker leads module · permissions enforcement', () => {
   let app: INestApplication;
   let prismaMock: ReturnType<typeof makePrismaMock>;
@@ -118,7 +126,7 @@ describe('Broker leads module · permissions enforcement', () => {
     @Module({
       imports: [MockPrismaModule],
       controllers: [BrokerLeadsController],
-      providers: [BrokerLeadsService],
+      providers: [{ provide: NotificationsService, useValue: notificationsMock }, BrokerLeadsService],
     })
     class TestModule {}
 

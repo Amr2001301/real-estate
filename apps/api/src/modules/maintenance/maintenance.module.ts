@@ -43,6 +43,10 @@ import {
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
+import {
+  NotificationsModule,
+  NotificationsService,
+} from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -225,87 +229,68 @@ class MaintenanceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly documents: DocumentsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
-  // ── Notifications (best-effort, IN_APP; never fail the maintenance action) ──
-
-  private async createNotifications(
-    userIds: Array<string | null | undefined>,
-    templateCode: string,
-    payload: Prisma.InputJsonValue,
-  ) {
-    const ids = [...new Set(userIds.filter((id): id is string => !!id))];
-    if (ids.length === 0) return;
-    await this.prisma.notification.createMany({
-      data: ids.map((userId) => ({
-        userId,
-        templateCode,
-        payload,
-        channel: NotificationChannel.IN_APP,
-        sentAt: new Date(),
-      })),
-    });
-  }
-
-  private async activeAdminIds(): Promise<string[]> {
-    const admins = await this.prisma.user.findMany({
-      where: { role: UserRole.ADMIN, active: true },
-      select: { id: true },
-    });
-    return admins.map((a) => a.id);
-  }
+  // ── Notifications (P4: routed through NotificationsService) ──
+  // DB row is always created (helper swallows errors so the business action
+  // never fails); push fires automatically when FCM is configured. The
+  // previous direct prisma.notification.createMany helper is gone.
 
   // Notify staff (+ assignee) that a request was created. Best-effort.
+  // ADMINs + MAINTENANCE_SUPERVISORs receive maintenance_request_created;
+  // the specific assignee (if any) also receives the assigned event so they
+  // know to pick it up.
   private async notifyCreated(unitCode: string, assignedAdminId?: string | null) {
-    try {
-      await this.createNotifications(await this.activeAdminIds(), 'maintenance_request_created', {
-        unitCode,
-      });
-      if (assignedAdminId) {
-        await this.createNotifications([assignedAdminId], 'maintenance_request_assigned', {
-          unitCode,
-        });
-      }
-    } catch (e) {
-      this.logger.warn(`notifyCreated failed: ${(e as Error).message}`);
+    const payload = { unitCode };
+    await this.notifications.sendToRoles(
+      [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
+      'maintenance_request_created',
+      payload,
+    );
+    if (assignedAdminId) {
+      await this.notifications.sendToUser(
+        assignedAdminId,
+        'maintenance_request_assigned',
+        payload,
+      );
     }
   }
 
   // Notify assignee + customer that a request was assigned. Best-effort.
   private async notifyAssigned(id: string) {
-    try {
-      const r = await this.notifyContext(id);
-      if (!r) return;
-      await this.createNotifications([r.assignedAdminId], 'maintenance_request_assigned', {
-        unitCode: r.unitCode,
-      });
-      await this.createNotifications([r.customerId], 'maintenance_request_status_changed', {
-        unitCode: r.unitCode,
-        statusLabel: STATUS_LABEL_AR[r.status],
-      });
-    } catch (e) {
-      this.logger.warn(`notifyAssigned failed: ${(e as Error).message}`);
-    }
+    const r = await this.notifyContext(id);
+    if (!r) return;
+    await this.notifications.sendToUser(
+      r.assignedAdminId,
+      'maintenance_request_assigned',
+      { unitCode: r.unitCode },
+    );
+    await this.notifications.sendToUser(
+      r.customerId,
+      'maintenance_request_status_changed',
+      { unitCode: r.unitCode, statusLabel: STATUS_LABEL_AR[r.status] },
+    );
   }
 
   // Notify customer (+ assignee) of a status change. Best-effort.
   private async notifyStatus(id: string) {
-    try {
-      const r = await this.notifyContext(id);
-      if (!r) return;
-      const code =
-        r.status === MaintenanceStatus.RESOLVED
-          ? 'maintenance_request_resolved'
-          : r.status === MaintenanceStatus.CLOSED
-            ? 'maintenance_request_closed'
-            : 'maintenance_request_status_changed';
-      const payload = { unitCode: r.unitCode, statusLabel: STATUS_LABEL_AR[r.status] };
-      await this.createNotifications([r.customerId], code, payload);
-      if (r.assignedAdminId) {
-        await this.createNotifications([r.assignedAdminId], 'maintenance_request_status_changed', payload);
-      }
-    } catch (e) {
-      this.logger.warn(`notifyStatus failed: ${(e as Error).message}`);
+    const r = await this.notifyContext(id);
+    if (!r) return;
+    const code =
+      r.status === MaintenanceStatus.RESOLVED
+        ? 'maintenance_request_resolved'
+        : r.status === MaintenanceStatus.CLOSED
+          ? 'maintenance_request_closed'
+          : 'maintenance_request_status_changed';
+    const payload = { unitCode: r.unitCode, statusLabel: STATUS_LABEL_AR[r.status] };
+    await this.notifications.sendToUser(r.customerId, code, payload);
+    if (r.assignedAdminId) {
+      await this.notifications.sendToUser(
+        r.assignedAdminId,
+        'maintenance_request_status_changed',
+        payload,
+      );
     }
   }
 
@@ -616,13 +601,11 @@ class MaintenanceService {
         dueAt: maxSla != null ? new Date(approvedAt.getTime() + maxSla * 60_000) : null,
       },
     });
-    try {
-      await this.createNotifications([req.customerId], 'maintenance_request_status_changed', {
-        statusLabel: 'تمت الموافقة',
-      });
-    } catch (e) {
-      this.logger.warn(`approve notify failed: ${(e as Error).message}`);
-    }
+    await this.notifications.sendToUser(
+      req.customerId,
+      'maintenance_request_status_changed',
+      { statusLabel: 'تمت الموافقة' },
+    );
     return updated;
   }
 
@@ -639,13 +622,11 @@ class MaintenanceService {
         dueAt: null,
       },
     });
-    try {
-      await this.createNotifications([req.customerId], 'maintenance_request_status_changed', {
-        statusLabel: 'مرفوض',
-      });
-    } catch (e) {
-      this.logger.warn(`reject notify failed: ${(e as Error).message}`);
-    }
+    await this.notifications.sendToUser(
+      req.customerId,
+      'maintenance_request_status_changed',
+      { statusLabel: 'مرفوض' },
+    );
     return updated;
   }
 
@@ -1411,7 +1392,7 @@ class MaintenanceController {
 }
 
 @Module({
-  imports: [DocumentsModule],
+  imports: [DocumentsModule, NotificationsModule],
   controllers: [MaintenanceController],
   providers: [MaintenanceService],
 })

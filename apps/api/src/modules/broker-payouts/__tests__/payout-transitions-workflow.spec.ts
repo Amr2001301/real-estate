@@ -7,6 +7,8 @@ import {
 } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
+import { NotificationsService } from '../../notifications/notifications.module';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { BrokerPayoutsController } from '../broker-payouts.controller';
@@ -129,6 +131,12 @@ function makePrismaMock() {
 
 let mock = makePrismaMock();
 
+const notificationsMock = {
+  sendToUser: jest.fn().mockResolvedValue(undefined),
+  sendToUsers: jest.fn().mockResolvedValue(undefined),
+  sendToRoles: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('Broker payouts · transitions workflow', () => {
   let app: INestApplication;
 
@@ -145,7 +153,7 @@ describe('Broker payouts · transitions workflow', () => {
     @Module({
       imports: [MockPrismaModule],
       controllers: [BrokerPayoutsController],
-      providers: [BrokerPayoutsService],
+      providers: [{ provide: NotificationsService, useValue: notificationsMock }, BrokerPayoutsService],
     })
     class TestBrokerPayoutsModule {}
 
@@ -181,7 +189,7 @@ describe('Broker payouts · transitions workflow', () => {
     mock.brokerPayout.update.mockClear();
     mock.brokerCommission.updateMany.mockClear();
     mock.brokerActivityLog.create.mockClear();
-    mock.notification.createMany.mockClear();
+    notificationsMock.sendToUsers.mockClear();
   });
 
   // ── approve() ──────────────────────────────────────────────────────────
@@ -209,7 +217,7 @@ describe('Broker payouts · transitions workflow', () => {
     };
     expect(activityArgs.data.type).toBe('PAYOUT_APPROVED');
     expect(activityArgs.data.brokerId).toBe('broker-1');
-    expect(mock.notification.createMany).toHaveBeenCalled();
+    expect(notificationsMock.sendToUsers).toHaveBeenCalled();
   });
 
   it('approve() rejects a DRAFT payout with zero linked commissions (400)', async () => {

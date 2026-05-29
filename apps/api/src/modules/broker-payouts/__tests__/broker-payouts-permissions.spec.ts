@@ -1,6 +1,8 @@
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
+import { NotificationsService } from '../../notifications/notifications.module';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { BrokerPayoutsController } from '../broker-payouts.controller';
@@ -145,6 +147,14 @@ function makePrismaMock() {
   };
 }
 
+// P4 — module now fans out via NotificationsService. Hoisted so the tests
+// can both inject the stub into the module graph and assert on its calls.
+const notificationsMock = {
+  sendToUser: jest.fn().mockResolvedValue(undefined),
+  sendToUsers: jest.fn().mockResolvedValue(undefined),
+  sendToRoles: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('Broker-payouts module · permissions enforcement', () => {
   let app: INestApplication;
   let prismaMock: ReturnType<typeof makePrismaMock>;
@@ -163,7 +173,10 @@ describe('Broker-payouts module · permissions enforcement', () => {
     @Module({
       imports: [MockPrismaModule],
       controllers: [BrokerPayoutsController],
-      providers: [BrokerPayoutsService],
+      providers: [
+        { provide: NotificationsService, useValue: notificationsMock },
+        BrokerPayoutsService,
+      ],
     })
     class TestBrokerPayoutsModule {}
 
@@ -192,7 +205,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
     prismaMock.brokerPayout.update.mockClear();
     prismaMock.brokerCommission.updateMany.mockClear();
     prismaMock.brokerActivityLog.create.mockClear();
-    prismaMock.notification.createMany.mockClear();
+    notificationsMock.sendToUsers.mockClear();
     // Reset fixture to DRAFT with a linked commission.
     payoutStore.current = {
       id: '00000000-0000-0000-0000-000000000001',
@@ -302,7 +315,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       await request(app.getHttpServer()).post('/broker-payouts').send(BODY).expect(201);
       expect(prismaMock.userPermission.findMany).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
 
     it('SALES even with broker_payouts:create → 403 from @Roles', async () => {
@@ -352,7 +365,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       });
       expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH broker_payouts:approve → 200; side effects fire', async () => {
@@ -364,7 +377,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       await request(app.getHttpServer()).patch(PATH).send({}).expect(200);
       expect(prismaMock.brokerPayout.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
 
     it('ADMIN WITH the code, but payout has 0 commissions → 400 (business logic survives permission gate)', async () => {
@@ -378,7 +391,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       expect(res.body.message).toContain('no commissions');
       expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('SALES even with broker_payouts:approve → 403 from @Roles', async () => {
@@ -406,7 +419,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       });
       expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH broker_payouts:process → 200; side effects fire (on APPROVED payout)', async () => {
@@ -419,7 +432,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       await request(app.getHttpServer()).patch(PATH).send({}).expect(200);
       expect(prismaMock.brokerPayout.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
   });
 
@@ -436,7 +449,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       });
       expect(prismaMock.brokerPayout.update).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH broker_payouts:pay → 200; side effects fire (on PROCESSING payout)', async () => {
@@ -449,7 +462,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       await request(app.getHttpServer()).patch(PATH).send(BODY).expect(200);
       expect(prismaMock.brokerPayout.update).toHaveBeenCalledTimes(1);
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
   });
 
@@ -469,7 +482,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       // the guard prevents from running.
       expect(prismaMock.brokerCommission.updateMany).not.toHaveBeenCalled();
       expect(prismaMock.brokerActivityLog.create).not.toHaveBeenCalled();
-      expect(prismaMock.notification.createMany).not.toHaveBeenCalled();
+      expect(notificationsMock.sendToUsers).not.toHaveBeenCalled();
     });
 
     it('ADMIN WITH broker_payouts:cancel → 200; side effects fire on DRAFT payout', async () => {
@@ -483,7 +496,7 @@ describe('Broker-payouts module · permissions enforcement', () => {
       // the top-level brokerPayout.update mock is not directly invoked.
       // Side effects (activity + notification) DO run after the transaction.
       expect(prismaMock.brokerActivityLog.create).toHaveBeenCalledTimes(1);
-      expect(prismaMock.notification.createMany).toHaveBeenCalledTimes(1);
+      expect(notificationsMock.sendToUsers).toHaveBeenCalled();
     });
   });
 });

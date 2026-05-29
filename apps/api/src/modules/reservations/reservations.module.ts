@@ -49,6 +49,10 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
 import { computeDurationOption } from '../installments/duration-calc';
+import {
+  NotificationsModule,
+  NotificationsService,
+} from '../notifications/notifications.module';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
 // signs a contract — and convert always produces an unsigned contract.
@@ -172,7 +176,10 @@ const FULL_INCLUDE = {
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // Public so the broker portal reservations service can reuse the same
   // numbering scheme without duplicating logic. Behavior unchanged.
@@ -522,7 +529,59 @@ export class ReservationsService {
       }
 
       return reservation;
+    }).then(async (reservation) => {
+      // P4 — event: sales or broker created a reservation; admins + sales
+      // managers get a heads-up. Side-effects after the tx commits, helpers
+      // never throw.
+      await this.notifications.sendToRoles(
+        [UserRole.ADMIN, UserRole.SALES_MANAGER],
+        'reservation_submitted_admin',
+        await this.buildReservationPayload(reservation.id),
+      );
+      return reservation;
     });
+  }
+
+  /** Build a safe payload for a reservation notification. Whitelist: unit
+   *  code, project name, status, reservation number, scheduled date.
+   *  Errors are swallowed so payload composition never blocks the action. */
+  private async buildReservationPayload(
+    reservationId: string,
+    extras: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    try {
+      const r = await this.prisma.reservation.findUnique({
+        where: { id: reservationId },
+        select: {
+          reservationNumber: true,
+          status: true,
+          unit: {
+            select: {
+              code: true,
+              building: {
+                select: { phase: { select: { project: { select: { name: true } } } } },
+              },
+            },
+          },
+          client: { select: { fullName: true } },
+        },
+      });
+      if (!r) return { reservationId, ...extras };
+      const project = r.unit?.building?.phase?.project?.name as
+        | { ar?: string; en?: string }
+        | undefined;
+      return {
+        reservationId,
+        reference: r.reservationNumber ?? '',
+        unitCode: r.unit?.code ?? '',
+        projectName: project?.ar || project?.en || '',
+        customerName: r.client?.fullName ?? '',
+        status: r.status,
+        ...extras,
+      };
+    } catch {
+      return { reservationId, ...extras };
+    }
   }
 
   async stats() {
@@ -757,6 +816,17 @@ export class ReservationsService {
         }
       }
       return updated;
+    }).then(async (updated) => {
+      // P4 — event: reservation status changed. Notify the customer/client
+      // and the assigned sales user; ADMINs already saw the submit event so
+      // we don't re-broadcast to the role for every transition.
+      const payload = await this.buildReservationPayload(updated.id);
+      await this.notifications.sendToUsers(
+        [updated.clientId, updated.salesId],
+        'reservation_status_changed',
+        payload,
+      );
+      return updated;
     });
   }
 
@@ -819,6 +889,15 @@ export class ReservationsService {
           verified: true,
         },
       });
+      return updated;
+    }).then(async (updated) => {
+      // P4 — event: booking payment confirmed. Notify customer + sales rep.
+      const payload = await this.buildReservationPayload(updated.id);
+      await this.notifications.sendToUsers(
+        [updated.clientId, updated.salesId],
+        'reservation_booking_paid',
+        payload,
+      );
       return updated;
     });
   }
@@ -1344,51 +1423,39 @@ export class ReservationsService {
           return { contractId: contract.id, contractNumber };
         });
 
-        // Post-transaction notifications — only fire when the contract is
-        // broker-attributed. Best-effort: failures are logged but never thrown.
+        // P4 — Broker fan-out via NotificationsService. Recipient list +
+        // dedup + per-recipient error swallowing are handled by sendToUsers.
+        // Customer-facing 'reservation_status_changed' was already fired by
+        // setStatus(); convert is admin-driven so it also re-broadcasts the
+        // status to the customer + sales.
         if (reservation.brokerId) {
-          try {
-            const recipients = await this.prisma.brokerUser.findMany({
-              where: { brokerId: reservation.brokerId, status: 'ACTIVE' },
-              select: { userId: true },
-            });
-            const userIds = new Set<string>(recipients.map((r) => r.userId));
-            // Internal sales user gets a notification too.
-            const salesUserId =
-              (await this.prisma.reservation.findUnique({
-                where: { id },
-                select: { salesId: true },
-              }))?.salesId ?? null;
-            if (salesUserId) userIds.add(salesUserId);
-
-            if (userIds.size > 0) {
-              const basePayload = {
-                contractId: result.contractId,
-                contractNumber: result.contractNumber,
-                reservationId: id,
-                unitId: reservation.unitId,
-                projectId: reservation.unit.building.phase.projectId,
-              };
-              await this.prisma.notification.createMany({
-                data: Array.from(userIds).map((userId) => ({
-                  userId,
-                  templateCode: 'broker_contract_created',
-                  payload: basePayload as Prisma.InputJsonValue,
-                  channel: NotificationChannel.IN_APP,
-                  sentAt: new Date(),
-                })),
-              });
-              // The `broker_contract_signed` notification fan-out is no
-              // longer emitted here — conversion creates an unsigned
-              // contract. Signing routes through POST /contracts/:id/sign,
-              // which fans out from ContractsService.sign().
-            }
-          } catch (notifyErr) {
-            this.logger.warn(
-              `Broker contract notify failed for reservation ${id}: ${(notifyErr as Error).message}`,
-            );
-          }
+          const brokerRecipients = await this.prisma.brokerUser.findMany({
+            where: { brokerId: reservation.brokerId, status: 'ACTIVE' },
+            select: { userId: true },
+          });
+          const salesUserId =
+            (await this.prisma.reservation.findUnique({
+              where: { id },
+              select: { salesId: true },
+            }))?.salesId ?? null;
+          const payload = {
+            reservationId: id,
+            reference: result.contractNumber,
+            unitCode: reservation.unit.code,
+            projectName: '', // omitted intentionally; safe whitelist
+          };
+          await this.notifications.sendToUsers(
+            [...brokerRecipients.map((r) => r.userId), salesUserId],
+            'broker_contract_created',
+            payload,
+          );
         }
+        // Notify the customer/client and sales of the converted status too.
+        await this.notifications.sendToUsers(
+          [reservation.clientId, reservation.salesId],
+          'reservation_status_changed',
+          await this.buildReservationPayload(id),
+        );
 
         // Broker commission materialization is performed by
         // ContractsService.sign() — the only path that signs a contract.
@@ -1700,6 +1767,7 @@ class ReservationsController {
 }
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [ReservationsController],
   providers: [ReservationsService, ReservationExpiryCron],
   exports: [ReservationsService],

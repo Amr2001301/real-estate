@@ -34,6 +34,10 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
+import {
+  NotificationsModule,
+  NotificationsService,
+} from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
@@ -82,6 +86,7 @@ class ContractsService {
     private readonly brokerCommissions: BrokerCommissionsService,
     private readonly bonus: BonusService,
     private readonly documents: DocumentsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // Link a contract PDF as a first-class CONTRACT document. Idempotent: skips
@@ -162,7 +167,52 @@ class ContractsService {
     if (dto.pdfUrl) {
       await this.tryLinkContractDocument(contract.id, dto.pdfUrl, actorId);
     }
+    // P4 — event: notify customer that a contract was created for them.
+    // Safe payload: unit code + project name only — no amounts, no PDF URL.
+    await this.notifications.sendToUser(
+      dto.customerId,
+      'contract_created_customer',
+      await this.buildContractPayload(contract.id),
+    );
     return contract;
+  }
+
+  /** Build a safe payload for contract notifications. Whitelist: unit code,
+   *  project name, contract number. No PDF URL, no amounts, no internal ids
+   *  beyond contractId for routing. */
+  private async buildContractPayload(
+    contractId: string,
+    extras: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    try {
+      const c = await this.prisma.contract.findUnique({
+        where: { id: contractId },
+        select: {
+          contractNumber: true,
+          unit: {
+            select: {
+              code: true,
+              building: {
+                select: { phase: { select: { project: { select: { name: true } } } } },
+              },
+            },
+          },
+        },
+      });
+      if (!c) return { contractId, ...extras };
+      const project = c.unit?.building?.phase?.project?.name as
+        | { ar?: string; en?: string }
+        | undefined;
+      return {
+        contractId,
+        contractNumber: c.contractNumber ?? '',
+        unitCode: c.unit?.code ?? '',
+        projectName: project?.ar || project?.en || '',
+        ...extras,
+      };
+    } catch {
+      return { contractId, ...extras };
+    }
   }
 
   async list(opts: {
@@ -320,6 +370,7 @@ class ContractsService {
         contractNumber: true,
         signedAt: true,
         unitId: true,
+        customerId: true,
         pdfUrl: true,
         brokerId: true,
         brokerAgentId: true,
@@ -387,29 +438,28 @@ class ContractsService {
           where: { brokerId: before.brokerId, status: 'ACTIVE' },
           select: { userId: true },
         });
-        const userIds = new Set<string>(recipients.map((r) => r.userId));
-        if (before.reservation?.salesId) userIds.add(before.reservation.salesId);
-
-        if (userIds.size > 0) {
-          await this.prisma.notification.createMany({
-            data: Array.from(userIds).map((userId) => ({
-              userId,
-              templateCode: 'broker_contract_signed',
-              payload: {
-                contractId: before.id,
-                contractNumber: before.contractNumber,
-                signedAt: dto.signedAt,
-              } as Prisma.InputJsonValue,
-              channel: NotificationChannel.IN_APP,
-              sentAt: new Date(),
-            })),
-          });
-        }
+        const brokerPayload = await this.buildContractPayload(before.id);
+        await this.notifications.sendToUsers(
+          [
+            ...recipients.map((r) => r.userId),
+            before.reservation?.salesId ?? null,
+          ],
+          'broker_contract_signed',
+          brokerPayload,
+        );
       } catch (e) {
+        // Defence in depth — the helpers already swallow, but in case the
+        // prisma query above throws we log and continue.
         this.logger.warn(
           `Broker contract sign notify failed for ${id}: ${(e as Error).message}`,
         );
       }
+      // P4 — also notify the customer directly that their contract was signed.
+      await this.notifications.sendToUser(
+        before.customerId,
+        'contract_signed_customer',
+        await this.buildContractPayload(before.id),
+      );
 
       // Materialize the broker commission. Idempotent: a contract that
       // already has a BrokerCommission returns `already_exists`.
@@ -592,7 +642,7 @@ class ContractsController {
 }
 
 @Module({
-  imports: [BrokerCommissionsModule, BonusModule, DocumentsModule],
+  imports: [BrokerCommissionsModule, BonusModule, DocumentsModule, NotificationsModule],
   controllers: [ContractsController],
   providers: [ContractsService],
   exports: [ContractsService],

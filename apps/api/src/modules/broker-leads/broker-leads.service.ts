@@ -4,8 +4,9 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { NotificationChannel, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import type { AuthUser } from '../../common/decorators/current-user.decorator';
 import {
@@ -41,7 +42,10 @@ const BROKER_LEAD_INCLUDE = {
 export class BrokerLeadsService {
   private readonly logger = new Logger(BrokerLeadsService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async list(query: BrokerLeadsQueryDto) {
     const page = query.page ?? 1;
@@ -271,13 +275,10 @@ export class BrokerLeadsService {
   }
 
   /**
-   * Fan out an IN_APP Notification to every active BrokerUser under the broker
-   * that owns this lead. We write Notification rows directly (no
-   * NotificationsService.send() — that requires a NotificationTemplate row,
-   * and we don't want to depend on operator-seeded templates for system events).
-   *
-   * Notification.templateCode is a plain String (no FK), so this is safe.
-   * Failures are swallowed with a warn log so they never block the admin action.
+   * P4 — route through NotificationsService.sendToUsers. Payload is the
+   * SAFE whitelist: leadReference (the lead's plaintext identifier on the
+   * broker side) + the projectInterest name. Phone numbers and full lead
+   * objects are NOT exposed in the notification body (they were before).
    */
   private async notifyBroker(
     leadId: string,
@@ -290,10 +291,8 @@ export class BrokerLeadsService {
         select: {
           id: true,
           fullName: true,
-          phone: true,
           brokerId: true,
-          brokerApprovalStatus: true,
-          projectInterest: { select: { id: true, name: true } },
+          projectInterest: { select: { name: true } },
         },
       });
       if (!lead?.brokerId) return;
@@ -304,28 +303,25 @@ export class BrokerLeadsService {
       });
       if (brokerUsers.length === 0) return;
 
-      const now = new Date();
-      const enrichedPayload = {
+      const projectName =
+        (lead.projectInterest?.name as { ar?: string; en?: string } | undefined)
+          ?.ar ||
+        (lead.projectInterest?.name as { ar?: string; en?: string } | undefined)
+          ?.en ||
+        '';
+      const safePayload = {
         ...payload,
-        lead: {
-          id: lead.id,
-          fullName: lead.fullName,
-          phone: lead.phone,
-          brokerApprovalStatus: lead.brokerApprovalStatus,
-          projectInterest: lead.projectInterest,
-        },
+        leadReference: lead.fullName ?? '',
+        projectName,
       };
-
-      await this.prisma.notification.createMany({
-        data: brokerUsers.map((bu) => ({
-          userId: bu.userId,
-          templateCode,
-          payload: enrichedPayload as Prisma.InputJsonValue,
-          channel: NotificationChannel.IN_APP,
-          sentAt: now,
-        })),
-      });
+      await this.notifications.sendToUsers(
+        brokerUsers.map((bu) => bu.userId),
+        templateCode,
+        safePayload,
+      );
     } catch (e) {
+      // The helper already swallows per-recipient errors; this catches
+      // failures from resolving the lead / broker-user set.
       this.logger.warn(
         `notifyBroker(${templateCode}) for lead ${leadId} failed: ${(e as Error).message}`,
       );
