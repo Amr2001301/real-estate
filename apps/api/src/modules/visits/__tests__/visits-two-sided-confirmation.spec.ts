@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -165,7 +166,7 @@ describe('Visits · two-sided confirmation (P2)', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, VisitsModule],
+      imports: [MockPrismaModule, ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), VisitsModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },

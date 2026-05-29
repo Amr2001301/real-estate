@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -182,7 +183,11 @@ describe('Visits module · permissions enforcement', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, VisitsModule],
+      // P3 — VisitsModule now imports NotificationsModule which transitively
+      // brings in FirebaseService → ConfigService. Provide a no-config
+      // ConfigModule so the DI graph resolves; Firebase stays a no-op without
+      // credentials (matches production behaviour when FCM is off).
+      imports: [MockPrismaModule, ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), VisitsModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },

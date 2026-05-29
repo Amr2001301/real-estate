@@ -83,7 +83,7 @@ function resolveText(
 }
 
 @Injectable()
-class NotificationsService {
+export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
@@ -112,6 +112,76 @@ class NotificationsService {
 
   listTemplates() {
     return this.prisma.notificationTemplate.findMany({ orderBy: { updatedAt: 'desc' } });
+  }
+
+  /**
+   * Fan-out helper used by business modules to deliver a notification without
+   * coupling them to the underlying send/push/template machinery.
+   *
+   * - DB row is always created (best-effort: any thrown error is logged and
+   *   swallowed so the caller's business action never fails).
+   * - Push is attempted via [send] and is already best-effort there.
+   * - Returns void; recipient resolution / lookup errors do not propagate.
+   */
+  async sendToUser(
+    userId: string | null | undefined,
+    templateCode: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<void> {
+    if (!userId) return; // safe skip — recipient missing
+    try {
+      await this.send({ userId, templateCode, payload });
+    } catch (err) {
+      this.logger.warn(
+        `Notification send failed (${templateCode}): ${(err as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Deliver one notification to many recipients. Deduplicates user ids so a
+   * customer who's also flagged as a recipient through some other path never
+   * sees the same notification twice. Empty / null entries are silently
+   * dropped. Each per-user send is independent — one failure does not abort
+   * the rest.
+   */
+  async sendToUsers(
+    userIds: ReadonlyArray<string | null | undefined>,
+    templateCode: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<void> {
+    const unique = Array.from(
+      new Set(userIds.filter((id): id is string => typeof id === 'string' && id.length > 0)),
+    );
+    if (unique.length === 0) return;
+    await Promise.all(
+      unique.map((userId) => this.sendToUser(userId, templateCode, payload)),
+    );
+  }
+
+  /**
+   * Resolve recipients by role and deliver to each. Inactive users are
+   * skipped. Used for the "notify all admins" / "notify sales managers" fan-
+   * outs that visit lifecycle events trigger. Like the other helpers, this
+   * never throws past the caller.
+   */
+  async sendToRoles(
+    roles: ReadonlyArray<UserRole>,
+    templateCode: string,
+    payload: Record<string, unknown> = {},
+  ): Promise<void> {
+    if (roles.length === 0) return;
+    try {
+      const users = await this.prisma.user.findMany({
+        where: { role: { in: [...roles] }, active: true },
+        select: { id: true },
+      });
+      await this.sendToUsers(users.map((u) => u.id), templateCode, payload);
+    } catch (err) {
+      this.logger.warn(
+        `Notification fan-out failed (${templateCode}): ${(err as Error).message}`,
+      );
+    }
   }
 
   async send(dto: SendNotificationDto) {

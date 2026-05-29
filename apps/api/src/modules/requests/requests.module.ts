@@ -31,6 +31,10 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import {
+  NotificationsModule,
+  NotificationsService,
+} from '../notifications/notifications.module';
 
 /** Format a Date's local hours+minutes as HH:mm — used to mirror a customer's
  *  submitted datetime into the `preferredTime` column so admin tooling renders
@@ -70,7 +74,10 @@ class UpdateVisitStatusDto {
 
 @Injectable()
 export class RequestsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   /**
    * Find-or-create the "Website" LeadSource so leads originating from the
@@ -217,7 +224,7 @@ export class RequestsService {
     // dashboard request detail). Mirroring keeps both surfaces accurate
     // without a data backfill.
     const customerMessage = dto.notes?.trim() || null;
-    return this.prisma.visitRequest.create({
+    const created = await this.prisma.visitRequest.create({
       data: {
         userId: actor.userId ?? null,
         leadId,
@@ -234,6 +241,54 @@ export class RequestsService {
         customerEmail: dto.email ?? null,
       },
     });
+
+    // P3 — event A: fan out to admins + sales managers. Safe placeholders
+    // only: identity, project/unit context, preferred date/time. No phone,
+    // email, address, or reservation amounts. The helper swallows errors
+    // and never throws past this call.
+    await this.notifications.sendToRoles(
+      [UserRole.ADMIN, UserRole.SALES_MANAGER],
+      'visit_request_created',
+      await this.buildVisitRequestPayload(created.id, dto),
+    );
+
+    return created;
+  }
+
+  /**
+   * Build a safe payload for visit_request_created. Project name is resolved
+   * from the translatable JSON column; missing pieces fall back to ''. Errors
+   * are silently swallowed so failure to compose a payload never blocks the
+   * actual VisitRequest write or business action.
+   */
+  private async buildVisitRequestPayload(
+    requestId: string,
+    dto: CreateVisitRequestDto,
+  ): Promise<Record<string, unknown>> {
+    try {
+      const project = await this.prisma.project.findUnique({
+        where: { id: dto.projectId },
+        select: { name: true },
+      });
+      const unit = dto.unitId
+        ? await this.prisma.unit.findUnique({
+            where: { id: dto.unitId },
+            select: { code: true },
+          })
+        : null;
+      const name = (project?.name ?? {}) as { ar?: string; en?: string };
+      return {
+        requestId,
+        customerName: dto.name ?? '',
+        projectName: name.ar || name.en || '',
+        unitCode: unit?.code ?? '',
+        preferredDate: new Date(dto.preferredDate).toISOString(),
+        preferredTime: dto.preferredTime ?? '',
+      };
+    } catch {
+      // Don't let payload composition take down the notification fan-out.
+      return { requestId, customerName: dto.name ?? '' };
+    }
   }
 
   async listVisitRequests(opts: {
@@ -411,6 +466,7 @@ class RequestsController {
 }
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [RequestsController],
   providers: [RequestsService],
   // Exported so ChatModule's conversion flow can create info/visit requests

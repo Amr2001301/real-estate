@@ -38,7 +38,14 @@ function makeService() {
       ),
     },
   } as unknown as PrismaService;
-  const svc = new VisitsService(prisma);
+  // Notification surface isn't exercised by this scope test — pass a stub
+  // that returns void for every helper.
+  const notifications = {
+    sendToUser: jest.fn().mockResolvedValue(undefined),
+    sendToUsers: jest.fn().mockResolvedValue(undefined),
+    sendToRoles: jest.fn().mockResolvedValue(undefined),
+  } as unknown as import('../../notifications/notifications.module').NotificationsService;
+  const svc = new VisitsService(prisma, notifications);
   const resolve = (
     svc as unknown as {
       resolveAssignableSalesId: (salesId: string, user: AuthUser) => Promise<string>;

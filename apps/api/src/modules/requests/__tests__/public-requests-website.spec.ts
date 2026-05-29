@@ -6,6 +6,7 @@ import {
   Module,
   ValidationPipe,
 } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -46,12 +47,23 @@ function makePrismaMock() {
     },
     user: {
       findUnique: jest.fn().mockResolvedValue(null),
+      // P3 — NotificationsService.sendToRoles calls findMany; default to
+      // no recipients so the notification is a silent no-op in these
+      // tests (the lead-intake assertions don't care about it).
+      findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue({
         id: 'client-1',
         fullName: 'Visitor',
         phone: '+966500000000',
         email: null,
       }),
+    },
+    // P3 — Project lookup powers the notification payload's projectName.
+    project: {
+      findUnique: jest.fn().mockResolvedValue({ name: { ar: 'م', en: 'Project' } }),
+    },
+    unit: {
+      findUnique: jest.fn().mockResolvedValue(null),
     },
     lead: {
       findFirst: jest.fn().mockResolvedValue(null),
@@ -94,7 +106,8 @@ describe('Public website · info/visit request intake', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, RequestsModule],
+      // P3 — RequestsModule now imports NotificationsModule which needs ConfigService.
+      imports: [MockPrismaModule, ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), RequestsModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },

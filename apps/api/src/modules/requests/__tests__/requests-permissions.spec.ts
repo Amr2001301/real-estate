@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -85,7 +86,7 @@ describe('Requests module · permissions enforcement (legacy admin surface)', ()
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, RequestsModule],
+      imports: [MockPrismaModule, ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), RequestsModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },

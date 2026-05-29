@@ -548,6 +548,91 @@ async function main() {
         ar_body: 'تم إغلاق طلب الصيانة للوحدة {{unitCode}}.',
         en_body: 'The maintenance request for unit {{unitCode}} was closed.',
       },
+      // ─── Visit lifecycle (P3) ────────────────────────────────────────────
+      // Placeholders are restricted to identity / scheduling context only —
+      // no phone, email, address, reservation amounts, or internal ids leak
+      // into notification bodies. `requestId` / `visitId` are surfaced for
+      // routing purposes only and never read by the rendered body.
+      {
+        code: 'visit_request_created',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'طلب زيارة جديد',
+        en_subject: 'New visit request',
+        ar_body: 'طلب زيارة جديد من {{customerName}} لمشروع {{projectName}}.',
+        en_body: 'New visit request from {{customerName}} for {{projectName}}.',
+      },
+      {
+        code: 'visit_scheduled',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تم جدولة زيارتك',
+        en_subject: 'Your visit was scheduled',
+        ar_body: 'تم جدولة زيارة {{projectName}} في {{scheduledAt}}. يرجى التأكيد.',
+        en_body: 'Your visit to {{projectName}} is scheduled for {{scheduledAt}}. Please confirm.',
+      },
+      {
+        code: 'visit_sales_assigned',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تم إسناد زيارة إليك',
+        en_subject: 'A visit was assigned to you',
+        ar_body: 'تم إسناد زيارة {{projectName}} لـ {{customerName}} في {{scheduledAt}}.',
+        en_body: 'You are now assigned to {{customerName}}\'s visit to {{projectName}} on {{scheduledAt}}.',
+      },
+      {
+        code: 'visit_customer_confirmed',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'العميل أكد الزيارة',
+        en_subject: 'Customer confirmed the visit',
+        ar_body: '{{customerName}} أكد زيارة {{projectName}} في {{scheduledAt}}.',
+        en_body: '{{customerName}} confirmed the visit to {{projectName}} on {{scheduledAt}}.',
+      },
+      {
+        code: 'visit_customer_reschedule_requested',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'طلب العميل إعادة الجدولة',
+        en_subject: 'Customer requested reschedule',
+        ar_body: '{{customerName}} طلب إعادة جدولة زيارة {{projectName}}. السبب: {{reason}}',
+        en_body: '{{customerName}} asked to reschedule the visit to {{projectName}}. Reason: {{reason}}',
+      },
+      {
+        code: 'visit_rescheduled',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تم تغيير موعد زيارتك',
+        en_subject: 'Your visit was rescheduled',
+        ar_body: 'تم نقل زيارة {{projectName}} إلى {{scheduledAt}}.',
+        en_body: 'Your visit to {{projectName}} was moved to {{scheduledAt}}.',
+      },
+      {
+        code: 'visit_completed',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'اكتملت زيارتك',
+        en_subject: 'Visit completed',
+        ar_body: 'شكراً لزيارتك مشروع {{projectName}}.',
+        en_body: 'Thank you for visiting {{projectName}}.',
+      },
+      {
+        code: 'visit_cancelled',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تم إلغاء الزيارة',
+        en_subject: 'Visit cancelled',
+        ar_body: 'تم إلغاء زيارة {{projectName}}.',
+        en_body: 'The visit to {{projectName}} was cancelled.',
+      },
+      {
+        code: 'visit_no_show',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'لم تتم الزيارة',
+        en_subject: 'Visit marked no-show',
+        ar_body: 'تم تسجيل عدم حضور للزيارة في {{projectName}} بتاريخ {{scheduledAt}}.',
+        en_body: 'A no-show was recorded for the {{projectName}} visit on {{scheduledAt}}.',
+      },
+      {
+        code: 'visit_day_reminder',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تذكير بزيارة اليوم',
+        en_subject: 'Reminder: visit today',
+        ar_body: 'لديك زيارة لمشروع {{projectName}} اليوم في {{scheduledAt}}.',
+        en_body: 'You have a visit to {{projectName}} today at {{scheduledAt}}.',
+      },
     ].map((t) =>
       prisma.notificationTemplate.upsert({
         where: { code: t.code },

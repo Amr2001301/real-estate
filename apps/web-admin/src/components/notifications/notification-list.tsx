@@ -28,6 +28,17 @@ const TEMPLATE_LABEL: Record<string, string> = {
   broker_payout_created: 'دفعة جديدة',
   broker_payout_approved: 'اعتماد دفعة',
   broker_payout_paid: 'دفعة مدفوعة',
+  // P3 — visit lifecycle (staff/admin-facing).
+  visit_request_created: 'طلب زيارة جديد',
+  visit_scheduled: 'تم جدولة زيارة',
+  visit_sales_assigned: 'تم إسناد زيارة إليك',
+  visit_customer_confirmed: 'العميل أكد الزيارة',
+  visit_customer_reschedule_requested: 'طلب العميل إعادة الجدولة',
+  visit_rescheduled: 'تم تعديل موعد زيارة',
+  visit_completed: 'اكتملت الزيارة',
+  visit_cancelled: 'تم إلغاء الزيارة',
+  visit_no_show: 'تسجيل عدم حضور',
+  visit_day_reminder: 'تذكير بزيارة اليوم',
 };
 
 interface RelatedLink {

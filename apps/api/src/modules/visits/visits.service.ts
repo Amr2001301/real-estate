@@ -17,6 +17,7 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { managerScopeIds, SALES_ACTOR_ROLES } from '../../common/utils/sales-scope';
 import { matchOrCreateLeadForClient } from '../crm/crm-lead-matching';
+import { NotificationsService } from '../notifications/notifications.module';
 import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
@@ -68,7 +69,89 @@ const APPOINTMENT_INCLUDE = {
 
 @Injectable()
 export class VisitsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
+
+  // ─── Notification helpers (P3) ───────────────────────────────────────────
+  // Every wire below is via NotificationsService — DB row is always created;
+  // push is best-effort inside `send`; helper methods (sendToUser/-Users/-Roles)
+  // never throw past the caller. Composing the payload also can't crash the
+  // business action: any failure here is logged and the notification is
+  // simply skipped.
+
+  /**
+   * Safe payload shared by every visit-lifecycle notification. Project name is
+   * resolved from the translatable JSON column with locale fallback; missing
+   * pieces default to ''. Pulled from a single appointment id so call sites
+   * stay tiny and uniform.
+   *
+   * No sensitive data: phone numbers, emails, addresses, reservation amounts
+   * and internal ids beyond `visitId` / `requestId` are intentionally excluded.
+   */
+  private async buildAppointmentPayload(
+    appointmentId: string,
+    extras: Record<string, unknown> = {},
+  ): Promise<Record<string, unknown>> {
+    try {
+      const a = await this.prisma.visitAppointment.findUnique({
+        where: { id: appointmentId },
+        select: {
+          id: true,
+          scheduledAt: true,
+          visitRequestId: true,
+          project: { select: { name: true } },
+          unit: { select: { code: true } },
+          visitRequest: {
+            select: {
+              customerName: true,
+              preferredDate: true,
+              preferredTime: true,
+            },
+          },
+          client: { select: { fullName: true } },
+          assignedSales: { select: { fullName: true } },
+        },
+      });
+      if (!a) return { visitId: appointmentId, ...extras };
+      const name = (a.project?.name ?? {}) as { ar?: string; en?: string };
+      return {
+        visitId: a.id,
+        requestId: a.visitRequestId ?? '',
+        customerName: a.client?.fullName ?? a.visitRequest?.customerName ?? '',
+        projectName: name.ar || name.en || '',
+        unitCode: a.unit?.code ?? '',
+        scheduledAt: a.scheduledAt.toISOString(),
+        preferredDate: a.visitRequest?.preferredDate?.toISOString() ?? '',
+        preferredTime: a.visitRequest?.preferredTime ?? '',
+        salesName: a.assignedSales?.fullName ?? '',
+        ...extras,
+      };
+    } catch {
+      return { visitId: appointmentId, ...extras };
+    }
+  }
+
+  /** Customer id resolved from the appointment's clientId or its parent
+   *  visit-request's userId. Returns null when neither is present (walk-in
+   *  visits created by sales for an off-platform customer). */
+  private async resolveCustomerUserId(
+    appointmentId: string,
+  ): Promise<string | null> {
+    try {
+      const a = await this.prisma.visitAppointment.findUnique({
+        where: { id: appointmentId },
+        select: {
+          clientId: true,
+          visitRequest: { select: { userId: true } },
+        },
+      });
+      return a?.clientId ?? a?.visitRequest?.userId ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   // ─── Stats ────────────────────────────────────────────────────────────────
 
@@ -321,6 +404,19 @@ export class VisitsService {
         });
       }
 
+      return appointment;
+    }).then(async (appointment) => {
+      // P3 — event B: notify customer + assigned sales AFTER the schedule
+      // commits. Side-effects intentionally outside the transaction so a
+      // notification failure can never roll it back, and the helpers
+      // themselves never throw.
+      const customerId = await this.resolveCustomerUserId(appointment.id);
+      const payload = await this.buildAppointmentPayload(appointment.id);
+      await this.notifications.sendToUsers(
+        [customerId, dto.assignedSalesId ?? null],
+        'visit_scheduled',
+        payload,
+      );
       return appointment;
     });
   }
@@ -791,6 +887,49 @@ export class VisitsService {
       }
 
       return updated;
+    }).then(async (updated) => {
+      // P3 — events D (CONFIRMED) / G (COMPLETED) / H (CANCELLED) / I (NO_SHOW).
+      // Side-effects after the tx commits; the helpers never throw.
+      const customerId = await this.resolveCustomerUserId(id);
+      const payload = await this.buildAppointmentPayload(id);
+      switch (dto.status) {
+        case AppointmentStatus.CONFIRMED:
+          // Admin-side confirmation (e.g., customer walked in). Notify
+          // admins + assigned sales (not the customer — they confirmed).
+          await this.notifications.sendToRoles(
+            [UserRole.ADMIN],
+            'visit_customer_confirmed',
+            payload,
+          );
+          await this.notifications.sendToUser(
+            appt.assignedSalesId,
+            'visit_customer_confirmed',
+            payload,
+          );
+          break;
+        case AppointmentStatus.COMPLETED:
+          await this.notifications.sendToUser(
+            customerId,
+            'visit_completed',
+            payload,
+          );
+          break;
+        case AppointmentStatus.CANCELLED:
+          await this.notifications.sendToUsers(
+            [customerId, appt.assignedSalesId],
+            'visit_cancelled',
+            payload,
+          );
+          break;
+        case AppointmentStatus.NO_SHOW:
+          await this.notifications.sendToUsers(
+            [customerId, appt.assignedSalesId],
+            'visit_no_show',
+            payload,
+          );
+          break;
+      }
+      return updated;
     });
   }
 
@@ -860,6 +999,18 @@ export class VisitsService {
       }
 
       return newAppt;
+    }).then(async (newAppt) => {
+      // P3 — event F: notify customer + new assigned sales after reschedule
+      // commits. Resolved against the NEW appointment because clientId /
+      // visitRequest are copied over from the original.
+      const customerId = await this.resolveCustomerUserId(newAppt.id);
+      const payload = await this.buildAppointmentPayload(newAppt.id);
+      await this.notifications.sendToUsers(
+        [customerId, newAppt.assignedSalesId],
+        'visit_rescheduled',
+        payload,
+      );
+      return newAppt;
     });
   }
 
@@ -879,6 +1030,11 @@ export class VisitsService {
       throw new BadRequestException('Assigned user must be a sales representative');
     }
 
+    // SALES_REASSIGNED captures a change from one sales user to another;
+    // SALES_ASSIGNED stays for the initial assignment.
+    const isReassignment =
+      appt.assignedSalesId !== null && appt.assignedSalesId !== dto.assignedSalesId;
+
     return this.prisma.$transaction(async (tx) => {
       const updated = await tx.visitAppointment.update({
         where: { id },
@@ -893,12 +1049,26 @@ export class VisitsService {
           leadId: appt.leadId,
           actorId: user.sub,
           actorRole: user.role,
-          type: VisitActivityType.SALES_ASSIGNED,
+          type: isReassignment
+            ? VisitActivityType.SALES_REASSIGNED
+            : VisitActivityType.SALES_ASSIGNED,
           oldValue: { assignedSalesId: appt.assignedSalesId },
           newValue: { assignedSalesId: dto.assignedSalesId, salesName: salesUser.fullName },
         },
       });
 
+      return updated;
+    }).then(async (updated) => {
+      // P3 — event C: notify the newly-assigned sales user. The previous
+      // assignee is intentionally NOT notified (silent reassignment to avoid
+      // confusion). The customer is not notified either — they only learn
+      // about staff changes through scheduling-related events.
+      const payload = await this.buildAppointmentPayload(id);
+      await this.notifications.sendToUser(
+        dto.assignedSalesId,
+        'visit_sales_assigned',
+        payload,
+      );
       return updated;
     });
   }
@@ -967,6 +1137,21 @@ export class VisitsService {
         },
       });
       return updated;
+    }).then(async (updated) => {
+      // P3 — event D: notify admins + assigned sales. The customer who just
+      // confirmed is intentionally not notified again.
+      const payload = await this.buildAppointmentPayload(appointmentId);
+      await this.notifications.sendToRoles(
+        [UserRole.ADMIN],
+        'visit_customer_confirmed',
+        payload,
+      );
+      await this.notifications.sendToUser(
+        appt.assignedSalesId,
+        'visit_customer_confirmed',
+        payload,
+      );
+      return updated;
     });
   }
 
@@ -1025,7 +1210,79 @@ export class VisitsService {
         },
       });
       return updated;
+    }).then(async (updated) => {
+      // P3 — event E: notify admins + assigned sales. Reason is included in
+      // the payload (capped at 500 chars by the DTO) — never logged.
+      const payload = await this.buildAppointmentPayload(appointmentId, {
+        reason: reason ?? '',
+      });
+      await this.notifications.sendToRoles(
+        [UserRole.ADMIN],
+        'visit_customer_reschedule_requested',
+        payload,
+      );
+      await this.notifications.sendToUser(
+        appt.assignedSalesId,
+        'visit_customer_reschedule_requested',
+        payload,
+      );
+      return updated;
     });
+  }
+
+  /**
+   * P3 — event J: visit-day reminder fan-out. Sends a single push/IN_APP
+   * notification to the customer and the assigned sales user for an
+   * appointment scheduled today. Wired as a service method only — there is
+   * **no scheduler** yet, so this is not called automatically.
+   *
+   * **Scheduler deferred:** the project has no recurring-job infrastructure
+   * (BullMQ recurring jobs / a cron worker / an external scheduler) wired
+   * for this. When that lands, a daily worker should call this method for
+   * every appointment whose `scheduledAt` falls on the current day and
+   * whose status is still `SCHEDULED` or `CONFIRMED`. The method itself is
+   * idempotent in the sense that re-running it would simply emit another
+   * reminder; the scheduler is expected to dedupe at the job layer.
+   *
+   * No-op (no throw) when:
+   *   - the appointment doesn't exist
+   *   - it isn't scheduled for today in UTC
+   *   - it's in a terminal state
+   *
+   * Recipient resolution and helpers are the same swallow-errors path used
+   * elsewhere, so a bad data row never bubbles up.
+   */
+  async notifyVisitDayReminder(appointmentId: string): Promise<void> {
+    try {
+      const a = await this.prisma.visitAppointment.findUnique({
+        where: { id: appointmentId },
+        select: {
+          scheduledAt: true,
+          status: true,
+          clientId: true,
+          assignedSalesId: true,
+          visitRequest: { select: { userId: true } },
+        },
+      });
+      if (!a) return;
+      if (FINAL_STATUSES.includes(a.status)) return;
+      const day = a.scheduledAt;
+      const today = new Date();
+      const sameDay =
+        day.getUTCFullYear() === today.getUTCFullYear() &&
+        day.getUTCMonth() === today.getUTCMonth() &&
+        day.getUTCDate() === today.getUTCDate();
+      if (!sameDay) return;
+      const customerId = a.clientId ?? a.visitRequest?.userId ?? null;
+      const payload = await this.buildAppointmentPayload(appointmentId);
+      await this.notifications.sendToUsers(
+        [customerId, a.assignedSalesId],
+        'visit_day_reminder',
+        payload,
+      );
+    } catch {
+      // Reminder is a best-effort surface; never let it surface failure.
+    }
   }
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
