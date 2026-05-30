@@ -3,6 +3,7 @@ import { Bell, CheckCheck } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { authFetch, AuthError } from '@/lib/api-auth';
+import { extractPaginatedData } from '@/lib/extract-paginated';
 import type { MeNotification, Paginated } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
@@ -38,24 +39,11 @@ function Header({ unreadCount }: { unreadCount: number }) {
   );
 }
 
-/**
- * Normalise the API response to an array. The backend now returns
- * `Paginated<MeNotification>` (`{ data, meta }`) but legacy comments in this
- * file assumed a plain array — calling `.filter()` on the wrapped response
- * crashed the page. The helper tolerates either shape (defence-in-depth) and
- * any other surprise becomes an empty list rather than a runtime error.
- */
-function extractItems(value: unknown): MeNotification[] {
-  if (Array.isArray(value)) return value as MeNotification[];
-  if (
-    value &&
-    typeof value === 'object' &&
-    Array.isArray((value as { data?: unknown }).data)
-  ) {
-    return (value as { data: MeNotification[] }).data;
-  }
-  return [];
-}
+// P10 — the local `extractItems` helper that used to live here is gone;
+// callers now use the shared `extractPaginatedData<T>` from
+// `@/lib/extract-paginated`. Same tolerance for legacy-array vs paginated
+// `{data, meta}` responses, just one source of truth so the dashboard and
+// this page never drift apart again.
 
 export default async function AccountNotificationsPage() {
   let raw: Paginated<MeNotification> | MeNotification[];
@@ -77,7 +65,7 @@ export default async function AccountNotificationsPage() {
     );
   }
 
-  const notifications = extractItems(raw);
+  const notifications = extractPaginatedData<MeNotification>(raw);
   const unreadCount = notifications.filter((n) => n.readAt === null).length;
 
   return (

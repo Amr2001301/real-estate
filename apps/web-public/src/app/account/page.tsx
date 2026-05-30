@@ -19,6 +19,7 @@ import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { getSession } from '@/lib/session';
 import { authFetch, AuthError } from '@/lib/api-auth';
+import { extractPaginatedData } from '@/lib/extract-paginated';
 import { pickAr, unitTypeLabel, formatPrice } from '@/lib/format';
 import type {
   FavoriteItem,
@@ -133,7 +134,11 @@ export default async function AccountPage() {
       authFetch<Paginated<MeContract>>('/contracts/me/contracts?page=1&pageSize=3'),
       authFetch<MeDepositsResponse>('/me/deposits'),
       authFetch<Paginated<MeMaintenanceRequest>>('/me/maintenance-requests?page=1&pageSize=3'),
-      authFetch<MeNotification[]>('/me/notifications'),
+      // P10 — accept either the historical flat-array shape OR the current
+      // `Paginated<MeNotification>` shape; the helper normalises both into a
+      // plain array. Calling .filter() directly on the wrapped response is
+      // what crashed the dashboard at src/app/account/page.tsx:150.
+      authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications'),
     ]);
     if ([contractsR, depositsR, maintR, notifsR].some((r) => r.status === 'rejected' && r.reason instanceof AuthError)) {
       redirect('/login');
@@ -142,16 +147,26 @@ export default async function AccountPage() {
     const contracts = contractsR.status === 'fulfilled' ? contractsR.value : null;
     const deposits = depositsR.status === 'fulfilled' ? depositsR.value : null;
     const maintenance = maintR.status === 'fulfilled' ? maintR.value : null;
-    const notifications = notifsR.status === 'fulfilled' ? notifsR.value : null;
+    // Defence-in-depth: anything other than an array OR `{data: T[]}` falls
+    // through to `[]`, so the dashboard renders zeros instead of throwing.
+    const notificationsRaw = notifsR.status === 'fulfilled' ? notifsR.value : null;
+    const notifications = extractPaginatedData<MeNotification>(notificationsRaw);
+    const notificationsLoaded = notifsR.status === 'fulfilled';
 
     contractsCount = contracts ? contracts.meta.total : null;
     depositsTotalText = deposits ? formatPrice(deposits.totals.totalAmount) : null;
     maintenanceCount = maintenance ? maintenance.meta.total : null;
-    unreadCount = notifications ? notifications.filter((n) => n.readAt === null).length : null;
+    // Unread count is derived from the normalised list (bounded by the
+    // backend's default pageSize=20). When the fetch failed we keep null so
+    // the SummaryTile renders an em-dash instead of "0", matching the other
+    // tiles' loading-failed semantics.
+    unreadCount = notificationsLoaded
+      ? notifications.filter((n) => n.readAt === null).length
+      : null;
 
     recentContracts = contracts?.data ?? [];
     recentMaintenance = maintenance?.data ?? [];
-    recentNotifications = (notifications ?? []).slice(0, 3);
+    recentNotifications = notifications.slice(0, 3);
   }
 
   const hasCustomerActivity =
