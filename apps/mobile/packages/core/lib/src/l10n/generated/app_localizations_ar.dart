@@ -726,6 +726,93 @@ class AppLocalizationsAr extends AppLocalizations {
   String get depositTypePayment => 'دفعة';
 
   @override
+  String get installmentsTitle => 'الأقساط';
+
+  @override
+  String get installmentsEmptyTitle => 'لا توجد أقساط بعد';
+
+  @override
+  String get installmentsEmptyMessage =>
+      'ستظهر جدول الأقساط هنا فور تفعيل خطة لعقدك.';
+
+  @override
+  String get installmentStatusPending => 'قيد الانتظار';
+
+  @override
+  String get installmentStatusPaid => 'مدفوع';
+
+  @override
+  String get installmentStatusOverdue => 'متأخر';
+
+  @override
+  String installmentDueOn(String date) {
+    return 'مستحق في $date';
+  }
+
+  @override
+  String get installmentAmount => 'المبلغ';
+
+  @override
+  String get paymentProofTitle => 'إثبات الدفع';
+
+  @override
+  String get paymentProofSubmit => 'إرسال إثبات الدفع';
+
+  @override
+  String get paymentProofResubmit => 'إعادة إرسال الإثبات';
+
+  @override
+  String get paymentProofChooseFile => 'اختر ملفًا';
+
+  @override
+  String get paymentProofMethodLabel => 'طريقة الدفع';
+
+  @override
+  String get paymentProofMethodBankTransfer => 'حوالة بنكية';
+
+  @override
+  String get paymentProofMethodCashDeposit => 'إيداع نقدي';
+
+  @override
+  String get paymentProofMethodManualCard => 'بطاقة يدوية';
+
+  @override
+  String get paymentProofMethodOther => 'أخرى';
+
+  @override
+  String get paymentProofNoteHint => 'أضف ملاحظة (اختياري)';
+
+  @override
+  String get paymentProofStatusPendingReview => 'قيد المراجعة';
+
+  @override
+  String get paymentProofStatusApproved => 'تمت الموافقة';
+
+  @override
+  String get paymentProofStatusRejected => 'مرفوض';
+
+  @override
+  String paymentProofRejectionReason(String reason) {
+    return 'السبب: $reason';
+  }
+
+  @override
+  String get paymentProofSubmittedSuccess => 'تم إرسال الإثبات بنجاح';
+
+  @override
+  String get paymentProofUploadFailed => 'فشل الرفع. حاول مرة أخرى.';
+
+  @override
+  String get paymentProofFileTooLarge => 'الملف كبير جدًا (الحد 25 ميجابايت)';
+
+  @override
+  String get paymentProofUnsupportedType =>
+      'نوع الملف غير مدعوم. يُقبل PDF أو JPEG أو PNG أو WebP فقط.';
+
+  @override
+  String get paymentProofNoFile => 'يرجى اختيار ملف أولاً.';
+
+  @override
   String get maintenanceEmptyTitle => 'لا توجد طلبات صيانة';
 
   @override

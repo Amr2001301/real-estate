@@ -20,6 +20,8 @@ dependencies:
   go_router: ^14.6.2
   dio: ^5.7.0 # data layer (remote data sources) only
   image_picker: ^1.1.2 # maintenance photo attachments (presentation platform service)
+  file_picker: ^8.1.2 # P11.5 — PDF/image selection for payment-proof submission
+  mime: ^1.0.5 # P11.5 — derive Content-Type from picked file extension
 
   cupertino_icons: ^1.0.8
 

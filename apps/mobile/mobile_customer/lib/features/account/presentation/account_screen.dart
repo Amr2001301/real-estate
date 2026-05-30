@@ -79,6 +79,8 @@ class _AccountScreenState extends State<AccountScreen> {
               () => context.push('/account/property')),
           _tile(context, Icons.account_balance_wallet_outlined, l10n.accountDeposits,
               () => context.push('/account/deposits')),
+          _tile(context, Icons.event_repeat_outlined, l10n.installmentsTitle,
+              () => context.push('/account/installments')),
           _tile(context, Icons.folder_outlined, l10n.accountContracts,
               () => context.push('/account/contracts')),
           _tile(context, Icons.build_outlined, l10n.accountMaintenance,

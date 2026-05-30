@@ -46,6 +46,14 @@ import '../features/deposits/domain/usecases/get_my_deposits.dart';
 import '../features/deposits/presentation/deposit_detail_screen.dart';
 import '../features/deposits/presentation/deposits_cubit.dart';
 import '../features/deposits/presentation/deposits_screen.dart';
+import '../features/installments/domain/entities/installment.dart';
+import '../features/installments/domain/repositories/installments_repository.dart';
+import '../features/installments/domain/usecases/get_my_installments.dart';
+import '../features/installments/domain/usecases/submit_payment_proof.dart';
+import '../features/installments/presentation/cubit/installments_cubit.dart';
+import '../features/installments/presentation/cubit/submit_proof_cubit.dart';
+import '../features/installments/presentation/screens/installments_screen.dart';
+import '../features/installments/presentation/screens/submit_proof_screen.dart';
 import '../features/documents/domain/entities/customer_document.dart';
 import '../features/documents/domain/repositories/documents_repository.dart';
 import '../features/documents/domain/usecases/get_customer_documents.dart';
@@ -217,6 +225,33 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
             ownerType: DocumentOwnerType.deposit,
             ownerId: deposit.id,
             child: DepositDetailScreen(deposit: deposit),
+          );
+        },
+      ),
+
+      // ── Installments + payment-proof submission (P11.5) ─────────────────
+      GoRoute(
+        path: '/account/installments',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) => InstallmentsCubit(
+            GetMyInstallments(ctx.read<InstallmentsRepository>()),
+          ),
+          child: const InstallmentsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/account/installments/:id/submit-proof',
+        builder: (context, state) {
+          final installment = state.extra! as Installment;
+          return BlocProvider(
+            create: (ctx) => SubmitProofCubit(
+              submit:
+                  SubmitPaymentProof(ctx.read<InstallmentsRepository>()),
+              resubmit:
+                  ResubmitPaymentProof(ctx.read<InstallmentsRepository>()),
+              installment: installment,
+            ),
+            child: const SubmitProofScreen(),
           );
         },
       ),

@@ -25,6 +25,9 @@ import 'features/contracts/domain/repositories/contracts_repository.dart';
 import 'features/deposits/data/datasources/deposits_remote_data_source.dart';
 import 'features/deposits/data/repositories/deposits_repository_impl.dart';
 import 'features/deposits/domain/repositories/deposits_repository.dart';
+import 'features/installments/data/datasources/installments_remote_data_source.dart';
+import 'features/installments/data/repositories/installments_repository_impl.dart';
+import 'features/installments/domain/repositories/installments_repository.dart';
 import 'features/documents/data/datasources/documents_remote_data_source.dart';
 import 'features/documents/data/repositories/documents_repository_impl.dart';
 import 'features/documents/domain/repositories/documents_repository.dart';
@@ -112,6 +115,11 @@ class CustomerApp extends StatelessWidget {
         RepositoryProvider<DepositsRepository>(
           create: (ctx) => DepositsRepositoryImpl(
             DepositsRemoteDataSourceImpl(ctx.read<Dio>()),
+          ),
+        ),
+        RepositoryProvider<InstallmentsRepository>(
+          create: (ctx) => InstallmentsRepositoryImpl(
+            InstallmentsRemoteDataSourceImpl(ctx.read<Dio>()),
           ),
         ),
         RepositoryProvider<MaintenanceRepository>(

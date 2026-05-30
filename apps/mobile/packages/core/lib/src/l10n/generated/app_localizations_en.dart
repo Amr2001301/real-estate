@@ -733,6 +733,93 @@ class AppLocalizationsEn extends AppLocalizations {
   String get depositTypePayment => 'Payment';
 
   @override
+  String get installmentsTitle => 'Installments';
+
+  @override
+  String get installmentsEmptyTitle => 'No installments yet';
+
+  @override
+  String get installmentsEmptyMessage =>
+      'Your installment schedule will appear here once a plan is active.';
+
+  @override
+  String get installmentStatusPending => 'Pending';
+
+  @override
+  String get installmentStatusPaid => 'Paid';
+
+  @override
+  String get installmentStatusOverdue => 'Overdue';
+
+  @override
+  String installmentDueOn(String date) {
+    return 'Due on $date';
+  }
+
+  @override
+  String get installmentAmount => 'Amount';
+
+  @override
+  String get paymentProofTitle => 'Payment proof';
+
+  @override
+  String get paymentProofSubmit => 'Submit proof';
+
+  @override
+  String get paymentProofResubmit => 'Resubmit proof';
+
+  @override
+  String get paymentProofChooseFile => 'Choose file';
+
+  @override
+  String get paymentProofMethodLabel => 'Payment method';
+
+  @override
+  String get paymentProofMethodBankTransfer => 'Bank transfer';
+
+  @override
+  String get paymentProofMethodCashDeposit => 'Cash deposit';
+
+  @override
+  String get paymentProofMethodManualCard => 'Manual card';
+
+  @override
+  String get paymentProofMethodOther => 'Other';
+
+  @override
+  String get paymentProofNoteHint => 'Add a note (optional)';
+
+  @override
+  String get paymentProofStatusPendingReview => 'Pending review';
+
+  @override
+  String get paymentProofStatusApproved => 'Approved';
+
+  @override
+  String get paymentProofStatusRejected => 'Rejected';
+
+  @override
+  String paymentProofRejectionReason(String reason) {
+    return 'Reason: $reason';
+  }
+
+  @override
+  String get paymentProofSubmittedSuccess => 'Proof submitted successfully';
+
+  @override
+  String get paymentProofUploadFailed => 'Upload failed. Please try again.';
+
+  @override
+  String get paymentProofFileTooLarge => 'File is too large (max 25 MB)';
+
+  @override
+  String get paymentProofUnsupportedType =>
+      'Unsupported file type. PDF, JPEG, PNG, or WebP only.';
+
+  @override
+  String get paymentProofNoFile => 'Please choose a file first.';
+
+  @override
   String get maintenanceEmptyTitle => 'No maintenance requests';
 
   @override

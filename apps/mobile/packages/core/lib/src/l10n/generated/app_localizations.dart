@@ -1448,6 +1448,168 @@ abstract class AppLocalizations {
   /// **'Payment'**
   String get depositTypePayment;
 
+  /// No description provided for @installmentsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Installments'**
+  String get installmentsTitle;
+
+  /// No description provided for @installmentsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No installments yet'**
+  String get installmentsEmptyTitle;
+
+  /// No description provided for @installmentsEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your installment schedule will appear here once a plan is active.'**
+  String get installmentsEmptyMessage;
+
+  /// No description provided for @installmentStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get installmentStatusPending;
+
+  /// No description provided for @installmentStatusPaid.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid'**
+  String get installmentStatusPaid;
+
+  /// No description provided for @installmentStatusOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get installmentStatusOverdue;
+
+  /// No description provided for @installmentDueOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Due on {date}'**
+  String installmentDueOn(String date);
+
+  /// No description provided for @installmentAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get installmentAmount;
+
+  /// No description provided for @paymentProofTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment proof'**
+  String get paymentProofTitle;
+
+  /// No description provided for @paymentProofSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit proof'**
+  String get paymentProofSubmit;
+
+  /// No description provided for @paymentProofResubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Resubmit proof'**
+  String get paymentProofResubmit;
+
+  /// No description provided for @paymentProofChooseFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose file'**
+  String get paymentProofChooseFile;
+
+  /// No description provided for @paymentProofMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get paymentProofMethodLabel;
+
+  /// No description provided for @paymentProofMethodBankTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get paymentProofMethodBankTransfer;
+
+  /// No description provided for @paymentProofMethodCashDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash deposit'**
+  String get paymentProofMethodCashDeposit;
+
+  /// No description provided for @paymentProofMethodManualCard.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual card'**
+  String get paymentProofMethodManualCard;
+
+  /// No description provided for @paymentProofMethodOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get paymentProofMethodOther;
+
+  /// No description provided for @paymentProofNoteHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a note (optional)'**
+  String get paymentProofNoteHint;
+
+  /// No description provided for @paymentProofStatusPendingReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get paymentProofStatusPendingReview;
+
+  /// No description provided for @paymentProofStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get paymentProofStatusApproved;
+
+  /// No description provided for @paymentProofStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get paymentProofStatusRejected;
+
+  /// No description provided for @paymentProofRejectionReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason: {reason}'**
+  String paymentProofRejectionReason(String reason);
+
+  /// No description provided for @paymentProofSubmittedSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof submitted successfully'**
+  String get paymentProofSubmittedSuccess;
+
+  /// No description provided for @paymentProofUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload failed. Please try again.'**
+  String get paymentProofUploadFailed;
+
+  /// No description provided for @paymentProofFileTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'File is too large (max 25 MB)'**
+  String get paymentProofFileTooLarge;
+
+  /// No description provided for @paymentProofUnsupportedType.
+  ///
+  /// In en, this message translates to:
+  /// **'Unsupported file type. PDF, JPEG, PNG, or WebP only.'**
+  String get paymentProofUnsupportedType;
+
+  /// No description provided for @paymentProofNoFile.
+  ///
+  /// In en, this message translates to:
+  /// **'Please choose a file first.'**
+  String get paymentProofNoFile;
+
   /// No description provided for @maintenanceEmptyTitle.
   ///
   /// In en, this message translates to:
