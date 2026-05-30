@@ -5,6 +5,7 @@ import {
   Heart,
   CalendarClock,
   MessageSquareText,
+  BookmarkCheck,
   Building2,
   Home,
   UserCircle2,
@@ -24,6 +25,7 @@ import type {
   Paginated,
   MeVisitRequest,
   MeInfoRequest,
+  MeReservation,
   VisitProjectRef,
   VisitUnitRef,
   MeContract,
@@ -88,27 +90,34 @@ export default async function AccountPage() {
   if (!session) redirect('/login');
   const isCustomer = session.role === 'CUSTOMER';
 
-  // ── Client sources (every portal user) ──────────────────────────────────
-  const [favsR, visitsR, reqsR] = await Promise.allSettled([
+  // ── Client sources (every portal user — CLIENT and CUSTOMER) ───────────
+  // P7 — reservations live here (not in the customer-only section) because
+  // CLIENT users can hold reservations without yet being promoted to CUSTOMER.
+  const [favsR, visitsR, reqsR, resvR] = await Promise.allSettled([
     authFetch<FavoriteItem[]>('/me/favorites'),
     authFetch<Paginated<MeVisitRequest>>('/me/visit-requests?page=1&pageSize=3'),
     authFetch<Paginated<MeInfoRequest>>('/me/info-requests?page=1&pageSize=3'),
+    authFetch<Paginated<MeReservation>>('/me/reservations?page=1&pageSize=3'),
   ]);
-  if ([favsR, visitsR, reqsR].some((r) => r.status === 'rejected' && r.reason instanceof AuthError)) {
+  if ([favsR, visitsR, reqsR, resvR].some((r) => r.status === 'rejected' && r.reason instanceof AuthError)) {
     redirect('/login');
   }
 
   const favorites = favsR.status === 'fulfilled' ? favsR.value : null;
   const visits = visitsR.status === 'fulfilled' ? visitsR.value : null;
   const requests = reqsR.status === 'fulfilled' ? reqsR.value : null;
+  const reservations = resvR.status === 'fulfilled' ? resvR.value : null;
 
   const favoritesCount = favorites ? favorites.length : null;
   const visitsCount = visits ? visits.meta.total : null;
   const requestsCount = requests ? requests.meta.total : null;
+  const reservationsCount = reservations ? reservations.meta.total : null;
 
   const recentVisits = visits?.data ?? [];
   const recentRequests = requests?.data ?? [];
-  const hasClientActivity = recentVisits.length > 0 || recentRequests.length > 0;
+  const recentReservations = reservations?.data ?? [];
+  const hasClientActivity =
+    recentVisits.length > 0 || recentRequests.length > 0 || recentReservations.length > 0;
 
   // ── Customer sources (CUSTOMER only — CLIENT never calls these) ──────────
   let contractsCount: number | null = null;
@@ -169,11 +178,12 @@ export default async function AccountPage() {
         </div>
       </div>
 
-      {/* Client summary tiles */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Client summary tiles (P7 — Reservations card visible to CLIENT + CUSTOMER) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryTile icon={Heart} label="المفضلة" value={favoritesCount} href={routes.accountFavorites} />
         <SummaryTile icon={CalendarClock} label="طلبات الزيارة" value={visitsCount} href={routes.accountVisits} />
         <SummaryTile icon={MessageSquareText} label="الاستفسارات" value={requestsCount} href={routes.accountRequests} />
+        <SummaryTile icon={BookmarkCheck} label="الحجوزات" value={reservationsCount} href={routes.accountReservations} />
       </div>
 
       {/* Client recent activity / guidance (guidance only for non-customers) */}
@@ -206,6 +216,26 @@ export default async function AccountPage() {
                     title={entityTitle(r.project, r.unit, 'استفسار عام')}
                     subtitle={r.message}
                     trailing={<span className="text-xs text-ink-muted">{formatDateTime(r.createdAt)}</span>}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+          {recentReservations.length > 0 && (
+            <section className="space-y-3 lg:col-span-2">
+              <SectionHead title="أحدث الحجوزات" href={routes.accountReservations} />
+              <div className="space-y-3">
+                {recentReservations.map((r) => (
+                  <RecentRow
+                    key={r.id}
+                    icon={BookmarkCheck}
+                    title={`حجز رقم ${r.reservationNumber ?? '—'}`}
+                    subtitle={
+                      r.unit
+                        ? `${unitTypeLabel(r.unit.type)} · ${r.unit.code}`
+                        : undefined
+                    }
+                    trailing={<StatusBadge status={r.status} />}
                   />
                 ))}
               </div>

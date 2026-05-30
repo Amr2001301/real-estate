@@ -9,6 +9,7 @@ import {
   Heart,
   CalendarClock,
   MessageSquareText,
+  BookmarkCheck,
   Building2,
   FileText,
   Wallet,
@@ -32,6 +33,12 @@ const CLIENT_ITEMS: NavItem[] = [
   { href: routes.accountFavorites, label: 'المفضلة', icon: Heart },
   { href: routes.accountVisits, label: 'الزيارات', icon: CalendarClock },
   { href: routes.accountRequests, label: 'الطلبات', icon: MessageSquareText },
+  // P7 — reservations are visible to BOTH CLIENT and CUSTOMER. Creating a
+  // reservation alone does NOT promote CLIENT → CUSTOMER; only contract
+  // creation/conversion does (see PROMOTION RULE in
+  // apps/api/src/modules/contracts/contracts.module.ts and
+  // reservations.module.ts).
+  { href: routes.accountReservations, label: 'الحجوزات', icon: BookmarkCheck },
   // P5 — notifications are now reachable by every portal role (CLIENT +
   // CUSTOMER). The page used to live in the (customer) route group and was
   // unreachable to CLIENT.

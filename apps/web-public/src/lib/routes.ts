@@ -16,6 +16,7 @@ export const routes = {
   accountFavorites: '/account/favorites',
   accountVisits: '/account/visits',
   accountRequests: '/account/requests',
+  accountReservations: '/account/reservations',
   // Customer-only (post-purchase) sections.
   accountProperty: '/account/property',
   accountContracts: '/account/contracts',

@@ -39,6 +39,8 @@ const STATUS_MAP: Record<string, { label: string; tone: Tone }> = {
   URGENT: { label: 'عاجلة', tone: 'error' },
   // Shared
   CANCELLED: { label: 'ملغى', tone: 'muted' },
+  // ReservationStatus extras
+  EXPIRED: { label: 'منتهي الصلاحية', tone: 'muted' },
 };
 
 export function StatusBadge({

@@ -141,7 +141,12 @@ class ContractsService {
           signedAt: null,
         },
       });
-      // Promote customer role if currently CLIENT
+      // PROMOTION RULE — CLIENT → CUSTOMER happens ONLY when an ownership
+      // milestone is recorded: a contract being created (here) or a
+      // reservation being converted (reservations.module.ts convertReservation).
+      // Creating a reservation alone must NOT promote the role — the customer
+      // can still walk away from a reservation. Mirrored test:
+      // apps/api/test/e2e/me-reservations.e2e-spec.ts
       await tx.user.updateMany({
         where: { id: dto.customerId, role: 'CLIENT' },
         data: { role: 'CUSTOMER' },

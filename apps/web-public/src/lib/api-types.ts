@@ -179,6 +179,47 @@ export interface MeInfoRequest {
 }
 
 /**
+ * A user's own reservation — item shape of GET /v1/me/reservations (paginated).
+ * Available to CLIENT and CUSTOMER. The backend scopes by both ownership
+ * paths (direct `clientId` and lead-based `lead.clientId`). Amounts are
+ * Decimal-as-string. Broker attribution, internal notes, and financial
+ * snapshots beyond `bookingAmount` are intentionally not exposed.
+ */
+export type MeReservationStatus =
+  | 'PENDING'
+  | 'APPROVED'
+  | 'REJECTED'
+  | 'CANCELLED'
+  | 'EXPIRED'
+  | 'CONVERTED';
+
+export type MeReservationBookingPaymentStatus =
+  | 'UNPAID'
+  | 'PENDING'
+  | 'PAID'
+  | 'WAIVED';
+
+export interface ReservationUnitRef {
+  id: string;
+  code: string;
+  type: string;
+  building: { phase: { project: { id: string; name: Translatable } | null } | null } | null;
+}
+
+export interface MeReservation {
+  id: string;
+  reservationNumber: string | null;
+  status: MeReservationStatus;
+  expiresAt: string;
+  createdAt: string;
+  bookingAmount: string;
+  bookingPaymentStatus: MeReservationBookingPaymentStatus;
+  bookingPaidAt: string | null;
+  unit: ReservationUnitRef | null;
+  sales: AssignedSalesRef | null;
+}
+
+/**
  * A customer's own contract — item shape of GET /v1/contracts/me/contracts
  * (paginated). Amounts are Decimal-as-string; project name is Translatable.
  * Broker/reservation fields exist on the API but are intentionally NOT typed

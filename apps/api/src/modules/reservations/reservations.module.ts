@@ -172,6 +172,40 @@ const FULL_INCLUDE = {
   },
 };
 
+/**
+ * Customer-facing reservation projection. Returns only fields the customer
+ * needs and intentionally OMITS broker attribution, internal notes, financial
+ * snapshots beyond the booking amount, and any actor information beyond the
+ * assigned sales rep's name. Used by GET /me/reservations.
+ */
+const ME_RESERVATION_SELECT = {
+  id: true,
+  reservationNumber: true,
+  status: true,
+  expiresAt: true,
+  createdAt: true,
+  bookingAmount: true,
+  bookingPaymentStatus: true,
+  bookingPaidAt: true,
+  unit: {
+    select: {
+      id: true,
+      code: true,
+      type: true,
+      building: {
+        select: {
+          phase: {
+            select: {
+              project: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+    },
+  },
+  sales: { select: { id: true, fullName: true } },
+} satisfies Prisma.ReservationSelect;
+
 @Injectable()
 export class ReservationsService {
   private readonly logger = new Logger(ReservationsService.name);
@@ -672,6 +706,75 @@ export class ReservationsService {
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
     return reservation;
+  }
+
+  /**
+   * Customer-facing reservation list. Scoped to a user across both ownership
+   * paths:
+   *  - Direct:  Reservation.clientId = userId
+   *  - Lead:    Reservation.lead.clientId = userId
+   *
+   * Returns only the fields the customer needs (unit, project, sales rep,
+   * status, booking amount + payment state, expiry, reservation number).
+   * Internal-only fields (notes, broker attribution, commission, financial
+   * snapshots beyond bookingAmount) are intentionally omitted.
+   */
+  async listForUser(
+    userId: string,
+    opts: { page: number; pageSize: number; status?: ReservationStatus },
+  ) {
+    const where: Prisma.ReservationWhereInput = {
+      ...(opts.status ? { status: opts.status } : {}),
+      OR: [
+        { clientId: userId },
+        { lead: { is: { clientId: userId } } },
+      ],
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.reservation.findMany({
+        where,
+        ...takeSkip(opts),
+        orderBy: { createdAt: 'desc' },
+        select: ME_RESERVATION_SELECT,
+      }),
+      this.prisma.reservation.count({ where }),
+    ]);
+    return paginate(data, total, opts);
+  }
+
+  /**
+   * Customer-facing reservation detail. Returns 404 unless the reservation is
+   * owned by the user via one of the two paths above. Returning 404 (not 403)
+   * is deliberate — we don't disclose existence of other customers' rows.
+   */
+  async findOneForUser(id: string, userId: string) {
+    const reservation = await this.prisma.reservation.findFirst({
+      where: {
+        id,
+        OR: [
+          { clientId: userId },
+          { lead: { is: { clientId: userId } } },
+        ],
+      },
+      select: ME_RESERVATION_SELECT,
+    });
+    if (!reservation) throw new NotFoundException('Reservation not found');
+    return reservation;
+  }
+
+  /**
+   * Customer-facing count: total reservations across both ownership paths.
+   * Used by the account dashboard summary tile.
+   */
+  async countForUser(userId: string): Promise<number> {
+    return this.prisma.reservation.count({
+      where: {
+        OR: [
+          { clientId: userId },
+          { lead: { is: { clientId: userId } } },
+        ],
+      },
+    });
   }
 
   async setStatus(id: string, dto: UpdateReservationStatusDto, actor: AuthUser) {
@@ -1270,7 +1373,11 @@ export class ReservationsService {
             },
           });
 
-      // 2. Promote CLIENT → CUSTOMER.
+      // 2. PROMOTION RULE — CLIENT → CUSTOMER fires here because convert()
+      // always creates a contract (step 1 above). Mirror: contracts.module.ts
+      // create(). Reservation.create alone must never promote — see
+      // MeReservationsController docstring and e2e:
+      // apps/api/test/e2e/me-reservations.e2e-spec.ts.
       await tx.user.updateMany({
         where: { id: customerId, role: UserRole.CLIENT },
         data: { role: UserRole.CUSTOMER },
@@ -1766,9 +1873,51 @@ class ReservationsController {
   }
 }
 
+/**
+ * Customer-facing reservation surface — kept SEPARATE from the admin/sales
+ * controller because the gating, response shape, and scoping rules differ:
+ *  - Auth: @Roles(CLIENT, CUSTOMER) — both can see their own reservations.
+ *    CLIENT users intentionally remain CLIENT after a reservation is created;
+ *    role promotion to CUSTOMER happens ONLY on contract create or convert
+ *    (see contracts.module.ts and convertReservation() in this file).
+ *  - Scope: queries are pinned to `user.sub` across both ownership paths
+ *    (direct `clientId` AND lead-based `lead.clientId`).
+ *  - Shape: ME_RESERVATION_SELECT omits broker attribution, internal notes,
+ *    and financial snapshots beyond bookingAmount.
+ */
+@ApiTags('me-reservations')
+@Controller('me/reservations')
+class MeReservationsController {
+  constructor(private readonly svc: ReservationsService) {}
+
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Get()
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query('status') status?: ReservationStatus,
+    @Query('page') page = 1,
+    @Query('pageSize') pageSize = 10,
+  ) {
+    return this.svc.listForUser(user.sub, {
+      page: Number(page),
+      pageSize: Number(pageSize),
+      status,
+    });
+  }
+
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Get(':id')
+  findOne(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.svc.findOneForUser(id, user.sub);
+  }
+}
+
 @Module({
   imports: [NotificationsModule],
-  controllers: [ReservationsController],
+  controllers: [ReservationsController, MeReservationsController],
   providers: [ReservationsService, ReservationExpiryCron],
   exports: [ReservationsService],
 })
