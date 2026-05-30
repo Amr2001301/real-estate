@@ -77,6 +77,15 @@ class SignContractDto {
   @IsDateString() signedAt!: string;
 }
 
+/// P11 — admin attaches a presigned-uploaded file as the contract PDF.
+class AttachContractDocumentDto {
+  @IsString() fileUrl!: string;
+  @IsOptional() @IsString() fileName?: string;
+  @IsOptional() @IsString() mimeType?: string;
+  @IsOptional() @IsNumber() @Min(0) sizeBytes?: number;
+  @IsOptional() @IsString() title?: string;
+}
+
 @Injectable()
 class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
@@ -120,6 +129,50 @@ class ContractsService {
     } catch (e) {
       this.logger.warn(`linkContractDocument(${contractId}) failed: ${(e as Error).message}`);
     }
+  }
+
+  /**
+   * P11 — attach a presigned-uploaded file as the contract's canonical PDF.
+   * Admin flow: client browser PUTs to MinIO/R2 via the presign URL, then
+   * POSTs here with the resulting publicUrl + fileName/mimeType/sizeBytes.
+   * Sets Contract.pdfUrl and registers a CONTRACT-category Document. Errors
+   * during the document registration ARE surfaced (it's the route's job).
+   */
+  async attachDocument(
+    contractId: string,
+    uploadedById: string,
+    dto: { fileUrl: string; fileName?: string; mimeType?: string; sizeBytes?: number; title?: string },
+  ) {
+    const contract = await this.prisma.contract.findUnique({ where: { id: contractId } });
+    if (!contract) throw new NotFoundException('Contract not found');
+    await this.prisma.contract.update({
+      where: { id: contractId },
+      data: { pdfUrl: dto.fileUrl },
+    });
+    // Idempotent: skip when a matching CONTRACT document already exists.
+    const existing = await this.prisma.document.findFirst({
+      where: {
+        ownerType: DocumentOwnerType.CONTRACT,
+        ownerId: contractId,
+        category: DocumentCategory.CONTRACT,
+        fileUrl: dto.fileUrl,
+        deletedAt: null,
+      },
+    });
+    const document =
+      existing ??
+      (await this.documents.create(uploadedById, {
+        ownerType: DocumentOwnerType.CONTRACT,
+        ownerId: contractId,
+        category: DocumentCategory.CONTRACT,
+        title: dto.title?.trim() || 'ملف العقد',
+        fileUrl: dto.fileUrl,
+        fileName: dto.fileName,
+        mimeType: dto.mimeType,
+        sizeBytes: dto.sizeBytes,
+        visibility: DocumentVisibility.ADMIN_ONLY,
+      }));
+    return { contract: await this.prisma.contract.findUnique({ where: { id: contractId } }), document };
   }
 
   async create(dto: CreateContractDto, actorId: string) {
@@ -643,6 +696,21 @@ class ContractsController {
     @Body() dto: SignContractDto,
   ) {
     return this.svc.sign(id, dto, user.sub);
+  }
+
+  // P11 — register a presigned-uploaded file as the contract's canonical PDF.
+  // Admin uploads via /v1/documents/presign → PUT to R2 → POSTs the resulting
+  // publicUrl here. Closes the post-presign linkage gap exposed by the upload
+  // bug investigation. SALES_MANAGER also allowed (signing remains ADMIN).
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('contracts:update')
+  @Post(':id/document')
+  attachDocument(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AttachContractDocumentDto,
+  ) {
+    return this.svc.attachDocument(id, user.sub, dto);
   }
 }
 

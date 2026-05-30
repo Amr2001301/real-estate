@@ -73,7 +73,20 @@ export class R2Service {
       Key: key,
       ContentType: opts.contentType,
     });
-    const uploadUrl = await getSignedUrl(this.client, command, { expiresIn: 60 * 5 });
+    // P11 — wrap getSignedUrl in try/catch so AWS SDK errors (network to
+    // MinIO/R2, bad credentials, region mismatch) surface as a friendly 503
+    // instead of leaking a raw 500 to the customer. The SDK message is
+    // logged server-side for ops; the response says only "Storage not
+    // available — please retry shortly".
+    let uploadUrl: string;
+    try {
+      uploadUrl = await getSignedUrl(this.client, command, { expiresIn: 60 * 5 });
+    } catch (err) {
+      this.logger.error(
+        `createPresignedUpload failed for bucket=${this.bucket}: ${(err as Error).message}`,
+      );
+      throw new ServiceUnavailableException('Storage not available — please retry shortly');
+    }
     const publicUrl = this.publicUrlFor(key);
     return { uploadUrl, key, publicUrl };
   }

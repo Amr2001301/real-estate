@@ -56,6 +56,14 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      # P11 — CORS allowlist for browser presigned-PUT preflight requests.
+      # Without this, the browser sends an OPTIONS preflight that MinIO
+      # answers without `Access-Control-Allow-Origin`, the PUT never goes
+      # out, and the uploader surfaces "انقطاع في الشبكة أثناء الرفع".
+      # Origins must include every front-end host that uploads documents:
+      # web-admin (default :3001) + web-public (default :3002). Override via
+      # MINIO_API_CORS_ALLOW_ORIGIN in .env for non-default ports.
+      MINIO_API_CORS_ALLOW_ORIGIN: ${MINIO_API_CORS_ALLOW_ORIGIN:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
     ports:
       - "${MINIO_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"

@@ -340,6 +340,19 @@ export interface Deposit {
   recordedById: string;
   verified: boolean;
   createdAt: string;
+  // P11 — payment-proof review.
+  reviewStatus?: 'NO_PROOF' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string | null;
+  reviewedAt?: string | null;
+  reviewedBy?: { id: string; fullName: string } | null;
+  paymentMethod?: 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER' | null;
+  proofDocument?: {
+    id: string;
+    fileName: string | null;
+    mimeType: string | null;
+    sizeBytes: number | null;
+    createdAt: string;
+  } | null;
 }
 
 export interface VisitRequest {

@@ -707,6 +707,102 @@ class InstallmentsCron {
   }
 }
 
+// ─── P11 — Customer-facing installments controller ───────────────────────
+// GET /v1/me/installments returns the signed-in customer's full installment
+// schedule across their contracts. Scoped purely by Installment.plan.
+// contract.customerId so cross-customer access is impossible. Response shape
+// intentionally OMITS any file URLs — proof PDFs/receipts are reached via
+// the customer signed-download endpoint just like /me/documents.
+class MeInstallmentsQueryDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(200) pageSize?: number;
+  @IsOptional() @IsUUID() contractId?: string;
+  @IsOptional() @IsEnum(InstallmentStatus) status?: InstallmentStatus;
+}
+
+@Injectable()
+class MeInstallmentsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async listForUser(
+    userId: string,
+    opts: { page: number; pageSize: number; contractId?: string; status?: InstallmentStatus },
+  ) {
+    const where: Prisma.InstallmentWhereInput = {
+      plan: { contract: { customerId: userId } },
+      ...(opts.contractId ? { plan: { contract: { customerId: userId, id: opts.contractId } } } : {}),
+      ...(opts.status ? { status: opts.status } : {}),
+    };
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.installment.findMany({
+        where,
+        skip: (opts.page - 1) * opts.pageSize,
+        take: opts.pageSize,
+        orderBy: { dueDate: 'asc' },
+        select: {
+          id: true,
+          dueDate: true,
+          amount: true,
+          status: true,
+          paidAt: true,
+          type: true,
+          plan: {
+            select: {
+              contract: {
+                select: {
+                  id: true,
+                  contractNumber: true,
+                  unit: {
+                    select: {
+                      id: true,
+                      code: true,
+                      type: true,
+                      building: {
+                        select: {
+                          phase: {
+                            select: { project: { select: { id: true, name: true } } },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      this.prisma.installment.count({ where }),
+    ]);
+    return {
+      data,
+      meta: {
+        page: opts.page,
+        pageSize: opts.pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / opts.pageSize)),
+      },
+    };
+  }
+}
+
+@ApiTags('me-installments')
+@Controller('me/installments')
+class MeInstallmentsController {
+  constructor(private readonly svc: MeInstallmentsService) {}
+
+  @Roles(UserRole.CUSTOMER)
+  @Get()
+  list(@Req() req: { user: { sub: string } }, @Query() q: MeInstallmentsQueryDto) {
+    return this.svc.listForUser(req.user.sub, {
+      page: q.page ?? 1,
+      pageSize: q.pageSize ?? 50,
+      contractId: q.contractId,
+      status: q.status,
+    });
+  }
+}
+
 // ─── Existing contract-based controller ───────────────────────────────────────
 
 @ApiTags('installments')
@@ -811,8 +907,13 @@ class PlanTemplatesController {
 
 @Module({
   imports: [NotificationsModule],
-  controllers: [InstallmentsController, PlanTemplatesController],
-  providers: [InstallmentsService, InstallmentsCron, PlanTemplatesService],
+  controllers: [InstallmentsController, PlanTemplatesController, MeInstallmentsController],
+  providers: [
+    InstallmentsService,
+    InstallmentsCron,
+    PlanTemplatesService,
+    MeInstallmentsService,
+  ],
   exports: [InstallmentsService, PlanTemplatesService],
 })
 export class InstallmentsModule {}

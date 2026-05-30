@@ -701,6 +701,44 @@ async function main() {
         ar_body: 'تم اعتماد دفعة بقيمة {{amount}} لعقدك.',
         en_body: 'A deposit of {{amount}} on your contract was verified.',
       },
+      // ─── Payment proof workflow (P11) ────────────────────────────────────
+      // Recipients differ per template:
+      //   *_submitted, *_resubmitted → ADMIN + SALES_MANAGER
+      //   *_approved, *_rejected     → the contract's customer
+      // Payloads carry only safe scalars: depositId, dueDate, amount, and a
+      // truncated reasonShort. NO receiptUrl, NO card data, NO internal notes.
+      {
+        code: 'payment_proof_submitted',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'إثبات دفع جديد قيد المراجعة',
+        en_subject: 'New payment proof pending review',
+        ar_body: 'تم استلام إثبات دفع بقيمة {{amount}} لقسط مستحق بتاريخ {{installmentDueDate}}.',
+        en_body: 'A payment proof of {{amount}} was submitted for an installment due {{installmentDueDate}}.',
+      },
+      {
+        code: 'payment_proof_resubmitted',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'تم إعادة إرسال إثبات الدفع',
+        en_subject: 'Payment proof resubmitted',
+        ar_body: 'تم إعادة إرسال إثبات دفع بقيمة {{amount}} لقسط مستحق بتاريخ {{installmentDueDate}}.',
+        en_body: 'A payment proof of {{amount}} was resubmitted for an installment due {{installmentDueDate}}.',
+      },
+      {
+        code: 'payment_proof_approved',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تم التحقق من دفعتك',
+        en_subject: 'Your payment was verified',
+        ar_body: 'تم التحقق من دفعة بقيمة {{amount}} للقسط المستحق بتاريخ {{installmentDueDate}}.',
+        en_body: 'A payment of {{amount}} for the installment due {{installmentDueDate}} was verified.',
+      },
+      {
+        code: 'payment_proof_rejected',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تم رفض إثبات الدفع',
+        en_subject: 'Payment proof rejected',
+        ar_body: 'تم رفض إثبات دفعة بقيمة {{amount}} للقسط المستحق بتاريخ {{installmentDueDate}}. السبب: {{reasonShort}}',
+        en_body: 'A payment proof of {{amount}} for the installment due {{installmentDueDate}} was rejected. Reason: {{reasonShort}}',
+      },
       // ─── Installments (P4) ───────────────────────────────────────────────
       {
         code: 'installment_plan_created',

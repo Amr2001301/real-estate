@@ -62,6 +62,7 @@ model User {
   maintenanceReqs         MaintenanceRequest[]      @relation("MaintenanceCustomer")
   maintenanceAssigned     MaintenanceRequest[]      @relation("MaintenanceAdmin")
   recordedDeposits        Deposit[]                 @relation("DepositRecordedBy")
+  reviewedDeposits        Deposit[]                 @relation("DepositReviewedBy")
   auditLogs               AuditLog[]
   unitStatusChanges       UnitStatusHistory[]
   visitsScheduledForSales VisitRequest[]            @relation("VisitRequestSales")
@@ -844,6 +845,27 @@ model Installment {
   @@index([status])
 }
 
+/// P11 — Manual/offline payment-proof review state. NO_PROOF is the default
+/// when a deposit is created admin-side (legacy verify flow). Customer-side
+/// submission goes directly into PENDING_REVIEW. APPROVED + REJECTED are the
+/// admin terminal states; REJECTED carries `rejectionReason` and the customer
+/// may resubmit freely (resubmit resets the row to PENDING_REVIEW).
+enum DepositReviewStatus {
+  NO_PROOF
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+/// P11 — Manual/offline payment method recorded by the customer when
+/// submitting proof. No online payment / card data ever stored.
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CHEQUE
+  OTHER
+}
+
 model Deposit {
   id             String       @id @default(uuid()) @db.Uuid
   type           DepositType  @default(INSTALLMENT)
@@ -858,11 +880,26 @@ model Deposit {
   receiptUrl     String?
   recordedById   String       @db.Uuid
   recordedBy     User         @relation("DepositRecordedBy", fields: [recordedById], references: [id])
+  /// LEGACY (P11) — kept for back-compat. New code reads/writes via
+  /// reviewStatus; this stays in lockstep (true iff reviewStatus = APPROVED).
   verified       Boolean      @default(false)
   createdAt      DateTime     @default(now())
 
+  // ── P11 — payment-proof review ────────────────────────────────────────
+  reviewStatus     DepositReviewStatus @default(NO_PROOF)
+  rejectionReason  String?             @db.VarChar(2000)
+  reviewedAt       DateTime?
+  reviewedById     String?             @db.Uuid
+  reviewedBy       User?               @relation("DepositReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+  proofDocumentId  String?             @db.Uuid
+  proofDocument    Document?           @relation("DepositProofDocument", fields: [proofDocumentId], references: [id], onDelete: SetNull)
+  paymentMethod    PaymentMethod?
+
   @@index([contractId])
   @@index([reservationId])
+  @@index([reviewStatus])
+  @@index([reviewedById])
+  @@index([proofDocumentId])
 }
 
 // =============================================================================
@@ -1610,6 +1647,9 @@ model Document {
   visibility   DocumentVisibility @default(ADMIN_ONLY)
   uploadedById String?            @db.Uuid
   uploadedBy   User?              @relation("DocumentUploader", fields: [uploadedById], references: [id])
+  /// P11 — back-relation for Deposit.proofDocumentId. A single Document can
+  /// be the canonical proof for at most one Deposit; the FK lives on Deposit.
+  depositProofs Deposit[]         @relation("DepositProofDocument")
   deletedAt    DateTime?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt

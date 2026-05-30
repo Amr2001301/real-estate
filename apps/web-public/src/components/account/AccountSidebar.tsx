@@ -49,6 +49,7 @@ const CLIENT_ITEMS: NavItem[] = [
 const CUSTOMER_ITEMS: NavItem[] = [
   { href: routes.accountProperty, label: 'عقاراتي', icon: Building2 },
   { href: routes.accountContracts, label: 'العقود', icon: FileText },
+  { href: routes.accountInstallments, label: 'الأقساط', icon: CalendarClock },
   { href: routes.accountDeposits, label: 'الدفعات', icon: Wallet },
   { href: routes.accountMaintenance, label: 'الصيانة', icon: Wrench },
 ];

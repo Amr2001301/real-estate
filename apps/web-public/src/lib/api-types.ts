@@ -260,6 +260,9 @@ export interface MeContract {
  * A customer's own deposit — item shape of GET /v1/me/deposits. Amounts are
  * Decimal-as-string. Reservation is returned by the API but not rendered.
  */
+export type MeDepositReviewStatus = 'NO_PROOF' | 'PENDING_REVIEW' | 'APPROVED' | 'REJECTED';
+export type MePaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'CHEQUE' | 'OTHER';
+
 export interface MeDeposit {
   id: string;
   type: string;
@@ -269,6 +272,40 @@ export interface MeDeposit {
   verified: boolean;
   contract: { id: string; contractNumber: string | null } | null;
   installment: { id: string; dueDate: string | null; amount: string; type: string } | null;
+  // P11
+  reviewStatus?: MeDepositReviewStatus;
+  rejectionReason?: string | null;
+  paymentMethod?: MePaymentMethod | null;
+  reviewedAt?: string | null;
+  proofDocument?: {
+    id: string;
+    fileName: string | null;
+    mimeType: string | null;
+    sizeBytes: number | null;
+  } | null;
+}
+
+// P11 — customer-facing installment row (GET /v1/me/installments).
+// No file URLs; the customer reaches proof via signed-download.
+export interface MeInstallment {
+  id: string;
+  dueDate: string;
+  amount: string;
+  status: 'PENDING' | 'PAID' | 'OVERDUE';
+  paidAt: string | null;
+  type: string;
+  plan: {
+    contract: {
+      id: string;
+      contractNumber: string | null;
+      unit: {
+        id: string;
+        code: string;
+        type: string;
+        building: { phase: { project: { id: string; name: Translatable } | null } | null } | null;
+      } | null;
+    } | null;
+  } | null;
 }
 
 export interface DepositTotals {

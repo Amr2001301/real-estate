@@ -300,7 +300,7 @@ describe('Deposits · recording + verification workflow', () => {
 
   // ── verify() flips only the verified column ────────────────────────────
 
-  it('verify(): flips verified true/false without modifying unrelated columns', async () => {
+  it('verify(): flips verified true/false and keeps reviewStatus in lockstep (P11)', async () => {
     const res1 = await request(app.getHttpServer())
       .patch(`/deposits/${DEPOSIT_ID}/verify`)
       .send({ verified: true })
@@ -311,18 +311,24 @@ describe('Deposits · recording + verification workflow', () => {
       data: Record<string, unknown>;
     };
     expect(args1.where.id).toBe(DEPOSIT_ID);
-    expect(args1.data).toEqual({ verified: true });
-    // Returned row reflects the flip.
+    // P11 — verified=true now mirrors reviewStatus=APPROVED to keep legacy
+    // and new fields in lockstep (see deposits.module.ts verify()).
+    expect(args1.data).toEqual({ verified: true, reviewStatus: 'APPROVED' });
     expect(res1.body.verified).toBe(true);
 
-    // Flipping back to false is symmetric.
+    // Flipping back to false with no receipt → NO_PROOF; rejectionReason
+    // cleared. (The default mock deposit has receiptUrl=null.)
     mock.deposit.update.mockClear();
     await request(app.getHttpServer())
       .patch(`/deposits/${DEPOSIT_ID}/verify`)
       .send({ verified: false })
       .expect(200);
     const args2 = mock.deposit.update.mock.calls[0]![0] as { data: Record<string, unknown> };
-    expect(args2.data).toEqual({ verified: false });
+    expect(args2.data).toEqual({
+      verified: false,
+      reviewStatus: 'NO_PROOF',
+      rejectionReason: null,
+    });
   });
 
   it('verify(): rejects body without the verified flag (400)', async () => {

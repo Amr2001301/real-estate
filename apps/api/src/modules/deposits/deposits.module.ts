@@ -25,14 +25,17 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
+  DepositReviewStatus,
   DepositType,
   DocumentCategory,
   DocumentOwnerType,
   DocumentVisibility,
+  PaymentMethod,
   Prisma,
   PlanPaymentType,
   InstallmentStatus,
@@ -71,6 +74,53 @@ class AttachReceiptDto {
   @IsOptional() @IsString() title?: string;
 }
 
+// ── P11 — payment-proof review DTOs ────────────────────────────────────────
+
+/** Customer submits a payment proof against one of their own installments. */
+class CustomerSubmitProofDto {
+  @IsUUID() installmentId!: string;
+  @IsNumber() @IsPositive() amount!: number;
+  @IsDateString() paidAt!: string;
+  @IsEnum(PaymentMethod) paymentMethod!: PaymentMethod;
+  /** R2 public URL minted by the customer-side presign endpoint. */
+  @IsString() receiptUrl!: string;
+  @IsOptional() @IsString() fileName?: string;
+  @IsOptional() @IsString() mimeType?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) sizeBytes?: number;
+  /** Optional customer note / reference number (e.g. bank transfer ref). */
+  @IsOptional() @IsString() @MaxLength(500) note?: string;
+}
+
+/** Customer resubmits proof after a rejection. Allowed only when current
+ *  status is REJECTED. Same payload shape as submit. */
+class CustomerResubmitProofDto {
+  @IsEnum(PaymentMethod) paymentMethod!: PaymentMethod;
+  @IsString() receiptUrl!: string;
+  @IsOptional() @IsString() fileName?: string;
+  @IsOptional() @IsString() mimeType?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) sizeBytes?: number;
+  @IsOptional() @IsDateString() paidAt?: string;
+  @IsOptional() @IsString() @MaxLength(500) note?: string;
+}
+
+/** Admin approves a customer-submitted payment proof. */
+class ApproveDepositDto {
+  @IsOptional() @IsString() @MaxLength(500) note?: string;
+}
+
+/** Admin rejects a customer-submitted payment proof with a required reason.
+ *  Mirrors RejectBrokerLeadDto in shape and cap. */
+class RejectDepositDto {
+  @IsString() @MaxLength(2000) reason!: string;
+}
+
+/** Customer-side presign request (folder forced to 'receipts' server-side). */
+class CustomerPresignDto {
+  @IsString() @MaxLength(120) contentType!: string;
+  @Type(() => Number) @IsInt() @Min(1) sizeBytes!: number;
+  @IsOptional() @IsString() @MaxLength(255) fileName?: string;
+}
+
 interface ListDepositsOpts {
   page: number;
   pageSize: number;
@@ -88,6 +138,8 @@ interface ListDepositsOpts {
   dueDateFrom?: string;
   dueDateTo?: string;
   verified?: boolean;
+  // P11
+  reviewStatus?: DepositReviewStatus;
 }
 
 const DEPOSIT_INCLUDE = {
@@ -111,6 +163,12 @@ const DEPOSIT_INCLUDE = {
       lead: { select: { id: true, fullName: true } },
     },
   },
+  // P11 — proof document reference. NEVER include fileUrl in this select;
+  // customers reach the file ONLY through the signed-download endpoint.
+  proofDocument: {
+    select: { id: true, fileName: true, mimeType: true, sizeBytes: true, createdAt: true },
+  },
+  reviewedBy: { select: { id: true, fullName: true } },
 } as const;
 
 @Injectable()
@@ -269,6 +327,9 @@ class DepositsService {
     // Verified filter
     if (opts.verified !== undefined) and.push({ verified: opts.verified });
 
+    // P11 — review status filter for the admin review queue.
+    if (opts.reviewStatus) and.push({ reviewStatus: opts.reviewStatus });
+
     // Unit filter (contract unit OR reservation unit)
     if (opts.unitId) {
       and.push({
@@ -386,9 +447,29 @@ class DepositsService {
   }
 
   async verify(id: string, dto: VerifyDepositDto) {
+    // P11 — keep `verified` in lockstep with `reviewStatus`. Toggling
+    // verified=true is equivalent to a manual approve action; verified=false
+    // resets the row to the pre-review state (NO_PROOF if no receipt exists,
+    // otherwise PENDING_REVIEW). This preserves the legacy semantics while
+    // the new approve/reject endpoints carry forward.
+    const target = await this.prisma.deposit.findUnique({
+      where: { id },
+      select: { receiptUrl: true, reviewStatus: true },
+    });
+    if (!target) throw new NotFoundException('Deposit not found');
+    const nextReviewStatus: DepositReviewStatus = dto.verified
+      ? DepositReviewStatus.APPROVED
+      : target.receiptUrl
+        ? DepositReviewStatus.PENDING_REVIEW
+        : DepositReviewStatus.NO_PROOF;
+
     const updated = await this.prisma.deposit.update({
       where: { id },
-      data: { verified: dto.verified },
+      data: {
+        verified: dto.verified,
+        reviewStatus: nextReviewStatus,
+        ...(dto.verified ? {} : { rejectionReason: null }),
+      },
       include: { contract: { select: { customerId: true } } },
     });
     // P4 — only fire the verified notification when this is a positive
@@ -405,6 +486,298 @@ class DepositsService {
       );
     }
     return updated;
+  }
+
+  // ── P11 — Customer payment-proof submission + admin review ────────────
+
+  /**
+   * Customer submits a payment proof against one of their own installments.
+   * Validates ownership (installment belongs to a contract owned by the
+   * caller), creates a Deposit row in PENDING_REVIEW state, and atomically
+   * registers the uploaded receipt as a CONTRACT-scoped Document with
+   * ADMIN_ONLY visibility (the customer keeps access via signed-download
+   * since they're a known peer via ownership.service).
+   *
+   * Notification fan-out: payment_proof_submitted → ADMIN + SALES_MANAGER.
+   * Push failure must never block the business action (see notifications
+   * service contract — DB row first, push best-effort try/catch).
+   */
+  async submitProofForCustomer(userId: string, dto: CustomerSubmitProofDto) {
+    const installment = await this.prisma.installment.findFirst({
+      where: { id: dto.installmentId },
+      include: {
+        plan: { include: { contract: { select: { id: true, customerId: true } } } },
+      },
+    });
+    if (!installment || !installment.plan?.contract) {
+      throw new NotFoundException('Installment not found');
+    }
+    if (installment.plan.contract.customerId !== userId) {
+      // 404 not 403 — don't disclose existence of other customers' rows.
+      throw new NotFoundException('Installment not found');
+    }
+    if (installment.status === InstallmentStatus.PAID) {
+      throw new BadRequestException('تم تأكيد دفع هذا القسط مسبقاً');
+    }
+    // Amount sanity — customer should only submit for the installment's
+    // expected amount (manual/offline; partial payments are out of scope).
+    const expected = Number(installment.amount);
+    if (Math.abs(dto.amount - expected) > 0.005) {
+      throw new BadRequestException('يجب أن يطابق المبلغ قيمة القسط بالضبط');
+    }
+
+    const depositType: DepositType = (() => {
+      switch (installment.type) {
+        case PlanPaymentType.DOWN_PAYMENT:
+          return DepositType.DOWN_PAYMENT;
+        case PlanPaymentType.FINAL_PAYMENT:
+          return DepositType.FINAL_PAYMENT;
+        default:
+          return DepositType.INSTALLMENT;
+      }
+    })();
+
+    // Create the Deposit first (its row needs to exist before
+    // DocumentsService validates the DEPOSIT ownerId). Then register the
+    // proof Document, then back-link it. Each step is small; failure
+    // between them is acceptable (the Deposit lives with NULL
+    // proofDocumentId — admin can still see it in the queue and ask the
+    // customer to resubmit).
+    const created = await this.prisma.deposit.create({
+      data: {
+        type: depositType,
+        contractId: installment.plan!.contractId,
+        installmentId: dto.installmentId,
+        amount: new Prisma.Decimal(dto.amount),
+        paidAt: new Date(dto.paidAt),
+        receiptUrl: dto.receiptUrl,
+        recordedById: userId,
+        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+        paymentMethod: dto.paymentMethod,
+        verified: false,
+      },
+    });
+    const document = await this.documents.create(userId, {
+      ownerType: DocumentOwnerType.DEPOSIT,
+      ownerId: created.id,
+      category: DocumentCategory.RECEIPT,
+      title: dto.note?.trim() || 'إثبات الدفع',
+      fileUrl: dto.receiptUrl,
+      fileName: dto.fileName,
+      mimeType: dto.mimeType,
+      sizeBytes: dto.sizeBytes,
+      visibility: DocumentVisibility.ADMIN_ONLY,
+    });
+    const deposit = await this.prisma.deposit.update({
+      where: { id: created.id },
+      data: { proofDocumentId: document.id },
+    });
+
+    // Notify ADMIN/SALES_MANAGER staff. Payload is intentionally minimal:
+    // amount as string, dueDate ISO, projectId for routing. No URLs.
+    const projectId = await this.resolveProjectIdForDeposit(deposit.id);
+    await this.notifyStaff('payment_proof_submitted', {
+      depositId: deposit.id,
+      installmentDueDate: installment.dueDate.toISOString(),
+      amount: deposit.amount.toString(),
+      ...(projectId ? { projectId } : {}),
+    });
+    return deposit;
+  }
+
+  /**
+   * Customer resubmits a payment proof for a deposit currently in REJECTED.
+   * Clears the rejectionReason and flips back to PENDING_REVIEW.
+   */
+  async resubmitProofForCustomer(
+    userId: string,
+    depositId: string,
+    dto: CustomerResubmitProofDto,
+  ) {
+    const deposit = await this.prisma.deposit.findUnique({
+      where: { id: depositId },
+      include: { contract: { select: { customerId: true } }, installment: true },
+    });
+    if (!deposit || deposit.contract?.customerId !== userId) {
+      throw new NotFoundException('Deposit not found');
+    }
+    if (deposit.reviewStatus !== DepositReviewStatus.REJECTED) {
+      throw new BadRequestException(
+        'يمكن إعادة الإرسال فقط بعد رفض الإثبات السابق',
+      );
+    }
+
+    // Document first (Deposit already exists, so no FK ordering issue).
+    const newDoc = await this.documents.create(userId, {
+      ownerType: DocumentOwnerType.DEPOSIT,
+      ownerId: depositId,
+      category: DocumentCategory.RECEIPT,
+      title: dto.note?.trim() || 'إعادة إرسال إثبات الدفع',
+      fileUrl: dto.receiptUrl,
+      fileName: dto.fileName,
+      mimeType: dto.mimeType,
+      sizeBytes: dto.sizeBytes,
+      visibility: DocumentVisibility.ADMIN_ONLY,
+    });
+    const updated = await this.prisma.deposit.update({
+      where: { id: depositId },
+      data: {
+        receiptUrl: dto.receiptUrl,
+        paymentMethod: dto.paymentMethod,
+        ...(dto.paidAt ? { paidAt: new Date(dto.paidAt) } : {}),
+        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+        rejectionReason: null,
+        reviewedAt: null,
+        reviewedById: null,
+        proofDocumentId: newDoc.id,
+        verified: false,
+      },
+    });
+
+    const projectId = await this.resolveProjectIdForDeposit(depositId);
+    await this.notifyStaff('payment_proof_resubmitted', {
+      depositId,
+      installmentDueDate: deposit.installment?.dueDate.toISOString(),
+      amount: updated.amount.toString(),
+      ...(projectId ? { projectId } : {}),
+    });
+    return updated;
+  }
+
+  /** Admin approves a customer-submitted payment proof. Mirrors verified=true
+   *  and marks the linked Installment as PAID with paidAt. */
+  async approveProof(id: string, actor: AuthUser, dto: ApproveDepositDto) {
+    const target = await this.prisma.deposit.findUnique({
+      where: { id },
+      include: {
+        contract: { select: { customerId: true } },
+        installment: { select: { id: true, status: true, dueDate: true } },
+      },
+    });
+    if (!target) throw new NotFoundException('Deposit not found');
+    if (
+      target.reviewStatus === DepositReviewStatus.APPROVED &&
+      target.installment?.status === InstallmentStatus.PAID
+    ) {
+      // Idempotent — return the current row.
+      return target;
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.deposit.update({
+        where: { id },
+        data: {
+          reviewStatus: DepositReviewStatus.APPROVED,
+          verified: true,
+          rejectionReason: null,
+          reviewedAt: new Date(),
+          reviewedById: actor.sub,
+        },
+      });
+      if (target.installment) {
+        await tx.installment.update({
+          where: { id: target.installment.id },
+          data: { status: InstallmentStatus.PAID, paidAt: next.paidAt },
+        });
+      }
+      return next;
+    });
+
+    await this.notifications.sendToUser(
+      target.contract?.customerId,
+      'payment_proof_approved',
+      {
+        depositId: id,
+        installmentDueDate: target.installment?.dueDate.toISOString(),
+        amount: updated.amount.toString(),
+        contractId: updated.contractId,
+      },
+    );
+    if (dto.note) {
+      this.logger.log(`Deposit ${id} approved by ${actor.sub} with note: ${dto.note.slice(0, 80)}`);
+    }
+    return updated;
+  }
+
+  /** Admin rejects a customer-submitted payment proof with a required
+   *  reason. Customer notification carries only a short snippet of the
+   *  reason (first 140 chars) — internal notes stay server-side. */
+  async rejectProof(id: string, actor: AuthUser, dto: RejectDepositDto) {
+    const target = await this.prisma.deposit.findUnique({
+      where: { id },
+      include: {
+        contract: { select: { customerId: true } },
+        installment: { select: { id: true, dueDate: true } },
+      },
+    });
+    if (!target) throw new NotFoundException('Deposit not found');
+    if (target.reviewStatus !== DepositReviewStatus.PENDING_REVIEW) {
+      throw new BadRequestException(
+        'يمكن رفض الإثبات فقط من حالة قيد المراجعة',
+      );
+    }
+    const reason = dto.reason.trim();
+    if (!reason) {
+      throw new BadRequestException('سبب الرفض مطلوب');
+    }
+    const updated = await this.prisma.deposit.update({
+      where: { id },
+      data: {
+        reviewStatus: DepositReviewStatus.REJECTED,
+        verified: false,
+        rejectionReason: reason.slice(0, 2000),
+        reviewedAt: new Date(),
+        reviewedById: actor.sub,
+      },
+    });
+
+    const reasonShort = reason.length > 140 ? `${reason.slice(0, 137)}...` : reason;
+    await this.notifications.sendToUser(
+      target.contract?.customerId,
+      'payment_proof_rejected',
+      {
+        depositId: id,
+        installmentDueDate: target.installment?.dueDate.toISOString(),
+        amount: updated.amount.toString(),
+        reasonShort,
+      },
+    );
+    return updated;
+  }
+
+  /** Resolve the projectId for a deposit via its contract → unit → building
+   *  → phase chain. Used to route the staff-side notification. */
+  private async resolveProjectIdForDeposit(depositId: string): Promise<string | null> {
+    const row = await this.prisma.deposit.findUnique({
+      where: { id: depositId },
+      select: {
+        contract: {
+          select: {
+            unit: { select: { building: { select: { phase: { select: { projectId: true } } } } } },
+          },
+        },
+      },
+    });
+    return row?.contract?.unit?.building?.phase?.projectId ?? null;
+  }
+
+  /** Fan-out to ADMIN + SALES_MANAGER. Best-effort: failures during the
+   *  recipient lookup log but never throw, mirroring the notifications
+   *  service contract. */
+  private async notifyStaff(templateCode: string, payload: Record<string, unknown>) {
+    try {
+      const staff = await this.prisma.user.findMany({
+        where: { role: { in: [UserRole.ADMIN, UserRole.SALES_MANAGER] }, active: true },
+        select: { id: true },
+      });
+      for (const u of staff) {
+        await this.notifications.sendToUser(u.id, templateCode, payload);
+      }
+    } catch (err) {
+      this.logger.warn(
+        `notifyStaff(${templateCode}) failed: ${(err as Error).message}`,
+      );
+    }
   }
 }
 
@@ -423,12 +796,16 @@ class ListDepositsQueryDto {
   @IsOptional() @IsDateString() dueDateFrom?: string;
   @IsOptional() @IsDateString() dueDateTo?: string;
   @IsOptional() @IsBoolean() verified?: boolean;
+  @IsOptional() @IsEnum(DepositReviewStatus) reviewStatus?: DepositReviewStatus;
 }
 
 @ApiTags('deposits')
 @Controller()
 class DepositsController {
-  constructor(private readonly svc: DepositsService) {}
+  constructor(
+    private readonly svc: DepositsService,
+    private readonly documents: DocumentsService,
+  ) {}
 
   // Admin-only recording per scope §5
   @Roles(UserRole.ADMIN)
@@ -457,6 +834,34 @@ class DepositsController {
       dueDateFrom: q.dueDateFrom,
       dueDateTo: q.dueDateTo,
       verified: q.verified,
+      reviewStatus: q.reviewStatus,
+    });
+  }
+
+  // ── P11 — Admin payment-proof review queue ─────────────────────────────
+  // Convenience endpoint that defaults to PENDING_REVIEW so the queue page
+  // doesn't need to remember the query param. Falls through to the full
+  // list() method otherwise.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('deposits:read')
+  @Get('deposits/review-queue')
+  reviewQueue(@Query() q: ListDepositsQueryDto) {
+    return this.svc.list({
+      page: q.page ?? 1,
+      pageSize: q.pageSize ?? 20,
+      contractId: q.contractId,
+      customerId: q.customerId,
+      type: q.type,
+      projectId: q.projectId,
+      unitId: q.unitId,
+      q: q.q,
+      ref: q.ref,
+      paidAtFrom: q.paidAtFrom,
+      paidAtTo: q.paidAtTo,
+      dueDateFrom: q.dueDateFrom,
+      dueDateTo: q.dueDateTo,
+      verified: q.verified,
+      reviewStatus: q.reviewStatus ?? DepositReviewStatus.PENDING_REVIEW,
     });
   }
 
@@ -491,6 +896,32 @@ class DepositsController {
     return this.svc.verify(id, dto);
   }
 
+  // ── P11 — Admin approve / reject payment proof ──────────────────────────
+  // Approve mirrors verified=true semantics (idempotent) and marks the
+  // installment PAID. Reject requires a non-empty reason and notifies the
+  // customer with only a short snippet (no internal notes).
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('deposits:verify')
+  @Post('deposits/:id/approve')
+  approveProof(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ApproveDepositDto,
+  ) {
+    return this.svc.approveProof(id, user, dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @PermissionsStrict('deposits:verify')
+  @Post('deposits/:id/reject')
+  rejectProof(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: RejectDepositDto,
+  ) {
+    return this.svc.rejectProof(id, user, dto);
+  }
+
   // Customer read-only view — intentionally NOT permission-gated.
   //
   // SECURITY: the underlying Deposit row carries a permanent `receiptUrl`
@@ -498,6 +929,10 @@ class DepositsController {
   // reach the receipt ONLY through the signed-download endpoint
   // (`GET /v1/me/documents/:id/download`). Admin views go through
   // `@Get('deposits')` / `@Get('deposits/:id')` above, not this method.
+  //
+  // P11 — reviewStatus + rejectionReason + paymentMethod ARE exposed (they
+  // are not URLs and the customer needs them to drive the UI). receiptUrl
+  // remains redacted to null.
   @Roles(UserRole.CUSTOMER)
   @Get('me/deposits')
   async myDeposits(@CurrentUser() user: AuthUser) {
@@ -506,6 +941,39 @@ class DepositsController {
       ...result,
       data: result.data.map((row) => ({ ...row, receiptUrl: null })),
     };
+  }
+
+  // ── P11 — Customer submits / resubmits a payment proof ─────────────────
+  @Roles(UserRole.CUSTOMER)
+  @Post('me/deposits')
+  submitProof(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CustomerSubmitProofDto,
+  ) {
+    return this.svc.submitProofForCustomer(user.sub, dto);
+  }
+
+  @Roles(UserRole.CUSTOMER)
+  @Post('me/deposits/:id/resubmit')
+  resubmitProof(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CustomerResubmitProofDto,
+  ) {
+    return this.svc.resubmitProofForCustomer(user.sub, id, dto);
+  }
+
+  // Customer-scoped presign for payment-proof uploads. Folder is forced to
+  // 'receipts' server-side; the standard MIME + size whitelist applies.
+  // Reuses the existing DocumentsService.presign which already validates.
+  @Roles(UserRole.CUSTOMER)
+  @Post('me/payments/presign')
+  customerPresign(@Body() dto: CustomerPresignDto) {
+    return this.documents.presign({
+      contentType: dto.contentType,
+      sizeBytes: dto.sizeBytes,
+      fileName: dto.fileName,
+    });
   }
 }
 

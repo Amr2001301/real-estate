@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { Wallet } from 'lucide-react';
+import { Wallet, CalendarClock } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { authFetch, AuthError } from '@/lib/api-auth';
@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { DepositCard } from '@/components/account/DepositCard';
+import { SubmitProofTrigger } from '@/components/account/SubmitProofTrigger';
 
 export const metadata = buildMetadata({
   title: 'الدفعات',
@@ -60,6 +61,22 @@ export default async function AccountDepositsPage() {
   return (
     <div className="space-y-6">
       <Header />
+
+      <SubmitProofTrigger />
+
+      {/* P11 — installments shortcut so customers can pick a due installment
+          and submit a proof without leaving the deposits surface. */}
+      <PremiumCard className="p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm text-ink-strong">
+            <CalendarClock className="h-4 w-4 text-gold-500" aria-hidden />
+            <span>اعرض جدول الأقساط وأرسل إثبات الدفع للقسط المستحق.</span>
+          </div>
+          <ButtonLink href={routes.accountInstallments} variant="outline" size="sm">
+            الأقساط
+          </ButtonLink>
+        </div>
+      </PremiumCard>
 
       {deposits.length === 0 ? (
         <EmptyState

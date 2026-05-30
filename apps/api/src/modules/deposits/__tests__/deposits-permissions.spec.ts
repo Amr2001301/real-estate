@@ -63,6 +63,13 @@ function makePrismaMock() {
       count: zero(),
       aggregate: sumZero(),
       groupBy: jest.fn().mockResolvedValue([]),
+      // P11 — verify() now reads the row first to keep reviewStatus in
+      // lockstep. Provide a no-op default so existing perms tests still pass.
+      findUnique: jest.fn().mockImplementation(async ({ where }) => ({
+        id: where.id,
+        receiptUrl: null,
+        reviewStatus: 'NO_PROOF',
+      })),
       update: jest.fn().mockImplementation(async ({ where, data }) => ({
         id: where.id,
         ...data,

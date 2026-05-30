@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, ReceiptText, Building2, Bookmark, CalendarClock } from 'lucide-react';
+import { ArrowLeft, ReceiptText, Building2, Bookmark, CalendarClock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Deposit, DepositType } from '@/lib/types';
@@ -8,6 +8,10 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { VerifyToggle } from '../verify-toggle';
+import {
+  ApproveDepositButton,
+  RejectDepositDialog,
+} from '../../payments/review/_actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +20,20 @@ const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
   DOWN_PAYMENT: 'دفعة أولى',
   INSTALLMENT: 'قسط شهري',
   FINAL_PAYMENT: 'دفعة أخيرة',
+};
+
+const REVIEW_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+  NO_PROOF: { label: 'بدون إثبات', cls: 'bg-slate-100 text-slate-600' },
+  PENDING_REVIEW: { label: 'قيد المراجعة', cls: 'bg-amber-100 text-amber-700' },
+  APPROVED: { label: 'تم التحقق', cls: 'bg-success-100 text-success-700' },
+  REJECTED: { label: 'مرفوض', cls: 'bg-danger-100 text-danger-700' },
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: 'نقدًا',
+  BANK_TRANSFER: 'حوالة بنكية',
+  CHEQUE: 'شيك',
+  OTHER: 'أخرى',
 };
 
 export default async function DepositDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -97,7 +115,56 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                 </span>
               )}
             </div>
-            {isAdmin && (
+            {/* P11 — review status surface. NO_PROOF rows still get the
+                legacy VerifyToggle so admins can manually confirm cash-on-
+                desk deposits without proof. PENDING_REVIEW rows show
+                approve + reject-with-reason. APPROVED/REJECTED rows show
+                the recorded decision. */}
+            {d.reviewStatus && d.reviewStatus !== 'NO_PROOF' && (
+              <div className="pt-2 border-t border-hairline space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-medium text-slate-400">حالة المراجعة:</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${REVIEW_STATUS_LABELS[d.reviewStatus]?.cls ?? ''}`}
+                  >
+                    {REVIEW_STATUS_LABELS[d.reviewStatus]?.label ?? d.reviewStatus}
+                  </span>
+                  {d.paymentMethod && (
+                    <span className="text-xs text-slate-500">
+                      طريقة الدفع: {PAYMENT_METHOD_LABELS[d.paymentMethod] ?? d.paymentMethod}
+                    </span>
+                  )}
+                  {d.reviewedAt && d.reviewedBy?.fullName && (
+                    <span className="text-xs text-slate-500">
+                      راجعها: {d.reviewedBy.fullName} — {formatDateTime(d.reviewedAt)}
+                    </span>
+                  )}
+                </div>
+                {d.reviewStatus === 'REJECTED' && d.rejectionReason && (
+                  <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 p-2.5 text-xs text-danger-700">
+                    <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold">سبب الرفض</p>
+                      <p className="mt-0.5">{d.rejectionReason}</p>
+                    </div>
+                  </div>
+                )}
+                {d.reviewStatus === 'APPROVED' && (
+                  <p className="flex items-center gap-1.5 text-xs text-success-700">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    تم اعتماد الإثبات وتسجيل القسط كمدفوع.
+                  </p>
+                )}
+                {isAdmin && d.reviewStatus === 'PENDING_REVIEW' && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <ApproveDepositButton depositId={d.id} contractId={d.contractId ?? null} />
+                    <RejectDepositDialog depositId={d.id} contractId={d.contractId ?? null} />
+                  </div>
+                )}
+              </div>
+            )}
+            {/* Legacy toggle stays for NO_PROOF rows (cash-on-desk admin flow). */}
+            {isAdmin && (!d.reviewStatus || d.reviewStatus === 'NO_PROOF') && (
               <div className="pt-2 border-t border-hairline flex items-center gap-2">
                 <span className="text-[11px] font-medium text-slate-400">حالة التحقق:</span>
                 <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
