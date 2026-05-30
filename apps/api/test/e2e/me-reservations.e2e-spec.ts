@@ -24,6 +24,9 @@
  */
 
 import request from 'supertest';
+import * as argon2 from 'argon2';
+import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { LeadStage, ReservationStatus, UnitStatus, UserRole } from '@prisma/client';
 import { type TestApp, createTestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
@@ -329,6 +332,53 @@ describe('P7 — /me/reservations (e2e)', () => {
     return String(userCount * 100 + p8Seq).padStart(6, '0');
   }
 
+  /**
+   * Direct-Prisma scaffolding for a CLIENT row that already has a passwordHash
+   * (i.e. would be the product of a successful customer/register call).
+   * Bypasses the @Throttle(5/60s) on POST /v1/auth/customer/register so a
+   * single spec can stage many "logged-in customer" fixtures without 429s.
+   * Use HTTP register only when verifying the register flow itself.
+   */
+  async function createRealUser(opts: {
+    fullName: string;
+    email: string;
+    phone: string | null;
+    password: string;
+  }): Promise<{ id: string }> {
+    const passwordHash = await argon2.hash(opts.password);
+    return testApp.prisma.user.create({
+      data: {
+        role: UserRole.CLIENT,
+        fullName: opts.fullName,
+        email: opts.email.toLowerCase(),
+        phone: opts.phone,
+        passwordHash,
+        locale: 'ar',
+      },
+      select: { id: true },
+    });
+  }
+
+  /**
+   * Mint an access token for an existing user via the live JwtService — same
+   * algorithm, same secret, same expiry as POST /v1/auth/customer/login, but
+   * without going through the @Throttle(5/60s) gate. CRITICAL: this DOES NOT
+   * invoke the login-time synthetic claim. Tests that exercise the claim
+   * MUST still call `loginAs()` (HTTP) — call this only for setup hops that
+   * have nothing to do with the claim path.
+   */
+  async function mintAccessToken(userId: string, role: UserRole): Promise<string> {
+    const jwt = testApp.app.get(JwtService);
+    const config = testApp.app.get(ConfigService);
+    return jwt.signAsync(
+      { sub: userId, role },
+      {
+        secret: config.getOrThrow<string>('JWT_ACCESS_SECRET'),
+        expiresIn: config.get<string>('JWT_ACCESS_EXPIRES_IN') ?? '15m',
+      },
+    );
+  }
+
   describe('P8 — Synthetic User claim at registration', () => {
     it('P8.1: registering with phone/email matching a synthetic CLIENT claims that row (existing Lead/Reservation surface)', async () => {
       const suffix = await uniqueSuffix();
@@ -402,8 +452,10 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(claimed.email).toBe(email);
       expect(claimed.phone).toBe(phone);
 
-      // 3) Log in via the same creds; /me/reservations surfaces the pre-existing reservation.
-      const claimedToken = await loginAs(testApp.app, email, 'StrongPass1!', 'customer');
+      // 3) Mint a token for the claimed row; /me/reservations surfaces the
+      //    pre-existing reservation. (Direct mint — register has already
+      //    fired the claim; we're verifying visibility, not the claim path.)
+      const claimedToken = await mintAccessToken(claimed.id, UserRole.CLIENT);
       const meRes = await http()
         .get('/v1/me/reservations')
         .set('Authorization', bearer(claimedToken));
@@ -537,20 +589,392 @@ describe('P7 — /me/reservations (e2e)', () => {
     });
   });
 
+  // ── P9 — normalized phone matching + login-time synthetic claim ─────────
+  // Background: P8 covered the case where registration credentials matched a
+  // synthetic CLIENT directly. The local QA case revealed two further gaps:
+  //  (a) phone-format drift — the same number stored as `+201008239075` on
+  //      one row and as plain `201008239075` on another would miss the exact
+  //      equality match P8 relied on.
+  //  (b) two-row identity — the registered customer's User row had email
+  //      only, the synthetic peer had phone only; no contact field
+  //      overlapped, so neither the registration claim nor the query-time
+  //      filter could bridge them automatically.
+  // P9 normalizes phone for matching, treats every User row sharing a
+  // contact field as an "identity peer" for ownership, and runs a best-effort
+  // login-time merge so the customer's second visit is fully reconciled.
+
+  describe('P9 — normalized phone matching in ownership filter', () => {
+    it('P9.1: a reservation whose lead.phone format differs from user.phone (no `+`) still surfaces after normalization', async () => {
+      const suffix = await uniqueSuffix();
+      // Same number, two stored formats: registered user keeps the `+`,
+      // the legacy lead row stored a bare digit string.
+      const userPhone = `+966500${suffix}`;
+      const leadPhoneNoPlus = `966500${suffix}`;
+      const email = `p9-fmt-${suffix}@example.com`;
+
+      const real = await createRealUser({
+        fullName: 'P9 Format Drift',
+        phone: userPhone,
+        email,
+        password: 'StrongPass1!',
+      });
+
+      // Legacy lead with the no-`+` form. clientId points at an unrelated
+      // synthetic row that the user never owned — proving the bridge fires
+      // purely on lead.phone normalization, not on shared user id.
+      const orphan = await testApp.prisma.user.create({
+        data: {
+          role: UserRole.CLIENT,
+          fullName: 'P9 Orphan',
+          phone: `+966500other${suffix.slice(-2)}`.replace(/\D/g, ''), // unique, unrelated
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.prisma.lead.create({
+        data: {
+          clientId: orphan.id,
+          fullName: 'P9 Format Drift',
+          phone: leadPhoneNoPlus,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.prisma.reservation.create({
+        data: {
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.APPROVED,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9F-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.prisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      const tok = await mintAccessToken(real.id, UserRole.CLIENT);
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(meRes.status).toBe(200);
+      expect(collectIds(meRes.body)).toContain(reservation.id);
+
+      // CUSTOMER_2 (unrelated phone/email) MUST still be excluded.
+      const c2 = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(customer2Token));
+      expect(collectIds(c2.body)).not.toContain(reservation.id);
+
+      // P9 — the real user's role stayed CLIENT (no auto-promotion).
+      const realAfter = await testApp.prisma.user.findUniqueOrThrow({
+        where: { id: real.id },
+        select: { role: true },
+      });
+      expect(realAfter.role).toBe(UserRole.CLIENT);
+    });
+
+    it('P9.2: a reservation whose lead.clientId is a synthetic peer matched only by user.email surfaces too', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const email = `p9-peer-${suffix}@example.com`;
+
+      // Synthetic row with the email, no phone — created by a prior CRM
+      // import that only had the customer's email.
+      const synthetic = await testApp.prisma.user.create({
+        data: {
+          role: UserRole.CLIENT,
+          fullName: 'P9 Identity Peer',
+          email,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.prisma.lead.create({
+        data: {
+          clientId: synthetic.id, // ← peer-by-email
+          fullName: 'P9 Identity Peer',
+          phone: '+999999999999', // unrelated; ownership flows through synthetic.email
+          email,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.prisma.reservation.create({
+        data: {
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9P-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.prisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      // Now register the real customer with a fresh phone but the SAME email.
+      // The registration's in-place claim will fire (matches synthetic by
+      // email) and the resulting row IS the synthetic with a passwordHash.
+      const reg = await http()
+        .post('/v1/auth/customer/register')
+        .send({ fullName: 'P9 Real Identity', phone, email, password: 'StrongPass1!', acceptTerms: true });
+      expect(reg.status).toBe(201);
+
+      // After register's in-place claim, the User row for `email` IS the
+      // former synthetic with a passwordHash. Mint a token directly so we
+      // can verify visibility without spending the login throttle budget.
+      const claimed = await testApp.prisma.user.findUniqueOrThrow({
+        where: { email },
+        select: { id: true },
+      });
+      const tok = await mintAccessToken(claimed.id, UserRole.CLIENT);
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(meRes.status).toBe(200);
+      expect(collectIds(meRes.body)).toContain(reservation.id);
+    });
+  });
+
+  describe('P9 — login-time synthetic claim merges FK references', () => {
+    it('P9.3: logging in opportunistically merges synthetic CLIENT peers matching by normalized phone (Lead/Reservation repoint, synthetic deleted)', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const email = `p9-claim-${suffix}@example.com`;
+
+      // 1) Real customer with phone + email (scaffolded directly to avoid
+      //    burning the customer/register throttle window).
+      const real = await createRealUser({
+        fullName: 'P9 Real Claimer',
+        phone,
+        email,
+        password: 'StrongPass1!',
+      });
+
+      // 2) A *separate* synthetic CLIENT exists with the SAME normalized
+      //    phone but stored in a different format. The registration above
+      //    couldn't see it (different format → no unique-column match).
+      const syntheticPhoneVariant = phone.replace('+', ''); // bare digits
+      const synthetic = await testApp.prisma.user.create({
+        data: {
+          role: UserRole.CLIENT,
+          fullName: 'P9 Drifted Synthetic',
+          phone: syntheticPhoneVariant,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.prisma.lead.create({
+        data: {
+          clientId: synthetic.id,
+          fullName: 'P9 Drifted Synthetic',
+          phone: syntheticPhoneVariant,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.prisma.reservation.create({
+        data: {
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.APPROVED,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9C-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.prisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      // 3) Log in. P9's login-time claim must:
+      //    - find the synthetic (matches by normalized phone)
+      //    - repoint Lead.clientId from synthetic.id → real.id
+      //    - delete the synthetic row
+      const tok = await loginAs(testApp.app, email, 'StrongPass1!', 'customer');
+      expect(tok).toBeTruthy();
+
+      // Verify the synthetic was deleted...
+      const syntheticAfter = await testApp.prisma.user.findUnique({
+        where: { id: synthetic.id },
+        select: { id: true },
+      });
+      expect(syntheticAfter).toBeNull();
+      // ...and the Lead now points at the real user.
+      const leadAfter = await testApp.prisma.lead.findUniqueOrThrow({
+        where: { id: lead.id },
+        select: { clientId: true },
+      });
+      expect(leadAfter.clientId).toBe(real.id);
+      // /me/reservations still surfaces the row (via direct lead.clientId now).
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(collectIds(meRes.body)).toContain(reservation.id);
+    });
+
+    it('P9.4: PATCH /v1/users/me adding a phone triggers the same merge (covers email-only registered + phone-only synthetic)', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const email = `p9-patch-${suffix}@example.com`;
+
+      // 1) Real customer with email only — mirrors the user's local QA case
+      //    (the registered E2E Client whose User.phone is NULL).
+      const real = await createRealUser({
+        fullName: 'P9 Patcher',
+        phone: null,
+        email,
+        password: 'StrongPass1!',
+      });
+
+      // 2) A synthetic with the target phone exists, anchoring a Lead +
+      //    Reservation that the registered user does NOT yet own (no
+      //    contact overlap).
+      const synthetic = await testApp.prisma.user.create({
+        data: {
+          role: UserRole.CLIENT,
+          fullName: 'P9 Patcher',
+          phone,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.prisma.lead.create({
+        data: {
+          clientId: synthetic.id,
+          fullName: 'P9 Patcher',
+          phone,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.prisma.reservation.create({
+        data: {
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P9PT-${suffix}`,
+          bookingAmount: 1,
+        },
+        select: { id: true },
+      });
+      await testApp.prisma.unit.update({
+        where: { id: unit.id },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
+      });
+
+      // 3) Mint a token (direct — we're not testing the login path here)
+      //    and confirm zero rows.
+      const tok = await mintAccessToken(real.id, UserRole.CLIENT);
+      const before = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(collectIds(before.body)).not.toContain(reservation.id);
+
+      // 4) PATCH /v1/users/me with the phone → claim fires, synthetic merged.
+      const patch = await http()
+        .patch('/v1/users/me')
+        .set('Authorization', bearer(tok))
+        .send({ phone });
+      expect(patch.status).toBe(200);
+
+      const syntheticAfter = await testApp.prisma.user.findUnique({
+        where: { id: synthetic.id },
+        select: { id: true },
+      });
+      expect(syntheticAfter).toBeNull();
+      const leadAfter = await testApp.prisma.lead.findUniqueOrThrow({
+        where: { id: lead.id },
+        select: { clientId: true },
+      });
+      expect(leadAfter.clientId).toBe(real.id);
+
+      // 5) The reservation is now visible.
+      const after = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(tok));
+      expect(collectIds(after.body)).toContain(reservation.id);
+    });
+
+    it('P9.5: claim refuses to merge a row with passwordHash set (real account), even on contact match', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500${suffix}`;
+      const emailA = `p9-realA-${suffix}@example.com`;
+      const emailB = `p9-realB-${suffix}@example.com`;
+
+      // Two real accounts (both passwordHash-set, distinct ids). Even if a
+      // phantom matcher fired, B's passwordHash flips it out of the claim
+      // eligibility filter.
+      const realA = await createRealUser({
+        fullName: 'P9 Real A',
+        phone,
+        email: emailA,
+        password: 'StrongPass1!',
+      });
+      const phoneB = `+966500${suffix}9`;
+      const realB = await createRealUser({
+        fullName: 'P9 Real B',
+        phone: phoneB,
+        email: emailB,
+        password: 'StrongPass1!',
+      });
+      const realBRow = await testApp.prisma.user.findUniqueOrThrow({
+        where: { id: realB.id },
+        select: { passwordHash: true },
+      });
+      expect(realBRow.passwordHash).toBeTruthy();
+
+      // Log in as A. Even if some phantom matching condition fires, B's
+      // passwordHash is set → claim skips it.
+      const tokA = await loginAs(testApp.app, emailA, 'StrongPass1!', 'customer');
+      expect(tokA).toBeTruthy();
+
+      // B still exists with passwordHash intact.
+      const bAfter = await testApp.prisma.user.findUniqueOrThrow({
+        where: { id: realB.id },
+        select: { passwordHash: true, email: true },
+      });
+      expect(bAfter.passwordHash).toBeTruthy();
+      // `createRealUser` lowercases on insert, matching registerCustomer.
+      expect(bAfter.email).toBe(emailB.toLowerCase());
+      expect(realA.id).not.toBe(realB.id);
+    });
+  });
+
   describe('P8 — phone/email fallback for legacy lead linkage', () => {
     it('P8.3: a logged-in user sees a reservation linked via lead.phone == user.phone even when lead.clientId points elsewhere', async () => {
       const suffix = await uniqueSuffix();
       const phone = `+966500777${suffix}`;
       const email = `p8-fallback-${suffix}@example.com`;
 
-      // 1) Create the REAL customer first (they registered before any Lead existed).
-      const registerRes = await http()
-        .post('/v1/auth/customer/register')
-        .send({ fullName: 'P8 Real Customer 2', phone, email, password: 'StrongPass1!', acceptTerms: true });
-      expect(registerRes.status).toBe(201);
-      const real = await testApp.prisma.user.findUniqueOrThrow({
-        where: { email },
-        select: { id: true },
+      // 1) Real customer with phone + email (scaffolded directly).
+      const real = await createRealUser({
+        fullName: 'P8 Real Customer 2',
+        phone,
+        email,
+        password: 'StrongPass1!',
       });
 
       // 2) Admin later imports a Lead with the SAME phone, but attaches it to
@@ -600,9 +1024,10 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
       });
 
-      // 3) Log in as the real customer. /me/reservations must surface the
-      //    reservation via the phone/email fallback path.
-      const realToken = await loginAs(testApp.app, email, 'StrongPass1!', 'customer');
+      // 3) Token for the real customer. /me/reservations must surface the
+      //    reservation via the phone/email fallback path. Direct mint so the
+      //    test exercises the QUERY-time filter, not the login claim.
+      const realToken = await mintAccessToken(real.id, UserRole.CLIENT);
       const meRes = await http()
         .get('/v1/me/reservations')
         .set('Authorization', bearer(realToken));

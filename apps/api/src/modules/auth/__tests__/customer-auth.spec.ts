@@ -26,6 +26,10 @@ function makeService() {
   const prisma = {
     user: {
       findUnique: jest.fn(),
+      // P9 — claimSyntheticPeers scans a small set of candidates by phone
+      // suffix. The unit-test mock returns an empty array so the claim is
+      // a no-op; integration coverage lives in the e2e suite.
+      findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn().mockResolvedValue(created),
       update: jest.fn().mockResolvedValue(created),
     },
@@ -48,9 +52,13 @@ describe('AuthService · public customer auth', () => {
   // ── Register ──────────────────────────────────────────────────────────
   it('registers a customer as CLIENT and returns tokens', async () => {
     const { service, prisma, created } = makeService();
-    // dup checks (email, phone) → none; issueTokens final lookup → created
+    // Sequence: byEmail (null) → byPhone (null) → identity-claim target
+    // lookup (created) → identity-claim email peer (null) → issueTokens
+    // final user lookup (created).
     prisma.user.findUnique
       .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(created)
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(created);
 
@@ -89,7 +97,13 @@ describe('AuthService · public customer auth', () => {
   // ── Login ─────────────────────────────────────────────────────────────
   it('logs in a CLIENT customer', async () => {
     const { service, prisma, created } = makeService();
-    prisma.user.findUnique.mockResolvedValueOnce(created).mockResolvedValueOnce(created);
+    // Sequence: loginCustomer email lookup → identity-claim target lookup →
+    // identity-claim email peer lookup → issueTokens final user lookup.
+    prisma.user.findUnique
+      .mockResolvedValueOnce(created)
+      .mockResolvedValueOnce(created)
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(created);
     const res = await service.loginCustomer('Sara@Example.com', 'StrongPass1');
     expect(res.tokens.accessToken).toBe('access-token');
     expect(res.user?.role).toBe(UserRole.CLIENT);

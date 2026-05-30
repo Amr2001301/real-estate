@@ -11,6 +11,7 @@ import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { randomBytes, randomInt, createHash } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { SmsService } from './sms.service';
 import type { UserRole } from '@prisma/client';
 
@@ -112,6 +113,10 @@ export class AuthService {
         where: { id: matchedRow.id },
         data: { fullName, email, phone, passwordHash, locale: 'ar' },
       });
+      // P9 — sweep any OTHER synthetic peers (e.g. one matched by phone
+      // here, another that holds an email-only stub) that the in-place
+      // claim above didn't touch.
+      await this.tryClaimSyntheticPeers(claimed.id);
       return this.issueTokens(claimed.id, claimed.role);
     }
 
@@ -126,6 +131,7 @@ export class AuthService {
         locale: 'ar',
       },
     });
+    await this.tryClaimSyntheticPeers(user.id);
     return this.issueTokens(user.id, user.role);
   }
 
@@ -146,6 +152,11 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    // P9 — opportunistic synthetic-peer claim. If a CRM-only stub exists for
+    // this customer (a Lead-side row created by findOrCreateClient before
+    // they registered) and shares phone / email, fold its FK references
+    // into the real account so /me/reservations etc. resolve correctly.
+    await this.tryClaimSyntheticPeers(user.id);
     return this.issueTokens(user.id, user.role);
   }
 
@@ -198,7 +209,35 @@ export class AuthService {
         data: { lastLoginAt: new Date() },
       });
     }
+    // P9 — same opportunistic claim as the password path. Useful when an
+    // OTP customer has an *email* somewhere in the CRM that doesn't match
+    // their phone-anchored row.
+    await this.tryClaimSyntheticPeers(user.id);
     return this.issueTokens(user.id, user.role);
+  }
+
+  /**
+   * Best-effort merge of synthetic CLIENT peers into the just-resolved user.
+   * Swallows errors — a failed merge must NEVER block the login it followed.
+   * Surfaces results via Logger so operators can see when the safety net
+   * fired without spamming the login response.
+   */
+  private async tryClaimSyntheticPeers(userId: string): Promise<void> {
+    try {
+      const result = await claimSyntheticPeers(this.prisma, userId);
+      if (result.claimedCount > 0) {
+        this.logger.log(
+          `[identity-claim] merged ${result.claimedCount} synthetic peer(s) into ${userId}: ${result.claimedIds.join(', ')}`,
+        );
+      }
+    } catch (err) {
+      // Never let a CRM-housekeeping failure block a customer from logging
+      // in. The /me/reservations safety-net OR clause still resolves the
+      // visibility question for the request that follows.
+      this.logger.warn(
+        `[identity-claim] post-login merge errored for ${userId}: ${(err as Error).message}`,
+      );
+    }
   }
 
   // ------------- Tokens -------------

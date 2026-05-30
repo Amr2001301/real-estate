@@ -43,6 +43,11 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import {
+  digitsOnly,
+  normalizeEmail,
+  normalizePhone,
+} from '../../common/utils/identity-match';
 import { resolveSalesScope, assertSalesRecordInScope } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
@@ -765,20 +770,30 @@ export class ReservationsService {
 
   /**
    * Build the OR clause that resolves "reservations belonging to this user".
-   * Three match paths (P8 — added phone/email fallback as a safety net for
-   * legacy data where a synthetic CLIENT row already existed on a Lead before
-   * the customer registered with the same phone/email but received a fresh
-   * User row). The synthetic-claim added at registration time
-   * (auth.service.ts registerCustomer) prevents this for NEW registrations;
-   * the fallbacks here cover historical data.
    *
-   *  - Direct:  Reservation.clientId = userId
-   *  - Lead:    Reservation.lead.clientId = userId
-   *  - Phone:   Reservation.lead.phone   = user.phone   (when user has a phone)
-   *  - Email:   Reservation.lead.email   = user.email   (when user has an email)
+   * P9 — extended to handle two historical data shapes that P8 missed:
+   *  - phone format drift between User.phone and Lead.phone (e.g. the same
+   *    number stored with vs. without a leading `+` or with vs. without the
+   *    country code) — we now match on digits-only normalized form.
+   *  - cases where the lead points at a *synthetic* peer User row and the
+   *    fallback contact field is on that peer rather than on the lead itself.
+   *    We resolve "identity peers" (any User whose normalized phone/email
+   *    matches the logged-in user's) and OR-match on every reservation
+   *    pointing at any peer, directly OR through a lead.
    *
-   * `User.phone` and `User.email` are unique columns, so the phone/email
-   * matches are safe — they cannot surface another user's reservations.
+   * Match paths (all anchored by an exact-after-normalize comparison —
+   * never fuzzy, never partial suffix):
+   *
+   *  - Direct:           Reservation.clientId = userId
+   *  - Lead:             Reservation.lead.clientId = userId
+   *  - Identity peers:   Reservation.clientId ∈ peerIds
+   *                  OR  Reservation.lead.clientId ∈ peerIds
+   *  - Lead contact:     Reservation.lead.phone (normalized) = user.phone (normalized)
+   *                  OR  Reservation.lead.email (lowercased)  = user.email (lowercased)
+   *
+   * `User.phone` and `User.email` are unique columns, so peer-by-contact
+   * lookup is bounded to at most ONE row per contact field — the match can
+   * never accidentally surface another user's reservations.
    */
   private async buildUserOwnershipFilter(
     userId: string,
@@ -787,15 +802,59 @@ export class ReservationsService {
       where: { id: userId },
       select: { phone: true, email: true },
     });
-    const or: Prisma.ReservationWhereInput[] = [
-      { clientId: userId },
-      { lead: { is: { clientId: userId } } },
-    ];
-    if (contact?.phone) {
-      or.push({ lead: { is: { phone: contact.phone } } });
+    const phoneDigits = normalizePhone(contact?.phone ?? null);
+    const emailKey = normalizeEmail(contact?.email ?? null);
+
+    // Resolve identity peers — every User row whose normalized phone or
+    // canonical email matches the logged-in user's. Always includes the
+    // logged-in user themselves. Unique columns bound this to ≤2 extra rows.
+    const peerIds = new Set<string>([userId]);
+    if (phoneDigits) {
+      // Prisma can't normalize during the where clause, so we scan the
+      // small set of rows that share a digit suffix and verify in JS. The
+      // suffix is the LAST 8 digits — enough to forgive a dropped country
+      // code while bounding the scan via the `phone` index.
+      const suffix = phoneDigits.slice(-8);
+      const candidates = await this.prisma.user.findMany({
+        where: { phone: { contains: suffix } },
+        select: { id: true, phone: true },
+      });
+      for (const u of candidates) {
+        if (normalizePhone(u.phone) === phoneDigits) peerIds.add(u.id);
+      }
     }
-    if (contact?.email) {
-      or.push({ lead: { is: { email: contact.email } } });
+    if (emailKey) {
+      const byEmail = await this.prisma.user.findUnique({
+        where: { email: emailKey },
+        select: { id: true },
+      });
+      if (byEmail) peerIds.add(byEmail.id);
+    }
+    const peerArray = Array.from(peerIds);
+
+    const or: Prisma.ReservationWhereInput[] = [
+      { clientId: { in: peerArray } },
+      { lead: { is: { clientId: { in: peerArray } } } },
+    ];
+    // Lead carries contact fields directly too (e.g. an unauthenticated
+    // public visit-request stores phone on the Lead before any User row is
+    // created). Match those independently.
+    if (emailKey) {
+      or.push({ lead: { is: { email: { equals: emailKey, mode: 'insensitive' } } } });
+    }
+    if (phoneDigits) {
+      // Same digit-suffix narrowing as above; verification happens at the
+      // User layer (since the peers query already pulled the right rows).
+      // For leads we keep a literal match on the leading-`+` form AND the
+      // digit-only form to cover the common storage variants without raw
+      // SQL.
+      const variants = new Set<string>();
+      variants.add(phoneDigits);
+      variants.add(`+${phoneDigits}`);
+      // The user's actual stored phone (if any) — covers casing/whitespace
+      // we may have stripped.
+      if (contact?.phone) variants.add(contact.phone);
+      or.push({ lead: { is: { phone: { in: Array.from(variants) } } } });
     }
     return or;
   }

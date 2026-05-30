@@ -1,12 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateUserDto) {
@@ -104,6 +107,35 @@ export class UsersService {
 
   async update(id: string, dto: UpdateUserDto) {
     await this.assertExists(id);
+    // P9 — when a user (typically self via PATCH /v1/users/me) adds a phone
+    // that overlaps with a synthetic peer (a CRM-only CLIENT row carrying
+    // their pre-registration Leads / Reservations), sweep the peer into the
+    // registered account BEFORE the update writes the new value — otherwise
+    // the unique-phone constraint on User.phone would block the write.
+    // Idempotent: re-runs after a successful merge are no-ops. Safe inside
+    // an admin-driven edit too — only CLIENT rows with passwordHash=null
+    // are eligible.
+    if (dto.phone !== undefined && dto.phone !== null) {
+      try {
+        const result = await claimSyntheticPeers(this.prisma, id, {
+          phone: dto.phone,
+        });
+        if (result.claimedCount > 0) {
+          this.logger.log(
+            `[identity-claim] profile-update pre-claim merged ${result.claimedCount} synthetic peer(s) into ${id}: ${result.claimedIds.join(', ')}`,
+          );
+        }
+      } catch (err) {
+        // Never block the customer's profile edit on a CRM-housekeeping
+        // failure; the next login will try again. If the synthetic survives
+        // and still holds the same phone, the user.update below will surface
+        // the unique-constraint violation — the caller (controller) maps it
+        // to a user-friendly error rather than a 500.
+        this.logger.warn(
+          `[identity-claim] profile-update pre-claim errored for ${id}: ${(err as Error).message}`,
+        );
+      }
+    }
     return this.prisma.user.update({
       where: { id },
       data: { ...dto },
