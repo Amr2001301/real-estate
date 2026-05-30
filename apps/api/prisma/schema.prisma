@@ -646,6 +646,16 @@ enum ReservationBookingPaymentStatus {
   WAIVED
 }
 
+/// P8 — how the admin chose the booking amount at create time. FIXED is the
+/// legacy default (admin enters an absolute amount, or the linked plan's
+/// reservationAmount is copied). PERCENTAGE is new: admin enters a percent
+/// and the server computes `unit.price × percent / 100` at create time.
+/// Stored for audit; bookingAmount remains the source of truth at runtime.
+enum ReservationBookingAmountMode {
+  FIXED
+  PERCENTAGE
+}
+
 enum InstallmentStatus {
   PENDING
   PAID
@@ -686,6 +696,13 @@ model Reservation {
   bookingPaymentStatus      ReservationBookingPaymentStatus @default(UNPAID)
   bookingPaidAt             DateTime?
   bookingNotes              String?
+  // P8 — booking amount mode + percentage audit trail. FIXED is the historical
+  // default (also covers plan-driven creates). PERCENTAGE records the percent
+  // the admin entered AND the unit price snapshot at create time so the math
+  // can be re-derived later if the unit's price changes.
+  bookingAmountMode           ReservationBookingAmountMode @default(FIXED)
+  bookingAmountPercent        Decimal?                     @db.Decimal(5, 2)
+  bookingAmountUnitPriceSnapshot Decimal?                  @db.Decimal(14, 2)
   installmentPlanTemplateId String?                         @db.Uuid
   installmentPlanTemplate   InstallmentPlanTemplate?        @relation("ReservationPlanTemplate", fields: [installmentPlanTemplateId], references: [id])
 

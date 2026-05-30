@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertCircle, ArrowLeftRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/form/field';
+import { DocumentUploader, type UploadResult } from '@/components/documents/document-uploader';
 import { convertReservationAction } from '../../actions';
 import type { Reservation } from '@/lib/types';
 
@@ -32,6 +33,16 @@ export function ConvertReservationForm({ reservation }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // P8 — replace the raw "paste a URL" input with a signed upload. The picked
+  // file is sent through the existing /documents/presign flow, which validates
+  // MIME (PDF / JPEG / PNG / WebP / Word / Excel / CSV) and size (≤25 MiB)
+  // server-side before minting an R2 PUT URL. The resulting public R2 URL is
+  // attached to the contract via the existing pdfUrl pathway; the contracts
+  // service then registers a CONTRACT-category document. The /me/contracts
+  // endpoint redacts pdfUrl to null for customers — they only ever reach the
+  // file through the signed-download endpoint (≤5 min URLs, just-in-time
+  // ownership check).
+  const [uploaded, setUploaded] = useState<UploadResult | null>(null);
 
   const bookingAmount = Number(reservation.bookingAmount);
   const paymentBlocking =
@@ -95,7 +106,7 @@ export function ConvertReservationForm({ reservation }: Props) {
       {paymentBlocking && !open && (
         <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-xs">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>يجب تأكيد سداد مبلغ الحجز أو إعفاؤه قبل التحويل إلى عقد.</p>
+          <p>يجب تأكيد استلام مبلغ الحجز أو إعفاؤه قبل التحويل إلى عقد.</p>
         </div>
       )}
 
@@ -191,15 +202,22 @@ export function ConvertReservationForm({ reservation }: Props) {
               />
             </Field>
 
-            <Field label="رابط PDF (اختياري)" name="pdfUrl">
-              <input
-                name="pdfUrl"
-                type="url"
-                dir="ltr"
-                placeholder="https://..."
-                className="w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            {/* P8 — Upload the contract document (PDF or image). On success
+                we capture the R2 public URL in `uploaded.fileUrl`; the hidden
+                `pdfUrl` field below sends it as the existing convert payload
+                so the contracts service can register the CONTRACT document.
+                Customers never receive this raw URL — see /me/contracts. */}
+            <Field
+              label="ملف العقد (PDF أو صورة)"
+              name="contractDocument"
+              hint="ارفع نسخة العقد المحوّل. يتم التحقق من النوع والحجم على الخادم قبل الرفع."
+            >
+              <DocumentUploader
+                onUploaded={setUploaded}
+                onCleared={() => setUploaded(null)}
               />
             </Field>
+            <input type="hidden" name="pdfUrl" value={uploaded?.fileUrl ?? ''} />
 
             {error && (
               <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-xs">

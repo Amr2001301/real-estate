@@ -36,6 +36,7 @@ import {
   PlanTemplateStatus,
   Prisma,
   ReservationActivityType,
+  ReservationBookingAmountMode,
   ReservationBookingPaymentStatus,
   ReservationStatus,
   UnitStatus,
@@ -64,13 +65,22 @@ class CreateReservationDto {
   @IsOptional() @IsUUID() salesId?: string;
   @IsOptional() @IsString() notes?: string;
   @IsOptional() @IsInt() @Min(1) @Max(720) expiresInHours?: number;
-  // Plan linkage: when provided, server copies plan.reservationAmount → bookingAmount.
-  // bookingAmount / bookingPaymentStatus / bookingPaidAt are intentionally NOT accepted
-  // on create — they are derived from the plan and the confirm-payment flow.
+  // Plan linkage: when provided AND no manual bookingAmount/Percent is sent,
+  // the server copies plan.reservationAmount → bookingAmount (mode=FIXED).
+  // bookingPaymentStatus / bookingPaidAt are intentionally NOT accepted on
+  // create — they are derived by the confirm-payment flow.
   @IsOptional() @IsUUID() installmentPlanTemplateId?: string;
   // Required when the linked template has duration options; ignored otherwise.
   @IsOptional() @IsUUID() installmentPlanDurationOptionId?: string;
   @IsOptional() @IsString() bookingNotes?: string;
+  // P8 — admin chooses booking amount mode.
+  // FIXED      → bookingAmount required, > 0 (or, when omitted, copy from plan).
+  // PERCENTAGE → bookingAmountPercent required, in (0, 100]; unit must have a
+  //              price > 0. Server computes bookingAmount = unit.price * pct/100.
+  @IsOptional() @IsEnum(ReservationBookingAmountMode)
+  bookingAmountMode?: ReservationBookingAmountMode;
+  @IsOptional() @IsNumber() @Min(0) bookingAmount?: number;
+  @IsOptional() @IsNumber() @Min(0) @Max(100) bookingAmountPercent?: number;
 }
 
 /**
@@ -376,6 +386,13 @@ export class ReservationsService {
     //    no duration snapshot).
     let resolvedPlanId: string | null = null;
     let resolvedBookingAmount: Prisma.Decimal = new Prisma.Decimal(0);
+    // P8 — booking amount mode + audit. Default to FIXED for back-compat
+    // with the plan-driven path. PERCENTAGE only fires when admin explicitly
+    // requests it via the DTO.
+    let resolvedBookingAmountMode: ReservationBookingAmountMode =
+      dto.bookingAmountMode ?? ReservationBookingAmountMode.FIXED;
+    let resolvedBookingAmountPercent: Prisma.Decimal | null = null;
+    let resolvedBookingAmountUnitPriceSnapshot: Prisma.Decimal | null = null;
     let selectedDurationOptionId: string | null = null;
     let selectedDurationMonths: number | null = null;
     let selectedIncreasePercentage: Prisma.Decimal | null = null;
@@ -444,6 +461,41 @@ export class ReservationsService {
       );
     }
 
+    // P8 — Admin override of bookingAmount. If the admin chose PERCENTAGE
+    // mode, compute from unit.price; if FIXED with an explicit amount, use
+    // that. Otherwise fall back to plan-derived value (already in
+    // resolvedBookingAmount).
+    if (dto.bookingAmountMode === ReservationBookingAmountMode.PERCENTAGE) {
+      if (dto.bookingAmountPercent == null || dto.bookingAmountPercent <= 0) {
+        throw new BadRequestException(
+          'يجب إدخال نسبة مبلغ الحجز (أكبر من صفر) عند اختيار وضع النسبة المئوية',
+        );
+      }
+      const unitPrice = new Prisma.Decimal(unit.price);
+      if (unitPrice.lte(0)) {
+        throw new BadRequestException(
+          'لا يمكن حساب مبلغ الحجز كنسبة لأن سعر الوحدة غير محدد',
+        );
+      }
+      const percent = new Prisma.Decimal(dto.bookingAmountPercent);
+      // bookingAmount = unitPrice * percent / 100, rounded to 2 decimals.
+      resolvedBookingAmount = unitPrice
+        .mul(percent)
+        .div(100)
+        .toDecimalPlaces(2);
+      resolvedBookingAmountPercent = percent;
+      resolvedBookingAmountUnitPriceSnapshot = unitPrice;
+      resolvedBookingAmountMode = ReservationBookingAmountMode.PERCENTAGE;
+    } else if (dto.bookingAmount != null) {
+      // FIXED with admin-provided amount.
+      if (dto.bookingAmount <= 0) {
+        throw new BadRequestException('مبلغ الحجز يجب أن يكون أكبر من صفر');
+      }
+      resolvedBookingAmount = new Prisma.Decimal(dto.bookingAmount);
+      resolvedBookingAmountMode = ReservationBookingAmountMode.FIXED;
+    }
+    // else: FIXED, no override → keep plan-derived value (or 0 when no plan).
+
     // Payment status on create is always UNPAID; payment is confirmed later
     // via POST /reservations/:id/booking-payment/confirm.
     const resolvedPaymentStatus = ReservationBookingPaymentStatus.UNPAID;
@@ -462,6 +514,9 @@ export class ReservationsService {
           status: ReservationStatus.PENDING,
           installmentPlanTemplateId: resolvedPlanId,
           bookingAmount: resolvedBookingAmount,
+          bookingAmountMode: resolvedBookingAmountMode,
+          bookingAmountPercent: resolvedBookingAmountPercent,
+          bookingAmountUnitPriceSnapshot: resolvedBookingAmountUnitPriceSnapshot,
           bookingPaymentStatus: resolvedPaymentStatus,
           bookingPaidAt: resolvedPaidAt,
           bookingNotes: dto.bookingNotes ?? null,
@@ -709,15 +764,48 @@ export class ReservationsService {
   }
 
   /**
-   * Customer-facing reservation list. Scoped to a user across both ownership
-   * paths:
+   * Build the OR clause that resolves "reservations belonging to this user".
+   * Three match paths (P8 — added phone/email fallback as a safety net for
+   * legacy data where a synthetic CLIENT row already existed on a Lead before
+   * the customer registered with the same phone/email but received a fresh
+   * User row). The synthetic-claim added at registration time
+   * (auth.service.ts registerCustomer) prevents this for NEW registrations;
+   * the fallbacks here cover historical data.
+   *
    *  - Direct:  Reservation.clientId = userId
    *  - Lead:    Reservation.lead.clientId = userId
+   *  - Phone:   Reservation.lead.phone   = user.phone   (when user has a phone)
+   *  - Email:   Reservation.lead.email   = user.email   (when user has an email)
    *
-   * Returns only the fields the customer needs (unit, project, sales rep,
-   * status, booking amount + payment state, expiry, reservation number).
-   * Internal-only fields (notes, broker attribution, commission, financial
-   * snapshots beyond bookingAmount) are intentionally omitted.
+   * `User.phone` and `User.email` are unique columns, so the phone/email
+   * matches are safe — they cannot surface another user's reservations.
+   */
+  private async buildUserOwnershipFilter(
+    userId: string,
+  ): Promise<Prisma.ReservationWhereInput[]> {
+    const contact = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { phone: true, email: true },
+    });
+    const or: Prisma.ReservationWhereInput[] = [
+      { clientId: userId },
+      { lead: { is: { clientId: userId } } },
+    ];
+    if (contact?.phone) {
+      or.push({ lead: { is: { phone: contact.phone } } });
+    }
+    if (contact?.email) {
+      or.push({ lead: { is: { email: contact.email } } });
+    }
+    return or;
+  }
+
+  /**
+   * Customer-facing reservation list. See [buildUserOwnershipFilter] for the
+   * scoping rules. Returns only the fields the customer needs (unit, project,
+   * sales rep, status, booking amount + payment state, expiry, reservation
+   * number). Internal-only fields (notes, broker attribution, commission,
+   * financial snapshots beyond bookingAmount) are intentionally omitted.
    */
   async listForUser(
     userId: string,
@@ -725,10 +813,7 @@ export class ReservationsService {
   ) {
     const where: Prisma.ReservationWhereInput = {
       ...(opts.status ? { status: opts.status } : {}),
-      OR: [
-        { clientId: userId },
-        { lead: { is: { clientId: userId } } },
-      ],
+      OR: await this.buildUserOwnershipFilter(userId),
     };
     const [data, total] = await this.prisma.$transaction([
       this.prisma.reservation.findMany({
@@ -744,17 +829,15 @@ export class ReservationsService {
 
   /**
    * Customer-facing reservation detail. Returns 404 unless the reservation is
-   * owned by the user via one of the two paths above. Returning 404 (not 403)
-   * is deliberate — we don't disclose existence of other customers' rows.
+   * owned by the user via one of the paths in [buildUserOwnershipFilter].
+   * Returning 404 (not 403) is deliberate — we don't disclose existence of
+   * other customers' rows.
    */
   async findOneForUser(id: string, userId: string) {
     const reservation = await this.prisma.reservation.findFirst({
       where: {
         id,
-        OR: [
-          { clientId: userId },
-          { lead: { is: { clientId: userId } } },
-        ],
+        OR: await this.buildUserOwnershipFilter(userId),
       },
       select: ME_RESERVATION_SELECT,
     });
@@ -763,17 +846,12 @@ export class ReservationsService {
   }
 
   /**
-   * Customer-facing count: total reservations across both ownership paths.
+   * Customer-facing count: total reservations across all ownership paths.
    * Used by the account dashboard summary tile.
    */
   async countForUser(userId: string): Promise<number> {
     return this.prisma.reservation.count({
-      where: {
-        OR: [
-          { clientId: userId },
-          { lead: { is: { clientId: userId } } },
-        ],
-      },
+      where: { OR: await this.buildUserOwnershipFilter(userId) },
     });
   }
 
@@ -949,11 +1027,11 @@ export class ReservationsService {
       reservation.status !== ReservationStatus.APPROVED
     ) {
       throw new BadRequestException(
-        'يمكن تأكيد سداد الحجز فقط للحجوزات المعلقة أو المعتمدة',
+        'يمكن تأكيد استلام مبلغ الحجز فقط للحجوزات المعلقة أو المعتمدة',
       );
     }
     if (reservation.bookingAmount.lte(0)) {
-      throw new BadRequestException('يجب تحديد مبلغ الحجز قبل تأكيد السداد');
+      throw new BadRequestException('يجب تحديد مبلغ الحجز قبل تأكيد الاستلام');
     }
 
     const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
@@ -973,7 +1051,7 @@ export class ReservationsService {
           actorId: actor.sub,
           note:
             dto.note?.trim()?.substring(0, 500) ??
-            `تم تأكيد سداد مبلغ الحجز (${updated.bookingAmount.toString()})`,
+            `تم تأكيد استلام مبلغ الحجز (${updated.bookingAmount.toString()})`,
         },
       });
       // Idempotent: remove any previous BOOKING_AMOUNT deposit, then re-create.
@@ -1041,7 +1119,7 @@ export class ReservationsService {
           reservationId: id,
           type: ReservationActivityType.BOOKING_PAYMENT_UNCONFIRMED,
           actorId: actor.sub,
-          note: dto.note?.trim()?.substring(0, 500) ?? 'تم إلغاء تأكيد سداد مبلغ الحجز',
+          note: dto.note?.trim()?.substring(0, 500) ?? 'تم إلغاء تأكيد استلام مبلغ الحجز',
         },
       });
       return updated;
@@ -1290,7 +1368,7 @@ export class ReservationsService {
       reservation.bookingPaymentStatus !== ReservationBookingPaymentStatus.WAIVED
     ) {
       throw new BadRequestException(
-        'يجب تأكيد سداد مبلغ الحجز أو إعفاؤه قبل التحويل إلى عقد',
+        'يجب تأكيد استلام مبلغ الحجز أو إعفاؤه قبل التحويل إلى عقد',
       );
     }
     // If the reservation is linked to a plan template, the full duration snapshot

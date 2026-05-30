@@ -307,6 +307,324 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(res.status).toBe(403);
     });
   });
+
+  // ── P8 — Synthetic User claim + phone/email fallback ─────────────────────
+  // Background: an unauthenticated public visit-request creates a "synthetic"
+  // CLIENT User row (no passwordHash) so the Lead has somewhere to hang. When
+  // the same person later registers via /auth/customer/register, the OLD code
+  // threw `phone_taken` / `email_taken` (blocking registration) OR — if the
+  // contact details diverged slightly — created a fresh User row and the
+  // pre-existing Lead/Reservation kept pointing at the synthetic User. From
+  // the customer's perspective, /me/reservations returned an empty list even
+  // though the admin dashboard showed their reservation. P8 closes that gap.
+
+  // Used to keep emails/phones/numbers distinct across P8 tests sharing the
+  // seeded DB. Returns a digit-only suffix (the customer-register DTO enforces
+  // an E.164-shaped phone — `/^\+?[1-9]\d{7,14}$/` — so letters break it).
+  let p8Seq = 0;
+  async function uniqueSuffix(): Promise<string> {
+    const userCount = await testApp.prisma.user.count();
+    p8Seq += 1;
+    // 6 digits total — enough headroom for tests within one e2e run.
+    return String(userCount * 100 + p8Seq).padStart(6, '0');
+  }
+
+  describe('P8 — Synthetic User claim at registration', () => {
+    it('P8.1: registering with phone/email matching a synthetic CLIENT claims that row (existing Lead/Reservation surface)', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500999${suffix}`;
+      const email = `p8-claim-${suffix}@example.com`;
+
+      // 1) Simulate the public visit-request path: create a synthetic CLIENT
+      //    row (no passwordHash) and a Lead pointing at it.
+      const synthetic = await testApp.prisma.user.create({
+        data: {
+          role: UserRole.CLIENT,
+          fullName: 'P8 Walk-in Lead',
+          phone,
+          email,
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.prisma.lead.create({
+        data: {
+          clientId: synthetic.id,
+          fullName: 'P8 Walk-in Lead',
+          phone,
+          email,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.prisma.reservation.create({
+        data: {
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.PENDING,
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P8C-${suffix}`,
+          bookingAmount: 0,
+        },
+        select: { id: true },
+      });
+      await testApp.prisma.unit.update({
+        where: { id: unit.id },
+        data: {
+          status: UnitStatus.RESERVED,
+          reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000),
+        },
+      });
+
+      // 2) Same person registers via /v1/auth/customer/register. Before P8 this
+      //    would 409. After P8 it CLAIMS the synthetic row.
+      const registerRes = await http()
+        .post('/v1/auth/customer/register')
+        .send({
+          fullName: 'P8 Real Customer',
+          phone,
+          email,
+          password: 'StrongPass1!',
+          acceptTerms: true,
+        });
+      expect(registerRes.status).toBe(201);
+
+      // The claimed row keeps its id, so Lead.clientId still resolves to it.
+      const claimed = await testApp.prisma.user.findUniqueOrThrow({
+        where: { id: synthetic.id },
+        select: { id: true, role: true, email: true, phone: true, passwordHash: true },
+      });
+      expect(claimed.passwordHash).toBeTruthy();
+      expect(claimed.role).toBe(UserRole.CLIENT); // not auto-promoted by registration
+      expect(claimed.email).toBe(email);
+      expect(claimed.phone).toBe(phone);
+
+      // 3) Log in via the same creds; /me/reservations surfaces the pre-existing reservation.
+      const claimedToken = await loginAs(testApp.app, email, 'StrongPass1!', 'customer');
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(claimedToken));
+      expect(meRes.status).toBe(200);
+      expect(collectIds(meRes.body)).toContain(reservation.id);
+    });
+
+    it('P8.2: registering against a REAL (passwordHash set) row still 409s — claim only applies to synthetic rows', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500888${suffix}`;
+      const email = `p8-real-${suffix}@example.com`;
+
+      const first = await http()
+        .post('/v1/auth/customer/register')
+        .send({ fullName: 'P8 First Register', phone, email, password: 'StrongPass1!', acceptTerms: true });
+      expect(first.status).toBe(201);
+
+      // Same creds, again — must fail with a conflict (real account exists).
+      const second = await http()
+        .post('/v1/auth/customer/register')
+        .send({ fullName: 'P8 Impostor', phone, email, password: 'OtherPass2!', acceptTerms: true });
+      expect(second.status).toBe(409);
+    });
+  });
+
+  describe('P8 — booking amount mode (FIXED vs PERCENTAGE)', () => {
+    it('P8.4: FIXED mode persists the exact admin-entered amount and bookingAmountMode=FIXED', async () => {
+      const unit = await pickFreshUnit();
+      const res = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          expiresInHours: 72,
+          bookingAmountMode: 'FIXED',
+          bookingAmount: 42_500,
+        });
+      expect(res.status).toBe(201);
+      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+        where: { id: res.body.id as string },
+        select: {
+          bookingAmount: true,
+          bookingAmountMode: true,
+          bookingAmountPercent: true,
+          bookingAmountUnitPriceSnapshot: true,
+        },
+      });
+      expect(row.bookingAmountMode).toBe('FIXED');
+      expect(Number(row.bookingAmount)).toBe(42_500);
+      expect(row.bookingAmountPercent).toBeNull();
+      expect(row.bookingAmountUnitPriceSnapshot).toBeNull();
+    });
+
+    it('P8.5: PERCENTAGE mode computes bookingAmount = unit.price * percent / 100 and snapshots the inputs', async () => {
+      const unit = await pickFreshUnit();
+      const unitRow = await testApp.prisma.unit.findUniqueOrThrow({
+        where: { id: unit.id },
+        select: { price: true },
+      });
+      const unitPrice = Number(unitRow.price);
+      // Sanity: the picker only returns units with a price > 0 from the seed.
+      expect(unitPrice).toBeGreaterThan(0);
+
+      const res = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          expiresInHours: 72,
+          bookingAmountMode: 'PERCENTAGE',
+          bookingAmountPercent: 5,
+        });
+      expect(res.status).toBe(201);
+      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+        where: { id: res.body.id as string },
+        select: {
+          bookingAmount: true,
+          bookingAmountMode: true,
+          bookingAmountPercent: true,
+          bookingAmountUnitPriceSnapshot: true,
+        },
+      });
+      expect(row.bookingAmountMode).toBe('PERCENTAGE');
+      expect(Number(row.bookingAmountPercent)).toBe(5);
+      expect(Number(row.bookingAmountUnitPriceSnapshot)).toBe(unitPrice);
+      // Rounded to 2dp; same formula as the backend.
+      const expected = Math.round(unitPrice * 0.05 * 100) / 100;
+      expect(Number(row.bookingAmount)).toBe(expected);
+    });
+
+    it('P8.6: PERCENTAGE with invalid percent → 400; PERCENTAGE > 100 → 400 (DTO clamp)', async () => {
+      const unit = await pickFreshUnit();
+      const zero = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          bookingAmountMode: 'PERCENTAGE',
+          bookingAmountPercent: 0,
+        });
+      expect(zero.status).toBe(400);
+      // Same unit got reserved on the failed call? No — the create transaction
+      // rolls back before the unit flip when validation throws. Reuse it.
+      const tooHigh = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          bookingAmountMode: 'PERCENTAGE',
+          bookingAmountPercent: 150,
+        });
+      expect(tooHigh.status).toBe(400);
+    });
+
+    it('P8.7: FIXED with non-positive amount → 400', async () => {
+      const unit = await pickFreshUnit();
+      const res = await http()
+        .post('/v1/reservations')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          unitId: unit.id,
+          clientId: fixtures.userIds.customer1UserId,
+          bookingAmountMode: 'FIXED',
+          bookingAmount: 0,
+        });
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('P8 — phone/email fallback for legacy lead linkage', () => {
+    it('P8.3: a logged-in user sees a reservation linked via lead.phone == user.phone even when lead.clientId points elsewhere', async () => {
+      const suffix = await uniqueSuffix();
+      const phone = `+966500777${suffix}`;
+      const email = `p8-fallback-${suffix}@example.com`;
+
+      // 1) Create the REAL customer first (they registered before any Lead existed).
+      const registerRes = await http()
+        .post('/v1/auth/customer/register')
+        .send({ fullName: 'P8 Real Customer 2', phone, email, password: 'StrongPass1!', acceptTerms: true });
+      expect(registerRes.status).toBe(201);
+      const real = await testApp.prisma.user.findUniqueOrThrow({
+        where: { email },
+        select: { id: true },
+      });
+
+      // 2) Admin later imports a Lead with the SAME phone, but attaches it to
+      //    a *different* synthetic User row (simulating CRM data drift — e.g.
+      //    the admin pasted the phone differently the first time then merged
+      //    it manually, ending up with a divergent synthetic row).
+      const orphanSynthetic = await testApp.prisma.user.create({
+        data: {
+          role: UserRole.CLIENT,
+          fullName: 'P8 Drifted Synthetic',
+          phone: `${phone}-orphan`, // distinct phone column so we don't claim it
+          locale: 'ar',
+        },
+        select: { id: true },
+      });
+      const lead = await testApp.prisma.lead.create({
+        data: {
+          clientId: orphanSynthetic.id,
+          fullName: 'P8 Drifted Synthetic',
+          phone, // matches the REAL user's phone — this is the fallback hook
+          email,
+          stage: LeadStage.NEW,
+          assignedSalesId: salesUserId,
+        },
+        select: { id: true },
+      });
+      const unit = await pickFreshUnit();
+      const reservation = await testApp.prisma.reservation.create({
+        data: {
+          unitId: unit.id,
+          salesId: salesUserId,
+          leadId: lead.id,
+          status: ReservationStatus.APPROVED, // ← APPROVED + non-default status
+          expiresAt: new Date(Date.now() + 72 * 3_600_000),
+          reservationNumber: `P8F-${suffix}`,
+          bookingAmount: 50_000,
+          bookingPaymentStatus: 'PAID', // ← PAID must still surface (no client-side filter)
+          bookingPaidAt: new Date(),
+        },
+        select: { id: true },
+      });
+      await testApp.prisma.unit.update({
+        where: { id: unit.id },
+        data: {
+          status: UnitStatus.RESERVED,
+          reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000),
+        },
+      });
+
+      // 3) Log in as the real customer. /me/reservations must surface the
+      //    reservation via the phone/email fallback path.
+      const realToken = await loginAs(testApp.app, email, 'StrongPass1!', 'customer');
+      const meRes = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(realToken));
+      expect(meRes.status).toBe(200);
+      const ids = collectIds(meRes.body);
+      expect(ids).toContain(reservation.id);
+
+      // 4) And cross-tenancy still holds: CUSTOMER_2 (different phone/email)
+      //    does NOT see it.
+      const c2 = await http()
+        .get('/v1/me/reservations')
+        .set('Authorization', bearer(customer2Token));
+      expect(collectIds(c2.body)).not.toContain(reservation.id);
+
+      // Real user must remain CLIENT (no auto-promotion).
+      const realAfter = await testApp.prisma.user.findUniqueOrThrow({
+        where: { id: real.id },
+        select: { role: true },
+      });
+      expect(realAfter.role).toBe(UserRole.CLIENT);
+    });
+  });
 });
 
 /** Pull ids out of either a bare array or `{ data: [...] }` page wrapper. */

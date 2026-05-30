@@ -4,14 +4,22 @@ import type { MeReservation, MeReservationBookingPaymentStatus } from '@/lib/api
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
 
+// P8 — customer-facing payment-status copy. Aligned with the rename of the
+// admin action from "تأكيد سداد" → "تأكيد استلام": the admin records that
+// they received the money, the customer sees the verification status.
+//
+// Customer-uploaded payment proof is NOT yet implemented (see
+// docs/p8-gaps.md). Today PENDING is only set by the admin choosing the
+// PENDING state explicitly; once a customer receipt-upload flow exists,
+// PENDING should auto-fire when proof is uploaded but not yet verified.
 const BOOKING_PAYMENT_LABELS: Record<
   MeReservationBookingPaymentStatus,
   { label: string; tone: 'success' | 'accent' | 'muted' | 'neutral' }
 > = {
-  UNPAID: { label: 'لم تُسدَّد', tone: 'muted' },
-  PENDING: { label: 'قيد التأكيد', tone: 'accent' },
-  PAID: { label: 'مدفوعة', tone: 'success' },
-  WAIVED: { label: 'مُعفاة', tone: 'neutral' },
+  UNPAID: { label: 'غير مدفوع', tone: 'muted' },
+  PENDING: { label: 'بانتظار المراجعة', tone: 'accent' },
+  PAID: { label: 'مدفوع — تم التحقق', tone: 'success' },
+  WAIVED: { label: 'مُعفى', tone: 'neutral' },
 };
 
 const PAYMENT_TONE_CLASS: Record<'success' | 'accent' | 'muted' | 'neutral', string> = {

@@ -19,6 +19,9 @@ interface Unit {
   id: string;
   code: string;
   type: string;
+  // P8 — preview source for PERCENTAGE booking mode. Display only; backend
+  // recomputes from the canonical Unit row when the reservation is created.
+  price?: string | number;
   building?: {
     phase?: { projectId?: string; project?: { id: string; name: { ar: string; en: string } } };
   };
@@ -117,6 +120,12 @@ export default function NewReservationForm({
   const [selectedUnitId, setSelectedUnitId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [selectedDurationOptionId, setSelectedDurationOptionId] = useState('');
+  // P8 — booking amount mode. PLAN keeps the legacy plan-driven behavior
+  // (server copies plan.reservationAmount; admin doesn't enter a value);
+  // FIXED + PERCENTAGE are admin overrides.
+  const [bookingAmountMode, setBookingAmountMode] = useState<'PLAN' | 'FIXED' | 'PERCENTAGE'>('PLAN');
+  const [fixedAmountInput, setFixedAmountInput] = useState('');
+  const [percentInput, setPercentInput] = useState('');
 
   const selectedUnit = useMemo(
     () => units.find((u) => u.id === selectedUnitId) ?? null,
@@ -161,6 +170,21 @@ export default function NewReservationForm({
     (o) => o.id === selectedDurationOptionId,
   ) ?? null;
   const durationMissing = planHasDurations && !selectedDuration;
+
+  // P8 — preview of the booking amount the server will compute for the chosen
+  // mode. Mirrors the backend math: unit.price × percent / 100, rounded to 2dp.
+  const selectedUnitPrice = useMemo(() => {
+    if (!selectedUnit?.price) return 0;
+    const n = Number(selectedUnit.price);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }, [selectedUnit]);
+  const percentPreviewAmount = useMemo(() => {
+    if (bookingAmountMode !== 'PERCENTAGE') return null;
+    const p = Number(percentInput);
+    if (!Number.isFinite(p) || p <= 0 || p > 100) return null;
+    if (selectedUnitPrice <= 0) return null;
+    return Math.round(selectedUnitPrice * (p / 100) * 100) / 100;
+  }, [bookingAmountMode, percentInput, selectedUnitPrice]);
 
   // Live snapshot preview using the same formula the backend uses
   const previewSnapshot = useMemo(() => {
@@ -319,7 +343,7 @@ export default function NewReservationForm({
 
       <FormSection
         title="خطة التقسيط ومبلغ الحجز"
-        description="اختر خطة التقسيط للوحدة. يتم جلب مبلغ الحجز المطلوب تلقائياً من الخطة ولا يمكن تعديله يدوياً."
+        description="اختر خطة التقسيط للوحدة، أو حدِّد مبلغ الحجز يدوياً (قيمة ثابتة أو نسبة من سعر الوحدة)."
       >
         <Field
           label="خطة التقسيط"
@@ -402,6 +426,122 @@ export default function NewReservationForm({
             </p>
           </div>
         )}
+
+        {/* P8 — Booking amount mode. PLAN keeps the current behavior (server
+            copies plan.reservationAmount). FIXED + PERCENTAGE are admin
+            overrides; the radio sends `bookingAmountMode` only when the admin
+            chose an override. */}
+        <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">طريقة تحديد مبلغ الحجز</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              يمكنك ترك مبلغ الحجز ليُحسب من خطة التقسيط، أو إدخاله يدوياً كقيمة ثابتة أو كنسبة من سعر الوحدة.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3 text-sm">
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="bookingAmountModeRadio"
+                value="PLAN"
+                checked={bookingAmountMode === 'PLAN'}
+                onChange={() => setBookingAmountMode('PLAN')}
+              />
+              <span>من خطة التقسيط</span>
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="bookingAmountModeRadio"
+                value="FIXED"
+                checked={bookingAmountMode === 'FIXED'}
+                onChange={() => setBookingAmountMode('FIXED')}
+              />
+              <span>مبلغ ثابت</span>
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="radio"
+                name="bookingAmountModeRadio"
+                value="PERCENTAGE"
+                checked={bookingAmountMode === 'PERCENTAGE'}
+                onChange={() => setBookingAmountMode('PERCENTAGE')}
+              />
+              <span>نسبة من سعر الوحدة</span>
+            </label>
+          </div>
+          {/* Hidden field sent to the server only when admin chose an override. */}
+          {(bookingAmountMode === 'FIXED' || bookingAmountMode === 'PERCENTAGE') && (
+            <input type="hidden" name="bookingAmountMode" value={bookingAmountMode} />
+          )}
+
+          {bookingAmountMode === 'FIXED' && (
+            <Field
+              label="مبلغ الحجز (قيمة ثابتة)"
+              name="bookingAmount"
+              hint="أدخل مبلغاً موجباً. سيُسجَّل كـ FIXED ويُسترجع في تفاصيل الحجز."
+              required
+            >
+              <input
+                type="number"
+                name="bookingAmount"
+                min="1"
+                step="0.01"
+                value={fixedAmountInput}
+                onChange={(e) => setFixedAmountInput(e.target.value)}
+                className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
+                placeholder="مثلاً 50000"
+                required
+              />
+            </Field>
+          )}
+
+          {bookingAmountMode === 'PERCENTAGE' && (
+            <>
+              <Field
+                label="النسبة المئوية من سعر الوحدة"
+                name="bookingAmountPercent"
+                hint="نسبة بين 0.01 و 100. سيتم حساب المبلغ تلقائياً وعرضه قبل الإرسال."
+                required
+              >
+                <input
+                  type="number"
+                  name="bookingAmountPercent"
+                  min="0.01"
+                  max="100"
+                  step="0.01"
+                  value={percentInput}
+                  onChange={(e) => setPercentInput(e.target.value)}
+                  className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
+                  placeholder="مثلاً 5"
+                  required
+                />
+              </Field>
+              <div className="rounded-xl bg-slate-50 border border-hairline p-3 text-sm space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">سعر الوحدة المختارة</span>
+                  <span className="font-medium tabular-nums">
+                    {selectedUnitPrice > 0 ? selectedUnitPrice.toLocaleString('ar') : '— غير محدد —'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">مبلغ الحجز المحسوب</span>
+                  <span className="font-bold tabular-nums text-brand-700">
+                    {percentPreviewAmount != null
+                      ? percentPreviewAmount.toLocaleString('ar')
+                      : '—'}
+                  </span>
+                </div>
+                {selectedUnitPrice <= 0 && (
+                  <p className="text-xs text-danger-700 flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    لا يمكن حساب النسبة لأن سعر الوحدة غير محدد. اختر وحدة بسعر &gt; 0 أو استخدم وضع المبلغ الثابت.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
 
         {planHasDurations && (
           <>

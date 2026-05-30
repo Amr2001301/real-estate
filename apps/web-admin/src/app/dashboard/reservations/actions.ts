@@ -66,9 +66,10 @@ export async function createReservationAction(
     };
   }
 
-  // Plan linkage + optional booking notes are the only booking-related fields
-  // accepted on create. bookingAmount is derived server-side from the plan,
-  // and bookingPaymentStatus always starts as UNPAID (confirmed later via the
+  // Plan linkage + optional booking notes are the booking-related fields
+  // accepted on create. P8 — booking amount mode (FIXED / PERCENTAGE) is also
+  // accepted; when omitted the server keeps the legacy plan-driven path.
+  // bookingPaymentStatus always starts as UNPAID (confirmed later via the
   // dedicated booking-payment endpoints).
   const installmentPlanTemplateId =
     String(formData.get('installmentPlanTemplateId') ?? '').trim() || undefined;
@@ -76,6 +77,25 @@ export async function createReservationAction(
     String(formData.get('installmentPlanDurationOptionId') ?? '').trim() || undefined;
   const bookingNotes =
     String(formData.get('bookingNotes') ?? '').trim() || undefined;
+
+  // P8 — booking amount mode payload. Only sent when admin made an explicit
+  // override choice. Validation lives server-side; the only client-side guard
+  // is to skip empty/garbage values rather than send them.
+  const rawMode = String(formData.get('bookingAmountMode') ?? '').trim();
+  const rawAmount = String(formData.get('bookingAmount') ?? '').trim();
+  const rawPercent = String(formData.get('bookingAmountPercent') ?? '').trim();
+  const bookingAmountMode: 'FIXED' | 'PERCENTAGE' | undefined =
+    rawMode === 'FIXED' || rawMode === 'PERCENTAGE' ? rawMode : undefined;
+  const bookingAmount =
+    bookingAmountMode === 'FIXED' && rawAmount !== '' && Number.isFinite(Number(rawAmount))
+      ? Number(rawAmount)
+      : undefined;
+  const bookingAmountPercent =
+    bookingAmountMode === 'PERCENTAGE' &&
+    rawPercent !== '' &&
+    Number.isFinite(Number(rawPercent))
+      ? Number(rawPercent)
+      : undefined;
 
   let createdId: string | null = null;
   try {
@@ -91,6 +111,9 @@ export async function createReservationAction(
         ? { installmentPlanDurationOptionId }
         : {}),
       ...(bookingNotes ? { bookingNotes } : {}),
+      ...(bookingAmountMode ? { bookingAmountMode } : {}),
+      ...(bookingAmount != null ? { bookingAmount } : {}),
+      ...(bookingAmountPercent != null ? { bookingAmountPercent } : {}),
     });
     createdId = res.id;
   } catch (e: unknown) {

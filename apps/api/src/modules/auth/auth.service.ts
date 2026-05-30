@@ -66,19 +66,60 @@ export class AuthService {
   }) {
     const email = dto.email.trim().toLowerCase();
     const phone = dto.phone.trim();
+    const fullName = dto.fullName.trim();
 
     const [byEmail, byPhone] = await Promise.all([
-      this.prisma.user.findUnique({ where: { email }, select: { id: true } }),
-      this.prisma.user.findUnique({ where: { phone }, select: { id: true } }),
+      this.prisma.user.findUnique({
+        where: { email },
+        select: { id: true, role: true, passwordHash: true, phone: true },
+      }),
+      this.prisma.user.findUnique({
+        where: { phone },
+        select: { id: true, role: true, passwordHash: true, email: true },
+      }),
     ]);
-    if (byEmail) throw new ConflictException({ code: 'email_taken' });
-    if (byPhone) throw new ConflictException({ code: 'phone_taken' });
+
+    // P8 — Synthetic-User claim. When a customer signs up with credentials that
+    // match an EXISTING CLIENT row created by the lead/visit-request flow (i.e.
+    // a synthetic User with no passwordHash, never logged in), claim that row
+    // instead of throwing a conflict. This preserves the link to every Lead /
+    // Reservation / VisitRequest already pointing at that row — without it the
+    // customer would register as a fresh User and never see records that the
+    // sales team already attached to their CRM identity.
+    //
+    // Claim conditions (strict): role=CLIENT, passwordHash=null, and the row
+    // matched on either phone or email. A row with passwordHash set is a real
+    // account → conflict (genuine duplicate). A staff/broker row matched by
+    // typo is also a conflict.
+    const matchedRow = byEmail ?? byPhone;
+    if (matchedRow) {
+      const isSynthetic =
+        matchedRow.role === 'CLIENT' && matchedRow.passwordHash === null;
+      if (!isSynthetic) {
+        if (byEmail) throw new ConflictException({ code: 'email_taken' });
+        if (byPhone) throw new ConflictException({ code: 'phone_taken' });
+      }
+      // Both email AND phone matched, but to two DIFFERENT synthetic rows.
+      // Don't silently merge those — that's an admin/CRM data conflict and
+      // requires manual cleanup. Fail loudly so we never lose history.
+      if (byEmail && byPhone && byEmail.id !== byPhone.id) {
+        throw new ConflictException({ code: 'identity_split_synthetic' });
+      }
+      // Safe to claim. Update credentials + canonical contact fields; existing
+      // FK rows (Lead.clientId, Reservation.clientId, …) continue to resolve.
+      const passwordHash = await argon2.hash(dto.password);
+      const claimed = await this.prisma.user.update({
+        where: { id: matchedRow.id },
+        data: { fullName, email, phone, passwordHash, locale: 'ar' },
+      });
+      return this.issueTokens(claimed.id, claimed.role);
+    }
 
     const passwordHash = await argon2.hash(dto.password);
     const user = await this.prisma.user.create({
       data: {
         role: 'CLIENT',
-        fullName: dto.fullName.trim(),
+        fullName,
         email,
         phone,
         passwordHash,

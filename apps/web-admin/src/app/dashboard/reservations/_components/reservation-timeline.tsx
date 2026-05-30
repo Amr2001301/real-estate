@@ -9,8 +9,8 @@ const TYPE_LABELS: Record<ReservationActivityType, string> = {
   CANCELLED: 'تم إلغاء الحجز',
   EXPIRED: 'انتهت صلاحية الحجز',
   NOTE_ADDED: 'تمت إضافة ملاحظة',
-  BOOKING_PAYMENT_CONFIRMED: 'تم تأكيد سداد مبلغ الحجز',
-  BOOKING_PAYMENT_UNCONFIRMED: 'تم إلغاء تأكيد سداد مبلغ الحجز',
+  BOOKING_PAYMENT_CONFIRMED: 'تم تأكيد استلام مبلغ الحجز',
+  BOOKING_PAYMENT_UNCONFIRMED: 'تم إلغاء تأكيد استلام مبلغ الحجز',
   CONVERTED: 'تم تحويل الحجز إلى عقد',
 };
 

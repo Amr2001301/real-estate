@@ -70,7 +70,7 @@ export function BookingPaymentActions({
             onClick={handleConfirm}
             leftIcon={<CheckCircle2 className="h-4 w-4" />}
           >
-            تأكيد سداد مبلغ الحجز
+            تأكيد استلام مبلغ الحجز
           </Button>
         )}
         {bookingPaymentStatus === 'PAID' && (
@@ -83,13 +83,13 @@ export function BookingPaymentActions({
             onClick={handleUnconfirm}
             leftIcon={<XCircle className="h-4 w-4" />}
           >
-            إلغاء تأكيد السداد
+            إلغاء تأكيد الاستلام
           </Button>
         )}
       </div>
       {bookingAmount <= 0 && bookingPaymentStatus !== 'PAID' && (
         <p className="text-xs text-amber-700">
-          يجب تحديد مبلغ الحجز قبل تأكيد السداد
+          يجب تحديد مبلغ الحجز قبل تأكيد الاستلام
         </p>
       )}
     </div>

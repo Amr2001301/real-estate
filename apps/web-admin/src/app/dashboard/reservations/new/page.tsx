@@ -9,6 +9,10 @@ interface AvailableUnit {
   id: string;
   code: string;
   type: string;
+  // P8 — included so the form can preview the booking amount when the admin
+  // chooses PERCENTAGE mode (preview = price × percent / 100). Backend
+  // validates again; this is display-only.
+  price?: string | number;
   building?: {
     phase?: { projectId?: string; project?: { id: string; name: { ar: string; en: string } } };
   };
