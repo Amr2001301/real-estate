@@ -370,7 +370,9 @@ describe('Contracts · signing workflow', () => {
       ownerId: CONTRACT_ID,
       category: 'CONTRACT',
       fileUrl: 'https://cdn.example/contract.pdf',
-      visibility: 'ADMIN_ONLY',
+      // P12 — the contract file is the customer's contract, so it is now
+      // registered CUSTOMER_VISIBLE (downloadable via signed-download).
+      visibility: 'CUSTOMER_VISIBLE',
     });
   });
 

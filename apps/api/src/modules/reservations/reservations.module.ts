@@ -26,8 +26,10 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxLength,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import {
   DepositType,
   LeadStage,
@@ -59,6 +61,11 @@ import {
   NotificationsModule,
   NotificationsService,
 } from '../notifications/notifications.module';
+// P12 — convert delegates contract side effects (customer notification +
+// CUSTOMER_VISIBLE contract-document registration) to ContractsService, the
+// single source of truth for contract documents. ContractsModule exports the
+// service; its dependency graph does not import reservations, so no cycle.
+import { ContractsModule, ContractsService } from '../contracts/contracts.module';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
 // signs a contract — and convert always produces an unsigned contract.
@@ -130,6 +137,12 @@ class ConvertReservationDto {
   // The global ValidationPipe's forbidNonWhitelisted rejects inbound
   // `signedAt` with 400, closing the convert→signed bypass.
   @IsOptional() @IsString() pdfUrl?: string;
+  // P12 — optional file metadata for the uploaded contract document, so the
+  // registered Document carries a proper fileName/mimeType/size in the Admin
+  // Documents Center. Whitelisted by ValidationPipe; ignored when no pdfUrl.
+  @IsOptional() @IsString() @MaxLength(255) fileName?: string;
+  @IsOptional() @IsString() @MaxLength(120) mimeType?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(0) sizeBytes?: number;
 }
 
 class AddNoteDto {
@@ -228,6 +241,7 @@ export class ReservationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly contracts: ContractsService,
   ) {}
 
   // Public so the broker portal reservations service can reuse the same
@@ -1701,6 +1715,27 @@ export class ReservationsService {
           await this.buildReservationPayload(id),
         );
 
+        // P12 — contract side effects (single source of truth in
+        // ContractsService): notify the customer their contract was created
+        // and, when the admin uploaded a file during conversion, register it
+        // as a CUSTOMER_VISIBLE CONTRACT document (Documents Center + customer
+        // signed-download) and notify it's available. Best-effort — the
+        // contract is already committed; a document/notification failure must
+        // never fail the conversion.
+        await this.contracts.handleConvertedContract(
+          result.contractId,
+          customerId,
+          actor.sub,
+          dto.pdfUrl
+            ? {
+                fileUrl: dto.pdfUrl,
+                fileName: dto.fileName,
+                mimeType: dto.mimeType,
+                sizeBytes: dto.sizeBytes,
+              }
+            : undefined,
+        );
+
         // Broker commission materialization is performed by
         // ContractsService.sign() — the only path that signs a contract.
         // Convert always produces an unsigned contract, so no commission
@@ -2053,7 +2088,7 @@ class MeReservationsController {
 }
 
 @Module({
-  imports: [NotificationsModule],
+  imports: [NotificationsModule, ContractsModule],
   controllers: [ReservationsController, MeReservationsController],
   providers: [ReservationsService, ReservationExpiryCron],
   exports: [ReservationsService],

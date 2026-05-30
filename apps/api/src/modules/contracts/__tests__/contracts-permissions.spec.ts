@@ -61,6 +61,7 @@ class FakeAuthGuard implements CanActivate {
 interface ContractFixture {
   id: string;
   contractNumber: string;
+  customerId: string;
   signedAt: Date | null;
   brokerId: string | null;
   brokerAgentId: string | null;
@@ -73,6 +74,7 @@ const contractStore: { current: ContractFixture } = {
   current: {
     id: '00000000-0000-0000-0000-000000000001',
     contractNumber: 'CT-0001',
+    customerId: 'a1111111-1111-4111-8111-111111111111',
     signedAt: null,
     brokerId: 'broker-1',
     brokerAgentId: 'agent-1',
@@ -113,6 +115,10 @@ function makePrismaMock() {
     unit: {
       findUnique: jest.fn().mockResolvedValue({ id: 'unit-1', status: 'AVAILABLE' }),
     },
+    // P12 — contract-document linking probes for an existing doc; null ⇒ a new
+    // CUSTOMER_VISIBLE doc is registered (via the overridden DocumentsService)
+    // and `contract_document_available` is fired.
+    document: { findFirst: jest.fn().mockResolvedValue(null) },
     leadActivity: { create: jest.fn().mockResolvedValue({}) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([{ userId: 'broker-user-1' }]) },
     notification: {
@@ -225,6 +231,7 @@ describe('Contracts module · permissions enforcement', () => {
     contractStore.current = {
       id: '00000000-0000-0000-0000-000000000001',
       contractNumber: 'CT-0001',
+      customerId: 'a1111111-1111-4111-8111-111111111111',
       signedAt: null,
       brokerId: 'broker-1',
       brokerAgentId: 'agent-1',
@@ -321,13 +328,16 @@ describe('Contracts module · permissions enforcement', () => {
       // No signing side effects.
       expect(prismaMock.leadActivity.create).not.toHaveBeenCalled();
       expect(brokerCommissionsMock.materializeFromContract).not.toHaveBeenCalled();
-      // P4 — `create` now fires a single `contract_created_customer`
-      // notification to the customer. The signing fan-out doesn't fire here.
-      expect(prismaMock.notification.create).toHaveBeenCalledTimes(1);
-      const notifyArgs = prismaMock.notification.create.mock.calls[0]![0] as {
-        data: { templateCode: string };
-      };
-      expect(notifyArgs.data.templateCode).toBe('contract_created_customer');
+      // P4/P12 — `create` with a pdfUrl fires two customer notifications:
+      // `contract_created_customer` (the contract exists) and
+      // `contract_document_available` (its file is downloadable). The signing
+      // fan-out doesn't fire here.
+      expect(prismaMock.notification.create).toHaveBeenCalledTimes(2);
+      const firedCodes = prismaMock.notification.create.mock.calls.map(
+        (c) => (c[0] as { data: { templateCode: string } }).data.templateCode,
+      );
+      expect(firedCodes).toContain('contract_created_customer');
+      expect(firedCodes).toContain('contract_document_available');
     });
 
     it('POST /contracts with signedAt is rejected by ValidationPipe (400); no contract created', async () => {

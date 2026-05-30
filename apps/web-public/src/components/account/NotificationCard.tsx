@@ -29,6 +29,8 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   reservation_booking_paid: 'تم تأكيد دفعة الحجز',
   contract_created_customer: 'تم إنشاء عقدك',
   contract_signed_customer: 'تم توقيع عقدك',
+  // P12 — a downloadable contract document is now available.
+  contract_document_available: 'عقدك جاهز للتحميل',
   deposit_verified: 'تم اعتماد دفعتك',
 };
 

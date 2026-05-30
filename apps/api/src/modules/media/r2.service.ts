@@ -126,6 +126,19 @@ export class R2Service {
     return key;
   }
 
+  /**
+   * Normalised public base of the configured object storage, with a trailing
+   * slash (e.g. `https://media.example.com/` or, in local dev,
+   * `http://localhost:9000/real-estate-media/`). Empty string when unset.
+   *
+   * Used by the documents URL guard to allowlist our own presigned-origin
+   * URLs even when the dev storage base resolves to localhost — see
+   * DocumentsService.assertSafeUrl.
+   */
+  get publicBaseUrl(): string {
+    return this.publicUrl ? `${this.publicUrl.replace(/\/$/, '')}/` : '';
+  }
+
   // Derives the storage key from a stored public URL (inverse of publicUrlFor).
   keyFromPublicUrl(url: string): string {
     if (this.publicUrl) {

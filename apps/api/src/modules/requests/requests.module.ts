@@ -168,7 +168,7 @@ export class RequestsService {
         leadId = lead.id;
       }
     }
-    return this.prisma.infoRequest.create({
+    const created = await this.prisma.infoRequest.create({
       data: {
         userId: actor.userId ?? null,
         leadId,
@@ -177,14 +177,88 @@ export class RequestsService {
         message: dto.message,
       },
     });
+
+    // P13 — event: a new info request (Guest, Client, or Customer) needs admin
+    // visibility. Fan out to ADMIN + SALES_MANAGER (NOT all SALES — there's no
+    // assignment/routing rule for inquiries). Safe placeholders only: identity +
+    // project/unit context. NO phone/email/message in the payload. The helper
+    // swallows errors and never throws past this call, and the DB row is written
+    // without Firebase (push is best-effort/no-op).
+    await this.notifications.sendToRoles(
+      [UserRole.ADMIN, UserRole.SALES_MANAGER],
+      'info_request_created',
+      await this.buildInfoRequestPayload(created.id, dto, actor.userId ?? null),
+    );
+
+    return created;
   }
 
-  listInfoRequests(opts: { page: number; pageSize: number }) {
-    return this.prisma.infoRequest.findMany({
-      ...takeSkip(opts),
-      orderBy: { createdAt: 'desc' },
-      include: { project: true, unit: true, user: { select: { id: true, fullName: true } } },
-    });
+  /**
+   * Build a safe payload for info_request_created. Whitelist: requestId
+   * (routing), customerName, projectName, unitCode. Deliberately NO phone,
+   * email, or message body. Errors are swallowed so payload composition never
+   * blocks the InfoRequest write or the notification fan-out.
+   */
+  private async buildInfoRequestPayload(
+    requestId: string,
+    dto: CreateInfoRequestDto,
+    userId: string | null,
+  ): Promise<Record<string, unknown>> {
+    try {
+      const project = dto.projectId
+        ? await this.prisma.project.findUnique({
+            where: { id: dto.projectId },
+            select: { name: true },
+          })
+        : null;
+      const unit = dto.unitId
+        ? await this.prisma.unit.findUnique({
+            where: { id: dto.unitId },
+            select: { code: true },
+          })
+        : null;
+      let customerName = dto.name?.trim() ?? '';
+      if (!customerName && userId) {
+        const u = await this.prisma.user.findUnique({
+          where: { id: userId },
+          select: { fullName: true },
+        });
+        customerName = u?.fullName ?? '';
+      }
+      const name = (project?.name ?? {}) as { ar?: string; en?: string };
+      return {
+        requestId,
+        customerName,
+        projectName: name.ar || name.en || '',
+        unitCode: unit?.code ?? '',
+      };
+    } catch {
+      return { requestId, customerName: dto.name?.trim() ?? '' };
+    }
+  }
+
+  /**
+   * Admin/Sales list of ALL info requests — Guest (no userId), Client, and
+   * Customer alike. Global (never filtered by userId) so guest inquiries stay
+   * visible. Paginated. Includes the submitter's contact (user OR guest lead)
+   * so the admin can call / WhatsApp / email them — this is an ADMIN-facing
+   * surface, so phone/email ARE included here (unlike the notification payload).
+   */
+  async listInfoRequests(opts: { page: number; pageSize: number }) {
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.infoRequest.findMany({
+        ...takeSkip(opts),
+        orderBy: { createdAt: 'desc' },
+        include: {
+          project: true,
+          unit: true,
+          user: { select: { id: true, fullName: true, phone: true, email: true, role: true } },
+          lead: { select: { id: true, fullName: true, phone: true, email: true } },
+        },
+      }),
+      this.prisma.infoRequest.count(),
+    ]);
+    return paginate(data, total, opts);
   }
 
   /**

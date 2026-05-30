@@ -98,6 +98,17 @@ function makePrismaMock() {
         ...data,
       })),
     },
+    // P13 — info_request_created fan-out delivery. user.findMany above resolves
+    // recipients; send() then reads the template and writes a notification row.
+    notificationTemplate: {
+      findUnique: jest.fn().mockResolvedValue({
+        code: 'info_request_created', channel: 'IN_APP',
+        subject: { ar: 's', en: 's' }, body: { ar: 'b', en: 'b' },
+      }),
+    },
+    notification: {
+      create: jest.fn().mockResolvedValue({ id: 'n-1', sentAt: new Date() }),
+    },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       return ops;
@@ -150,6 +161,8 @@ describe('Public website · info/visit request intake', () => {
     mock.infoRequest.create.mockClear();
     mock.visitRequest.create.mockClear();
     mock.leadSource.findFirst.mockClear();
+    mock.notification.create.mockClear();
+    mock.user.findMany.mockClear();
     FakeAuthGuard.currentUser = null;
   });
 
@@ -394,5 +407,66 @@ describe('Public website · info/visit request intake', () => {
       .expect(201);
     const info = mock.infoRequest.create.mock.calls[0][0].data;
     expect(info.userId).toBe('cust-2');
+  });
+
+  // ── P13 — Guest/Client/Customer attribution + admin notification ──────────
+
+  it('GUEST info-request: row saved without userId, guest lead attached', async () => {
+    // No Bearer (beforeEach resets currentUser to null) → guest submission.
+    await request(app.getHttpServer())
+      .post('/public/info-request')
+      .send({ message: 'general inquiry', name: 'Guest', phone: '+966500000040' })
+      .expect(201);
+    const info = mock.infoRequest.create.mock.calls[0][0].data;
+    expect(info.userId).toBeFalsy(); // saved without a userId
+    expect(info.leadId).toBe('lead-1'); // still captured as a guest lead
+  });
+
+  it('CLIENT info-request: row saved WITH userId (no guest lead)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'client-9', role: 'CLIENT' };
+    await request(app.getHttpServer())
+      .post('/public/info-request')
+      .send({ message: 'tell me more' })
+      .expect(201);
+    const info = mock.infoRequest.create.mock.calls[0][0].data;
+    expect(info.userId).toBe('client-9');
+    // Authenticated submitters don't spawn a guest lead.
+    expect(mock.lead.create).not.toHaveBeenCalled();
+  });
+
+  it('info-request notifies ADMIN + SALES_MANAGER with a payload free of phone/email', async () => {
+    // One recipient resolved for this call (sendToRoles → user.findMany).
+    mock.user.findMany.mockResolvedValueOnce([{ id: 'admin-1' }]);
+    await request(app.getHttpServer())
+      .post('/public/info-request')
+      .send({
+        message: 'I want a callback',
+        name: 'Reachable Guest',
+        phone: '+966512345678',
+        email: 'guest@example.com',
+        projectId: PROJECT_ID,
+      })
+      .expect(201);
+
+    // sendToRoles queried exactly ADMIN + SALES_MANAGER (never all SALES).
+    const roleQuery = mock.user.findMany.mock.calls.at(-1)![0] as {
+      where: { role: { in: string[] } };
+    };
+    expect(roleQuery.where.role.in.sort()).toEqual(['ADMIN', 'SALES_MANAGER']);
+
+    // A DB notification row was written (no Firebase needed).
+    expect(mock.notification.create).toHaveBeenCalledTimes(1);
+    const notif = mock.notification.create.mock.calls[0][0].data as {
+      templateCode: string;
+      payload: Record<string, unknown>;
+    };
+    expect(notif.templateCode).toBe('info_request_created');
+    // Safe payload: identity + context only.
+    expect(notif.payload).toMatchObject({ customerName: 'Reachable Guest', projectName: 'م' });
+    // CRITICAL: no phone/email/message leak into the notification payload.
+    const serialised = JSON.stringify(notif.payload);
+    expect(serialised).not.toContain('+966512345678');
+    expect(serialised).not.toContain('guest@example.com');
+    expect(serialised).not.toContain('I want a callback');
   });
 });

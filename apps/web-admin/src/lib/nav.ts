@@ -24,6 +24,7 @@ import {
   Activity,
   Gauge,
   Files,
+  MessageSquareText,
   type LucideIcon,
 } from 'lucide-react';
 import type { SessionRole } from './session';
@@ -61,6 +62,7 @@ export const NAV_ICONS = {
   Activity,
   Gauge,
   Files,
+  MessageSquareText,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof NAV_ICONS;
@@ -103,6 +105,9 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/inventory', label: 'المخزون', iconKey: 'Boxes' },
       { href: '/dashboard/units', label: 'الوحدات', iconKey: 'Home' },
       { href: '/dashboard/leads', label: 'فرص المبيعات (CRM)', iconKey: 'Users' },
+      // P13 — general info/contact-form inquiries (Guest/Client/Customer).
+      // Role-only gate matches GET /info-requests (ADMIN + SALES + SALES_MANAGER).
+      { href: '/dashboard/requests', label: 'استفسارات العملاء', iconKey: 'MessageSquareText' },
       // Clients/customers read from the ADMIN-only /users API, so they would
       // 403 for SALES — hidden from the SALES sidebar until a scoped endpoint
       // exists. SALES works customer data through the CRM (leads) instead.

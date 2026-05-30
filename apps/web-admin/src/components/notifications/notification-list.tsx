@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bell, CheckCheck, BookmarkCheck, FileText, Wallet, BadgePercent, Users, Activity } from 'lucide-react';
+import { Bell, CheckCheck, BookmarkCheck, FileText, Wallet, BadgePercent, Users, Activity, MessageSquareText } from 'lucide-react';
 import type { NotificationItem } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,6 +30,8 @@ const TEMPLATE_LABEL: Record<string, string> = {
   broker_payout_paid: 'دفعة مدفوعة',
   // P3 — visit lifecycle (staff/admin-facing).
   visit_request_created: 'طلب زيارة جديد',
+  // P13 — general info/contact inquiry intake (admin/sales-manager-facing).
+  info_request_created: 'استفسار جديد',
   visit_scheduled: 'تم جدولة زيارة',
   visit_sales_assigned: 'تم إسناد زيارة إليك',
   visit_customer_confirmed: 'العميل أكد الزيارة',
@@ -73,8 +75,13 @@ function relatedLink(
   const contractId = id('contractId');
   const commissionId = id('commissionId');
   const payoutId = id('payoutId');
+  const requestId = id('requestId');
 
   if (base === '/dashboard') {
+    // P13 — info_request_created carries requestId; route to the inquiries list
+    // (there is no per-request detail page — rows expand inline). Checked first
+    // so an inquiry notification never falls through to a broker entity link.
+    if (requestId) return { href: `/dashboard/requests`, icon: MessageSquareText, label: 'الاستفسار' };
     if (payoutId) return { href: `/dashboard/broker-payouts/${payoutId}`, icon: Wallet, label: 'الدفعة' };
     if (commissionId) return { href: `/dashboard/broker-commissions/${commissionId}`, icon: BadgePercent, label: 'العمولة' };
     if (contractId) return { href: `/dashboard/broker-contracts/${contractId}`, icon: FileText, label: 'العقد' };

@@ -561,6 +561,17 @@ async function main() {
         ar_body: 'طلب زيارة جديد من {{customerName}} لمشروع {{projectName}}.',
         en_body: 'New visit request from {{customerName}} for {{projectName}}.',
       },
+      // P13 — fired to ADMIN + SALES_MANAGER when an info/general inquiry is
+      // submitted (Guest, Client, or Customer). Safe placeholders only:
+      // identity + project/unit context. NO phone, email, or message body.
+      {
+        code: 'info_request_created',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'استفسار جديد',
+        en_subject: 'New info request',
+        ar_body: 'تم استلام استفسار جديد من {{customerName}}.',
+        en_body: 'A new info request was received from {{customerName}}.',
+      },
       {
         code: 'visit_scheduled',
         channel: NotificationChannel.PUSH,
@@ -674,6 +685,18 @@ async function main() {
         en_subject: 'Your contract was signed',
         ar_body: 'تم توقيع العقد رقم {{contractNumber}} للوحدة {{unitCode}}.',
         en_body: 'Contract {{contractNumber}} for unit {{unitCode}} was signed.',
+      },
+      // P12 — fired when a downloadable contract document is registered for
+      // the customer (during reservation→contract conversion or a later admin
+      // upload). Safe payload only: contractNumber / unitCode / projectName /
+      // contractId — never a file URL, signed URL, storage key, or raw path.
+      {
+        code: 'contract_document_available',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'عقدك جاهز للتحميل',
+        en_subject: 'Your contract is ready to download',
+        ar_body: 'أصبح ملف العقد رقم {{contractNumber}} للوحدة {{unitCode}} متاحًا للتحميل.',
+        en_body: 'The contract document {{contractNumber}} for unit {{unitCode}} is now available to download.',
       },
       // Broker variant — only fires when the contract has brokerId set.
       {

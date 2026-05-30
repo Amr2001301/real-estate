@@ -36,12 +36,13 @@ export function ConvertReservationForm({ reservation }: Props) {
   // P8 — replace the raw "paste a URL" input with a signed upload. The picked
   // file is sent through the existing /documents/presign flow, which validates
   // MIME (PDF / JPEG / PNG / WebP / Word / Excel / CSV) and size (≤25 MiB)
-  // server-side before minting an R2 PUT URL. The resulting public R2 URL is
-  // attached to the contract via the existing pdfUrl pathway; the contracts
-  // service then registers a CONTRACT-category document. The /me/contracts
-  // endpoint redacts pdfUrl to null for customers — they only ever reach the
-  // file through the signed-download endpoint (≤5 min URLs, just-in-time
-  // ownership check).
+  // server-side before minting an R2 PUT URL. The resulting public R2 URL +
+  // file metadata are sent on the convert payload (pdfUrl/fileName/mimeType/
+  // sizeBytes). P12 — the convert endpoint then registers a CUSTOMER_VISIBLE
+  // CONTRACT document (visible in the Documents Center + downloadable by the
+  // customer). The /me/contracts endpoint redacts pdfUrl to null — customers
+  // only ever reach the file through the signed-download endpoint (≤5 min
+  // URLs, just-in-time ownership check).
   const [uploaded, setUploaded] = useState<UploadResult | null>(null);
 
   const bookingAmount = Number(reservation.bookingAmount);
@@ -218,6 +219,13 @@ export function ConvertReservationForm({ reservation }: Props) {
               />
             </Field>
             <input type="hidden" name="pdfUrl" value={uploaded?.fileUrl ?? ''} />
+            <input type="hidden" name="fileName" value={uploaded?.fileName ?? ''} />
+            <input type="hidden" name="mimeType" value={uploaded?.mimeType ?? ''} />
+            <input
+              type="hidden"
+              name="sizeBytes"
+              value={uploaded?.sizeBytes != null ? String(uploaded.sizeBytes) : ''}
+            />
 
             {error && (
               <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-xs">

@@ -11,6 +11,8 @@ import { join } from 'node:path';
 
 const SEED_PATH = join(__dirname, '../../../../prisma/seed.ts');
 const REQUIRED_CODES = [
+  // Info requests (P13)
+  'info_request_created',
   // Reservations
   'reservation_submitted_admin',
   'reservation_status_changed',
@@ -18,6 +20,7 @@ const REQUIRED_CODES = [
   // Contracts
   'contract_created_customer',
   'contract_signed_customer',
+  'contract_document_available',
   'broker_contract_signed',
   'broker_contract_created',
   // Deposits

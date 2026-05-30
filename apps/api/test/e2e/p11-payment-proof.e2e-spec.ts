@@ -414,7 +414,10 @@ describe('P11 — Payment-proof review (e2e)', () => {
         },
         select: { id: true, visibility: true },
       });
-      expect(document.visibility).toBe(DocumentVisibility.ADMIN_ONLY);
+      // P12 — the contract file is the customer's contract, so it is now
+      // registered CUSTOMER_VISIBLE (downloadable via signed-download). Deposit
+      // RECEIPT documents (asserted elsewhere) stay ADMIN_ONLY.
+      expect(document.visibility).toBe(DocumentVisibility.CUSTOMER_VISIBLE);
 
       // Customer-facing /me/contracts still redacts pdfUrl to null even when
       // the underlying Contract carries a fileUrl now.

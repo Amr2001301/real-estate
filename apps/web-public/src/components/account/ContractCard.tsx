@@ -58,15 +58,23 @@ export function ContractCard({ contract }: { contract: MeContract }) {
           </div>
         </div>
 
-        {/* Signed-download — Phase 7E. Customer never receives a permanent
-            R2 URL. On click the component mints a short-lived signed URL
-            just-in-time and opens it in a new tab. */}
-        <DocumentDownloadByOwner
-          ownerType="CONTRACT"
-          ownerId={contract.id}
-          label="تحميل العقد PDF"
-          emptyLabel="العقد غير متاح بعد"
-        />
+        {/* Signed-download — Phase 7E / P12. Customer never receives a
+            permanent R2 URL. On click the component mints a short-lived signed
+            URL just-in-time and opens it in a new tab. When the API reports no
+            customer-visible document (hasDocument === false) we show the empty
+            state upfront instead of a button that resolves to nothing. */}
+        {contract.hasDocument === false ? (
+          <span className="shrink-0 rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted">
+            العقد غير متاح بعد
+          </span>
+        ) : (
+          <DocumentDownloadByOwner
+            ownerType="CONTRACT"
+            ownerId={contract.id}
+            label="تحميل العقد PDF"
+            emptyLabel="العقد غير متاح بعد"
+          />
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 border-t border-hairline pt-4 sm:grid-cols-3">

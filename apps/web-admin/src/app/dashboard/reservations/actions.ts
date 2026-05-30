@@ -215,12 +215,21 @@ export async function convertReservationAction(
   const startsAt = String(formData.get('startsAt') ?? '').trim() || undefined;
   const signedAt = String(formData.get('signedAt') ?? '').trim() || undefined;
   const pdfUrl = String(formData.get('pdfUrl') ?? '').trim() || undefined;
+  // P12 — forward the uploaded file's metadata so the registered CONTRACT
+  // document carries a proper name/type/size in the Documents Center. Only
+  // sent alongside a pdfUrl; the backend ignores them otherwise.
+  const fileName = String(formData.get('fileName') ?? '').trim() || undefined;
+  const mimeType = String(formData.get('mimeType') ?? '').trim() || undefined;
+  const sizeRaw = String(formData.get('sizeBytes') ?? '').trim();
+  const sizeBytes = sizeRaw ? Number(sizeRaw) : undefined;
 
   let result: { contractId: string; contractNumber: string };
   try {
     result = await api.post<{ contractId: string; contractNumber: string }>(
       `/reservations/${id}/convert`,
-      { startsAt, pdfUrl },
+      pdfUrl
+        ? { startsAt, pdfUrl, fileName, mimeType, sizeBytes }
+        : { startsAt },
     );
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };

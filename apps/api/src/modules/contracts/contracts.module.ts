@@ -48,6 +48,49 @@ import { BrokerCommissionsService } from '../broker-commissions/broker-commissio
 import { BonusModule } from '../bonus/bonus.module';
 import { BonusService } from '../bonus/bonus.module';
 
+// ── P12 legacy backfill helpers ─────────────────────────────────────────────
+// Pure (exported for unit tests). Derive safe display metadata for a backfilled
+// contract Document from the contract's stored pdfUrl — never trust the URL as
+// a filename blindly.
+
+const CONTRACT_DOC_MIME_BY_EXT: Record<string, string> = {
+  '.pdf': 'application/pdf',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.png': 'image/png',
+  '.webp': 'image/webp',
+};
+
+/** Best-effort fileName from a pdfUrl's last path segment; falls back to a
+ *  contractNumber-derived name. Strips query/hash and sanitises. */
+export function deriveContractDocFileName(pdfUrl: string, contractNumber: string | null): string {
+  try {
+    const noQuery = pdfUrl.split(/[?#]/)[0] ?? pdfUrl;
+    const seg = noQuery.split('/').filter(Boolean).pop() ?? '';
+    let decoded = seg;
+    try {
+      decoded = decodeURIComponent(seg);
+    } catch {
+      /* keep raw segment if it isn't valid percent-encoding */
+    }
+    const cleaned = decoded.replace(/[^\w.\-() ]+/g, '_').trim();
+    if (cleaned && /\.[a-z0-9]{1,8}$/i.test(cleaned)) return cleaned;
+  } catch {
+    /* fall through to the contractNumber fallback */
+  }
+  return contractNumber ? `contract-${contractNumber}.pdf` : 'contract.pdf';
+}
+
+/** MIME type guessed from a pdfUrl's extension, or undefined when unknown. */
+export function deriveContractDocMimeType(pdfUrl: string): string | undefined {
+  const noQuery = (pdfUrl.split(/[?#]/)[0] ?? pdfUrl).toLowerCase();
+  const m = noQuery.match(/(\.[a-z0-9]{1,8})$/);
+  return m ? CONTRACT_DOC_MIME_BY_EXT[m[1]!] : undefined;
+}
+
+/** Outcome of a single contract's backfill evaluation. */
+export type ContractDocBackfillResult = 'created' | 'would-create' | 'exists' | 'no-pdfurl';
+
 class CreateContractDto {
   // `signedAt` is intentionally NOT accepted here. Creation produces an
   // unsigned contract; signing is a separate action (POST /contracts/:id/sign)
@@ -87,7 +130,7 @@ class AttachContractDocumentDto {
 }
 
 @Injectable()
-class ContractsService {
+export class ContractsService {
   private readonly logger = new Logger(ContractsService.name);
 
   constructor(
@@ -100,7 +143,18 @@ class ContractsService {
 
   // Link a contract PDF as a first-class CONTRACT document. Idempotent: skips
   // when a matching (contract, CONTRACT, fileUrl) document already exists.
-  private async linkContractDocument(contractId: string, pdfUrl: string, uploadedById: string) {
+  //
+  // P12 — the contract file IS the customer's contract, so it is registered
+  // CUSTOMER_VISIBLE: it shows up in the Admin Documents Center AND is
+  // downloadable by the owning customer through the signed-download endpoint
+  // (GET /v1/me/documents/:id/download) — never via a permanent URL. Returns
+  // `created` so callers fire `contract_document_available` exactly once.
+  private async linkContractDocument(
+    contractId: string,
+    pdfUrl: string,
+    uploadedById: string,
+    meta?: { fileName?: string; mimeType?: string; sizeBytes?: number; title?: string },
+  ): Promise<{ document: { id: string }; created: boolean }> {
     const existing = await this.prisma.document.findFirst({
       where: {
         ownerType: DocumentOwnerType.CONTRACT,
@@ -110,25 +164,132 @@ class ContractsService {
         deletedAt: null,
       },
     });
-    if (existing) return existing;
-    return this.documents.create(uploadedById, {
+    if (existing) return { document: existing, created: false };
+    const document = await this.documents.create(uploadedById, {
       ownerType: DocumentOwnerType.CONTRACT,
       ownerId: contractId,
       category: DocumentCategory.CONTRACT,
-      title: 'ملف العقد',
+      title: meta?.title?.trim() || 'ملف العقد',
       fileUrl: pdfUrl,
-      visibility: DocumentVisibility.ADMIN_ONLY,
+      fileName: meta?.fileName,
+      mimeType: meta?.mimeType,
+      sizeBytes: meta?.sizeBytes,
+      visibility: DocumentVisibility.CUSTOMER_VISIBLE,
     });
+    return { document, created: true };
   }
 
   // Best-effort linking — a document failure must never fail the PDF attach,
-  // contract creation, or signing.
-  private async tryLinkContractDocument(contractId: string, pdfUrl: string, uploadedById: string) {
+  // contract creation, or signing. Fires `contract_document_available` to the
+  // customer the first time the file is registered (idempotent re-links are
+  // silent). Safe payload only — never a file URL/key (see buildContractPayload).
+  private async tryLinkContractDocument(
+    contractId: string,
+    pdfUrl: string,
+    uploadedById: string,
+    meta?: { fileName?: string; mimeType?: string; sizeBytes?: number; title?: string },
+  ) {
     try {
-      await this.linkContractDocument(contractId, pdfUrl, uploadedById);
+      const { created } = await this.linkContractDocument(contractId, pdfUrl, uploadedById, meta);
+      if (created) await this.notifyContractDocumentAvailable(contractId);
     } catch (e) {
       this.logger.warn(`linkContractDocument(${contractId}) failed: ${(e as Error).message}`);
     }
+  }
+
+  // Notify the owning customer that a downloadable contract document now
+  // exists. Best-effort (sendToUser already swallows + needs no Firebase).
+  private async notifyContractDocumentAvailable(contractId: string) {
+    const c = await this.prisma.contract.findUnique({
+      where: { id: contractId },
+      select: { customerId: true },
+    });
+    await this.notifications.sendToUser(
+      c?.customerId,
+      'contract_document_available',
+      await this.buildContractPayload(contractId),
+    );
+  }
+
+  /**
+   * P12 — side effects for a contract that was just created via reservation
+   * conversion (reservations.module.ts convertReservation). Notifies the
+   * customer their contract exists and, when the admin attached a file during
+   * conversion, registers it as a CUSTOMER_VISIBLE CONTRACT document (so it
+   * lands in the Documents Center + is downloadable) and notifies that it is
+   * available. Best-effort: a document/notification failure must NEVER fail
+   * the conversion — the contract is already committed by the caller.
+   */
+  async handleConvertedContract(
+    contractId: string,
+    customerId: string,
+    uploadedById: string,
+    file?: { fileUrl: string; fileName?: string; mimeType?: string; sizeBytes?: number },
+  ): Promise<void> {
+    await this.notifications.sendToUser(
+      customerId,
+      'contract_created_customer',
+      await this.buildContractPayload(contractId),
+    );
+    if (file?.fileUrl) {
+      await this.tryLinkContractDocument(contractId, file.fileUrl, uploadedById, file);
+    }
+  }
+
+  /**
+   * P12 legacy backfill — repair a contract created BEFORE P12 that carries a
+   * pdfUrl but has no CONTRACT-category Document. Without the Document the file
+   * is invisible in the Admin Documents Center and the customer's signed-
+   * download lookup finds nothing ("العقد غير متاح بعد"). Registers a
+   * CUSTOMER_VISIBLE CONTRACT Document so both surfaces work, identically to a
+   * P12-created one.
+   *
+   * Idempotent per the task's condition: skips when ANY non-deleted
+   * CONTRACT-category Document already exists for the contract (so re-running,
+   * or a contract already fixed by the P12 hooks, is a no-op).
+   *
+   * Trusted existing data: the row is written directly (NOT through
+   * DocumentsService.create / assertSafeUrl, which would reject some legacy URL
+   * shapes) with fileUrl = pdfUrl verbatim, so the customer's keyFromPublicUrl
+   * resolves it exactly as it does for new contracts. `uploadedById` is null —
+   * the original uploader is unknown for legacy rows (the column is nullable).
+   *
+   * DELIBERATELY sends NO notification: legacy contracts are often long
+   * finalised and mass-notifying on backfill would spam customers. New
+   * contracts still notify via handleConvertedContract / create /
+   * attachDocument. `dryRun` reports the action without writing.
+   */
+  async backfillContractDocument(
+    contract: { id: string; contractNumber: string | null; pdfUrl: string | null },
+    opts: { dryRun: boolean } = { dryRun: true },
+  ): Promise<ContractDocBackfillResult> {
+    const pdfUrl = contract.pdfUrl?.trim();
+    if (!pdfUrl) return 'no-pdfurl';
+    const existing = await this.prisma.document.findFirst({
+      where: {
+        ownerType: DocumentOwnerType.CONTRACT,
+        ownerId: contract.id,
+        category: DocumentCategory.CONTRACT,
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+    if (existing) return 'exists';
+    if (opts.dryRun) return 'would-create';
+    await this.prisma.document.create({
+      data: {
+        ownerType: DocumentOwnerType.CONTRACT,
+        ownerId: contract.id,
+        category: DocumentCategory.CONTRACT,
+        title: contract.contractNumber ? `ملف العقد ${contract.contractNumber}` : 'ملف العقد',
+        fileUrl: pdfUrl,
+        fileName: deriveContractDocFileName(pdfUrl, contract.contractNumber),
+        mimeType: deriveContractDocMimeType(pdfUrl) ?? null,
+        visibility: DocumentVisibility.CUSTOMER_VISIBLE,
+        uploadedById: null,
+      },
+    });
+    return 'created';
   }
 
   /**
@@ -149,29 +310,17 @@ class ContractsService {
       where: { id: contractId },
       data: { pdfUrl: dto.fileUrl },
     });
-    // Idempotent: skip when a matching CONTRACT document already exists.
-    const existing = await this.prisma.document.findFirst({
-      where: {
-        ownerType: DocumentOwnerType.CONTRACT,
-        ownerId: contractId,
-        category: DocumentCategory.CONTRACT,
-        fileUrl: dto.fileUrl,
-        deletedAt: null,
-      },
-    });
-    const document =
-      existing ??
-      (await this.documents.create(uploadedById, {
-        ownerType: DocumentOwnerType.CONTRACT,
-        ownerId: contractId,
-        category: DocumentCategory.CONTRACT,
-        title: dto.title?.trim() || 'ملف العقد',
-        fileUrl: dto.fileUrl,
-        fileName: dto.fileName,
-        mimeType: dto.mimeType,
-        sizeBytes: dto.sizeBytes,
-        visibility: DocumentVisibility.ADMIN_ONLY,
-      }));
+    // Idempotent + CUSTOMER_VISIBLE registration. Errors here ARE surfaced
+    // (it's the route's job), so we call linkContractDocument directly rather
+    // than the best-effort wrapper. The customer is notified the first time
+    // the document is registered.
+    const { document, created } = await this.linkContractDocument(
+      contractId,
+      dto.fileUrl,
+      uploadedById,
+      { fileName: dto.fileName, mimeType: dto.mimeType, sizeBytes: dto.sizeBytes, title: dto.title },
+    );
+    if (created) await this.notifyContractDocumentAvailable(contractId);
     return { contract: await this.prisma.contract.findUnique({ where: { id: contractId } }), document };
   }
 
@@ -667,9 +816,33 @@ class ContractsController {
       pageSize: Number(pageSize),
       customerId: user.sub,
     });
+    // P12 — surface a `hasDocument` flag so the customer UI can pre-gate the
+    // download button (button vs "العقد غير متاح بعد") without leaking any
+    // permanent URL. The flag reflects the existence of a CUSTOMER_VISIBLE
+    // CONTRACT document; the actual file is reachable ONLY through the
+    // signed-download endpoint. pdfUrl stays redacted to null.
+    const ids = result.data.map((row) => row.id);
+    const withDoc = new Set<string>();
+    if (ids.length > 0) {
+      const docs = await this.prisma.document.findMany({
+        where: {
+          ownerType: DocumentOwnerType.CONTRACT,
+          ownerId: { in: ids },
+          category: DocumentCategory.CONTRACT,
+          visibility: DocumentVisibility.CUSTOMER_VISIBLE,
+          deletedAt: null,
+        },
+        select: { ownerId: true },
+      });
+      for (const d of docs) withDoc.add(d.ownerId);
+    }
     return {
       ...result,
-      data: result.data.map((row) => ({ ...row, pdfUrl: null })),
+      data: result.data.map((row) => ({
+        ...row,
+        pdfUrl: null,
+        hasDocument: withDoc.has(row.id),
+      })),
     };
   }
 

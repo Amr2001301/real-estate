@@ -49,8 +49,15 @@ import { R2Service } from '../media/r2.service';
  * accept http(s) absolute URLs (S3/R2/CDN) and signed presigned URLs from
  * the existing presign endpoint. Anything else (javascript:, file:, data:,
  * arbitrary local paths) is refused.
+ *
+ * `allowedLocalBase` is the configured object-storage public base
+ * (R2Service.publicBaseUrl). When set, a localhost URL is permitted ONLY if
+ * it lives under that exact base. This lets our own presigned-origin URLs
+ * round-trip through the signed-download path in local dev (where the
+ * storage base is http://localhost:9000/…) while still rejecting arbitrary
+ * localhost/SSRF targets.
  */
-function assertSafeUrl(value: unknown): string {
+function assertSafeUrl(value: unknown, allowedLocalBase = ''): string {
   if (typeof value !== 'string' || value.length === 0) {
     throw new BadRequestException('fileUrl is required');
   }
@@ -70,9 +77,12 @@ function assertSafeUrl(value: unknown): string {
     );
   }
   // Reject anything that resolves to localhost — admin-uploaded docs should
-  // live on a public/CDN URL.
+  // live on a public/CDN URL. Exception: our own configured object storage,
+  // which is localhost in local dev (MinIO). That carve-out is matched by an
+  // exact base-prefix check, not a bare host check.
   const host = parsed.hostname.toLowerCase();
   if (host === 'localhost' || host === '0.0.0.0' || host === '127.0.0.1') {
+    if (allowedLocalBase && trimmed.startsWith(allowedLocalBase)) return trimmed;
     throw new BadRequestException('fileUrl must not point at localhost');
   }
   return trimmed;
@@ -258,7 +268,7 @@ export class DocumentsService {
   }
 
   async create(uploadedById: string, dto: CreateDocumentDto) {
-    const fileUrl = assertSafeUrl(dto.fileUrl);
+    const fileUrl = assertSafeUrl(dto.fileUrl, this.r2.publicBaseUrl);
     await this.assertOwnerExists(dto.ownerType, dto.ownerId);
     return this.prisma.document.create({
       data: {
@@ -286,7 +296,7 @@ export class DocumentsService {
       data.description = dto.description ? dto.description.trim() : null;
     if (dto.category !== undefined) data.category = dto.category;
     if (dto.visibility !== undefined) data.visibility = dto.visibility;
-    if (dto.fileUrl !== undefined) data.fileUrl = assertSafeUrl(dto.fileUrl);
+    if (dto.fileUrl !== undefined) data.fileUrl = assertSafeUrl(dto.fileUrl, this.r2.publicBaseUrl);
     if (dto.fileName !== undefined) data.fileName = dto.fileName?.trim() ?? null;
     if (dto.mimeType !== undefined) data.mimeType = dto.mimeType?.trim() ?? null;
     if (dto.sizeBytes !== undefined) data.sizeBytes = dto.sizeBytes ?? null;

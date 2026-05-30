@@ -250,7 +250,13 @@ export interface MeContract {
   contractNumber: string | null;
   totalAmount: string;
   downPayment: string;
+  /** Always null on the customer surface — the file is reachable only via the
+   *  signed-download endpoint (GET /me/documents/:id/download). */
   pdfUrl: string | null;
+  /** P12 — true when a CUSTOMER_VISIBLE contract document exists, so the UI
+   *  can show the download button vs. the "not available yet" state without a
+   *  round-trip. Never carries the URL itself. */
+  hasDocument?: boolean;
   signedAt: string | null;
   unit: ContractUnitRef | null;
   installmentPlan: ContractInstallmentPlan | null;

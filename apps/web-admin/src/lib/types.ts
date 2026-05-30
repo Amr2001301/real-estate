@@ -398,6 +398,30 @@ export interface VisitAppointmentSummary {
   assignedSales?: { id: string; fullName: string } | null;
 }
 
+/** P13 — Admin view of a customer info/general inquiry. Includes the submitter
+ *  contact (authenticated user OR guest lead) so admins can reach out. Guest
+ *  inquiries have userId=null and surface via the lead (or anonymously). */
+export interface AdminInfoRequest {
+  id: string;
+  userId: string | null;
+  leadId: string | null;
+  projectId: string | null;
+  project?: { id: string; name: Translatable } | null;
+  unitId: string | null;
+  unit?: { id: string; code: string; type: string } | null;
+  message: string;
+  status: string;
+  createdAt: string;
+  user?: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+    email: string | null;
+    role: string;
+  } | null;
+  lead?: { id: string; fullName: string; phone: string | null; email: string | null } | null;
+}
+
 export interface VisitAppointment {
   id: string;
   visitNumber: string;

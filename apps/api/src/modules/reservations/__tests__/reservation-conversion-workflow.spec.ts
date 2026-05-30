@@ -169,9 +169,21 @@ function makePrismaMock() {
       update: jest.fn().mockResolvedValue({}),
     },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
-    user: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
+    user: {
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      // P12 — NotificationsService.send reads the recipient locale for push.
+      findUnique: jest.fn().mockResolvedValue({ locale: 'ar' }),
+    },
     contract: {
       findMany: jest.fn().mockResolvedValue([]),
+      // P12 — ContractsService.handleConvertedContract looks the contract up
+      // (buildContractPayload, owner-exists check, notify lookup).
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'contract-new',
+        customerId: 'client-1',
+        contractNumber: 'C-0001',
+        unit: { code: 'A101', building: { phase: { project: { name: { ar: 'مشروع' } } } } },
+      }),
       create: jest.fn().mockImplementation(async ({ data }) => ({
         id: 'contract-new',
         contractNumber: data.contractNumber,
@@ -189,7 +201,21 @@ function makePrismaMock() {
     },
     lead: { update: jest.fn().mockResolvedValue({}) },
     brokerUser: { findMany: jest.fn().mockResolvedValue([]) },
-    notification: { createMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    // P12 — contract-document linking (after the tx) + notification delivery.
+    document: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockImplementation(async ({ data }) => ({ id: 'doc-1', ...data })),
+    },
+    notification: {
+      createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      create: jest.fn().mockResolvedValue({ id: 'n-1', sentAt: new Date() }),
+    },
+    notificationTemplate: {
+      findUnique: jest.fn().mockResolvedValue({
+        code: 'tpl', channel: 'IN_APP',
+        subject: { ar: 's', en: 's' }, body: { ar: 'b', en: 'b' },
+      }),
+    },
     $transaction: jest.fn(),
   };
   m.$transaction.mockImplementation(async (ops: unknown) => {
@@ -460,6 +486,61 @@ describe('Reservations · conversion workflow', () => {
     expect(contractArgs.data.brokerAgentId).toBe('agent-1');
     // Still unsigned — broker commission only materializes on /contracts/:id/sign.
     expect(contractArgs.data.signedAt).toBeNull();
+  });
+
+  // ── P12 — contract document linking + customer notifications ─────────────
+
+  it('converting with an uploaded pdfUrl registers a CUSTOMER_VISIBLE CONTRACT document linked to the contract', async () => {
+    await request(app.getHttpServer())
+      .post(PATH_CONVERT)
+      .send({
+        pdfUrl: 'https://cdn.example/contract.pdf',
+        fileName: 'contract.pdf',
+        mimeType: 'application/pdf',
+        sizeBytes: 4096,
+      })
+      .expect(201);
+
+    // The uploaded file becomes a first-class Document owned by the contract,
+    // customer-visible so it shows in the Documents Center AND downloads via
+    // the signed-download endpoint.
+    expect(mock.document.create).toHaveBeenCalledTimes(1);
+    const docData = mock.document.create.mock.calls[0]![0] as {
+      data: {
+        ownerType: string;
+        ownerId: string;
+        category: string;
+        visibility: string;
+        fileUrl: string;
+        fileName: string;
+      };
+    };
+    expect(docData.data).toMatchObject({
+      ownerType: 'CONTRACT',
+      ownerId: 'contract-new',
+      category: 'CONTRACT',
+      visibility: 'CUSTOMER_VISIBLE',
+      fileUrl: 'https://cdn.example/contract.pdf',
+      fileName: 'contract.pdf',
+    });
+
+    // Both customer notifications fire: contract created + document available.
+    const firedCodes = mock.notification.create.mock.calls.map(
+      (c) => (c[0] as { data: { templateCode: string } }).data.templateCode,
+    );
+    expect(firedCodes).toContain('contract_created_customer');
+    expect(firedCodes).toContain('contract_document_available');
+  });
+
+  it('converting without a pdfUrl notifies contract_created_customer but registers no document', async () => {
+    await request(app.getHttpServer()).post(PATH_CONVERT).send({}).expect(201);
+
+    expect(mock.document.create).not.toHaveBeenCalled();
+    const firedCodes = mock.notification.create.mock.calls.map(
+      (c) => (c[0] as { data: { templateCode: string } }).data.templateCode,
+    );
+    expect(firedCodes).toContain('contract_created_customer');
+    expect(firedCodes).not.toContain('contract_document_available');
   });
 
   // ── Booking-payment confirmation ────────────────────────────────────────
