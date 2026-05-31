@@ -12,7 +12,7 @@ import { ReservationCard } from '@/components/account/ReservationCard';
 
 export const metadata = buildMetadata({
   title: 'الحجوزات',
-  description: 'حجوزاتك في دار الفخامة.',
+  description: 'حجوزاتك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

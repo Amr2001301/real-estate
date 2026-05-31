@@ -101,13 +101,13 @@ abstract class AppLocalizations {
   /// Customer app display name
   ///
   /// In en, this message translates to:
-  /// **'Real Estate'**
+  /// **'Devora'**
   String get customerAppTitle;
 
   /// Staff app display name
   ///
   /// In en, this message translates to:
-  /// **'Real Estate Staff'**
+  /// **'Devora Staff'**
   String get staffAppTitle;
 
   /// Native name of this language

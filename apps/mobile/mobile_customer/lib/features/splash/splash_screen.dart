@@ -15,7 +15,7 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.apartment_rounded, size: 56, color: colors.brandGold),
+            Image.asset('assets/brand/devora-logo.png', width: 96, height: 96),
             const SizedBox(height: AppSpacing.md),
             Text(
               context.l10n.customerAppTitle,

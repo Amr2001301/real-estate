@@ -43,7 +43,7 @@ import { notificationTitle } from '@/components/account/NotificationCard';
 
 export const metadata = buildMetadata({
   title: 'لوحة الحساب',
-  description: 'منطقة العميل في دار الفخامة.',
+  description: 'منطقة العميل في ديفورا.',
   robots: { index: false, follow: false },
 });
 

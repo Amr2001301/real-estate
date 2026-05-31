@@ -49,7 +49,7 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: AppSpacing.xxl),
-                  Icon(Icons.business_center_rounded, size: 56, color: colors.brandGold),
+                  Image.asset('assets/brand/devora-logo.png', width: 72, height: 72),
                   const SizedBox(height: AppSpacing.md),
                   Text(
                     l10n.staffAppTitle,

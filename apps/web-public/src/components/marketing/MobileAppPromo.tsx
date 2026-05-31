@@ -38,7 +38,7 @@ function AppPreviewScreen() {
       <div className="flex items-center justify-between px-4 pb-2 pt-1">
         <div className="leading-tight">
           <p className="text-[9px] text-ink-muted">مرحباً بك في</p>
-          <p className="text-xs font-bold text-navy">دار الفخامة</p>
+          <p className="text-xs font-bold text-navy">ديفورا</p>
         </div>
         <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-full bg-gold-100 text-gold-600">
           <Bell className="h-4 w-4" aria-hidden />

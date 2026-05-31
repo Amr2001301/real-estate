@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import type { Route } from 'next';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
@@ -42,7 +43,7 @@ export function Footer() {
   const contactPhone = getContactPhone();
   const contact: ContactRow[] = [
     ...(contactPhone ? [{ icon: Phone, text: contactPhone, dir: 'ltr' as const }] : []),
-    { icon: Mail, text: 'hello@dar-alfakhama.sa', dir: 'ltr' as const },
+    { icon: Mail, text: 'devorasoftware@gmail.com', dir: 'ltr' as const },
     { icon: MapPin, text: 'الرياض، المملكة العربية السعودية', dir: 'rtl' as const },
   ];
   return (
@@ -56,8 +57,14 @@ export function Footer() {
         <div className="grid gap-x-8 gap-y-9 sm:grid-cols-2 lg:grid-cols-12 lg:gap-10">
           {/* Brand */}
           <div className="lg:col-span-5">
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold-400" aria-hidden />
+            <div className="flex items-center gap-2.5">
+              <Image
+                src="/brand/devora-logo.png"
+                alt={SITE.name}
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-md object-cover"
+              />
               <span className="font-display text-xl text-white">{SITE.name}</span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">

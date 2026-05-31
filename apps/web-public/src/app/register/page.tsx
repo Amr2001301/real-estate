@@ -5,7 +5,7 @@ import { CustomerAuthForm } from '@/components/auth/CustomerAuthForm';
 
 export const metadata = buildMetadata({
   title: 'إنشاء حساب',
-  description: 'أنشئ حسابك في دار الفخامة للوصول إلى العروض، طلبات الزيارة، ومتابعة اختياراتك.',
+  description: 'أنشئ حسابك في ديفورا للوصول إلى العروض، طلبات الزيارة، ومتابعة اختياراتك.',
   robots: { index: false, follow: false },
 });
 

@@ -9,7 +9,7 @@ import { ProfileForm } from '@/components/account/ProfileForm';
 
 export const metadata = buildMetadata({
   title: 'الملف الشخصي',
-  description: 'إدارة بياناتك في دار الفخامة.',
+  description: 'إدارة بياناتك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

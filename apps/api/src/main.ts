@@ -46,7 +46,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new DateSerializerInterceptor());
 
   const swagger = new DocumentBuilder()
-    .setTitle('Real Estate Platform API')
+    .setTitle('Devora API')
     .setDescription('Backend for Public, Admin, Sales, Client/Customer surfaces')
     .setVersion('0.1.0')
     .addBearerAuth()

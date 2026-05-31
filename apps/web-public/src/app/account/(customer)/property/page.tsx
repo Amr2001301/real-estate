@@ -12,7 +12,7 @@ import { PropertyCard } from '@/components/account/PropertyCard';
 
 export const metadata = buildMetadata({
   title: 'عقاراتي',
-  description: 'الوحدات التي تملكها في دار الفخامة.',
+  description: 'الوحدات التي تملكها في ديفورا.',
   robots: { index: false, follow: false },
 });
 

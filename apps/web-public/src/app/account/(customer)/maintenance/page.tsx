@@ -12,7 +12,7 @@ import { MaintenanceRequestCard } from '@/components/account/MaintenanceRequestC
 
 export const metadata = buildMetadata({
   title: 'الصيانة',
-  description: 'طلبات الصيانة الخاصة بك في دار الفخامة.',
+  description: 'طلبات الصيانة الخاصة بك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

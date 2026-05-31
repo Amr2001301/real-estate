@@ -7,7 +7,7 @@ import { InlineNotice } from '@/components/states/InlineNotice';
 
 export const metadata = buildMetadata({
   title: 'سياسة الخصوصية',
-  description: 'سياسة الخصوصية لمنصة دار الفخامة العقارية.',
+  description: 'سياسة الخصوصية لمنصة ديفورا العقارية.',
   // Placeholder content — keep out of search indexes until the final legal text lands.
   robots: { index: false, follow: false },
 });
@@ -30,7 +30,7 @@ export default function PrivacyPage() {
 
             <PremiumCard className="mt-6 space-y-5 p-8 leading-relaxed text-ink-muted sm:p-10">
               <p>
-                تحترم دار الفخامة خصوصية زوّارها وعملائها، وتلتزم بحماية البيانات الشخصية التي تتم
+                تحترم ديفورا خصوصية زوّارها وعملائها، وتلتزم بحماية البيانات الشخصية التي تتم
                 مشاركتها معنا عبر الموقع.
               </p>
               <div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import type { Route } from 'next';
 import { Menu, X, UserCircle2, LogOut } from 'lucide-react';
@@ -26,7 +27,14 @@ function Wordmark({ invert }: { invert: boolean }) {
       href={routes.home}
       className="flex items-center gap-2 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-0"
     >
-      <span className="inline-block h-2.5 w-2.5 rounded-full bg-gold-400" aria-hidden />
+      <Image
+        src="/brand/devora-logo.png"
+        alt={SITE.name}
+        width={28}
+        height={28}
+        priority
+        className="h-7 w-7 rounded-md object-cover"
+      />
       <span className={cn('font-display text-xl tracking-tight', invert ? 'text-white' : 'text-ink-strong')}>
         {SITE.name}
       </span>

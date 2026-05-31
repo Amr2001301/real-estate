@@ -12,7 +12,7 @@ import { ButtonLink } from '@/components/ui/Button';
 export const metadata: Metadata = buildMetadata({
   path: '/app',
   title: 'التجربة الرقمية',
-  description: 'ابدأ رحلتك العقارية مع دار الفخامة — تجربة رقمية واضحة وسريعة من البحث حتى القرار.',
+  description: 'ابدأ رحلتك العقارية مع ديفورا — تجربة رقمية واضحة وسريعة من البحث حتى القرار.',
   // Smart landing / redirect target — keep it out of the index.
   robots: { index: false, follow: true },
 });
@@ -32,7 +32,7 @@ export default async function AppLandingPage() {
       <Container className="mx-auto max-w-2xl text-center">
         <Badge tone="gold">تجربة رقمية متكاملة</Badge>
         <h1 className="mt-5 text-3xl font-bold leading-snug text-ink-strong sm:text-4xl">
-          ابدأ رحلتك العقارية مع دار الفخامة
+          ابدأ رحلتك العقارية مع ديفورا
         </h1>
         <p className="mt-4 text-base leading-relaxed text-ink-muted sm:text-lg">
           تصفّح المشاريع والوحدات، قارن الخيارات المناسبة، واحجز زيارتك — تجربة واضحة وسريعة من البحث حتى القرار.

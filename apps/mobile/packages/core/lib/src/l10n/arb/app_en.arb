@@ -1,9 +1,9 @@
 {
   "@@locale": "en",
 
-  "customerAppTitle": "Real Estate",
+  "customerAppTitle": "Devora",
   "@customerAppTitle": { "description": "Customer app display name" },
-  "staffAppTitle": "Real Estate Staff",
+  "staffAppTitle": "Devora Staff",
   "@staffAppTitle": { "description": "Staff app display name" },
 
   "languageName": "English",

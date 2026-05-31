@@ -28,6 +28,7 @@ import {
   workbookToBuffer,
 } from '../../common/utils/xlsx';
 import { renderBarChartPng } from '../../common/utils/xlsx-chart';
+import { brandLogoPng } from '../../common/utils/brand';
 
 const TOP_METRIC_LABEL: Record<TopMetric, string> = {
   leads: 'الفرص',
@@ -563,7 +564,7 @@ export class BrokerReportsService {
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'تقرير أداء الوسطاء', SPAN);
+    addBoardBanner(cover, 'تقرير أداء الوسطاء', SPAN, { wb, logo: brandLogoPng() });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,

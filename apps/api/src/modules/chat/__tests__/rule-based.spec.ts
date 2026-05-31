@@ -168,7 +168,7 @@ describe('RuleBasedChatProvider (no LLM, no external calls)', () => {
 
   it('greets with home quick replies and zero tokens', async () => {
     const out = await turn('مرحبا');
-    expect(out.content).toContain('دار الفخامة');
+    expect(out.content).toContain('ديفورا');
     expect(out.quickReplies?.length).toBeGreaterThan(0);
     expect(out.tokensIn).toBe(0);
     expect(out.tokensOut).toBe(0);

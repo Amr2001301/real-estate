@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const SITE = {
-  name: 'دار الفخامة',
+  name: 'ديفورا',
   tagline: 'تجربة عقارية فاخرة تبدأ من هنا',
   description:
     'اكتشف مشاريع ووحدات سكنية مختارة بعناية لأسلوب حياة أرقى — تجربة عقارية فاخرة وموثوقة.',
@@ -49,6 +49,7 @@ export function buildMetadata({
     metadataBase: new URL(SITE_URL),
     title: fullTitle,
     description: desc,
+    icons: { icon: '/favicon.ico' },
     robots: { index: true, follow: true },
     ...(path ? { alternates: { canonical: path } } : {}),
     openGraph: {

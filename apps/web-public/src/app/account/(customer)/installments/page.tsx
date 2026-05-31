@@ -15,7 +15,7 @@ import { cn } from '@/lib/cn';
 
 export const metadata = buildMetadata({
   title: 'الأقساط',
-  description: 'جدول أقساط عقودك في دار الفخامة.',
+  description: 'جدول أقساط عقودك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

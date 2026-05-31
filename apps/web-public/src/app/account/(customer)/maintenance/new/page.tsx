@@ -15,7 +15,7 @@ import { MaintenanceRequestForm, type SelectOption } from '@/components/account/
 
 export const metadata = buildMetadata({
   title: 'طلب صيانة جديد',
-  description: 'إنشاء طلب صيانة جديد في دار الفخامة.',
+  description: 'إنشاء طلب صيانة جديد في ديفورا.',
   robots: { index: false, follow: false },
 });
 

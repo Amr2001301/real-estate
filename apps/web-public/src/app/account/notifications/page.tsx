@@ -13,7 +13,7 @@ import { markAllNotificationsReadAction } from '@/lib/account-actions';
 
 export const metadata = buildMetadata({
   title: 'الإشعارات',
-  description: 'إشعاراتك في دار الفخامة.',
+  description: 'إشعاراتك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

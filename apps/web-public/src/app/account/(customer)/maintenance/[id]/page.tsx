@@ -14,7 +14,7 @@ import { DocumentDownloadById } from '@/components/account/DocumentDownloadById'
 
 export const metadata = buildMetadata({
   title: 'تفاصيل طلب الصيانة',
-  description: 'تفاصيل طلب الصيانة في دار الفخامة.',
+  description: 'تفاصيل طلب الصيانة في ديفورا.',
   robots: { index: false, follow: false },
 });
 

@@ -21,7 +21,7 @@ export function WhyChooseUs() {
       {/* Two-level heading — gold pill eyebrow + title + one-line subtitle */}
       <div className="mx-auto max-w-2xl text-center">
         <span className="inline-block rounded-full bg-gold-100/70 px-3 py-1 text-sm font-semibold text-gold-600 sm:text-base">
-          لماذا دار الفخامة
+          لماذا ديفورا
         </span>
         <h2 className="mt-4 text-3xl font-bold text-ink-strong lg:text-4xl">تجربة عقارية تمنحك الثقة</h2>
         <p className="mt-2 text-ink-muted">اختيارات منتقاة، مقارنة واضحة، ومتابعة تساعدك قبل القرار.</p>

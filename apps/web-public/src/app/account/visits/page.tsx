@@ -12,7 +12,7 @@ import { VisitRequestCard } from '@/components/account/VisitRequestCard';
 
 export const metadata = buildMetadata({
   title: 'الزيارات',
-  description: 'طلبات الزيارة الخاصة بك في دار الفخامة.',
+  description: 'طلبات الزيارة الخاصة بك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

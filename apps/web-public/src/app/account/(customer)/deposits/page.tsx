@@ -14,7 +14,7 @@ import { SubmitProofTrigger } from '@/components/account/SubmitProofTrigger';
 
 export const metadata = buildMetadata({
   title: 'الدفعات',
-  description: 'سجل دفعاتك في دار الفخامة.',
+  description: 'سجل دفعاتك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

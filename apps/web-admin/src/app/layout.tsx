@@ -16,8 +16,9 @@ const plexArabic = IBM_Plex_Sans_Arabic({
 });
 
 export const metadata: Metadata = {
-  title: 'Real Estate Admin',
-  description: 'Admin dashboard for the Real Estate Platform',
+  title: 'Devora Admin',
+  description: 'Admin dashboard for Devora',
+  icons: { icon: '/favicon.ico' },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

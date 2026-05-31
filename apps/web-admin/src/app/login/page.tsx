@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import LoginForm from './form';
 
 export default async function LoginPage({
@@ -21,10 +22,16 @@ export default async function LoginPage({
         <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-brand-500/8 rounded-full blur-2xl translate-y-1/4 -translate-x-1/4" />
 
         {/* Brand name */}
-        <div className="relative z-10">
-          <span className="text-xl font-bold text-white tracking-tight">
-            إدارة العقارات
-          </span>
+        <div className="relative z-10 flex items-center gap-3">
+          <Image
+            src="/brand/devora-logo.png"
+            alt="Devora"
+            width={40}
+            height={40}
+            priority
+            className="h-10 w-10 rounded-xl object-cover ring-1 ring-inset ring-white/10"
+          />
+          <span className="text-xl font-bold text-white tracking-tight">ديفورا</span>
         </div>
 
         {/* Main hero text */}
@@ -60,7 +67,7 @@ export default async function LoginPage({
       {/* ── Form panel ── */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-white">
         {/* Mobile-only brand */}
-        <p className="lg:hidden text-lg font-bold text-slate-900 mb-8">إدارة العقارات</p>
+        <p className="lg:hidden text-lg font-bold text-slate-900 mb-8">ديفورا</p>
 
         <div className="w-full max-w-[420px]">
           {/* Header */}

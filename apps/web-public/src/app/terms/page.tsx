@@ -7,7 +7,7 @@ import { InlineNotice } from '@/components/states/InlineNotice';
 
 export const metadata = buildMetadata({
   title: 'الشروط والأحكام',
-  description: 'الشروط والأحكام لاستخدام منصة دار الفخامة العقارية.',
+  description: 'الشروط والأحكام لاستخدام منصة ديفورا العقارية.',
   // Placeholder content — keep out of search indexes until the final legal text lands.
   robots: { index: false, follow: false },
 });
@@ -30,7 +30,7 @@ export default function TermsPage() {
 
             <PremiumCard className="mt-6 space-y-5 p-8 leading-relaxed text-ink-muted sm:p-10">
               <p>
-                باستخدامك لموقع دار الفخامة فإنك توافق على الالتزام بهذه الشروط والأحكام. يرجى قراءتها
+                باستخدامك لموقع ديفورا فإنك توافق على الالتزام بهذه الشروط والأحكام. يرجى قراءتها
                 بعناية.
               </p>
               <div>

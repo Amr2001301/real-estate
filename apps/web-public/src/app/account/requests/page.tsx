@@ -12,7 +12,7 @@ import { InfoRequestCard } from '@/components/account/InfoRequestCard';
 
 export const metadata = buildMetadata({
   title: 'الطلبات',
-  description: 'استفساراتك وطلبات المعلومات في دار الفخامة.',
+  description: 'استفساراتك وطلبات المعلومات في ديفورا.',
   robots: { index: false, follow: false },
 });
 

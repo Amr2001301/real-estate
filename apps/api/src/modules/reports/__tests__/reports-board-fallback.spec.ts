@@ -105,16 +105,17 @@ describe('Board XLSX — graceful chart fallback (P15.4)', () => {
     ['/reports/financial/export.xlsx', 'الملخص'],
     ['/reports/sales/export.xlsx', 'الملخص'],
     ['/reports/financial-dashboard/export.xlsx', 'الملخص'],
-  ])('%s still produces a valid workbook with NO images when charts are null', async (path, coverName) => {
+  ])('%s still produces a valid workbook with its tables + a chart-unavailable note when charts are null', async (path, coverName) => {
     FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
     const res = await fetchXlsx(app, path).expect(200);
     expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
     const wb = new Workbook();
     await wb.xlsx.load(res.body as unknown as ArrayBuffer);
-    // Tables present (cover sheet exists), zero embedded images.
-    expect(wb.getWorksheet(coverName)).toBeDefined();
-    let images = 0;
-    wb.eachSheet((ws) => (images += ws.getImages().length));
-    expect(images).toBe(0);
+    // Cover sheet + tables still render; each chart slot degrades to a note.
+    const cover = wb.getWorksheet(coverName)!;
+    expect(cover).toBeDefined();
+    const flat: string[] = [];
+    cover.eachRow((r) => r.eachCell((c) => flat.push(String(c.value ?? ''))));
+    expect(flat.join(' ')).toContain('الرسم البياني غير متاح حالياً');
   });
 });

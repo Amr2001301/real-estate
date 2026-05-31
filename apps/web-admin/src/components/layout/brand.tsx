@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Building2 } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/cn';
 
 interface Props {
@@ -26,15 +26,14 @@ export function Brand({
         className,
       )}
     >
-      <span
-        className={cn(
-          'inline-flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-md',
-          'bg-gradient-to-br from-brand-400 via-brand-500 to-brand-700',
-          'ring-1 ring-inset ring-white/10',
-        )}
-      >
-        <Building2 className="h-[20px] w-[20px]" strokeWidth={2} />
-      </span>
+      <Image
+        src="/brand/devora-logo.png"
+        alt="Devora"
+        width={40}
+        height={40}
+        priority
+        className="h-10 w-10 rounded-xl object-cover shadow-md ring-1 ring-inset ring-white/10"
+      />
       {!compact && (
         <span className="flex flex-col leading-tight">
           <span
@@ -43,7 +42,7 @@ export function Brand({
               isDark ? 'text-white' : 'text-slate-900',
             )}
           >
-            إدارة العقارات
+            ديفورا
           </span>
           <span
             className={cn(

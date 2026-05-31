@@ -6,7 +6,7 @@ import { InlineNotice } from '@/components/states/InlineNotice';
 
 export const metadata = buildMetadata({
   title: 'تسجيل الدخول',
-  description: 'سجّل دخولك إلى حسابك في دار الفخامة لمتابعة طلباتك وزياراتك ووحداتك المفضلة.',
+  description: 'سجّل دخولك إلى حسابك في ديفورا لمتابعة طلباتك وزياراتك ووحداتك المفضلة.',
   robots: { index: false, follow: false },
 });
 

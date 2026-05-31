@@ -4,7 +4,7 @@ import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { OpenStatus } from './OpenStatus';
 
-const EMAIL = 'hello@dar-alfakhama.sa';
+const EMAIL = 'devorasoftware@gmail.com';
 const MAP_URL = 'https://maps.google.com/?q=الرياض،+المملكة+العربية+السعودية';
 const WHATSAPP_MESSAGE = 'مرحبًا، أرغب في الاستفسار عن خدماتكم العقارية.';
 

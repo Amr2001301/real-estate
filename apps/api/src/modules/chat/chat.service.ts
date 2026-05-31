@@ -5,7 +5,7 @@ import { ChatProvider, type ChatTurn } from './providers/chat-provider';
 import { CreateSessionDto, FeedbackDto, SendMessageDto } from './dto/chat.dto';
 
 const GREETING =
-  'مرحبًا! أنا المساعد العقاري لدار الفخامة. كيف يمكنني مساعدتك اليوم؟';
+  'مرحبًا! أنا المساعد العقاري لديفورا. كيف يمكنني مساعدتك اليوم؟';
 const QUICK_REPLIES = ['أبحث عن شقة', 'أبحث عن مشروع', 'كيف أحجز زيارة؟', 'تواصل مع مستشار'];
 const HISTORY_LIMIT = 40;
 

@@ -11,7 +11,7 @@ import { FavoriteCard } from '@/components/account/FavoriteCard';
 
 export const metadata = buildMetadata({
   title: 'المفضلة',
-  description: 'وحداتك ومشاريعك المحفوظة في دار الفخامة.',
+  description: 'وحداتك ومشاريعك المحفوظة في ديفورا.',
   robots: { index: false, follow: false },
 });
 

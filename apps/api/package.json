@@ -2,7 +2,7 @@
   "name": "@rep/api",
   "version": "0.1.0",
   "private": true,
-  "description": "Real Estate Platform — NestJS API",
+  "description": "Devora — NestJS API",
   "main": "dist/main.js",
   "scripts": {
     "build": "nest build",

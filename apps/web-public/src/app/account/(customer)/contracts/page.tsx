@@ -12,7 +12,7 @@ import { ContractCard } from '@/components/account/ContractCard';
 
 export const metadata = buildMetadata({
   title: 'العقود',
-  description: 'عقودك في دار الفخامة.',
+  description: 'عقودك في ديفورا.',
   robots: { index: false, follow: false },
 });
 

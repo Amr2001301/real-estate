@@ -53,6 +53,7 @@ import {
   renderBarChartPng,
   renderDoughnutChartPng,
 } from '../../common/utils/xlsx-chart';
+import { brandLogoPng } from '../../common/utils/brand';
 
 // Arabic month names indexed by JS month (0 = January). Used for the
 // reservation-trend labels on the admin dashboard.
@@ -516,7 +517,7 @@ class ReportsService {
     const SPAN = 6;
     const sum = wb.addWorksheet('الملخص');
     setupBoardSheet(sum, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(sum, 'تقرير لوحة التحكم', SPAN);
+    addBoardBanner(sum, 'تقرير لوحة التحكم', SPAN, { wb, logo: brandLogoPng() });
 
     addSectionTitle(sum, 'الملخص التنفيذي', SPAN);
     addKpiCards(
@@ -1396,7 +1397,7 @@ class ReportsService {
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'تقرير المبيعات', SPAN);
+    addBoardBanner(cover, 'تقرير المبيعات', SPAN, { wb, logo: brandLogoPng() });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
@@ -1457,7 +1458,7 @@ class ReportsService {
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'التقرير المالي', SPAN);
+    addBoardBanner(cover, 'التقرير المالي', SPAN, { wb, logo: brandLogoPng() });
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
       cover,
@@ -1805,7 +1806,7 @@ class ReportsService {
     const wb = createReportWorkbook();
     const cover = wb.addWorksheet('الملخص');
     setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
-    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN);
+    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN, { wb, logo: brandLogoPng() });
 
     addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
     addKpiCards(
