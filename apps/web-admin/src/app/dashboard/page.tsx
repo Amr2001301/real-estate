@@ -8,7 +8,8 @@ import {
   Banknote,
   AlertCircle,
   FileText,
-  Cloud,
+  MessageSquare,
+  Clock,
   ArrowLeft,
   Plus,
 } from 'lucide-react';
@@ -22,103 +23,152 @@ import { Card } from '@/components/ui/card';
 import { ChartPanel } from '@/components/dashboard/chart-panel';
 import { BookingsTrendChart } from '@/components/dashboard/bookings-trend-chart';
 import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
-import { AlertList } from '@/components/dashboard/alert-list';
+import { AlertList, type AlertItem } from '@/components/dashboard/alert-list';
 import { ActivityTable } from '@/components/dashboard/activity-table';
 import { SupportCard } from '@/components/dashboard/support-card';
 import { SalesDashboard } from './_components/sales-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
 
-interface Kpis {
-  projects: number;
-  units: { total: number; available: number; reserved: number; sold: number };
-  leads: { total: number; new: number };
-  pendingVisits: number;
-  contracts: number;
-  depositsTotal: number | string;
+// P14 — the single ADMIN dashboard feed. Every value is DB-derived; there is
+// no demo data on this screen anymore.
+interface AdminSummary {
+  kpis: {
+    projects: number;
+    totalUnits: number;
+    availableUnits: number;
+    reservedUnits: number;
+    newLeadsThisMonth: number;
+    pendingDeposits: number;
+    openMaintenance: number;
+  };
+  reservationTrend: Array<{ month: string; label: string; value: number }>;
+  leadSources: Array<{ source: string; count: number }>;
+  recentActivity: Array<{
+    id: string;
+    type: string;
+    title: string;
+    action: string;
+    context: string | null;
+    createdAt: string;
+  }>;
+  alerts: {
+    contractsAwaitingSignature: number;
+    depositsPendingReview: number;
+    openMaintenance: number;
+    reservationsExpiringSoon: number;
+    visitsAwaitingConfirmation: number;
+    infoRequestsOpen: number;
+  };
 }
 
-// TODO(phase-5): wire to real /reports/* endpoints when available.
-const BOOKINGS_TREND = [
-  { month: 'يناير', value: 32 },
-  { month: 'فبراير', value: 41 },
-  { month: 'مارس', value: 28 },
-  { month: 'أبريل', value: 47 },
-  { month: 'مايو', value: 38 },
-  { month: 'يونيو', value: 64, highlight: true },
-];
+const DONUT_COLORS = ['#C99A2E', '#1E3348', '#94A3B8', '#CBD5E1', '#64748B', '#E2E8F0'];
 
-const LEAD_SOURCES = [
-  { label: 'مباشر', value: 74, color: '#C99A2E' },
-  { label: 'وسائل التواصل', value: 18, color: '#1E3348' },
-  { label: 'إحالة', value: 6, color: '#94A3B8' },
-  { label: 'موقع الويب', value: 2, color: '#CBD5E1' },
-];
+/** Server-rendered relative time in Arabic (no client JS needed). */
+function relativeTime(iso: string): string {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.round(diffMs / 60000);
+  if (mins < 1) return 'الآن';
+  if (mins < 60) return `منذ ${mins} دقيقة`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `منذ ${hrs} ساعة`;
+  const days = Math.round(hrs / 24);
+  return `منذ ${days} يوم`;
+}
 
-const ALERTS = [
-  {
-    id: '1',
-    tone: 'danger' as const,
-    title: '5 عقود بانتظار التوقيع',
-    description: 'تجاوزت المهلة المحددة بـ 24 ساعة',
-    icon: <FileText />,
-  },
-  {
-    id: '2',
-    tone: 'info' as const,
-    title: 'ودائع بانتظار التأكيد',
-    description: 'عدد 2 معاملة بنكية جديدة',
-    icon: <Banknote />,
-  },
-  {
-    id: '3',
-    tone: 'neutral' as const,
-    title: 'تحديثات النظام',
-    description: 'نسخة احتياطية مكتملة',
-    icon: <Cloud />,
-  },
-];
-
-const ACTIVITIES = [
-  {
-    id: 'a1',
-    user: 'أحمد منصور',
-    action: 'حجز الوحدة 402',
-    entity: 'برج الجوار',
-    time: 'منذ ساعتين',
-  },
-  {
-    id: 'a2',
-    user: 'سارة كمال',
-    action: 'طلب صيانة جديد',
-    entity: 'فيلا الياقوت',
-    time: 'منذ 4 ساعات',
-  },
-  {
-    id: 'a3',
-    user: 'محمد علي',
-    action: 'توقيع عقد رقم #490',
-    entity: 'مجمع النخيل',
-    time: 'منذ 6 ساعات',
-  },
-];
+function EmptyBlock({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+      <Clock className="h-5 w-5 text-slate-300" aria-hidden />
+      <p className="text-sm text-slate-400">{message}</p>
+    </div>
+  );
+}
 
 export default async function DashboardHome() {
-  // Non-admin staff (SALES) get a sales-focused home built from endpoints they
-  // can access — the admin /reports/kpis call below is ADMIN-only and would
-  // 403 for them. ADMIN keeps the existing dashboard unchanged.
+  // Non-admin staff get their own home — the admin summary below is ADMIN-only
+  // and would 403 for them.
   const session = await getSession();
   if (session && session.role === 'SALES') {
     return <SalesDashboard userId={session.id} />;
   }
-  // SALES_MANAGER gets the all-sales team dashboard. Its endpoints are open to
-  // the role and self-scope nothing for managers; ADMIN keeps the admin home.
   if (session && session.role === 'SALES_MANAGER') {
     return <SalesManagerDashboard />;
   }
 
-  const r = await safe(api.get<Kpis>('/reports/kpis'));
-  const kpis = r.data;
+  const r = await safe(api.get<AdminSummary>('/reports/admin-summary'));
+  const summary = r.data;
   const error = r.error;
+
+  // Lead-source distribution → donut slices + center label (top source share).
+  const leadSlices = (summary?.leadSources ?? []).map((s, i) => ({
+    label: s.source,
+    value: s.count,
+    color: DONUT_COLORS[i % DONUT_COLORS.length]!,
+  }));
+  const leadTotal = leadSlices.reduce((sum, s) => sum + s.value, 0);
+  const topSource = summary?.leadSources?.[0];
+  const donutCenter =
+    topSource && leadTotal > 0 ? `${Math.round((topSource.count / leadTotal) * 100)}%` : undefined;
+
+  // Reservation trend → bar chart (zeros render as empty bars — never faked).
+  const trendData = (summary?.reservationTrend ?? []).map((t) => ({ month: t.label, value: t.value }));
+
+  // Alerts → only actionable, non-zero counts (no fabricated rows).
+  const a = summary?.alerts;
+  const alertItems: AlertItem[] = a
+    ? (
+        [
+          a.contractsAwaitingSignature > 0 && {
+            id: 'contracts',
+            tone: 'danger' as const,
+            title: `${a.contractsAwaitingSignature} عقود بانتظار التوقيع`,
+            description: 'عقود لم تُوقَّع بعد',
+            icon: <FileText />,
+          },
+          a.depositsPendingReview > 0 && {
+            id: 'deposits',
+            tone: 'info' as const,
+            title: `${a.depositsPendingReview} دفعات بانتظار المراجعة`,
+            description: 'إثباتات دفع مقدّمة من العملاء',
+            icon: <Banknote />,
+          },
+          a.openMaintenance > 0 && {
+            id: 'maintenance',
+            tone: 'warning' as const,
+            title: `${a.openMaintenance} طلبات صيانة مفتوحة`,
+            icon: <Wrench />,
+          },
+          a.reservationsExpiringSoon > 0 && {
+            id: 'reservations',
+            tone: 'warning' as const,
+            title: `${a.reservationsExpiringSoon} حجوزات تنتهي قريباً`,
+            description: 'خلال 7 أيام',
+            icon: <CalendarCheck2 />,
+          },
+          a.visitsAwaitingConfirmation > 0 && {
+            id: 'visits',
+            tone: 'info' as const,
+            title: `${a.visitsAwaitingConfirmation} زيارات بانتظار تأكيد العميل`,
+            icon: <CalendarCheck2 />,
+          },
+          a.infoRequestsOpen > 0 && {
+            id: 'info',
+            tone: 'neutral' as const,
+            title: `${a.infoRequestsOpen} استفسارات مفتوحة`,
+            icon: <MessageSquare />,
+          },
+        ].filter(Boolean) as AlertItem[]
+      )
+    : [];
+
+  // Recent activity → table rows (derived from real createdAt rows).
+  const activityRows = (summary?.recentActivity ?? []).map((it) => ({
+    id: it.id,
+    user: it.title,
+    action: it.action,
+    entity: it.context ?? '—',
+    time: relativeTime(it.createdAt),
+  }));
 
   return (
     <div className="space-y-5">
@@ -127,19 +177,11 @@ export default async function DashboardHome() {
         description="نظرة عامة على أداء المحفظة العقارية والعمليات الجارية اليوم."
         actions={
           <>
-            <Button
-              variant="outline"
-              size="md"
-              leftIcon={<FileText className="h-4 w-4" />}
-            >
+            <Button variant="outline" size="md" leftIcon={<FileText className="h-4 w-4" />}>
               توليد تقرير
             </Button>
             <Link href={'/dashboard/projects/new' as never}>
-              <Button
-                variant="primary"
-                size="md"
-                leftIcon={<Plus className="h-4 w-4" />}
-              >
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 مشروع جديد
               </Button>
             </Link>
@@ -157,61 +199,36 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {kpis && (
+      {summary && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          <PageKpiCard
-            label="إجمالي المشاريع"
-            value={kpis.projects}
-            icon={<Building2 />}
-            tone="brand"
-          />
+          <PageKpiCard label="إجمالي المشاريع" value={summary.kpis.projects} icon={<Building2 />} tone="brand" />
           <PageKpiCard
             label="الوحدات المتاحة"
-            value={kpis.units.available}
-            sub={`من إجمالي ${kpis.units.total}`}
+            value={summary.kpis.availableUnits}
+            sub={`من إجمالي ${summary.kpis.totalUnits}`}
             icon={<Home />}
             tone="info"
           />
           <PageKpiCard
             label="الفرص الجديدة"
-            value={kpis.leads.new}
-            sub={kpis.leads.new > 0 ? `+${kpis.leads.new} هذا الشهر` : undefined}
+            value={summary.kpis.newLeadsThisMonth}
+            sub={summary.kpis.newLeadsThisMonth > 0 ? 'هذا الشهر' : undefined}
             icon={<Zap />}
             tone="accent"
           />
-          <PageKpiCard
-            label="الحجوزات النشطة"
-            value={kpis.units.reserved}
-            icon={<CalendarCheck2 />}
-            tone="success"
-          />
-          <PageKpiCard
-            label="ودائع معلقة"
-            value={kpis.pendingVisits}
-            icon={<Receipt />}
-            tone="warning"
-          />
-          <PageKpiCard
-            label="طلبات صيانة"
-            value={7}
-            sub="بيانات تجريبية"
-            icon={<Wrench />}
-            tone="danger"
-          />
+          <PageKpiCard label="الحجوزات النشطة" value={summary.kpis.reservedUnits} icon={<CalendarCheck2 />} tone="success" />
+          <PageKpiCard label="ودائع معلقة" value={summary.kpis.pendingDeposits} icon={<Receipt />} tone="warning" />
+          <PageKpiCard label="طلبات صيانة مفتوحة" value={summary.kpis.openMaintenance} icon={<Wrench />} tone="danger" />
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ChartPanel
-          title="توزيع العملاء المحتملين"
-          description="حسب مصدر القناة"
-          className="lg:col-span-1"
-        >
-          <LeadSourceDonut
-            slices={LEAD_SOURCES}
-            centerLabel="74%"
-            centerSub="مباشر"
-          />
+        <ChartPanel title="توزيع العملاء المحتملين" description="حسب مصدر القناة" className="lg:col-span-1">
+          {leadSlices.length > 0 ? (
+            <LeadSourceDonut slices={leadSlices} centerLabel={donutCenter} centerSub={topSource?.source} />
+          ) : (
+            <EmptyBlock message="لا توجد بيانات كافية" />
+          )}
         </ChartPanel>
 
         <ChartPanel
@@ -224,7 +241,11 @@ export default async function DashboardHome() {
             </span>
           }
         >
-          <BookingsTrendChart data={BOOKINGS_TREND} />
+          {trendData.length > 0 ? (
+            <BookingsTrendChart data={trendData} />
+          ) : (
+            <EmptyBlock message="لا توجد بيانات كافية" />
+          )}
         </ChartPanel>
       </div>
 
@@ -234,20 +255,20 @@ export default async function DashboardHome() {
             <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-danger-50 text-danger-600 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5">
               <AlertCircle className="h-3.5 w-3.5" />
             </span>
-            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
-              تنبيهات معلقة
-            </h3>
+            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">تنبيهات معلقة</h3>
           </div>
           <div className="p-4 sm:p-5">
-            <AlertList items={ALERTS} />
+            {alertItems.length > 0 ? (
+              <AlertList items={alertItems} />
+            ) : (
+              <EmptyBlock message="لا توجد تنبيهات حالياً" />
+            )}
           </div>
         </Card>
 
         <Card className="overflow-hidden lg:col-span-2">
           <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
-            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
-              آخر النشاطات
-            </h3>
+            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">آخر النشاطات</h3>
             <Link
               href={'/dashboard/audit' as never}
               className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
@@ -257,7 +278,11 @@ export default async function DashboardHome() {
             </Link>
           </div>
           <div className="p-4 sm:p-5">
-            <ActivityTable rows={ACTIVITIES} />
+            {activityRows.length > 0 ? (
+              <ActivityTable rows={activityRows} />
+            ) : (
+              <EmptyBlock message="لا توجد بيانات كافية" />
+            )}
           </div>
         </Card>
       </div>

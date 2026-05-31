@@ -15,13 +15,16 @@ import {
   IsUUID,
 } from 'class-validator';
 import {
+  AppointmentStatus,
   BonusEntryStatus,
   BrokerCommissionStatus,
   BrokerPayoutStatus,
+  DepositReviewStatus,
   DepositType,
   DocumentCategory,
   DocumentOwnerType,
   InstallmentStatus,
+  MaintenanceStatus,
   Prisma,
   ReservationStatus,
   UnitStatus,
@@ -31,6 +34,13 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
+
+// Arabic month names indexed by JS month (0 = January). Used for the
+// reservation-trend labels on the admin dashboard.
+const AR_MONTHS = [
+  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
+  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
+] as const;
 
 @Injectable()
 class ReportsService {
@@ -122,6 +132,272 @@ class ReportsService {
       (acc, g) => ((acc[g.status] = g._count._all), acc),
       {},
     );
+  }
+
+  // ── P14 — Admin dashboard summary ────────────────────────────────────────
+  // One ADMIN-only call that backs the /dashboard home: live KPIs, the 6-month
+  // reservation trend, lead-source distribution, a unified recent-activity
+  // feed (derived from real createdAt rows), and actionable alert counts. Every
+  // value is DB-derived — the dashboard renders empty/zero states rather than
+  // any demo data when a section is empty.
+  async adminSummary() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const expiringHorizon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const [
+      projects,
+      totalUnits,
+      availableUnits,
+      reservedUnits,
+      newLeadsThisMonth,
+      pendingDeposits,
+      openMaintenance,
+      contractsAwaitingSignature,
+      reservationsExpiringSoon,
+      visitsAwaitingConfirmation,
+      infoRequestsOpen,
+    ] = await this.prisma.$transaction([
+      this.prisma.project.count({ where: { status: 'PUBLISHED' } }),
+      this.prisma.unit.count(),
+      this.prisma.unit.count({ where: { status: UnitStatus.AVAILABLE } }),
+      this.prisma.unit.count({ where: { status: UnitStatus.RESERVED } }),
+      this.prisma.lead.count({ where: { createdAt: { gte: startOfMonth } } }),
+      this.prisma.deposit.count({ where: { reviewStatus: DepositReviewStatus.PENDING_REVIEW } }),
+      this.prisma.maintenanceRequest.count({
+        where: {
+          status: {
+            in: [MaintenanceStatus.OPEN, MaintenanceStatus.ASSIGNED, MaintenanceStatus.IN_PROGRESS],
+          },
+        },
+      }),
+      this.prisma.contract.count({ where: { signedAt: null } }),
+      this.prisma.reservation.count({
+        where: { status: ReservationStatus.PENDING, expiresAt: { gte: now, lte: expiringHorizon } },
+      }),
+      this.prisma.visitAppointment.count({ where: { status: AppointmentStatus.SCHEDULED } }),
+      this.prisma.infoRequest.count({ where: { status: 'OPEN' } }),
+    ]);
+
+    const [reservationTrend, leadSources, recentActivity] = await Promise.all([
+      this.reservationTrend(now),
+      this.leadSourceDistribution(),
+      this.recentActivity(),
+    ]);
+
+    return {
+      kpis: {
+        projects,
+        totalUnits,
+        availableUnits,
+        reservedUnits,
+        newLeadsThisMonth,
+        pendingDeposits,
+        openMaintenance,
+      },
+      reservationTrend,
+      leadSources,
+      recentActivity,
+      alerts: {
+        contractsAwaitingSignature,
+        depositsPendingReview: pendingDeposits,
+        openMaintenance,
+        reservationsExpiringSoon,
+        visitsAwaitingConfirmation,
+        infoRequestsOpen,
+      },
+    };
+  }
+
+  /** Reservation counts grouped by calendar month for the last 6 months. */
+  private async reservationTrend(
+    now: Date,
+  ): Promise<Array<{ month: string; label: string; value: number }>> {
+    const slots = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      const end = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+      return {
+        start,
+        end,
+        month: `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`,
+        label: AR_MONTHS[start.getMonth()]!,
+      };
+    });
+    const counts = await this.prisma.$transaction(
+      slots.map((s) =>
+        this.prisma.reservation.count({ where: { createdAt: { gte: s.start, lt: s.end } } }),
+      ),
+    );
+    return slots.map((s, i) => ({ month: s.month, label: s.label, value: counts[i] ?? 0 }));
+  }
+
+  /** Lead counts grouped by source, with resolved Arabic/English source names. */
+  private async leadSourceDistribution(): Promise<Array<{ source: string; count: number }>> {
+    const groups = await this.prisma.lead.groupBy({ by: ['sourceId'], _count: { _all: true } });
+    const ids = groups
+      .map((g) => g.sourceId)
+      .filter((x): x is string => typeof x === 'string');
+    const sources = ids.length
+      ? await this.prisma.leadSource.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+      : [];
+    const nameById = new Map(sources.map((s) => [s.id, s.name]));
+    return groups
+      .map((g) => {
+        const raw = (g.sourceId ? nameById.get(g.sourceId) : null) as
+          | { ar?: string; en?: string }
+          | null
+          | undefined;
+        const label = raw?.ar || raw?.en || (g.sourceId ? 'غير معروف' : 'غير محدد');
+        return { source: label, count: g._count._all };
+      })
+      .sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * Unified recent-activity feed derived from real `createdAt` rows across the
+   * core entities (no demo data). Each item carries a display name, an action
+   * label, optional project/unit context, and the timestamp. Returns the 8 most
+   * recent across all sources.
+   */
+  private async recentActivity(): Promise<
+    Array<{ id: string; type: string; title: string; action: string; context: string | null; createdAt: Date }>
+  > {
+    const take = 5;
+    const [leads, reservations, contracts, visits, maintenance, deposits, infos] = await Promise.all([
+      this.prisma.lead.findMany({
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: { id: true, fullName: true, createdAt: true },
+      }),
+      this.prisma.reservation.findMany({
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: {
+          id: true,
+          reservationNumber: true,
+          createdAt: true,
+          unit: { select: { code: true } },
+          client: { select: { fullName: true } },
+          lead: { select: { fullName: true } },
+        },
+      }),
+      this.prisma.contract.findMany({
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: {
+          id: true,
+          contractNumber: true,
+          createdAt: true,
+          customer: { select: { fullName: true } },
+        },
+      }),
+      this.prisma.visitRequest.findMany({
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: {
+          id: true,
+          createdAt: true,
+          customerName: true,
+          user: { select: { fullName: true } },
+          lead: { select: { fullName: true } },
+        },
+      }),
+      this.prisma.maintenanceRequest.findMany({
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: { id: true, createdAt: true, unit: { select: { code: true } } },
+      }),
+      this.prisma.deposit.findMany({
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: {
+          id: true,
+          createdAt: true,
+          contract: { select: { contractNumber: true, customer: { select: { fullName: true } } } },
+        },
+      }),
+      this.prisma.infoRequest.findMany({
+        orderBy: { createdAt: 'desc' },
+        take,
+        select: {
+          id: true,
+          createdAt: true,
+          user: { select: { fullName: true } },
+          lead: { select: { fullName: true } },
+        },
+      }),
+    ]);
+
+    const items: Array<{
+      id: string;
+      type: string;
+      title: string;
+      action: string;
+      context: string | null;
+      createdAt: Date;
+    }> = [
+      ...leads.map((l) => ({
+        id: `lead:${l.id}`,
+        type: 'lead',
+        title: l.fullName,
+        action: 'فرصة جديدة',
+        context: null,
+        createdAt: l.createdAt,
+      })),
+      ...reservations.map((r) => ({
+        id: `reservation:${r.id}`,
+        type: 'reservation',
+        title: r.client?.fullName ?? r.lead?.fullName ?? 'عميل',
+        action: 'حجز جديد',
+        context: r.unit?.code ?? r.reservationNumber ?? null,
+        createdAt: r.createdAt,
+      })),
+      ...contracts.map((c) => ({
+        id: `contract:${c.id}`,
+        type: 'contract',
+        title: c.customer?.fullName ?? 'عميل',
+        action: 'عقد جديد',
+        context: c.contractNumber ?? null,
+        createdAt: c.createdAt,
+      })),
+      ...visits.map((v) => ({
+        id: `visit:${v.id}`,
+        type: 'visit',
+        title: v.user?.fullName ?? v.lead?.fullName ?? v.customerName ?? 'زائر',
+        action: 'طلب زيارة',
+        context: null,
+        createdAt: v.createdAt,
+      })),
+      ...maintenance.map((m) => ({
+        id: `maintenance:${m.id}`,
+        type: 'maintenance',
+        title: m.unit?.code ?? 'وحدة',
+        action: 'طلب صيانة',
+        context: m.unit?.code ?? null,
+        createdAt: m.createdAt,
+      })),
+      ...deposits.map((d) => ({
+        id: `deposit:${d.id}`,
+        type: 'deposit',
+        title: d.contract?.customer?.fullName ?? 'عميل',
+        action: 'دفعة جديدة',
+        context: d.contract?.contractNumber ?? null,
+        createdAt: d.createdAt,
+      })),
+      ...infos.map((info) => ({
+        id: `info:${info.id}`,
+        type: 'info_request',
+        title: info.user?.fullName ?? info.lead?.fullName ?? 'زائر',
+        action: 'استفسار جديد',
+        context: null,
+        createdAt: info.createdAt,
+      })),
+    ];
+
+    return items
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 8);
   }
 
   async financialDashboard(opts: {
@@ -1199,6 +1475,16 @@ class ReportsController {
   @Get('kpis')
   kpis() {
     return this.svc.kpis();
+  }
+
+  // P14 — single ADMIN-only feed for the /dashboard home (KPIs + reservation
+  // trend + lead sources + recent activity + alert counts). CUSTOMER / CLIENT /
+  // BROKER are rejected at @Roles; SALES / SALES_MANAGER get their own home.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
+  @Get('admin-summary')
+  adminSummary() {
+    return this.svc.adminSummary();
   }
 
   @Roles(UserRole.ADMIN)
