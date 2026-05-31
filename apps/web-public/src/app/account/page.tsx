@@ -30,6 +30,7 @@ import type {
   MeDepositsResponse,
   MeMaintenanceRequest,
   MeNotification,
+  MeInstallment,
 } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -38,6 +39,7 @@ import { Stagger } from '@/components/motion/Stagger';
 import { Reveal } from '@/components/motion/Reveal';
 import { EmptyState } from '@/components/states/EmptyState';
 import { SummaryTile } from '@/components/account/SummaryTile';
+import { PropertyFocus } from '@/components/account/PropertyFocus';
 import { RecentRow } from '@/components/account/RecentRow';
 import { RecentPanel } from '@/components/account/RecentPanel';
 import { StatusBadge } from '@/components/account/StatusBadge';
@@ -117,9 +119,14 @@ export default async function AccountPage() {
   let recentContracts: MeContract[] = [];
   let recentMaintenance: MeMaintenanceRequest[] = [];
   let recentNotifications: MeNotification[] = [];
+  // Owner-first focus band: the customer's primary owned unit (derived from
+  // their first contract) + the single most urgent upcoming installment.
+  let primaryContract: MeContract | null = null;
+  let nextInstallment: MeInstallment | null = null;
+  let unpaidCount = 0;
 
   if (isCustomer) {
-    const [contractsR, depositsR, maintR, notifsR] = await Promise.allSettled([
+    const [contractsR, depositsR, maintR, notifsR, instR] = await Promise.allSettled([
       authFetch<Paginated<MeContract>>('/contracts/me/contracts?page=1&pageSize=3'),
       authFetch<MeDepositsResponse>('/me/deposits'),
       authFetch<Paginated<MeMaintenanceRequest>>('/me/maintenance-requests?page=1&pageSize=3'),
@@ -128,14 +135,27 @@ export default async function AccountPage() {
       // plain array. Calling .filter() directly on the wrapped response is
       // what crashed the dashboard at src/app/account/page.tsx:150.
       authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications'),
+      // Installment schedule — used only to surface the next due payment in the
+      // focus band. Failure is non-fatal (band hides the payment side).
+      authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200'),
     ]);
-    if ([contractsR, depositsR, maintR, notifsR].some((r) => r.status === 'rejected' && r.reason instanceof AuthError)) {
+    if ([contractsR, depositsR, maintR, notifsR, instR].some((r) => r.status === 'rejected' && r.reason instanceof AuthError)) {
       redirect('/login');
     }
 
     const contracts = contractsR.status === 'fulfilled' ? contractsR.value : null;
     const deposits = depositsR.status === 'fulfilled' ? depositsR.value : null;
     const maintenance = maintR.status === 'fulfilled' ? maintR.value : null;
+    const installments = instR.status === 'fulfilled' ? instR.value.data : [];
+
+    // Next due = earliest-dated unpaid installment (an overdue one naturally
+    // sorts first), so the band always shows the most urgent obligation.
+    const unpaid = installments.filter((i) => i.status !== 'PAID');
+    unpaidCount = unpaid.length;
+    nextInstallment =
+      unpaid.length > 0
+        ? unpaid.reduce((earliest, i) => (i.dueDate < earliest.dueDate ? i : earliest))
+        : null;
     // Defence-in-depth: anything other than an array OR `{data: T[]}` falls
     // through to `[]`, so the dashboard renders zeros instead of throwing.
     const notificationsRaw = notifsR.status === 'fulfilled' ? notifsR.value : null;
@@ -156,6 +176,7 @@ export default async function AccountPage() {
     recentContracts = contracts?.data ?? [];
     recentMaintenance = maintenance?.data ?? [];
     recentNotifications = notifications.slice(0, 3);
+    primaryContract = recentContracts[0] ?? null;
   }
 
   const hasCustomerActivity =
@@ -192,8 +213,8 @@ export default async function AccountPage() {
           <SectionHeading eyebrow="متابعة" title="نشاطك الأخير" />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {recentVisits.length > 0 && (
-              <Reveal>
-                <RecentPanel icon={CalendarClock} title="أحدث الزيارات" href={routes.accountVisits}>
+              <Reveal className="h-full">
+                <RecentPanel icon={CalendarClock} title="أحدث الزيارات" href={routes.accountVisits} className="h-full">
                   {recentVisits.map((v) => (
                     <RecentRow
                       key={v.id}
@@ -208,8 +229,8 @@ export default async function AccountPage() {
               </Reveal>
             )}
             {recentRequests.length > 0 && (
-              <Reveal>
-                <RecentPanel icon={MessageSquareText} title="أحدث الاستفسارات" href={routes.accountRequests}>
+              <Reveal className="h-full">
+                <RecentPanel icon={MessageSquareText} title="أحدث الاستفسارات" href={routes.accountRequests} className="h-full">
                   {recentRequests.map((r) => (
                     <RecentRow
                       key={r.id}
@@ -282,7 +303,14 @@ export default async function AccountPage() {
             </div>
           </div>
 
-          {/* Customer stats */}
+          {/* Owner-first focus: the primary owned unit + next payment due. */}
+          {primaryContract && (
+            <Reveal>
+              <PropertyFocus contract={primaryContract} nextInstallment={nextInstallment} unpaidCount={unpaidCount} />
+            </Reveal>
+          )}
+
+          {/* Customer stats — compact secondary row beneath the focus band. */}
           <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4" childClassName="h-full" step={70}>
             <SummaryTile icon={FileText} label="العقود" value={contractsCount} href={routes.accountContracts} />
             <SummaryTile icon={Wallet} label="إجمالي المدفوعات" value={null} valueText={depositsTotalText} href={routes.accountDeposits} />
@@ -294,8 +322,8 @@ export default async function AccountPage() {
           {hasCustomerActivity ? (
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               {recentContracts.length > 0 && (
-                <Reveal>
-                  <RecentPanel icon={FileText} title="أحدث العقود" href={routes.accountContracts}>
+                <Reveal className="h-full">
+                  <RecentPanel icon={FileText} title="أحدث العقود" href={routes.accountContracts} className="h-full">
                     {recentContracts.map((c) => (
                       <RecentRow
                         key={c.id}
@@ -311,8 +339,8 @@ export default async function AccountPage() {
               )}
 
               {recentMaintenance.length > 0 && (
-                <Reveal>
-                  <RecentPanel icon={Wrench} title="أحدث طلبات الصيانة" href={routes.accountMaintenance}>
+                <Reveal className="h-full">
+                  <RecentPanel icon={Wrench} title="أحدث طلبات الصيانة" href={routes.accountMaintenance} className="h-full">
                     {recentMaintenance.map((m) => (
                       <RecentRow
                         key={m.id}
