@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
+import { Workbook } from 'exceljs';
 import { ReportsModule } from '../reports.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
@@ -245,6 +246,88 @@ describe('GET /reports/admin-summary (P14)', () => {
     for (const role of [UserRole.CUSTOMER, UserRole.CLIENT, UserRole.BROKER]) {
       FakeAuthGuard.currentUser = { sub: 'u', role, codes: ['reports:operational:read'] };
       await request(app.getHttpServer()).get('/reports/admin-summary/export.csv').expect(403);
+    }
+  });
+
+  // ── P14.2 — styled XLSX export ───────────────────────────────────────────
+
+  // Pulls the raw binary body so the workbook can be parsed back with exceljs.
+  async function fetchXlsx(): Promise<{ headers: Record<string, string>; wb: Workbook }> {
+    const res = await request(app.getHttpServer())
+      .get('/reports/admin-summary/export.xlsx')
+      .buffer()
+      .parse((response, cb) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (c: Buffer) => chunks.push(c));
+        response.on('end', () => cb(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+    const wb = new Workbook();
+    await wb.xlsx.load(res.body as unknown as ArrayBuffer);
+    return { headers: res.headers, wb };
+  }
+
+  /** Flatten every cell value across all sheets into one searchable string. */
+  function dumpAll(wb: Workbook): string {
+    const parts: string[] = [];
+    wb.eachSheet((ws) => {
+      ws.eachRow((row) => {
+        row.eachCell((cell) => parts.push(String(cell.value ?? '')));
+      });
+    });
+    return parts.join('');
+  }
+
+  it('export.xlsx returns the correct content-type + attachment header', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const { headers } = await fetchXlsx();
+    expect(headers['content-type']).toContain(
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    expect(headers['content-disposition']).toContain('attachment');
+    expect(headers['content-disposition']).toContain('admin-summary.xlsx');
+  });
+
+  it('workbook has the 5 expected Arabic sheets', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const { wb } = await fetchXlsx();
+    expect(wb.worksheets.map((w) => w.name)).toEqual([
+      'الملخص',
+      'اتجاهات الحجوزات',
+      'مصادر العملاء',
+      'التنبيهات',
+      'آخر النشاطات',
+    ]);
+  });
+
+  it('workbook is built from real adminSummary data (KPI values, sources, activity)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const { wb } = await fetchXlsx();
+    const all = dumpAll(wb);
+    expect(all).toContain('تقرير لوحة التحكم'); // title
+    expect(all).toContain('المشاريع المنشورة');
+    expect(all).toContain('مباشر'); // lead source name
+    expect(all).toContain('خالد'); // recent-activity actor
+    // The الملخص KPI table carries the real projects count (4).
+    const summary = wb.getWorksheet('الملخص')!;
+    const labels: string[] = [];
+    summary.eachRow((row) => labels.push(String(row.getCell(1).value ?? '')));
+    const projectsRow = summary
+      .getRows(1, summary.rowCount)!
+      .find((r) => String(r.getCell(1).value) === 'المشاريع المنشورة');
+    expect(projectsRow?.getCell(2).value).toBe(4);
+  });
+
+  it('workbook contains no old fake/demo values', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const { wb } = await fetchXlsx();
+    expect(dumpAll(wb)).not.toMatch(/أحمد منصور|بيانات تجريبية|74%|برج الجوار/);
+  });
+
+  it('export.xlsx is forbidden for CUSTOMER / CLIENT / BROKER', async () => {
+    for (const role of [UserRole.CUSTOMER, UserRole.CLIENT, UserRole.BROKER]) {
+      FakeAuthGuard.currentUser = { sub: 'u', role, codes: ['reports:operational:read'] };
+      await request(app.getHttpServer()).get('/reports/admin-summary/export.xlsx').expect(403);
     }
   });
 });

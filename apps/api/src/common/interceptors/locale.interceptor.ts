@@ -1,4 +1,10 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  StreamableFile,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
@@ -12,6 +18,10 @@ function isTranslatable(v: unknown): v is Translatable {
 }
 
 function flatten(value: unknown, locale: 'ar' | 'en'): unknown {
+  // Never traverse binary/stream responses (e.g. a StreamableFile download) —
+  // rebuilding them as plain objects strips the prototype and breaks Nest's
+  // streaming path. See date-serializer.interceptor for the same guard.
+  if (value instanceof StreamableFile || Buffer.isBuffer(value)) return value;
   if (Array.isArray(value)) return value.map((v) => flatten(v, locale));
   if (isTranslatable(value)) {
     const ar = (value as Translatable).ar;

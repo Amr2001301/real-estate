@@ -1,9 +1,21 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  StreamableFile,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 function serializeDates(value: unknown): unknown {
+  // Binary/stream responses (e.g. a StreamableFile for the XLSX/CSV downloads)
+  // must pass through untouched. Rebuilding them via the generic object branch
+  // below strips the StreamableFile prototype, so Nest can no longer detect it
+  // with `instanceof` and JSON-serializes the wrapper instead of streaming the
+  // bytes — which is exactly how the XLSX download ended up as one JSON cell.
+  if (value instanceof StreamableFile || Buffer.isBuffer(value)) return value;
   if (value instanceof Date) return value.toISOString();
   // Prisma Decimal is an object; convert to string before generic object traversal
   if (value instanceof Prisma.Decimal) return value.toString();

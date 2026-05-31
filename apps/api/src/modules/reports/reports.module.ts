@@ -5,8 +5,10 @@ import {
   Injectable,
   Module,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
+import { Workbook, type Cell, type Row, type Worksheet } from 'exceljs';
 import {
   IsDateString,
   IsEnum,
@@ -41,6 +43,86 @@ const AR_MONTHS = [
   'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
 ] as const;
+
+// ── P14.2 — styled XLSX export palette/helpers ───────────────────────────────
+const XLSX_NAVY = 'FF1E3348'; // header fill (ARGB)
+const XLSX_GOLD = 'FFC99A2E'; // title accent
+const XLSX_MUTED = 'FF64748B';
+const XLSX_ZEBRA = 'FFF8FAFC';
+
+const THIN_BORDER = {
+  top: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
+  left: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
+  bottom: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
+  right: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
+};
+
+/** Two-digit zero-padded value. */
+function pad2(n: number): string {
+  return String(n).padStart(2, '0');
+}
+
+function formatStamp(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+/** Navy fill + white bold — the shared table-header look. */
+function styleHeaderCell(cell: Cell): void {
+  cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_NAVY } };
+  cell.alignment = { horizontal: 'center', vertical: 'middle' };
+  cell.border = THIN_BORDER;
+}
+
+/** Bold gold-tinted totals row. */
+function styleTotalsRow(row: Row): void {
+  row.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: XLSX_NAVY } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF3DE' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = THIN_BORDER;
+  });
+}
+
+/**
+ * Append a titled table to a worksheet: a styled header row, optional column
+ * widths, borders + zebra striping, a frozen header, and a "لا توجد بيانات" row
+ * when there is no data. Returns nothing; mutates the sheet.
+ */
+function addTable(
+  ws: Worksheet,
+  headers: string[],
+  rows: Array<Array<string | number | Date>>,
+  widths: number[],
+): void {
+  ws.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
+  ws.columns = headers.map((_, i) => ({ width: widths[i] ?? 18 }));
+
+  const headerRow = ws.addRow(headers);
+  headerRow.height = 22;
+  headerRow.eachCell(styleHeaderCell);
+
+  if (rows.length === 0) {
+    const empty = ws.addRow(['لا توجد بيانات']);
+    ws.mergeCells(empty.number, 1, empty.number, Math.max(1, headers.length));
+    const c = empty.getCell(1);
+    c.font = { italic: true, color: { argb: XLSX_MUTED } };
+    c.alignment = { horizontal: 'center' };
+    c.border = THIN_BORDER;
+    return;
+  }
+
+  rows.forEach((r, idx) => {
+    const row = ws.addRow(r);
+    row.eachCell((cell) => {
+      cell.border = THIN_BORDER;
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      if (idx % 2 === 1) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_ZEBRA } };
+      }
+    });
+  });
+}
 
 @Injectable()
 class ReportsService {
@@ -450,6 +532,119 @@ class ReportsService {
       'آخر النشاطات',
       toCsv(['النشاط', 'الجهة', 'السياق', 'التاريخ'], activityRows),
     ].join('\r\n');
+  }
+
+  /**
+   * P14.2 — admin dashboard summary as a styled, professional Arabic XLSX
+   * workbook (5 RTL sheets). Built from the SAME real `adminSummary()` data as
+   * the CSV/JSON. No demo values; empty sections render a "لا توجد بيانات" row.
+   */
+  async adminSummaryXlsx(): Promise<Buffer> {
+    const s = await this.adminSummary();
+    const wb = new Workbook();
+    wb.creator = 'Real Estate Admin';
+    wb.created = new Date();
+
+    // ── Sheet 1: الملخص (title + generated stamp + KPI table + footer) ──────
+    const sum = wb.addWorksheet('الملخص');
+    sum.columns = [{ width: 34 }, { width: 18 }];
+    sum.views = [{ state: 'frozen', ySplit: 4, rightToLeft: true }];
+
+    sum.mergeCells('A1:B1');
+    const title = sum.getCell('A1');
+    title.value = 'تقرير لوحة التحكم';
+    title.font = { bold: true, size: 16, color: { argb: XLSX_NAVY } };
+    title.alignment = { horizontal: 'right', vertical: 'middle' };
+    sum.getRow(1).height = 26;
+
+    sum.mergeCells('A2:B2');
+    const gen = sum.getCell('A2');
+    gen.value = `تاريخ التوليد: ${formatStamp(new Date())}`;
+    gen.font = { italic: true, size: 10, color: { argb: XLSX_MUTED } };
+    gen.alignment = { horizontal: 'right' };
+
+    sum.addRow([]); // spacer (row 3)
+    const kpiHeader = sum.addRow(['المؤشر', 'القيمة']); // row 4
+    kpiHeader.height = 22;
+    kpiHeader.eachCell(styleHeaderCell);
+
+    const kpiRows: Array<[string, number]> = [
+      ['المشاريع المنشورة', s.kpis.projects],
+      ['إجمالي الوحدات', s.kpis.totalUnits],
+      ['وحدات متاحة', s.kpis.availableUnits],
+      ['وحدات محجوزة', s.kpis.reservedUnits],
+      ['فرص جديدة هذا الشهر', s.kpis.newLeadsThisMonth],
+      ['دفعات بانتظار المراجعة', s.kpis.pendingDeposits],
+      ['طلبات صيانة مفتوحة', s.kpis.openMaintenance],
+    ];
+    kpiRows.forEach(([label, value], idx) => {
+      const row = sum.addRow([label, value]);
+      row.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
+      row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
+      row.getCell(2).numFmt = '#,##0';
+      row.eachCell((cell) => {
+        cell.border = THIN_BORDER;
+        if (idx % 2 === 1) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_ZEBRA } };
+        }
+      });
+    });
+
+    sum.addRow([]);
+    const footer = sum.addRow(['Generated by Real Estate Admin']);
+    footer.getCell(1).font = { italic: true, size: 9, color: { argb: XLSX_MUTED } };
+
+    // ── Sheet 2: اتجاهات الحجوزات ───────────────────────────────────────────
+    const trend = wb.addWorksheet('اتجاهات الحجوزات');
+    addTable(
+      trend,
+      ['الشهر', 'الشهر (بالعربية)', 'عدد الحجوزات'],
+      s.reservationTrend.map((t) => [t.month, t.label, t.value]),
+      [14, 20, 16],
+    );
+    const trendTotal = s.reservationTrend.reduce((acc, t) => acc + t.value, 0);
+    styleTotalsRow(trend.addRow(['الإجمالي', '', trendTotal]));
+
+    // ── Sheet 3: مصادر العملاء ──────────────────────────────────────────────
+    const lead = wb.addWorksheet('مصادر العملاء');
+    const leadTotal = s.leadSources.reduce((acc, l) => acc + l.count, 0);
+    addTable(
+      lead,
+      ['المصدر', 'العدد', 'النسبة'],
+      s.leadSources.map((l) => [
+        l.source,
+        l.count,
+        leadTotal > 0 ? `${Math.round((l.count / leadTotal) * 100)}%` : '0%',
+      ]),
+      [26, 14, 12],
+    );
+
+    // ── Sheet 4: التنبيهات (real, non-zero alerts only) ─────────────────────
+    const alertSheet = wb.addWorksheet('التنبيهات');
+    const alertRows = (
+      [
+        ['عقود بانتظار التوقيع', s.alerts.contractsAwaitingSignature],
+        ['دفعات بانتظار المراجعة', s.alerts.depositsPendingReview],
+        ['طلبات صيانة مفتوحة', s.alerts.openMaintenance],
+        ['حجوزات تنتهي قريباً', s.alerts.reservationsExpiringSoon],
+        ['زيارات بانتظار تأكيد العميل', s.alerts.visitsAwaitingConfirmation],
+        ['استفسارات مفتوحة', s.alerts.infoRequestsOpen],
+      ] as Array<[string, number]>
+    ).filter(([, count]) => count > 0);
+    addTable(alertSheet, ['التنبيه', 'العدد'], alertRows, [34, 14]);
+
+    // ── Sheet 5: آخر النشاطات ───────────────────────────────────────────────
+    const activity = wb.addWorksheet('آخر النشاطات');
+    addTable(
+      activity,
+      ['النشاط', 'الجهة', 'السياق', 'التاريخ'],
+      s.recentActivity.map((a) => [a.action, a.title, a.context ?? '—', a.createdAt]),
+      [18, 24, 16, 20],
+    );
+    activity.getColumn(4).numFmt = 'yyyy-mm-dd hh:mm';
+
+    const out = await wb.xlsx.writeBuffer();
+    return Buffer.from(out as ArrayBuffer);
   }
 
   async financialDashboard(opts: {
@@ -1549,6 +1744,21 @@ class ReportsController {
   @Header('Content-Disposition', 'attachment; filename="admin-summary.csv"')
   adminSummaryCsv() {
     return this.svc.adminSummaryCsv();
+  }
+
+  // P14.2 — styled XLSX of the admin dashboard summary (default download).
+  // Same data + same ADMIN-only gate; CUSTOMER / CLIENT / BROKER rejected at
+  // @Roles. The CSV endpoint above stays as a raw-data fallback.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
+  @Get('admin-summary/export.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="admin-summary.xlsx"')
+  async adminSummaryXlsx(): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.adminSummaryXlsx());
   }
 
   @Roles(UserRole.ADMIN)

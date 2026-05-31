@@ -5,11 +5,13 @@ import { FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 /**
- * P14.1 — "توليد تقرير" on the admin dashboard. Downloads the admin-summary CSV
- * (real `/reports/admin-summary` data) via the whitelisted `/api/csv` proxy,
- * which forwards the admin's Bearer token server-side. Shows a loading state
+ * P14.2 — "توليد تقرير" on the admin dashboard. Downloads the styled admin
+ * dashboard XLSX report (real `/reports/admin-summary` data) via the
+ * authenticated `/api-proxy` (which forwards the admin's Bearer token
+ * server-side and preserves the binary content-type). Shows a loading state
  * while generating and a friendly Arabic message on failure — never a silent
- * no-op and never a raw backend error.
+ * no-op and never a raw backend error. (The CSV endpoint remains as a raw-data
+ * fallback but is no longer surfaced in the UI.)
  */
 export function GenerateReportButton() {
   const [state, setState] = useState<'idle' | 'loading' | 'error'>('idle');
@@ -17,12 +19,12 @@ export function GenerateReportButton() {
   async function handleClick() {
     if (state === 'loading') return;
     setState('loading');
-    const filename = `admin-summary-${new Date().toISOString().slice(0, 10)}.csv`;
+    const filename = `admin-summary-${new Date().toISOString().slice(0, 10)}.xlsx`;
     try {
-      const res = await fetch(
-        `/api/csv?path=${encodeURIComponent('/reports/admin-summary/export.csv')}&filename=${encodeURIComponent(filename)}`,
-        { method: 'GET', credentials: 'include' },
-      );
+      const res = await fetch('/api-proxy/reports/admin-summary/export.xlsx', {
+        method: 'GET',
+        credentials: 'include',
+      });
       if (!res.ok) {
         setState('error');
         return;
