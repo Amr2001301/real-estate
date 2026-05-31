@@ -75,6 +75,10 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // P11.6 — payment review is viewable by ADMIN + SALES_MANAGER (matches
+    // GET /deposits/review-queue). Hidden for SALES/BROKER, who would 403.
+    final role = context.read<SessionCubit>().state.role;
+    final canReviewPayments = role == AppRole.admin || role == AppRole.salesManager;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
@@ -151,6 +155,12 @@ class _DashboardBody extends StatelessWidget {
               label: Text(l10n.bonusTitle),
               onPressed: () => context.push('/bonus'),
             ),
+            if (canReviewPayments)
+              ActionChip(
+                avatar: const Icon(Icons.receipt_long_outlined, size: 18),
+                label: Text(l10n.paymentReviewTitle),
+                onPressed: () => context.push('/payments-review'),
+              ),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),

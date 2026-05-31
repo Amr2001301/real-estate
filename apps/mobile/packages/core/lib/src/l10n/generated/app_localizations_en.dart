@@ -1546,4 +1546,82 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get brokerCommissionsEmptyMessage =>
       'Your commissions will appear here.';
+
+  @override
+  String get paymentReviewTitle => 'Payment Review';
+
+  @override
+  String get paymentReviewSubtitle =>
+      'Review payment proofs submitted by customers';
+
+  @override
+  String get paymentReviewEmptyTitle => 'No payment proofs pending review';
+
+  @override
+  String get paymentReviewEmptyMessage =>
+      'Customer payment proofs awaiting review will appear here.';
+
+  @override
+  String get paymentReviewReadOnly =>
+      'Approving or rejecting is available to admins only.';
+
+  @override
+  String get paymentMethodLabel => 'Payment method';
+
+  @override
+  String get paymentSubmittedDate => 'Submitted date';
+
+  @override
+  String get paymentDueDate => 'Due date';
+
+  @override
+  String get paymentCustomerNote => 'Customer note';
+
+  @override
+  String get paymentReference => 'Reference number';
+
+  @override
+  String get paymentProofAttached => 'Proof attached';
+
+  @override
+  String get paymentOpenProof => 'Open proof';
+
+  @override
+  String get paymentApprove => 'Approve payment';
+
+  @override
+  String get paymentReject => 'Reject payment';
+
+  @override
+  String get paymentRejectReason => 'Rejection reason';
+
+  @override
+  String get paymentReasonRequired => 'A rejection reason is required';
+
+  @override
+  String get paymentApproved => 'Payment approved';
+
+  @override
+  String get paymentRejected => 'Payment rejected';
+
+  @override
+  String get paymentStatusPending => 'Pending review';
+
+  @override
+  String get paymentStatusApproved => 'Verified';
+
+  @override
+  String get paymentStatusRejected => 'Rejected';
+
+  @override
+  String get paymentMethodCash => 'Cash';
+
+  @override
+  String get paymentMethodBankTransfer => 'Bank transfer';
+
+  @override
+  String get paymentMethodCheque => 'Cheque';
+
+  @override
+  String get paymentMethodOther => 'Other';
 }

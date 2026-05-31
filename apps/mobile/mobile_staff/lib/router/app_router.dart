@@ -38,6 +38,10 @@ import '../features/broker/reservations/presentation/cubit/create_broker_reserva
 import '../features/broker/reservations/presentation/screens/broker_reservation_detail_screen.dart';
 import '../features/broker/reservations/presentation/screens/create_broker_reservation_screen.dart';
 import '../features/broker/shell/presentation/broker_shell.dart';
+import '../features/payments_review/domain/repositories/payments_review_repository.dart';
+import '../features/payments_review/domain/usecases/payments_review_use_cases.dart';
+import '../features/payments_review/presentation/cubit/payments_review_cubit.dart';
+import '../features/payments_review/presentation/screens/payments_review_screen.dart';
 import '../features/performance/domain/repositories/performance_repository.dart';
 import '../features/performance/domain/usecases/performance_use_cases.dart';
 import '../features/performance/presentation/cubit/targets_cubit.dart';
@@ -387,6 +391,18 @@ GoRouter createStaffRouter(SessionCubit sessionCubit) {
         },
       ),
 
+      // ── Payments review (P11.6) — ADMIN + SALES_MANAGER view; ADMIN acts ──
+      GoRoute(
+        path: '/payments-review',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) => PaymentsReviewCubit(
+            GetPaymentReviewQueue(ctx.read<PaymentsReviewRepository>()),
+            ApprovePayment(ctx.read<PaymentsReviewRepository>()),
+            RejectPayment(ctx.read<PaymentsReviewRepository>()),
+          ),
+          child: const PaymentsReviewScreen(),
+        ),
+      ),
       // ── Bonus / Targets ──────────────────────────────────────────────────
       GoRoute(
         path: '/bonus',

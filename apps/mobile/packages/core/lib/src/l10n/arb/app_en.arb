@@ -555,5 +555,31 @@
   "brokerLeadStatusExpired": "Expired",
 
   "brokerCommissionsEmptyTitle": "No commissions",
-  "brokerCommissionsEmptyMessage": "Your commissions will appear here."
+  "brokerCommissionsEmptyMessage": "Your commissions will appear here.",
+
+  "paymentReviewTitle": "Payment Review",
+  "paymentReviewSubtitle": "Review payment proofs submitted by customers",
+  "paymentReviewEmptyTitle": "No payment proofs pending review",
+  "paymentReviewEmptyMessage": "Customer payment proofs awaiting review will appear here.",
+  "paymentReviewReadOnly": "Approving or rejecting is available to admins only.",
+  "paymentMethodLabel": "Payment method",
+  "paymentSubmittedDate": "Submitted date",
+  "paymentDueDate": "Due date",
+  "paymentCustomerNote": "Customer note",
+  "paymentReference": "Reference number",
+  "paymentProofAttached": "Proof attached",
+  "paymentOpenProof": "Open proof",
+  "paymentApprove": "Approve payment",
+  "paymentReject": "Reject payment",
+  "paymentRejectReason": "Rejection reason",
+  "paymentReasonRequired": "A rejection reason is required",
+  "paymentApproved": "Payment approved",
+  "paymentRejected": "Payment rejected",
+  "paymentStatusPending": "Pending review",
+  "paymentStatusApproved": "Verified",
+  "paymentStatusRejected": "Rejected",
+  "paymentMethodCash": "Cash",
+  "paymentMethodBankTransfer": "Bank transfer",
+  "paymentMethodCheque": "Cheque",
+  "paymentMethodOther": "Other"
 }

@@ -50,6 +50,9 @@ import 'features/notifications/data/repositories/notifications_repository_impl.d
 import 'features/notifications/domain/repositories/notifications_repository.dart';
 import 'features/notifications/domain/usecases/notification_use_cases.dart';
 import 'features/notifications/presentation/cubit/unread_count_cubit.dart';
+import 'features/payments_review/data/datasources/payments_review_remote_data_source.dart';
+import 'features/payments_review/data/repositories/payments_review_repository_impl.dart';
+import 'features/payments_review/domain/repositories/payments_review_repository.dart';
 import 'features/performance/data/datasources/performance_remote_data_source.dart';
 import 'features/performance/data/repositories/performance_repository_impl.dart';
 import 'features/performance/domain/repositories/performance_repository.dart';
@@ -96,6 +99,11 @@ class StaffApp extends StatelessWidget {
         RepositoryProvider<NotificationsRepository>(
           create: (ctx) => NotificationsRepositoryImpl(
             NotificationsRemoteDataSourceImpl(ctx.read<Dio>()),
+          ),
+        ),
+        RepositoryProvider<PaymentsReviewRepository>(
+          create: (ctx) => PaymentsReviewRepositoryImpl(
+            PaymentsReviewRemoteDataSourceImpl(ctx.read<Dio>()),
           ),
         ),
         RepositoryProvider<ClientsRepository>(

@@ -1531,4 +1531,81 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get brokerCommissionsEmptyMessage => 'ستظهر عمولاتك هنا.';
+
+  @override
+  String get paymentReviewTitle => 'مراجعة المدفوعات';
+
+  @override
+  String get paymentReviewSubtitle => 'راجع إثباتات الدفع المقدّمة من العملاء';
+
+  @override
+  String get paymentReviewEmptyTitle => 'لا توجد مدفوعات قيد المراجعة';
+
+  @override
+  String get paymentReviewEmptyMessage =>
+      'ستظهر هنا إثباتات الدفع المقدّمة من العملاء بانتظار المراجعة.';
+
+  @override
+  String get paymentReviewReadOnly =>
+      'اعتماد أو رفض الدفعات متاح للمسؤولين فقط.';
+
+  @override
+  String get paymentMethodLabel => 'طريقة الدفع';
+
+  @override
+  String get paymentSubmittedDate => 'تاريخ الإرسال';
+
+  @override
+  String get paymentDueDate => 'تاريخ الاستحقاق';
+
+  @override
+  String get paymentCustomerNote => 'ملاحظة العميل';
+
+  @override
+  String get paymentReference => 'الرقم المرجعي';
+
+  @override
+  String get paymentProofAttached => 'تم إرفاق إثبات الدفع';
+
+  @override
+  String get paymentOpenProof => 'فتح الإثبات';
+
+  @override
+  String get paymentApprove => 'اعتماد الدفعة';
+
+  @override
+  String get paymentReject => 'رفض الدفعة';
+
+  @override
+  String get paymentRejectReason => 'سبب الرفض';
+
+  @override
+  String get paymentReasonRequired => 'سبب الرفض مطلوب';
+
+  @override
+  String get paymentApproved => 'تم اعتماد الدفعة';
+
+  @override
+  String get paymentRejected => 'تم رفض الدفعة';
+
+  @override
+  String get paymentStatusPending => 'قيد المراجعة';
+
+  @override
+  String get paymentStatusApproved => 'تم الاعتماد';
+
+  @override
+  String get paymentStatusRejected => 'مرفوض';
+
+  @override
+  String get paymentMethodCash => 'نقدًا';
+
+  @override
+  String get paymentMethodBankTransfer => 'تحويل بنكي';
+
+  @override
+  String get paymentMethodCheque => 'شيك';
+
+  @override
+  String get paymentMethodOther => 'أخرى';
 }

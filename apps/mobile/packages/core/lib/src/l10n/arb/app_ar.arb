@@ -552,5 +552,31 @@
   "brokerLeadStatusExpired": "منتهٍ",
 
   "brokerCommissionsEmptyTitle": "لا توجد عمولات",
-  "brokerCommissionsEmptyMessage": "ستظهر عمولاتك هنا."
+  "brokerCommissionsEmptyMessage": "ستظهر عمولاتك هنا.",
+
+  "paymentReviewTitle": "مراجعة المدفوعات",
+  "paymentReviewSubtitle": "راجع إثباتات الدفع المقدّمة من العملاء",
+  "paymentReviewEmptyTitle": "لا توجد مدفوعات قيد المراجعة",
+  "paymentReviewEmptyMessage": "ستظهر هنا إثباتات الدفع المقدّمة من العملاء بانتظار المراجعة.",
+  "paymentReviewReadOnly": "اعتماد أو رفض الدفعات متاح للمسؤولين فقط.",
+  "paymentMethodLabel": "طريقة الدفع",
+  "paymentSubmittedDate": "تاريخ الإرسال",
+  "paymentDueDate": "تاريخ الاستحقاق",
+  "paymentCustomerNote": "ملاحظة العميل",
+  "paymentReference": "الرقم المرجعي",
+  "paymentProofAttached": "تم إرفاق إثبات الدفع",
+  "paymentOpenProof": "فتح الإثبات",
+  "paymentApprove": "اعتماد الدفعة",
+  "paymentReject": "رفض الدفعة",
+  "paymentRejectReason": "سبب الرفض",
+  "paymentReasonRequired": "سبب الرفض مطلوب",
+  "paymentApproved": "تم اعتماد الدفعة",
+  "paymentRejected": "تم رفض الدفعة",
+  "paymentStatusPending": "قيد المراجعة",
+  "paymentStatusApproved": "تم الاعتماد",
+  "paymentStatusRejected": "مرفوض",
+  "paymentMethodCash": "نقدًا",
+  "paymentMethodBankTransfer": "تحويل بنكي",
+  "paymentMethodCheque": "شيك",
+  "paymentMethodOther": "أخرى"
 }

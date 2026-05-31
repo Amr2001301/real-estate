@@ -2953,6 +2953,156 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your commissions will appear here.'**
   String get brokerCommissionsEmptyMessage;
+
+  /// No description provided for @paymentReviewTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment Review'**
+  String get paymentReviewTitle;
+
+  /// No description provided for @paymentReviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review payment proofs submitted by customers'**
+  String get paymentReviewSubtitle;
+
+  /// No description provided for @paymentReviewEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No payment proofs pending review'**
+  String get paymentReviewEmptyTitle;
+
+  /// No description provided for @paymentReviewEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer payment proofs awaiting review will appear here.'**
+  String get paymentReviewEmptyMessage;
+
+  /// No description provided for @paymentReviewReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Approving or rejecting is available to admins only.'**
+  String get paymentReviewReadOnly;
+
+  /// No description provided for @paymentMethodLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment method'**
+  String get paymentMethodLabel;
+
+  /// No description provided for @paymentSubmittedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Submitted date'**
+  String get paymentSubmittedDate;
+
+  /// No description provided for @paymentDueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Due date'**
+  String get paymentDueDate;
+
+  /// No description provided for @paymentCustomerNote.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer note'**
+  String get paymentCustomerNote;
+
+  /// No description provided for @paymentReference.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference number'**
+  String get paymentReference;
+
+  /// No description provided for @paymentProofAttached.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof attached'**
+  String get paymentProofAttached;
+
+  /// No description provided for @paymentOpenProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Open proof'**
+  String get paymentOpenProof;
+
+  /// No description provided for @paymentApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve payment'**
+  String get paymentApprove;
+
+  /// No description provided for @paymentReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject payment'**
+  String get paymentReject;
+
+  /// No description provided for @paymentRejectReason.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejection reason'**
+  String get paymentRejectReason;
+
+  /// No description provided for @paymentReasonRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'A rejection reason is required'**
+  String get paymentReasonRequired;
+
+  /// No description provided for @paymentApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment approved'**
+  String get paymentApproved;
+
+  /// No description provided for @paymentRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment rejected'**
+  String get paymentRejected;
+
+  /// No description provided for @paymentStatusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get paymentStatusPending;
+
+  /// No description provided for @paymentStatusApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get paymentStatusApproved;
+
+  /// No description provided for @paymentStatusRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get paymentStatusRejected;
+
+  /// No description provided for @paymentMethodCash.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash'**
+  String get paymentMethodCash;
+
+  /// No description provided for @paymentMethodBankTransfer.
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get paymentMethodBankTransfer;
+
+  /// No description provided for @paymentMethodCheque.
+  ///
+  /// In en, this message translates to:
+  /// **'Cheque'**
+  String get paymentMethodCheque;
+
+  /// No description provided for @paymentMethodOther.
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get paymentMethodOther;
 }
 
 class _AppLocalizationsDelegate

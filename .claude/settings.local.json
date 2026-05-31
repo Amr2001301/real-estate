@@ -63,7 +63,8 @@
       "Bash(npx jest *)",
       "Bash(SEED_ADMIN_EMAIL=\"admin@example.com\" SEED_ADMIN_PASSWORD=\"ChangeMe123!\" TEST_DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/realestate_e2e\" npx jest --config ./test/jest-e2e.json test/e2e/flow-e-financial-documents.e2e-spec.ts)",
       "Bash(echo \"WEB-PUBLIC TYPECHECK EXIT: $?\")",
-      "Bash(SEED_ADMIN_EMAIL=\"admin@example.com\" SEED_ADMIN_PASSWORD=\"ChangeMe123!\" TEST_DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/realestate_e2e\" npx jest --config ./test/jest-e2e.json)"
+      "Bash(SEED_ADMIN_EMAIL=\"admin@example.com\" SEED_ADMIN_PASSWORD=\"ChangeMe123!\" TEST_DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/realestate_e2e\" npx jest --config ./test/jest-e2e.json)",
+      "Bash(head-12)"
     ],
     "additionalDirectories": [
       "/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/units/[id]",

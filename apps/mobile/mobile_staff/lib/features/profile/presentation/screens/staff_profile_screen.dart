@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../common/role_label.dart';
 import '../../../auth/presentation/cubit/staff_auth_cubit.dart';
@@ -30,6 +31,9 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
+    // P11.6 — payment review entry for ADMIN + SALES_MANAGER only.
+    final role = context.read<SessionCubit>().state.role;
+    final canReviewPayments = role == AppRole.admin || role == AppRole.salesManager;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.navProfile)),
@@ -90,6 +94,12 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
           ),
           const SizedBox(height: AppSpacing.lg),
           const _PerformanceSection(),
+          if (canReviewPayments)
+            _SettingTile(
+              icon: Icons.receipt_long_rounded,
+              label: l10n.paymentReviewTitle,
+              onTap: () => context.push('/payments-review'),
+            ),
           _SettingTile(
             icon: Icons.translate_rounded,
             label: l10n.settingsLanguage,
