@@ -1,5 +1,6 @@
 import { Container } from '@/components/ui/Container';
 import { Reveal } from '@/components/motion/Reveal';
+import { cn } from '@/lib/cn';
 
 export interface PageHeroStat {
   value: string;
@@ -13,6 +14,15 @@ interface PageHeroProps {
   stats?: PageHeroStat[];
   /** Adds bottom space so a following element (e.g. a filter bar) can overlap the band. */
   overlap?: boolean;
+  /**
+   * Slimmer band for authenticated/utility pages (e.g. the account shell). A
+   * returning user wants their data near the fold, not a full-height marketing
+   * billboard — so the title steps down to display-2 and the vertical rhythm
+   * tightens. `actions` render beside the title from md+ (stacked below on
+   * mobile), which lets the shell host quick actions inside the brand band.
+   */
+  compact?: boolean;
+  actions?: React.ReactNode;
 }
 
 // Faint texture so the navy band reads with depth, not as a flat block.
@@ -26,7 +36,15 @@ const DOTS = {
  * transparent top navbar readable and stays consistent with the brand's
  * "dark moments" while leaving the rest of the page light.
  */
-export function PageHero({ eyebrow, title, subtitle, stats, overlap = false }: PageHeroProps) {
+export function PageHero({
+  eyebrow,
+  title,
+  subtitle,
+  stats,
+  overlap = false,
+  compact = false,
+  actions,
+}: PageHeroProps) {
   return (
     <section className="relative overflow-hidden bg-navy">
       <div
@@ -37,28 +55,51 @@ export function PageHero({ eyebrow, title, subtitle, stats, overlap = false }: P
       <span className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden />
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-gold-400/10 blur-3xl" aria-hidden />
 
-      <Container className={`relative pt-24 sm:pt-28 ${overlap ? 'pb-24 sm:pb-28' : 'pb-10 sm:pb-12'}`}>
+      <Container
+        className={cn(
+          'relative pt-24 sm:pt-28',
+          overlap ? (compact ? 'pb-16 sm:pb-20' : 'pb-24 sm:pb-28') : compact ? 'pb-8 sm:pb-10' : 'pb-10 sm:pb-12',
+        )}
+      >
         <Reveal>
-          <div className="max-w-2xl">
-            {eyebrow && (
-              <span className="inline-flex items-center rounded-full bg-gold-400/15 px-3.5 py-1 text-sm font-semibold text-gold-200 ring-1 ring-gold-400/25 backdrop-blur">
-                {eyebrow}
-              </span>
+          <div
+            className={cn(
+              actions && 'gap-6 md:flex md:items-end md:justify-between',
+              compact ? 'max-w-3xl' : 'max-w-2xl',
             )}
-            <h1 className="mt-4 text-display-1 text-white">{title}</h1>
-            <span aria-hidden className="mt-5 block h-1 w-16 rounded-full bg-gold-400" />
-            {subtitle && <p className="mt-5 max-w-xl text-lg leading-relaxed text-white/75">{subtitle}</p>}
+          >
+            <div className={cn('min-w-0', compact ? 'max-w-2xl' : 'max-w-2xl')}>
+              {eyebrow && (
+                <span className="inline-flex items-center rounded-full bg-gold-400/15 px-3.5 py-1 text-sm font-semibold text-gold-200 ring-1 ring-gold-400/25 backdrop-blur">
+                  {eyebrow}
+                </span>
+              )}
+              <h1 className={cn('text-white', compact ? 'mt-3.5 text-display-2' : 'mt-4 text-display-1')}>{title}</h1>
+              <span aria-hidden className={cn('block h-1 w-16 rounded-full bg-gold-400', compact ? 'mt-4' : 'mt-5')} />
+              {subtitle && (
+                <p
+                  className={cn(
+                    'max-w-xl leading-relaxed text-white/75',
+                    compact ? 'mt-4 text-base' : 'mt-5 text-lg',
+                  )}
+                >
+                  {subtitle}
+                </p>
+              )}
 
-            {stats && stats.length > 0 && (
-              <dl className="mt-8 flex flex-wrap gap-x-12 gap-y-6 border-t border-white/10 pt-6">
-                {stats.map((s) => (
-                  <div key={s.label}>
-                    <dt className="font-display text-2xl text-gold-200">{s.value}</dt>
-                    <dd className="mt-1 text-sm text-white/65">{s.label}</dd>
-                  </div>
-                ))}
-              </dl>
-            )}
+              {stats && stats.length > 0 && (
+                <dl className="mt-8 flex flex-wrap gap-x-12 gap-y-6 border-t border-white/10 pt-6">
+                  {stats.map((s) => (
+                    <div key={s.label}>
+                      <dt className="font-display text-2xl text-gold-200">{s.value}</dt>
+                      <dd className="mt-1 text-sm text-white/65">{s.label}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+
+            {actions && <div className="mt-6 shrink-0 md:mt-0">{actions}</div>}
           </div>
         </Reveal>
       </Container>

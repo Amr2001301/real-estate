@@ -61,15 +61,15 @@ export function SkeletonList({ count = 4, className }: { count?: number; classNa
   );
 }
 
-/** Summary-tile grid — mirrors the dashboard SummaryTile row. */
-export function SkeletonStat({ count = 3, className }: { count?: number; className?: string }) {
+/** Summary-tile grid — mirrors the dashboard SummaryTile row (tall vertical tile). */
+export function SkeletonStat({ count = 4, className }: { count?: number; className?: string }) {
   return (
-    <div aria-hidden className={cn('grid grid-cols-1 gap-4 sm:grid-cols-3', className)}>
+    <div aria-hidden className={cn('grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4', className)}>
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 rounded-2xl border border-hairline bg-surface p-5">
-          <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-6 w-1/2 rounded-full" />
+        <div key={i} className="flex flex-col justify-between gap-6 rounded-2xl border border-hairline bg-surface p-5">
+          <Skeleton className="h-11 w-11 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-7 w-1/2 rounded-full" />
             <Skeleton className="h-3 w-2/3 rounded-full" />
           </div>
         </div>

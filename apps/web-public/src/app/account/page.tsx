@@ -1,5 +1,3 @@
-import type { Route } from 'next';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   Heart,
@@ -9,7 +7,6 @@ import {
   Building2,
   Home,
   UserCircle2,
-  ArrowLeft,
   FileText,
   Wallet,
   Wrench,
@@ -35,9 +32,14 @@ import type {
   MeNotification,
 } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { SectionHeading } from '@/components/ui/Section';
+import { Stagger } from '@/components/motion/Stagger';
+import { Reveal } from '@/components/motion/Reveal';
 import { EmptyState } from '@/components/states/EmptyState';
 import { SummaryTile } from '@/components/account/SummaryTile';
 import { RecentRow } from '@/components/account/RecentRow';
+import { RecentPanel } from '@/components/account/RecentPanel';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { notificationTitle } from '@/components/account/NotificationCard';
 
@@ -71,19 +73,6 @@ function contractTitle(c: MeContract): string {
   if (project) return pickAr(project.name) || `عقد رقم ${c.contractNumber ?? '—'}`;
   if (c.unit) return `${unitTypeLabel(c.unit.type)} · ${c.unit.code}`;
   return `عقد رقم ${c.contractNumber ?? '—'}`;
-}
-
-/** Small "view all" header link for a recent section. */
-function SectionHead({ title, href }: { title: string; href: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-lg font-semibold text-ink-strong">{title}</h2>
-      <Link href={href as Route} className="inline-flex items-center gap-1 text-sm font-medium text-gold-600 hover:text-gold-500">
-        عرض الكل
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-      </Link>
-    </div>
-  );
 }
 
 export default async function AccountPage() {
@@ -173,90 +162,85 @@ export default async function AccountPage() {
     recentContracts.length > 0 || recentMaintenance.length > 0 || recentNotifications.length > 0;
 
   return (
-    <div className="space-y-8">
-      {/* Overview + quick actions (greeting lives in the layout hero/sidebar) */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl text-ink-strong">نظرة عامة</h1>
-          <p className="mt-1.5 text-sm text-ink-muted">ملخص نشاطك وروابط سريعة.</p>
+    <div className="space-y-12 sm:space-y-16">
+      {/* ── Overview (greeting lives in the layout hero) ── */}
+      <section className="space-y-7">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <SectionHeading eyebrow="حسابك" title="نظرة عامة" description="ملخص نشاطك وأحدث ما يخصّك في مكان واحد." />
+          <div className="flex flex-wrap gap-3">
+            <ButtonLink href={routes.projects} variant="primary" size="sm">
+              تصفّح المشاريع
+            </ButtonLink>
+            <ButtonLink href={routes.units} variant="outline" size="sm">
+              استكشف الوحدات
+            </ButtonLink>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <ButtonLink href={routes.projects} variant="primary" size="md">
-            تصفّح المشاريع
-          </ButtonLink>
-          <ButtonLink href={routes.units} variant="outline" size="md">
-            استكشف الوحدات
-          </ButtonLink>
-          <ButtonLink href={routes.accountProfile} variant="ghost" size="md">
-            تعديل البيانات
-          </ButtonLink>
-        </div>
-      </div>
 
-      {/* Client summary tiles (P7 — Reservations card visible to CLIENT + CUSTOMER) */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryTile icon={Heart} label="المفضلة" value={favoritesCount} href={routes.accountFavorites} />
-        <SummaryTile icon={CalendarClock} label="طلبات الزيارة" value={visitsCount} href={routes.accountVisits} />
-        <SummaryTile icon={MessageSquareText} label="الاستفسارات" value={requestsCount} href={routes.accountRequests} />
-        <SummaryTile icon={BookmarkCheck} label="الحجوزات" value={reservationsCount} href={routes.accountReservations} />
-      </div>
+        {/* Journey stats — P7: Reservations visible to CLIENT + CUSTOMER. */}
+        <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4" childClassName="h-full" step={70}>
+          <SummaryTile icon={Heart} label="المفضلة" value={favoritesCount} href={routes.accountFavorites} />
+          <SummaryTile icon={CalendarClock} label="طلبات الزيارة" value={visitsCount} href={routes.accountVisits} />
+          <SummaryTile icon={MessageSquareText} label="الاستفسارات" value={requestsCount} href={routes.accountRequests} />
+          <SummaryTile icon={BookmarkCheck} label="الحجوزات" value={reservationsCount} href={routes.accountReservations} />
+        </Stagger>
+      </section>
 
       {/* Client recent activity / guidance (guidance only for non-customers) */}
       {hasClientActivity ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {recentVisits.length > 0 && (
-            <section className="space-y-3">
-              <SectionHead title="أحدث الزيارات" href={routes.accountVisits} />
-              <div className="space-y-3">
-                {recentVisits.map((v) => (
-                  <RecentRow
-                    key={v.id}
-                    icon={entityIcon(v.project, v.unit)}
-                    title={entityTitle(v.project, v.unit, 'طلب زيارة')}
-                    subtitle={`الموعد المفضل: ${formatDateTime(v.preferredDate)}`}
-                    trailing={<StatusBadge status={v.requestStatus} />}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-          {recentRequests.length > 0 && (
-            <section className="space-y-3">
-              <SectionHead title="أحدث الاستفسارات" href={routes.accountRequests} />
-              <div className="space-y-3">
-                {recentRequests.map((r) => (
-                  <RecentRow
-                    key={r.id}
-                    icon={entityIcon(r.project, r.unit)}
-                    title={entityTitle(r.project, r.unit, 'استفسار عام')}
-                    subtitle={r.message}
-                    trailing={<span className="text-xs text-ink-muted">{formatDateTime(r.createdAt)}</span>}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-          {recentReservations.length > 0 && (
-            <section className="space-y-3 lg:col-span-2">
-              <SectionHead title="أحدث الحجوزات" href={routes.accountReservations} />
-              <div className="space-y-3">
-                {recentReservations.map((r) => (
-                  <RecentRow
-                    key={r.id}
-                    icon={BookmarkCheck}
-                    title={`حجز رقم ${r.reservationNumber ?? '—'}`}
-                    subtitle={
-                      r.unit
-                        ? `${unitTypeLabel(r.unit.type)} · ${r.unit.code}`
-                        : undefined
-                    }
-                    trailing={<StatusBadge status={r.status} />}
-                  />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+        <section className="space-y-7">
+          <SectionHeading eyebrow="متابعة" title="نشاطك الأخير" />
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {recentVisits.length > 0 && (
+              <Reveal>
+                <RecentPanel icon={CalendarClock} title="أحدث الزيارات" href={routes.accountVisits}>
+                  {recentVisits.map((v) => (
+                    <RecentRow
+                      key={v.id}
+                      href={routes.accountVisits}
+                      icon={entityIcon(v.project, v.unit)}
+                      title={entityTitle(v.project, v.unit, 'طلب زيارة')}
+                      subtitle={`الموعد المفضل: ${formatDateTime(v.preferredDate)}`}
+                      trailing={<StatusBadge status={v.requestStatus} />}
+                    />
+                  ))}
+                </RecentPanel>
+              </Reveal>
+            )}
+            {recentRequests.length > 0 && (
+              <Reveal>
+                <RecentPanel icon={MessageSquareText} title="أحدث الاستفسارات" href={routes.accountRequests}>
+                  {recentRequests.map((r) => (
+                    <RecentRow
+                      key={r.id}
+                      href={routes.accountRequests}
+                      icon={entityIcon(r.project, r.unit)}
+                      title={entityTitle(r.project, r.unit, 'استفسار عام')}
+                      subtitle={r.message}
+                      trailing={<span className="whitespace-nowrap text-xs text-ink-muted">{formatDateTime(r.createdAt)}</span>}
+                    />
+                  ))}
+                </RecentPanel>
+              </Reveal>
+            )}
+            {recentReservations.length > 0 && (
+              <Reveal className="lg:col-span-2">
+                <RecentPanel icon={BookmarkCheck} title="أحدث الحجوزات" href={routes.accountReservations}>
+                  {recentReservations.map((r) => (
+                    <RecentRow
+                      key={r.id}
+                      href={routes.accountReservations}
+                      icon={BookmarkCheck}
+                      title={`حجز رقم ${r.reservationNumber ?? '—'}`}
+                      subtitle={r.unit ? `${unitTypeLabel(r.unit.type)} · ${r.unit.code}` : undefined}
+                      trailing={<StatusBadge status={r.status} />}
+                    />
+                  ))}
+                </RecentPanel>
+              </Reveal>
+            )}
+          </div>
+        </section>
       ) : (
         !isCustomer && (
           <EmptyState
@@ -279,88 +263,85 @@ export default async function AccountPage() {
 
       {/* ── Customer (post-purchase) section ── */}
       {isCustomer && (
-        <div className="space-y-6 border-t border-hairline pt-8">
-          <div>
-            <h2 className="text-xl font-semibold text-ink-strong">خدمات ما بعد الشراء</h2>
-            <p className="mt-1 text-sm text-ink-muted">عقاراتك وعقودك ودفعاتك وطلبات الصيانة.</p>
+        <section className="space-y-7 border-t border-hairline pt-12 sm:pt-14">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+            <SectionHeading
+              eyebrow="خدمات العميل"
+              title="ما بعد الشراء"
+              description="عقاراتك وعقودك ودفعاتك وطلبات الصيانة في مكان واحد."
+            />
+            <div className="flex flex-wrap gap-3">
+              <ButtonLink href={routes.accountProperty} variant="outline" size="sm">
+                <Building2 className="h-4 w-4" aria-hidden />
+                عقاراتي
+              </ButtonLink>
+              <ButtonLink href={routes.accountMaintenanceNew} variant="gold" size="sm">
+                <Wrench className="h-4 w-4" aria-hidden />
+                طلب صيانة جديد
+              </ButtonLink>
+            </div>
           </div>
 
-          {/* Customer summary tiles (real counts/values; CTA on failure) */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Customer stats */}
+          <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4" childClassName="h-full" step={70}>
             <SummaryTile icon={FileText} label="العقود" value={contractsCount} href={routes.accountContracts} />
             <SummaryTile icon={Wallet} label="إجمالي المدفوعات" value={null} valueText={depositsTotalText} href={routes.accountDeposits} />
             <SummaryTile icon={Wrench} label="طلبات الصيانة" value={maintenanceCount} href={routes.accountMaintenance} />
             <SummaryTile icon={Bell} label="إشعارات غير مقروءة" value={unreadCount} href={routes.accountNotifications} />
-          </div>
-
-          {/* Customer quick links */}
-          <div className="flex flex-wrap gap-3">
-            <ButtonLink href={routes.accountProperty} variant="outline" size="sm">
-              <Building2 className="h-4 w-4" aria-hidden />
-              عقاراتي
-            </ButtonLink>
-            <ButtonLink href={routes.accountMaintenanceNew} variant="outline" size="sm">
-              <Wrench className="h-4 w-4" aria-hidden />
-              طلب صيانة جديد
-            </ButtonLink>
-          </div>
+          </Stagger>
 
           {/* Customer recent activity, or guidance when none */}
           {hasCustomerActivity ? (
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               {recentContracts.length > 0 && (
-                <section className="space-y-3">
-                  <SectionHead title="أحدث العقود" href={routes.accountContracts} />
-                  <div className="space-y-3">
+                <Reveal>
+                  <RecentPanel icon={FileText} title="أحدث العقود" href={routes.accountContracts}>
                     {recentContracts.map((c) => (
                       <RecentRow
                         key={c.id}
+                        href={routes.accountContracts}
                         icon={FileText}
                         title={contractTitle(c)}
                         subtitle={`عقد رقم ${c.contractNumber ?? '—'}`}
-                        trailing={<span className="text-xs font-medium text-ink-strong">{formatPrice(c.totalAmount)}</span>}
+                        trailing={<span className="whitespace-nowrap text-sm font-bold text-ink-strong">{formatPrice(c.totalAmount)}</span>}
                       />
                     ))}
-                  </div>
-                </section>
+                  </RecentPanel>
+                </Reveal>
               )}
 
               {recentMaintenance.length > 0 && (
-                <section className="space-y-3">
-                  <SectionHead title="أحدث طلبات الصيانة" href={routes.accountMaintenance} />
-                  <div className="space-y-3">
+                <Reveal>
+                  <RecentPanel icon={Wrench} title="أحدث طلبات الصيانة" href={routes.accountMaintenance}>
                     {recentMaintenance.map((m) => (
                       <RecentRow
                         key={m.id}
+                        href={routes.accountMaintenance}
                         icon={Wrench}
                         title={m.category ? pickAr(m.category.name) || 'طلب صيانة' : 'طلب صيانة'}
                         subtitle={m.unit ? `${unitTypeLabel(m.unit.type)} · ${m.unit.code}` : undefined}
                         trailing={<StatusBadge status={m.status} />}
                       />
                     ))}
-                  </div>
-                </section>
+                  </RecentPanel>
+                </Reveal>
               )}
 
               {recentNotifications.length > 0 && (
-                <section className="space-y-3 lg:col-span-2">
-                  <SectionHead title="أحدث الإشعارات" href={routes.accountNotifications} />
-                  <div className="space-y-3">
+                <Reveal className="lg:col-span-2">
+                  <RecentPanel icon={Bell} title="أحدث الإشعارات" href={routes.accountNotifications}>
                     {recentNotifications.map((n) => (
                       <RecentRow
                         key={n.id}
+                        href={routes.accountNotifications}
                         icon={Bell}
                         title={notificationTitle(n.templateCode)}
                         subtitle={formatDateTime(n.createdAt)}
-                        trailing={
-                          n.readAt === null ? (
-                            <span className="h-2 w-2 rounded-full bg-gold-500" aria-hidden />
-                          ) : undefined
-                        }
+                        trailing={n.readAt === null ? <Badge tone="gold">جديد</Badge> : undefined}
                       />
                     ))}
-                  </div>
-                </section>
+                  </RecentPanel>
+                </Reveal>
               )}
             </div>
           ) : (
@@ -375,7 +356,7 @@ export default async function AccountPage() {
               }
             />
           )}
-        </div>
+        </section>
       )}
     </div>
   );

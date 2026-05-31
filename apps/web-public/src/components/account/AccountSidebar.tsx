@@ -95,22 +95,29 @@ export function AccountSidebar({
 
   return (
     <aside className="lg:sticky lg:top-28 lg:self-start">
-      <div className="rounded-2xl border border-hairline bg-surface p-4 shadow-card sm:p-5">
-        {/* Profile */}
-        <div className="flex items-center gap-3 border-b border-hairline pb-4">
-          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-navy text-white">
-            <UserCircle2 className="h-6 w-6" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-base font-semibold text-ink-strong">{fullName || 'حسابك'}</p>
-            <span className="mt-1 inline-flex items-center rounded-full bg-gold-100 px-2.5 py-0.5 text-xs font-medium text-gold-600">
-              {roleLabel}
+      <div className="overflow-hidden rounded-2xl border border-hairline bg-surface shadow-card">
+        {/* Profile — navy header band ties the sidebar to the brand hero above */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-navy-600 to-navy p-4 sm:p-5">
+          <span
+            className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-gold-400/15 blur-2xl"
+            aria-hidden
+          />
+          <div className="relative flex items-center gap-3">
+            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold-400 text-navy ring-1 ring-gold-300/60">
+              <UserCircle2 className="h-6 w-6" aria-hidden />
             </span>
+            <div className="min-w-0">
+              <p className="truncate text-base font-semibold text-white">{fullName || 'حسابك'}</p>
+              <span className="mt-1 inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-gold-200 ring-1 ring-white/15">
+                {roleLabel}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Nav — horizontal scroll on mobile, vertical on desktop */}
-        <nav className="mt-4 flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+        <div className="p-4 sm:p-5">
+          {/* Nav — horizontal scroll on mobile, vertical on desktop */}
+          <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
           {CLIENT_ITEMS.map(renderItem)}
 
           {isCustomer && (
@@ -137,7 +144,8 @@ export function AccountSidebar({
               تسجيل الخروج
             </button>
           </form>
-        </nav>
+          </nav>
+        </div>
       </div>
     </aside>
   );

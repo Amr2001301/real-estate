@@ -33,11 +33,16 @@ export default async function AccountLayout({ children }: { children: React.Reac
         title={session.fullName ? `مرحبًا، ${session.fullName}` : 'حسابك'}
         subtitle="تابع مفضلاتك وزياراتك وطلباتك، وحدّث بياناتك من مكان واحد."
         overlap
+        compact
       />
-      <Container className="relative z-10 -mt-16 pb-20 sm:-mt-20">
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-8">
+      <Container className="relative z-10 -mt-14 pb-20 sm:-mt-16">
+        <div className="grid gap-6 lg:grid-cols-[284px_minmax(0,1fr)] lg:gap-8">
+          {/* The sidebar is a solid card, so it tucks into the navy band for a
+              premium overlap. The content column is mostly dark text, so on
+              desktop it drops below the band (lg:pt) to stay readable; on
+              mobile it already follows the sidebar, clear of the band. */}
           <AccountSidebar fullName={session.fullName} roleLabel={roleLabel} isCustomer={session.role === 'CUSTOMER'} />
-          <div className="min-w-0">{children}</div>
+          <div className="min-w-0 lg:pt-[4.5rem]">{children}</div>
         </div>
       </Container>
     </>
