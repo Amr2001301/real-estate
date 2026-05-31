@@ -21,7 +21,7 @@ import type {
 } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
-import { CsvExportLink } from '@/components/csv-export-link';
+import { ExportMenu } from '@/components/export-menu';
 import { FunnelCard } from '@/components/broker/funnel-card';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,17 +105,19 @@ export default async function AdminBrokerReportsPage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <CsvExportLink
-              path="/broker-reports/export/summary.csv"
-              filename="broker-summary.csv"
-              params={{ brokerId: sp.brokerId, projectId: sp.projectId, from: sp.from, to: sp.to }}
+            <ExportMenu
               label="تصدير الملخص"
+              xlsxPath="/broker-reports/export/summary.xlsx"
+              csvPath="/broker-reports/export/summary.csv"
+              filenameBase="broker-summary"
+              params={{ brokerId: sp.brokerId, projectId: sp.projectId, from: sp.from, to: sp.to }}
             />
-            <CsvExportLink
-              path="/broker-reports/export/top-brokers.csv"
-              filename="top-brokers.csv"
-              params={{ projectId: sp.projectId, from: sp.from, to: sp.to, metric: sp.metric }}
+            <ExportMenu
               label="تصدير أعلى الوسطاء"
+              xlsxPath="/broker-reports/export/top-brokers.xlsx"
+              csvPath="/broker-reports/export/top-brokers.csv"
+              filenameBase="top-brokers"
+              params={{ projectId: sp.projectId, from: sp.from, to: sp.to, metric: sp.metric }}
             />
           </div>
         }

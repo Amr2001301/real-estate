@@ -21,7 +21,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { ReportsTabs } from '../_components/reports-tabs';
-import { CsvExportLink } from '@/components/csv-export-link';
+import { ExportMenu } from '@/components/export-menu';
 import { ProjectSelect } from './_components/project-select';
 import { CashflowBarChart } from './_components/cashflow-bar-chart';
 import { PaymentDonutChart } from './_components/payment-donut-chart';
@@ -388,9 +388,10 @@ export default async function FinancialReportsPage({
           >
             {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
           </Link>
-          <CsvExportLink
-            path="/reports/financial-dashboard/export.csv"
-            filename="financial-dashboard.csv"
+          <ExportMenu
+            xlsxPath="/reports/financial-dashboard/export.xlsx"
+            csvPath="/reports/financial-dashboard/export.csv"
+            filenameBase="financial-dashboard"
             params={{
               projectId: sp.projectId,
               q: sp.q,

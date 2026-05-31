@@ -13,6 +13,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -42,6 +43,13 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
+import {
+  addFooter,
+  addTable,
+  addTitledTable,
+  createReportWorkbook,
+  workbookToBuffer,
+} from '../../common/utils/xlsx';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
 import {
   NotificationsModule,
@@ -1160,6 +1168,99 @@ class MaintenanceService {
       toCsv(['section', 'unitCode', 'categoryName', 'warrantyEnd'], expiringRows),
     ].join('\r\n');
   }
+
+  /**
+   * P15.3 — styled XLSX twin of reportsSummaryCsv. Same real report (summary +
+   * by-category + by-assignee + expiring warranties), one sheet per section,
+   * applied filters surfaced on the summary sheet. No demo values.
+   */
+  async reportsSummaryXlsx(opts: {
+    from?: string;
+    to?: string;
+    assignedAdminId?: string;
+    categoryId?: string;
+    reviewStatus?: MaintenanceReviewStatus;
+    status?: MaintenanceStatus;
+  }): Promise<Buffer> {
+    const r = await this.reportsSummary(opts);
+    const txAr = (v: unknown): string => {
+      if (!v) return '—';
+      if (typeof v === 'string') return v;
+      const t = v as { ar?: string; en?: string };
+      return t.ar || t.en || '—';
+    };
+    const fmtDate = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : '—');
+    const STATUS_AR: Record<string, string> = {
+      OPEN: 'مفتوحة', ASSIGNED: 'مسندة', IN_PROGRESS: 'قيد التنفيذ',
+      RESOLVED: 'تم الحل', CLOSED: 'مغلقة',
+    };
+    const REVIEW_AR: Record<string, string> = {
+      PENDING: 'قيد المراجعة', APPROVED: 'معتمدة', REJECTED: 'مرفوضة',
+    };
+
+    const wb = createReportWorkbook();
+    const sum = wb.addWorksheet('الملخص');
+    addTitledTable(sum, {
+      title: 'تقرير الصيانة',
+      filters: [
+        ['من', opts.from ?? ''],
+        ['إلى', opts.to ?? ''],
+        ['الحالة', opts.status ? (STATUS_AR[opts.status] ?? opts.status) : ''],
+        ['حالة المراجعة', opts.reviewStatus ? (REVIEW_AR[opts.reviewStatus] ?? opts.reviewStatus) : ''],
+        ['المسند إليه', opts.assignedAdminId ? 'موظف محدد' : ''],
+        ['الفئة', opts.categoryId ? 'فئة محددة' : ''],
+      ],
+      headers: ['المؤشر', 'القيمة'],
+      rows: [
+        ['إجمالي الطلبات', r.totalRequests],
+        ['قيد المراجعة', r.pendingReviewCount],
+        ['معتمدة', r.approvedCount],
+        ['مرفوضة', r.rejectedCount],
+        ['مفتوحة', r.openCount],
+        ['مسندة', r.assignedCount],
+        ['قيد التنفيذ', r.inProgressCount],
+        ['تم الحل', r.resolvedCount],
+        ['مغلقة', r.closedCount],
+        ['متأخرة', r.overdueCount],
+        ['تحت الضمان', r.inWarrantyCount],
+        ['خارج الضمان', r.outOfWarrantyCount],
+        ['ضمان غير معروف', r.unknownWarrantyCount],
+        ['متوسط زمن المعالجة (ساعة)', r.avgResolutionHours ?? '—'],
+        ['تم الحل ضمن المدة', r.resolvedWithinSlaCount],
+        ['تم الحل بعد الموعد', r.resolvedOverdueCount],
+        ['نسبة الالتزام بالمدة (٪)', r.slaAttainmentPercent ?? '—'],
+        ['متوسط التأخير (ساعة)', r.avgDelayHours ?? '—'],
+      ],
+      widths: [34, 16],
+    });
+    addFooter(sum);
+
+    const cat = wb.addWorksheet('حسب الفئة');
+    addTable(
+      cat,
+      ['الفئة', 'العدد', 'متأخرة', 'خارج الضمان'],
+      r.byCategory.map((c) => [txAr(c.categoryName), c.count, c.overdueCount, c.outOfWarrantyCount]),
+      [28, 12, 12, 14],
+    );
+
+    const assignee = wb.addWorksheet('حسب المسند إليه');
+    addTable(
+      assignee,
+      ['المسند إليه', 'العدد', 'متأخرة', 'قيد التنفيذ'],
+      r.byAssignee.map((a) => [a.name, a.count, a.overdueCount, a.inProgressCount]),
+      [28, 12, 12, 14],
+    );
+
+    const expiring = wb.addWorksheet('ضمانات تنتهي قريباً');
+    addTable(
+      expiring,
+      ['الوحدة', 'الفئة', 'نهاية الضمان'],
+      r.expiringWarranties.map((e) => [e.unitCode, txAr(e.categoryName), fmtDate(e.warrantyEnd)]),
+      [18, 24, 16],
+    );
+
+    return workbookToBuffer(wb);
+  }
 }
 
 @ApiTags('maintenance')
@@ -1343,6 +1444,30 @@ class MaintenanceController {
     @Query('status') status?: MaintenanceStatus,
   ) {
     return this.svc.reportsSummaryCsv({ from, to, assignedAdminId, categoryId, reviewStatus, status });
+  }
+
+  // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate +
+  // filters; the CSV above stays as the raw-data fallback. Declared before
+  // `:id` so the literal path is never read as a request id.
+  @Roles(UserRole.ADMIN)
+  @Permissions('maintenance:read')
+  @Get('maintenance-requests/reports/summary.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="maintenance-report.xlsx"')
+  async reportsSummaryXlsx(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('assignedAdminId') assignedAdminId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('reviewStatus') reviewStatus?: MaintenanceReviewStatus,
+    @Query('status') status?: MaintenanceStatus,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(
+      await this.svc.reportsSummaryXlsx({ from, to, assignedAdminId, categoryId, reviewStatus, status }),
+    );
   }
 
   @Roles(UserRole.ADMIN)

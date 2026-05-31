@@ -304,24 +304,43 @@ describe('GET /reports/admin-summary (P14)', () => {
     FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
     const { wb } = await fetchXlsx();
     const all = dumpAll(wb);
-    expect(all).toContain('تقرير لوحة التحكم'); // title
+    expect(all).toContain('تقرير لوحة التحكم'); // banner title
     expect(all).toContain('المشاريع المنشورة');
     expect(all).toContain('مباشر'); // lead source name
     expect(all).toContain('خالد'); // recent-activity actor
-    // The الملخص KPI table carries the real projects count (4).
+    // The الملخص KPI card carries the real projects count (4): the value sits in
+    // the cell directly ABOVE its label (same column), per the card layout.
     const summary = wb.getWorksheet('الملخص')!;
-    const labels: string[] = [];
-    summary.eachRow((row) => labels.push(String(row.getCell(1).value ?? '')));
-    const projectsRow = summary
-      .getRows(1, summary.rowCount)!
-      .find((r) => String(r.getCell(1).value) === 'المشاريع المنشورة');
-    expect(projectsRow?.getCell(2).value).toBe(4);
+    let found: number | undefined;
+    summary.eachRow((row, rowNumber) => {
+      row.eachCell((cell, colNumber) => {
+        if (String(cell.value) === 'المشاريع المنشورة') {
+          found = Number(summary.getCell(rowNumber - 1, colNumber).value);
+        }
+      });
+    });
+    expect(found).toBe(4);
   });
 
   it('workbook contains no old fake/demo values', async () => {
     FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
     const { wb } = await fetchXlsx();
     expect(dumpAll(wb)).not.toMatch(/أحمد منصور|بيانات تجريبية|74%|برج الجوار/);
+  });
+
+  it('embeds board chart images on the cover sheet (trend bar + sources doughnut)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const { wb } = await fetchXlsx();
+    // Real reservationTrend + leadSources in the mock → both charts render.
+    expect(wb.getWorksheet('الملخص')!.getImages().length).toBeGreaterThan(0);
+  });
+
+  it('cover sheet is a polished board: RTL view with gridlines hidden', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const { wb } = await fetchXlsx();
+    const view = wb.getWorksheet('الملخص')!.views[0] as { rightToLeft?: boolean; showGridLines?: boolean };
+    expect(view.rightToLeft).toBe(true);
+    expect(view.showGridLines).toBe(false);
   });
 
   it('export.xlsx is forbidden for CUSTOMER / CLIENT / BROKER', async () => {

@@ -25,7 +25,7 @@ import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MonthlyTrendChart } from '@/components/broker/monthly-trend-chart';
 import { FunnelCard } from '@/components/broker/funnel-card';
-import { CsvExportLink } from '@/components/csv-export-link';
+import { ExportMenu } from '@/components/export-menu';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -79,9 +79,10 @@ export default async function PortalPerformancePage({
           { label: 'الأداء' },
         ]}
         actions={
-          <CsvExportLink
-            path="/portal/performance/export.csv"
-            filename="my-performance.csv"
+          <ExportMenu
+            xlsxPath="/portal/performance/export.xlsx"
+            csvPath="/portal/performance/export.csv"
+            filenameBase="my-performance"
             params={{ from: sp.from, to: sp.to, projectId: sp.projectId, brokerAgentId: sp.brokerAgentId }}
           />
         }

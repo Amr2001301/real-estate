@@ -22,7 +22,7 @@ import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { CsvExportLink } from '@/components/csv-export-link';
+import { ExportMenu } from '@/components/export-menu';
 
 export const dynamic = 'force-dynamic';
 
@@ -216,9 +216,10 @@ export default async function BonusPage({
           { label: 'العمولات' },
         ]}
         actions={
-          <CsvExportLink
-            path="/bonus-entries/export.csv"
-            filename="bonus-entries.csv"
+          <ExportMenu
+            xlsxPath="/bonus-entries/export.xlsx"
+            csvPath="/bonus-entries/export.csv"
+            filenameBase="bonus-entries"
             params={{ salesId: sp.salesId, status: sp.status, period: sp.period }}
           />
         }

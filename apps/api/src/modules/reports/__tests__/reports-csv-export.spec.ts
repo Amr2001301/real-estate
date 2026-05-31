@@ -9,6 +9,7 @@ import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
+import { Workbook } from 'exceljs';
 import { ReportsModule } from '../reports.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
@@ -144,11 +145,132 @@ describe('Reports module · CSV export', () => {
 
     it.each<[string, string]>([
       ['salesCsv', 'reports:sales:read'],
+      ['salesXlsx', 'reports:sales:read'],
       ['financialCsv', 'reports:financial:read'],
+      ['financialXlsx', 'reports:financial:read'],
       ['operationalCsv', 'reports:operational:read'],
+      ['operationalXlsx', 'reports:operational:read'],
       ['financialDashboardCsv', 'reports:financial:read'],
+      ['financialDashboardXlsx', 'reports:financial:read'],
     ])('%s → @Permissions(%s)', (method, code) => {
       expect(getMeta(method)).toMatchObject({ codes: [code], adminBypass: true });
+    });
+  });
+
+  // ── Operational XLSX twin (P15.3) ─────────────────────────────────────────
+
+  function fetchXlsx(path: string) {
+    return request(app.getHttpServer())
+      .get(path)
+      .buffer()
+      .parse((res, cb) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (c: Buffer) => chunks.push(c));
+        res.on('end', () => cb(null, Buffer.concat(chunks)));
+      });
+  }
+
+  describe('GET /reports/operational/export.xlsx', () => {
+    it('returns a real XLSX (PK) with the spreadsheet content-type + attachment', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      const res = await fetchXlsx('/reports/operational/export.xlsx').expect(200);
+      const body = res.body as Buffer;
+      expect(res.headers['content-type']).toContain(
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      expect(res.headers['content-disposition']).toContain('operational-report.xlsx');
+      expect(body.subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+    });
+
+    it('opens with the two expected sheets and no fake/demo values', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      const res = await fetchXlsx('/reports/operational/export.xlsx').expect(200);
+      const wb = new Workbook();
+      await wb.xlsx.load(res.body as unknown as ArrayBuffer);
+      expect(wb.worksheets.map((w) => w.name)).toEqual(['المؤشرات', 'الحجوزات حسب الحالة']);
+      const flat: string[] = [];
+      wb.eachSheet((ws) => ws.eachRow((r) => r.eachCell((c) => flat.push(String(c.value ?? '')))));
+      const all = flat.join(' ');
+      expect(all).toContain('التقرير التشغيلي');
+      expect(all).toContain('إجمالي الوحدات');
+      expect(all).not.toMatch(/أحمد منصور|بيانات تجريبية|برج الجوار|74%/);
+    });
+
+    it('rejects SALES / BROKER at the @Roles layer', async () => {
+      for (const role of [UserRole.SALES, UserRole.BROKER]) {
+        FakeAuthGuard.currentUser = { sub: 'x', role, codes: ['reports:operational:read'] };
+        await request(app.getHttpServer()).get('/reports/operational/export.xlsx').expect(403);
+      }
+    });
+  });
+
+  // ── Board-style report XLSX (P15.4) ───────────────────────────────────────
+
+  async function loadBoard(path: string) {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const res = await fetchXlsx(path).expect(200);
+    const wb = new Workbook();
+    await wb.xlsx.load(res.body as unknown as ArrayBuffer);
+    const flat: string[] = [];
+    wb.eachSheet((ws) => ws.eachRow((r) => r.eachCell((c) => flat.push(String(c.value ?? '')))));
+    return { res, wb, text: flat.join(' ') };
+  }
+
+  describe('GET /reports/sales/export.xlsx (board)', () => {
+    it('is a real XLSX (PK) + content-type/attachment with the expected sheets, no fakes', async () => {
+      const { res, wb, text } = await loadBoard('/reports/sales/export.xlsx');
+      expect(res.headers['content-type']).toContain('spreadsheetml.sheet');
+      expect(res.headers['content-disposition']).toContain('sales-report.xlsx');
+      expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      expect(wb.worksheets.map((w) => w.name)).toEqual(['الملخص', 'المبيعات حسب المشروع']);
+      expect(text).toContain('تقرير المبيعات');
+      expect(text).toContain('الملخص التنفيذي');
+      expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
+    });
+    it('is forbidden for SALES (admin-only @Roles)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['reports:sales:read'] };
+      await request(app.getHttpServer()).get('/reports/sales/export.xlsx').expect(403);
+    });
+  });
+
+  describe('GET /reports/financial/export.xlsx (board)', () => {
+    it('embeds a doughnut chart on the cover, PK, expected sheet, no fakes', async () => {
+      const { res, wb, text } = await loadBoard('/reports/financial/export.xlsx');
+      expect(res.headers['content-disposition']).toContain('financial-report.xlsx');
+      expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      expect(wb.worksheets.map((w) => w.name)).toEqual(['الملخص']);
+      // Verified/unverified doughnut renders even at zero values → image embedded.
+      expect(wb.getWorksheet('الملخص')!.getImages().length).toBeGreaterThan(0);
+      expect(text).toContain('التقرير المالي');
+      expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
+    });
+    it('is forbidden for BROKER', async () => {
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.BROKER, codes: ['reports:financial:read'] };
+      await request(app.getHttpServer()).get('/reports/financial/export.xlsx').expect(403);
+    });
+  });
+
+  describe('GET /reports/financial-dashboard/export.xlsx (board)', () => {
+    it('is a real XLSX (PK) with cover + detail sheets, no fakes', async () => {
+      const { res, wb, text } = await loadBoard('/reports/financial-dashboard/export.xlsx');
+      expect(res.headers['content-disposition']).toContain('financial-dashboard.xlsx');
+      expect((res.body as Buffer).subarray(0, 4)).toEqual(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+      expect(wb.worksheets.map((w) => w.name)).toEqual([
+        'الملخص', 'التحصيل حسب النوع', 'أعمار المتأخرات',
+      ]);
+      expect(text).toContain('لوحة المؤشرات المالية');
+      expect(text).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
+    });
+    it('forwards the projectId filter to financialDashboard', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      const projectId = '11111111-1111-4111-8111-111111111111';
+      await fetchXlsx(`/reports/financial-dashboard/export.xlsx?projectId=${projectId}`).expect(200);
+      const where = JSON.stringify(prismaMock.contract.aggregate.mock.calls.map((c) => c[0]));
+      expect(where).toContain(projectId);
+    });
+    it('is forbidden for SALES', async () => {
+      FakeAuthGuard.currentUser = { sub: 'x', role: UserRole.SALES, codes: ['reports:financial:read'] };
+      await request(app.getHttpServer()).get('/reports/financial-dashboard/export.xlsx').expect(403);
     });
   });
 

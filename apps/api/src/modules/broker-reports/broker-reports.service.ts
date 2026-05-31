@@ -15,6 +15,28 @@ import {
   TopMetric,
 } from './dto/broker-report.dto';
 import { toCsv } from '../../common/utils/csv';
+import {
+  addBoardBanner,
+  addChartBlock,
+  addFooter,
+  addKpiCards,
+  addSectionTitle,
+  addTable,
+  addTitledTable,
+  createReportWorkbook,
+  setupBoardSheet,
+  workbookToBuffer,
+} from '../../common/utils/xlsx';
+import { renderBarChartPng } from '../../common/utils/xlsx-chart';
+
+const TOP_METRIC_LABEL: Record<TopMetric, string> = {
+  leads: 'الفرص',
+  reservations: 'الحجوزات',
+  contracts: 'العقود',
+  salesGross: 'إجمالي المبيعات',
+  commissionNet: 'صافي العمولات',
+  payoutNet: 'صافي المدفوعات',
+};
 
 /**
  * Date basis used throughout this service (per Phase 10 spec):
@@ -520,6 +542,59 @@ export class BrokerReportsService {
     return toCsv(['المؤشر', 'القيمة'], rows);
   }
 
+  /**
+   * P15.4 — broker performance as a board-style XLSX: branded cover with an
+   * executive summary + a top-brokers (by sales) bar chart, plus a top-brokers
+   * detail sheet. Same real `summary()` + `topBrokers()` data as the CSV. Chart
+   * degrades gracefully to tables-only on failure.
+   */
+  async summaryBoardXlsx(query: BrokerReportsSummaryQueryDto) {
+    const [s, top] = await Promise.all([
+      this.summary(query),
+      this.topBrokers({ from: query.from, to: query.to, projectId: query.projectId, metric: 'salesGross', limit: 8 }),
+    ]);
+
+    const topChart = await renderBarChartPng({
+      title: 'أعلى الوسطاء حسب المبيعات',
+      series: top.data.map((r) => ({ label: r.companyName, value: Number(r.salesGross) })),
+    });
+
+    const SPAN = 6;
+    const wb = createReportWorkbook();
+    const cover = wb.addWorksheet('الملخص');
+    setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
+    addBoardBanner(cover, 'تقرير أداء الوسطاء', SPAN);
+    addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
+    addKpiCards(
+      cover,
+      [
+        { label: 'الوسطاء الإجماليون', value: s.totalBrokers },
+        { label: 'الوسطاء النشطون', value: s.activeBrokers },
+        { label: 'وكلاء الوسطاء', value: s.totalBrokerAgents },
+        { label: 'الفرص المرسلة', value: s.leadsSubmitted },
+        { label: 'الفرص المعتمدة', value: s.leadsApproved },
+        { label: 'الحجوزات المُنشأة', value: s.reservationsCreated },
+        { label: 'العقود الموقّعة', value: s.contractsSigned },
+        { label: 'إجمالي المبيعات', value: Number(s.salesGross) },
+        { label: 'صافي العمولات', value: Number(s.commissionsNet) },
+        { label: 'صافي المدفوعات', value: Number(s.payoutsTotalNet) },
+      ],
+      { span: SPAN, perRow: 3 },
+    );
+    addChartBlock(wb, cover, 'أعلى الوسطاء حسب المبيعات', topChart, { span: SPAN, width: 720, height: 320 });
+    addFooter(cover);
+
+    const topSheet = wb.addWorksheet('أعلى الوسطاء');
+    addTable(
+      topSheet,
+      ['الوسيط', 'الكود', 'إجمالي المبيعات', 'صافي العمولات', 'صافي المدفوعات'],
+      top.data.map((r) => [r.companyName, r.code, Number(r.salesGross), Number(r.commissionNet), Number(r.payoutNet)]),
+      [24, 12, 18, 16, 16],
+    );
+
+    return workbookToBuffer(wb);
+  }
+
   async topBrokersCsv(query: TopBrokersQueryDto) {
     const { data, metric } = await this.topBrokers(query);
     const headers = [
@@ -659,6 +734,115 @@ export class BrokerReportsService {
     }
 
     return sections.join('\r\n\r\n');
+  }
+
+  /**
+   * P15.3 — styled XLSX twin of topBrokersCsv. Same real ranking + same filters
+   * (sort metric, date range) surfaced in the sheet header. No demo values.
+   */
+  async topBrokersXlsx(query: TopBrokersQueryDto) {
+    const { data, metric } = await this.topBrokers(query);
+    const wb = createReportWorkbook();
+    const ws = wb.addWorksheet('أعلى الوسطاء');
+    addTitledTable(ws, {
+      title: 'تقرير أعلى الوسطاء',
+      filters: [
+        ['مرتب حسب', TOP_METRIC_LABEL[metric] ?? metric],
+        ['من', query.from ?? ''],
+        ['إلى', query.to ?? ''],
+      ],
+      headers: [
+        'الوسيط', 'الكود', 'الحالة', 'فرص', 'فرص معتمدة', 'حجوزات', 'عقود',
+        'عقود موقّعة', 'إجمالي المبيعات', 'إجمالي العمولات', 'صافي العمولات',
+        'صافي المدفوعات', 'نسبة التحويل',
+      ],
+      rows: data.map((r) => [
+        r.companyName, r.code, r.status,
+        r.leads, r.approvedLeads, r.reservations, r.contracts, r.contractsSigned,
+        Number(r.salesGross), Number(r.commissionGross), Number(r.commissionNet),
+        Number(r.payoutNet), formatRate(r.conversionRate),
+      ]),
+      widths: [22, 12, 12, 8, 11, 9, 8, 11, 16, 16, 14, 14, 12],
+    });
+    [9, 10, 11, 12].forEach((c) => (ws.getColumn(c).numFmt = '#,##0.##'));
+    addFooter(ws);
+    return workbookToBuffer(wb);
+  }
+
+  /**
+   * P15.3 — styled XLSX twin of brokerDetailCsv. Same real detail (summary +
+   * monthly trend + agent + project breakdowns) across one sheet per section.
+   * No demo values.
+   */
+  async brokerDetailXlsx(brokerId: string, query: BrokerDetailReportQueryDto) {
+    const detail = await this.brokerDetail(brokerId, query);
+    const s = detail.summary;
+    const wb = createReportWorkbook();
+
+    const sum = wb.addWorksheet('الملخص');
+    addTitledTable(sum, {
+      title: `تقرير الوسيط — ${this.localizedName(detail.broker.companyName) || detail.broker.code || ''}`,
+      filters: [
+        ['الكود', detail.broker.code ?? ''],
+        ['الحالة', detail.broker.status],
+        ['من', query.from ?? ''],
+        ['إلى', query.to ?? ''],
+      ],
+      headers: ['المؤشر', 'القيمة'],
+      rows: [
+        ['فرص مرسلة', s.leadsSubmitted],
+        ['فرص معتمدة', s.leadsApproved],
+        ['حجوزات', s.reservationsCreated],
+        ['عقود', s.contractsCreated],
+        ['عقود موقّعة', s.contractsSigned],
+        ['إجمالي المبيعات', Number(s.salesGross)],
+        ['صافي العمولات', Number(s.commissionsNet)],
+        ['صافي المدفوعات', Number(s.payoutsTotalNet)],
+        ['نسبة الفرصة → الحجز', formatRate(s.leadToReservationRate)],
+        ['نسبة الحجز → العقد', formatRate(s.reservationToContractRate)],
+        ['نسبة العقد الموقّع', formatRate(s.signedContractRate)],
+        ['نسبة العقد → الدفع', formatRate(s.contractToPaidPayoutRate)],
+      ],
+      widths: [30, 18],
+    });
+    addFooter(sum);
+
+    const trend = wb.addWorksheet('الاتجاه الشهري');
+    addTable(
+      trend,
+      ['الشهر', 'حجوزات', 'عقود موقّعة', 'صافي العمولات', 'صافي المدفوعات'],
+      detail.monthlyTrend.map((m) => [
+        m.label, m.reservations, m.contractsSigned,
+        Number(m.commissionsNet), Number(m.payoutsNet),
+      ]),
+      [16, 10, 12, 16, 16],
+    );
+
+    const agents = wb.addWorksheet('الوكلاء');
+    addTable(
+      agents,
+      ['الوكيل', 'البريد', 'الهاتف', 'فرص', 'حجوزات', 'عقود', 'عقود موقّعة', 'إجمالي المبيعات', 'صافي العمولات', 'صافي المدفوعات'],
+      detail.agentBreakdown.map((a) => [
+        a.fullName, a.email ?? '', a.phone ?? '',
+        a.leadsSubmitted, a.reservations, a.contracts, a.contractsSigned,
+        Number(a.salesGross), Number(a.commissionNet), Number(a.payoutNet),
+      ]),
+      [22, 22, 16, 8, 9, 8, 11, 16, 16, 16],
+    );
+
+    const projects = wb.addWorksheet('المشاريع');
+    addTable(
+      projects,
+      ['المشروع', 'المدينة', 'عدد الوسطاء', 'عقود', 'عقود موقّعة', 'إجمالي المبيعات', 'صافي العمولات', 'صافي المدفوعات'],
+      detail.projectBreakdown.map((p) => [
+        this.localizedName(p.projectName), this.localizedName(p.city),
+        p.brokerCount, p.contracts, p.contractsSigned,
+        Number(p.salesGross), Number(p.commissionNet), Number(p.payoutNet),
+      ]),
+      [24, 16, 12, 8, 11, 16, 16, 16],
+    );
+
+    return workbookToBuffer(wb);
   }
 
   private localizedName(value: unknown): string {

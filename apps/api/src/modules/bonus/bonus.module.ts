@@ -11,6 +11,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -36,6 +37,12 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { toCsv } from '../../common/utils/csv';
+import {
+  addFooter,
+  addTitledTable,
+  createReportWorkbook,
+  workbookToBuffer,
+} from '../../common/utils/xlsx';
 import {
   resolveSalesScope,
   salesActorIds,
@@ -334,6 +341,42 @@ export class BonusService {
     );
   }
 
+  /**
+   * P15.3 — styled XLSX twin of entriesCsv. Same real list + same filters; the
+   * applied filters are surfaced in the sheet header. No demo values.
+   */
+  async entriesXlsx(opts: { salesId?: string; status?: BonusEntryStatus; period?: string }) {
+    const entries = await this.listEntries(opts);
+    const statusLabel: Record<BonusEntryStatus, string> = {
+      [BonusEntryStatus.PENDING]: 'معلق',
+      [BonusEntryStatus.APPROVED]: 'معتمد',
+      [BonusEntryStatus.PAID]: 'مدفوع',
+    };
+    const wb = createReportWorkbook();
+    const ws = wb.addWorksheet('مكافآت المندوبين');
+    addTitledTable(ws, {
+      title: 'تقرير مكافآت المندوبين',
+      filters: [
+        ['الفترة', opts.period ?? ''],
+        ['الحالة', opts.status ? statusLabel[opts.status] : ''],
+        ['المندوب', opts.salesId ? 'مندوب محدد' : ''],
+      ],
+      headers: ['المندوب', 'الفترة', 'القاعدة', 'المبلغ', 'الحالة', 'تاريخ الدفع'],
+      rows: entries.map((e) => [
+        e.sales?.fullName ?? '',
+        e.period,
+        e.rule?.name ?? '',
+        Number(e.amount),
+        statusLabel[e.status],
+        e.paidAt ? e.paidAt.toISOString().slice(0, 10) : '',
+      ]),
+      widths: [22, 12, 22, 16, 12, 16],
+    });
+    ws.getColumn(4).numFmt = '#,##0.##';
+    addFooter(ws);
+    return workbookToBuffer(wb);
+  }
+
   setEntryStatus(id: string, dto: UpdateEntryStatusDto) {
     return this.prisma.bonusEntry.update({
       where: { id },
@@ -601,6 +644,24 @@ class BonusController {
     @Query('period') period?: string,
   ) {
     return this.svc.entriesCsv({ salesId, status, period });
+  }
+
+  // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate +
+  // filters; the CSV above stays as the raw-data fallback.
+  @Roles(UserRole.ADMIN)
+  @Permissions('bonus:entries:read')
+  @Get('bonus-entries/export.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="bonus-entries.xlsx"')
+  async entriesXlsx(
+    @Query('salesId') salesId?: string,
+    @Query('status') status?: BonusEntryStatus,
+    @Query('period') period?: string,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.entriesXlsx({ salesId, status, period }));
   }
 
   // Strict: approval recognises the bonus as payable. Segregation of duties

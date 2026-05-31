@@ -5,6 +5,7 @@ import {
   Param,
   ParseUUIDPipe,
   Query,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
@@ -58,11 +59,37 @@ export class BrokerReportsController {
     return this.svc.summaryCsv(query);
   }
 
+  // P15.4 — board-style XLSX (default UI download). Controller-level
+  // @Roles(ADMIN) + @Permissions('broker_reports:read') still apply; the CSV
+  // above stays as the raw-data fallback.
+  @Get('export/summary.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="broker-summary.xlsx"')
+  async summaryXlsx(@Query() query: BrokerReportsSummaryQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.summaryBoardXlsx(query));
+  }
+
   @Get('export/top-brokers.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="top-brokers.csv"')
   topBrokersCsv(@Query() query: TopBrokersQueryDto) {
     return this.svc.topBrokersCsv(query);
+  }
+
+  // P15.3 — styled XLSX twin (default UI download). Controller-level
+  // @Roles(ADMIN) + @Permissions('broker_reports:read') still apply; the CSV
+  // above stays as the raw-data fallback.
+  @Get('export/top-brokers.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="top-brokers.xlsx"')
+  async topBrokersXlsx(@Query() query: TopBrokersQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.topBrokersXlsx(query));
   }
 
   // Note: `broker/:brokerId` is declared LAST so the literal segments above
@@ -75,6 +102,21 @@ export class BrokerReportsController {
     @Query() query: BrokerDetailReportQueryDto,
   ) {
     return this.svc.brokerDetailCsv(brokerId, query);
+  }
+
+  // P15.3 — styled XLSX twin (default UI download). Same controller-level gate;
+  // the CSV above stays as the raw-data fallback.
+  @Get('export/broker/:brokerId.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="broker-detail.xlsx"')
+  async brokerDetailXlsx(
+    @Param('brokerId', ParseUUIDPipe) brokerId: string,
+    @Query() query: BrokerDetailReportQueryDto,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.brokerDetailXlsx(brokerId, query));
   }
 
   @Get('broker/:brokerId')

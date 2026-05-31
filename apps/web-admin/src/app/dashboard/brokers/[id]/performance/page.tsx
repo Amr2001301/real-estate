@@ -32,7 +32,7 @@ import {
 } from '@/components/badges';
 import { MonthlyTrendChart } from '@/components/broker/monthly-trend-chart';
 import { FunnelCard } from '@/components/broker/funnel-card';
-import { CsvExportLink } from '@/components/csv-export-link';
+import { ExportMenu } from '@/components/export-menu';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -92,9 +92,10 @@ export default async function BrokerPerformancePage({
         }
         actions={
           <div className="flex items-center gap-2 flex-wrap">
-            <CsvExportLink
-              path={`/broker-reports/export/broker/${id}.csv`}
-              filename={`broker-${report.broker.code ?? id}.csv`}
+            <ExportMenu
+              xlsxPath={`/broker-reports/export/broker/${id}.xlsx`}
+              csvPath={`/broker-reports/export/broker/${id}.csv`}
+              filenameBase={`broker-${report.broker.code ?? id}`}
               params={{ from: sp.from, to: sp.to, projectId: sp.projectId, brokerAgentId: sp.brokerAgentId }}
             />
             <Link href={`/dashboard/brokers/${id}`}>

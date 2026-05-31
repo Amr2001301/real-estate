@@ -8,7 +8,6 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { Workbook, type Cell, type Row, type Worksheet } from 'exceljs';
 import {
   IsDateString,
   IsEnum,
@@ -36,6 +35,24 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
+import {
+  XLSX_ALERT_BG,
+  addBoardBanner,
+  addChartBlock,
+  addFooter,
+  addKpiCards,
+  addSectionTitle,
+  addTable,
+  addTitledTable,
+  createReportWorkbook,
+  setupBoardSheet,
+  styleTotalsRow,
+  workbookToBuffer,
+} from '../../common/utils/xlsx';
+import {
+  renderBarChartPng,
+  renderDoughnutChartPng,
+} from '../../common/utils/xlsx-chart';
 
 // Arabic month names indexed by JS month (0 = January). Used for the
 // reservation-trend labels on the admin dashboard.
@@ -44,84 +61,12 @@ const AR_MONTHS = [
   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
 ] as const;
 
-// ── P14.2 — styled XLSX export palette/helpers ───────────────────────────────
-const XLSX_NAVY = 'FF1E3348'; // header fill (ARGB)
-const XLSX_GOLD = 'FFC99A2E'; // title accent
-const XLSX_MUTED = 'FF64748B';
-const XLSX_ZEBRA = 'FFF8FAFC';
-
-const THIN_BORDER = {
-  top: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-  left: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-  bottom: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-  right: { style: 'thin' as const, color: { argb: 'FFE2E8F0' } },
-};
-
-/** Two-digit zero-padded value. */
-function pad2(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
-function formatStamp(d: Date): string {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-}
-
-/** Navy fill + white bold — the shared table-header look. */
-function styleHeaderCell(cell: Cell): void {
-  cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_NAVY } };
-  cell.alignment = { horizontal: 'center', vertical: 'middle' };
-  cell.border = THIN_BORDER;
-}
-
-/** Bold gold-tinted totals row. */
-function styleTotalsRow(row: Row): void {
-  row.eachCell((cell) => {
-    cell.font = { bold: true, color: { argb: XLSX_NAVY } };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFBF3DE' } };
-    cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    cell.border = THIN_BORDER;
-  });
-}
-
-/**
- * Append a titled table to a worksheet: a styled header row, optional column
- * widths, borders + zebra striping, a frozen header, and a "لا توجد بيانات" row
- * when there is no data. Returns nothing; mutates the sheet.
- */
-function addTable(
-  ws: Worksheet,
-  headers: string[],
-  rows: Array<Array<string | number | Date>>,
-  widths: number[],
-): void {
-  ws.views = [{ state: 'frozen', ySplit: 1, rightToLeft: true }];
-  ws.columns = headers.map((_, i) => ({ width: widths[i] ?? 18 }));
-
-  const headerRow = ws.addRow(headers);
-  headerRow.height = 22;
-  headerRow.eachCell(styleHeaderCell);
-
-  if (rows.length === 0) {
-    const empty = ws.addRow(['لا توجد بيانات']);
-    ws.mergeCells(empty.number, 1, empty.number, Math.max(1, headers.length));
-    const c = empty.getCell(1);
-    c.font = { italic: true, color: { argb: XLSX_MUTED } };
-    c.alignment = { horizontal: 'center' };
-    c.border = THIN_BORDER;
-    return;
-  }
-
-  rows.forEach((r, idx) => {
-    const row = ws.addRow(r);
-    row.eachCell((cell) => {
-      cell.border = THIN_BORDER;
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      if (idx % 2 === 1) {
-        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_ZEBRA } };
-      }
-    });
-  });
+/** Resolve an Arabic label from a translatable `{ ar, en }` JSON or a string. */
+function translatableAr(v: unknown): string {
+  if (v == null) return '—';
+  if (typeof v === 'string') return v;
+  const t = v as { ar?: string; en?: string };
+  return t.ar || t.en || '—';
 }
 
 @Injectable()
@@ -535,64 +480,70 @@ class ReportsService {
   }
 
   /**
-   * P14.2 — admin dashboard summary as a styled, professional Arabic XLSX
-   * workbook (5 RTL sheets). Built from the SAME real `adminSummary()` data as
-   * the CSV/JSON. No demo values; empty sections render a "لا توجد بيانات" row.
+   * P14.2 + P15.4 — admin dashboard summary as a board-style Arabic XLSX: a
+   * branded cover (executive summary + real-alert insights + a reservation-trend
+   * bar chart and a lead-source doughnut) plus four detail sheets. Built from the
+   * SAME real `adminSummary()` data; no demo values. Charts degrade gracefully —
+   * if rendering returns null the tables still ship and the file is never broken.
    */
   async adminSummaryXlsx(): Promise<Buffer> {
     const s = await this.adminSummary();
-    const wb = new Workbook();
-    wb.creator = 'Real Estate Admin';
-    wb.created = new Date();
+    const wb = createReportWorkbook();
 
-    // ── Sheet 1: الملخص (title + generated stamp + KPI table + footer) ──────
-    const sum = wb.addWorksheet('الملخص');
-    sum.columns = [{ width: 34 }, { width: 18 }];
-    sum.views = [{ state: 'frozen', ySplit: 4, rightToLeft: true }];
+    // Real, non-zero alerts only — reused on the cover + the detail sheet.
+    const alertRows = (
+      [
+        ['عقود بانتظار التوقيع', s.alerts.contractsAwaitingSignature],
+        ['دفعات بانتظار المراجعة', s.alerts.depositsPendingReview],
+        ['طلبات صيانة مفتوحة', s.alerts.openMaintenance],
+        ['حجوزات تنتهي قريباً', s.alerts.reservationsExpiringSoon],
+        ['زيارات بانتظار تأكيد العميل', s.alerts.visitsAwaitingConfirmation],
+        ['استفسارات مفتوحة', s.alerts.infoRequestsOpen],
+      ] as Array<[string, number]>
+    ).filter(([, count]) => count > 0);
 
-    sum.mergeCells('A1:B1');
-    const title = sum.getCell('A1');
-    title.value = 'تقرير لوحة التحكم';
-    title.font = { bold: true, size: 16, color: { argb: XLSX_NAVY } };
-    title.alignment = { horizontal: 'right', vertical: 'middle' };
-    sum.getRow(1).height = 26;
-
-    sum.mergeCells('A2:B2');
-    const gen = sum.getCell('A2');
-    gen.value = `تاريخ التوليد: ${formatStamp(new Date())}`;
-    gen.font = { italic: true, size: 10, color: { argb: XLSX_MUTED } };
-    gen.alignment = { horizontal: 'right' };
-
-    sum.addRow([]); // spacer (row 3)
-    const kpiHeader = sum.addRow(['المؤشر', 'القيمة']); // row 4
-    kpiHeader.height = 22;
-    kpiHeader.eachCell(styleHeaderCell);
-
-    const kpiRows: Array<[string, number]> = [
-      ['المشاريع المنشورة', s.kpis.projects],
-      ['إجمالي الوحدات', s.kpis.totalUnits],
-      ['وحدات متاحة', s.kpis.availableUnits],
-      ['وحدات محجوزة', s.kpis.reservedUnits],
-      ['فرص جديدة هذا الشهر', s.kpis.newLeadsThisMonth],
-      ['دفعات بانتظار المراجعة', s.kpis.pendingDeposits],
-      ['طلبات صيانة مفتوحة', s.kpis.openMaintenance],
-    ];
-    kpiRows.forEach(([label, value], idx) => {
-      const row = sum.addRow([label, value]);
-      row.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
-      row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-      row.getCell(2).numFmt = '#,##0';
-      row.eachCell((cell) => {
-        cell.border = THIN_BORDER;
-        if (idx % 2 === 1) {
-          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XLSX_ZEBRA } };
-        }
-      });
+    // Charts up-front (null on any rendering failure → graceful fallback).
+    const trendChart = await renderBarChartPng({
+      title: 'اتجاه الحجوزات (آخر 6 أشهر)',
+      series: s.reservationTrend.map((t) => ({ label: t.label, value: t.value })),
+    });
+    const sourcesChart = await renderDoughnutChartPng({
+      title: 'توزيع مصادر العملاء',
+      series: s.leadSources.map((l) => ({ label: l.source, value: l.count })),
     });
 
-    sum.addRow([]);
-    const footer = sum.addRow(['Generated by Real Estate Admin']);
-    footer.getCell(1).font = { italic: true, size: 9, color: { argb: XLSX_MUTED } };
+    // ── Sheet 1: الملخص — polished board cover (P15.4.1) ────────────────────
+    const SPAN = 6;
+    const sum = wb.addWorksheet('الملخص');
+    setupBoardSheet(sum, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
+    addBoardBanner(sum, 'تقرير لوحة التحكم', SPAN);
+
+    addSectionTitle(sum, 'الملخص التنفيذي', SPAN);
+    addKpiCards(
+      sum,
+      [
+        { label: 'المشاريع المنشورة', value: s.kpis.projects },
+        { label: 'إجمالي الوحدات', value: s.kpis.totalUnits },
+        { label: 'وحدات متاحة', value: s.kpis.availableUnits },
+        { label: 'وحدات محجوزة', value: s.kpis.reservedUnits },
+        { label: 'فرص جديدة هذا الشهر', value: s.kpis.newLeadsThisMonth },
+        { label: 'دفعات بانتظار المراجعة', value: s.kpis.pendingDeposits },
+        { label: 'طلبات صيانة مفتوحة', value: s.kpis.openMaintenance },
+      ],
+      { span: SPAN, perRow: 3 },
+    );
+
+    addSectionTitle(sum, 'التنبيهات والمخاطر', SPAN);
+    addKpiCards(
+      sum,
+      alertRows.map(([label, value]) => ({ label, value })),
+      { span: SPAN, perRow: 3, bg: XLSX_ALERT_BG },
+    );
+
+    addChartBlock(wb, sum, 'اتجاه الحجوزات (آخر 6 أشهر)', trendChart, { span: SPAN, width: 720, height: 300 });
+    addChartBlock(wb, sum, 'توزيع مصادر العملاء', sourcesChart, { span: SPAN, width: 560, height: 300 });
+
+    addFooter(sum);
 
     // ── Sheet 2: اتجاهات الحجوزات ───────────────────────────────────────────
     const trend = wb.addWorksheet('اتجاهات الحجوزات');
@@ -619,18 +570,8 @@ class ReportsService {
       [26, 14, 12],
     );
 
-    // ── Sheet 4: التنبيهات (real, non-zero alerts only) ─────────────────────
+    // ── Sheet 4: التنبيهات (real, non-zero alerts only — reuses the cover set) ─
     const alertSheet = wb.addWorksheet('التنبيهات');
-    const alertRows = (
-      [
-        ['عقود بانتظار التوقيع', s.alerts.contractsAwaitingSignature],
-        ['دفعات بانتظار المراجعة', s.alerts.depositsPendingReview],
-        ['طلبات صيانة مفتوحة', s.alerts.openMaintenance],
-        ['حجوزات تنتهي قريباً', s.alerts.reservationsExpiringSoon],
-        ['زيارات بانتظار تأكيد العميل', s.alerts.visitsAwaitingConfirmation],
-        ['استفسارات مفتوحة', s.alerts.infoRequestsOpen],
-      ] as Array<[string, number]>
-    ).filter(([, count]) => count > 0);
     addTable(alertSheet, ['التنبيه', 'العدد'], alertRows, [34, 14]);
 
     // ── Sheet 5: آخر النشاطات ───────────────────────────────────────────────
@@ -643,8 +584,7 @@ class ReportsService {
     );
     activity.getColumn(4).numFmt = 'yyyy-mm-dd hh:mm';
 
-    const out = await wb.xlsx.writeBuffer();
-    return Buffer.from(out as ArrayBuffer);
+    return workbookToBuffer(wb);
   }
 
   async financialDashboard(opts: {
@@ -1427,6 +1367,64 @@ class ReportsService {
     ].join('\r\n');
   }
 
+  /**
+   * P15.4 — sales as a board-style XLSX: branded cover with an executive summary
+   * (lead/visit/contract/sales KPIs), a sales-by-project bar chart, and a detail
+   * sheet. Same real `sales()` + `kpis()` data as the CSV; project names resolved
+   * for the chart/table. Chart degrades gracefully to tables-only on failure.
+   */
+  async salesBoardXlsx(period?: string): Promise<Buffer> {
+    const [data, k] = await Promise.all([this.sales(period), this.kpis()]);
+
+    const ids = (data.byProject ?? []).map((p) => p.projectId);
+    const projects = ids.length
+      ? await this.prisma.project.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })
+      : [];
+    const nameById = new Map(projects.map((p) => [p.id, translatableAr(p.name)]));
+    const byProject = (data.byProject ?? []).map((p) => ({
+      name: nameById.get(p.projectId) ?? p.projectId,
+      count: p.count,
+      total: Number(p.total),
+    }));
+
+    const projectChart = await renderBarChartPng({
+      title: 'المبيعات حسب المشروع',
+      series: byProject.slice(0, 8).map((p) => ({ label: p.name, value: p.total })),
+    });
+
+    const SPAN = 6;
+    const wb = createReportWorkbook();
+    const cover = wb.addWorksheet('الملخص');
+    setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
+    addBoardBanner(cover, 'تقرير المبيعات', SPAN);
+    addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
+    addKpiCards(
+      cover,
+      [
+        { label: 'الفترة', value: period ?? 'الكل' },
+        { label: 'عدد العقود', value: data.contracts },
+        { label: 'إجمالي قيمة العقود', value: Number(data.total) },
+        { label: 'إجمالي الفرص', value: k.leads.total },
+        { label: 'فرص جديدة', value: k.leads.new },
+        { label: 'زيارات قيد الانتظار', value: k.pendingVisits },
+      ],
+      { span: SPAN, perRow: 3 },
+    );
+    addChartBlock(wb, cover, 'المبيعات حسب المشروع', projectChart, { span: SPAN, width: 720, height: 320 });
+    addFooter(cover);
+
+    const detail = wb.addWorksheet('المبيعات حسب المشروع');
+    addTable(
+      detail,
+      ['المشروع', 'عدد العقود', 'إجمالي القيمة'],
+      byProject.map((p) => [p.name, p.count, p.total]),
+      [30, 14, 18],
+    );
+    detail.getColumn(3).numFmt = '#,##0.##';
+
+    return workbookToBuffer(wb);
+  }
+
   async financialCsv(period?: string): Promise<string> {
     const data = await this.financial(period);
     const rows: CsvCell[][] = [
@@ -1436,6 +1434,46 @@ class ReportsService {
       ['إجمالي المبالغ المحصّلة', Number(data.total).toFixed(2)],
     ];
     return toCsv(['المؤشر', 'القيمة'], rows);
+  }
+
+  /**
+   * P15.4 — financial collections as a board-style XLSX: branded cover with an
+   * executive summary and a verified-vs-unverified deposit doughnut. Same real
+   * `financial()` data as the CSV. Chart degrades gracefully to tables-only.
+   */
+  async financialBoardXlsx(period?: string): Promise<Buffer> {
+    const data = await this.financial(period);
+    const unverified = Math.max(0, data.deposits - data.verified);
+
+    const statusChart = await renderDoughnutChartPng({
+      title: 'توزيع الدفعات حسب التوثيق',
+      series: [
+        { label: 'موثّقة', value: data.verified },
+        { label: 'غير موثّقة', value: unverified },
+      ],
+    });
+
+    const SPAN = 6;
+    const wb = createReportWorkbook();
+    const cover = wb.addWorksheet('الملخص');
+    setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
+    addBoardBanner(cover, 'التقرير المالي', SPAN);
+    addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
+    addKpiCards(
+      cover,
+      [
+        { label: 'الفترة', value: period ?? 'الكل' },
+        { label: 'عدد الدفعات', value: data.deposits },
+        { label: 'الدفعات الموثّقة', value: data.verified },
+        { label: 'الدفعات غير الموثّقة', value: unverified },
+        { label: 'إجمالي المبالغ المحصّلة', value: Number(data.total) },
+      ],
+      { span: SPAN, perRow: 3 },
+    );
+    addChartBlock(wb, cover, 'توزيع الدفعات حسب التوثيق', statusChart, { span: SPAN, width: 560, height: 320 });
+    addFooter(cover);
+
+    return workbookToBuffer(wb);
   }
 
   async operationalCsv(): Promise<string> {
@@ -1466,6 +1504,46 @@ class ReportsService {
       '',
       toCsv(['حالة الحجز', 'العدد'], reservationRows),
     ].join('\r\n');
+  }
+
+  /**
+   * P15.3 — styled XLSX twin of operationalCsv. Same two real reads (KPIs +
+   * reservation breakdown), one sheet per table. No demo values.
+   */
+  async operationalXlsx(): Promise<Buffer> {
+    const [k, r] = await Promise.all([this.kpis(), this.reservations()]);
+    const wb = createReportWorkbook();
+
+    const kpiSheet = wb.addWorksheet('المؤشرات');
+    addTitledTable(kpiSheet, {
+      title: 'التقرير التشغيلي',
+      headers: ['المؤشر', 'القيمة'],
+      rows: [
+        ['المشاريع المنشورة', k.projects],
+        ['إجمالي الوحدات', k.units.total],
+        ['وحدات متاحة', k.units.available],
+        ['وحدات محجوزة', k.units.reserved],
+        ['وحدات مباعة', k.units.sold],
+        ['إجمالي العملاء المتصفّحين (Leads)', k.leads.total],
+        ['عملاء جدد', k.leads.new],
+        ['زيارات قيد الانتظار', k.pendingVisits],
+        ['عدد العقود', k.contracts],
+        ['إجمالي الدفعات المحصّلة', Number(k.depositsTotal)],
+      ],
+      widths: [34, 18],
+    });
+    kpiSheet.getColumn(2).numFmt = '#,##0.##';
+    addFooter(kpiSheet);
+
+    const resSheet = wb.addWorksheet('الحجوزات حسب الحالة');
+    addTable(
+      resSheet,
+      ['حالة الحجز', 'العدد'],
+      Object.entries(r).map(([status, count]) => [status, Number(count)]),
+      [26, 14],
+    );
+
+    return workbookToBuffer(wb);
   }
 
   async financialDashboardCsv(opts: {
@@ -1689,6 +1767,103 @@ class ReportsService {
     ].join('\r\n');
   }
 
+  /**
+   * P15.4 — financial dashboard as a board-style XLSX: branded cover with an
+   * executive summary, real-derived alerts, an aging bar chart + a collection-
+   * by-type doughnut, plus detail sheets. Same real `financialDashboard()` data
+   * (and filters) as the CSV. Charts degrade gracefully to tables-only.
+   */
+  async financialDashboardXlsx(opts: {
+    projectId?: string;
+    q?: string;
+    type?: DepositType;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<Buffer> {
+    const data = await this.financialDashboard(opts);
+    const s = data.summary;
+    const DEP_TYPE_LABEL: Record<string, string> = {
+      BOOKING_AMOUNT: 'مبلغ الحجز',
+      DOWN_PAYMENT: 'دفعة أولى',
+      INSTALLMENT: 'قسط شهري',
+      FINAL_PAYMENT: 'دفعة أخيرة',
+    };
+    const AGING_LABEL: Record<string, string> = {
+      '1-30': '1-30 يوم', '31-60': '31-60 يوم', '61-90': '61-90 يوم', '90+': '90+ يوم',
+    };
+
+    const agingChart = await renderBarChartPng({
+      title: 'أعمار المتأخرات',
+      series: data.aging.map((a) => ({ label: AGING_LABEL[a.label] ?? a.label, value: Number(a.amount) })),
+    });
+    const typeChart = await renderDoughnutChartPng({
+      title: 'التحصيل حسب نوع الدفعة',
+      series: data.collectionByType.map((c) => ({ label: DEP_TYPE_LABEL[c.type] ?? c.type, value: Number(c.totalAll) })),
+    });
+
+    const SPAN = 6;
+    const wb = createReportWorkbook();
+    const cover = wb.addWorksheet('الملخص');
+    setupBoardSheet(cover, { widths: [16, 16, 16, 16, 16, 16], landscape: true });
+    addBoardBanner(cover, 'لوحة المؤشرات المالية', SPAN);
+
+    addSectionTitle(cover, 'الملخص التنفيذي', SPAN);
+    addKpiCards(
+      cover,
+      [
+        { label: 'إجمالي قيمة العقود', value: Number(s.totalContractValue) },
+        { label: 'المحصّل المؤكد', value: Number(s.totalCollectedVerified) },
+        { label: 'المحصّل غير المؤكد', value: Number(s.totalCollectedUnverified) },
+        { label: 'المتبقي للتحصيل', value: Number(s.totalOutstanding) },
+        { label: 'المحصّل هذا الشهر', value: Number(s.collectedThisMonth) },
+        { label: 'المستحق هذا الشهر', value: Number(s.dueThisMonth) },
+        { label: 'عدد العقود', value: s.contractCount },
+        { label: 'عدد الدفعات', value: s.depositCount },
+      ],
+      { span: SPAN, perRow: 3 },
+    );
+
+    addSectionTitle(cover, 'التنبيهات والمخاطر', SPAN);
+    const alertCards = (
+      [
+        ['مستحق خلال 7 أيام', Number(s.dueSoonAmount)],
+        ['المتأخر المحسوب', Number(s.overdueAmountComputed)],
+        ['عدد الأقساط المتأخرة', Number(s.overdueInstallmentCountComputed)],
+        ['إجمالي الالتزامات غير المدفوعة', Number(data.liabilities.totalUnpaidLiabilities)],
+      ] as Array<[string, number]>
+    ).filter(([, v]) => v > 0);
+    addKpiCards(
+      cover,
+      alertCards.map(([label, value]) => ({ label, value })),
+      { span: SPAN, perRow: 3, bg: XLSX_ALERT_BG },
+    );
+
+    addChartBlock(wb, cover, 'أعمار المتأخرات', agingChart, { span: SPAN, width: 720, height: 300 });
+    addChartBlock(wb, cover, 'التحصيل حسب نوع الدفعة', typeChart, { span: SPAN, width: 560, height: 300 });
+    addFooter(cover);
+
+    const byType = wb.addWorksheet('التحصيل حسب النوع');
+    addTable(
+      byType,
+      ['النوع', 'العدد', 'الإجمالي', 'المؤكد', 'غير المؤكد'],
+      data.collectionByType.map((c) => [
+        DEP_TYPE_LABEL[c.type] ?? c.type, c.count,
+        Number(c.totalAll), Number(c.totalVerified), Number(c.totalUnverified),
+      ]),
+      [20, 12, 16, 16, 16],
+    );
+
+    const aging = wb.addWorksheet('أعمار المتأخرات');
+    addTable(
+      aging,
+      ['الفئة', 'العدد', 'المبلغ'],
+      data.aging.map((a) => [AGING_LABEL[a.label] ?? a.label, a.count, Number(a.amount)]),
+      [18, 12, 18],
+    );
+
+    return workbookToBuffer(wb);
+  }
+
   private periodWhereContract(period: string): Prisma.ContractWhereInput {
     const [y, m] = period.split('-').map(Number);
     const start = new Date(Date.UTC(y!, (m ?? 1) - 1, 1));
@@ -1809,6 +1984,20 @@ class ReportsController {
     return this.svc.salesCsv(period);
   }
 
+  // P15.4 — board-style XLSX (default UI download). Same ADMIN + sales gate;
+  // the CSV above stays as the raw-data fallback.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:sales:read')
+  @Get('sales/export.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="sales-report.xlsx"')
+  async salesXlsx(@Query('period') period?: string): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.salesBoardXlsx(period));
+  }
+
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @Get('financial/export.csv')
@@ -1818,6 +2007,19 @@ class ReportsController {
     return this.svc.financialCsv(period);
   }
 
+  // P15.4 — board-style XLSX (default UI download). Same ADMIN + financial gate.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @Get('financial/export.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="financial-report.xlsx"')
+  async financialXlsx(@Query('period') period?: string): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.financialBoardXlsx(period));
+  }
+
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
   @Get('operational/export.csv')
@@ -1825,6 +2027,20 @@ class ReportsController {
   @Header('Content-Disposition', 'attachment; filename="operational-report.csv"')
   operationalCsv() {
     return this.svc.operationalCsv();
+  }
+
+  // P15.3 — styled XLSX twin (default UI download). Same ADMIN-only gate; the
+  // CSV above stays as the raw-data fallback.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
+  @Get('operational/export.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="operational-report.xlsx"')
+  async operationalXlsx(): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.operationalXlsx());
   }
 
   @Roles(UserRole.ADMIN)
@@ -1840,6 +2056,28 @@ class ReportsController {
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
     });
+  }
+
+  // P15.4 — board-style XLSX (default UI download). Same ADMIN + financial gate
+  // + filters; the CSV above stays as the raw-data fallback.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:financial:read')
+  @Get('financial-dashboard/export.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="financial-dashboard.xlsx"')
+  async financialDashboardXlsx(@Query() query: FinancialDashboardQueryDto): Promise<StreamableFile> {
+    return new StreamableFile(
+      await this.svc.financialDashboardXlsx({
+        projectId: query.projectId,
+        q: query.q,
+        type: query.type,
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
+      }),
+    );
   }
 }
 

@@ -59,6 +59,25 @@ export class BrokerPortalPerformanceService {
     });
   }
 
+  /**
+   * P15.5 — styled XLSX twin of exportCsv. Identical scoping: the broker firm is
+   * always `scope.brokerId` (from the token, never a request param), and a
+   * non-manager is pinned to their own brokerAgentId — so a broker can only ever
+   * export their own firm's slice, with no cross-broker leakage.
+   */
+  async exportXlsx(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
+    const { brokerAgentId } = await this.resolveAgentScope(
+      scope,
+      query.brokerAgentId,
+    );
+    return this.reports.brokerDetailXlsx(scope.brokerId, {
+      from: query.from,
+      to: query.to,
+      projectId: query.projectId,
+      brokerAgentId,
+    });
+  }
+
   async agents(scope: BrokerScopeContext, query: PortalPerformanceQueryDto) {
     const { canSeeAllAgents } = await this.resolveAgentScope(scope, query.brokerAgentId);
     const result = await this.reports.agents({

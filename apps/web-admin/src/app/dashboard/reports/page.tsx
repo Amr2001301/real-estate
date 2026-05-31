@@ -4,7 +4,7 @@ import { formatCurrency, tx } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { KpiCard } from '@/components/ui/kpi-card';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
-import { CsvExportLink } from '@/components/csv-export-link';
+import { ExportMenu } from '@/components/export-menu';
 import { ReportsTabs } from './_components/reports-tabs';
 
 interface Sales {
@@ -70,22 +70,25 @@ export default async function ReportsPage({
         ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <CsvExportLink
-              path="/reports/sales/export.csv"
-              filename="sales-report.csv"
+            <ExportMenu
+              label="تصدير المبيعات"
+              xlsxPath="/reports/sales/export.xlsx"
+              csvPath="/reports/sales/export.csv"
+              filenameBase="sales-report"
               params={{ period }}
-              label="تصدير المبيعات CSV"
             />
-            <CsvExportLink
-              path="/reports/financial/export.csv"
-              filename="financial-report.csv"
+            <ExportMenu
+              label="تصدير المالية"
+              xlsxPath="/reports/financial/export.xlsx"
+              csvPath="/reports/financial/export.csv"
+              filenameBase="financial-report"
               params={{ period }}
-              label="تصدير المالية CSV"
             />
-            <CsvExportLink
-              path="/reports/operational/export.csv"
-              filename="operational-report.csv"
-              label="تصدير التشغيلي CSV"
+            <ExportMenu
+              label="تصدير التشغيلي"
+              xlsxPath="/reports/operational/export.xlsx"
+              csvPath="/reports/operational/export.csv"
+              filenameBase="operational-report"
             />
           </div>
         }

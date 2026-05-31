@@ -11,7 +11,7 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MaintenanceStatusBadge, MaintenancePriorityBadge, MaintenanceReviewStatusBadge } from '@/components/badges';
-import { CsvExportLink } from '@/components/csv-export-link';
+import { ExportMenu } from '@/components/export-menu';
 import { MaintenanceReports } from './maintenance-reports';
 
 // dueAt/overdue only apply once a request is approved (the SLA timer starts then).
@@ -119,9 +119,10 @@ export default async function MaintenancePage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <CsvExportLink
-              path="/maintenance-requests/reports/summary.csv"
-              filename="maintenance-report.csv"
+            <ExportMenu
+              xlsxPath="/maintenance-requests/reports/summary.xlsx"
+              csvPath="/maintenance-requests/reports/summary.csv"
+              filenameBase="maintenance-report"
               params={csvParams}
             />
             <Link href="/dashboard/maintenance/new">

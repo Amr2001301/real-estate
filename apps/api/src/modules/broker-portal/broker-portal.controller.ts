@@ -8,6 +8,7 @@ import {
   Patch,
   Post,
   Query,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
@@ -274,6 +275,23 @@ export class BrokerPortalController {
     @Query() query: PortalPerformanceQueryDto,
   ) {
     return this.portalPerformance.exportCsv(scope, query);
+  }
+
+  // P15.5 — styled XLSX twin (default UI download). Same BROKER role +
+  // BrokerScopeGuard + per-agent scoping; the CSV above stays the raw fallback.
+  // The broker firm is always scope.brokerId (from the token), so a broker can
+  // only export their own performance — no cross-broker access.
+  @Get('performance/export.xlsx')
+  @Header(
+    'Content-Type',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  )
+  @Header('Content-Disposition', 'attachment; filename="my-performance.xlsx"')
+  async performanceExportXlsx(
+    @BrokerScope() scope: BrokerScopeContext,
+    @Query() query: PortalPerformanceQueryDto,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.portalPerformance.exportXlsx(scope, query));
   }
 
   // ── Team management ───────────────────────────────────────────────────
