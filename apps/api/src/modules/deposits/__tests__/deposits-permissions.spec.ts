@@ -6,6 +6,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { DepositsModule } from '../deposits.module';
 import { DocumentsService } from '../../documents/documents.module';
+import { R2Service } from '../../media/r2.service';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -13,6 +14,15 @@ import { PrismaService } from '../../../common/prisma/prisma.service';
 // DepositsModule imports DocumentsModule; override the service so tests never
 // touch R2, and ConfigModule satisfies the (unused-here) R2/Config deps.
 const documentsMock = { create: jest.fn().mockResolvedValue({ id: 'doc-1' }) };
+// P11.6.1 — R2 is overridden so the signed-download handler returns a
+// deterministic signed URL without contacting object storage.
+const r2Mock = {
+  keyFromPublicUrl: jest.fn((_url: string) => 'receipts/2026/proof.pdf'),
+  createPresignedDownload: jest.fn().mockResolvedValue({
+    url: 'https://signed.example/proof.pdf?X-Amz-Signature=deadbeef',
+    expiresIn: 300,
+  }),
+};
 import {
   PERMISSIONS_KEY,
   type PermissionsMeta,
@@ -78,6 +88,8 @@ function makePrismaMock() {
         type: 'BOOKING_AMOUNT',
       })),
     },
+    // P11.6.1 — proof-document lookup for the staff signed-download route.
+    document: { findFirst: jest.fn().mockResolvedValue(null) },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       return ops;
@@ -111,6 +123,8 @@ describe('Deposits module · permissions enforcement', () => {
     })
       .overrideProvider(DocumentsService)
       .useValue(documentsMock)
+      .overrideProvider(R2Service)
+      .useValue(r2Mock)
       .compile();
 
     reflector = moduleRef.get(Reflector);
@@ -126,6 +140,11 @@ describe('Deposits module · permissions enforcement', () => {
     FakeAuthGuard.currentUser = null;
     prismaMock.userPermission.findMany.mockClear();
     prismaMock.deposit.update.mockClear();
+    prismaMock.deposit.findUnique.mockClear();
+    prismaMock.document.findFirst.mockClear();
+    prismaMock.document.findFirst.mockResolvedValue(null);
+    r2Mock.createPresignedDownload.mockClear();
+    r2Mock.keyFromPublicUrl.mockClear();
   });
 
   // ── Metadata: per-route mapping ─────────────────────────────────────────
@@ -167,6 +186,11 @@ describe('Deposits module · permissions enforcement', () => {
     });
     it('attachReceipt (POST /deposits/:id/receipt) → deposits:register, adminBypass true', () => {
       expect(getMeta('attachReceipt')).toMatchObject({ codes: ['deposits:register'], adminBypass: true });
+    });
+    it('proofDownload (GET /deposits/:id/proof/download) → deposits:read, adminBypass true', () => {
+      // P11.6.1 — read-only reviewers open proofs with deposits:read; only
+      // approve/reject require the strict deposits:verify.
+      expect(getMeta('proofDownload')).toMatchObject({ codes: ['deposits:read'], adminBypass: true });
     });
   });
 
@@ -310,6 +334,92 @@ describe('Deposits module · permissions enforcement', () => {
     it('rejects ADMIN at @Roles (route is CUSTOMER-only)', async () => {
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
       await request(app.getHttpServer()).get('/me/deposits').expect(403);
+    });
+  });
+
+  // ── P11.6.1 — GET /deposits/:id/proof/download (staff signed download) ──
+
+  describe('GET /deposits/:id/proof/download (staff signed proof download)', () => {
+    const DEP = '00000000-0000-0000-0000-0000000000aa';
+    const PATH = `/deposits/${DEP}/proof/download`;
+
+    // A deposit that has a proof, plus the matching RECEIPT document.
+    function withProof() {
+      prismaMock.deposit.findUnique.mockResolvedValueOnce({ id: DEP, proofDocumentId: 'doc-1' });
+      prismaMock.document.findFirst.mockResolvedValueOnce({
+        fileUrl: 'http://localhost:9000/real-estate-media/receipts/2026/proof.pdf',
+        fileName: 'proof.pdf',
+        mimeType: 'application/pdf',
+      });
+    }
+
+    it('ADMIN gets a short-lived signed URL (no permanent URL / storage key leaked)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      withProof();
+      const res = await request(app.getHttpServer()).get(PATH).expect(200);
+      expect(res.body).toMatchObject({
+        url: expect.stringContaining('X-Amz-Signature'),
+        fileName: 'proof.pdf',
+        contentType: 'application/pdf',
+        expiresIn: 300,
+      });
+      // CRITICAL: the response must not carry the permanent fileUrl or a key.
+      const serialised = JSON.stringify(res.body);
+      expect(serialised).not.toContain('localhost:9000');
+      expect(serialised).not.toContain('real-estate-media');
+      expect(res.body).not.toHaveProperty('fileUrl');
+      expect(res.body).not.toHaveProperty('storageKey');
+      expect(res.body).not.toHaveProperty('key');
+    });
+
+    it('SALES_MANAGER WITH deposits:read can download', async () => {
+      FakeAuthGuard.currentUser = { sub: 'mgr-1', role: UserRole.SALES_MANAGER, codes: ['deposits:read'] };
+      withProof();
+      await request(app.getHttpServer()).get(PATH).expect(200);
+    });
+
+    it('SALES_MANAGER WITHOUT deposits:read is denied (structured 403)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'mgr-2', role: UserRole.SALES_MANAGER, codes: [] };
+      const res = await request(app.getHttpServer()).get(PATH).expect(403);
+      expect(res.body).toMatchObject({ code: 'missing_permission', permissions: ['deposits:read'] });
+    });
+
+    it('SALES is denied at @Roles (not on the review surface)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'sales-1', role: UserRole.SALES, codes: ['deposits:read'] };
+      await request(app.getHttpServer()).get(PATH).expect(403);
+    });
+
+    it('BROKER is denied at @Roles', async () => {
+      FakeAuthGuard.currentUser = { sub: 'broker-1', role: UserRole.BROKER, codes: ['deposits:read'] };
+      await request(app.getHttpServer()).get(PATH).expect(403);
+    });
+
+    it('CUSTOMER is denied at @Roles (uses /me/documents/:id/download instead)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'cust-1', role: UserRole.CUSTOMER, codes: [] };
+      await request(app.getHttpServer()).get(PATH).expect(403);
+    });
+
+    it('deposit without a proof document → friendly 404 (no signing)', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      prismaMock.deposit.findUnique.mockResolvedValueOnce({ id: DEP, proofDocumentId: null });
+      await request(app.getHttpServer()).get(PATH).expect(404);
+      expect(r2Mock.createPresignedDownload).not.toHaveBeenCalled();
+    });
+
+    it('proof-document mismatch (wrong owner/type) → 404, no leak', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      prismaMock.deposit.findUnique.mockResolvedValueOnce({ id: DEP, proofDocumentId: 'doc-x' });
+      // findFirst returns null because the strict ownerType=DEPOSIT/ownerId/
+      // category=RECEIPT filter doesn't match (e.g. it's a contract file).
+      prismaMock.document.findFirst.mockResolvedValueOnce(null);
+      await request(app.getHttpServer()).get(PATH).expect(404);
+      expect(r2Mock.createPresignedDownload).not.toHaveBeenCalled();
+    });
+
+    it('missing deposit → 404', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      prismaMock.deposit.findUnique.mockResolvedValueOnce(null);
+      await request(app.getHttpServer()).get(PATH).expect(404);
     });
   });
 });

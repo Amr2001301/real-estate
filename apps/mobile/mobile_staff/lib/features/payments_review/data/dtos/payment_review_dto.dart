@@ -70,3 +70,21 @@ class PaymentReviewDto {
     return data.whereType<Map<String, dynamic>>().map(PaymentReviewDto.fromJson).toList();
   }
 }
+
+/// Wire shape of `GET /deposits/:id/proof/download`. The backend returns ONLY a
+/// short-lived signed url + display metadata — never a permanent url/key.
+class ProofDownloadLinkDto {
+  const ProofDownloadLinkDto({required this.url, this.fileName, this.contentType, this.expiresIn});
+
+  final String url;
+  final String? fileName;
+  final String? contentType;
+  final int? expiresIn;
+
+  factory ProofDownloadLinkDto.fromJson(Map<String, dynamic> json) => ProofDownloadLinkDto(
+        url: json['url'] as String? ?? '',
+        fileName: json['fileName'] as String?,
+        contentType: json['contentType'] as String?,
+        expiresIn: (json['expiresIn'] as num?)?.toInt(),
+      );
+}

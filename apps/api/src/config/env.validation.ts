@@ -49,6 +49,14 @@ const EnvSchema = z.object({
   FIREBASE_CLIENT_EMAIL: z.string().optional(),
   FIREBASE_PRIVATE_KEY: z.string().optional(),
 
+  // P11.7 — Installment due-soon reminder cron. OFF by default so it never
+  // fires in local/dev/CI; enable explicitly where customers should be
+  // notified. The cron runs in the API process.
+  INSTALLMENT_REMINDERS_ENABLED: z.enum(['true', 'false']).optional(),
+  INSTALLMENT_REMINDER_DAYS_BEFORE: z.coerce.number().int().positive().optional(),
+  INSTALLMENT_REMINDER_CRON: z.string().optional(),
+  INSTALLMENT_REMINDER_TIMEZONE: z.string().optional(),
+
   SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
   SEED_ADMIN_PASSWORD: z.string().min(8).default('ChangeMe123!'),
 

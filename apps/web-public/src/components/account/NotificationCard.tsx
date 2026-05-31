@@ -32,6 +32,8 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   // P12 — a downloadable contract document is now available.
   contract_document_available: 'عقدك جاهز للتحميل',
   deposit_verified: 'تم اعتماد دفعتك',
+  // P11.7 — installment due-soon reminder.
+  installment_due_soon: 'تذكير بقسط مستحق قريباً',
 };
 
 export function notificationTitle(code: string): string {

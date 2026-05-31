@@ -34,6 +34,8 @@ class PaymentReviewTile extends StatelessWidget {
     required this.busy,
     required this.onApprove,
     required this.onReject,
+    this.onOpenProof,
+    this.openBusy = false,
   });
 
   final PaymentReviewItem item;
@@ -43,6 +45,13 @@ class PaymentReviewTile extends StatelessWidget {
   final bool busy;
   final VoidCallback onApprove;
   final VoidCallback onReject;
+
+  /// Opens the proof document (signed download). Null when no proof is attached.
+  /// Available to any queue viewer (ADMIN + SALES_MANAGER), not just reviewers.
+  final VoidCallback? onOpenProof;
+
+  /// True while THIS item's proof is being opened.
+  final bool openBusy;
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +118,18 @@ class PaymentReviewTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (onOpenProof != null)
+                  TextButton.icon(
+                    onPressed: openBusy ? null : onOpenProof,
+                    icon: openBusy
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.open_in_new_rounded, size: 16),
+                    label: Text(l10n.paymentOpenProof),
+                  ),
               ],
             ),
           ],

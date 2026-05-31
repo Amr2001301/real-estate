@@ -44,3 +44,14 @@ class RejectPayment implements UseCase<void, RejectPaymentParams> {
   Future<Result<void>> call(RejectPaymentParams params) =>
       _repo.reject(params.depositId, reason: params.reason);
 }
+
+/// Resolve a fresh short-lived signed link to open a deposit's payment proof.
+/// `In` is the deposit id.
+class GetProofDownloadLink implements UseCase<ProofDownloadLink, String> {
+  const GetProofDownloadLink(this._repo);
+  final PaymentsReviewRepository _repo;
+
+  @override
+  Future<Result<ProofDownloadLink>> call(String depositId) =>
+      _repo.getProofDownloadLink(depositId);
+}

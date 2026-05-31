@@ -27,6 +27,7 @@ const REQUIRED_CODES = [
   'deposit_verified',
   // Installments
   'installment_plan_created',
+  'installment_due_soon',
   // Broker leads
   'broker_lead_approved',
   'broker_lead_rejected',

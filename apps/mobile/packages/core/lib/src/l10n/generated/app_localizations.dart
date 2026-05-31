@@ -3026,6 +3026,30 @@ abstract class AppLocalizations {
   /// **'Open proof'**
   String get paymentOpenProof;
 
+  /// No description provided for @paymentDownloadProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Download proof'**
+  String get paymentDownloadProof;
+
+  /// No description provided for @paymentProofUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof unavailable'**
+  String get paymentProofUnavailable;
+
+  /// No description provided for @paymentCouldNotOpenProof.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t open the proof'**
+  String get paymentCouldNotOpenProof;
+
+  /// No description provided for @paymentProofExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'The proof link expired — tap again'**
+  String get paymentProofExpired;
+
   /// No description provided for @paymentApprove.
   ///
   /// In en, this message translates to:

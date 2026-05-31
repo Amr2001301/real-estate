@@ -771,6 +771,17 @@ async function main() {
         ar_body: 'تمت إضافة خطة تقسيط جديدة لمشروع {{projectName}}.',
         en_body: 'A new installment plan was added for {{projectName}}.',
       },
+      // P11.7 — daily due-soon reminder. Safe placeholders only: amount, due
+      // date, project/unit/contract context. NO phone, email, URLs, or bank
+      // details.
+      {
+        code: 'installment_due_soon',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'تذكير بقسط مستحق قريباً',
+        en_subject: 'Upcoming installment due',
+        ar_body: 'تذكير: قسط بقيمة {{amount}} مستحق بتاريخ {{dueDate}} لمشروع {{projectName}}.',
+        en_body: 'Reminder: an installment of {{amount}} is due on {{dueDate}} for {{projectName}}.',
+      },
       // ─── Broker leads (P4) ───────────────────────────────────────────────
       {
         code: 'broker_lead_approved',

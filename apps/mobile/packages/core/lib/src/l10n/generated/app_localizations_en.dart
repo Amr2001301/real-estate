@@ -1587,6 +1587,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paymentOpenProof => 'Open proof';
 
   @override
+  String get paymentDownloadProof => 'Download proof';
+
+  @override
+  String get paymentProofUnavailable => 'Proof unavailable';
+
+  @override
+  String get paymentCouldNotOpenProof => 'Couldn\'t open the proof';
+
+  @override
+  String get paymentProofExpired => 'The proof link expired — tap again';
+
+  @override
   String get paymentApprove => 'Approve payment';
 
   @override

@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/payment_review_item.dart';
 import '../cubit/payments_review_cubit.dart';
+import '../cubit/proof_download_cubit.dart';
 import '../widgets/payment_review_tile.dart';
 
 /// Staff payment-proof review queue (مراجعة المدفوعات).
@@ -91,6 +92,32 @@ class _PaymentsReviewScreenState extends State<PaymentsReviewScreen> {
     }
   }
 
+  Future<void> _openProof(PaymentReviewItem item) async {
+    await context.read<ProofDownloadCubit>().open(item.id);
+  }
+
+  /// Surface a friendly message for a failed proof open — never a raw error.
+  void _onProofDownload(BuildContext context, ProofDownloadState state) {
+    final l10n = context.l10n;
+    if (state.launchFailed) {
+      _snack(context, l10n.paymentCouldNotOpenProof);
+      return;
+    }
+    final failure = state.failure;
+    if (failure == null) return;
+    if (failure.type == FailureType.notFound) {
+      _snack(context, l10n.paymentProofUnavailable);
+    } else {
+      showFailureSnackBar(context, failure);
+    }
+  }
+
+  void _snack(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -98,44 +125,57 @@ class _PaymentsReviewScreenState extends State<PaymentsReviewScreen> {
     final canReview = _canReview;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.paymentReviewTitle)),
-      body: BlocConsumer<PaymentsReviewCubit, PaymentsReviewState>(
-        listenWhen: (a, b) => a.actionEpoch != b.actionEpoch,
-        listener: _onAction,
-        builder: (context, state) {
-          switch (state.status) {
-            case DataStatus.initial:
-            case DataStatus.loading:
-              return const StaffListSkeleton();
-            case DataStatus.failure:
-              return ErrorState(failure: state.failure, onRetry: cubit.load);
-            case DataStatus.empty:
-              return EmptyState(
-                icon: Icons.receipt_long_outlined,
-                title: l10n.paymentReviewEmptyTitle,
-                message: l10n.paymentReviewEmptyMessage,
-              );
-            case DataStatus.success:
-              return RefreshIndicator(
-                onRefresh: cubit.load,
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  itemCount: state.items.length + (canReview ? 0 : 1),
-                  separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, i) {
-                    if (!canReview && i == 0) return const _ReadOnlyBanner();
-                    final item = state.items[canReview ? i : i - 1];
-                    return PaymentReviewTile(
-                      item: item,
-                      canReview: canReview,
-                      busy: state.workingId == item.id,
-                      onApprove: () => _approve(item),
-                      onReject: () => _reject(item),
-                    );
-                  },
-                ),
-              );
-          }
-        },
+      body: BlocListener<ProofDownloadCubit, ProofDownloadState>(
+        // Fire only when an open attempt settled with a problem (success just
+        // opened the file externally — no SnackBar needed).
+        listenWhen: (a, b) => b.openingId == null && (b.failure != null || b.launchFailed),
+        listener: _onProofDownload,
+        child: BlocConsumer<PaymentsReviewCubit, PaymentsReviewState>(
+          listenWhen: (a, b) => a.actionEpoch != b.actionEpoch,
+          listener: _onAction,
+          builder: (context, state) {
+            switch (state.status) {
+              case DataStatus.initial:
+              case DataStatus.loading:
+                return const StaffListSkeleton();
+              case DataStatus.failure:
+                return ErrorState(failure: state.failure, onRetry: cubit.load);
+              case DataStatus.empty:
+                return EmptyState(
+                  icon: Icons.receipt_long_outlined,
+                  title: l10n.paymentReviewEmptyTitle,
+                  message: l10n.paymentReviewEmptyMessage,
+                );
+              case DataStatus.success:
+                // Re-reads the proof-open progress so the tapped tile shows a
+                // spinner while its signed URL is minted.
+                final openingId = context.watch<ProofDownloadCubit>().state.openingId;
+                return RefreshIndicator(
+                  onRefresh: cubit.load,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(AppSpacing.lg),
+                    itemCount: state.items.length + (canReview ? 0 : 1),
+                    separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
+                    itemBuilder: (context, i) {
+                      if (!canReview && i == 0) return const _ReadOnlyBanner();
+                      final item = state.items[canReview ? i : i - 1];
+                      return PaymentReviewTile(
+                        item: item,
+                        canReview: canReview,
+                        busy: state.workingId == item.id,
+                        onApprove: () => _approve(item),
+                        onReject: () => _reject(item),
+                        // Open-proof is available to every queue viewer (ADMIN +
+                        // SALES_MANAGER), independent of approve/reject rights.
+                        onOpenProof: item.hasProof ? () => _openProof(item) : null,
+                        openBusy: openingId == item.id,
+                      );
+                    },
+                  ),
+                );
+            }
+          },
+        ),
       ),
     );
   }

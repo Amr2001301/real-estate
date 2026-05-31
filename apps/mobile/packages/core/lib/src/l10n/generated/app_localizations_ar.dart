@@ -1571,6 +1571,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get paymentOpenProof => 'فتح الإثبات';
 
   @override
+  String get paymentDownloadProof => 'تحميل الإثبات';
+
+  @override
+  String get paymentProofUnavailable => 'الإثبات غير متاح';
+
+  @override
+  String get paymentCouldNotOpenProof => 'تعذّر فتح الإثبات';
+
+  @override
+  String get paymentProofExpired => 'انتهت صلاحية رابط الإثبات — حاول مرة أخرى';
+
+  @override
   String get paymentApprove => 'اعتماد الدفعة';
 
   @override

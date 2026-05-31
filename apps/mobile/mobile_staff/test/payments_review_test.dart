@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile_staff/features/payments_review/data/datasources/payments_review_remote_data_source.dart';
 import 'package:mobile_staff/features/payments_review/data/dtos/payment_review_dto.dart';
@@ -9,6 +10,7 @@ import 'package:mobile_staff/features/payments_review/domain/entities/payment_re
 import 'package:mobile_staff/features/payments_review/domain/repositories/payments_review_repository.dart';
 import 'package:mobile_staff/features/payments_review/domain/usecases/payments_review_use_cases.dart';
 import 'package:mobile_staff/features/payments_review/presentation/cubit/payments_review_cubit.dart';
+import 'package:mobile_staff/features/payments_review/presentation/cubit/proof_download_cubit.dart';
 
 // ── Fakes ────────────────────────────────────────────────────────────────
 
@@ -37,6 +39,17 @@ class _FakeRemote implements PaymentsReviewRemoteDataSource {
     if (error != null) throw error!;
     rejected.add(depositId);
     lastReason = reason;
+  }
+
+  @override
+  Future<ProofDownloadLinkDto> proofDownloadLink(String depositId) async {
+    if (error != null) throw error!;
+    return const ProofDownloadLinkDto(
+      url: 'https://signed.example/proof.pdf?X-Amz-Signature=deadbeef',
+      fileName: 'proof.pdf',
+      contentType: 'application/pdf',
+      expiresIn: 300,
+    );
   }
 }
 
@@ -76,6 +89,16 @@ class _FakeRepo implements PaymentsReviewRepository {
     rejectedReason = reason;
     return rejectResult;
   }
+
+  Result<ProofDownloadLink> proofLinkResult =
+      const Ok(ProofDownloadLink(url: 'https://signed.example/p?X-Amz-Signature=zz', expiresIn: 300));
+  String? proofRequestedId;
+
+  @override
+  Future<Result<ProofDownloadLink>> getProofDownloadLink(String depositId) async {
+    proofRequestedId = depositId;
+    return proofLinkResult;
+  }
 }
 
 DioException _http(int status) => DioException(
@@ -112,6 +135,16 @@ Map<String, dynamic> _row({
     };
 
 void main() {
+  // ProofDownloadCubit calls ContactActions.openExternal (url_launcher). In a
+  // pure unit test there's no platform, so mock the channel to report the URL
+  // as not-launchable — the cubit then settles into a launch-failed state
+  // without throwing (and never persists the signed URL).
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('plugins.flutter.io/url_launcher'), (_) async => false);
+  });
+
   group('PaymentReviewDto envelope + mapper', () {
     test('parses the paginated {data, meta} envelope (data only)', () {
       final dtos = PaymentReviewDto.listFromEnvelope({
@@ -272,6 +305,86 @@ void main() {
       final r = await RejectPayment(repo)(const RejectPaymentParams(depositId: 'd1', reason: 'bad'));
       expect(r.isOk, isTrue);
       expect(repo.rejectedReason, 'bad');
+    });
+  });
+
+  // ── P11.6.1 — proof signed-download ──────────────────────────────────────
+
+  group('ProofDownloadLinkDto + mapper + repository', () {
+    test('DTO parses the signed-download response and maps to an entity', () {
+      final e = ProofDownloadLinkDto.fromJson({
+        'url': 'https://signed.example/proof.pdf?X-Amz-Signature=abc',
+        'fileName': 'proof.pdf',
+        'contentType': 'application/pdf',
+        'expiresIn': 300,
+      }).toEntity();
+      expect(e.url, contains('X-Amz-Signature'));
+      expect(e.fileName, 'proof.pdf');
+      expect(e.contentType, 'application/pdf');
+      expect(e.expiresIn, 300);
+    });
+
+    test('repository maps a successful signed-download response', () async {
+      final repo = PaymentsReviewRepositoryImpl(_FakeRemote());
+      final r = await repo.getProofDownloadLink('d1');
+      expect(r.dataOrNull?.url, contains('X-Amz-Signature'));
+      expect(r.dataOrNull?.fileName, 'proof.pdf');
+    });
+
+    test('repository maps a 404 to a friendly notFound failure (no raw error)', () async {
+      final repo = PaymentsReviewRepositoryImpl(_FakeRemote(error: _http(404)));
+      final r = await repo.getProofDownloadLink('d1');
+      expect(r.failureOrNull?.type, FailureType.notFound);
+    });
+
+    test('repository maps a 403 to forbidden', () async {
+      final repo = PaymentsReviewRepositoryImpl(_FakeRemote(error: _http(403)));
+      final r = await repo.getProofDownloadLink('d1');
+      expect(r.failureOrNull?.type, FailureType.forbidden);
+    });
+  });
+
+  group('ProofDownloadCubit', () {
+    test('open success requests a fresh link for the deposit and clears the opening id', () async {
+      final repo = _FakeRepo();
+      final cubit = ProofDownloadCubit(GetProofDownloadLink(repo));
+      await cubit.open('d1');
+      expect(repo.proofRequestedId, 'd1');
+      expect(cubit.state.openingId, isNull);
+    });
+
+    test('open never persists the signed URL anywhere in the state', () async {
+      final repo = _FakeRepo()
+        ..proofLinkResult = const Ok(
+          ProofDownloadLink(url: 'https://signed.example/secret-proof?X-Amz-Signature=zz'),
+        );
+      final cubit = ProofDownloadCubit(GetProofDownloadLink(repo));
+      await cubit.open('d1');
+      // The state carries no url field by design — prove the signed URL leaked
+      // nowhere (props / toString).
+      expect(cubit.state.toString(), isNot(contains('secret-proof')));
+      expect(cubit.state.props, isNot(contains(contains('secret-proof'))));
+    });
+
+    test('open failure (404) surfaces a friendly notFound AppFailure, never launches', () async {
+      final repo = _FakeRepo()
+        ..proofLinkResult = Err<ProofDownloadLink>(
+          AppFailure(type: FailureType.notFound, technicalMessage: 'no proof'),
+        );
+      final cubit = ProofDownloadCubit(GetProofDownloadLink(repo));
+      await cubit.open('d1');
+      expect(cubit.state.failure?.type, FailureType.notFound);
+      expect(cubit.state.launchFailed, isFalse);
+      expect(cubit.state.openingId, isNull);
+    });
+
+    test('a second tap while one is in flight is ignored', () async {
+      final repo = _FakeRepo();
+      final cubit = ProofDownloadCubit(GetProofDownloadLink(repo));
+      final first = cubit.open('d1');
+      final second = cubit.open('d2'); // dropped — one already in flight
+      await Future.wait([first, second]);
+      expect(repo.proofRequestedId, 'd1');
     });
   });
 }

@@ -26,4 +26,9 @@ class PaymentsReviewRepositoryImpl implements PaymentsReviewRepository {
   Future<Result<void>> reject(String depositId, {required String reason}) {
     return guardApiCall(() => _remote.reject(depositId, reason: reason));
   }
+
+  @override
+  Future<Result<ProofDownloadLink>> getProofDownloadLink(String depositId) {
+    return guardApiCall(() async => (await _remote.proofDownloadLink(depositId)).toEntity());
+  }
 }

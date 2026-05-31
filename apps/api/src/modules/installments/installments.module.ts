@@ -6,6 +6,7 @@ import {
   Delete,
   Get,
   Injectable,
+  Logger,
   Module,
   NotFoundException,
   Param,
@@ -15,6 +16,7 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -707,6 +709,210 @@ class InstallmentsCron {
   }
 }
 
+// ─── P11.7 — Installment due-soon reminders ──────────────────────────────────
+
+export interface InstallmentReminderSummary {
+  scanned: number;
+  /** Notifications sent (or, in dry-run, that WOULD be sent). */
+  sent: number;
+  skipped: number;
+  failed: number;
+}
+
+const INSTALLMENT_DUE_SOON_TEMPLATE = 'installment_due_soon';
+const DEFAULT_DAYS_BEFORE = 3;
+
+/**
+ * P11.7 — sends a DB reminder to customers whose unpaid installments are due
+ * soon (status PENDING, dueDate within a configurable window). Exported so the
+ * cron AND the manual CLI (`scripts/send-installment-due-soon-reminders.ts`)
+ * share one implementation.
+ *
+ * Idempotent: dedupes on the existing Notification rows (templateCode + userId
+ * + payload.installmentId + payload.dueDate) — at most one reminder per
+ * installment+dueDate, NO schema change. DB notification works without Firebase;
+ * push is best-effort via NotificationsService. A single bad row never fails the
+ * run. Only aggregate counts are logged — never amounts, names, or contacts.
+ */
+@Injectable()
+export class InstallmentRemindersService {
+  private readonly logger = new Logger(InstallmentRemindersService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+    private readonly config: ConfigService,
+  ) {}
+
+  private daysBefore(): number {
+    const raw = Number(this.config.get<string>('INSTALLMENT_REMINDER_DAYS_BEFORE'));
+    return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DEFAULT_DAYS_BEFORE;
+  }
+
+  /** Inclusive [start-of-today, end-of (today + daysBefore)] window. */
+  private window(days: number): { start: Date; end: Date } {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(end.getDate() + days);
+    end.setHours(23, 59, 59, 999);
+    return { start, end };
+  }
+
+  /** Stable date-only key (YYYY-MM-DD) used for BOTH the payload and dedupe. */
+  private dateKey(d: Date): string {
+    return d.toISOString().slice(0, 10);
+  }
+
+  async run(opts: { dryRun: boolean }): Promise<InstallmentReminderSummary> {
+    const days = this.daysBefore();
+    const { start, end } = this.window(days);
+
+    const due = await this.prisma.installment.findMany({
+      where: {
+        status: InstallmentStatus.PENDING,
+        dueDate: { gte: start, lte: end },
+        // Only active customers receive reminders.
+        plan: { contract: { customer: { active: true } } },
+      },
+      orderBy: { dueDate: 'asc' },
+      select: {
+        id: true,
+        planId: true,
+        dueDate: true,
+        amount: true,
+        plan: {
+          select: {
+            contract: {
+              select: {
+                id: true,
+                contractNumber: true,
+                customerId: true,
+                unit: {
+                  select: {
+                    code: true,
+                    building: {
+                      select: { phase: { select: { project: { select: { name: true } } } } },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    for (const inst of due) {
+      const contract = inst.plan?.contract;
+      const customerId = contract?.customerId ?? null;
+      if (!customerId) {
+        skipped++; // no linked customer — nothing safe to notify
+        continue;
+      }
+      const dueDateStr = this.dateKey(inst.dueDate);
+      try {
+        const already = await this.prisma.notification.findFirst({
+          where: {
+            userId: customerId,
+            templateCode: INSTALLMENT_DUE_SOON_TEMPLATE,
+            AND: [
+              { payload: { path: ['installmentId'], equals: inst.id } },
+              { payload: { path: ['dueDate'], equals: dueDateStr } },
+            ],
+          },
+          select: { id: true },
+        });
+        if (already) {
+          skipped++; // reminder for this installment+dueDate already sent
+          continue;
+        }
+        if (opts.dryRun) {
+          sent++; // would send
+          continue;
+        }
+        await this.notifications.sendToUser(
+          customerId,
+          INSTALLMENT_DUE_SOON_TEMPLATE,
+          await this.buildPayload(inst, contract, inst.dueDate, dueDateStr),
+        );
+        sent++;
+      } catch (e) {
+        // A single failure (lookup or send) must never abort the whole run.
+        failed++;
+        this.logger.warn(`Installment reminder failed for installment ${inst.id}: ${(e as Error).message}`);
+      }
+    }
+
+    this.logger.log(
+      `Installment due-soon reminders: scanned=${due.length} sent=${sent} skipped=${skipped} failed=${failed} dryRun=${opts.dryRun}`,
+    );
+    return { scanned: due.length, sent, skipped, failed };
+  }
+
+  /**
+   * Safe notification payload — identity-free financial context only. NO phone,
+   * email, document/receipt URLs, or bank details. dueDate is the canonical
+   * date-only string (also used for dedupe).
+   */
+  private async buildPayload(
+    inst: { id: string; planId: string; amount: Prisma.Decimal },
+    contract: {
+      id: string;
+      contractNumber: string | null;
+      unit: { code: string | null; building: { phase: { project: { name: Prisma.JsonValue } } | null } | null } | null;
+    },
+    dueDate: Date,
+    dueDateStr: string,
+  ): Promise<Record<string, unknown>> {
+    // 1-based ordinal within the plan (no installmentNumber column exists).
+    const installmentNumber = await this.prisma.installment.count({
+      where: { planId: inst.planId, dueDate: { lte: dueDate } },
+    });
+    const name = (contract.unit?.building?.phase?.project?.name ?? {}) as { ar?: string; en?: string };
+    return {
+      installmentId: inst.id,
+      contractId: contract.id,
+      installmentNumber,
+      amount: inst.amount.toString(),
+      dueDate: dueDateStr,
+      contractNumber: contract.contractNumber ?? '',
+      unitCode: contract.unit?.code ?? '',
+      projectName: name.ar || name.en || '',
+    };
+  }
+}
+
+/**
+ * P11.7 — daily cron that fires the due-soon reminders. Env-gated: the handler
+ * no-ops unless INSTALLMENT_REMINDERS_ENABLED=true, so it is OFF by default in
+ * local/dev/CI. The cron expression is read from INSTALLMENT_REMINDER_CRON
+ * (default 09:00 daily) with an optional timezone.
+ */
+@Injectable()
+export class InstallmentDueSoonCron {
+  private readonly logger = new Logger(InstallmentDueSoonCron.name);
+
+  constructor(
+    private readonly reminders: InstallmentRemindersService,
+    private readonly config: ConfigService,
+  ) {}
+
+  @Cron(process.env.INSTALLMENT_REMINDER_CRON || '0 9 * * *', {
+    name: 'installment-due-soon',
+    timeZone: process.env.INSTALLMENT_REMINDER_TIMEZONE || undefined,
+  })
+  async daily(): Promise<void> {
+    const enabled = (this.config.get<string>('INSTALLMENT_REMINDERS_ENABLED') ?? '').toLowerCase() === 'true';
+    if (!enabled) return; // disabled by default — never fires in dev/CI
+    await this.reminders.run({ dryRun: false });
+  }
+}
+
 // ─── P11 — Customer-facing installments controller ───────────────────────
 // GET /v1/me/installments returns the signed-in customer's full installment
 // schedule across their contracts. Scoped purely by Installment.plan.
@@ -911,9 +1117,11 @@ class PlanTemplatesController {
   providers: [
     InstallmentsService,
     InstallmentsCron,
+    InstallmentRemindersService,
+    InstallmentDueSoonCron,
     PlanTemplatesService,
     MeInstallmentsService,
   ],
-  exports: [InstallmentsService, PlanTemplatesService],
+  exports: [InstallmentsService, PlanTemplatesService, InstallmentRemindersService],
 })
 export class InstallmentsModule {}

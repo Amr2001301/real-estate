@@ -16,4 +16,9 @@ abstract interface class PaymentsReviewRepository {
   /// Reject a submitted proof with a required reason
   /// (`POST /deposits/:id/reject`). ADMIN + strict `deposits:verify`.
   Future<Result<void>> reject(String depositId, {required String reason});
+
+  /// Mint a short-lived signed URL to open the deposit's payment-proof document
+  /// (`GET /deposits/:id/proof/download`). ADMIN + SALES_MANAGER with
+  /// `deposits:read`. The link is used immediately and never persisted.
+  Future<Result<ProofDownloadLink>> getProofDownloadLink(String depositId);
 }

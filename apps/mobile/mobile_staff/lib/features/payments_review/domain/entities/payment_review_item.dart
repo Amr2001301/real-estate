@@ -45,6 +45,22 @@ enum PaymentReviewStatus {
 /// A decision a reviewer can take on a pending payment proof.
 enum ReviewDecision { approved, rejected }
 
+/// A short-lived signed link to open a payment-proof document
+/// (`GET /deposits/:id/proof/download`). [url] is a freshly-minted signed URL
+/// used immediately to open the file — it is NOT a permanent URL and is never
+/// persisted in cubit state.
+class ProofDownloadLink extends Equatable {
+  const ProofDownloadLink({required this.url, this.fileName, this.contentType, this.expiresIn});
+
+  final String url;
+  final String? fileName;
+  final String? contentType;
+  final int? expiresIn;
+
+  @override
+  List<Object?> get props => [url, fileName, contentType, expiresIn];
+}
+
 /// One customer-submitted payment proof awaiting staff review (a Deposit row
 /// projected from `GET /deposits/review-queue`).
 ///

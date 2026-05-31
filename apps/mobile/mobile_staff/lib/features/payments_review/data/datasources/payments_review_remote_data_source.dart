@@ -8,6 +8,7 @@ abstract interface class PaymentsReviewRemoteDataSource {
   Future<List<PaymentReviewDto>> reviewQueue();
   Future<void> approve(String depositId, {String? note});
   Future<void> reject(String depositId, {required String reason});
+  Future<ProofDownloadLinkDto> proofDownloadLink(String depositId);
 }
 
 class PaymentsReviewRemoteDataSourceImpl implements PaymentsReviewRemoteDataSource {
@@ -39,5 +40,11 @@ class PaymentsReviewRemoteDataSourceImpl implements PaymentsReviewRemoteDataSour
       '/deposits/$depositId/reject',
       data: {'reason': reason},
     );
+  }
+
+  @override
+  Future<ProofDownloadLinkDto> proofDownloadLink(String depositId) async {
+    final res = await _dio.get<Map<String, dynamic>>('/deposits/$depositId/proof/download');
+    return ProofDownloadLinkDto.fromJson(res.data ?? const {});
   }
 }

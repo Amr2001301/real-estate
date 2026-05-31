@@ -43,6 +43,8 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
+import { MediaModule } from '../media/media.module';
+import { R2Service } from '../media/r2.service';
 import {
   NotificationsModule,
   NotificationsService,
@@ -179,6 +181,7 @@ class DepositsService {
     private readonly prisma: PrismaService,
     private readonly documents: DocumentsService,
     private readonly notifications: NotificationsService,
+    private readonly r2: R2Service,
   ) {}
 
   // Link a payment proof as a first-class RECEIPT document. Idempotent: skips
@@ -745,6 +748,59 @@ class DepositsService {
     return updated;
   }
 
+  /**
+   * P11.6.1 — staff/admin signed download for a deposit's payment-proof
+   * document. Mirrors the customer signed-download (GET /me/documents/:id/
+   * download) but is keyed by the DEPOSIT, with strict proof-type safety so a
+   * reviewer can only ever reach THAT deposit's RECEIPT proof — never an
+   * unrelated contract / maintenance file.
+   *
+   * Returns ONLY a short-lived signed URL + display metadata. NEVER returns the
+   * permanent fileUrl or the storage key, and the signed URL is never logged.
+   * A missing deposit / missing proof / type-or-owner mismatch all return a
+   * friendly 404 (no existence leak).
+   */
+  async getProofDownloadLink(
+    depositId: string,
+  ): Promise<{ url: string; fileName: string | null; contentType: string | null; expiresIn: number }> {
+    const deposit = await this.prisma.deposit.findUnique({
+      where: { id: depositId },
+      select: { id: true, proofDocumentId: true },
+    });
+    if (!deposit) throw new NotFoundException('Deposit not found');
+    if (!deposit.proofDocumentId) {
+      throw new NotFoundException('لا يوجد إثبات دفع مرفق');
+    }
+
+    // Resolve the proof STRICTLY: it must be this deposit's RECEIPT document
+    // (ownerType=DEPOSIT, ownerId=deposit.id, category=RECEIPT). A mismatch —
+    // e.g. a doctored proofDocumentId pointing at a contract file — yields 404.
+    const doc = await this.prisma.document.findFirst({
+      where: {
+        id: deposit.proofDocumentId,
+        ownerType: DocumentOwnerType.DEPOSIT,
+        ownerId: deposit.id,
+        category: DocumentCategory.RECEIPT,
+        deletedAt: null,
+      },
+      select: { fileUrl: true, fileName: true, mimeType: true },
+    });
+    if (!doc) throw new NotFoundException('Payment proof not found');
+
+    const key = this.r2.keyFromPublicUrl(doc.fileUrl);
+    const signed = await this.r2.createPresignedDownload({
+      key,
+      fileName: doc.fileName,
+      contentType: doc.mimeType,
+    });
+    return {
+      url: signed.url,
+      fileName: doc.fileName,
+      contentType: doc.mimeType,
+      expiresIn: signed.expiresIn,
+    };
+  }
+
   /** Resolve the projectId for a deposit via its contract → unit → building
    *  → phase chain. Used to route the staff-side notification. */
   private async resolveProjectIdForDeposit(depositId: string): Promise<string | null> {
@@ -922,6 +978,18 @@ class DepositsController {
     return this.svc.rejectProof(id, user, dto);
   }
 
+  // P11.6.1 — staff/admin signed download for a deposit's payment proof.
+  // Mirrors the review-queue gate (ADMIN + SALES_MANAGER, deposits:read) so a
+  // read-only reviewer can OPEN the proof without holding deposits:verify
+  // (which is reserved for approve/reject). Returns a short-lived signed URL
+  // only — never a permanent URL or storage key.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('deposits:read')
+  @Get('deposits/:id/proof/download')
+  proofDownload(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.getProofDownloadLink(id);
+  }
+
   // Customer read-only view — intentionally NOT permission-gated.
   //
   // SECURITY: the underlying Deposit row carries a permanent `receiptUrl`
@@ -978,7 +1046,7 @@ class DepositsController {
 }
 
 @Module({
-  imports: [DocumentsModule, NotificationsModule],
+  imports: [DocumentsModule, NotificationsModule, MediaModule],
   controllers: [DepositsController],
   providers: [DepositsService],
 })
