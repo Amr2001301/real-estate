@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { DepositCard } from '@/components/account/DepositCard';
 import { SubmitProofTrigger } from '@/components/account/SubmitProofTrigger';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'الدفعات',
@@ -20,10 +21,11 @@ export const metadata = buildMetadata({
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink-strong">الدفعات</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">سجل دفعاتك المسجّلة لدى الشركة (للعرض فقط).</p>
-    </div>
+    <AccountPageHeader
+      eyebrow="ملكيتك"
+      title="الدفعات"
+      description="سجل دفعاتك المسجّلة لدى الشركة (للعرض فقط)."
+    />
   );
 }
 
@@ -44,7 +46,7 @@ export default async function AccountDepositsPage() {
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل الدفعات حاليًا"
@@ -59,7 +61,7 @@ export default async function AccountDepositsPage() {
   const totals = result.totals;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       <SubmitProofTrigger />

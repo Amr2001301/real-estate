@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Pagination } from '@/components/projects/Pagination';
 import { InfoRequestCard } from '@/components/account/InfoRequestCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'الطلبات',
@@ -26,19 +27,22 @@ function firstStr(v: string | string[] | undefined): string {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink-strong">طلبات الاستفسار</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">
-        رسائل الاستفسار التي أرسلتها فقط — طلبات الزيارة تظهر في{' '}
-        <a
-          href={routes.accountVisits}
-          className="font-medium text-gold-600 underline decoration-gold-300 underline-offset-2 hover:text-gold-500"
-        >
-          صفحة الزيارات
-        </a>
-        .
-      </p>
-    </div>
+    <AccountPageHeader
+      eyebrow="متابعة"
+      title="طلبات الاستفسار"
+      description={
+        <>
+          رسائل الاستفسار التي أرسلتها فقط — طلبات الزيارة تظهر في{' '}
+          <a
+            href={routes.accountVisits}
+            className="font-medium text-gold-600 underline decoration-gold-300 underline-offset-2 hover:text-gold-500"
+          >
+            صفحة الزيارات
+          </a>
+          .
+        </>
+      }
+    />
   );
 }
 
@@ -54,7 +58,7 @@ export default async function AccountRequestsPage({ searchParams }: { searchPara
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل الطلبات حاليًا"
@@ -72,7 +76,7 @@ export default async function AccountRequestsPage({ searchParams }: { searchPara
     nextPage > 1 ? `${routes.accountRequests}?page=${nextPage}` : routes.accountRequests;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {requests.length === 0 ? (

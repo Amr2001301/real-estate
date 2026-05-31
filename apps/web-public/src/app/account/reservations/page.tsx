@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Pagination } from '@/components/projects/Pagination';
 import { ReservationCard } from '@/components/account/ReservationCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'الحجوزات',
@@ -26,12 +27,11 @@ function firstStr(v: string | string[] | undefined): string {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink-strong">الحجوزات</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">
-        حجوزاتك على وحداتنا. بعد اعتماد الحجز وتأكيد دفعة الحجز يتم الانتقال إلى إجراءات العقد.
-      </p>
-    </div>
+    <AccountPageHeader
+      eyebrow="متابعة"
+      title="الحجوزات"
+      description="حجوزاتك على وحداتنا. بعد اعتماد الحجز وتأكيد دفعة الحجز يتم الانتقال إلى إجراءات العقد."
+    />
   );
 }
 
@@ -47,7 +47,7 @@ export default async function AccountReservationsPage({ searchParams }: { search
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل الحجوزات حاليًا"
@@ -65,7 +65,7 @@ export default async function AccountReservationsPage({ searchParams }: { search
     nextPage > 1 ? `${routes.accountReservations}?page=${nextPage}` : routes.accountReservations;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {reservations.length === 0 ? (

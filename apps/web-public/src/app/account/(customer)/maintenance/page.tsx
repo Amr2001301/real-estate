@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Pagination } from '@/components/projects/Pagination';
 import { MaintenanceRequestCard } from '@/components/account/MaintenanceRequestCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'الصيانة',
@@ -26,16 +27,17 @@ function firstStr(v: string | string[] | undefined): string {
 
 function Header() {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="text-2xl text-ink-strong">الصيانة</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">تابع حالة طلبات الصيانة الخاصة بوحداتك.</p>
-      </div>
-      <ButtonLink href={routes.accountMaintenanceNew} variant="primary" size="md">
-        <Plus className="h-5 w-5" aria-hidden />
-        طلب صيانة جديد
-      </ButtonLink>
-    </div>
+    <AccountPageHeader
+      eyebrow="ملكيتك"
+      title="الصيانة"
+      description="تابع حالة طلبات الصيانة الخاصة بوحداتك."
+      actions={
+        <ButtonLink href={routes.accountMaintenanceNew} variant="gold" size="sm">
+          <Plus className="h-4 w-4" aria-hidden />
+          طلب صيانة جديد
+        </ButtonLink>
+      }
+    />
   );
 }
 
@@ -51,7 +53,7 @@ export default async function AccountMaintenancePage({ searchParams }: { searchP
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل طلبات الصيانة حاليًا"
@@ -69,7 +71,7 @@ export default async function AccountMaintenancePage({ searchParams }: { searchP
     nextPage > 1 ? `${routes.accountMaintenance}?page=${nextPage}` : routes.accountMaintenance;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {requests.length === 0 ? (

@@ -12,6 +12,7 @@ import { ErrorState } from '@/components/states/ErrorState';
 import { InlineNotice } from '@/components/states/InlineNotice';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { MaintenanceRequestForm, type SelectOption } from '@/components/account/MaintenanceRequestForm';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'طلب صيانة جديد',
@@ -27,15 +28,16 @@ function firstStr(v: string | string[] | undefined): string {
 
 function Header() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <Link href={routes.accountMaintenance} className="inline-flex items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-500">
         <ArrowRight className="h-4 w-4" aria-hidden />
         العودة إلى الصيانة
       </Link>
-      <div>
-        <h1 className="text-2xl text-ink-strong">طلب صيانة جديد</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">اختر الوحدة وفئة الصيانة واشرح المشكلة، وسيتابع فريقنا طلبك.</p>
-      </div>
+      <AccountPageHeader
+        eyebrow="ملكيتك"
+        title="طلب صيانة جديد"
+        description="اختر الوحدة وفئة الصيانة واشرح المشكلة، وسيتابع فريقنا طلبك."
+      />
     </div>
   );
 }
@@ -69,7 +71,7 @@ export default async function AccountMaintenanceNewPage({ searchParams }: { sear
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل البيانات حاليًا"
@@ -87,7 +89,7 @@ export default async function AccountMaintenanceNewPage({ searchParams }: { sear
   const initialUnitId = units.some((u) => u.id === requestedUnitId) ? requestedUnitId : '';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {units.length === 0 ? (

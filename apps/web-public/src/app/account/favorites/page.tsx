@@ -8,6 +8,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { FavoriteCard } from '@/components/account/FavoriteCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'المفضلة',
@@ -23,8 +24,8 @@ export default async function AccountFavoritesPage() {
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl text-ink-strong">المفضلة</h1>
+      <div className="space-y-8">
+        <AccountPageHeader eyebrow="حسابك" title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
         <ErrorState
           title="تعذّر تحميل المفضلة حاليًا"
           message="يرجى المحاولة مرة أخرى بعد لحظات."
@@ -35,11 +36,8 @@ export default async function AccountFavoritesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl text-ink-strong">المفضلة</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا.</p>
-      </div>
+    <div className="space-y-8">
+      <AccountPageHeader eyebrow="حسابك" title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
 
       {favorites.length === 0 ? (
         <EmptyState

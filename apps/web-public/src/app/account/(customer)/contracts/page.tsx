@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Pagination } from '@/components/projects/Pagination';
 import { ContractCard } from '@/components/account/ContractCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'العقود',
@@ -26,10 +27,11 @@ function firstStr(v: string | string[] | undefined): string {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink-strong">العقود</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">عقودك المسجّلة، مع إمكانية تحميل نسخة PDF عند توفرها.</p>
-    </div>
+    <AccountPageHeader
+      eyebrow="ملكيتك"
+      title="العقود"
+      description="عقودك المسجّلة، مع إمكانية تحميل نسخة PDF عند توفرها."
+    />
   );
 }
 
@@ -45,7 +47,7 @@ export default async function AccountContractsPage({ searchParams }: { searchPar
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل العقود حاليًا"
@@ -63,7 +65,7 @@ export default async function AccountContractsPage({ searchParams }: { searchPar
     nextPage > 1 ? `${routes.accountContracts}?page=${nextPage}` : routes.accountContracts;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {contracts.length === 0 ? (

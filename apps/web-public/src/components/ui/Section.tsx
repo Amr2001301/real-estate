@@ -38,10 +38,13 @@ export function Section({
 interface SectionHeadingProps {
   eyebrow?: string;
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   align?: 'start' | 'center';
   invert?: boolean;
   className?: string;
+  /** Heading level for the title. Defaults to h2; pages that need a single
+   *  document-level title (and the e2e level-1 assertions) pass 'h1'. */
+  as?: 'h1' | 'h2';
 }
 
 export function SectionHeading({
@@ -51,6 +54,7 @@ export function SectionHeading({
   align = 'start',
   invert = false,
   className,
+  as: Heading = 'h2',
 }: SectionHeadingProps) {
   return (
     <div
@@ -70,7 +74,7 @@ export function SectionHeading({
           {eyebrow}
         </span>
       )}
-      <h2 className={cn('text-3xl font-bold lg:text-4xl', invert && 'text-white')}>{title}</h2>
+      <Heading className={cn('text-3xl font-bold lg:text-4xl', invert && 'text-white')}>{title}</Heading>
       {description && (
         <p className={cn('mt-2 leading-relaxed', invert ? 'text-white/75' : 'text-ink-muted')}>
           {description}

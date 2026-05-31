@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Pagination } from '@/components/projects/Pagination';
 import { PropertyCard } from '@/components/account/PropertyCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'عقاراتي',
@@ -26,10 +27,11 @@ function firstStr(v: string | string[] | undefined): string {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink-strong">عقاراتي</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">الوحدات التي تملكها، مع روابط العقد وطلب الصيانة.</p>
-    </div>
+    <AccountPageHeader
+      eyebrow="ملكيتك"
+      title="عقاراتي"
+      description="الوحدات التي تملكها، مع روابط العقد وطلب الصيانة."
+    />
   );
 }
 
@@ -47,7 +49,7 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل عقاراتك حاليًا"
@@ -65,7 +67,7 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
     nextPage > 1 ? `${routes.accountProperty}?page=${nextPage}` : routes.accountProperty;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {contracts.length === 0 ? (

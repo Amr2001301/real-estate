@@ -6,6 +6,7 @@ import type { MeProfile } from '@/lib/api-types';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ErrorState } from '@/components/states/ErrorState';
 import { ProfileForm } from '@/components/account/ProfileForm';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'الملف الشخصي',
@@ -38,8 +39,8 @@ function InfoRow({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-3 py-3">
-      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-surface-soft text-gold-500">
+    <div className="flex items-center gap-3 py-3.5">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
         {icon}
       </span>
       <div className="min-w-0">
@@ -59,8 +60,8 @@ export default async function AccountProfilePage() {
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
-        <h1 className="text-2xl text-ink-strong">الملف الشخصي</h1>
+      <div className="space-y-8">
+        <AccountPageHeader eyebrow="حسابك" title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
         <ErrorState
           title="تعذّر تحميل بياناتك حاليًا"
           message="يرجى المحاولة مرة أخرى بعد لحظات."
@@ -74,26 +75,28 @@ export default async function AccountProfilePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl text-ink-strong">الملف الشخصي</h1>
+      <AccountPageHeader eyebrow="حسابك" title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
 
-      {/* Read-only account info */}
-      <PremiumCard className="p-6 sm:p-8">
-        <h2 className="text-lg font-semibold text-ink-strong">معلومات الحساب</h2>
-        <p className="mt-1 text-sm text-ink-muted">هذه البيانات للعرض فقط ولا يمكن تعديلها من هنا.</p>
-        <div className="mt-4 divide-y divide-hairline">
-          <InfoRow icon={<Mail className="h-4 w-4" aria-hidden />} label="البريد الإلكتروني" value={profile.email ?? '—'} />
-          <InfoRow icon={<ShieldCheck className="h-4 w-4" aria-hidden />} label="نوع الحساب" value={roleLabel} />
-          <InfoRow icon={<CalendarDays className="h-4 w-4" aria-hidden />} label="تاريخ الانضمام" value={formatDate(profile.createdAt)} />
-          <InfoRow icon={<Clock className="h-4 w-4" aria-hidden />} label="آخر تسجيل دخول" value={formatDate(profile.lastLoginAt)} />
-        </div>
-      </PremiumCard>
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        {/* Read-only account info */}
+        <PremiumCard className="p-6 sm:p-8">
+          <h2 className="text-lg font-semibold text-ink-strong">معلومات الحساب</h2>
+          <p className="mt-1 text-sm text-ink-muted">هذه البيانات للعرض فقط ولا يمكن تعديلها من هنا.</p>
+          <div className="mt-4 divide-y divide-hairline">
+            <InfoRow icon={<Mail className="h-4 w-4" aria-hidden />} label="البريد الإلكتروني" value={profile.email ?? '—'} />
+            <InfoRow icon={<ShieldCheck className="h-4 w-4" aria-hidden />} label="نوع الحساب" value={roleLabel} />
+            <InfoRow icon={<CalendarDays className="h-4 w-4" aria-hidden />} label="تاريخ الانضمام" value={formatDate(profile.createdAt)} />
+            <InfoRow icon={<Clock className="h-4 w-4" aria-hidden />} label="آخر تسجيل دخول" value={formatDate(profile.lastLoginAt)} />
+          </div>
+        </PremiumCard>
 
-      {/* Editable fields */}
-      <PremiumCard className="p-6 sm:p-8">
-        <h2 className="text-lg font-semibold text-ink-strong">تعديل البيانات</h2>
-        <p className="mt-1 mb-5 text-sm text-ink-muted">يمكنك تحديث اسمك ورقم جوالك.</p>
-        <ProfileForm initialFullName={profile.fullName} initialPhone={profile.phone ?? ''} />
-      </PremiumCard>
+        {/* Editable fields */}
+        <PremiumCard className="p-6 sm:p-8">
+          <h2 className="text-lg font-semibold text-ink-strong">تعديل البيانات</h2>
+          <p className="mt-1 mb-5 text-sm text-ink-muted">يمكنك تحديث اسمك ورقم جوالك.</p>
+          <ProfileForm initialFullName={profile.fullName} initialPhone={profile.phone ?? ''} />
+        </PremiumCard>
+      </div>
     </div>
   );
 }

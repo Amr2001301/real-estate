@@ -187,7 +187,7 @@ export default async function AccountPage() {
       {/* ── Overview (greeting lives in the layout hero) ── */}
       <section className="space-y-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <SectionHeading eyebrow="حسابك" title="نظرة عامة" description="ملخص نشاطك وأحدث ما يخصّك في مكان واحد." />
+          <SectionHeading as="h1" eyebrow="حسابك" title="نظرة عامة" description="ملخص نشاطك وأحدث ما يخصّك في مكان واحد." />
           <div className="flex flex-wrap gap-3">
             <ButtonLink href={routes.projects} variant="primary" size="sm">
               تصفّح المشاريع
@@ -287,8 +287,8 @@ export default async function AccountPage() {
         <section className="space-y-7 border-t border-hairline pt-12 sm:pt-14">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <SectionHeading
-              eyebrow="خدمات العميل"
-              title="ما بعد الشراء"
+              eyebrow="ملكيتك"
+              title="خدمات ما بعد الشراء"
               description="عقاراتك وعقودك ودفعاتك وطلبات الصيانة في مكان واحد."
             />
             <div className="flex flex-wrap gap-3">

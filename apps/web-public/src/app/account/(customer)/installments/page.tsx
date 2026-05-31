@@ -11,6 +11,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { cn } from '@/lib/cn';
 
 export const metadata = buildMetadata({
@@ -54,7 +55,7 @@ export default async function AccountInstallmentsPage() {
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل الأقساط حاليًا"
@@ -68,7 +69,7 @@ export default async function AccountInstallmentsPage() {
   const installments = result.data;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {installments.length === 0 ? (
@@ -95,12 +96,11 @@ export default async function AccountInstallmentsPage() {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink-strong">جدول الأقساط</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">
-        مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع للأقساط غير المدفوعة.
-      </p>
-    </div>
+    <AccountPageHeader
+      eyebrow="ملكيتك"
+      title="جدول الأقساط"
+      description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع للأقساط غير المدفوعة."
+    />
   );
 }
 

@@ -9,6 +9,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { NotificationCard } from '@/components/account/NotificationCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { markAllNotificationsReadAction } from '@/lib/account-actions';
 
 export const metadata = buildMetadata({
@@ -19,23 +20,24 @@ export const metadata = buildMetadata({
 
 function Header({ unreadCount }: { unreadCount: number }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-      <div>
-        <h1 className="text-2xl text-ink-strong">الإشعارات</h1>
-        <p className="mt-1.5 text-sm text-ink-muted">تحديثات حسابك وطلباتك تظهر هنا.</p>
-      </div>
-      {unreadCount > 0 && (
-        <form action={markAllNotificationsReadAction}>
-          <button
-            type="submit"
-            className="inline-flex items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600"
-          >
-            <CheckCheck className="h-4 w-4" aria-hidden />
-            تحديد الكل كمقروء
-          </button>
-        </form>
-      )}
-    </div>
+    <AccountPageHeader
+      eyebrow="متابعة"
+      title="الإشعارات"
+      description="تحديثات حسابك وطلباتك تظهر هنا."
+      actions={
+        unreadCount > 0 ? (
+          <form action={markAllNotificationsReadAction}>
+            <button
+              type="submit"
+              className="inline-flex items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600"
+            >
+              <CheckCheck className="h-4 w-4" aria-hidden />
+              تحديد الكل كمقروء
+            </button>
+          </form>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -54,7 +56,7 @@ export default async function AccountNotificationsPage() {
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header unreadCount={0} />
         <ErrorState
           title="تعذّر تحميل الإشعارات حاليًا"
@@ -69,7 +71,7 @@ export default async function AccountNotificationsPage() {
   const unreadCount = notifications.filter((n) => n.readAt === null).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header unreadCount={unreadCount} />
 
       {notifications.length === 0 ? (

@@ -9,6 +9,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Pagination } from '@/components/projects/Pagination';
 import { VisitRequestCard } from '@/components/account/VisitRequestCard';
+import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 
 export const metadata = buildMetadata({
   title: 'الزيارات',
@@ -26,10 +27,11 @@ function firstStr(v: string | string[] | undefined): string {
 
 function Header() {
   return (
-    <div>
-      <h1 className="text-2xl text-ink-strong">الزيارات</h1>
-      <p className="mt-1.5 text-sm text-ink-muted">تابع حالة طلبات الزيارة الخاصة بك ومواعيدها.</p>
-    </div>
+    <AccountPageHeader
+      eyebrow="متابعة"
+      title="الزيارات"
+      description="تابع حالة طلبات الزيارة الخاصة بك ومواعيدها."
+    />
   );
 }
 
@@ -45,7 +47,7 @@ export default async function AccountVisitsPage({ searchParams }: { searchParams
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
-      <div className="space-y-6">
+      <div className="space-y-8">
         <Header />
         <ErrorState
           title="تعذّر تحميل الزيارات حاليًا"
@@ -63,7 +65,7 @@ export default async function AccountVisitsPage({ searchParams }: { searchParams
     nextPage > 1 ? `${routes.accountVisits}?page=${nextPage}` : routes.accountVisits;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Header />
 
       {visits.length === 0 ? (
