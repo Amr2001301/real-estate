@@ -15,6 +15,7 @@ const ALLOWED = [
   /^\/reports\/financial\/export\.csv$/,
   /^\/reports\/operational\/export\.csv$/,
   /^\/reports\/financial-dashboard\/export\.csv$/,
+  /^\/reports\/admin-summary\/export\.csv$/,
   /^\/bonus-entries\/export\.csv$/,
   /^\/maintenance-requests\/reports\/summary\.csv$/,
 ];

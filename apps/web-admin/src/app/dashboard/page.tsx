@@ -26,6 +26,7 @@ import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
 import { AlertList, type AlertItem } from '@/components/dashboard/alert-list';
 import { ActivityTable } from '@/components/dashboard/activity-table';
 import { SupportCard } from '@/components/dashboard/support-card';
+import { GenerateReportButton } from '@/components/dashboard/generate-report-button';
 import { SalesDashboard } from './_components/sales-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
 
@@ -177,9 +178,7 @@ export default async function DashboardHome() {
         description="نظرة عامة على أداء المحفظة العقارية والعمليات الجارية اليوم."
         actions={
           <>
-            <Button variant="outline" size="md" leftIcon={<FileText className="h-4 w-4" />}>
-              توليد تقرير
-            </Button>
+            <GenerateReportButton />
             <Link href={'/dashboard/projects/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 مشروع جديد

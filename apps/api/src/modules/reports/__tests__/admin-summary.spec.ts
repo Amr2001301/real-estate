@@ -214,4 +214,37 @@ describe('GET /reports/admin-summary (P14)', () => {
       await request(app.getHttpServer()).get('/reports/admin-summary').expect(403);
     }
   });
+
+  // ── P14.1 — CSV export ───────────────────────────────────────────────────
+
+  it('export.csv returns a downloadable CSV with the real summary data (no demo values)', async () => {
+    FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+    const res = await request(app.getHttpServer())
+      .get('/reports/admin-summary/export.csv')
+      .expect(200);
+
+    expect(res.headers['content-type']).toContain('text/csv');
+    expect(res.headers['content-disposition']).toContain('attachment');
+
+    const csv = res.text;
+    // All five real sections are present.
+    expect(csv).toContain('المؤشرات الرئيسية');
+    expect(csv).toContain('اتجاه الحجوزات');
+    expect(csv).toContain('توزيع مصادر العملاء المحتملين');
+    expect(csv).toContain('التنبيهات المعلقة');
+    expect(csv).toContain('آخر النشاطات');
+    // Real values from the mocked DB rows.
+    expect(csv).toContain('المشاريع المنشورة,4');
+    expect(csv).toContain('مباشر,10');
+    expect(csv).toContain('خالد'); // recent-activity actor
+    // None of the removed hardcoded demo values survive.
+    expect(csv).not.toMatch(/أحمد منصور|بيانات تجريبية|74%/);
+  });
+
+  it('export.csv is forbidden for CUSTOMER / CLIENT / BROKER', async () => {
+    for (const role of [UserRole.CUSTOMER, UserRole.CLIENT, UserRole.BROKER]) {
+      FakeAuthGuard.currentUser = { sub: 'u', role, codes: ['reports:operational:read'] };
+      await request(app.getHttpServer()).get('/reports/admin-summary/export.csv').expect(403);
+    }
+  });
 });

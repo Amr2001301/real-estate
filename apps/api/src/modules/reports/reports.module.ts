@@ -400,6 +400,58 @@ class ReportsService {
       .slice(0, 8);
   }
 
+  /**
+   * P14.1 — admin dashboard summary as a downloadable CSV. Built from the SAME
+   * real `adminSummary()` data (KPIs, reservation trend, lead sources, alerts,
+   * recent activity) as stacked tables. No demo values.
+   */
+  async adminSummaryCsv(): Promise<string> {
+    const s = await this.adminSummary();
+
+    const kpiRows: CsvCell[][] = [
+      ['المشاريع المنشورة', s.kpis.projects],
+      ['إجمالي الوحدات', s.kpis.totalUnits],
+      ['وحدات متاحة', s.kpis.availableUnits],
+      ['وحدات محجوزة', s.kpis.reservedUnits],
+      ['فرص جديدة هذا الشهر', s.kpis.newLeadsThisMonth],
+      ['ودائع بانتظار المراجعة', s.kpis.pendingDeposits],
+      ['طلبات صيانة مفتوحة', s.kpis.openMaintenance],
+    ];
+    const trendRows: CsvCell[][] = s.reservationTrend.map((t) => [t.month, t.label, t.value]);
+    const leadRows: CsvCell[][] = s.leadSources.map((l) => [l.source, l.count]);
+    const alertRows: CsvCell[][] = [
+      ['عقود بانتظار التوقيع', s.alerts.contractsAwaitingSignature],
+      ['دفعات بانتظار المراجعة', s.alerts.depositsPendingReview],
+      ['طلبات صيانة مفتوحة', s.alerts.openMaintenance],
+      ['حجوزات تنتهي قريباً', s.alerts.reservationsExpiringSoon],
+      ['زيارات بانتظار تأكيد العميل', s.alerts.visitsAwaitingConfirmation],
+      ['استفسارات مفتوحة', s.alerts.infoRequestsOpen],
+    ];
+    const activityRows: CsvCell[][] = s.recentActivity.map((a) => [
+      a.action,
+      a.title,
+      a.context ?? '',
+      a.createdAt.toISOString(),
+    ]);
+
+    return [
+      'المؤشرات الرئيسية',
+      toCsv(['المؤشر', 'القيمة'], kpiRows),
+      '',
+      'اتجاه الحجوزات (آخر 6 أشهر)',
+      toCsv(['الشهر', 'التسمية', 'عدد الحجوزات'], trendRows),
+      '',
+      'توزيع مصادر العملاء المحتملين',
+      toCsv(['المصدر', 'العدد'], leadRows),
+      '',
+      'التنبيهات المعلقة',
+      toCsv(['التنبيه', 'العدد'], alertRows),
+      '',
+      'آخر النشاطات',
+      toCsv(['النشاط', 'الجهة', 'السياق', 'التاريخ'], activityRows),
+    ].join('\r\n');
+  }
+
   async financialDashboard(opts: {
     projectId?: string;
     q?: string;
@@ -1485,6 +1537,18 @@ class ReportsController {
   @Get('admin-summary')
   adminSummary() {
     return this.svc.adminSummary();
+  }
+
+  // P14.1 — downloadable CSV of the admin dashboard summary. Same data + same
+  // ADMIN-only gate as /admin-summary; CUSTOMER / CLIENT / BROKER are rejected
+  // at @Roles.
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:operational:read')
+  @Get('admin-summary/export.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  @Header('Content-Disposition', 'attachment; filename="admin-summary.csv"')
+  adminSummaryCsv() {
+    return this.svc.adminSummaryCsv();
   }
 
   @Roles(UserRole.ADMIN)
