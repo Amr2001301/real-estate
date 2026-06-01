@@ -1,4 +1,5 @@
 import { BookmarkCheck, Building2, Home, Clock, User2 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { formatPrice, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeReservation, MeReservationBookingPaymentStatus } from '@/lib/api-types';
 import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
@@ -38,13 +39,21 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+/** A single data block in the 3-up row. A hairline separator on the start edge
+ *  (md+) gives each number room to breathe; the first block omits it. */
+function Block({
+  label,
+  separator,
+  children,
+}: {
+  label: string;
+  separator?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div>
-      <div className="text-xs text-ink-muted">{label}</div>
-      <div className="mt-0.5 text-sm font-semibold text-ink-strong" dir="auto">
-        {value}
-      </div>
+    <div className={cn('min-w-0', separator && 'md:border-s md:border-hairline/70 md:ps-6')}>
+      <div className="mb-1 text-xs font-medium tracking-wide text-ink-muted">{label}</div>
+      {children}
     </div>
   );
 }
@@ -90,38 +99,54 @@ export function ReservationCard({ reservation }: { reservation: MeReservation })
         <StatusBadge status={reservation.status} />
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 border-t border-hairline pt-4 sm:grid-cols-3">
-        <Fact label="مبلغ الحجز" value={formatPrice(reservation.bookingAmount)} />
-        <div>
-          <div className="text-xs text-ink-muted">حالة الدفع</div>
+      {/* ── Three balanced data blocks with breathing-room separators ── */}
+      <div className="mt-5 grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-3 sm:items-center sm:gap-0">
+        <Block label="مبلغ الحجز">
+          <div className="text-sm font-semibold text-ink-strong" dir="auto">
+            {formatPrice(reservation.bookingAmount)}
+          </div>
+        </Block>
+        <Block label="حالة الدفع" separator>
           <span
-            className={`mt-0.5 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${PAYMENT_TONE_CLASS[payment.tone]}`}
+            className={cn(
+              'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
+              PAYMENT_TONE_CLASS[payment.tone],
+            )}
           >
             {payment.label}
           </span>
-        </div>
-        <Fact
-          label="ينتهي في"
-          value={formatDate(reservation.expiresAt)}
-        />
-        {reservation.bookingPaidAt && (
-          <Fact label="تاريخ السداد" value={formatDate(reservation.bookingPaidAt)} />
-        )}
-        {reservation.sales && (
-          <div className="sm:col-span-2">
-            <div className="text-xs text-ink-muted">المسؤول المختص</div>
-            <div className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold text-ink-strong">
-              <User2 className="h-4 w-4 text-gold-500" aria-hidden />
-              {reservation.sales.fullName}
-            </div>
+        </Block>
+        <Block label="ينتهي في" separator>
+          <div className="text-sm font-semibold text-ink-strong" dir="auto">
+            {formatDate(reservation.expiresAt)}
           </div>
-        )}
+        </Block>
       </div>
 
-      <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-ink-muted">
-        <Clock className="h-3.5 w-3.5 text-gold-500" aria-hidden />
-        أُنشئ في {formatDate(reservation.createdAt)}
-      </p>
+      {/* ── Footer metadata: specialist + paid date (start) ⟷ created (end) ── */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hairline pt-3.5 text-xs text-ink-muted">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5">
+          {reservation.sales && (
+            <span className="inline-flex items-center gap-1.5">
+              <User2 className="h-3.5 w-3.5 shrink-0 text-gold-500" strokeWidth={1.5} aria-hidden />
+              المسؤول المختص:
+              <span className="font-semibold text-ink-strong">{reservation.sales.fullName}</span>
+            </span>
+          )}
+          {reservation.bookingPaidAt && (
+            <span className="inline-flex items-center gap-1.5">
+              تاريخ السداد:
+              <span className="font-semibold text-ink-strong" dir="auto">
+                {formatDate(reservation.bookingPaidAt)}
+              </span>
+            </span>
+          )}
+        </div>
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <Clock className="h-3.5 w-3.5 shrink-0 text-gold-500" strokeWidth={1.5} aria-hidden />
+          أُنشئ في {formatDate(reservation.createdAt)}
+        </span>
+      </div>
     </AccountCard>
   );
 }
