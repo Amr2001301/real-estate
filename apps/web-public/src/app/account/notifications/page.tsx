@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { NotificationCard } from '@/components/account/NotificationCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
+import { PremiumCard } from '@/components/ui/PremiumCard';
 import { markAllNotificationsReadAction } from '@/lib/account-actions';
 
 export const metadata = buildMetadata({
@@ -85,11 +86,11 @@ export default async function AccountNotificationsPage() {
           }
         />
       ) : (
-        <div className="space-y-3">
+        <PremiumCard className="divide-y divide-hairline/60 overflow-hidden">
           {notifications.map((notification) => (
             <NotificationCard key={notification.id} notification={notification} />
           ))}
-        </div>
+        </PremiumCard>
       )}
     </div>
   );

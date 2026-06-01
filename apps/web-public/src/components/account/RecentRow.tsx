@@ -10,6 +10,8 @@ interface RecentRowProps {
   trailing?: React.ReactNode;
   /** When set, the whole row becomes a link and a hover chevron appears. */
   href?: string;
+  /** Overrides the default gold icon chip — e.g. semantic notification tints. */
+  iconClassName?: string;
 }
 
 /**
@@ -18,13 +20,14 @@ interface RecentRowProps {
  * surface tint appears on hover; the trailing slot (status / amount) keeps
  * visual priority.
  */
-export function RecentRow({ icon: Icon, title, subtitle, trailing, href }: RecentRowProps) {
+export function RecentRow({ icon: Icon, title, subtitle, trailing, href, iconClassName }: RecentRowProps) {
   const inner = (
     <>
       <span
         className={cn(
-          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600 transition-colors',
-          href && 'group-hover:bg-gold-200',
+          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors',
+          iconClassName ?? 'bg-gold-100 text-gold-600',
+          href && !iconClassName && 'group-hover:bg-gold-200',
         )}
       >
         <Icon className="h-[18px] w-[18px]" aria-hidden />

@@ -1,7 +1,14 @@
-import { Bell, Check } from 'lucide-react';
+import {
+  Bell,
+  Wrench,
+  FileText,
+  Wallet,
+  CalendarClock,
+  BookmarkCheck,
+  type LucideIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { MeNotification } from '@/lib/api-types';
-import { AccountCard } from '@/components/account/AccountCard';
 import { markNotificationReadAction } from '@/lib/account-actions';
 
 /**
@@ -41,6 +48,40 @@ export function notificationTitle(code: string): string {
   return NOTIFICATION_LABELS[code] ?? 'إشعار جديد';
 }
 
+/**
+ * Maps a notification to a semantic icon + tinted chip, keyed off the template
+ * code (robust) with an Arabic-title fallback. Tones use theme tokens so they
+ * stay legible in dark mode: warning=amber (maintenance), success=green
+ * (contracts/payments), gold=brand (scheduling + general). The chip string
+ * includes its own `ring-1` so any consumer (this row, the dashboard's
+ * RecentRow) can apply it directly for a consistent look across the app.
+ */
+export function notificationVisual(code: string, title: string): { Icon: LucideIcon; chip: string } {
+  const c = code.toLowerCase();
+  if (c.includes('maintenance') || title.includes('صيانة')) {
+    return { Icon: Wrench, chip: 'bg-warning/10 text-warning ring-1 ring-warning/20' };
+  }
+  if (c.includes('contract') || c.includes('document') || title.includes('عقد') || title.includes('تحميل')) {
+    return { Icon: FileText, chip: 'bg-success/10 text-success ring-1 ring-success/20' };
+  }
+  if (
+    c.includes('deposit') ||
+    c.includes('installment') ||
+    c.includes('booking_paid') ||
+    title.includes('دفعة') ||
+    title.includes('قسط')
+  ) {
+    return { Icon: Wallet, chip: 'bg-success/10 text-success ring-1 ring-success/20' };
+  }
+  if (c.includes('visit') || title.includes('زيار') || title.includes('جدولة')) {
+    return { Icon: CalendarClock, chip: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70' };
+  }
+  if (c.includes('reservation') || title.includes('حجز')) {
+    return { Icon: BookmarkCheck, chip: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70' };
+  }
+  return { Icon: Bell, chip: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70' };
+}
+
 function formatDateTime(iso: string): string {
   try {
     return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
@@ -49,46 +90,57 @@ function formatDateTime(iso: string): string {
   }
 }
 
+/**
+ * One notification row. UNREAD rows are a submit button that marks the
+ * notification read on click (whole-row affordance + cursor-pointer); READ rows
+ * are static and ultra-clean (no dot, no action). Designed to sit inside a
+ * divided list container.
+ */
 export function NotificationCard({ notification }: { notification: MeNotification }) {
   const unread = notification.readAt === null;
   const title = notificationTitle(notification.templateCode);
+  const { Icon, chip } = notificationVisual(notification.templateCode, title);
 
-  return (
-    <AccountCard accent={unread ? 'gold' : 'muted'} className="p-4">
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
-            unread
-              ? 'bg-gradient-to-br from-gold-300 to-gold-500 text-navy ring-gold-400'
-              : 'bg-surface-soft text-ink-muted ring-hairline',
-          )}
-        >
-          <Bell className="h-5 w-5" aria-hidden />
-        </span>
+  const inner = (
+    <>
+      {/* Semantic icon — far start (right in RTL) */}
+      <span className={cn('inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', chip)}>
+        <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+      </span>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-gold-500" aria-hidden />}
-            <h3 className={cn('line-clamp-2 text-sm font-semibold', unread ? 'text-ink-strong' : 'text-ink')}>{title}</h3>
-          </div>
-          <p className="mt-1 text-xs text-ink-muted">{formatDateTime(notification.createdAt)}</p>
-        </div>
-
-        {unread ? (
-          <form action={markNotificationReadAction.bind(null, notification.id)} className="shrink-0">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-gold-600 transition-colors hover:bg-gold-100"
-            >
-              <Check className="h-3.5 w-3.5" aria-hidden />
-              تحديد كمقروء
-            </button>
-          </form>
-        ) : (
-          <span className="shrink-0 text-xs text-ink-muted/70">مقروء</span>
-        )}
+      {/* Title + timestamp */}
+      <div className="min-w-0 flex-1">
+        <h3 className={cn('line-clamp-2 text-sm font-semibold', unread ? 'text-ink-strong' : 'text-ink')}>
+          {title}
+        </h3>
+        <p className="mt-0.5 text-xs text-ink-muted">{formatDateTime(notification.createdAt)}</p>
       </div>
-    </AccountCard>
+
+      {/* Unread dot — far end (left in RTL). Read rows show nothing. */}
+      {unread && (
+        <span
+          className="h-2.5 w-2.5 shrink-0 rounded-full bg-gold-500 shadow-[0_0_8px_rgba(200,162,75,0.6)]"
+          aria-hidden
+        />
+      )}
+    </>
   );
+
+  const base = 'flex w-full items-center gap-3.5 p-4 text-start transition-colors duration-200';
+
+  if (unread) {
+    return (
+      <form action={markNotificationReadAction.bind(null, notification.id)} className="block">
+        <button
+          type="submit"
+          aria-label={`تحديد كمقروء: ${title}`}
+          className={cn(base, 'cursor-pointer hover:bg-surface-soft/60')}
+        >
+          {inner}
+        </button>
+      </form>
+    );
+  }
+
+  return <div className={base}>{inner}</div>;
 }

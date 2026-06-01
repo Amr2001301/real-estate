@@ -43,7 +43,7 @@ import { PropertyFocus } from '@/components/account/PropertyFocus';
 import { RecentRow } from '@/components/account/RecentRow';
 import { RecentPanel } from '@/components/account/RecentPanel';
 import { StatusBadge } from '@/components/account/StatusBadge';
-import { notificationTitle } from '@/components/account/NotificationCard';
+import { notificationTitle, notificationVisual } from '@/components/account/NotificationCard';
 
 export const metadata = buildMetadata({
   title: 'لوحة الحساب',
@@ -357,16 +357,21 @@ export default async function AccountPage() {
               {recentNotifications.length > 0 && (
                 <Reveal className="lg:col-span-2">
                   <RecentPanel icon={Bell} title="أحدث الإشعارات" href={routes.accountNotifications}>
-                    {recentNotifications.map((n) => (
-                      <RecentRow
-                        key={n.id}
-                        href={routes.accountNotifications}
-                        icon={Bell}
-                        title={notificationTitle(n.templateCode)}
-                        subtitle={formatDateTime(n.createdAt)}
-                        trailing={n.readAt === null ? <Badge tone="gold">جديد</Badge> : undefined}
-                      />
-                    ))}
+                    {recentNotifications.map((n) => {
+                      const nTitle = notificationTitle(n.templateCode);
+                      const { Icon, chip } = notificationVisual(n.templateCode, nTitle);
+                      return (
+                        <RecentRow
+                          key={n.id}
+                          href={routes.accountNotifications}
+                          icon={Icon}
+                          iconClassName={chip}
+                          title={nTitle}
+                          subtitle={formatDateTime(n.createdAt)}
+                          trailing={n.readAt === null ? <Badge tone="gold">جديد</Badge> : undefined}
+                        />
+                      );
+                    })}
                   </RecentPanel>
                 </Reveal>
               )}
