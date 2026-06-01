@@ -85,7 +85,7 @@ export default async function AccountVisitsPage({ searchParams }: { searchParams
         />
       ) : (
         <>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {visits.map((visit) => (
               <VisitRequestCard key={visit.id} visit={visit} />
             ))}

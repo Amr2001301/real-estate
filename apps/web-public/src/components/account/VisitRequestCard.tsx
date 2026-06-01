@@ -1,18 +1,26 @@
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Building2, Home, CalendarClock, CalendarCheck, UserRound, ArrowLeft, MessageSquare } from 'lucide-react';
+import {
+  Building2,
+  Home,
+  CalendarClock,
+  CalendarCheck,
+  UserRound,
+  MessageSquare,
+  MapPin,
+  type LucideIcon,
+} from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { MeVisitRequest, MeAppointmentSummary } from '@/lib/api-types';
-import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { VisitConfirmActions } from '@/components/account/VisitConfirmActions';
 
-/** Visit statuses worth surfacing as a secondary chip beside the request status. */
+/** Visit statuses worth surfacing when there's no appointment yet. */
 const PROGRESSED = new Set(['APPROVED', 'SCHEDULED', 'COMPLETED']);
 
-/** Arabic label for the appointment lifecycle state — must stay in lockstep
- *  with the admin badges to give the customer the same vocabulary. */
+/** Arabic label for the appointment lifecycle state — kept in lockstep with the
+ *  admin badges so the customer reads the same vocabulary. */
 const APPOINTMENT_LABEL: Record<MeAppointmentSummary['status'], string> = {
   SCHEDULED: 'بانتظار تأكيدك',
   CONFIRMED: 'مؤكدة',
@@ -32,11 +40,32 @@ function formatDateTime(iso: string | null): string {
   }
 }
 
+/**
+ * One ticket line: gold icon chip + stacked label/value. No truncate or fixed
+ * width — the date wraps gracefully and is never clipped.
+ */
+function TicketRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gold-100 text-gold-600 ring-1 ring-gold-200/60">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <div className="text-xs text-ink-muted">{label}</div>
+        <div className="mt-0.5 text-sm font-medium leading-snug text-ink-strong" dir="auto">
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
   const projectName = visit.project ? pickAr(visit.project.name) : '';
   const unitLabel = visit.unit ? `${unitTypeLabel(visit.unit.type)} · ${visit.unit.code}` : '';
   const title = projectName || unitLabel || 'طلب زيارة';
   const subtitle = projectName ? unitLabel || cityLabel(visit.project?.city) : '';
+  const TypeIcon = visit.unit ? Home : Building2;
 
   const detailHref: Route | null = visit.unit
     ? (routes.unit(visit.unit.id) as Route)
@@ -44,91 +73,91 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
       ? (routes.project(visit.project.id) as Route)
       : null;
 
-  // P2 — the customer's view of the appointment lifecycle. The backend now
-  // includes the latest appointment; if `appointments[0]` is SCHEDULED, the
-  // customer is being asked to confirm or request a reschedule. Other states
-  // surface as informational chips only.
+  // P2 — appointment lifecycle. SCHEDULED → the customer must confirm or request
+  // a reschedule; other states are informational only.
   const appointment = visit.appointments?.[0] ?? null;
   const awaitingCustomer = appointment?.status === 'SCHEDULED';
   const pendingReschedule = appointment?.status === 'PENDING_RESCHEDULE';
-  const accent: AccountCardAccent =
-    visit.requestStatus === 'CONVERTED' ? 'success' : visit.requestStatus === 'REJECTED' ? 'error' : 'gold';
+  const suggested = appointment?.scheduledAt ?? (!appointment ? visit.scheduledAt : null);
+  const suggestedLabel = appointment ? 'الموعد المقترح' : 'موعد محدد';
+
+  // A single, most-meaningful badge.
+  const badge: { status: string; label?: string } | null = appointment
+    ? { status: appointment.status, label: APPOINTMENT_LABEL[appointment.status] }
+    : visit.requestStatus
+      ? { status: visit.requestStatus }
+      : PROGRESSED.has(visit.status)
+        ? { status: visit.status }
+        : null;
 
   return (
-    <AccountCard accent={accent} className="p-5">
+    <div className="group relative isolate flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface p-5 shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-xl">
+      {/* Architectural watermark — large, ultra-subtle, behind everything */}
+      <TypeIcon
+        className="pointer-events-none absolute -bottom-8 -left-8 -z-10 h-48 w-48 text-ink-strong opacity-[0.05]"
+        strokeWidth={1}
+        aria-hidden
+      />
+
+      {/* Stretched link: whole card navigates. Sibling overlay so the confirm
+          controls can layer above it — a button inside an <a> is invalid HTML. */}
+      {detailHref && (
+        <Link href={detailHref} aria-label={`عرض تفاصيل ${title}`} className="absolute inset-0 z-[1]" />
+      )}
+
+      {/* ── Header: title (start) ⟷ badge (end) ── */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <AccountCardIcon size="sm">
-            {visit.unit ? <Home className="h-[18px] w-[18px]" aria-hidden /> : <Building2 className="h-[18px] w-[18px]" aria-hidden />}
-          </AccountCardIcon>
-          <div className="min-w-0">
-            <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{title}</h3>
-            {subtitle && <p className="line-clamp-1 text-xs text-ink-muted">{subtitle}</p>}
-          </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-          <StatusBadge status={visit.requestStatus} />
-          {appointment ? (
-            <StatusBadge status={appointment.status} label={APPOINTMENT_LABEL[appointment.status]} />
-          ) : (
-            PROGRESSED.has(visit.status) && <StatusBadge status={visit.status} />
+        <div className="min-w-0">
+          <h3 className="line-clamp-1 text-lg font-bold tracking-tight text-ink-strong">{title}</h3>
+          {subtitle && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+              <span className="line-clamp-1">{subtitle}</span>
+            </p>
           )}
         </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-muted">
-        <span className="inline-flex items-center gap-1.5">
-          <CalendarClock className="h-4 w-4 text-gold-500" aria-hidden />
-          الموعد المفضل: <span className="font-medium text-ink-strong">{formatDateTime(visit.preferredDate)}</span>
-        </span>
-        {appointment?.scheduledAt && (
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarCheck className="h-4 w-4 text-gold-500" aria-hidden />
-            الموعد المقترح: <span className="font-medium text-ink-strong">{formatDateTime(appointment.scheduledAt)}</span>
-          </span>
-        )}
-        {!appointment && visit.scheduledAt && (
-          <span className="inline-flex items-center gap-1.5">
-            <CalendarCheck className="h-4 w-4 text-gold-500" aria-hidden />
-            موعد محدد: <span className="font-medium text-ink-strong">{formatDateTime(visit.scheduledAt)}</span>
-          </span>
-        )}
-        {visit.assignedSales && (
-          <span className="inline-flex items-center gap-1.5">
-            <UserRound className="h-4 w-4 text-gold-500" aria-hidden />
-            المستشار: <span className="font-medium text-ink-strong">{visit.assignedSales.fullName}</span>
-          </span>
+        {badge && (
+          <StatusBadge
+            status={badge.status}
+            label={badge.label}
+            className="shrink-0 px-3 font-semibold shadow-sm ring-1 ring-black/5"
+          />
         )}
       </div>
 
-      {visit.notes && (
-        <p className="mt-3 rounded-xl bg-surface-soft px-3.5 py-2.5 text-sm leading-relaxed text-ink-muted">
-          {visit.notes}
-        </p>
-      )}
+      {/* ── Visit Ticket ── */}
+      <div className="mt-4 space-y-4 rounded-xl border border-hairline bg-surface-soft/60 p-4">
+        <div className="space-y-3.5">
+          <TicketRow icon={CalendarClock} label="الموعد المفضل" value={formatDateTime(visit.preferredDate)} />
+          {suggested && <TicketRow icon={CalendarCheck} label={suggestedLabel} value={formatDateTime(suggested)} />}
+          {visit.assignedSales && (
+            <TicketRow icon={UserRound} label="المستشار" value={visit.assignedSales.fullName} />
+          )}
+        </div>
+
+        {/* User comment — mini speech-bubble at the very bottom of the ticket */}
+        {visit.notes && (
+          <div className="flex items-start gap-2 rounded-xl border border-hairline bg-surface p-3 text-xs leading-relaxed text-ink-muted">
+            <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+            <p className="line-clamp-3" dir="auto">
+              {visit.notes}
+            </p>
+          </div>
+        )}
+      </div>
 
       {pendingReschedule && appointment?.customerFeedback && (
-        <p className="mt-3 inline-flex items-start gap-2 rounded-xl bg-amber-50 px-3.5 py-2.5 text-sm leading-relaxed text-amber-800">
-          <MessageSquare className="h-4 w-4 shrink-0 mt-0.5" aria-hidden />
-          <span>
-            سبب طلب إعادة الجدولة: <span className="font-medium">{appointment.customerFeedback}</span>
-          </span>
+        <p className="mt-3 rounded-xl bg-warning/10 px-3 py-2.5 text-xs leading-relaxed text-warning">
+          سبب طلب إعادة الجدولة: <span className="font-medium">{appointment.customerFeedback}</span>
         </p>
       )}
 
+      {/* Interactive controls sit ABOVE the stretched link (z-[2]) */}
       {awaitingCustomer && appointment && (
-        <VisitConfirmActions appointmentId={appointment.id} />
+        <div className="relative z-[2] mt-3">
+          <VisitConfirmActions appointmentId={appointment.id} />
+        </div>
       )}
-
-      {detailHref && (
-        <Link
-          href={detailHref}
-          className="group mt-4 inline-flex items-center gap-1 text-sm font-medium text-gold-600 transition-colors hover:text-gold-500"
-        >
-          عرض التفاصيل
-          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden />
-        </Link>
-      )}
-    </AccountCard>
+    </div>
   );
 }
