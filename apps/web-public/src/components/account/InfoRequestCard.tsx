@@ -1,10 +1,17 @@
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Building2, Home, MessageSquareText, Clock, ArrowLeft } from 'lucide-react';
+import {
+  Building2,
+  Home,
+  MessageSquareText,
+  Clock,
+  MapPin,
+  type LucideIcon,
+} from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { MeInfoRequest } from '@/lib/api-types';
-import { AccountCard, AccountCardIcon } from '@/components/account/AccountCard';
+import { Badge } from '@/components/ui/Badge';
 
 function formatDateTime(iso: string): string {
   try {
@@ -14,13 +21,42 @@ function formatDateTime(iso: string): string {
   }
 }
 
+/**
+ * One ticket line: gold icon chip + stacked label/value — identical to the
+ * Visits card's metadata rows for cross-dashboard consistency.
+ */
+function TicketRow({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gold-100 text-gold-600 ring-1 ring-gold-200/60">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <div className="text-xs text-ink-muted">{label}</div>
+        <div className="mt-0.5 text-sm font-medium leading-snug text-ink-strong" dir="auto">
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Inquiry card — mirrors the Visits card anatomy exactly. NOTE: MeInfoRequest
+ * carries no reply/status field, so the badge reflects the inquiry's real
+ * CONTEXT (unit / project / general) rather than a fabricated status.
+ */
 export function InfoRequestCard({ request }: { request: MeInfoRequest }) {
   const projectName = request.project ? pickAr(request.project.name) : '';
   const unitLabel = request.unit ? `${unitTypeLabel(request.unit.type)} · ${request.unit.code}` : '';
   const title = projectName || unitLabel || 'استفسار عام';
   const subtitle = projectName ? unitLabel || cityLabel(request.project?.city) : '';
 
-  const Icon = request.unit ? Home : request.project ? Building2 : MessageSquareText;
+  const badge: { label: string; Icon: LucideIcon; tone: 'gold' | 'neutral' } = request.unit
+    ? { label: 'وحدة', Icon: Home, tone: 'gold' }
+    : request.project
+      ? { label: 'مشروع', Icon: Building2, tone: 'gold' }
+      : { label: 'عام', Icon: MessageSquareText, tone: 'neutral' };
 
   const detailHref: Route | null = request.unit
     ? (routes.unit(request.unit.id) as Route)
@@ -29,36 +65,52 @@ export function InfoRequestCard({ request }: { request: MeInfoRequest }) {
       : null;
 
   return (
-    <AccountCard accent="gold" className="p-5">
+    <div className="group relative isolate flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface p-5 shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-xl">
+      {/* Inquiry watermark — a giant, ultra-faded "?" glyph reads as an abstract
+          luxury mark for a question/inquiry. font-display keeps it geometric. */}
+      <span
+        className="pointer-events-none absolute bottom-[-20px] left-2 -z-10 select-none font-display text-[140px] font-extrabold leading-none text-ink-strong/[0.05]"
+        aria-hidden
+      >
+        ؟
+      </span>
+
+      {/* Stretched link: whole card navigates when tied to a property. */}
+      {detailHref && (
+        <Link href={detailHref} aria-label={`عرض تفاصيل ${title}`} className="absolute inset-0 z-[1]" />
+      )}
+
+      {/* ── Header: title (start) ⟷ context badge (end) ── */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <AccountCardIcon size="sm">
-            <Icon className="h-[18px] w-[18px]" aria-hidden />
-          </AccountCardIcon>
-          <div className="min-w-0">
-            <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{title}</h3>
-            {subtitle && <p className="line-clamp-1 text-xs text-ink-muted">{subtitle}</p>}
-          </div>
+        <div className="min-w-0">
+          <h3 className="line-clamp-1 text-lg font-bold tracking-tight text-ink-strong">{title}</h3>
+          {subtitle && (
+            <p className="mt-1 flex items-center gap-1.5 text-xs text-ink-muted">
+              <MapPin className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+              <span className="line-clamp-1">{subtitle}</span>
+            </p>
+          )}
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 text-xs text-ink-muted">
-          <Clock className="h-3.5 w-3.5 text-gold-500" aria-hidden />
-          {formatDateTime(request.createdAt)}
-        </span>
+        <Badge tone={badge.tone} className="shrink-0 px-3 font-semibold shadow-sm ring-1 ring-black/5">
+          <badge.Icon className="h-3 w-3 shrink-0" aria-hidden />
+          {badge.label}
+        </Badge>
       </div>
 
-      <p className="mt-3 rounded-xl bg-surface-soft px-3.5 py-2.5 text-sm leading-relaxed text-ink-muted">
-        {request.message}
-      </p>
+      {/* ── Inquiry Ticket ── */}
+      <div className="mt-4 space-y-4 rounded-xl border border-hairline bg-surface-soft/60 p-4">
+        <div className="space-y-3.5">
+          <TicketRow icon={Clock} label="تاريخ الإرسال" value={formatDateTime(request.createdAt)} />
+        </div>
 
-      {detailHref && (
-        <Link
-          href={detailHref}
-          className="group mt-4 inline-flex items-center gap-1 text-sm font-medium text-gold-600 transition-colors hover:text-gold-500"
-        >
-          عرض التفاصيل
-          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden />
-        </Link>
-      )}
-    </AccountCard>
+        {/* Inquiry message — speech-bubble, primary space */}
+        <div className="flex items-start gap-2 rounded-xl border border-hairline bg-surface p-3 text-sm leading-relaxed text-ink-muted">
+          <MessageSquareText className="mt-0.5 h-4 w-4 shrink-0 text-gold-500" aria-hidden />
+          <p className="line-clamp-5" dir="auto">
+            {request.message}
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
