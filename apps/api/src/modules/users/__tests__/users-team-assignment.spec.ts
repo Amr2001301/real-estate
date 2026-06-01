@@ -28,7 +28,7 @@ function makeService() {
   }));
   const create = jest.fn().mockImplementation(async ({ data }) => ({ id: 'u-new', ...data }));
   const prisma = { user: { findUnique, update, create } } as unknown as PrismaService;
-  return { service: new UsersService(prisma), findUnique, update, create };
+  return { service: new UsersService(prisma, {} as never), findUnique, update, create };
 }
 
 describe('Users · SALES_MANAGER team assignment', () => {

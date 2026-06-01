@@ -7,14 +7,20 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
-import { UsersService } from './users.service';
+import { UsersService, type UploadedImage } from './users.service';
 import { AssignManagerDto, CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { UserRole } from '@prisma/client';
+
+/** Avatar upload cap — mirrors UsersService.AVATAR_MAX_BYTES (5 MB). */
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 
 @ApiTags('users')
 @Controller('users')
@@ -50,6 +56,15 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser() user: AuthUser, @Body() dto: UpdateUserDto) {
     return this.users.update(user.sub, dto);
+  }
+
+  // Multipart avatar upload for the signed-in user. The image is buffered in
+  // memory (FileInterceptor default), validated + streamed to object storage
+  // by the service, and the new avatarUrl is persisted on the user.
+  @Post('me/avatar')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: AVATAR_MAX_BYTES } }))
+  uploadAvatar(@CurrentUser() user: AuthUser, @UploadedFile() file: UploadedImage) {
+    return this.users.updateAvatar(user.sub, file);
   }
 
   @Roles(UserRole.ADMIN)

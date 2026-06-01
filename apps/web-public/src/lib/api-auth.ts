@@ -105,10 +105,13 @@ export async function authFetch<T>(path: string, init?: RequestInit): Promise<T>
 async function doFetch(path: string, init?: RequestInit): Promise<Response> {
   const c = await cookies();
   const token = c.get('access_token')?.value;
+  // For multipart bodies (file uploads) we must NOT set Content-Type — fetch
+  // derives it with the correct multipart boundary. Everything else is JSON.
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
   return fetch(`${API_BASE}/v1${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       Accept: 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),

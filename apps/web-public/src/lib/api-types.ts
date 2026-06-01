@@ -396,6 +396,7 @@ export interface MeProfile {
   phone: string | null;
   locale: string;
   active: boolean;
+  avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string | null;

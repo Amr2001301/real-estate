@@ -268,6 +268,46 @@ export class AuthService {
     return { ok: true };
   }
 
+  /**
+   * Authenticated self-service password change. Verifies the current password
+   * against the stored argon2 hash before writing the new one. Accounts with no
+   * password (OTP-only) can't use this path. Existing refresh tokens are
+   * revoked so other sessions are forced to re-authenticate after the change.
+   */
+  async changePassword(userId: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, passwordHash: true },
+    });
+    if (!user) throw new UnauthorizedException('Invalid credentials');
+    if (!user.passwordHash) {
+      throw new BadRequestException('No password is set for this account');
+    }
+
+    // 400 (not 401): a wrong *current password* in a change-password form is a
+    // validation error on the request body, not an authentication failure of
+    // the session — keeping it out of the 401 lane avoids tripping the client's
+    // session-refresh/logout path.
+    const ok = await argon2.verify(user.passwordHash, currentPassword);
+    if (!ok) throw new BadRequestException('Current password is incorrect');
+
+    const same = await argon2.verify(user.passwordHash, newPassword);
+    if (same) {
+      throw new BadRequestException('New password must be different from the current one');
+    }
+
+    const passwordHash = await argon2.hash(newPassword);
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id: userId }, data: { passwordHash } }),
+      // Invalidate other sessions: any active refresh token is revoked.
+      this.prisma.refreshToken.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+    return { ok: true };
+  }
+
   private async issueTokens(userId: string, role: UserRole) {
     const accessToken = await this.jwt.signAsync(
       { sub: userId, role },

@@ -1,16 +1,41 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { R2Service } from '../media/r2.service';
+
+/** Avatars: small images only, capped well below the document limit. */
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+};
+
+/** Minimal shape of a multer file — avoids a hard @types/multer dependency. */
+export interface UploadedImage {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+  originalname: string;
+}
 
 @Injectable()
 export class UsersService {
   private readonly logger = new Logger(UsersService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly r2: R2Service,
+  ) {}
 
   async create(dto: CreateUserDto) {
     if (
@@ -161,6 +186,52 @@ export class UsersService {
     });
   }
 
+  /**
+   * Replace the signed-in user's avatar: validate the image, stream it to
+   * object storage, persist the new public URL, and best-effort delete the
+   * previous object so old avatars don't pile up in the bucket.
+   */
+  async updateAvatar(id: string, file: UploadedImage | undefined) {
+    if (!file) throw new BadRequestException('No file uploaded');
+    const ext = AVATAR_MIME[file.mimetype];
+    if (!ext) {
+      throw new BadRequestException('Unsupported image type — use JPG, PNG, or WEBP');
+    }
+    if (file.size > AVATAR_MAX_BYTES) {
+      throw new BadRequestException('Image too large — max 5 MB');
+    }
+
+    const current = await this.prisma.user.findUnique({
+      where: { id },
+      select: { id: true, avatarUrl: true },
+    });
+    if (!current) throw new NotFoundException('User not found');
+
+    const { publicUrl } = await this.r2.uploadObject({
+      buffer: file.buffer,
+      contentType: file.mimetype,
+      folder: 'avatars',
+      extension: ext,
+    });
+
+    const updated = await this.prisma.user.update({
+      where: { id },
+      data: { avatarUrl: publicUrl },
+      select: this.publicSelect(),
+    });
+
+    // Best-effort cleanup of the prior object — never fail the request on it.
+    if (current.avatarUrl && current.avatarUrl !== publicUrl) {
+      this.r2
+        .delete(this.r2.keyFromPublicUrl(current.avatarUrl))
+        .catch((err) =>
+          this.logger.warn(`avatar cleanup failed for ${id}: ${(err as Error).message}`),
+        );
+    }
+
+    return updated;
+  }
+
   private publicSelect() {
     return {
       id: true,
@@ -170,6 +241,7 @@ export class UsersService {
       phone: true,
       locale: true,
       active: true,
+      avatarUrl: true,
       createdAt: true,
       updatedAt: true,
       lastLoginAt: true,

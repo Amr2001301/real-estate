@@ -9,6 +9,17 @@ import {
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'node:crypto';
 
+/** Top-level object-key namespaces in the storage bucket. */
+export type StorageFolder =
+  | 'projects'
+  | 'units'
+  | 'contracts'
+  | 'receipts'
+  | 'maintenance'
+  | 'banners'
+  | 'documents'
+  | 'avatars';
+
 @Injectable()
 export class R2Service {
   private readonly logger = new Logger(R2Service.name);
@@ -53,14 +64,7 @@ export class R2Service {
 
   async createPresignedUpload(opts: {
     contentType: string;
-    folder:
-      | 'projects'
-      | 'units'
-      | 'contracts'
-      | 'receipts'
-      | 'maintenance'
-      | 'banners'
-      | 'documents';
+    folder: StorageFolder;
     extension?: string;
   }) {
     if (!this.client || !this.bucket) {
@@ -89,6 +93,40 @@ export class R2Service {
     }
     const publicUrl = this.publicUrlFor(key);
     return { uploadUrl, key, publicUrl };
+  }
+
+  /**
+   * Server-side direct upload of an in-memory buffer (e.g. a multipart avatar
+   * the API received and streams on to storage). Unlike createPresignedUpload —
+   * which hands the browser a URL to PUT to — this puts the bytes itself, so
+   * small trusted uploads never touch the client a second time. Returns the
+   * generated key + its public URL.
+   */
+  async uploadObject(opts: {
+    buffer: Buffer;
+    contentType: string;
+    folder: StorageFolder;
+    extension?: string;
+  }): Promise<{ key: string; publicUrl: string }> {
+    if (!this.client || !this.bucket) {
+      throw new ServiceUnavailableException('Storage not configured');
+    }
+    const ext = opts.extension ?? this.guessExtension(opts.contentType);
+    const key = `${opts.folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${ext}`;
+    try {
+      await this.client.send(
+        new PutObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Body: opts.buffer,
+          ContentType: opts.contentType,
+        }),
+      );
+    } catch (err) {
+      this.logger.error(`uploadObject failed for bucket=${this.bucket}: ${(err as Error).message}`);
+      throw new ServiceUnavailableException('Storage not available — please retry shortly');
+    }
+    return { key, publicUrl: this.publicUrlFor(key) };
   }
 
   async delete(key: string) {

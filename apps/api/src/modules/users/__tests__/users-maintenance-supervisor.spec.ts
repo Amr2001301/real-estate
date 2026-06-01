@@ -20,7 +20,7 @@ describe('Users · MAINTENANCE_SUPERVISOR role foundation', () => {
       phone: data.phone,
     }));
     const prisma = { user: { create } } as unknown as PrismaService;
-    return { service: new UsersService(prisma), create };
+    return { service: new UsersService(prisma, {} as never), create };
   }
 
   it('UserRole enum exposes MAINTENANCE_SUPERVISOR', () => {

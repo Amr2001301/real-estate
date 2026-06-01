@@ -80,7 +80,7 @@ export default async function AccountProfilePage() {
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Read-only account info */}
         <PremiumCard className="p-6 sm:p-8">
-          <h2 className="text-lg font-semibold text-ink-strong">معلومات الحساب</h2>
+          <h2 className="text-xl font-bold text-ink-strong">معلومات الحساب</h2>
           <p className="mt-1 text-sm text-ink-muted">هذه البيانات للعرض فقط ولا يمكن تعديلها من هنا.</p>
           <div className="mt-4 divide-y divide-hairline">
             <InfoRow icon={<Mail className="h-4 w-4" aria-hidden />} label="البريد الإلكتروني" value={profile.email ?? '—'} />
@@ -92,9 +92,13 @@ export default async function AccountProfilePage() {
 
         {/* Editable fields */}
         <PremiumCard className="p-6 sm:p-8">
-          <h2 className="text-lg font-semibold text-ink-strong">تعديل البيانات</h2>
-          <p className="mt-1 mb-5 text-sm text-ink-muted">يمكنك تحديث اسمك ورقم جوالك.</p>
-          <ProfileForm initialFullName={profile.fullName} initialPhone={profile.phone ?? ''} />
+          <h2 className="text-xl font-bold text-ink-strong">تعديل البيانات</h2>
+          <p className="mb-6 mt-1 text-sm text-ink-muted">حدّث صورتك الشخصية وبياناتك الأساسية.</p>
+          <ProfileForm
+            initialFullName={profile.fullName}
+            initialPhone={profile.phone ?? ''}
+            initialAvatarUrl={profile.avatarUrl ?? null}
+          />
         </PremiumCard>
       </div>
     </div>

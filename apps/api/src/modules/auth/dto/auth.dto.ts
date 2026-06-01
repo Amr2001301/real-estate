@@ -17,6 +17,17 @@ export class LoginEmailDto {
   password!: string;
 }
 
+// Authenticated self-service password change (POST /auth/change-password).
+// The signed-in user is taken from the JWT, never the body.
+export class ChangePasswordDto {
+  @IsString()
+  currentPassword!: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
+}
+
 // ── Public customer (email + password) ──────────────────────────────────────
 
 export class CustomerRegisterDto {
