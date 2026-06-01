@@ -74,7 +74,7 @@ export function PageHero({
                   {eyebrow}
                 </span>
               )}
-              <h1 className={cn('text-white', compact ? 'mt-3.5 text-display-2' : 'mt-4 text-display-1')}>{title}</h1>
+              <h1 className={cn('font-bold text-white', compact ? 'mt-3.5 text-display-2' : 'mt-4 text-display-1')}>{title}</h1>
               <span aria-hidden className={cn('block h-1 w-16 rounded-full bg-gold-400', compact ? 'mt-4' : 'mt-5')} />
               {subtitle && (
                 <p

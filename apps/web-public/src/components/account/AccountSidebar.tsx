@@ -83,8 +83,10 @@ export function AccountSidebar({
         href={href as Route}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'inline-flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-colors duration-200 lg:w-full',
-          active ? 'bg-navy text-white shadow-soft' : 'text-ink-muted hover:bg-navy/[0.05] hover:text-ink-strong',
+          'inline-flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ease-smooth lg:w-full',
+          active
+            ? 'bg-navy text-white shadow-soft ring-1 ring-navy/10'
+            : 'text-ink-muted hover:bg-navy/[0.04] hover:text-ink-strong',
         )}
       >
         <Icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-gold-300' : 'text-gold-500')} aria-hidden />
@@ -124,7 +126,7 @@ export function AccountSidebar({
             <>
               {/* Group separator: vertical line on mobile, full divider + label on desktop */}
               <span
-                className="my-auto h-6 w-px shrink-0 bg-hairline lg:my-2 lg:h-px lg:w-full"
+                className="my-auto h-6 w-px shrink-0 bg-hairline/60 lg:my-2 lg:h-px lg:w-full"
                 aria-hidden
               />
               <span className="hidden px-3.5 pb-1 text-[11px] font-medium text-ink-muted/70 lg:block">
@@ -135,7 +137,7 @@ export function AccountSidebar({
           )}
 
           {/* Logout — divided off on desktop, inline at the end on mobile */}
-          <form action={logoutAction} className="ms-auto shrink-0 lg:ms-0 lg:mt-1 lg:w-full lg:border-t lg:border-hairline lg:pt-1">
+          <form action={logoutAction} className="ms-auto shrink-0 lg:ms-0 lg:mt-1 lg:w-full lg:border-t lg:border-hairline/60 lg:pt-1">
             <button
               type="submit"
               className="inline-flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-ink-muted transition-colors duration-200 hover:bg-error/5 hover:text-error"
