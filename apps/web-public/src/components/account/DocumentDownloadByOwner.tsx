@@ -47,8 +47,9 @@ export function DocumentDownloadByOwner({
   ownerId: string;
   label: string;
   emptyLabel: string;
-  /** `pill` = ContractCard / PropertyCard styling, `inline` = DepositCard inline link. */
-  variant?: 'pill' | 'inline';
+  /** `pill` = ContractCard styling, `compact` = sleeker rounded-xl/text-xs
+   *  button (PropertyCard), `inline` = DepositCard inline link. */
+  variant?: 'pill' | 'compact' | 'inline';
 }) {
   const [state, setState] = useState<'idle' | 'loading' | 'empty' | 'error'>('idle');
 
@@ -87,13 +88,18 @@ export function DocumentDownloadByOwner({
     }
   }
 
+  const isInline = variant === 'inline';
+  const isCompact = variant === 'compact';
+
   if (state === 'empty') {
     return (
       <span
         className={
-          variant === 'pill'
-            ? 'shrink-0 rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted'
-            : 'text-ink-muted/70'
+          isInline
+            ? 'text-ink-muted/70'
+            : isCompact
+              ? 'shrink-0 rounded-xl bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted'
+              : 'shrink-0 rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted'
         }
       >
         {emptyLabel}
@@ -106,9 +112,11 @@ export function DocumentDownloadByOwner({
         type="button"
         onClick={handleClick}
         className={
-          variant === 'pill'
-            ? 'inline-flex shrink-0 items-center gap-2 rounded-full border border-red-300 bg-surface px-4 py-2 text-sm font-medium text-red-600 hover:border-red-400'
-            : 'inline-flex items-center gap-1.5 font-medium text-red-600 hover:text-red-500'
+          isInline
+            ? 'inline-flex items-center gap-1.5 font-medium text-red-600 hover:text-red-500'
+            : isCompact
+              ? 'inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-300 bg-surface px-3.5 py-2 text-xs font-medium text-red-600 hover:border-red-400'
+              : 'inline-flex shrink-0 items-center gap-2 rounded-full border border-red-300 bg-surface px-4 py-2 text-sm font-medium text-red-600 hover:border-red-400'
         }
       >
         تعذر الفتح — حاول مرة أخرى
@@ -116,17 +124,20 @@ export function DocumentDownloadByOwner({
     );
   }
 
-  const baseClass =
-    variant === 'pill'
-      ? 'inline-flex shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600 disabled:cursor-progress disabled:opacity-70'
-      : 'inline-flex items-center gap-1.5 font-medium text-gold-600 transition-colors hover:text-gold-500 disabled:cursor-progress disabled:opacity-70';
+  const baseClass = isInline
+    ? 'inline-flex items-center gap-1.5 font-medium text-gold-600 transition-colors hover:text-gold-500 disabled:cursor-progress disabled:opacity-70'
+    : isCompact
+      ? 'inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-hairline/60 bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted transition-colors hover:border-hairline hover:text-ink-strong disabled:cursor-progress disabled:opacity-70'
+      : 'inline-flex shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600 disabled:cursor-progress disabled:opacity-70';
+
+  const iconSize = isInline ? 'h-3.5 w-3.5' : 'h-4 w-4';
 
   return (
     <button type="button" onClick={handleClick} disabled={state === 'loading'} className={baseClass}>
       {state === 'loading' ? (
-        <Loader2 className={variant === 'pill' ? 'h-4 w-4 animate-spin' : 'h-3.5 w-3.5 animate-spin'} aria-hidden />
+        <Loader2 className={`${iconSize} animate-spin`} aria-hidden />
       ) : (
-        <Download className={variant === 'pill' ? 'h-4 w-4' : 'h-3.5 w-3.5'} aria-hidden />
+        <Download className={iconSize} aria-hidden />
       )}
       {state === 'loading' ? 'جارٍ التحضير...' : label}
     </button>

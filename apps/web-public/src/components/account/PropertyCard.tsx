@@ -1,8 +1,9 @@
 import { Home, Building2, Wrench } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { MeContract } from '@/lib/api-types';
-import { AccountCard, AccountCardIcon } from '@/components/account/AccountCard';
+import { AccountCard } from '@/components/account/AccountCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
@@ -15,13 +16,24 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({
+  label,
+  value,
+  align = 'start',
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  /** Which edge the block hugs — `start` (right in RTL) or `end` (left). */
+  align?: 'start' | 'end';
+  valueClassName?: string;
+}) {
   return (
-    <div>
-      <div className="text-xs text-ink-muted">{label}</div>
-      <div className="mt-0.5 text-sm font-semibold text-ink-strong" dir="auto">
-        {value}
-      </div>
+    <div className={cn('min-w-0', align === 'end' ? 'text-end' : 'text-start')}>
+      <span className="block text-[11px] font-medium text-ink-muted">{label}</span>
+      {/* No dir="auto": text-align controls the edge so the value sits flush
+          under its label instead of bidi-drifting to the other side. */}
+      <div className={cn('mt-0.5 text-xs font-semibold text-ink-strong', valueClassName)}>{value}</div>
     </div>
   );
 }
@@ -43,9 +55,10 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
   return (
     <AccountCard accent="gold" className="flex h-full flex-col p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <AccountCardIcon>
+        {/* Abstract premium thumbnail — neutral geometric tile, not a circle */}
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-hairline bg-surface-soft text-ink-muted">
           <Home className="h-5 w-5" aria-hidden />
-        </AccountCardIcon>
+        </span>
         <div className="min-w-0 flex-1">
           <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{title}</h3>
           {unitLabel && projectName && (
@@ -57,25 +70,47 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 border-t border-hairline pt-4">
-        <Fact label="رقم العقد" value={contract.contractNumber ?? '—'} />
-        <Fact label="تاريخ التوقيع" value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'} />
-        {plan && <Fact label="خطة التقسيط" value={`${formatNumber(plan.totalMonths)} شهرًا`} />}
+      {/* Strict geometric 2-column micro-grid — blocks hug opposite edges */}
+      <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-3 border-b border-hairline pb-3 mb-3">
+        <Fact
+          label="رقم العقد"
+          value={contract.contractNumber ?? '—'}
+          align="start"
+          valueClassName="font-bold tracking-wide font-mono"
+        />
+        <Fact
+          label="تاريخ التوقيع"
+          value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'}
+          align="end"
+          valueClassName="font-semibold text-ink"
+        />
+        {plan && (
+          <Fact label="خطة التقسيط" value={`${formatNumber(plan.totalMonths)} شهرًا`} align="start" />
+        )}
       </div>
 
-      <div className="mt-5 flex flex-wrap items-center gap-3 pt-1">
+      {/* Luxury action row — dark primary ⟷ low-profile download */}
+      <div className="mt-auto flex items-center justify-between gap-3 pt-1">
         {unit?.id ? (
-          <ButtonLink href={`${routes.accountMaintenanceNew}?unitId=${unit.id}`} variant="primary" size="sm">
+          <ButtonLink
+            href={`${routes.accountMaintenanceNew}?unitId=${unit.id}`}
+            variant="primary"
+            size="sm"
+            className="h-auto rounded-xl px-3.5 py-2 text-xs font-semibold shadow-sm"
+          >
             <Wrench className="h-4 w-4" aria-hidden />
             طلب صيانة
           </ButtonLink>
-        ) : null}
+        ) : (
+          <span aria-hidden />
+        )}
 
         <DocumentDownloadByOwner
           ownerType="CONTRACT"
           ownerId={contract.id}
           label="عرض العقد PDF"
           emptyLabel="العقد غير متاح بعد"
+          variant="compact"
         />
       </div>
     </AccountCard>
