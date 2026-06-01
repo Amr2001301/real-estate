@@ -28,7 +28,6 @@ function firstStr(v: string | string[] | undefined): string {
 function Header() {
   return (
     <AccountPageHeader
-      eyebrow="متابعة"
       title="الحجوزات"
       description="حجوزاتك على وحداتنا. بعد اعتماد الحجز وتأكيد دفعة الحجز يتم الانتقال إلى إجراءات العقد."
     />

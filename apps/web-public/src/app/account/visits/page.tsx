@@ -28,7 +28,6 @@ function firstStr(v: string | string[] | undefined): string {
 function Header() {
   return (
     <AccountPageHeader
-      eyebrow="متابعة"
       title="الزيارات"
       description="تابع حالة طلبات الزيارة الخاصة بك ومواعيدها."
     />

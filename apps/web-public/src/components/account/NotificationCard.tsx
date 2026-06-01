@@ -1,6 +1,7 @@
 import { Bell, Check } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { MeNotification } from '@/lib/api-types';
+import { AccountCard } from '@/components/account/AccountCard';
 import { markNotificationReadAction } from '@/lib/account-actions';
 
 /**
@@ -53,42 +54,41 @@ export function NotificationCard({ notification }: { notification: MeNotificatio
   const title = notificationTitle(notification.templateCode);
 
   return (
-    <div
-      className={cn(
-        'flex items-start gap-3 rounded-xl border p-4',
-        unread ? 'border-gold-300 bg-gold-100/40' : 'border-hairline bg-surface',
-      )}
-    >
-      <span
-        className={cn(
-          'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-          unread ? 'bg-gold-400 text-navy' : 'bg-surface-soft text-ink-muted',
-        )}
-      >
-        <Bell className="h-5 w-5" aria-hidden />
-      </span>
+    <AccountCard accent={unread ? 'gold' : 'muted'} className="p-4">
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1',
+            unread
+              ? 'bg-gradient-to-br from-gold-300 to-gold-500 text-navy ring-gold-400'
+              : 'bg-surface-soft text-ink-muted ring-hairline',
+          )}
+        >
+          <Bell className="h-5 w-5" aria-hidden />
+        </span>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-gold-500" aria-hidden />}
-          <h3 className="line-clamp-2 text-sm font-semibold text-ink-strong">{title}</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            {unread && <span className="h-2 w-2 shrink-0 rounded-full bg-gold-500" aria-hidden />}
+            <h3 className={cn('line-clamp-2 text-sm font-semibold', unread ? 'text-ink-strong' : 'text-ink')}>{title}</h3>
+          </div>
+          <p className="mt-1 text-xs text-ink-muted">{formatDateTime(notification.createdAt)}</p>
         </div>
-        <p className="mt-1 text-xs text-ink-muted">{formatDateTime(notification.createdAt)}</p>
-      </div>
 
-      {unread ? (
-        <form action={markNotificationReadAction.bind(null, notification.id)} className="shrink-0">
-          <button
-            type="submit"
-            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-gold-600 transition-colors hover:bg-gold-100"
-          >
-            <Check className="h-3.5 w-3.5" aria-hidden />
-            تحديد كمقروء
-          </button>
-        </form>
-      ) : (
-        <span className="shrink-0 text-xs text-ink-muted/70">مقروء</span>
-      )}
-    </div>
+        {unread ? (
+          <form action={markNotificationReadAction.bind(null, notification.id)} className="shrink-0">
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-gold-600 transition-colors hover:bg-gold-100"
+            >
+              <Check className="h-3.5 w-3.5" aria-hidden />
+              تحديد كمقروء
+            </button>
+          </form>
+        ) : (
+          <span className="shrink-0 text-xs text-ink-muted/70">مقروء</span>
+        )}
+      </div>
+    </AccountCard>
   );
 }

@@ -1,7 +1,7 @@
 import { BookmarkCheck, Building2, Home, Clock, User2 } from 'lucide-react';
 import { formatPrice, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeReservation, MeReservationBookingPaymentStatus } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
 
 // P8 — customer-facing payment-status copy. Aligned with the rename of the
@@ -57,14 +57,20 @@ export function ReservationCard({ reservation }: { reservation: MeReservation })
     : '';
   const subtitle = [projectName, unitLabel].filter(Boolean).join(' — ');
   const payment = BOOKING_PAYMENT_LABELS[reservation.bookingPaymentStatus];
+  const accent: AccountCardAccent =
+    reservation.status === 'CONVERTED'
+      ? 'success'
+      : reservation.status === 'CANCELLED' || reservation.status === 'EXPIRED' || reservation.status === 'REJECTED'
+        ? 'muted'
+        : 'gold';
 
   return (
-    <PremiumCard className="p-5 sm:p-6">
+    <AccountCard accent={accent} className="p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+        <div className="flex min-w-0 items-center gap-3">
+          <AccountCardIcon>
             <BookmarkCheck className="h-5 w-5" aria-hidden />
-          </span>
+          </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
               حجز رقم {reservation.reservationNumber ?? '—'}
@@ -116,6 +122,6 @@ export function ReservationCard({ reservation }: { reservation: MeReservation })
         <Clock className="h-3.5 w-3.5 text-gold-500" aria-hidden />
         أُنشئ في {formatDate(reservation.createdAt)}
       </p>
-    </PremiumCard>
+    </AccountCard>
   );
 }

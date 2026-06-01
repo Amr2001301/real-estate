@@ -4,7 +4,7 @@ import { Wrench, Home, ArrowLeft } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeMaintenanceRequest } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
 
 function formatDate(iso: string): string {
@@ -18,15 +18,21 @@ function formatDate(iso: string): string {
 export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequest }) {
   const categoryName = request.category ? pickAr(request.category.name) : '';
   const unitLabel = request.unit ? `${unitTypeLabel(request.unit.type)} · ${request.unit.code}` : '';
+  const accent: AccountCardAccent =
+    request.status === 'RESOLVED'
+      ? 'success'
+      : request.status === 'CLOSED' || request.status === 'CANCELLED'
+        ? 'muted'
+        : 'gold';
 
   return (
-    <Link href={`${routes.accountMaintenance}/${request.id}` as Route} className="group block">
-      <PremiumCard className="p-5 transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-gold-300 hover:shadow-lift">
+    <Link href={`${routes.accountMaintenance}/${request.id}` as Route} className="block">
+      <AccountCard accent={accent} interactive className="p-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+          <div className="flex min-w-0 items-center gap-3">
+            <AccountCardIcon>
               <Wrench className="h-5 w-5" aria-hidden />
-            </span>
+            </AccountCardIcon>
             <div className="min-w-0">
               <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{categoryName || 'طلب صيانة'}</h3>
               {unitLabel && (
@@ -53,7 +59,7 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
             <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" aria-hidden />
           </span>
         </div>
-      </PremiumCard>
+      </AccountCard>
     </Link>
   );
 }

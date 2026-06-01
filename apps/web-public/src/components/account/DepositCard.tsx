@@ -5,7 +5,7 @@ import { cn } from '@/lib/cn';
 import { formatPrice } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { MeDeposit, MeDepositReviewStatus, MePaymentMethod } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -74,14 +74,18 @@ export function DepositCard({ deposit }: { deposit: MeDeposit }) {
     deposit.contract?.contractNumber ? `عقد رقم ${deposit.contract.contractNumber}` : '',
     deposit.installment?.dueDate ? `قسط مستحق ${formatDate(deposit.installment.dueDate)}` : '',
   ].filter(Boolean);
+  const status: MeDepositReviewStatus =
+    deposit.reviewStatus ?? (deposit.verified ? 'APPROVED' : 'PENDING_REVIEW');
+  const accent: AccountCardAccent =
+    status === 'APPROVED' ? 'success' : status === 'REJECTED' ? 'error' : status === 'NO_PROOF' ? 'muted' : 'gold';
 
   return (
-    <PremiumCard className="p-5">
+    <AccountCard accent={accent} className="p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+        <div className="flex min-w-0 items-center gap-3">
+          <AccountCardIcon>
             <Wallet className="h-5 w-5" aria-hidden />
-          </span>
+          </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{typeLabel}</h3>
             {subtitleParts.length > 0 && (
@@ -90,8 +94,8 @@ export function DepositCard({ deposit }: { deposit: MeDeposit }) {
           </div>
         </div>
         <div className="shrink-0 text-end">
-          <div className="font-display text-lg font-bold text-ink-strong">{formatPrice(deposit.amount)}</div>
-          <div className="mt-1">
+          <div className="font-display text-xl font-bold leading-none text-ink-strong">{formatPrice(deposit.amount)}</div>
+          <div className="mt-2">
             <StatusBadge deposit={deposit} />
           </div>
         </div>
@@ -140,6 +144,6 @@ export function DepositCard({ deposit }: { deposit: MeDeposit }) {
           variant="inline"
         />
       </div>
-    </PremiumCard>
+    </AccountCard>
   );
 }

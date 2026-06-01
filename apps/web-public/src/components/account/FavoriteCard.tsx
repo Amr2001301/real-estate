@@ -4,7 +4,7 @@ import { Building2, Home, MapPin, BedDouble, Trash2, ArrowLeft } from 'lucide-re
 import { routes } from '@/lib/routes';
 import { formatPrice, formatNumber, pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { FavoriteItem } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard } from '@/components/account/AccountCard';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { removeFavoriteAction } from '@/lib/account-actions';
 
@@ -55,7 +55,8 @@ export function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
   const { BadgeIcon } = v;
 
   return (
-    <PremiumCard className="flex items-stretch gap-0 overflow-hidden p-0">
+    <AccountCard accent="gold">
+      <div className="flex items-stretch">
       {/* Clickable area → public detail page */}
       <Link href={v.href} className="group flex min-w-0 flex-1 items-center gap-4 p-3">
         <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-xl">
@@ -96,6 +97,7 @@ export function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
           <Trash2 className="h-5 w-5" aria-hidden />
         </button>
       </form>
-    </PremiumCard>
+      </div>
+    </AccountCard>
   );
 }

@@ -4,7 +4,7 @@ import { Building2, Home, MessageSquareText, Clock, ArrowLeft } from 'lucide-rea
 import { routes } from '@/lib/routes';
 import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { MeInfoRequest } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard, AccountCardIcon } from '@/components/account/AccountCard';
 
 function formatDateTime(iso: string): string {
   try {
@@ -29,12 +29,12 @@ export function InfoRequestCard({ request }: { request: MeInfoRequest }) {
       : null;
 
   return (
-    <PremiumCard className="p-5">
+    <AccountCard accent="gold" className="p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+        <div className="flex min-w-0 items-center gap-3">
+          <AccountCardIcon size="sm">
             <Icon className="h-[18px] w-[18px]" aria-hidden />
-          </span>
+          </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{title}</h3>
             {subtitle && <p className="line-clamp-1 text-xs text-ink-muted">{subtitle}</p>}
@@ -59,6 +59,6 @@ export function InfoRequestCard({ request }: { request: MeInfoRequest }) {
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden />
         </Link>
       )}
-    </PremiumCard>
+    </AccountCard>
   );
 }

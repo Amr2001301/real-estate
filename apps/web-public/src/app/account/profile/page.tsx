@@ -61,7 +61,7 @@ export default async function AccountProfilePage() {
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <AccountPageHeader eyebrow="حسابك" title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
+        <AccountPageHeader title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
         <ErrorState
           title="تعذّر تحميل بياناتك حاليًا"
           message="يرجى المحاولة مرة أخرى بعد لحظات."
@@ -75,7 +75,7 @@ export default async function AccountProfilePage() {
 
   return (
     <div className="space-y-8">
-      <AccountPageHeader eyebrow="حسابك" title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
+      <AccountPageHeader title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Read-only account info */}

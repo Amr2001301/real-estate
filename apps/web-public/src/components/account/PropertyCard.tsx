@@ -2,7 +2,7 @@ import { Home, Building2, Wrench } from 'lucide-react';
 import { formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { MeContract } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard, AccountCardIcon } from '@/components/account/AccountCard';
 import { ButtonLink } from '@/components/ui/Button';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
@@ -41,11 +41,11 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
   const plan = contract.installmentPlan;
 
   return (
-    <PremiumCard className="flex h-full flex-col p-5 sm:p-6">
+    <AccountCard accent="gold" className="flex h-full flex-col p-5 sm:p-6">
       <div className="flex items-start gap-3">
-        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
+        <AccountCardIcon>
           <Home className="h-5 w-5" aria-hidden />
-        </span>
+        </AccountCardIcon>
         <div className="min-w-0 flex-1">
           <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{title}</h3>
           {unitLabel && projectName && (
@@ -78,6 +78,6 @@ export function PropertyCard({ contract }: { contract: MeContract }) {
           emptyLabel="العقد غير متاح بعد"
         />
       </div>
-    </PremiumCard>
+    </AccountCard>
   );
 }

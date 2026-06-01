@@ -25,7 +25,7 @@ export default async function AccountFavoritesPage() {
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <AccountPageHeader eyebrow="حسابك" title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
+        <AccountPageHeader title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
         <ErrorState
           title="تعذّر تحميل المفضلة حاليًا"
           message="يرجى المحاولة مرة أخرى بعد لحظات."
@@ -37,7 +37,7 @@ export default async function AccountFavoritesPage() {
 
   return (
     <div className="space-y-8">
-      <AccountPageHeader eyebrow="حسابك" title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
+      <AccountPageHeader title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
 
       {favorites.length === 0 ? (
         <EmptyState

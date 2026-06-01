@@ -34,7 +34,6 @@ function Header() {
         العودة إلى الصيانة
       </Link>
       <AccountPageHeader
-        eyebrow="ملكيتك"
         title="طلب صيانة جديد"
         description="اختر الوحدة وفئة الصيانة واشرح المشكلة، وسيتابع فريقنا طلبك."
       />

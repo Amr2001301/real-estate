@@ -1,7 +1,7 @@
 import { FileText, Building2, Home } from 'lucide-react';
 import { formatPrice, formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeContract } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard, AccountCardIcon } from '@/components/account/AccountCard';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
 const FREQUENCY_LABELS: Record<string, string> = {
@@ -39,56 +39,72 @@ export function ContractCard({ contract }: { contract: MeContract }) {
   const plan = contract.installmentPlan;
 
   return (
-    <PremiumCard className="p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
-            <FileText className="h-5 w-5" aria-hidden />
-          </span>
-          <div className="min-w-0">
-            <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
-              عقد رقم {contract.contractNumber ?? '—'}
-            </h3>
-            {subtitle && (
-              <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
-                {contract.unit ? <Home className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden /> : <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />}
-                <span className="line-clamp-1">{subtitle}</span>
-              </p>
-            )}
+    <AccountCard accent="gold">
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <AccountCardIcon>
+              <FileText className="h-5 w-5" aria-hidden />
+            </AccountCardIcon>
+            <div className="min-w-0">
+              <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
+                عقد رقم {contract.contractNumber ?? '—'}
+              </h3>
+              {subtitle && (
+                <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
+                  {contract.unit ? <Home className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden /> : <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />}
+                  <span className="line-clamp-1">{subtitle}</span>
+                </p>
+              )}
+            </div>
           </div>
+
+          {/* Signed-download — Phase 7E / P12. Customer never receives a
+              permanent R2 URL. On click the component mints a short-lived signed
+              URL just-in-time and opens it in a new tab. When the API reports no
+              customer-visible document (hasDocument === false) we show the empty
+              state upfront instead of a button that resolves to nothing. */}
+          {contract.hasDocument === false ? (
+            <span className="shrink-0 rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted">
+              العقد غير متاح بعد
+            </span>
+          ) : (
+            <DocumentDownloadByOwner
+              ownerType="CONTRACT"
+              ownerId={contract.id}
+              label="تحميل العقد PDF"
+              emptyLabel="العقد غير متاح بعد"
+            />
+          )}
         </div>
 
-        {/* Signed-download — Phase 7E / P12. Customer never receives a
-            permanent R2 URL. On click the component mints a short-lived signed
-            URL just-in-time and opens it in a new tab. When the API reports no
-            customer-visible document (hasDocument === false) we show the empty
-            state upfront instead of a button that resolves to nothing. */}
-        {contract.hasDocument === false ? (
-          <span className="shrink-0 rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted">
-            العقد غير متاح بعد
-          </span>
-        ) : (
-          <DocumentDownloadByOwner
-            ownerType="CONTRACT"
-            ownerId={contract.id}
-            label="تحميل العقد PDF"
-            emptyLabel="العقد غير متاح بعد"
-          />
-        )}
-      </div>
+        {/* Hero band: total contract value + (if any) the recurring instalment */}
+        <div className="mt-5 flex flex-wrap items-end justify-between gap-4 rounded-2xl bg-surface-soft px-4 py-3.5">
+          <div>
+            <div className="text-xs text-ink-muted">إجمالي العقد</div>
+            <div className="mt-1 font-display text-2xl font-bold leading-none text-ink-strong">
+              {formatPrice(contract.totalAmount)}
+            </div>
+          </div>
+          {plan && (
+            <div className="text-end">
+              <div className="text-xs text-ink-muted">القسط</div>
+              <div className="mt-1 text-sm font-bold text-ink-strong">
+                {formatPrice(plan.monthlyAmount)}
+                {FREQUENCY_LABELS[plan.frequency] ? ` / ${FREQUENCY_LABELS[plan.frequency]}` : ''}
+              </div>
+            </div>
+          )}
+        </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 border-t border-hairline pt-4 sm:grid-cols-3">
-        <Fact label="إجمالي العقد" value={formatPrice(contract.totalAmount)} />
-        <Fact label="الدفعة الأولى" value={formatPrice(contract.downPayment)} />
-        <Fact label="تاريخ التوقيع" value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'} />
-        {plan && (
-          <>
-            <Fact label="عدد الأشهر" value={`${formatNumber(plan.totalMonths)} شهرًا`} />
-            <Fact label="القسط" value={`${formatPrice(plan.monthlyAmount)}${FREQUENCY_LABELS[plan.frequency] ? ` / ${FREQUENCY_LABELS[plan.frequency]}` : ''}`} />
-            <Fact label="بداية الخطة" value={formatDate(plan.startsAt)} />
-          </>
-        )}
+        {/* Supporting facts */}
+        <dl className="mt-4 grid grid-cols-2 gap-x-5 gap-y-3 sm:grid-cols-4">
+          <Fact label="الدفعة الأولى" value={formatPrice(contract.downPayment)} />
+          <Fact label="تاريخ التوقيع" value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'} />
+          {plan && <Fact label="عدد الأشهر" value={`${formatNumber(plan.totalMonths)} شهرًا`} />}
+          {plan && <Fact label="بداية الخطة" value={formatDate(plan.startsAt)} />}
+        </dl>
       </div>
-    </PremiumCard>
+    </AccountCard>
   );
 }

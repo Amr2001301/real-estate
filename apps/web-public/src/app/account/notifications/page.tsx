@@ -21,7 +21,6 @@ export const metadata = buildMetadata({
 function Header({ unreadCount }: { unreadCount: number }) {
   return (
     <AccountPageHeader
-      eyebrow="متابعة"
       title="الإشعارات"
       description="تحديثات حسابك وطلباتك تظهر هنا."
       actions={

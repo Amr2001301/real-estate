@@ -4,7 +4,7 @@ import { Building2, Home, CalendarClock, CalendarCheck, UserRound, ArrowLeft, Me
 import { routes } from '@/lib/routes';
 import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { MeVisitRequest, MeAppointmentSummary } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
+import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { VisitConfirmActions } from '@/components/account/VisitConfirmActions';
 
@@ -51,14 +51,16 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
   const appointment = visit.appointments?.[0] ?? null;
   const awaitingCustomer = appointment?.status === 'SCHEDULED';
   const pendingReschedule = appointment?.status === 'PENDING_RESCHEDULE';
+  const accent: AccountCardAccent =
+    visit.requestStatus === 'CONVERTED' ? 'success' : visit.requestStatus === 'REJECTED' ? 'error' : 'gold';
 
   return (
-    <PremiumCard className="p-5">
+    <AccountCard accent={accent} className="p-5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+        <div className="flex min-w-0 items-center gap-3">
+          <AccountCardIcon size="sm">
             {visit.unit ? <Home className="h-[18px] w-[18px]" aria-hidden /> : <Building2 className="h-[18px] w-[18px]" aria-hidden />}
-          </span>
+          </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{title}</h3>
             {subtitle && <p className="line-clamp-1 text-xs text-ink-muted">{subtitle}</p>}
@@ -127,6 +129,6 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" aria-hidden />
         </Link>
       )}
-    </PremiumCard>
+    </AccountCard>
   );
 }

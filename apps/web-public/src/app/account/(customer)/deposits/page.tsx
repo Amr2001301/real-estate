@@ -22,7 +22,6 @@ export const metadata = buildMetadata({
 function Header() {
   return (
     <AccountPageHeader
-      eyebrow="ملكيتك"
       title="الدفعات"
       description="سجل دفعاتك المسجّلة لدى الشركة (للعرض فقط)."
     />

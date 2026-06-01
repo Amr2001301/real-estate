@@ -10,8 +10,8 @@ import type { Paginated, MeInstallment } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
+import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { cn } from '@/lib/cn';
 
 export const metadata = buildMetadata({
@@ -97,7 +97,6 @@ export default async function AccountInstallmentsPage() {
 function Header() {
   return (
     <AccountPageHeader
-      eyebrow="ملكيتك"
       title="جدول الأقساط"
       description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع للأقساط غير المدفوعة."
     />
@@ -115,47 +114,50 @@ function InstallmentRow({ installment }: { installment: MeInstallment }) {
   const { label, tone } = STATUS_LABELS[installment.status];
   const Icon = statusIcon(installment.status);
   const canSubmit = installment.status !== 'PAID';
+  const accent: AccountCardAccent =
+    installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'error' : 'gold';
 
   return (
-    <PremiumCard className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
+    <AccountCard accent={accent}>
+      <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        {/* Identity */}
+        <div className="flex min-w-0 items-center gap-3">
+          <AccountCardIcon>
             <CalendarClock className="h-5 w-5" aria-hidden />
-          </span>
+          </AccountCardIcon>
           <div className="min-w-0">
-            <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
-              قسط مستحق {formatDate(installment.dueDate)}
-            </h3>
+            <p className="text-xs text-ink-muted">قسط مستحق {formatDate(installment.dueDate)}</p>
             {subtitle && (
-              <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
+              <h3 className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-sm font-semibold text-ink-strong">
                 {contract?.unit ? (
                   <Home className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
                 ) : (
                   <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
                 )}
                 <span className="line-clamp-1">{subtitle}</span>
-              </p>
+              </h3>
             )}
           </div>
         </div>
-        <div className="shrink-0 text-end">
-          <div className="font-display text-lg font-bold text-ink-strong">{formatPrice(installment.amount)}</div>
-          <div className="mt-1">
-            <span
-              className={cn(
-                'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
-                STATUS_TONE_CLS[tone],
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" aria-hidden />
-              {label}
-            </span>
+
+        {/* Amount + status — the financial hero */}
+        <div className="ps-14 text-start sm:ps-0 sm:text-end">
+          <div className="font-display text-2xl font-bold leading-none text-ink-strong">
+            {formatPrice(installment.amount)}
           </div>
+          <span
+            className={cn(
+              'mt-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
+              STATUS_TONE_CLS[tone],
+            )}
+          >
+            <Icon className="h-3.5 w-3.5" aria-hidden />
+            {label}
+          </span>
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3 text-xs text-ink-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-xs text-ink-muted">
         {installment.paidAt ? (
           <span>تاريخ السداد: {formatDate(installment.paidAt)}</span>
         ) : (
@@ -165,7 +167,7 @@ function InstallmentRow({ installment }: { installment: MeInstallment }) {
           {contract && (
             <Link
               href={`${routes.accountContracts}` as Route}
-              className="inline-flex items-center gap-1 text-xs font-medium text-gold-600 hover:text-gold-500"
+              className="inline-flex items-center gap-1 font-medium text-gold-600 hover:text-gold-500"
             >
               <FileText className="h-3.5 w-3.5" aria-hidden />
               العقد {contract.contractNumber ?? '—'}
@@ -179,7 +181,7 @@ function InstallmentRow({ installment }: { installment: MeInstallment }) {
                   query: { submit: 'proof', installmentId: installment.id, amount: installment.amount },
                 } as unknown as Route
               }
-              className="inline-flex items-center gap-1 rounded-full bg-navy px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-navy/90"
+              className="inline-flex items-center gap-1 rounded-full bg-navy px-3 py-1.5 font-medium text-white transition-colors hover:bg-navy-700"
             >
               <Upload className="h-3.5 w-3.5" aria-hidden />
               إرسال إثبات الدفع
@@ -187,6 +189,6 @@ function InstallmentRow({ installment }: { installment: MeInstallment }) {
           )}
         </div>
       </div>
-    </PremiumCard>
+    </AccountCard>
   );
 }

@@ -28,7 +28,6 @@ function firstStr(v: string | string[] | undefined): string {
 function Header() {
   return (
     <AccountPageHeader
-      eyebrow="ملكيتك"
       title="عقاراتي"
       description="الوحدات التي تملكها، مع روابط العقد وطلب الصيانة."
     />
