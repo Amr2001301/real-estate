@@ -35,22 +35,25 @@ export function SummaryTile({
   return (
     <Link
       href={href as Route}
-      className="group relative flex items-start justify-between gap-3 overflow-hidden rounded-2xl border border-hairline bg-surface p-5 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-300 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.16),0_18px_44px_-16px_rgba(15,30,51,0.20)]"
+      className="group relative flex h-full flex-col items-center justify-center gap-3 overflow-hidden rounded-2xl border border-hairline bg-surface px-5 py-7 text-center shadow-[0_8px_30px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:border-gold-300 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.16),0_24px_50px_-18px_rgba(15,30,51,0.28)]"
     >
       <span className="pointer-events-none absolute inset-0" style={GLOW} aria-hidden />
 
+      {/* Gold icon chip — center-aligned at the top of the tile */}
+      <span className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
+        <Icon className="h-6 w-6" aria-hidden />
+      </span>
+
       <div className="relative min-w-0">
         {display != null ? (
-          <div className="font-display text-[1.7rem] font-bold leading-none text-ink-strong">{display}</div>
+          <div className="break-words font-display text-3xl font-extrabold leading-none tracking-tight text-ink-strong sm:text-4xl">
+            {display}
+          </div>
         ) : (
-          <div className="text-sm font-medium text-gold-600">عرض القسم</div>
+          <div className="text-base font-semibold text-gold-600">عرض القسم</div>
         )}
-        <div className="mt-2 text-sm text-ink-muted">{label}</div>
+        <div className="mt-2.5 text-sm font-medium text-ink-muted">{label}</div>
       </div>
-
-      <span className="relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 transition-all duration-300 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
-        <Icon className="h-5 w-5" aria-hidden />
-      </span>
     </Link>
   );
 }

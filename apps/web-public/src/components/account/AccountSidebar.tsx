@@ -83,53 +83,58 @@ export function AccountSidebar({
         href={href as Route}
         aria-current={active ? 'page' : undefined}
         className={cn(
-          'inline-flex shrink-0 items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium transition-all duration-200 ease-smooth lg:w-full',
+          'inline-flex shrink-0 items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-sm transition-all duration-200 ease-smooth lg:w-full',
           active
-            ? 'bg-navy text-white shadow-soft ring-1 ring-navy/10'
-            : 'text-ink-muted hover:bg-navy/[0.04] hover:text-ink-strong',
+            ? 'bg-gradient-to-br from-gold-300 to-gold-500 font-semibold text-navy shadow-[0_10px_24px_-8px_rgba(200,162,75,0.55)]'
+            : 'font-medium text-white/65 hover:bg-white/[0.07] hover:text-white',
         )}
       >
-        <Icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-gold-300' : 'text-gold-500')} aria-hidden />
+        <Icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-navy' : 'text-gold-300')} aria-hidden />
         {label}
       </Link>
     );
   };
 
   return (
-    <aside className="lg:sticky lg:top-28 lg:self-start">
-      <div className="overflow-hidden rounded-2xl border border-hairline bg-surface shadow-card">
-        {/* Profile — navy header band ties the sidebar to the brand hero above */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-navy-600 to-navy p-4 sm:p-5">
-          <span
-            className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full bg-gold-400/15 blur-2xl"
-            aria-hidden
-          />
-          <div className="relative flex items-center gap-3">
-            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gold-400 text-navy ring-1 ring-gold-300/60">
-              <UserCircle2 className="h-6 w-6" aria-hidden />
+    <aside className="lg:sticky lg:top-24 lg:self-start">
+      {/* Floating dark-luxury panel: a navy slab that floats on the cream canvas
+          for a high-end SaaS contrast, rounded-3xl with a soft gold edge glow. */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-navy-700 to-navy p-3 shadow-lift ring-1 ring-white/10 sm:p-4">
+        <span
+          className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-gold-400/15 blur-3xl"
+          aria-hidden
+        />
+        <span
+          className="pointer-events-none absolute -bottom-16 -left-12 h-40 w-40 rounded-full bg-gold-500/10 blur-3xl"
+          aria-hidden
+        />
+
+        {/* Profile — an integrated translucent card inside the panel */}
+        <div className="relative flex items-center gap-3 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
+          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-300 to-gold-500 text-navy shadow-[0_8px_20px_-6px_rgba(200,162,75,0.6)]">
+            <UserCircle2 className="h-6 w-6" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-base font-semibold text-white">{fullName || 'حسابك'}</p>
+            <span className="mt-1 inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-gold-200 ring-1 ring-white/15">
+              {roleLabel}
             </span>
-            <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-white">{fullName || 'حسابك'}</p>
-              <span className="mt-1 inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-gold-200 ring-1 ring-white/15">
-                {roleLabel}
-              </span>
-            </div>
           </div>
         </div>
 
-        <div className="p-4 sm:p-5">
+        <div className="relative mt-3 px-0.5">
           {/* Nav — horizontal scroll on mobile, vertical on desktop */}
-          <nav className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+          <nav className="flex gap-1.5 overflow-x-auto lg:flex-col lg:gap-1 lg:overflow-visible">
           {CLIENT_ITEMS.map(renderItem)}
 
           {isCustomer && (
             <>
               {/* Group separator: vertical line on mobile, full divider + label on desktop */}
               <span
-                className="my-auto h-6 w-px shrink-0 bg-hairline/60 lg:my-2 lg:h-px lg:w-full"
+                className="my-auto h-6 w-px shrink-0 bg-white/10 lg:my-2.5 lg:h-px lg:w-full"
                 aria-hidden
               />
-              <span className="hidden px-3.5 pb-1 text-[11px] font-medium text-ink-muted/70 lg:block">
+              <span className="hidden px-3.5 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/40 lg:block">
                 خدمات العميل
               </span>
               {CUSTOMER_ITEMS.map(renderItem)}
@@ -137,10 +142,10 @@ export function AccountSidebar({
           )}
 
           {/* Logout — divided off on desktop, inline at the end on mobile */}
-          <form action={logoutAction} className="ms-auto shrink-0 lg:ms-0 lg:mt-1 lg:w-full lg:border-t lg:border-hairline/60 lg:pt-1">
+          <form action={logoutAction} className="ms-auto shrink-0 lg:ms-0 lg:mt-2 lg:w-full lg:border-t lg:border-white/10 lg:pt-2">
             <button
               type="submit"
-              className="inline-flex w-full items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-sm font-medium text-ink-muted transition-colors duration-200 hover:bg-error/5 hover:text-error"
+              className="inline-flex w-full items-center gap-2.5 rounded-2xl px-3.5 py-2.5 text-sm font-medium text-white/55 transition-all duration-200 hover:bg-error/20 hover:text-white"
             >
               <LogOut className="h-[18px] w-[18px] shrink-0" aria-hidden />
               تسجيل الخروج

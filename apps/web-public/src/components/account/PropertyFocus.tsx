@@ -102,17 +102,19 @@ export function PropertyFocus({
           </div>
         </div>
 
-        {/* ── What you owe next ── */}
+        {/* ── What you owe next ── invoice-summary block ── */}
         <div
           className={cn(
             // Gold tint must adapt to the theme: the gold scale is literal, so
             // a flat gold-50 fill would stay light-on-dark. A low-opacity
-            // gold-400 wash reads as a warm tint over either canvas.
-            'flex flex-col border-t border-hairline p-6 sm:p-7 md:border-s md:border-t-0',
+            // gold-400 wash reads as a warm tint over either canvas. A bold
+            // inset card wrapper makes it read like an invoice summary panel.
+            'flex flex-col border-t border-hairline p-5 sm:p-6 md:border-s md:border-t-0',
             overdue ? 'bg-error/[0.05]' : 'bg-gold-400/[0.07]',
           )}
         >
-          <span className={cn('text-sm font-medium', overdue ? 'text-error' : 'text-gold-600')}>القسط القادم</span>
+          <div className="flex h-full flex-col rounded-2xl border border-hairline bg-surface p-5 shadow-[0_8px_30px_rgb(15,30,51,0.05)] sm:p-6">
+          <span className={cn('text-sm font-semibold', overdue ? 'text-error' : 'text-gold-600')}>القسط القادم</span>
 
           {nextInstallment ? (
             <>
@@ -157,6 +159,7 @@ export function PropertyFocus({
               </div>
             </>
           )}
+          </div>
         </div>
       </div>
     </PremiumCard>

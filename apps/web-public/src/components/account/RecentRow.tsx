@@ -43,11 +43,11 @@ export function RecentRow({ icon: Icon, title, subtitle, trailing, href }: Recen
     </>
   );
 
-  const base = 'flex items-center gap-3 rounded-xl px-3 py-3';
+  const base = 'flex items-center gap-3.5 px-3 py-4';
 
   if (href) {
     return (
-      <Link href={href as Route} className={cn(base, 'group transition-colors hover:bg-surface-soft')}>
+      <Link href={href as Route} className={cn(base, 'group -mx-1 rounded-xl px-4 transition-colors duration-200 hover:bg-surface-soft')}>
         {inner}
       </Link>
     );

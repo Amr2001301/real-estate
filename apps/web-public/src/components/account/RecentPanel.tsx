@@ -40,7 +40,7 @@ export function RecentPanel({ icon: Icon, title, href, linkLabel = 'عرض ال�
           </Link>
         )}
       </div>
-      <div className="mt-1 space-y-0.5">{children}</div>
+      <div className="mt-1 divide-y divide-hairline/60">{children}</div>
     </PremiumCard>
   );
 }

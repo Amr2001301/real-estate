@@ -6,11 +6,12 @@ type Variant = 'primary' | 'gold' | 'outline' | 'ghost';
 type Size = 'sm' | 'md' | 'lg';
 
 const VARIANTS: Record<Variant, string> = {
-  // Refined dark navy CTA — the primary conversion button.
+  // Refined dark navy CTA — the primary conversion button. Lifts on hover for a
+  // crisp, premium feel.
   primary:
-    'bg-navy text-white shadow-soft hover:bg-navy-700 active:bg-navy-700',
+    'bg-navy text-white shadow-soft hover:-translate-y-0.5 hover:bg-navy-700 hover:shadow-lift active:translate-y-0 active:bg-navy-700',
   // Gold accent — used sparingly for premium emphasis.
-  gold: 'bg-gold-400 text-navy shadow-soft hover:bg-gold-300 active:bg-gold-500',
+  gold: 'bg-gold-400 text-navy shadow-soft hover:-translate-y-0.5 hover:bg-gold-300 hover:shadow-[0_16px_36px_-12px_rgba(200,162,75,0.6)] active:translate-y-0 active:bg-gold-500',
   outline:
     'border border-hairline/20 text-ink-strong bg-transparent hover:border-hairline/40 hover:bg-navy/[0.03]',
   ghost: 'text-ink-strong hover:bg-navy/[0.05]',

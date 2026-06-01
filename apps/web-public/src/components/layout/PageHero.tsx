@@ -49,11 +49,18 @@ export function PageHero({
     <section className="relative overflow-hidden bg-navy">
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(120% 140% at 85% 0%, #24426A 0%, #14273F 55%, #0B1726 100%)' }}
+        style={{ background: 'radial-gradient(125% 150% at 88% -8%, #2A4A74 0%, #142A45 50%, #0A1422 100%)' }}
+        aria-hidden
+      />
+      {/* Warm gold wash from the lower-start corner — the navy-to-gold luxury tint. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: 'radial-gradient(70% 90% at 4% 112%, rgba(200,162,75,0.14), transparent 58%)' }}
         aria-hidden
       />
       <span className="pointer-events-none absolute inset-0" style={DOTS} aria-hidden />
       <div className="pointer-events-none absolute -left-24 top-0 h-72 w-72 rounded-full bg-gold-400/10 blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute -right-20 bottom-[-6rem] h-80 w-80 rounded-full bg-gold-500/10 blur-3xl" aria-hidden />
 
       <Container
         className={cn(
@@ -70,17 +77,20 @@ export function PageHero({
           >
             <div className={cn('min-w-0', compact ? 'max-w-2xl' : 'max-w-2xl')}>
               {eyebrow && (
-                <span className="inline-flex items-center rounded-full bg-gold-400/15 px-3.5 py-1 text-sm font-semibold text-gold-200 ring-1 ring-gold-400/25 backdrop-blur">
+                <span className="inline-flex items-center rounded-full bg-gold-400/15 px-4 py-1.5 text-sm font-semibold tracking-wide text-gold-200 ring-1 ring-gold-400/25 backdrop-blur">
                   {eyebrow}
                 </span>
               )}
-              <h1 className={cn('font-bold text-white', compact ? 'mt-3.5 text-display-2' : 'mt-4 text-display-1')}>{title}</h1>
-              <span aria-hidden className={cn('block h-1 w-16 rounded-full bg-gold-400', compact ? 'mt-4' : 'mt-5')} />
+              <h1 className={cn('font-bold text-white', compact ? 'mt-5 text-display-2' : 'mt-4 text-display-1')}>{title}</h1>
+              <span
+                aria-hidden
+                className={cn('block h-1 rounded-full bg-gradient-to-r from-gold-300 to-gold-500', compact ? 'mt-5 w-24' : 'mt-5 w-16')}
+              />
               {subtitle && (
                 <p
                   className={cn(
-                    'max-w-xl leading-relaxed text-white/75',
-                    compact ? 'mt-4 text-base' : 'mt-5 text-lg',
+                    'leading-relaxed text-white/75',
+                    compact ? 'mt-5 max-w-2xl text-base sm:text-lg' : 'mt-5 max-w-xl text-lg',
                   )}
                 >
                   {subtitle}
