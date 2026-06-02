@@ -103,27 +103,42 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="hidden items-center gap-1 lg:flex">
-          <ThemeToggle className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
+        <div className="hidden items-center gap-4 lg:flex">
+          <ThemeToggle
+            className={cn(
+              'rounded-lg',
+              solid ? 'text-ink-muted hover:bg-surface-soft' : 'text-white/80 hover:bg-white/10 hover:text-white',
+            )}
+          />
           {user ? (
             <>
+              {/* User account capsule — name + micro initials avatar */}
               <Link
                 href={routes.account}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors duration-200',
-                  solid ? 'text-ink-muted hover:bg-navy/[0.05] hover:text-ink-strong' : 'text-white/80 hover:bg-white/10 hover:text-white',
+                  'flex items-center gap-2 rounded-full border py-1 pe-2 ps-3 transition-all duration-200',
+                  solid
+                    ? 'border-hairline/60 bg-surface-soft hover:bg-hairline/40'
+                    : 'border-white/15 bg-white/10 hover:bg-white/15',
                 )}
               >
-                <UserCircle2 className="h-4 w-4" aria-hidden />
-                {accountLabel(user)}
+                <span className={cn('text-xs font-bold', solid ? 'text-ink-strong' : 'text-white')}>
+                  {accountLabel(user)}
+                </span>
+                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gold-100 text-[10px] font-black text-gold-600">
+                  {(user.fullName.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('') || '؟').toUpperCase()}
+                </span>
               </Link>
+              {/* Premium logout button */}
               <form action={logoutAction}>
                 <button
                   type="submit"
                   aria-label="تسجيل الخروج"
                   className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors duration-200',
-                    solid ? 'text-ink-muted hover:bg-navy/[0.05] hover:text-ink-strong' : 'text-white/80 hover:bg-white/10 hover:text-white',
+                    'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all duration-200',
+                    solid
+                      ? 'border-error/20 bg-error/10 text-error hover:bg-error/15'
+                      : 'border-white/15 bg-white/10 text-white/90 hover:bg-error/30 hover:text-white',
                   )}
                 >
                   <LogOut className="h-4 w-4" aria-hidden />

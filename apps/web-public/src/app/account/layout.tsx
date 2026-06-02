@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession, isPortalRole, type SessionRole } from '@/lib/session';
+import { authFetch } from '@/lib/api-auth';
 import { Container } from '@/components/ui/Container';
 import { PageHero } from '@/components/layout/PageHero';
 import { AccountSidebar } from '@/components/account/AccountSidebar';
@@ -26,6 +27,16 @@ export default async function AccountLayout({ children }: { children: React.Reac
 
   const roleLabel = ROLE_LABELS[session.role] ?? session.role;
 
+  // The session hint carries no avatar, so fetch it for the sidebar. Non-fatal:
+  // on any failure the sidebar gracefully falls back to the initials avatar.
+  let avatarUrl: string | null = null;
+  try {
+    const me = await authFetch<{ avatarUrl: string | null }>('/users/me');
+    avatarUrl = me.avatarUrl ?? null;
+  } catch {
+    /* ignore — initials fallback */
+  }
+
   return (
     <>
       <PageHero
@@ -42,7 +53,12 @@ export default async function AccountLayout({ children }: { children: React.Reac
               (pt-12 → lg:pt-20) so every account sub-page breathes the same
               distance from the hero and tab-switching never jitters vertically.
               On lg it also needs enough room to drop below the overlapping band. */}
-          <AccountSidebar fullName={session.fullName} roleLabel={roleLabel} isCustomer={session.role === 'CUSTOMER'} />
+          <AccountSidebar
+            fullName={session.fullName}
+            roleLabel={roleLabel}
+            avatarUrl={avatarUrl}
+            isCustomer={session.role === 'CUSTOMER'}
+          />
           <div className="min-w-0 pt-12 md:pt-16 lg:pt-28">{children}</div>
         </div>
       </Container>

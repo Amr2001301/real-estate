@@ -64,13 +64,23 @@ function isActive(pathname: string, href: string): boolean {
  * row above a horizontally-scrolling nav. CUSTOMER users additionally see a
  * post-purchase group; CLIENT users never see those links.
  */
+/** First letters of the first two name words — Arabic/Latin-friendly. */
+function getInitials(name?: string): string {
+  const parts = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '؟';
+  if (parts.length === 1) return (parts[0] ?? '').slice(0, 2).toUpperCase();
+  return ((parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
 export function AccountSidebar({
   fullName,
   roleLabel,
+  avatarUrl,
   isCustomer = false,
 }: {
   fullName?: string;
   roleLabel: string;
+  avatarUrl?: string | null;
   isCustomer?: boolean;
 }) {
   const pathname = usePathname();
@@ -111,9 +121,18 @@ export function AccountSidebar({
 
         {/* Profile — an integrated translucent card inside the panel */}
         <div className="relative flex items-center gap-3 rounded-2xl bg-white/[0.06] p-4 ring-1 ring-white/10">
-          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-300 to-gold-500 text-navy shadow-[0_8px_20px_-6px_rgba(200,162,75,0.6)]">
-            <UserCircle2 className="h-6 w-6" aria-hidden />
-          </span>
+          {avatarUrl ? (
+            <span
+              className="h-12 w-12 shrink-0 rounded-2xl bg-cover bg-center ring-1 ring-gold-300/60"
+              style={{ backgroundImage: `url(${avatarUrl})` }}
+              role="img"
+              aria-label={fullName || 'الصورة الشخصية'}
+            />
+          ) : (
+            <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-300 to-gold-500 font-display text-base font-black text-navy shadow-[0_8px_20px_-6px_rgba(200,162,75,0.6)]">
+              {getInitials(fullName)}
+            </span>
+          )}
           <div className="min-w-0">
             <p className="truncate text-base font-semibold text-white">{fullName || 'حسابك'}</p>
             <span className="mt-1 inline-flex items-center rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-gold-200 ring-1 ring-white/15">
