@@ -42,7 +42,7 @@ const TAG: Record<string, { label: string; cls: string }> = {
   URGENT: { label: 'عاجلة', cls: ERROR },
 };
 
-function Tag({ status }: { status: string }) {
+export function MaintenanceTag({ status }: { status: string }) {
   const t = TAG[status] ?? { label: status, cls: SLATE };
   return (
     <span className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold', t.cls)}>
@@ -90,9 +90,9 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
 
           {/* Col 3 — status matrix, single horizontal row (never wraps) */}
           <div className="flex shrink-0 flex-row flex-nowrap items-center gap-2 md:col-span-3 md:justify-center">
-            <Tag status={request.status} />
-            <Tag status={request.reviewStatus} />
-            {request.priority && <Tag status={request.priority} />}
+            <MaintenanceTag status={request.status} />
+            <MaintenanceTag status={request.reviewStatus} />
+            {request.priority && <MaintenanceTag status={request.priority} />}
           </div>
 
           {/* Col 4 — timeline (far left) */}
