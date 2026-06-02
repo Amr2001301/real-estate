@@ -1,23 +1,26 @@
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import type { Route } from 'next';
 import {
   Heart,
   CalendarClock,
   MessageSquareText,
   BookmarkCheck,
   Building2,
-  Home,
   UserCircle2,
   FileText,
   Wallet,
   Wrench,
-  Bell,
+  ArrowLeft,
+  type LucideIcon,
 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { getSession } from '@/lib/session';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { extractPaginatedData } from '@/lib/extract-paginated';
-import { pickAr, unitTypeLabel, formatPrice } from '@/lib/format';
+import { pickAr, unitTypeLabel, formatPrice, formatNumber } from '@/lib/format';
 import type {
   FavoriteItem,
   Paginated,
@@ -34,16 +37,92 @@ import type {
 } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { SectionHeading } from '@/components/ui/Section';
-import { Stagger } from '@/components/motion/Stagger';
-import { Reveal } from '@/components/motion/Reveal';
+import { PremiumCard } from '@/components/ui/PremiumCard';
 import { EmptyState } from '@/components/states/EmptyState';
-import { SummaryTile } from '@/components/account/SummaryTile';
 import { PropertyFocus } from '@/components/account/PropertyFocus';
 import { RecentRow } from '@/components/account/RecentRow';
 import { RecentPanel } from '@/components/account/RecentPanel';
 import { StatusBadge } from '@/components/account/StatusBadge';
-import { notificationTitle, notificationVisual } from '@/components/account/NotificationCard';
+import { notificationTitle } from '@/components/account/NotificationCard';
+
+// Tinted icon chips for the hero metrics — theme tokens, dark-mode safe.
+const CHIP_SUCCESS = 'bg-success/10 text-success ring-1 ring-success/20';
+const CHIP_GOLD = 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70';
+const CHIP_AMBER = 'bg-warning/10 text-warning ring-1 ring-warning/20';
+const CHIP_ROSE = 'bg-error/10 text-error ring-1 ring-error/20';
+
+interface Metric {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  href: string;
+  chip: string;
+}
+
+/** Compact executive metric card: tinted icon + label/value stack. */
+function HeroMetric({ icon: Icon, label, value, href, chip }: Metric) {
+  return (
+    <Link
+      href={href as Route}
+      className="flex items-center gap-3 rounded-xl border border-hairline bg-surface p-4 shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <span className={cn('inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', chip)}>
+        <Icon className="h-5 w-5" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <div className="text-[11px] font-medium text-ink-muted">{label}</div>
+        <div className="truncate text-base font-black text-ink-strong" dir="auto">
+          {value}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/** Left activity panel with a vertical timeline rail (RTL start edge). */
+function TimelinePanel({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
+  return (
+    <PremiumCard className="p-5">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-bold text-ink-strong">{title}</h2>
+        <Link
+          href={href as Route}
+          className="group inline-flex items-center gap-1 text-xs font-bold text-gold-600 transition-colors hover:text-gold-500"
+        >
+          عرض الكل
+          <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" aria-hidden />
+        </Link>
+      </div>
+      <div className="mt-4 space-y-4 border-s-2 border-hairline/70 ps-4">{children}</div>
+    </PremiumCard>
+  );
+}
+
+function TimelineItem({
+  title,
+  subtitle,
+  trailing,
+}: {
+  title: string;
+  subtitle?: string;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <span
+        className="absolute -start-[1.32rem] top-1.5 h-2 w-2 rounded-full bg-gold-400 ring-2 ring-surface"
+        aria-hidden
+      />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="line-clamp-1 text-sm font-semibold text-ink-strong">{title}</p>
+          {subtitle && <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted">{subtitle}</p>}
+        </div>
+        {trailing && <div className="shrink-0">{trailing}</div>}
+      </div>
+    </div>
+  );
+}
 
 export const metadata = buildMetadata({
   title: 'لوحة الحساب',
@@ -64,10 +143,6 @@ function entityTitle(project: VisitProjectRef | null, unit: VisitUnitRef | null,
   if (project) return pickAr(project.name) || fallback;
   if (unit) return `${unitTypeLabel(unit.type)} · ${unit.code}`;
   return fallback;
-}
-
-function entityIcon(project: VisitProjectRef | null, unit: VisitUnitRef | null) {
-  return unit ? Home : project ? Building2 : MessageSquareText;
 }
 
 function contractTitle(c: MeContract): string {
@@ -106,18 +181,13 @@ export default async function AccountPage() {
   const reservationsCount = reservations ? reservations.meta.total : null;
 
   const recentVisits = visits?.data ?? [];
-  const recentRequests = requests?.data ?? [];
   const recentReservations = reservations?.data ?? [];
-  const hasClientActivity =
-    recentVisits.length > 0 || recentRequests.length > 0 || recentReservations.length > 0;
 
   // ── Customer sources (CUSTOMER only — CLIENT never calls these) ──────────
   let contractsCount: number | null = null;
   let depositsTotalText: string | null = null;
   let maintenanceCount: number | null = null;
-  let unreadCount: number | null = null;
   let recentContracts: MeContract[] = [];
-  let recentMaintenance: MeMaintenanceRequest[] = [];
   let recentNotifications: MeNotification[] = [];
   // Owner-first focus band: the customer's primary owned unit (derived from
   // their first contract) + the single most urgent upcoming installment.
@@ -160,108 +230,132 @@ export default async function AccountPage() {
     // through to `[]`, so the dashboard renders zeros instead of throwing.
     const notificationsRaw = notifsR.status === 'fulfilled' ? notifsR.value : null;
     const notifications = extractPaginatedData<MeNotification>(notificationsRaw);
-    const notificationsLoaded = notifsR.status === 'fulfilled';
 
     contractsCount = contracts ? contracts.meta.total : null;
     depositsTotalText = deposits ? formatPrice(deposits.totals.totalAmount) : null;
     maintenanceCount = maintenance ? maintenance.meta.total : null;
-    // Unread count is derived from the normalised list (bounded by the
-    // backend's default pageSize=20). When the fetch failed we keep null so
-    // the SummaryTile renders an em-dash instead of "0", matching the other
-    // tiles' loading-failed semantics.
-    unreadCount = notificationsLoaded
-      ? notifications.filter((n) => n.readAt === null).length
-      : null;
 
     recentContracts = contracts?.data ?? [];
-    recentMaintenance = maintenance?.data ?? [];
     recentNotifications = notifications.slice(0, 3);
     primaryContract = recentContracts[0] ?? null;
   }
 
-  const hasCustomerActivity =
-    recentContracts.length > 0 || recentMaintenance.length > 0 || recentNotifications.length > 0;
+  const fmt = (n: number | null) => (n != null ? formatNumber(n) : '—');
+  const sum = (...vals: (number | null)[]) => {
+    const present = vals.filter((v): v is number => v != null);
+    return present.length ? formatNumber(present.reduce((a, b) => a + b, 0)) : '—';
+  };
+
+  // ── Block 1: role-aware hero metrics ──
+  const metrics: Metric[] = isCustomer
+    ? [
+        { icon: Wallet, label: 'إجمالي المدفوعات', value: depositsTotalText ?? '—', href: routes.accountDeposits, chip: CHIP_SUCCESS },
+        { icon: FileText, label: 'العقود النشطة', value: fmt(contractsCount), href: routes.accountContracts, chip: CHIP_GOLD },
+        { icon: Wrench, label: 'طلبات الصيانة والزيارات', value: sum(maintenanceCount, visitsCount), href: routes.accountMaintenance, chip: CHIP_AMBER },
+        { icon: Heart, label: 'المفضلة', value: fmt(favoritesCount), href: routes.accountFavorites, chip: CHIP_ROSE },
+      ]
+    : [
+        { icon: Heart, label: 'المفضلة', value: fmt(favoritesCount), href: routes.accountFavorites, chip: CHIP_ROSE },
+        { icon: CalendarClock, label: 'طلبات الزيارة', value: fmt(visitsCount), href: routes.accountVisits, chip: CHIP_GOLD },
+        { icon: MessageSquareText, label: 'الاستفسارات', value: fmt(requestsCount), href: routes.accountRequests, chip: CHIP_AMBER },
+        { icon: BookmarkCheck, label: 'الحجوزات', value: fmt(reservationsCount), href: routes.accountReservations, chip: CHIP_SUCCESS },
+      ];
+
+  // ── Block 3: activity center ──
+  // Right — bookings + contracts (latest 2).
+  const rightRows = [
+    ...recentContracts.map((c) => (
+      <RecentRow
+        key={`c-${c.id}`}
+        href={routes.accountContracts}
+        icon={FileText}
+        title={contractTitle(c)}
+        subtitle={`عقد رقم ${c.contractNumber ?? '—'}`}
+        trailing={<span className="whitespace-nowrap text-sm font-bold text-ink-strong">{formatPrice(c.totalAmount)}</span>}
+      />
+    )),
+    ...recentReservations.map((r) => (
+      <RecentRow
+        key={`r-${r.id}`}
+        href={routes.accountReservations}
+        icon={BookmarkCheck}
+        title={`حجز رقم ${r.reservationNumber ?? '—'}`}
+        subtitle={r.unit ? `${unitTypeLabel(r.unit.type)} · ${r.unit.code}` : undefined}
+        trailing={<StatusBadge status={r.status} />}
+      />
+    )),
+  ].slice(0, 2);
+
+  // Left — notifications + visits (latest 3), shown on a timeline rail.
+  const leftItems = [
+    ...recentNotifications.map((n) => (
+      <TimelineItem
+        key={`n-${n.id}`}
+        title={notificationTitle(n.templateCode)}
+        subtitle={formatDateTime(n.createdAt)}
+        trailing={n.readAt === null ? <Badge tone="gold">جديد</Badge> : undefined}
+      />
+    )),
+    ...recentVisits.map((v) => (
+      <TimelineItem
+        key={`v-${v.id}`}
+        title={entityTitle(v.project, v.unit, 'طلب زيارة')}
+        subtitle={`الموعد المفضل: ${formatDateTime(v.preferredDate)}`}
+        trailing={<StatusBadge status={v.requestStatus} />}
+      />
+    )),
+  ].slice(0, 3);
+
+  const rightTitle = isCustomer ? 'أحدث الحجوزات والعقود' : 'أحدث الحجوزات';
+  const rightIcon = isCustomer ? FileText : BookmarkCheck;
+  const rightHref = isCustomer ? routes.accountContracts : routes.accountReservations;
+  const leftTitle = isCustomer ? 'الإشعارات والزيارات' : 'أحدث الزيارات';
+  const leftHref = isCustomer ? routes.accountNotifications : routes.accountVisits;
+  const hasActivity = rightRows.length > 0 || leftItems.length > 0;
 
   return (
-    <div className="space-y-12 sm:space-y-16">
-      {/* ── Overview (greeting lives in the layout hero) ── */}
-      <section className="space-y-7">
-        <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <SectionHeading as="h1" title="نظرة عامة" description="ملخص نشاطك وأحدث ما يخصّك في مكان واحد." />
-          <div className="flex flex-wrap gap-3">
-            <ButtonLink href={routes.projects} variant="primary" size="sm">
-              تصفّح المشاريع
-            </ButtonLink>
-            <ButtonLink href={routes.units} variant="outline" size="sm">
-              استكشف الوحدات
-            </ButtonLink>
-          </div>
-        </div>
+    <div className="space-y-6">
+      {/* ── Block 1: unified hero metrics ── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {metrics.map((m) => (
+          <HeroMetric key={m.label} {...m} />
+        ))}
+      </div>
 
-        {/* Journey stats — P7: Reservations visible to CLIENT + CUSTOMER. */}
-        <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4" childClassName="h-full" step={70}>
-          <SummaryTile icon={Heart} label="المفضلة" value={favoritesCount} href={routes.accountFavorites} />
-          <SummaryTile icon={CalendarClock} label="طلبات الزيارة" value={visitsCount} href={routes.accountVisits} />
-          <SummaryTile icon={MessageSquareText} label="الاستفسارات" value={requestsCount} href={routes.accountRequests} />
-          <SummaryTile icon={BookmarkCheck} label="الحجوزات" value={reservationsCount} href={routes.accountReservations} />
-        </Stagger>
-      </section>
-
-      {/* Client recent activity / guidance (guidance only for non-customers) */}
-      {hasClientActivity ? (
-        <section className="space-y-7">
-          <SectionHeading title="نشاطك الأخير" />
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {recentVisits.length > 0 && (
-              <Reveal className="h-full">
-                <RecentPanel icon={CalendarClock} title="أحدث الزيارات" href={routes.accountVisits} className="h-full">
-                  {recentVisits.map((v) => (
-                    <RecentRow
-                      key={v.id}
-                      href={routes.accountVisits}
-                      icon={entityIcon(v.project, v.unit)}
-                      title={entityTitle(v.project, v.unit, 'طلب زيارة')}
-                      subtitle={`الموعد المفضل: ${formatDateTime(v.preferredDate)}`}
-                      trailing={<StatusBadge status={v.requestStatus} />}
-                    />
-                  ))}
-                </RecentPanel>
-              </Reveal>
-            )}
-            {recentRequests.length > 0 && (
-              <Reveal className="h-full">
-                <RecentPanel icon={MessageSquareText} title="أحدث الاستفسارات" href={routes.accountRequests} className="h-full">
-                  {recentRequests.map((r) => (
-                    <RecentRow
-                      key={r.id}
-                      href={routes.accountRequests}
-                      icon={entityIcon(r.project, r.unit)}
-                      title={entityTitle(r.project, r.unit, 'استفسار عام')}
-                      subtitle={r.message}
-                      trailing={<span className="whitespace-nowrap text-xs text-ink-muted">{formatDateTime(r.createdAt)}</span>}
-                    />
-                  ))}
-                </RecentPanel>
-              </Reveal>
-            )}
-            {recentReservations.length > 0 && (
-              <Reveal className="lg:col-span-2">
-                <RecentPanel icon={BookmarkCheck} title="أحدث الحجوزات" href={routes.accountReservations}>
-                  {recentReservations.map((r) => (
-                    <RecentRow
-                      key={r.id}
-                      href={routes.accountReservations}
-                      icon={BookmarkCheck}
-                      title={`حجز رقم ${r.reservationNumber ?? '—'}`}
-                      subtitle={r.unit ? `${unitTypeLabel(r.unit.type)} · ${r.unit.code}` : undefined}
-                      trailing={<StatusBadge status={r.status} />}
-                    />
-                  ))}
-                </RecentPanel>
-              </Reveal>
-            )}
+      {/* ── Block 2: after-sales banner (customer + owned unit) ── */}
+      {isCustomer && primaryContract && (
+        <section className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-bold text-ink-strong">خدمات ما بعد الشراء</h2>
+            <div className="flex flex-wrap gap-2">
+              <ButtonLink href={routes.accountProperty} variant="outline" size="sm">
+                <Building2 className="h-4 w-4" aria-hidden />
+                عقاراتي
+              </ButtonLink>
+              <ButtonLink href={routes.accountMaintenanceNew} variant="gold" size="sm">
+                <Wrench className="h-4 w-4" aria-hidden />
+                طلب صيانة جديد
+              </ButtonLink>
+            </div>
           </div>
+          <PropertyFocus contract={primaryContract} nextInstallment={nextInstallment} unpaidCount={unpaidCount} />
         </section>
+      )}
+
+      {/* ── Block 3: micro recent-activity center ── */}
+      {hasActivity ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {rightRows.length > 0 && (
+            <RecentPanel icon={rightIcon} title={rightTitle} href={rightHref}>
+              {rightRows}
+            </RecentPanel>
+          )}
+          {leftItems.length > 0 && (
+            <TimelinePanel title={leftTitle} href={leftHref}>
+              {leftItems}
+            </TimelinePanel>
+          )}
+        </div>
       ) : (
         !isCustomer && (
           <EmptyState
@@ -280,115 +374,6 @@ export default async function AccountPage() {
             }
           />
         )
-      )}
-
-      {/* ── Customer (post-purchase) section ── */}
-      {isCustomer && (
-        <section className="space-y-7 border-t border-hairline pt-12 sm:pt-14">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-            <SectionHeading
-              title="خدمات ما بعد الشراء"
-              description="عقاراتك وعقودك ودفعاتك وطلبات الصيانة في مكان واحد."
-            />
-            <div className="flex flex-wrap gap-3">
-              <ButtonLink href={routes.accountProperty} variant="outline" size="sm">
-                <Building2 className="h-4 w-4" aria-hidden />
-                عقاراتي
-              </ButtonLink>
-              <ButtonLink href={routes.accountMaintenanceNew} variant="gold" size="sm">
-                <Wrench className="h-4 w-4" aria-hidden />
-                طلب صيانة جديد
-              </ButtonLink>
-            </div>
-          </div>
-
-          {/* Owner-first focus: the primary owned unit + next payment due. */}
-          {primaryContract && (
-            <Reveal>
-              <PropertyFocus contract={primaryContract} nextInstallment={nextInstallment} unpaidCount={unpaidCount} />
-            </Reveal>
-          )}
-
-          {/* Customer stats — compact secondary row beneath the focus band. */}
-          <Stagger className="grid grid-cols-2 gap-4 lg:grid-cols-4" childClassName="h-full" step={70}>
-            <SummaryTile icon={FileText} label="العقود" value={contractsCount} href={routes.accountContracts} />
-            <SummaryTile icon={Wallet} label="إجمالي المدفوعات" value={null} valueText={depositsTotalText} href={routes.accountDeposits} />
-            <SummaryTile icon={Wrench} label="طلبات الصيانة" value={maintenanceCount} href={routes.accountMaintenance} />
-            <SummaryTile icon={Bell} label="إشعارات غير مقروءة" value={unreadCount} href={routes.accountNotifications} />
-          </Stagger>
-
-          {/* Customer recent activity, or guidance when none */}
-          {hasCustomerActivity ? (
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              {recentContracts.length > 0 && (
-                <Reveal className="h-full">
-                  <RecentPanel icon={FileText} title="أحدث العقود" href={routes.accountContracts} className="h-full">
-                    {recentContracts.map((c) => (
-                      <RecentRow
-                        key={c.id}
-                        href={routes.accountContracts}
-                        icon={FileText}
-                        title={contractTitle(c)}
-                        subtitle={`عقد رقم ${c.contractNumber ?? '—'}`}
-                        trailing={<span className="whitespace-nowrap text-sm font-bold text-ink-strong">{formatPrice(c.totalAmount)}</span>}
-                      />
-                    ))}
-                  </RecentPanel>
-                </Reveal>
-              )}
-
-              {recentMaintenance.length > 0 && (
-                <Reveal className="h-full">
-                  <RecentPanel icon={Wrench} title="أحدث طلبات الصيانة" href={routes.accountMaintenance} className="h-full">
-                    {recentMaintenance.map((m) => (
-                      <RecentRow
-                        key={m.id}
-                        href={routes.accountMaintenance}
-                        icon={Wrench}
-                        title={m.category ? pickAr(m.category.name) || 'طلب صيانة' : 'طلب صيانة'}
-                        subtitle={m.unit ? `${unitTypeLabel(m.unit.type)} · ${m.unit.code}` : undefined}
-                        trailing={<StatusBadge status={m.status} />}
-                      />
-                    ))}
-                  </RecentPanel>
-                </Reveal>
-              )}
-
-              {recentNotifications.length > 0 && (
-                <Reveal className="lg:col-span-2">
-                  <RecentPanel icon={Bell} title="أحدث الإشعارات" href={routes.accountNotifications}>
-                    {recentNotifications.map((n) => {
-                      const nTitle = notificationTitle(n.templateCode);
-                      const { Icon, chip } = notificationVisual(n.templateCode, nTitle);
-                      return (
-                        <RecentRow
-                          key={n.id}
-                          href={routes.accountNotifications}
-                          icon={Icon}
-                          iconClassName={chip}
-                          title={nTitle}
-                          subtitle={formatDateTime(n.createdAt)}
-                          trailing={n.readAt === null ? <Badge tone="gold">جديد</Badge> : undefined}
-                        />
-                      );
-                    })}
-                  </RecentPanel>
-                </Reveal>
-              )}
-            </div>
-          ) : (
-            <EmptyState
-              title="لا يوجد نشاط بعد"
-              message="ستظهر هنا عقودك ودفعاتك وطلبات الصيانة بعد إتمام إجراءات الشراء."
-              icon={<Building2 className="h-6 w-6" aria-hidden />}
-              action={
-                <ButtonLink href={routes.accountProperty} variant="outline" size="md">
-                  الذهاب إلى عقاراتي
-                </ButtonLink>
-              }
-            />
-          )}
-        </section>
       )}
     </div>
   );
