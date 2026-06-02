@@ -16,6 +16,9 @@ const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 const AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const ATTACH_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
+const ATTACH_MAX_BYTES = 5 * 1024 * 1024;
+const ATTACH_MAX_COUNT = 5;
 
 export type ProfileActionResult =
   | { ok: true }
@@ -208,20 +211,18 @@ export type MaintenanceActionResult =
   | { ok: false; error: string; field?: 'unitId' | 'categoryId' | 'description' };
 
 /**
- * Create a maintenance request → POST /v1/me/maintenance-requests. Sends a
- * single `categoryId` (the DTO accepts categoryId | categoryIds; single is the
- * simplest backend-compatible payload). Unit ownership is enforced by the
- * backend — we never trust the client. On success the caller navigates to the
- * list (which we revalidate here).
+ * Create a maintenance request → POST /v1/me/maintenance-requests (multipart).
+ * Accepts a FormData carrying the text fields + an optional `attachments` field
+ * (≤5 images/PDFs, ≤5 MB each). We re-validate everything server-side, then
+ * forward the multipart body via authFetch (which omits Content-Type so fetch
+ * sets the boundary). The backend streams each file to storage and logs it as a
+ * customer-visible Document on the new request. Unit ownership is enforced by
+ * the backend — we never trust the client.
  */
-export async function createMaintenanceRequestAction(input: {
-  unitId: string;
-  categoryId: string;
-  description: string;
-}): Promise<MaintenanceActionResult> {
-  const unitId = input.unitId?.trim() ?? '';
-  const categoryId = input.categoryId?.trim() ?? '';
-  const description = input.description?.trim() ?? '';
+export async function createMaintenanceRequestAction(formData: FormData): Promise<MaintenanceActionResult> {
+  const unitId = ((formData.get('unitId') as string) ?? '').trim();
+  const categoryId = ((formData.get('categoryId') as string) ?? '').trim();
+  const description = ((formData.get('description') as string) ?? '').trim();
 
   if (!unitId) return { ok: false, error: 'يرجى اختيار الوحدة.', field: 'unitId' };
   if (!categoryId) return { ok: false, error: 'يرجى اختيار فئة الصيانة.', field: 'categoryId' };
@@ -229,11 +230,27 @@ export async function createMaintenanceRequestAction(input: {
     return { ok: false, error: 'يرجى كتابة وصف للمشكلة لا يقل عن ٥ أحرف.', field: 'description' };
   }
 
+  const files = formData.getAll('attachments').filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length > ATTACH_MAX_COUNT) {
+    return { ok: false, error: 'يمكن إرفاق ٥ ملفات كحد أقصى.' };
+  }
+  for (const f of files) {
+    if (!ATTACH_TYPES.includes(f.type)) {
+      return { ok: false, error: 'صيغة غير مدعومة — استخدم JPG أو PNG أو WEBP أو PDF.' };
+    }
+    if (f.size > ATTACH_MAX_BYTES) {
+      return { ok: false, error: `الملف "${f.name}" كبير — الحد الأقصى ٥ ميجابايت.` };
+    }
+  }
+
+  const body = new FormData();
+  body.append('unitId', unitId);
+  body.append('categoryId', categoryId);
+  body.append('description', description);
+  files.forEach((f) => body.append('attachments', f, f.name));
+
   try {
-    await authFetch('/me/maintenance-requests', {
-      method: 'POST',
-      body: JSON.stringify({ unitId, categoryId, description }),
-    });
+    await authFetch('/me/maintenance-requests', { method: 'POST', body });
   } catch (e) {
     if (e instanceof AuthError) return { ok: false, error: 'انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.' };
     return { ok: false, error: 'تعذّر إرسال الطلب حاليًا. حاول مرة أخرى بعد لحظات.' };

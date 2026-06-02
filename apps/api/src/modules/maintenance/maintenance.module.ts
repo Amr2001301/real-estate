@@ -14,7 +14,10 @@ import {
   Post,
   Query,
   StreamableFile,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import {
   IsArray,
@@ -51,6 +54,8 @@ import {
   workbookToBuffer,
 } from '../../common/utils/xlsx';
 import { DocumentsModule, DocumentsService } from '../documents/documents.module';
+import { MediaModule } from '../media/media.module';
+import { R2Service } from '../media/r2.service';
 import {
   NotificationsModule,
   NotificationsService,
@@ -230,6 +235,23 @@ const STATUS_LABEL_AR: Record<MaintenanceStatus, string> = {
   [MaintenanceStatus.CLOSED]: 'مغلق',
 };
 
+// Customer attachment limits (mirrored client-side). Images + PDF only.
+const ATTACH_MAX_BYTES = 5 * 1024 * 1024;
+const ATTACH_MIME: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'application/pdf': '.pdf',
+};
+
+/** Minimal multer file shape — avoids a hard @types/multer dependency. */
+interface UploadedFile {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+  originalname: string;
+}
+
 @Injectable()
 class MaintenanceService {
   private readonly logger = new Logger(MaintenanceService.name);
@@ -238,7 +260,45 @@ class MaintenanceService {
     private readonly prisma: PrismaService,
     private readonly documents: DocumentsService,
     private readonly notifications: NotificationsService,
+    private readonly r2: R2Service,
   ) {}
+
+  /**
+   * Stream customer-uploaded attachments to object storage and log each as a
+   * CUSTOMER_VISIBLE Document on the request — so they surface in the detail
+   * view's "المرفقات". Validates type/size up-front (all-or-nothing).
+   */
+  async addCustomerAttachments(userId: string, requestId: string, files: UploadedFile[]) {
+    await this.assertCustomerOwns(userId, requestId);
+    for (const f of files) {
+      if (!ATTACH_MIME[f.mimetype]) {
+        throw new BadRequestException('Unsupported file type — only JPG, PNG, WEBP, or PDF are allowed');
+      }
+      if (f.size > ATTACH_MAX_BYTES) {
+        throw new BadRequestException('File too large — max 5 MB per attachment');
+      }
+    }
+    for (const f of files) {
+      const ext = ATTACH_MIME[f.mimetype];
+      const { publicUrl } = await this.r2.uploadObject({
+        buffer: f.buffer,
+        contentType: f.mimetype,
+        folder: 'maintenance',
+        extension: ext,
+      });
+      await this.documents.create(userId, {
+        ownerType: DocumentOwnerType.MAINTENANCE_REQUEST,
+        ownerId: requestId,
+        category: f.mimetype === 'application/pdf' ? DocumentCategory.OTHER : DocumentCategory.IMAGE,
+        title: (f.originalname || 'مرفق').slice(0, 200),
+        fileUrl: publicUrl,
+        fileName: f.originalname?.slice(0, 255),
+        mimeType: f.mimetype,
+        sizeBytes: f.size,
+        visibility: DocumentVisibility.CUSTOMER_VISIBLE,
+      });
+    }
+  }
 
   // ── Notifications (P4: routed through NotificationsService) ──
   // DB row is always created (helper swallows errors so the business action
@@ -1291,11 +1351,23 @@ class MaintenanceController {
     return this.svc.updateCategory(id, dto);
   }
 
-  // Customer self-service — intentionally NOT permission-gated.
+  // Customer self-service — intentionally NOT permission-gated. Accepts an
+  // optional multipart `attachments` field (≤5 images/PDFs, ≤5 MB each) sent
+  // alongside the text fields; each file is streamed to storage and logged as
+  // a customer-visible Document on the new request.
   @Roles(UserRole.CUSTOMER)
   @Post('me/maintenance-requests')
-  create(@CurrentUser() user: AuthUser, @Body() dto: CreateRequestDto) {
-    return this.svc.createRequest(user.sub, dto);
+  @UseInterceptors(FilesInterceptor('attachments', 5, { limits: { fileSize: ATTACH_MAX_BYTES } }))
+  async create(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: CreateRequestDto,
+    @UploadedFiles() attachments?: UploadedFile[],
+  ) {
+    const created = await this.svc.createRequest(user.sub, dto);
+    if (attachments?.length) {
+      await this.svc.addCustomerAttachments(user.sub, created.id, attachments);
+    }
+    return created;
   }
 
   // Self-service list. CUSTOMER sees requests they filed; MAINTENANCE_SUPERVISOR
@@ -1517,7 +1589,7 @@ class MaintenanceController {
 }
 
 @Module({
-  imports: [DocumentsModule, NotificationsModule],
+  imports: [DocumentsModule, MediaModule, NotificationsModule],
   controllers: [MaintenanceController],
   providers: [MaintenanceService],
 })
