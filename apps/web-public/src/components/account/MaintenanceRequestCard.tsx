@@ -1,11 +1,11 @@
 import type { Route } from 'next';
 import Link from 'next/link';
-import { Wrench, Home, ArrowLeft } from 'lucide-react';
+import { Wrench, Home } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeMaintenanceRequest } from '@/lib/api-types';
-import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
-import { StatusBadge } from '@/components/account/StatusBadge';
+import { AccountCard, type AccountCardAccent } from '@/components/account/AccountCard';
 
 function formatDate(iso: string): string {
   try {
@@ -13,6 +13,42 @@ function formatDate(iso: string): string {
   } catch {
     return '—';
   }
+}
+
+// Luxury tag palettes (theme tokens → dark-mode safe).
+const SLATE = 'bg-surface-soft text-ink-muted ring-1 ring-hairline';
+const SUCCESS = 'bg-success/10 text-success ring-1 ring-success/20';
+const AMBER = 'bg-warning/10 text-warning ring-1 ring-warning/20';
+const GOLD = 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70';
+const ERROR = 'bg-error/10 text-error ring-1 ring-error/20';
+
+/** Status / review / priority enums → Arabic label + luxury tint. */
+const TAG: Record<string, { label: string; cls: string }> = {
+  // MaintenanceStatus
+  OPEN: { label: 'مفتوح', cls: GOLD },
+  ASSIGNED: { label: 'تم الإسناد', cls: GOLD },
+  IN_PROGRESS: { label: 'قيد التنفيذ', cls: GOLD },
+  RESOLVED: { label: 'تم الحل', cls: SUCCESS },
+  CLOSED: { label: 'مغلق', cls: SLATE },
+  CANCELLED: { label: 'ملغى', cls: SLATE },
+  // Review status
+  PENDING_REVIEW: { label: 'بانتظار المراجعة', cls: GOLD },
+  APPROVED: { label: 'تمت الموافقة', cls: SUCCESS },
+  REJECTED: { label: 'مرفوض', cls: ERROR },
+  // Priority
+  LOW: { label: 'أولوية منخفضة', cls: SLATE },
+  MEDIUM: { label: 'أولوية متوسطة', cls: AMBER },
+  HIGH: { label: 'أولوية عالية', cls: GOLD },
+  URGENT: { label: 'عاجلة', cls: ERROR },
+};
+
+function Tag({ status }: { status: string }) {
+  const t = TAG[status] ?? { label: status, cls: SLATE };
+  return (
+    <span className={cn('inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold', t.cls)}>
+      {t.label}
+    </span>
+  );
 }
 
 export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequest }) {
@@ -28,36 +64,45 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
   return (
     <Link href={`${routes.accountMaintenance}/${request.id}` as Route} className="block">
       <AccountCard accent={accent} interactive className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <AccountCardIcon>
+        <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-4">
+          {/* Col 1 (right) — type + location */}
+          <div className="flex items-center gap-3">
+            <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-warning/10 p-2.5 text-warning ring-1 ring-warning/20">
               <Wrench className="h-5 w-5" aria-hidden />
-            </AccountCardIcon>
+            </span>
             <div className="min-w-0">
-              <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{categoryName || 'طلب صيانة'}</h3>
+              <h3 className="line-clamp-1 text-sm font-black text-ink-strong">{categoryName || 'طلب صيانة'}</h3>
               {unitLabel && (
-                <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
-                  <Home className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+                <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-ink-muted">
+                  <Home className="h-3 w-3 shrink-0 text-gold-500" aria-hidden />
                   <span className="line-clamp-1">{unitLabel}</span>
                 </p>
               )}
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-            <StatusBadge status={request.status} />
-            <StatusBadge status={request.reviewStatus} />
-            {request.priority && <StatusBadge status={request.priority} />}
+
+          {/* Col 2 — contained description */}
+          <div className="min-w-0">
+            <div className="max-w-xs rounded-xl border border-hairline bg-surface-soft/70 p-3">
+              <p className="line-clamp-1 text-xs font-semibold text-ink-muted" dir="auto">
+                {request.description}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-ink-muted">{request.description}</p>
+          {/* Col 3 — status matrix */}
+          <div className="flex flex-wrap gap-2 md:justify-center">
+            <Tag status={request.status} />
+            <Tag status={request.reviewStatus} />
+            {request.priority && <Tag status={request.priority} />}
+          </div>
 
-        <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3 text-xs text-ink-muted">
-          <span>{formatDate(request.createdAt)}</span>
-          <span className="inline-flex items-center gap-1 font-medium text-gold-600 transition-colors group-hover:text-gold-500">
-            عرض التفاصيل
-            <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" aria-hidden />
-          </span>
+          {/* Col 4 (far left) — timeline only */}
+          <div className="md:flex md:flex-col md:items-end md:justify-center">
+            <span className="font-mono text-[11px] font-bold text-ink-muted" dir="auto">
+              {formatDate(request.createdAt)}
+            </span>
+          </div>
         </div>
       </AccountCard>
     </Link>

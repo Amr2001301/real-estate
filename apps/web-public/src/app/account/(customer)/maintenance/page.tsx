@@ -31,7 +31,12 @@ function Header() {
       title="الصيانة"
       description="تابع حالة طلبات الصيانة الخاصة بوحداتك."
       actions={
-        <ButtonLink href={routes.accountMaintenanceNew} variant="gold" size="sm">
+        <ButtonLink
+          href={routes.accountMaintenanceNew}
+          variant="primary"
+          size="sm"
+          className="h-auto rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm"
+        >
           <Plus className="h-4 w-4" aria-hidden />
           طلب صيانة جديد
         </ButtonLink>
