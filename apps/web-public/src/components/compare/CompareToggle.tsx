@@ -24,14 +24,13 @@ export function CompareToggle({ item }: { item: CompareItem }) {
         toggle(item);
       }}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium shadow-soft backdrop-blur-md transition-colors',
+        'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full shadow-sm ring-1 backdrop-blur-sm transition-all duration-200',
         selected
-          ? 'bg-gold-400 text-navy'
-          : 'bg-surface/90 text-ink-strong hover:bg-surface',
+          ? 'bg-gold-400 text-navy ring-gold-300'
+          : 'bg-white/80 text-ink-strong ring-black/5 hover:bg-white hover:text-navy',
       )}
     >
       {selected ? <Check className="h-4 w-4" aria-hidden /> : <Scale className="h-4 w-4" aria-hidden />}
-      {selected ? 'في المقارنة' : 'قارن'}
     </button>
   );
 }

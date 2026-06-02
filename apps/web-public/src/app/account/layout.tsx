@@ -38,11 +38,12 @@ export default async function AccountLayout({ children }: { children: React.Reac
       <Container className="relative z-10 -mt-14 pb-20 sm:-mt-16">
         <div className="grid gap-6 lg:grid-cols-[284px_minmax(0,1fr)] lg:gap-8">
           {/* The sidebar is a solid card, so it tucks into the navy band for a
-              premium overlap. The content column is mostly dark text, so on
-              desktop it drops below the band (lg:pt) to stay readable; on
-              mobile it already follows the sidebar, clear of the band. */}
+              premium overlap. The content column carries a UNIFORM top clearance
+              (pt-12 → lg:pt-20) so every account sub-page breathes the same
+              distance from the hero and tab-switching never jitters vertically.
+              On lg it also needs enough room to drop below the overlapping band. */}
           <AccountSidebar fullName={session.fullName} roleLabel={roleLabel} isCustomer={session.role === 'CUSTOMER'} />
-          <div className="min-w-0 lg:pt-[4.5rem]">{children}</div>
+          <div className="min-w-0 pt-12 md:pt-16 lg:pt-28">{children}</div>
         </div>
       </Container>
     </>

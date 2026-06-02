@@ -79,11 +79,12 @@ export function FavoriteButton({
       aria-label={ariaLabel}
       disabled={pending}
       className={cn(
-        'inline-flex h-9 w-9 items-center justify-center rounded-full bg-navy/55 text-white ring-1 ring-white/15 backdrop-blur-md transition-all duration-200 hover:bg-navy/70 disabled:opacity-70',
+        'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/80 text-ink-strong shadow-sm ring-1 ring-black/5 backdrop-blur-sm transition-all duration-200 hover:bg-white hover:text-rose-600 disabled:opacity-70',
+        active && 'text-gold-500',
         className,
       )}
     >
-      <Heart className={cn('h-[18px] w-[18px]', active && 'fill-gold-400 text-gold-400')} aria-hidden />
+      <Heart className={cn('h-4 w-4', active && 'fill-gold-500 text-gold-500')} aria-hidden />
     </button>
   );
 }

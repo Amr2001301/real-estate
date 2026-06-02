@@ -32,7 +32,7 @@ function typeIcon(type: string): typeof Home {
   }
 }
 
-export function UnitCard({ unit }: { unit: PublicUnit }) {
+export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.ReactNode }) {
   const status = STATUS[unit.status] ?? DEFAULT_STATUS;
   const typeLabel = unitTypeLabel(unit.type);
   const TypeIcon = typeIcon(unit.type);
@@ -54,7 +54,7 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
       href={routes.unit(unit.id) as Route}
       className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
     >
-      <PremiumCard interactive className="flex h-full flex-col overflow-hidden">
+      <PremiumCard interactive className="flex h-full flex-col overflow-hidden isolate">
         {/* Image */}
         <div className="relative">
           <CoverImage src={unit.coverImage} alt={`${typeLabel} — ${unit.code}`} className="aspect-[4/3]" zoomOnHover />
@@ -125,7 +125,11 @@ export function UnitCard({ unit }: { unit: PublicUnit }) {
         </div>
       </PremiumCard>
     </Link>
-      <FavoriteButton kind="unit" id={unit.id} className="absolute left-3 top-3 z-20" />
+      {/* Action row — favorite + optional compare, grouped so they never stack */}
+      <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
+        <FavoriteButton kind="unit" id={unit.id} />
+        {action}
+      </div>
     </div>
   );
 }

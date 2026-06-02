@@ -24,11 +24,8 @@ export function UnitsExplorer({ units }: { units: PublicUnit[] }) {
     <CompareProvider>
       <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
         {units.map((unit) => (
-          <div key={unit.id} className="relative h-full">
-            <div className="absolute left-4 top-4 z-20">
-              <CompareToggle item={toCompareItem(unit)} />
-            </div>
-            <UnitCard unit={unit} />
+          <div key={unit.id} className="h-full">
+            <UnitCard unit={unit} action={<CompareToggle item={toCompareItem(unit)} />} />
           </div>
         ))}
       </Stagger>
