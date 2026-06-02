@@ -55,9 +55,20 @@ export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.Re
       className="group block h-full rounded-3xl outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
     >
       <PremiumCard interactive className="flex h-full flex-col overflow-hidden isolate">
-        {/* Image */}
-        <div className="relative">
-          <CoverImage src={unit.coverImage} alt={`${typeLabel} — ${unit.code}`} className="aspect-[4/3]" zoomOnHover />
+        {/* Image — GPU-isolated wrapper with its OWN rounded-top clip, so the
+            zoom transform composites on a stable layer. Fixes the WebKit/Chromium
+            border-radius flicker where rounded corners reset to 0 mid-transition. */}
+        <div
+          className="relative transform-gpu overflow-hidden rounded-t-3xl isolate"
+          style={{ transform: 'translateZ(0)' }}
+        >
+          <CoverImage
+            src={unit.coverImage}
+            alt={`${typeLabel} — ${unit.code}`}
+            className="aspect-[4/3]"
+            imgClassName="will-change-transform motion-reduce:transition-none"
+            zoomOnHover
+          />
           {/* Soft scrim keeps the pills legible over any photo */}
           <span className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-black/25 to-transparent" aria-hidden />
           {/* Status — top start (right in RTL) */}
@@ -126,7 +137,7 @@ export function UnitCard({ unit, action }: { unit: PublicUnit; action?: React.Re
       </PremiumCard>
     </Link>
       {/* Action row — favorite + optional compare, grouped so they never stack */}
-      <div className="absolute left-3 top-3 z-20 flex items-center gap-2">
+      <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5">
         <FavoriteButton kind="unit" id={unit.id} />
         {action}
       </div>
