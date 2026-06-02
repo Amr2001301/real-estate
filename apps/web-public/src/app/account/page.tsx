@@ -11,7 +11,6 @@ import {
   FileText,
   Wallet,
   Wrench,
-  ArrowLeft,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -64,17 +63,17 @@ function HeroMetric({ icon: Icon, label, value, href, chip }: Metric) {
   return (
     <Link
       href={href as Route}
-      className="flex items-center gap-3 rounded-xl border border-hairline bg-surface p-4 shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:shadow-md"
+      className="flex w-full items-center justify-between gap-3 rounded-xl border border-hairline bg-surface px-5 py-4 shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:shadow-md"
     >
-      <span className={cn('inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', chip)}>
-        <Icon className="h-5 w-5" aria-hidden />
-      </span>
       <div className="min-w-0">
         <div className="text-[11px] font-medium text-ink-muted">{label}</div>
-        <div className="truncate text-base font-black text-ink-strong" dir="auto">
+        <div className="mt-0.5 truncate text-base font-black text-ink-strong" dir="auto">
           {value}
         </div>
       </div>
+      <span className={cn('inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', chip)}>
+        <Icon className="h-5 w-5" aria-hidden />
+      </span>
     </Link>
   );
 }
@@ -83,17 +82,16 @@ function HeroMetric({ icon: Icon, label, value, href, chip }: Metric) {
 function TimelinePanel({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
   return (
     <PremiumCard className="p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-bold text-ink-strong">{title}</h2>
+      <div className="mb-4 flex h-8 items-center justify-between gap-3">
+        <h2 className="truncate text-base font-bold text-ink-strong">{title}</h2>
         <Link
           href={href as Route}
-          className="group inline-flex items-center gap-1 text-xs font-bold text-gold-600 transition-colors hover:text-gold-500"
+          className="inline-flex shrink-0 items-center rounded-lg border border-hairline/70 bg-surface-soft px-3 py-1 text-[10px] font-extrabold text-ink-strong shadow-sm transition-all duration-200 hover:bg-hairline/40"
         >
           عرض الكل
-          <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-0.5" aria-hidden />
         </Link>
       </div>
-      <div className="mt-4 space-y-4 border-s-2 border-hairline/70 ps-4">{children}</div>
+      <div className="space-y-4 border-s-2 border-hairline/70 ps-4">{children}</div>
     </PremiumCard>
   );
 }
@@ -327,12 +325,22 @@ export default async function AccountPage() {
         <section className="space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-lg font-bold text-ink-strong">خدمات ما بعد الشراء</h2>
-            <div className="flex flex-wrap gap-2">
-              <ButtonLink href={routes.accountProperty} variant="outline" size="sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <ButtonLink
+                href={routes.accountProperty}
+                variant="primary"
+                size="sm"
+                className="h-auto rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+              >
                 <Building2 className="h-4 w-4" aria-hidden />
                 عقاراتي
               </ButtonLink>
-              <ButtonLink href={routes.accountMaintenanceNew} variant="gold" size="sm">
+              <ButtonLink
+                href={routes.accountMaintenanceNew}
+                variant="gold"
+                size="sm"
+                className="h-auto rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+              >
                 <Wrench className="h-4 w-4" aria-hidden />
                 طلب صيانة جديد
               </ButtonLink>

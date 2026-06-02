@@ -1,17 +1,10 @@
-import { Home, Building2, Wrench, ArrowLeft, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Home, Building2, Wrench, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 import { pickAr, unitTypeLabel, formatPrice, formatNumber } from '@/lib/format';
 import type { MeContract, MeInstallment } from '@/lib/api-types';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
-
-// Warm gold corner glow — same family as the homepage feature surfaces.
-const GLOW = {
-  background: 'radial-gradient(circle at 100% 0%, rgba(200,162,75,0.12), transparent 55%)',
-} as const;
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -22,23 +15,26 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+/** Strict vertical micro-stack used inside the contract sub-grid. */
+function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-xs text-ink-muted">{label}</dt>
-      <dd className="mt-0.5 truncate text-sm font-semibold text-ink-strong" dir="auto">
+    <div className="flex flex-col items-start gap-1 text-right">
+      <span className="text-[11px] font-bold text-ink-muted">{label}</span>
+      <span className="text-xs font-black text-ink-strong" dir="auto">
         {value}
-      </dd>
+      </span>
     </div>
   );
 }
 
+// Secondary pill — soft by default, inverts to navy on hover. Shared by the two
+// bottom actions so they read as a matched pair.
+const SECONDARY_PILL =
+  'inline-flex h-auto items-center gap-1.5 rounded-xl border border-hairline bg-surface-soft px-4 py-2 text-xs font-bold text-ink-strong transition-all duration-200 hover:border-navy hover:bg-navy hover:text-white';
+
 /**
- * Owner-first focus band. A property owner opens the portal to know two things:
- * what they own and what they owe next. The right (start) side is the owned
- * unit derived from the primary contract; the left (end) side is the single
- * most urgent upcoming installment with a clear next action. Stays in the
- * Warm-Luxe light language — no dark surfaces.
+ * Owner-first after-sales card: a 65/35 split — the asset & contract identity
+ * panel (start) and an isolated next-payment invoice box (end).
  */
 export function PropertyFocus({
   contract,
@@ -58,110 +54,102 @@ export function PropertyFocus({
   const overdue = nextInstallment?.status === 'OVERDUE';
 
   return (
-    <PremiumCard className="relative overflow-hidden">
-      <span className="pointer-events-none absolute inset-0" style={GLOW} aria-hidden />
-
-      <div className="relative grid md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
-        {/* ── What you own ── */}
-        <div className="p-6 sm:p-7">
+    <div className="flex flex-col items-stretch justify-between gap-6 rounded-2xl border border-hairline bg-surface p-6 shadow-sm lg:flex-row">
+      {/* ── Asset & contract panel (~65%) ── */}
+      <div className="flex w-full flex-col justify-between lg:w-2/3">
+        <div>
           <span className="text-sm font-medium text-gold-600">عقارك</span>
-          <div className="mt-3 flex items-start gap-3.5">
+
+          {/* Asset header */}
+          <div className="mb-4 mt-2 flex items-center gap-3">
             <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
               <Home className="h-6 w-6" aria-hidden />
             </span>
             <div className="min-w-0">
-              <h2 className="line-clamp-1 text-xl font-bold text-ink-strong sm:text-2xl">{title}</h2>
-              {unitLabel && projectName && (
-                <p className="mt-1 line-clamp-1 flex items-center gap-1.5 text-sm text-ink-muted">
-                  <Building2 className="h-4 w-4 shrink-0 text-gold-500" aria-hidden />
-                  <span className="line-clamp-1">{unitLabel}</span>
-                </p>
+              <h2 className="line-clamp-1 text-lg font-black text-ink-strong">{title}</h2>
+              {unitLabel && (
+                <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg bg-gold-100/70 px-2.5 py-1 text-xs font-semibold text-gold-600 ring-1 ring-gold-200/60">
+                  <Building2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  {unitLabel}
+                </span>
               )}
             </div>
           </div>
 
-          <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-hairline pt-4 sm:grid-cols-3">
-            <Fact label="رقم العقد" value={contract.contractNumber ?? '—'} />
-            <Fact label="تاريخ التوقيع" value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'} />
-            {plan && <Fact label="خطة التقسيط" value={`${formatNumber(plan.totalMonths)} شهرًا`} />}
-          </dl>
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            {unit?.id && (
-              <ButtonLink href={`${routes.accountMaintenanceNew}?unitId=${unit.id}`} variant="primary" size="sm">
-                <Wrench className="h-4 w-4" aria-hidden />
-                طلب صيانة
-              </ButtonLink>
-            )}
-            <DocumentDownloadByOwner
-              ownerType="CONTRACT"
-              ownerId={contract.id}
-              label="عرض العقد PDF"
-              emptyLabel="العقد غير متاح بعد"
-            />
+          {/* Contract sub-grid */}
+          <div className="my-2 grid grid-cols-3 gap-4 border-y border-hairline/80 py-4">
+            <Stat label="رقم العقد" value={contract.contractNumber ?? '—'} />
+            <Stat label="تاريخ التوقيع" value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'} />
+            {plan && <Stat label="خطة التقسيط" value={`${formatNumber(plan.totalMonths)} شهرًا`} />}
           </div>
         </div>
 
-        {/* ── What you owe next ── invoice-summary block ── */}
-        <div
-          className={cn(
-            // Gold tint must adapt to the theme: the gold scale is literal, so
-            // a flat gold-50 fill would stay light-on-dark. A low-opacity
-            // gold-400 wash reads as a warm tint over either canvas. A bold
-            // inset card wrapper makes it read like an invoice summary panel.
-            'flex flex-col border-t border-hairline p-5 sm:p-6 md:border-s md:border-t-0',
-            overdue ? 'bg-error/[0.05]' : 'bg-gold-400/[0.07]',
+        {/* Secondary actions */}
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {unit?.id && (
+            <ButtonLink href={`${routes.accountMaintenanceNew}?unitId=${unit.id}`} variant="ghost" size="sm" className={SECONDARY_PILL}>
+              <Wrench className="h-4 w-4" aria-hidden />
+              طلب صيانة
+            </ButtonLink>
           )}
-        >
-          <div className="flex h-full flex-col rounded-2xl border border-hairline bg-surface p-5 shadow-[0_8px_30px_rgb(15,30,51,0.05)] sm:p-6">
-          <span className={cn('text-sm font-semibold', overdue ? 'text-error' : 'text-gold-600')}>القسط القادم</span>
+          <DocumentDownloadByOwner
+            ownerType="CONTRACT"
+            ownerId={contract.id}
+            label="عرض العقد PDF"
+            emptyLabel="العقد غير متاح بعد"
+            variant="dark"
+          />
+        </div>
+      </div>
+
+      {/* ── Next-payment invoice box (~35%) ── */}
+      <div
+        className={cn(
+          'flex w-full flex-col items-center justify-between rounded-2xl border p-5 text-center lg:w-1/3',
+          overdue ? 'border-error/20 bg-error/[0.05]' : 'border-gold-200/70 bg-gold-100/30',
+        )}
+      >
+        <div className="flex flex-col items-center">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">القسط القادم</span>
 
           {nextInstallment ? (
             <>
-              <div className="mt-2 font-display text-3xl font-bold leading-none text-ink-strong">
+              <div className="my-1 font-display text-2xl font-black text-ink-strong" dir="auto">
                 {formatPrice(nextInstallment.amount)}
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-                {overdue ? (
-                  <Badge tone="warning" className="!bg-error/10 !text-error">
-                    <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-                    متأخر
-                  </Badge>
-                ) : (
-                  <span>مستحق في</span>
-                )}
-                <span className="font-medium text-ink-strong" dir="auto">
-                  {formatDate(nextInstallment.dueDate)}
+              {overdue ? (
+                <span className="inline-flex items-center rounded-lg bg-error/10 px-2.5 py-1 text-[10px] font-bold text-error shadow-sm">
+                  متأخر — {formatDate(nextInstallment.dueDate)}
                 </span>
-              </div>
-              {unpaidCount > 1 && (
-                <p className="mt-2 text-xs text-ink-muted">{formatNumber(unpaidCount)} أقساط متبقية</p>
+              ) : (
+                <span className="inline-flex items-center rounded-lg bg-gold-100 px-2.5 py-1 text-[10px] font-bold text-gold-600 shadow-sm">
+                  مستحق في {formatDate(nextInstallment.dueDate)}
+                </span>
               )}
-              <div className="mt-auto pt-5">
-                <ButtonLink href={routes.accountInstallments} variant="gold" size="sm">
-                  عرض الأقساط
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                </ButtonLink>
-              </div>
+              {unpaidCount > 1 && (
+                <p className="mt-2 text-[11px] text-ink-muted">{formatNumber(unpaidCount)} أقساط متبقية</p>
+              )}
             </>
           ) : (
             <>
-              <div className="mt-2 flex items-center gap-2 text-base font-semibold text-ink-strong">
+              <div className="my-1 flex items-center gap-1.5 text-base font-bold text-ink-strong">
                 <CheckCircle2 className="h-5 w-5 text-success" aria-hidden />
                 لا أقساط مستحقة
               </div>
-              <p className="mt-1.5 text-sm text-ink-muted">سجلّك خالٍ من المستحقات الحالية.</p>
-              <div className="mt-auto pt-5">
-                <ButtonLink href={routes.accountDeposits} variant="outline" size="sm">
-                  سجل المدفوعات
-                  <ArrowLeft className="h-4 w-4" aria-hidden />
-                </ButtonLink>
-              </div>
+              <p className="text-[11px] text-ink-muted">سجلّك خالٍ من المستحقات الحالية.</p>
             </>
           )}
-          </div>
         </div>
+
+        <ButtonLink
+          href={nextInstallment ? routes.accountInstallments : routes.accountDeposits}
+          variant="primary"
+          size="sm"
+          className="mt-4 h-auto w-full justify-center rounded-xl py-2.5 text-xs font-black tracking-wide shadow-md"
+        >
+          {nextInstallment ? 'عرض الأقساط' : 'سجل المدفوعات'}
+        </ButtonLink>
       </div>
-    </PremiumCard>
+    </div>
   );
 }

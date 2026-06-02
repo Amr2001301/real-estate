@@ -47,9 +47,10 @@ export function DocumentDownloadByOwner({
   ownerId: string;
   label: string;
   emptyLabel: string;
-  /** `pill` = ContractCard styling, `compact` = sleeker rounded-xl/text-xs
-   *  button (PropertyCard), `inline` = DepositCard inline link. */
-  variant?: 'pill' | 'compact' | 'inline';
+  /** `pill` = ContractCard styling, `compact` = sleeker soft button, `dark` =
+   *  secondary pill that inverts to navy on hover (PropertyFocus), `inline` =
+   *  DepositCard inline link. */
+  variant?: 'pill' | 'compact' | 'dark' | 'inline';
 }) {
   const [state, setState] = useState<'idle' | 'loading' | 'empty' | 'error'>('idle');
 
@@ -90,6 +91,9 @@ export function DocumentDownloadByOwner({
 
   const isInline = variant === 'inline';
   const isCompact = variant === 'compact';
+  const isDark = variant === 'dark';
+  // compact + dark share the soft chip layout for empty/error states.
+  const isChip = isCompact || isDark;
 
   if (state === 'empty') {
     return (
@@ -97,8 +101,8 @@ export function DocumentDownloadByOwner({
         className={
           isInline
             ? 'text-ink-muted/70'
-            : isCompact
-              ? 'shrink-0 rounded-xl bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted'
+            : isChip
+              ? 'shrink-0 rounded-xl bg-surface-soft px-4 py-2 text-xs font-medium text-ink-muted'
               : 'shrink-0 rounded-full bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted'
         }
       >
@@ -114,8 +118,8 @@ export function DocumentDownloadByOwner({
         className={
           isInline
             ? 'inline-flex items-center gap-1.5 font-medium text-red-600 hover:text-red-500'
-            : isCompact
-              ? 'inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-300 bg-surface px-3.5 py-2 text-xs font-medium text-red-600 hover:border-red-400'
+            : isChip
+              ? 'inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-300 bg-surface px-4 py-2 text-xs font-medium text-red-600 hover:border-red-400'
               : 'inline-flex shrink-0 items-center gap-2 rounded-full border border-red-300 bg-surface px-4 py-2 text-sm font-medium text-red-600 hover:border-red-400'
         }
       >
@@ -126,9 +130,11 @@ export function DocumentDownloadByOwner({
 
   const baseClass = isInline
     ? 'inline-flex items-center gap-1.5 font-medium text-gold-600 transition-colors hover:text-gold-500 disabled:cursor-progress disabled:opacity-70'
-    : isCompact
-      ? 'inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-hairline/60 bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted transition-colors hover:border-hairline hover:text-ink-strong disabled:cursor-progress disabled:opacity-70'
-      : 'inline-flex shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600 disabled:cursor-progress disabled:opacity-70';
+    : isDark
+      ? 'inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-hairline bg-surface-soft px-4 py-2 text-xs font-bold text-ink-strong transition-all duration-200 hover:border-navy hover:bg-navy hover:text-white disabled:cursor-progress disabled:opacity-70'
+      : isCompact
+        ? 'inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-hairline/60 bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted transition-colors hover:border-hairline hover:text-ink-strong disabled:cursor-progress disabled:opacity-70'
+        : 'inline-flex shrink-0 items-center gap-2 rounded-full border border-hairline bg-surface px-4 py-2 text-sm font-medium text-ink-strong transition-colors hover:border-gold-300 hover:text-gold-600 disabled:cursor-progress disabled:opacity-70';
 
   const iconSize = isInline ? 'h-3.5 w-3.5' : 'h-4 w-4';
 
