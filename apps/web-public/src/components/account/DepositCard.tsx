@@ -1,11 +1,11 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Wallet, CheckCircle2, Clock, AlertCircle, Upload } from 'lucide-react';
+import { Wallet, CheckCircle2, Clock, AlertCircle, Upload, Landmark } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatPrice } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { MeDeposit, MeDepositReviewStatus, MePaymentMethod } from '@/lib/api-types';
-import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
+import { AccountCard, type AccountCardAccent } from '@/components/account/AccountCard';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -24,10 +24,10 @@ const REVIEW_STATUS_LABELS: Record<MeDepositReviewStatus, { label: string; tone:
 };
 
 const TONE_CLASS: Record<'success' | 'accent' | 'muted' | 'error', string> = {
-  success: 'bg-success/10 text-success',
-  accent: 'bg-gold-100 text-gold-600',
+  success: 'bg-success/10 text-success ring-1 ring-success/20',
+  accent: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70',
   muted: 'bg-surface-soft text-ink-muted',
-  error: 'bg-error/10 text-error',
+  error: 'bg-error/10 text-error ring-1 ring-error/20',
 };
 
 const PAYMENT_METHOD_LABELS: Record<MePaymentMethod, string> = {
@@ -46,68 +46,77 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function StatusBadge({ deposit }: { deposit: MeDeposit }) {
-  // P11 — prefer the explicit reviewStatus when present; fall back to the
-  // legacy `verified` boolean for rows untouched by the new workflow.
+export function DepositCard({ deposit }: { deposit: MeDeposit }) {
+  const typeLabel = TYPE_LABELS[deposit.type] ?? 'دفعة';
   const status: MeDepositReviewStatus =
     deposit.reviewStatus ?? (deposit.verified ? 'APPROVED' : 'PENDING_REVIEW');
   const { label, tone } = REVIEW_STATUS_LABELS[status];
-  const icon =
-    status === 'APPROVED' ? CheckCircle2 : status === 'REJECTED' ? AlertCircle : Clock;
-  const Icon = icon;
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium',
-        TONE_CLASS[tone],
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" aria-hidden />
-      {label}
-    </span>
-  );
-}
-
-export function DepositCard({ deposit }: { deposit: MeDeposit }) {
-  const typeLabel = TYPE_LABELS[deposit.type] ?? 'دفعة';
-  const subtitleParts = [
-    deposit.contract?.contractNumber ? `عقد رقم ${deposit.contract.contractNumber}` : '',
-    deposit.installment?.dueDate ? `قسط مستحق ${formatDate(deposit.installment.dueDate)}` : '',
-  ].filter(Boolean);
-  const status: MeDepositReviewStatus =
-    deposit.reviewStatus ?? (deposit.verified ? 'APPROVED' : 'PENDING_REVIEW');
+  const StatusIcon = status === 'APPROVED' ? CheckCircle2 : status === 'REJECTED' ? AlertCircle : Clock;
   const accent: AccountCardAccent =
     status === 'APPROVED' ? 'success' : status === 'REJECTED' ? 'error' : status === 'NO_PROOF' ? 'muted' : 'gold';
 
   return (
-    <AccountCard accent={accent} className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <AccountCardIcon>
-            <Wallet className="h-5 w-5" aria-hidden />
-          </AccountCardIcon>
-          <div className="min-w-0">
-            <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">{typeLabel}</h3>
-            {subtitleParts.length > 0 && (
-              <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted">{subtitleParts.join(' · ')}</p>
+    <AccountCard accent={accent} className="p-5 sm:p-6">
+      <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-4">
+        {/* Block 1 (right) — amount + verification */}
+        <div className="min-w-0">
+          <div className="text-base font-black text-ink-strong" dir="auto">
+            {formatPrice(deposit.amount)}
+          </div>
+          <span
+            className={cn(
+              'mt-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold',
+              TONE_CLASS[tone],
             )}
+          >
+            <StatusIcon className="h-3 w-3 shrink-0" aria-hidden />
+            {label}
+          </span>
+        </div>
+
+        {/* Block 2 — type + contract binding */}
+        <div className="min-w-0 space-y-1 md:border-s md:border-hairline/70 md:ps-6">
+          <div className="flex items-center gap-1.5 text-sm font-bold text-ink-strong">
+            <Wallet className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+            {typeLabel}
+          </div>
+          {deposit.contract?.contractNumber && (
+            <span className="inline-block rounded-md bg-surface-soft px-2 py-0.5 font-mono text-[11px] font-bold text-ink-muted">
+              عقد رقم {deposit.contract.contractNumber}
+            </span>
+          )}
+        </div>
+
+        {/* Block 3 — method + timeline */}
+        <div className="min-w-0 md:border-s md:border-hairline/70 md:ps-6">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-ink">
+            <Landmark className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+            {deposit.paymentMethod ? PAYMENT_METHOD_LABELS[deposit.paymentMethod] : '—'}
+          </div>
+          <div className="mt-1 text-[11px] text-ink-muted" dir="auto">
+            تاريخ الدفع: {formatDate(deposit.paidAt)}
           </div>
         </div>
-        <div className="shrink-0 text-end">
-          <div className="font-display text-xl font-bold leading-none text-ink-strong">{formatPrice(deposit.amount)}</div>
-          <div className="mt-2">
-            <StatusBadge deposit={deposit} />
-          </div>
+
+        {/* Block 4 (far left) — download receipt */}
+        <div className="flex md:justify-end md:border-s md:border-hairline/70 md:ps-6">
+          <DocumentDownloadByOwner
+            ownerType="DEPOSIT"
+            ownerId={deposit.id}
+            label="تحميل الإيصال"
+            emptyLabel="الإيصال غير متاح بعد"
+            variant="compact"
+          />
         </div>
       </div>
 
-      {/* P11 — rejection reason banner + resubmit link. Surfaces only what
-          admin wrote; internal notes never reach the customer. */}
+      {/* P11 — rejection reason banner + resubmit (full width below the grid).
+          Surfaces only what admin wrote; internal notes never reach the customer. */}
       {deposit.reviewStatus === 'REJECTED' && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-4 space-y-2 border-t border-hairline/70 pt-4">
           {deposit.rejectionReason && (
-            <div className="flex items-start gap-2 rounded-xl bg-error/5 border border-error/20 p-3 text-xs text-error">
-              <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" aria-hidden />
+            <div className="flex items-start gap-2 rounded-xl border border-error/20 bg-error/5 p-3 text-xs text-error">
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
               <div>
                 <p className="font-semibold">سبب رفض الإثبات</p>
                 <p className="mt-0.5">{deposit.rejectionReason}</p>
@@ -121,29 +130,13 @@ export function DepositCard({ deposit }: { deposit: MeDeposit }) {
                 query: { resubmit: deposit.id, amount: deposit.amount },
               } as unknown as Route
             }
-            className="inline-flex items-center gap-1 rounded-full bg-navy px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-navy/90"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-navy-700"
           >
             <Upload className="h-3.5 w-3.5" aria-hidden />
             إعادة إرسال الإثبات
           </Link>
         </div>
       )}
-
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3 text-xs text-ink-muted">
-        <span>
-          تاريخ الدفع: {formatDate(deposit.paidAt)}
-          {deposit.paymentMethod && (
-            <span className="ms-2">· {PAYMENT_METHOD_LABELS[deposit.paymentMethod]}</span>
-          )}
-        </span>
-        <DocumentDownloadByOwner
-          ownerType="DEPOSIT"
-          ownerId={deposit.id}
-          label="تحميل الإيصال"
-          emptyLabel="الإيصال غير متاح بعد"
-          variant="inline"
-        />
-      </div>
     </AccountCard>
   );
 }
