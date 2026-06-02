@@ -15,12 +15,12 @@ function formatDate(iso: string): string {
   }
 }
 
-// Luxury tag palettes (theme tokens → dark-mode safe).
-const SLATE = 'bg-surface-soft text-ink-muted ring-1 ring-hairline';
-const SUCCESS = 'bg-success/10 text-success ring-1 ring-success/20';
-const AMBER = 'bg-warning/10 text-warning ring-1 ring-warning/20';
-const GOLD = 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70';
-const ERROR = 'bg-error/10 text-error ring-1 ring-error/20';
+// Soft minimal pills — light tint + matching border (theme tokens → dark-safe).
+const SLATE = 'bg-surface-soft/80 text-ink-muted border border-hairline/60';
+const SUCCESS = 'bg-success/10 text-success border border-success/20';
+const AMBER = 'bg-warning/10 text-warning border border-warning/20';
+const GOLD = 'bg-gold-100/80 text-gold-600 border border-gold-200/50';
+const ERROR = 'bg-error/10 text-error border border-error/20';
 
 /** Status / review / priority enums → Arabic label + luxury tint. */
 const TAG: Record<string, { label: string; cls: string }> = {
@@ -45,7 +45,7 @@ const TAG: Record<string, { label: string; cls: string }> = {
 function Tag({ status }: { status: string }) {
   const t = TAG[status] ?? { label: status, cls: SLATE };
   return (
-    <span className={cn('inline-flex items-center rounded-lg px-2.5 py-1 text-[10px] font-bold', t.cls)}>
+    <span className={cn('inline-flex shrink-0 items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold', t.cls)}>
       {t.label}
     </span>
   );
@@ -64,16 +64,16 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
   return (
     <Link href={`${routes.accountMaintenance}/${request.id}` as Route} className="block">
       <AccountCard accent={accent} interactive className="p-5">
-        <div className="grid grid-cols-1 items-center gap-4 md:grid-cols-4">
-          {/* Col 1 (right) — type + location */}
-          <div className="flex items-center gap-3">
+        <div className="grid w-full grid-cols-1 items-center gap-4 md:grid-cols-12">
+          {/* Col 1 — identity (far right) */}
+          <div className="flex items-center gap-3 md:col-span-3">
             <span className="inline-flex shrink-0 items-center justify-center rounded-xl bg-warning/10 p-2.5 text-warning ring-1 ring-warning/20">
               <Wrench className="h-5 w-5" aria-hidden />
             </span>
             <div className="min-w-0">
               <h3 className="line-clamp-1 text-sm font-black text-ink-strong">{categoryName || 'طلب صيانة'}</h3>
               {unitLabel && (
-                <p className="mt-1 flex items-center gap-1 text-[11px] font-medium text-ink-muted">
+                <p className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-ink-muted">
                   <Home className="h-3 w-3 shrink-0 text-gold-500" aria-hidden />
                   <span className="line-clamp-1">{unitLabel}</span>
                 </p>
@@ -81,24 +81,22 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
             </div>
           </div>
 
-          {/* Col 2 — contained description */}
-          <div className="min-w-0">
-            <div className="max-w-xs rounded-xl border border-hairline bg-surface-soft/70 p-3">
-              <p className="line-clamp-1 text-xs font-semibold text-ink-muted" dir="auto">
-                {request.description}
-              </p>
-            </div>
+          {/* Col 2 — raw description, separated by a hairline rule */}
+          <div className="min-w-0 md:col-span-4 md:border-s md:border-hairline/80 md:ps-4">
+            <p className="max-w-[200px] truncate text-right text-sm font-semibold text-ink-muted" dir="auto">
+              {request.description}
+            </p>
           </div>
 
-          {/* Col 3 — status matrix */}
-          <div className="flex flex-wrap gap-2 md:justify-center">
+          {/* Col 3 — status matrix, single horizontal row (never wraps) */}
+          <div className="flex shrink-0 flex-row flex-nowrap items-center gap-2 md:col-span-3 md:justify-center">
             <Tag status={request.status} />
             <Tag status={request.reviewStatus} />
             {request.priority && <Tag status={request.priority} />}
           </div>
 
-          {/* Col 4 (far left) — timeline only */}
-          <div className="md:flex md:flex-col md:items-end md:justify-center">
+          {/* Col 4 — timeline (far left) */}
+          <div className="md:col-span-2 md:flex md:justify-end">
             <span className="font-mono text-[11px] font-bold text-ink-muted" dir="auto">
               {formatDate(request.createdAt)}
             </span>
