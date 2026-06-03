@@ -31,6 +31,18 @@ function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 }
 
+// Compare ids carried over from /compare (?compareIds=A,B). Dedupe + trim and
+// cap at the 3-unit compare limit (mirrors MAX_COMPARE in CompareContext).
+const COMPARE_MAX = 3;
+function parseCompareIds(raw: string): string[] {
+  const seen = new Set<string>();
+  for (const part of raw.split(',')) {
+    const id = part.trim();
+    if (id) seen.add(id);
+  }
+  return [...seen].slice(0, COMPARE_MAX);
+}
+
 export default async function UnitsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const projectId = firstStr(sp.projectId);
@@ -45,6 +57,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   const areaMax = firstStr(sp.areaMax);
   const sort = firstStr(sp.sort);
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
+  const seedCompareIds = parseCompareIds(firstStr(sp.compareIds));
 
   const apiParams = new URLSearchParams({ pageSize: String(PAGE_SIZE), page: String(page) });
   if (projectId) apiParams.set('projectId', projectId);
@@ -139,7 +152,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
                   عرض {units.length} من أصل {formatNumber(meta.total)} وحدة
                 </p>
               )}
-              <UnitsExplorer units={units} />
+              <UnitsExplorer units={units} seedCompareIds={seedCompareIds} />
               {meta && <Pagination page={meta.page} totalPages={meta.totalPages} buildHref={buildHref} />}
             </>
           )}

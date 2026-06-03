@@ -19,9 +19,24 @@ function toCompareItem(unit: PublicUnit): CompareItem {
  * toggle on each card, and renders the sticky compare bar. The card's link and
  * the toggle are siblings, so selecting never navigates.
  */
-export function UnitsExplorer({ units }: { units: PublicUnit[] }) {
+export function UnitsExplorer({
+  units,
+  seedCompareIds = [],
+}: {
+  units: PublicUnit[];
+  /** Compare ids carried over from /compare (?compareIds=…), preserved in order. */
+  seedCompareIds?: string[];
+}) {
+  // Resolve each carried-over id to a full compare item when the unit is on the
+  // current page; otherwise a minimal placeholder (id only) — the provider then
+  // enriches it from localStorage. Either way the id is preserved.
+  const byId = new Map(units.map((u) => [u.id, toCompareItem(u)] as const));
+  const seedItems = seedCompareIds.map(
+    (id) => byId.get(id) ?? { id, label: '', price: '', coverImage: null },
+  );
+
   return (
-    <CompareProvider>
+    <CompareProvider seedItems={seedItems}>
       <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
         {units.map((unit) => (
           <div key={unit.id} className="h-full">

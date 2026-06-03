@@ -34,22 +34,49 @@ interface CompareContextValue {
 
 const CompareContext = createContext<CompareContextValue | null>(null);
 
-export function CompareProvider({ children }: { children: React.ReactNode }) {
+export function CompareProvider({
+  children,
+  seedItems,
+}: {
+  children: React.ReactNode;
+  /**
+   * Selection carried over from another page (e.g. /compare → /units?compareIds=…).
+   * When non-empty it is AUTHORITATIVE for the id set + order; each seed is
+   * enriched with richer data (label/price/image) from localStorage when the
+   * seed itself lacks it (the unit may not be on the current page).
+   */
+  seedItems?: CompareItem[];
+}) {
   const [items, setItems] = useState<CompareItem[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Hydrate from localStorage once on mount.
+  // Hydrate once on mount: read localStorage, then merge any carried-over
+  // selection (seedItems) so the compared ids survive the /compare → /units hop
+  // even when localStorage is empty/stale (direct links, cleared storage).
   useEffect(() => {
+    let stored: CompareItem[] = [];
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as CompareItem[];
-        if (Array.isArray(parsed)) setItems(parsed.slice(0, MAX_COMPARE));
+        if (Array.isArray(parsed)) stored = parsed;
       }
     } catch {
-      // Corrupt/blocked storage — start empty, never crash.
+      // Corrupt/blocked storage — fall back to seed/empty, never crash.
     }
+    if (seedItems && seedItems.length > 0) {
+      const byId = new Map(stored.map((i) => [i.id, i] as const));
+      const merged = seedItems.map((s) => {
+        const hasData = Boolean(s.label || s.price || s.coverImage);
+        return hasData ? s : (byId.get(s.id) ?? s);
+      });
+      setItems(merged.slice(0, MAX_COMPARE));
+    } else {
+      setItems(stored.slice(0, MAX_COMPARE));
+    }
+    // Mount-only: the carried-over seed is read once (matches the prior hydrate).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist on change.

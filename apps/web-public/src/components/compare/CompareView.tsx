@@ -78,6 +78,11 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
   }
 
   const canAddMore = units.length < 3;
+  // "أضف وحدات أخرى" must carry the current selection so /units can preserve it
+  // (merged with localStorage there) and adding a unit appends to A,B → A,B,C.
+  const addMoreHref = (
+    units.length ? `${routes.units}?compareIds=${units.map((u) => u.id).join(',')}` : routes.units
+  ) as Route;
   // Winning value per comparable row (null = no highlight).
   const bests = ROWS.map((row) => bestValue(row, units));
 
@@ -139,7 +144,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
 
         {canAddMore && (
           <Link
-            href={routes.units as Route}
+            href={addMoreHref}
             className="flex min-h-44 flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-hairline bg-surface-soft/60 p-6 text-center text-ink-muted transition-colors hover:border-hairline/30 hover:text-ink-strong"
           >
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-gold-500 shadow-soft">
@@ -239,7 +244,7 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
       </div>
 
       <div className="mt-10 flex flex-wrap items-center gap-4">
-        <ButtonLink href={routes.units} variant="outline" size="md">
+        <ButtonLink href={addMoreHref} variant="outline" size="md">
           <Plus className="h-4 w-4" aria-hidden />
           أضف وحدات أخرى
         </ButtonLink>
