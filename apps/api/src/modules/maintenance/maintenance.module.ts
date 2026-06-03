@@ -324,8 +324,19 @@ export class MaintenanceService {
   // ADMINs + MAINTENANCE_SUPERVISORs receive maintenance_request_created;
   // the specific assignee (if any) also receives the assigned event so they
   // know to pick it up.
-  private async notifyCreated(unitCode: string, assignedAdminId?: string | null) {
-    const payload = { unitCode };
+  // Deep-link metadata every maintenance notification carries so the admin /
+  // customer notification UIs can route to /dashboard/maintenance/[id] (or
+  // /account/maintenance/[id]). entityType wins over the legacy requestId.
+  private maintenanceLinkPayload(
+    id: string,
+    action: string,
+    extra: Record<string, unknown> = {},
+  ): Record<string, unknown> {
+    return { entityType: 'maintenance', entityId: id, requestId: id, action, ...extra };
+  }
+
+  private async notifyCreated(id: string, unitCode: string, assignedAdminId?: string | null) {
+    const payload = this.maintenanceLinkPayload(id, 'view_maintenance_request', { unitCode });
     await this.notifications.sendToRoles(
       [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
       'maintenance_request_created',
@@ -344,15 +355,12 @@ export class MaintenanceService {
   private async notifyAssigned(id: string) {
     const r = await this.notifyContext(id);
     if (!r) return;
-    await this.notifications.sendToUser(
-      r.assignedAdminId,
-      'maintenance_request_assigned',
-      { unitCode: r.unitCode },
-    );
+    const base = this.maintenanceLinkPayload(id, 'view_maintenance_request', { unitCode: r.unitCode });
+    await this.notifications.sendToUser(r.assignedAdminId, 'maintenance_request_assigned', base);
     await this.notifications.sendToUser(
       r.customerId,
       'maintenance_request_status_changed',
-      { unitCode: r.unitCode, statusLabel: STATUS_LABEL_AR[r.status] },
+      { ...base, statusLabel: STATUS_LABEL_AR[r.status] },
     );
   }
 
@@ -366,7 +374,10 @@ export class MaintenanceService {
         : r.status === MaintenanceStatus.CLOSED
           ? 'maintenance_request_closed'
           : 'maintenance_request_status_changed';
-    const payload = { unitCode: r.unitCode, statusLabel: STATUS_LABEL_AR[r.status] };
+    const payload = this.maintenanceLinkPayload(id, 'view_maintenance_request', {
+      unitCode: r.unitCode,
+      statusLabel: STATUS_LABEL_AR[r.status],
+    });
     await this.notifications.sendToUser(r.customerId, code, payload);
     if (r.assignedAdminId) {
       await this.notifications.sendToUser(
@@ -601,7 +612,7 @@ export class MaintenanceService {
       },
     });
     await this.createRequestItems(created.id, items);
-    await this.notifyCreated(unit.code);
+    await this.notifyCreated(created.id, unit.code);
     return created;
   }
 
@@ -652,7 +663,7 @@ export class MaintenanceService {
       },
     });
     await this.createRequestItems(created.id, items);
-    await this.notifyCreated(unit.code, assignedAdminId);
+    await this.notifyCreated(created.id, unit.code, assignedAdminId);
     return created;
   }
 

@@ -40,6 +40,23 @@ function makePrismaMock() {
     },
     installmentPlanTemplate: {
       findFirst: jest.fn().mockResolvedValue(null),
+      // List endpoint: a legacy/FIXED plan + a PERCENTAGE plan, both with the
+      // new fields populated (post-migration shape).
+      findMany: jest.fn().mockResolvedValue([
+        {
+          id: 'tpl-fixed', name: 'Fixed', status: 'ACTIVE', projectId: PROJECT_ID, unitId: UNIT_ID,
+          reservationAmountType: 'FIXED', reservationAmountValue: 50_000,
+          discountType: 'FIXED', discountValue: 0,
+          project: null, unit: null, createdBy: null, durationOptions: [],
+        },
+        {
+          id: 'tpl-pct', name: 'Pct', status: 'ACTIVE', projectId: PROJECT_ID, unitId: UNIT_ID,
+          reservationAmountType: 'PERCENTAGE', reservationAmountValue: 10,
+          discountType: 'PERCENTAGE', discountValue: 5,
+          project: null, unit: null, createdBy: null, durationOptions: [],
+        },
+      ]),
+      count: jest.fn().mockResolvedValue(2),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
         id: 'tpl-new',
         ...data,
@@ -237,5 +254,15 @@ describe('Plan template · reservation amount fixed/percentage', () => {
     expect(data.discountType).toBe('FIXED');
     expect(String(data.discountAmount)).toBe('50000');
     expect(String(data.discountValue)).toBe('50000');
+  });
+
+  // Regression: the list endpoint must serialize the new fixed/percentage
+  // fields without crashing (the 500 was an unapplied-migration column mismatch,
+  // but this guards the list mapper against future field regressions).
+  it('GET /installment-plan-templates returns plans with the new mode fields', async () => {
+    const res = await request(app.getHttpServer()).get('/installment-plan-templates').expect(200);
+    expect(res.body.data).toHaveLength(2);
+    expect(res.body.data[0]).toMatchObject({ reservationAmountType: 'FIXED', discountType: 'FIXED' });
+    expect(res.body.data[1]).toMatchObject({ reservationAmountType: 'PERCENTAGE', discountType: 'PERCENTAGE' });
   });
 });

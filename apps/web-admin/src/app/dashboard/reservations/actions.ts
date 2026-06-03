@@ -232,6 +232,14 @@ export async function convertReservationAction(
         : { startsAt },
     );
   } catch (e: unknown) {
+    // An expired/absent session surfaces as 401 from the API. Show an
+    // auth-recovery message so the user re-logs-in rather than re-submitting
+    // (which would silently fail again).
+    if (e instanceof ApiError && e.status === 401) {
+      return {
+        error: 'انتهت الجلسة. يرجى تسجيل الدخول من جديد ثم إعادة المحاولة.',
+      };
+    }
     return { error: e instanceof Error ? e.message : 'حدث خطأ غير متوقع' };
   }
 

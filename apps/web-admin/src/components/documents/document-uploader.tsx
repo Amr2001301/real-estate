@@ -95,6 +95,13 @@ export function DocumentUploader({ onUploaded, onCleared }: Props) {
         }),
       });
       if (!presignRes.ok) {
+        // An expired/absent session yields 401 (no Bearer reaches the API).
+        // Surface a clear Arabic message instead of dumping the raw JSON body.
+        if (presignRes.status === 401) {
+          throw new Error(
+            'انتهت الجلسة. يرجى تحديث الصفحة أو تسجيل الدخول من جديد ثم إعادة المحاولة.',
+          );
+        }
         const body = await presignRes.text();
         throw new Error(`فشل التحضير (${presignRes.status}): ${body.slice(0, 200)}`);
       }

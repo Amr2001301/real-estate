@@ -1842,5 +1842,8 @@ export interface NotificationItem {
   /** GET /v1/me/notifications resolves a `read` boolean (from the row's
    *  readAt). Unread = `read === false`. */
   read: boolean;
+  /** Locale-resolved title/body from the notification template (when seeded). */
+  title?: string;
+  body?: string;
   createdAt: string;
 }

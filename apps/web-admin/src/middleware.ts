@@ -46,6 +46,15 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/portal')) {
     if (hasToken) return NextResponse.next();
 
+    // Server Action POSTs carry a `Next-Action` header. 302-redirecting them to
+    // the login HTML page breaks the RSC action protocol on the client ("An
+    // unexpected response was received from the server"). Let them through so
+    // the action's own server-side auth (requireAdmin + backend guards) returns
+    // a graceful { error } the form can display, instead of crashing.
+    if (req.method === 'POST' && req.headers.has('next-action')) {
+      return NextResponse.next();
+    }
+
     const loginUrl = new URL('/login', req.url);
     // Preserve the original destination (path + query) so a later iteration
     // can honor ?from=… post-login. We URL-encode the whole thing as a single
