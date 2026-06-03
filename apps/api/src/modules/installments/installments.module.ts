@@ -77,7 +77,13 @@ class CreatePlanTemplateDto {
   @IsUUID() unitId!: string;
   @IsNumber() @IsPositive() totalPrice!: number;
   @IsOptional() @IsNumber() @Min(0) discountAmount?: number;
-  @IsNumber() @Min(0) reservationAmount!: number;
+  @IsOptional() @IsEnum(DownPaymentType) discountType?: DownPaymentType;
+  @IsOptional() @IsNumber() @Min(0) discountValue?: number;
+  // Booking amount: legacy `reservationAmount` (fixed) stays accepted for
+  // back-compat; new payloads send reservationAmountType + reservationAmountValue.
+  @IsOptional() @IsNumber() @Min(0) reservationAmount?: number;
+  @IsOptional() @IsEnum(DownPaymentType) reservationAmountType?: DownPaymentType;
+  @IsOptional() @IsNumber() @Min(0) reservationAmountValue?: number;
   @IsEnum(DownPaymentType) downPaymentType!: DownPaymentType;
   @IsNumber() @IsPositive() downPaymentValue!: number;
   // installmentsCount + frequency are legacy single-duration fields.
@@ -99,7 +105,11 @@ class UpdatePlanTemplateDto {
   @IsOptional() @IsUUID() unitId?: string;
   @IsOptional() @IsNumber() @IsPositive() totalPrice?: number;
   @IsOptional() @IsNumber() @Min(0) discountAmount?: number;
+  @IsOptional() @IsEnum(DownPaymentType) discountType?: DownPaymentType;
+  @IsOptional() @IsNumber() @Min(0) discountValue?: number;
   @IsOptional() @IsNumber() @Min(0) reservationAmount?: number;
+  @IsOptional() @IsEnum(DownPaymentType) reservationAmountType?: DownPaymentType;
+  @IsOptional() @IsNumber() @Min(0) reservationAmountValue?: number;
   @IsOptional() @IsEnum(DownPaymentType) downPaymentType?: DownPaymentType;
   @IsOptional() @IsNumber() @IsPositive() downPaymentValue?: number;
   @IsOptional() @IsInt() @Min(1) installmentsCount?: number;
@@ -185,6 +195,36 @@ function computeDownPaymentAmount(
   return type === DownPaymentType.PERCENTAGE ? (netPrice * value) / 100 : value;
 }
 
+/**
+ * Resolve the reservation/booking amount triplet from a (possibly legacy) DTO.
+ * FIXED → value is the amount; PERCENTAGE → value is a percent of netPrice (for
+ * the template's own schedule preview). A legacy `reservationAmount`-only
+ * payload maps to FIXED. The same math as the down payment (intentionally).
+ */
+function resolveReservation(
+  dto: CreatePlanTemplateDto | UpdatePlanTemplateDto,
+  netPrice: number,
+): { type: DownPaymentType; value: number; amount: number } {
+  const type = dto.reservationAmountType ?? DownPaymentType.FIXED;
+  const value = dto.reservationAmountValue ?? dto.reservationAmount ?? 0;
+  return { type, value, amount: computeDownPaymentAmount(netPrice, type, value) };
+}
+
+/**
+ * Resolve the discount triplet from a (possibly legacy) DTO. FIXED → value is
+ * the amount; PERCENTAGE → value is a percent of `totalPrice` (the template's
+ * pricing base — netPrice = totalPrice − discount, so the percentage cannot be
+ * of netPrice). A legacy `discountAmount`-only payload maps to FIXED.
+ */
+function resolveDiscount(
+  dto: CreatePlanTemplateDto | UpdatePlanTemplateDto,
+  totalPrice: number,
+): { type: DownPaymentType; value: number; amount: number } {
+  const type = dto.discountType ?? DownPaymentType.FIXED;
+  const value = dto.discountValue ?? dto.discountAmount ?? 0;
+  return { type, value, amount: computeDownPaymentAmount(totalPrice, type, value) };
+}
+
 function buildScheduleItems(
   dto: CreatePlanTemplateDto | UpdatePlanTemplateDto,
   totalPrice: number,
@@ -193,7 +233,7 @@ function buildScheduleItems(
   const tp = totalPrice;
   const disc = discountAmount;
   const netPrice = tp - disc;
-  const reservation = dto.reservationAmount ?? 0;
+  const reservation = resolveReservation(dto, netPrice).amount;
   const dpType = dto.downPaymentType ?? DownPaymentType.FIXED;
   const dpValue = dto.downPaymentValue ?? 0;
   const dpAmount = computeDownPaymentAmount(netPrice, dpType, dpValue);
@@ -452,7 +492,13 @@ class PlanTemplatesService {
     }
 
     const totalPrice = dto.totalPrice;
-    const discountAmount = dto.discountAmount ?? 0;
+    // Discount: FIXED → value is the amount; PERCENTAGE → value is a percent
+    // (0–100) of totalPrice. Zero discount is allowed in both modes.
+    const disc = resolveDiscount(dto, totalPrice);
+    if (disc.type === DownPaymentType.PERCENTAGE && (disc.value < 0 || disc.value > 100)) {
+      throw new BadRequestException('نسبة الخصم يجب أن تكون بين صفر و100');
+    }
+    const discountAmount = disc.amount;
     const netPrice = totalPrice - discountAmount;
     const dpAmount = computeDownPaymentAmount(
       netPrice,
@@ -460,9 +506,19 @@ class PlanTemplatesService {
       dto.downPaymentValue,
     );
 
+    // Booking amount: FIXED → value is the amount; PERCENTAGE → value is a
+    // percent (0–100] of netPrice for the template schedule. The percent is
+    // re-applied to the unit price when a reservation is created.
+    const resv = resolveReservation(dto, netPrice);
+    if (resv.type === DownPaymentType.PERCENTAGE && (resv.value <= 0 || resv.value > 100)) {
+      throw new BadRequestException(
+        'نسبة دفعة الحجز يجب أن تكون أكبر من صفر وحتى 100',
+      );
+    }
+    const reservation = resv.amount;
+
     // Business rule (shared with legacy and new model):
     // reservationAmount + downPaymentAmount cannot exceed netPrice
-    const reservation = dto.reservationAmount ?? 0;
     if (reservation + dpAmount > netPrice) {
       throw new BadRequestException(
         'مبلغ الحجز + الدفعة الأولى يتجاوزان صافي السعر',
@@ -490,8 +546,12 @@ class PlanTemplatesService {
           unitId: dto.unitId,
           totalPrice: new Prisma.Decimal(totalPrice),
           discountAmount: new Prisma.Decimal(discountAmount),
+          discountType: disc.type,
+          discountValue: new Prisma.Decimal(disc.value),
           netPrice: new Prisma.Decimal(netPrice),
           reservationAmount: new Prisma.Decimal(reservation),
+          reservationAmountType: resv.type,
+          reservationAmountValue: new Prisma.Decimal(resv.value),
           downPaymentType: dto.downPaymentType,
           downPaymentValue: new Prisma.Decimal(dto.downPaymentValue),
           downPaymentAmount: new Prisma.Decimal(dpAmount),
@@ -571,11 +631,34 @@ class PlanTemplatesService {
     }
 
     const totalPrice = dto.totalPrice ?? Number(existing.totalPrice);
-    const discountAmount = dto.discountAmount ?? Number(existing.discountAmount);
+    // Discount: prefer explicit type/value; a legacy `discountAmount` (no
+    // type/value) is treated as FIXED; otherwise keep the stored type/value.
+    const discType =
+      dto.discountType ??
+      (dto.discountAmount != null ? DownPaymentType.FIXED : existing.discountType);
+    const discValue =
+      dto.discountValue ?? dto.discountAmount ?? Number(existing.discountValue);
+    if (discType === DownPaymentType.PERCENTAGE && (discValue < 0 || discValue > 100)) {
+      throw new BadRequestException('نسبة الخصم يجب أن تكون بين صفر و100');
+    }
+    const discountAmount = computeDownPaymentAmount(totalPrice, discType, discValue);
     const netPrice = totalPrice - discountAmount;
     const dpType = dto.downPaymentType ?? existing.downPaymentType;
     const dpValue = dto.downPaymentValue ?? Number(existing.downPaymentValue);
     const dpAmount = computeDownPaymentAmount(netPrice, dpType, dpValue);
+
+    // Booking amount: prefer explicit type/value; a legacy `reservationAmount`
+    // (without type/value) is treated as a FIXED override; otherwise keep the
+    // stored type/value.
+    const resvType =
+      dto.reservationAmountType ??
+      (dto.reservationAmount != null ? DownPaymentType.FIXED : existing.reservationAmountType);
+    const resvValue =
+      dto.reservationAmountValue ?? dto.reservationAmount ?? Number(existing.reservationAmountValue);
+    if (resvType === DownPaymentType.PERCENTAGE && (resvValue <= 0 || resvValue > 100)) {
+      throw new BadRequestException('نسبة دفعة الحجز يجب أن تكون أكبر من صفر وحتى 100');
+    }
+    const reservationAmountComputed = computeDownPaymentAmount(netPrice, resvType, resvValue);
 
     const merged: CreatePlanTemplateDto = {
       name: dto.name ?? existing.name,
@@ -584,7 +667,9 @@ class PlanTemplatesService {
       unitId: resolvedUnitId,
       totalPrice,
       discountAmount,
-      reservationAmount: dto.reservationAmount ?? Number(existing.reservationAmount),
+      reservationAmount: reservationAmountComputed,
+      reservationAmountType: resvType,
+      reservationAmountValue: resvValue,
       downPaymentType: dpType,
       downPaymentValue: dpValue,
       installmentsCount: dto.installmentsCount ?? existing.installmentsCount ?? undefined,
@@ -631,8 +716,12 @@ class PlanTemplatesService {
           unitId: merged.unitId ?? null,
           totalPrice: new Prisma.Decimal(totalPrice),
           discountAmount: new Prisma.Decimal(discountAmount),
+          discountType: discType,
+          discountValue: new Prisma.Decimal(discValue),
           netPrice: new Prisma.Decimal(netPrice),
           reservationAmount: new Prisma.Decimal(reservation),
+          reservationAmountType: resvType,
+          reservationAmountValue: new Prisma.Decimal(resvValue),
           downPaymentType: dpType,
           downPaymentValue: new Prisma.Decimal(dpValue),
           downPaymentAmount: new Prisma.Decimal(dpAmount),

@@ -730,8 +730,15 @@ export interface InstallmentPlanTemplate {
   unit?: { id: string; code: string; type?: string; price?: string | number } | null;
   totalPrice: string | number;
   discountAmount: string | number;
+  // Discount mode (mirrors downPayment). Optional for back-compat.
+  discountType?: DownPaymentType;
+  discountValue?: string | number;
   netPrice: string | number;
   reservationAmount: string | number;
+  // Booking-amount mode (mirrors downPayment). Optional for back-compat with
+  // responses predating the fixed/percentage split.
+  reservationAmountType?: DownPaymentType;
+  reservationAmountValue?: string | number;
   downPaymentType: DownPaymentType;
   downPaymentValue: string | number;
   downPaymentAmount: string | number;

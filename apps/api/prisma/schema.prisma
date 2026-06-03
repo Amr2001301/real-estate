@@ -959,9 +959,22 @@ model InstallmentPlanTemplate {
   unitId             String?              @db.Uuid
   unit               Unit?                @relation("UnitPlanTemplates", fields: [unitId], references: [id])
   totalPrice         Decimal              @db.Decimal(14, 2)
+  // Discount off the total price. `discountAmount` is the COMPUTED amount
+  // (netPrice = totalPrice − discountAmount). The type/value pair mirrors the
+  // down-payment pattern: FIXED → value is the amount; PERCENTAGE → value is a
+  // percent of totalPrice (the template's pricing base).
   discountAmount     Decimal              @default(0) @db.Decimal(14, 2)
+  discountType       DownPaymentType      @default(FIXED)
+  discountValue      Decimal              @default(0) @db.Decimal(14, 2)
   netPrice           Decimal              @db.Decimal(14, 2)
+  // Booking/reservation amount. `reservationAmount` is the COMPUTED amount used
+  // by the schedule (mirrors downPaymentAmount). The type/value pair mirrors the
+  // down-payment pattern: FIXED → value is the amount; PERCENTAGE → value is the
+  // percent (applied to the unit price at reservation time, to netPrice for the
+  // template's own schedule preview).
   reservationAmount  Decimal              @default(0) @db.Decimal(14, 2)
+  reservationAmountType  DownPaymentType  @default(FIXED)
+  reservationAmountValue Decimal          @default(0) @db.Decimal(14, 2)
   downPaymentType    DownPaymentType      @default(FIXED)
   downPaymentValue   Decimal              @db.Decimal(14, 2)
   downPaymentAmount  Decimal              @db.Decimal(14, 2)

@@ -89,8 +89,18 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
   // In edit mode the price may have been customised; keep it editable by default
   const [manualPriceOverride, setManualPriceOverride] = useState(mode === 'edit');
   const [totalPrice, setTotalPrice] = useState(safeStr(d?.totalPrice));
-  const [discountAmount, setDiscountAmount] = useState(safeStr(d?.discountAmount, '0'));
-  const [reservationAmount, setReservationAmount] = useState(safeStr(d?.reservationAmount, '0'));
+  const [discountType, setDiscountType] = useState<DownPaymentType>(d?.discountType ?? 'FIXED');
+  // For edit, prefer the stored raw value; fall back to the legacy amount.
+  const [discountValue, setDiscountValue] = useState(
+    safeStr(d?.discountValue ?? d?.discountAmount, '0'),
+  );
+  const [reservationAmountType, setReservationAmountType] = useState<DownPaymentType>(
+    d?.reservationAmountType ?? 'FIXED',
+  );
+  // For edit, prefer the stored raw value; fall back to the legacy amount.
+  const [reservationAmountValue, setReservationAmountValue] = useState(
+    safeStr(d?.reservationAmountValue ?? d?.reservationAmount, '0'),
+  );
   const [downPaymentType, setDownPaymentType] = useState<DownPaymentType>(
     d?.downPaymentType ?? 'FIXED',
   );
@@ -210,9 +220,15 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
 
   // ── derived values ────────────────────────────────────────────────────────
   const tp = parseNum(totalPrice);
-  const disc = parseNum(discountAmount);
+  // Discount: PERCENTAGE is of the total price (the pricing base).
+  const discValue = parseNum(discountValue);
+  const disc = discountType === 'PERCENTAGE' ? (tp * discValue) / 100 : discValue;
   const netPrice = tp - disc;
-  const reservation = parseNum(reservationAmount);
+  const reservationValue = parseNum(reservationAmountValue);
+  // Template preview: PERCENTAGE is of netPrice (mirrors down payment). At
+  // reservation creation the percentage is re-applied to the selected unit price.
+  const reservation =
+    reservationAmountType === 'PERCENTAGE' ? (netPrice * reservationValue) / 100 : reservationValue;
   const dpVal = parseNum(downPaymentValue);
   const dpAmount = downPaymentType === 'PERCENTAGE' ? (netPrice * dpVal) / 100 : dpVal;
 
@@ -447,32 +463,115 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
           </p>
         </div>
 
+        <div>
+          <span className="text-sm font-medium text-slate-700">نوع الخصم</span>
+          <div className="flex flex-wrap gap-3 mt-2">
+            {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
+              <label
+                key={t}
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                  discountType === t
+                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                    : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="discountType"
+                  value={t}
+                  checked={discountType === t}
+                  onChange={() => setDiscountType(t)}
+                  className="accent-brand-500"
+                />
+                <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <Field
-          label="قيمة الخصم (ج.م)"
-          name="discountAmount"
-          hint="اتركها صفراً إذا لم يكن هناك خصم"
+          label={discountType === 'FIXED' ? 'قيمة الخصم (ج.م)' : 'نسبة الخصم (%)'}
+          name="discountValue"
+          hint={
+            discountType === 'PERCENTAGE'
+              ? 'نسبة من السعر الإجمالي. اتركها صفراً إذا لم يكن هناك خصم.'
+              : 'اتركها صفراً إذا لم يكن هناك خصم'
+          }
         >
           <Input
-            id="discountAmount"
-            name="discountAmount"
-            placeholder="0"
-            {...numericInputProps(discountAmount, setDiscountAmount)}
+            id="discountValue"
+            name="discountValue"
+            placeholder={discountType === 'PERCENTAGE' ? '10' : '0'}
+            {...numericInputProps(discountValue, setDiscountValue, { allowEmpty: true })}
           />
         </Field>
 
+        {disc > 0 && (
+          <div className="rounded-xl bg-slate-50 border border-hairline p-3 text-sm">
+            <p className="text-slate-600 font-medium">
+              {discountType === 'PERCENTAGE' ? 'قيمة الخصم المحتسبة' : 'قيمة الخصم'}
+            </p>
+            <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc)}</p>
+          </div>
+        )}
+
+        <div>
+          <span className="text-sm font-medium text-slate-700">نوع دفعة الحجز</span>
+          <div className="flex flex-wrap gap-3 mt-2">
+            {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
+              <label
+                key={t}
+                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                  reservationAmountType === t
+                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                    : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="reservationAmountType"
+                  value={t}
+                  checked={reservationAmountType === t}
+                  onChange={() => setReservationAmountType(t)}
+                  className="accent-brand-500"
+                />
+                <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <Field
-          label="دفعة الحجز (ج.م)"
-          name="reservationAmount"
+          label={reservationAmountType === 'FIXED' ? 'قيمة دفعة الحجز (ج.م)' : 'نسبة دفعة الحجز (%)'}
+          name="reservationAmountValue"
           required
-          hint="مبلغ الحجز المطلوب من العميل. هذا المبلغ يُستخدم تلقائياً عند إنشاء الحجز. مطلوب وأكبر من صفر للخطط التي تستخدم خيارات المدة."
+          hint={
+            reservationAmountType === 'PERCENTAGE'
+              ? 'نسبة من سعر الوحدة. تُحتسب القيمة من سعر الوحدة المختارة عند إنشاء الحجز. مطلوبة وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
+              : 'مبلغ الحجز المطلوب من العميل. يُستخدم تلقائياً عند إنشاء الحجز. مطلوب وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
+          }
         >
           <Input
-            id="reservationAmount"
-            name="reservationAmount"
-            placeholder="مثال: 50000"
-            {...numericInputProps(reservationAmount, setReservationAmount)}
+            id="reservationAmountValue"
+            name="reservationAmountValue"
+            placeholder={reservationAmountType === 'PERCENTAGE' ? '10' : 'مثال: 50000'}
+            {...numericInputProps(reservationAmountValue, setReservationAmountValue, { allowEmpty: true })}
           />
         </Field>
+
+        {reservation > 0 && (
+          <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
+            <p className="text-brand-700 font-medium">
+              {reservationAmountType === 'PERCENTAGE' ? 'دفعة الحجز المحتسبة (من صافي السعر)' : 'دفعة الحجز'}
+            </p>
+            <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation)}</p>
+            {reservationAmountType === 'PERCENTAGE' && (
+              <p className="text-brand-700/80 text-xs mt-1">
+                عند إنشاء الحجز ستُحتسب النسبة من سعر الوحدة المختارة.
+              </p>
+            )}
+          </div>
+        )}
       </FormSection>
 
       {/* ── Section 3: Down Payment ──────────────────────────────────────── */}

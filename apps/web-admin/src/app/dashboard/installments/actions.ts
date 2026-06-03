@@ -135,8 +135,14 @@ function buildPayload(formData: FormData): Record<string, unknown> {
     projectId: str('projectId'),
     unitId: str('unitId') || null,
     totalPrice: num('totalPrice'),
-    discountAmount: num('discountAmount') ?? 0,
-    reservationAmount: num('reservationAmount') ?? 0,
+    // Discount: type + value (mirrors down payment). The API computes the
+    // concrete discountAmount from these.
+    discountType: str('discountType'),
+    discountValue: num('discountValue'),
+    // Booking amount: type + value (mirrors down payment). The API computes the
+    // concrete reservationAmount from these.
+    reservationAmountType: str('reservationAmountType'),
+    reservationAmountValue: num('reservationAmountValue'),
     downPaymentType: str('downPaymentType'),
     downPaymentValue: num('downPaymentValue'),
     installmentsCount: num('installmentsCount'),

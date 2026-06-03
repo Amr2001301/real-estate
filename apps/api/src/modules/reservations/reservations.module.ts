@@ -327,6 +327,8 @@ export class ReservationsService {
         unitId: true,
         netPrice: true,
         reservationAmount: true,
+        reservationAmountType: true,
+        reservationAmountValue: true,
         downPaymentAmount: true,
         finalPaymentAmount: true,
         durationOptions: {
@@ -465,6 +467,22 @@ export class ReservationsService {
       }
       resolvedPlanId = plan.id;
       resolvedBookingAmount = plan.reservationAmount;
+      // When the plan's booking amount is PERCENTAGE-based, the booking amount
+      // the customer pays is computed from the UNIT price (per spec) and
+      // snapshotted on the reservation — mirroring the manual PERCENTAGE
+      // override below. An explicit DTO override still wins (handled after).
+      if (
+        plan.reservationAmountType === 'PERCENTAGE' &&
+        plan.reservationAmountValue.gt(0) &&
+        new Prisma.Decimal(unit.price).gt(0)
+      ) {
+        const unitPrice = new Prisma.Decimal(unit.price);
+        const percent = plan.reservationAmountValue;
+        resolvedBookingAmount = unitPrice.mul(percent).div(100).toDecimalPlaces(2);
+        resolvedBookingAmountMode = ReservationBookingAmountMode.PERCENTAGE;
+        resolvedBookingAmountPercent = percent;
+        resolvedBookingAmountUnitPriceSnapshot = unitPrice;
+      }
 
       if (plan.durationOptions.length > 0) {
         // Plan has duration options → option id is required and must belong here.
