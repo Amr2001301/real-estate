@@ -65,6 +65,9 @@ import 'features/reservations/domain/repositories/reservations_repository.dart';
 import 'features/visits/data/datasources/visits_remote_data_source.dart';
 import 'features/visits/data/repositories/visits_repository_impl.dart';
 import 'features/visits/domain/repositories/visits_repository.dart';
+import 'features/maintenance/data/datasources/maintenance_remote_data_source.dart';
+import 'features/maintenance/data/repositories/maintenance_repository_impl.dart';
+import 'features/maintenance/domain/repositories/maintenance_repository.dart';
 import 'router/app_router.dart';
 
 /// Root of the Staff App (Sales / Broker). Provides feature repositories (data→
@@ -113,6 +116,10 @@ class StaffApp extends StatelessWidget {
         RepositoryProvider<StaffCatalogRepository>(
           create: (ctx) =>
               StaffCatalogRepositoryImpl(StaffCatalogRemoteDataSourceImpl(ctx.read<Dio>())),
+        ),
+        RepositoryProvider<MaintenanceRepository>(
+          create: (ctx) =>
+              MaintenanceRepositoryImpl(MaintenanceRemoteDataSourceImpl(ctx.read<Dio>())),
         ),
         RepositoryProvider<VisitsRepository>(
           create: (ctx) => VisitsRepositoryImpl(VisitsRemoteDataSourceImpl(ctx.read<Dio>())),

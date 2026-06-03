@@ -90,6 +90,13 @@ import '../features/visits/presentation/cubit/visits_cubit.dart';
 import '../features/visits/presentation/screens/create_visit_screen.dart';
 import '../features/visits/presentation/screens/visit_detail_screen.dart';
 import '../features/visits/presentation/screens/visits_screen.dart';
+import '../features/maintenance/domain/entities/maintenance_request.dart';
+import '../features/maintenance/domain/repositories/maintenance_repository.dart';
+import '../features/maintenance/domain/usecases/maintenance_use_cases.dart';
+import '../features/maintenance/presentation/cubit/maintenance_detail_cubit.dart';
+import '../features/maintenance/presentation/cubit/maintenance_list_cubit.dart';
+import '../features/maintenance/presentation/screens/maintenance_detail_screen.dart';
+import '../features/maintenance/presentation/screens/maintenance_list_screen.dart';
 import '../features/shell/presentation/staff_shell.dart';
 import '../features/splash/splash_screen.dart';
 
@@ -119,8 +126,19 @@ String? staffRedirect(SessionState session, String loc) {
     return null;
   }
 
-  // Sales / Manager / Admin: never enter the broker workspace.
+  // Maintenance supervisor workspace: confined to `/maintenance/*` (+ shared).
+  // Mirrors the broker pattern so the supervisor never lands on the sales shell.
+  if (role == AppRole.maintenanceSupervisor) {
+    if (loc == '/login' || loc == '/splash') return '/maintenance';
+    if (!loc.startsWith('/maintenance') && !sharedPaths.contains(loc)) {
+      return '/maintenance';
+    }
+    return null;
+  }
+
+  // Sales / Manager / Admin: never enter the broker / maintenance workspaces.
   if (loc.startsWith('/broker')) return '/home';
+  if (loc.startsWith('/maintenance')) return '/home';
   if (loc == '/login' || loc == '/splash') return '/home';
   return null;
 }
@@ -237,6 +255,35 @@ GoRouter createStaffRouter(SessionCubit sessionCubit) {
         ),
       ),
       GoRoute(path: '/home', builder: (_, _) => const StaffShell()),
+
+      // ── Maintenance supervisor workspace ─────────────────────────────────
+      GoRoute(
+        path: '/maintenance',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) =>
+              MaintenanceListCubit(GetAssignedMaintenance(ctx.read<MaintenanceRepository>())),
+          child: const MaintenanceListScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/maintenance/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final request = state.extra as MaintenanceRequest?;
+          return BlocProvider(
+            create: (ctx) {
+              final repo = ctx.read<MaintenanceRepository>();
+              return MaintenanceDetailCubit(
+                GetMaintenanceDetail(repo),
+                UpdateMaintenanceStatus(repo),
+                ConfirmMaintenanceResolution(repo),
+                requestId: id,
+              );
+            },
+            child: MaintenanceDetailScreen(fallback: request),
+          );
+        },
+      ),
 
       // ── Lead detail ──────────────────────────────────────────────────────
       GoRoute(
