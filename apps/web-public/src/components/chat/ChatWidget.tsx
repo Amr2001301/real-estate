@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { FRIENDLY } from '@/lib/api';
 import {
@@ -195,18 +195,44 @@ export function ChatWidget() {
   return (
     <>
       {!open && (
-        <button
-          type="button"
-          onClick={handleOpen}
-          aria-label="افتح المساعد العقاري"
-          className={cn(
-            'fixed bottom-5 left-5 z-[60] inline-flex h-14 w-14 items-center justify-center rounded-full',
-            'bg-gold-400 text-navy shadow-lift transition-transform duration-200 hover:scale-105',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-2',
-          )}
-        >
-          <MessageCircle className="h-6 w-6" aria-hidden />
-        </button>
+        <div className="fixed bottom-6 left-6 z-[60] flex flex-col items-center gap-3">
+          {/* WhatsApp — secondary action, sits above the AI button */}
+          <a
+            href="https://wa.me/201008239075"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="تواصل عبر واتساب"
+            className="group relative flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-emerald-600 active:scale-95"
+          >
+            <MessageCircle className="h-[22px] w-[22px]" aria-hidden />
+            <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-lg border border-navy-700 bg-navy px-2.5 py-1 text-[11px] font-bold text-white opacity-0 shadow-xl transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+              تواصل عبر واتساب
+            </span>
+          </a>
+
+          {/* AI assistant — hero action */}
+          <button
+            type="button"
+            onClick={handleOpen}
+            aria-label="مساعد ديفورا الذكي"
+            className={cn(
+              'group relative flex h-14 w-14 items-center justify-center rounded-full',
+              'bg-gradient-to-tr from-navy via-indigo-950 to-navy text-gold-400 ring-1 ring-navy-700',
+              'shadow-[0_8px_30px_rgb(0,0,0,0.18)] transition-all duration-300 hover:scale-110 active:scale-95',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/60 focus-visible:ring-offset-2',
+            )}
+          >
+            {/* Pulsing AI "brain" ring */}
+            <span
+              className="pointer-events-none absolute inset-0 animate-ping rounded-full bg-indigo-500/20 group-hover:bg-indigo-500/30"
+              aria-hidden
+            />
+            <Sparkles className="relative h-6 w-6 animate-pulse" aria-hidden />
+            <span className="pointer-events-none absolute left-full top-1/2 ml-3 -translate-y-1/2 translate-x-1 whitespace-nowrap rounded-lg border border-navy-700 bg-navy px-2.5 py-1 text-[11px] font-bold text-white opacity-0 shadow-xl transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+              مساعد ديفورا الذكي AI
+            </span>
+          </button>
+        </div>
       )}
 
       <ChatPanel
