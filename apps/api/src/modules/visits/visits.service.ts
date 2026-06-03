@@ -22,9 +22,11 @@ import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
   CustomerRequestRescheduleDto,
+  CustomerVisitFeedbackDto,
   ListAppointmentsDto,
   ListRequestsDto,
   RescheduleVisitDto,
+  SalesVisitFeedbackDto,
   ScheduleVisitDto,
   UpdateAppointmentStatusDto,
   UpdateRequestStatusDto,
@@ -913,6 +915,16 @@ export class VisitsService {
             'visit_completed',
             payload,
           );
+          // Gap 7 — ask the customer to rate the visit. Deep-link metadata
+          // routes the notification to the visits ticket (entityType 'visit'
+          // resolves to /account/visits in the customer notification mapper).
+          await this.notifications.sendToUser(customerId, 'visit_feedback_requested', {
+            ...payload,
+            entityType: 'visit',
+            entityId: id,
+            appointmentId: id,
+            action: 'submit_visit_feedback',
+          });
           break;
         case AppointmentStatus.CANCELLED:
           await this.notifications.sendToUsers(
@@ -1227,6 +1239,114 @@ export class VisitsService {
         payload,
       );
       return updated;
+    });
+  }
+
+  /**
+   * Gap 7 — customer submits a rating + optional comment for a COMPLETED visit.
+   * One-time: a second attempt is rejected. Writes the dedicated customer*
+   * columns (never the legacy customerFeedback, which is the reschedule reason).
+   * Notifies the assigned sales rep best-effort.
+   */
+  async customerSubmitFeedback(
+    appointmentId: string,
+    dto: CustomerVisitFeedbackDto,
+    user: AuthUser,
+  ) {
+    const appt = await this.loadAppointmentForCustomer(appointmentId, user.sub);
+    if (appt.status !== AppointmentStatus.COMPLETED) {
+      throw new BadRequestException('يمكن تقييم الزيارة بعد اكتمالها فقط');
+    }
+    if (appt.customerRatingSubmittedAt) {
+      throw new BadRequestException('تم إرسال تقييمك لهذه الزيارة مسبقاً');
+    }
+
+    const comment = dto.comment?.trim() || null;
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.visitAppointment.update({
+        where: { id: appointmentId },
+        data: {
+          customerRating: dto.rating,
+          customerRatingText: comment,
+          customerRatingSubmittedAt: new Date(),
+        },
+        include: APPOINTMENT_INCLUDE,
+      });
+      await tx.visitActivity.create({
+        data: {
+          visitRequestId: appt.visitRequestId,
+          visitId: appointmentId,
+          leadId: appt.leadId,
+          actorId: user.sub,
+          actorRole: user.role,
+          type: VisitActivityType.NOTE_ADDED,
+          note: `تقييم العميل: ${dto.rating}/5`,
+        },
+      });
+      return next;
+    });
+
+    // Let the assigned sales rep know their visit was rated (best-effort).
+    const payload = await this.buildAppointmentPayload(appointmentId, {
+      entityType: 'visit',
+      entityId: appointmentId,
+      appointmentId,
+      rating: dto.rating,
+    });
+    await this.notifications.sendToUser(
+      appt.assignedSalesId,
+      'visit_feedback_received',
+      payload,
+    );
+    return updated;
+  }
+
+  /**
+   * Gap 7 — assigned sales / manager / admin records their own feedback on a
+   * COMPLETED visit. Updatable (staff may revise their note). Writes the
+   * dedicated sales* columns; rejects an entirely empty submission.
+   */
+  async salesSubmitFeedback(
+    appointmentId: string,
+    dto: SalesVisitFeedbackDto,
+    user: AuthUser,
+  ) {
+    const appt = await this.prisma.visitAppointment.findUnique({
+      where: { id: appointmentId },
+    });
+    if (!appt) throw new NotFoundException('Appointment not found');
+    await this.assertApptInScope(appt, user);
+    if (appt.status !== AppointmentStatus.COMPLETED) {
+      throw new BadRequestException('يمكن إضافة ملاحظات الزيارة بعد اكتمالها فقط');
+    }
+    const notes = dto.notes?.trim() || null;
+    if (dto.rating == null && !notes) {
+      throw new BadRequestException('أدخل تقييماً (1–5) أو ملاحظة على الأقل');
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const next = await tx.visitAppointment.update({
+        where: { id: appointmentId },
+        data: {
+          salesRating: dto.rating ?? appt.salesRating,
+          salesRatingText: notes ?? appt.salesRatingText,
+          salesRatingSubmittedAt: new Date(),
+          updatedById: user.sub,
+        },
+        include: APPOINTMENT_INCLUDE,
+      });
+      await tx.visitActivity.create({
+        data: {
+          visitRequestId: appt.visitRequestId,
+          visitId: appointmentId,
+          leadId: appt.leadId,
+          actorId: user.sub,
+          actorRole: user.role,
+          type: VisitActivityType.NOTE_ADDED,
+          note: dto.rating != null ? `تقييم المندوب: ${dto.rating}/5` : 'ملاحظة المندوب على الزيارة',
+        },
+      });
+      return next;
     });
   }
 

@@ -31,6 +31,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
+  DepositReviewStatus,
   DepositType,
   LeadStage,
   NotificationChannel,
@@ -215,6 +216,16 @@ const ME_RESERVATION_SELECT = {
   bookingAmount: true,
   bookingPaymentStatus: true,
   bookingPaidAt: true,
+  // Gap 3 — surface the latest BOOKING_AMOUNT proof so the customer UI can
+  // distinguish "submit" vs "pending review" vs "rejected (resubmit)". Only
+  // safe scalars; the receipt is reached via the signed-download endpoint, so
+  // no fileUrl is selected here.
+  deposits: {
+    where: { type: DepositType.BOOKING_AMOUNT },
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+    select: { id: true, reviewStatus: true, rejectionReason: true },
+  },
   unit: {
     select: {
       id: true,
@@ -233,6 +244,25 @@ const ME_RESERVATION_SELECT = {
   },
   sales: { select: { id: true, fullName: true } },
 } satisfies Prisma.ReservationSelect;
+
+/**
+ * Flatten the raw ME_RESERVATION_SELECT row into the customer-facing shape:
+ * collapse the `deposits` array (latest BOOKING_AMOUNT proof) into a single
+ * `bookingDeposit` field (or null). Keeps the /me/reservations payload stable
+ * and additive — `bookingDeposit` is the only new field.
+ */
+function toMeReservation<
+  T extends { deposits?: { id: string; reviewStatus: DepositReviewStatus; rejectionReason: string | null }[] },
+>(row: T) {
+  const { deposits, ...rest } = row;
+  const latest = deposits?.[0] ?? null;
+  return {
+    ...rest,
+    bookingDeposit: latest
+      ? { id: latest.id, reviewStatus: latest.reviewStatus, rejectionReason: latest.rejectionReason }
+      : null,
+  };
+}
 
 @Injectable()
 export class ReservationsService {
@@ -646,6 +676,24 @@ export class ReservationsService {
         'reservation_submitted_admin',
         await this.buildReservationPayload(reservation.id),
       );
+      // Gap 3 — ask the customer to pay the booking amount. Only when the
+      // reservation is owned by a real customer (clientId) AND a positive
+      // booking amount is due. Best-effort (sendToUser never throws past
+      // here), so a missing template / push failure can't fail creation. The
+      // payload carries deep-link metadata (entityType/entityId/action) for
+      // the notification-center routing added in Gap 1.
+      if (resolvedClientId && resolvedBookingAmount.gt(0)) {
+        await this.notifications.sendToUser(
+          resolvedClientId,
+          'reservation_payment_requested',
+          await this.buildReservationPayload(reservation.id, {
+            entityType: 'reservation',
+            entityId: reservation.id,
+            action: 'pay_booking_amount',
+            bookingAmount: resolvedBookingAmount.toString(),
+          }),
+        );
+      }
       return reservation;
     });
   }
@@ -897,7 +945,7 @@ export class ReservationsService {
       }),
       this.prisma.reservation.count({ where }),
     ]);
-    return paginate(data, total, opts);
+    return paginate(data.map(toMeReservation), total, opts);
   }
 
   /**
@@ -915,7 +963,7 @@ export class ReservationsService {
       select: ME_RESERVATION_SELECT,
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
-    return reservation;
+    return toMeReservation(reservation);
   }
 
   /**

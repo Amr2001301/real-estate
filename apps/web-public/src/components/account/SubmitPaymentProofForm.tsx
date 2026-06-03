@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Upload, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface Props {
-  installmentId: string;
+  /** Installment proof mode. Exactly one of installmentId / reservationId is set. */
+  installmentId?: string;
+  /** Gap 3 — booking-amount proof mode (reservation booking payment). */
+  reservationId?: string;
   amount: string;
   /** Resubmit mode: when set, the form POSTs to /me/deposits/:id/resubmit. */
   resubmitDepositId?: string;
@@ -40,6 +43,7 @@ function formatSize(b: number): string {
 
 export function SubmitPaymentProofForm({
   installmentId,
+  reservationId,
   amount,
   resubmitDepositId,
   onClose,
@@ -122,27 +126,22 @@ export function SubmitPaymentProofForm({
       const url = resubmitDepositId
         ? `/api-proxy/me/deposits/${resubmitDepositId}/resubmit`
         : '/api-proxy/me/deposits';
+      const common = {
+        paidAt: new Date(paidAt).toISOString(),
+        paymentMethod,
+        receiptUrl: publicUrl,
+        fileName: pickedFile.name,
+        mimeType: pickedFile.type,
+        sizeBytes: pickedFile.size,
+        note: note.trim() || undefined,
+      };
       const body = resubmitDepositId
-        ? {
-            paymentMethod,
-            receiptUrl: publicUrl,
-            fileName: pickedFile.name,
-            mimeType: pickedFile.type,
-            sizeBytes: pickedFile.size,
-            paidAt: new Date(paidAt).toISOString(),
-            note: note.trim() || undefined,
-          }
-        : {
-            installmentId,
-            amount: Number(amount),
-            paidAt: new Date(paidAt).toISOString(),
-            paymentMethod,
-            receiptUrl: publicUrl,
-            fileName: pickedFile.name,
-            mimeType: pickedFile.type,
-            sizeBytes: pickedFile.size,
-            note: note.trim() || undefined,
-          };
+        ? common
+        : reservationId
+          ? // Gap 3 — booking-amount proof: server uses the reservation's
+            // authoritative bookingAmount, so no amount is sent.
+            { reservationId, ...common }
+          : { installmentId, amount: Number(amount), ...common };
       const submitRes = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

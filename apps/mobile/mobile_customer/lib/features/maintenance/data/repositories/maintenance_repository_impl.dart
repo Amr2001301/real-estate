@@ -66,4 +66,28 @@ class MaintenanceRepositoryImpl implements MaintenanceRepository {
       );
     });
   }
+
+  @override
+  Future<Result<MaintenanceRequest>> confirmResolution({
+    required String requestId,
+    required int rating,
+    String? note,
+  }) {
+    return guardApiCall(() async {
+      final dto = await _remote.confirmResolution(
+        requestId: requestId,
+        rating: rating,
+        note: note,
+      );
+      return dto.toEntity();
+    });
+  }
+
+  @override
+  Future<Result<MaintenanceRequest>> submitComplaint(String requestId) {
+    return guardApiCall(() async {
+      final dto = await _remote.submitComplaint(requestId: requestId);
+      return dto.toEntity();
+    });
+  }
 }

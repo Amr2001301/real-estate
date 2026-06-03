@@ -9,7 +9,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { MeNotification } from '@/lib/api-types';
-import { markNotificationReadAction } from '@/lib/account-actions';
+import { notificationHref } from '@/lib/notification-link';
+import { NotificationRow } from '@/components/account/NotificationRow';
 
 /**
  * templateCode → Arabic label. Records have no title/body, so this is the
@@ -91,15 +92,16 @@ function formatDateTime(iso: string): string {
 }
 
 /**
- * One notification row. UNREAD rows are a submit button that marks the
- * notification read on click (whole-row affordance + cursor-pointer); READ rows
- * are static and ultra-clean (no dot, no action). Designed to sit inside a
- * divided list container.
+ * One notification row. When the payload resolves to a customer route the whole
+ * row becomes a link to that page (marking the notification read on click if it
+ * was unread). Otherwise an UNREAD row stays a click-to-mark-read affordance and
+ * a READ row is static. Designed to sit inside a divided list container.
  */
 export function NotificationCard({ notification }: { notification: MeNotification }) {
-  const unread = notification.readAt === null;
+  const unread = !notification.read;
   const title = notificationTitle(notification.templateCode);
   const { Icon, chip } = notificationVisual(notification.templateCode, title);
+  const href = notificationHref(notification.payload);
 
   const inner = (
     <>
@@ -126,21 +128,14 @@ export function NotificationCard({ notification }: { notification: MeNotificatio
     </>
   );
 
-  const base = 'flex w-full items-center gap-3.5 p-4 text-start transition-colors duration-200';
+  const base = cn(
+    'flex w-full items-center gap-3.5 p-4 text-start transition-colors duration-200',
+    (unread || href) && 'cursor-pointer hover:bg-surface-soft/60',
+  );
 
-  if (unread) {
-    return (
-      <form action={markNotificationReadAction.bind(null, notification.id)} className="block">
-        <button
-          type="submit"
-          aria-label={`تحديد كمقروء: ${title}`}
-          className={cn(base, 'cursor-pointer hover:bg-surface-soft/60')}
-        >
-          {inner}
-        </button>
-      </form>
-    );
-  }
-
-  return <div className={base}>{inner}</div>;
+  return (
+    <NotificationRow id={notification.id} href={href} unread={unread} className={base}>
+      {inner}
+    </NotificationRow>
+  );
 }

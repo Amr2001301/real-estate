@@ -145,6 +145,12 @@ export interface MeAppointmentSummary {
   location: string | null;
   meetingPoint: string | null;
   customerFeedback: string | null;
+  // Gap 7 — the customer's own post-visit rating (1–5) + optional comment.
+  // `customerRatingSubmittedAt` doubles as the "already rated" flag. Sales
+  // feedback is intentionally NOT exposed to the customer.
+  customerRating?: number | null;
+  customerRatingText?: string | null;
+  customerRatingSubmittedAt?: string | null;
 }
 
 export interface MeVisitRequest {
@@ -206,6 +212,14 @@ export interface ReservationUnitRef {
   building: { phase: { project: { id: string; name: Translatable } | null } | null } | null;
 }
 
+/** Gap 3 — latest BOOKING_AMOUNT proof for a reservation, so the customer UI
+ *  can distinguish submit / pending-review / rejected states. */
+export interface MeReservationBookingDeposit {
+  id: string;
+  reviewStatus: MeDepositReviewStatus;
+  rejectionReason: string | null;
+}
+
 export interface MeReservation {
   id: string;
   reservationNumber: string | null;
@@ -215,6 +229,8 @@ export interface MeReservation {
   bookingAmount: string;
   bookingPaymentStatus: MeReservationBookingPaymentStatus;
   bookingPaidAt: string | null;
+  /** Latest booking-amount proof (null when none submitted yet). */
+  bookingDeposit?: MeReservationBookingDeposit | null;
   unit: ReservationUnitRef | null;
   sales: AssignedSalesRef | null;
 }
@@ -291,6 +307,29 @@ export interface MeDeposit {
   } | null;
 }
 
+/**
+ * Gap 5 — installment-schedule summary attached to GET /v1/me/installments.
+ * All money fields are Decimal-as-string. These totals describe the INSTALLMENT
+ * SCHEDULE only — the booking amount lives on the reservation and is NOT
+ * included here (so it is never double-counted). `remaining` = pending +
+ * overdue (everything not yet PAID).
+ */
+export interface MeInstallmentsSummary {
+  totalPaid: string;
+  remaining: string;
+  overdue: string;
+  counts: { total: number; paid: number; pending: number; overdue: number };
+  nextDue: { amount: string; dueDate: string } | null;
+  contracts: { id: string; contractNumber: string | null }[];
+}
+
+/** GET /v1/me/installments — paginated list + additive summary. */
+export interface MeInstallmentsResponse {
+  data: MeInstallment[];
+  meta: { page: number; pageSize: number; total: number; totalPages: number };
+  summary?: MeInstallmentsSummary;
+}
+
 // P11 — customer-facing installment row (GET /v1/me/installments).
 // No file URLs; the customer reaches proof via signed-download.
 export interface MeInstallment {
@@ -346,6 +385,9 @@ export interface MaintenanceUnitRef {
   type: string;
 }
 
+/** Phase A — who confirmed a maintenance request's resolution. */
+export type MaintenanceResolvedBy = 'CUSTOMER' | 'SUPERVISOR' | 'BOTH';
+
 export interface MeMaintenanceRequest {
   id: string;
   status: string;
@@ -356,6 +398,17 @@ export interface MeMaintenanceRequest {
   updatedAt: string;
   unit: MaintenanceUnitRef | null;
   category: MaintenanceCategoryRef | null;
+  // Phase A — resolution loop (additive/optional; backward-compatible). The
+  // customer detail/list endpoints return these (Prisma `include` → all scalars).
+  dueAt?: string | null;
+  complaintAt?: string | null;
+  unresolvedAt?: string | null;
+  customerConfirmedResolutionAt?: string | null;
+  supervisorConfirmedResolutionAt?: string | null;
+  resolvedBy?: MaintenanceResolvedBy | null;
+  customerRating?: number | null;
+  customerRatingText?: string | null;
+  customerRatingSubmittedAt?: string | null;
 }
 
 export interface MaintenanceDocument {
@@ -383,7 +436,9 @@ export interface MeNotification {
   templateCode: string;
   payload: Record<string, unknown> | null;
   channel: string;
-  readAt: string | null;
+  /** GET /v1/me/notifications returns a resolved `read` boolean (derived from
+   *  the row's readAt). Unread = `read === false`. */
+  read: boolean;
   createdAt: string;
 }
 

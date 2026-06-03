@@ -447,6 +447,13 @@ export interface VisitAppointment {
   resultNotes: string | null;
   cancellationReason: string | null;
   noShowReason: string | null;
+  // Gap 7 — dedicated post-visit ratings (customer-submitted vs sales-submitted).
+  customerRating: number | null;
+  customerRatingText: string | null;
+  customerRatingSubmittedAt: string | null;
+  salesRating: number | null;
+  salesRatingText: string | null;
+  salesRatingSubmittedAt: string | null;
   createdById: string | null;
   createdBy?: { id: string; fullName: string } | null;
   createdAt: string;
@@ -653,6 +660,9 @@ export interface MaintenanceRequestItem {
   warrantyEndSnapshot: string | null;
 }
 
+// Phase A — who has confirmed a maintenance request's resolution.
+export type MaintenanceResolutionConfirmedBy = 'CUSTOMER' | 'SUPERVISOR' | 'BOTH';
+
 export interface MaintenanceRequest {
   id: string;
   customerId: string;
@@ -672,6 +682,17 @@ export interface MaintenanceRequest {
   assignedAdminId: string | null;
   createdAt: string;
   items?: MaintenanceRequestItem[];
+  // Phase A — resolution loop (all additive/optional, backward-compatible).
+  resolvedAt?: string | null;
+  closedAt?: string | null;
+  complaintAt?: string | null;
+  unresolvedAt?: string | null;
+  customerConfirmedResolutionAt?: string | null;
+  supervisorConfirmedResolutionAt?: string | null;
+  resolvedBy?: MaintenanceResolutionConfirmedBy | null;
+  customerRating?: number | null;
+  customerRatingText?: string | null;
+  customerRatingSubmittedAt?: string | null;
 }
 
 export interface User {
@@ -1808,11 +1829,11 @@ export type NotificationChannel = 'IN_APP' | 'PUSH' | 'EMAIL' | 'SMS';
 
 export interface NotificationItem {
   id: string;
-  userId: string;
   templateCode: string;
   channel: NotificationChannel;
   payload: Record<string, unknown> | null;
-  sentAt: string | null;
-  readAt: string | null;
+  /** GET /v1/me/notifications resolves a `read` boolean (from the row's
+   *  readAt). Unread = `read === false`. */
+  read: boolean;
   createdAt: string;
 }

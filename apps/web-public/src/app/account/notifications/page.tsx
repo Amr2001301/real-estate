@@ -68,7 +68,7 @@ export default async function AccountNotificationsPage() {
   }
 
   const notifications = extractPaginatedData<MeNotification>(raw);
-  const unreadCount = notifications.filter((n) => n.readAt === null).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div className="space-y-8">

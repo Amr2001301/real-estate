@@ -50,4 +50,14 @@ abstract interface class MaintenanceRepository {
   /// Err on any step failing (partial work leaves an unreferenced object that
   /// R2 lifecycle reaps — never an orphaned document row).
   Future<Result<void>> uploadPhoto(MaintenancePhotoUpload input);
+
+  /// Phase A — customer confirms resolution + rating; returns the updated row.
+  Future<Result<MaintenanceRequest>> confirmResolution({
+    required String requestId,
+    required int rating,
+    String? note,
+  });
+
+  /// Phase A — customer files a complaint; returns the updated row.
+  Future<Result<MaintenanceRequest>> submitComplaint(String requestId);
 }

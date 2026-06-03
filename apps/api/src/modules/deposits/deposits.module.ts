@@ -39,6 +39,7 @@ import {
   Prisma,
   PlanPaymentType,
   InstallmentStatus,
+  ReservationBookingPaymentStatus,
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -78,10 +79,18 @@ class AttachReceiptDto {
 
 // ── P11 — payment-proof review DTOs ────────────────────────────────────────
 
-/** Customer submits a payment proof against one of their own installments. */
+/**
+ * Customer submits a payment proof. Exactly ONE target must be provided:
+ *   - `installmentId` → installment / down-payment / final-payment proof, OR
+ *   - `reservationId` → booking-amount proof (Gap 3).
+ * `amount` is required for the installment path (must match the installment);
+ * for the booking path it is ignored — the reservation's bookingAmount is the
+ * authoritative source.
+ */
 class CustomerSubmitProofDto {
-  @IsUUID() installmentId!: string;
-  @IsNumber() @IsPositive() amount!: number;
+  @IsOptional() @IsUUID() installmentId?: string;
+  @IsOptional() @IsUUID() reservationId?: string;
+  @IsOptional() @IsNumber() @IsPositive() amount?: number;
   @IsDateString() paidAt!: string;
   @IsEnum(PaymentMethod) paymentMethod!: PaymentMethod;
   /** R2 public URL minted by the customer-side presign endpoint. */
@@ -322,7 +331,22 @@ class DepositsService {
 
     // Legacy filters (kept for backward compatibility with customer portal)
     if (opts.contractId) and.push({ contractId: opts.contractId });
-    if (opts.customerId) and.push({ contract: { customerId: opts.customerId } });
+    // Customer scope must include BOTH contract-linked deposits AND
+    // reservation-linked BOOKING_AMOUNT deposits. Booking-amount deposits carry
+    // contractId = null and bind to the customer through the reservation's
+    // client (or its linked lead's client), so matching only `contract.
+    // customerId` silently dropped them — that's why /me/deposits showed the
+    // booking payment as 0. Mirror the reservation ownership paths used by
+    // GET /me/reservations (direct clientId + lead.clientId).
+    if (opts.customerId) {
+      and.push({
+        OR: [
+          { contract: { customerId: opts.customerId } },
+          { reservation: { clientId: opts.customerId } },
+          { reservation: { lead: { is: { clientId: opts.customerId } } } },
+        ],
+      });
+    }
 
     // Type filter
     if (opts.type) and.push({ type: opts.type });
@@ -401,6 +425,25 @@ class DepositsService {
 
     const where: Prisma.DepositWhereInput = and.length > 0 ? { AND: and } : {};
 
+    // "Paid money" totals exclude proofs that are still pending or were
+    // rejected — those are records, not confirmed payments, and must never
+    // inflate the customer's "إجمالي المدفوعات". NO_PROOF and APPROVED both
+    // count as paid: admin-recorded deposits and admin-confirmed booking
+    // amounts legitimately sit at NO_PROOF (with verified=true), while a
+    // customer-submitted proof becomes APPROVED on review. The `data` list
+    // below still returns every row (pending/rejected included) so they remain
+    // visible as records.
+    const paidWhere: Prisma.DepositWhereInput = {
+      AND: [
+        where,
+        {
+          reviewStatus: {
+            notIn: [DepositReviewStatus.PENDING_REVIEW, DepositReviewStatus.REJECTED],
+          },
+        },
+      ],
+    };
+
     const [data, total, groups] = await Promise.all([
       this.prisma.deposit.findMany({
         where,
@@ -411,7 +454,7 @@ class DepositsService {
       this.prisma.deposit.count({ where }),
       this.prisma.deposit.groupBy({
         by: ['type'],
-        where,
+        where: paidWhere,
         _sum: { amount: true },
         _count: { id: true },
       }),
@@ -506,6 +549,20 @@ class DepositsService {
    * service contract — DB row first, push best-effort try/catch).
    */
   async submitProofForCustomer(userId: string, dto: CustomerSubmitProofDto) {
+    // Exactly one target — an installment OR a reservation booking amount.
+    const hasInstallment = !!dto.installmentId;
+    const hasReservation = !!dto.reservationId;
+    if (hasInstallment === hasReservation) {
+      throw new BadRequestException(
+        'يجب تحديد قسط واحد أو حجز واحد لإرسال إثبات الدفع',
+      );
+    }
+    if (hasReservation) {
+      return this.submitBookingProofForCustomer(userId, dto);
+    }
+    if (dto.amount == null) {
+      throw new BadRequestException('المبلغ مطلوب');
+    }
     const installment = await this.prisma.installment.findFirst({
       where: { id: dto.installmentId },
       include: {
@@ -583,6 +640,119 @@ class DepositsService {
       depositId: deposit.id,
       installmentDueDate: installment.dueDate.toISOString(),
       amount: deposit.amount.toString(),
+      entityType: 'deposit',
+      entityId: deposit.id,
+      action: 'review_payment_proof',
+      ...(projectId ? { projectId } : {}),
+    });
+    return deposit;
+  }
+
+  /**
+   * Gap 3 — customer submits a payment proof for a reservation's BOOKING_AMOUNT.
+   * Unlike the installment path, a booking deposit carries `reservationId`
+   * (contractId stays null) and its amount is the reservation's authoritative
+   * `bookingAmount`. Ownership is verified via the reservation's client (direct
+   * or through its linked lead) — a mismatch returns 404 (no existence leak).
+   *
+   * Duplicate guard: at most one pending booking proof per reservation. A prior
+   * REJECTED proof does NOT block a fresh submission (resubmission is allowed by
+   * creating a new proof). On submit the reservation's booking payment flips to
+   * PENDING; approval (DepositsService.approveProof — Gap 2) flips it to PAID,
+   * rejection reverts it to UNPAID (see rejectProof).
+   */
+  async submitBookingProofForCustomer(userId: string, dto: CustomerSubmitProofDto) {
+    const reservation = await this.prisma.reservation.findUnique({
+      where: { id: dto.reservationId },
+      select: {
+        id: true,
+        clientId: true,
+        reservationNumber: true,
+        bookingAmount: true,
+        bookingPaymentStatus: true,
+        lead: { select: { clientId: true } },
+        unit: {
+          select: { building: { select: { phase: { select: { projectId: true } } } } },
+        },
+        deposits: {
+          where: { type: DepositType.BOOKING_AMOUNT },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { reviewStatus: true },
+        },
+      },
+    });
+    // 404 (not 403) when missing OR not owned by the caller — don't disclose
+    // existence of other customers' reservations.
+    const owns =
+      !!reservation &&
+      (reservation.clientId === userId || reservation.lead?.clientId === userId);
+    if (!reservation || !owns) {
+      throw new NotFoundException('Reservation not found');
+    }
+    if (reservation.bookingAmount.lte(0)) {
+      throw new BadRequestException('لا يوجد مبلغ حجز مستحق على هذا الحجز');
+    }
+    if (reservation.bookingPaymentStatus === ReservationBookingPaymentStatus.PAID) {
+      throw new BadRequestException('تم سداد مبلغ الحجز مسبقاً');
+    }
+    if (reservation.bookingPaymentStatus === ReservationBookingPaymentStatus.WAIVED) {
+      throw new BadRequestException('مبلغ الحجز مُعفى ولا يتطلب دفعاً');
+    }
+    if (reservation.deposits[0]?.reviewStatus === DepositReviewStatus.PENDING_REVIEW) {
+      throw new BadRequestException('يوجد إثبات دفع قيد المراجعة بالفعل لهذا الحجز');
+    }
+
+    // Mirror the installment flow: create the Deposit, register the proof
+    // Document, back-link it, then reflect PENDING on the reservation. Amount
+    // is the reservation's authoritative bookingAmount (client `amount` is
+    // ignored here to prevent under/over-statement).
+    const created = await this.prisma.deposit.create({
+      data: {
+        type: DepositType.BOOKING_AMOUNT,
+        reservationId: reservation.id,
+        contractId: null,
+        installmentId: null,
+        amount: reservation.bookingAmount,
+        paidAt: new Date(dto.paidAt),
+        receiptUrl: dto.receiptUrl,
+        recordedById: userId,
+        reviewStatus: DepositReviewStatus.PENDING_REVIEW,
+        paymentMethod: dto.paymentMethod,
+        verified: false,
+      },
+    });
+    const document = await this.documents.create(userId, {
+      ownerType: DocumentOwnerType.DEPOSIT,
+      ownerId: created.id,
+      category: DocumentCategory.RECEIPT,
+      title: dto.note?.trim() || 'إثبات دفع مبلغ الحجز',
+      fileUrl: dto.receiptUrl,
+      fileName: dto.fileName,
+      mimeType: dto.mimeType,
+      sizeBytes: dto.sizeBytes,
+      visibility: DocumentVisibility.ADMIN_ONLY,
+    });
+    const deposit = await this.prisma.deposit.update({
+      where: { id: created.id },
+      data: { proofDocumentId: document.id },
+    });
+    // Reflect "awaiting review" on the reservation so /me/reservations and the
+    // admin reservation view show the pending state without a deposit join.
+    await this.prisma.reservation.update({
+      where: { id: reservation.id },
+      data: { bookingPaymentStatus: ReservationBookingPaymentStatus.PENDING },
+    });
+
+    const projectId = reservation.unit?.building?.phase?.projectId ?? null;
+    await this.notifyStaff('booking_payment_proof_submitted', {
+      depositId: deposit.id,
+      reservationId: reservation.id,
+      amount: deposit.amount.toString(),
+      reference: reservation.reservationNumber ?? '',
+      entityType: 'deposit',
+      entityId: deposit.id,
+      action: 'review_payment_proof',
       ...(projectId ? { projectId } : {}),
     });
     return deposit;
@@ -655,14 +825,22 @@ class DepositsService {
       include: {
         contract: { select: { customerId: true } },
         installment: { select: { id: true, status: true, dueDate: true } },
+        reservation: { select: { id: true, clientId: true, bookingPaymentStatus: true } },
       },
     });
     if (!target) throw new NotFoundException('Deposit not found');
-    if (
+    // Idempotent — already-approved deposits whose side effect is already in
+    // place return the current row untouched. Two side-effect shapes exist:
+    // installment-linked (installment PAID) and BOOKING_AMOUNT (reservation
+    // booking PAID).
+    const installmentSettled =
       target.reviewStatus === DepositReviewStatus.APPROVED &&
-      target.installment?.status === InstallmentStatus.PAID
-    ) {
-      // Idempotent — return the current row.
+      target.installment?.status === InstallmentStatus.PAID;
+    const bookingSettled =
+      target.reviewStatus === DepositReviewStatus.APPROVED &&
+      target.type === DepositType.BOOKING_AMOUNT &&
+      target.reservation?.bookingPaymentStatus === ReservationBookingPaymentStatus.PAID;
+    if (installmentSettled || bookingSettled) {
       return target;
     }
 
@@ -683,17 +861,37 @@ class DepositsService {
           data: { status: InstallmentStatus.PAID, paidAt: next.paidAt },
         });
       }
+      // BOOKING_AMOUNT proofs bind to a Reservation (contractId is null), so
+      // approving one must flip the reservation's booking payment to PAID —
+      // the same source-of-truth update the admin confirm-booking path makes
+      // (reservations.confirmBookingPayment). Without this, /me/reservations
+      // keeps showing the booking as UNPAID after approval. Snapshot fields
+      // (bookingAmount / mode / percent) are intentionally left untouched.
+      if (target.type === DepositType.BOOKING_AMOUNT && target.reservationId) {
+        await tx.reservation.update({
+          where: { id: target.reservationId },
+          data: {
+            bookingPaymentStatus: ReservationBookingPaymentStatus.PAID,
+            bookingPaidAt: next.paidAt,
+          },
+        });
+      }
       return next;
     });
 
+    // Recipient is the contract owner for installment deposits, or the
+    // reservation's client for BOOKING_AMOUNT deposits (no contract).
     await this.notifications.sendToUser(
-      target.contract?.customerId,
+      target.contract?.customerId ?? target.reservation?.clientId,
       'payment_proof_approved',
       {
         depositId: id,
         installmentDueDate: target.installment?.dueDate.toISOString(),
         amount: updated.amount.toString(),
         contractId: updated.contractId,
+        ...(target.reservationId
+          ? { entityType: 'reservation', entityId: target.reservationId }
+          : {}),
       },
     );
     if (dto.note) {
@@ -711,6 +909,7 @@ class DepositsService {
       include: {
         contract: { select: { customerId: true } },
         installment: { select: { id: true, dueDate: true } },
+        reservation: { select: { id: true, clientId: true } },
       },
     });
     if (!target) throw new NotFoundException('Deposit not found');
@@ -723,26 +922,41 @@ class DepositsService {
     if (!reason) {
       throw new BadRequestException('سبب الرفض مطلوب');
     }
-    const updated = await this.prisma.deposit.update({
-      where: { id },
-      data: {
-        reviewStatus: DepositReviewStatus.REJECTED,
-        verified: false,
-        rejectionReason: reason.slice(0, 2000),
-        reviewedAt: new Date(),
-        reviewedById: actor.sub,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const next = await tx.deposit.update({
+        where: { id },
+        data: {
+          reviewStatus: DepositReviewStatus.REJECTED,
+          verified: false,
+          rejectionReason: reason.slice(0, 2000),
+          reviewedAt: new Date(),
+          reviewedById: actor.sub,
+        },
+      });
+      // Booking proofs flip the reservation to PENDING on submit; rejecting one
+      // reverts it to UNPAID so the customer can resubmit. (The rejected
+      // Deposit row keeps the reason for the customer to see.)
+      if (target.type === DepositType.BOOKING_AMOUNT && target.reservationId) {
+        await tx.reservation.update({
+          where: { id: target.reservationId },
+          data: { bookingPaymentStatus: ReservationBookingPaymentStatus.UNPAID },
+        });
+      }
+      return next;
     });
 
     const reasonShort = reason.length > 140 ? `${reason.slice(0, 137)}...` : reason;
     await this.notifications.sendToUser(
-      target.contract?.customerId,
+      target.contract?.customerId ?? target.reservation?.clientId,
       'payment_proof_rejected',
       {
         depositId: id,
         installmentDueDate: target.installment?.dueDate.toISOString(),
         amount: updated.amount.toString(),
         reasonShort,
+        ...(target.reservationId
+          ? { entityType: 'reservation', entityId: target.reservationId }
+          : {}),
       },
     );
     return updated;

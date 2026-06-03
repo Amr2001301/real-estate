@@ -37,3 +37,39 @@ class UploadMaintenancePhoto implements UseCase<void, MaintenancePhotoUpload> {
   Future<Result<void>> call(MaintenancePhotoUpload params) =>
       _repo.uploadPhoto(params);
 }
+
+/// Params for the customer confirm-resolution action (Phase A).
+class ConfirmMaintenanceResolutionParams {
+  const ConfirmMaintenanceResolutionParams({
+    required this.requestId,
+    required this.rating,
+    this.note,
+  });
+
+  final String requestId;
+  final int rating;
+  final String? note;
+}
+
+class ConfirmMaintenanceResolution
+    implements UseCase<MaintenanceRequest, ConfirmMaintenanceResolutionParams> {
+  const ConfirmMaintenanceResolution(this._repo);
+  final MaintenanceRepository _repo;
+
+  @override
+  Future<Result<MaintenanceRequest>> call(ConfirmMaintenanceResolutionParams params) =>
+      _repo.confirmResolution(
+        requestId: params.requestId,
+        rating: params.rating,
+        note: params.note,
+      );
+}
+
+class SubmitMaintenanceComplaint implements UseCase<MaintenanceRequest, String> {
+  const SubmitMaintenanceComplaint(this._repo);
+  final MaintenanceRepository _repo;
+
+  @override
+  Future<Result<MaintenanceRequest>> call(String requestId) =>
+      _repo.submitComplaint(requestId);
+}

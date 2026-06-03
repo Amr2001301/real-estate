@@ -13,6 +13,7 @@ import 'package:mobile_customer/features/maintenance/domain/entities/maintenance
 import 'package:mobile_customer/features/maintenance/domain/repositories/maintenance_repository.dart';
 import 'package:mobile_customer/features/maintenance/domain/usecases/maintenance_use_cases.dart';
 import 'package:mobile_customer/features/maintenance/presentation/create_maintenance_cubit.dart';
+import 'package:mobile_customer/features/maintenance/presentation/maintenance_detail_cubit.dart';
 import 'package:mobile_customer/features/maintenance/presentation/maintenance_requests_cubit.dart';
 import 'package:mobile_customer/features/maintenance/presentation/photo_picker.dart';
 import 'package:mobile_customer/features/my_property/domain/entities/property.dart';
@@ -67,6 +68,17 @@ class _FakeMaintenanceRepo implements MaintenanceRepository {
     input.onProgress?.call(1);
     return result;
   }
+
+  @override
+  Future<Result<MaintenanceRequest>> confirmResolution({
+    required String requestId,
+    required int rating,
+    String? note,
+  }) async =>
+      createResult;
+
+  @override
+  Future<Result<MaintenanceRequest>> submitComplaint(String requestId) async => createResult;
 }
 
 class _FakePhotoPicker implements PhotoPicker {
@@ -435,6 +447,116 @@ void main() {
       expect(ds.registerCalls, 0);
     });
   });
+
+  group('Maintenance resolution loop (Phase A)', () {
+    test('dto → entity maps the Phase A resolution fields', () {
+      final r = MaintenanceRequestDto.fromJson({
+        'id': 'r1',
+        'description': 'Leak',
+        'status': 'RESOLVED',
+        'priority': 'HIGH',
+        'dueAt': '2026-04-01T00:00:00.000Z',
+        'complaintAt': '2026-04-03T00:00:00.000Z',
+        'customerConfirmedResolutionAt': '2026-04-05T00:00:00.000Z',
+        'resolvedBy': 'BOTH',
+        'customerRating': 5,
+        'customerRatingText': 'ممتاز',
+      }).toEntity();
+      expect(r.dueAt, isNotNull);
+      expect(r.complaintAt, isNotNull);
+      expect(r.resolvedBy, MaintenanceResolvedBy.both);
+      expect(r.customerRating, 5);
+      expect(r.customerRatingText, 'ممتاز');
+      expect(r.customerHasConfirmed, isTrue);
+    });
+
+    test('canConfirmResolution true on RESOLVED + unconfirmed, false once confirmed', () {
+      const resolved = MaintenanceRequest(
+        id: 'r1',
+        description: 'x',
+        status: MaintenanceStatus.resolved,
+        priority: MaintenancePriority.medium,
+      );
+      expect(resolved.canConfirmResolution, isTrue);
+      final confirmed = MaintenanceRequest(
+        id: 'r1',
+        description: 'x',
+        status: MaintenanceStatus.resolved,
+        priority: MaintenancePriority.medium,
+        customerConfirmedResolutionAt: DateTime(2026, 4, 5),
+      );
+      expect(confirmed.canConfirmResolution, isFalse);
+    });
+
+    test('canComplain true only ≥24h overdue and unresolved', () {
+      final overdue = MaintenanceRequest(
+        id: 'r1',
+        description: 'x',
+        status: MaintenanceStatus.inProgress,
+        priority: MaintenancePriority.medium,
+        dueAt: DateTime.now().subtract(const Duration(hours: 25)),
+      );
+      expect(overdue.canComplain, isTrue);
+      expect(overdue.isOverdue, isTrue);
+
+      final freshlyOverdue = MaintenanceRequest(
+        id: 'r1',
+        description: 'x',
+        status: MaintenanceStatus.inProgress,
+        priority: MaintenancePriority.medium,
+        dueAt: DateTime.now().subtract(const Duration(hours: 1)),
+      );
+      expect(freshlyOverdue.canComplain, isFalse);
+    });
+
+    test('detail cubit confirmResolution success emits the updated request', () async {
+      const confirmed = MaintenanceRequest(
+        id: 'r1',
+        description: 'x',
+        status: MaintenanceStatus.resolved,
+        priority: MaintenancePriority.medium,
+        customerRating: 5,
+        resolvedBy: MaintenanceResolvedBy.customer,
+      );
+      // _FakeMaintenanceRepo.confirmResolution returns its createResult.
+      final repo = _FakeMaintenanceRepo(createResult: const Ok(confirmed));
+      final cubit = MaintenanceDetailCubit(
+        initial: const MaintenanceRequest(
+          id: 'r1',
+          description: 'x',
+          status: MaintenanceStatus.resolved,
+          priority: MaintenancePriority.medium,
+        ),
+        confirmResolution: ConfirmMaintenanceResolution(repo),
+        submitComplaint: SubmitMaintenanceComplaint(repo),
+      );
+      final failure = await cubit.confirmResolution(rating: 5);
+      expect(failure, isNull);
+      expect(cubit.state.submitting, isFalse);
+      expect(cubit.state.request.customerRating, 5);
+      expect(cubit.state.request.resolvedBy, MaintenanceResolvedBy.customer);
+    });
+
+    test('detail cubit surfaces failure and keeps the original request', () async {
+      final repo = _FakeMaintenanceRepo(
+        createResult: Result.err(AppFailure(type: FailureType.validation)),
+      );
+      final cubit = MaintenanceDetailCubit(
+        initial: const MaintenanceRequest(
+          id: 'r1',
+          description: 'x',
+          status: MaintenanceStatus.resolved,
+          priority: MaintenancePriority.medium,
+        ),
+        confirmResolution: ConfirmMaintenanceResolution(repo),
+        submitComplaint: SubmitMaintenanceComplaint(repo),
+      );
+      final failure = await cubit.confirmResolution(rating: 4);
+      expect(failure?.type, FailureType.validation);
+      expect(cubit.state.submitting, isFalse);
+      expect(cubit.state.request.customerHasConfirmed, isFalse);
+    });
+  });
 }
 
 class _ThrowingDataSource implements MaintenanceRemoteDataSource {
@@ -487,6 +609,15 @@ class _ThrowingDataSource implements MaintenanceRemoteDataSource {
     required int sizeBytes,
   }) async =>
       throw _e;
+  @override
+  Future<MaintenanceRequestDto> confirmResolution({
+    required String requestId,
+    required int rating,
+    String? note,
+  }) async =>
+      throw _e;
+  @override
+  Future<MaintenanceRequestDto> submitComplaint({required String requestId}) async => throw _e;
 }
 
 /// Records the presign → PUT → register dance for orchestration tests.
@@ -544,5 +675,15 @@ class _RecordingUploadDataSource implements MaintenanceRemoteDataSource {
     required List<String> categoryIds,
     required String description,
   }) async =>
+      throw UnimplementedError();
+  @override
+  Future<MaintenanceRequestDto> confirmResolution({
+    required String requestId,
+    required int rating,
+    String? note,
+  }) async =>
+      throw UnimplementedError();
+  @override
+  Future<MaintenanceRequestDto> submitComplaint({required String requestId}) async =>
       throw UnimplementedError();
 }

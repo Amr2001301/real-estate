@@ -66,6 +66,7 @@ import '../features/maintenance/domain/usecases/maintenance_use_cases.dart';
 import '../features/maintenance/presentation/create_maintenance_cubit.dart';
 import '../features/maintenance/presentation/create_maintenance_screen.dart';
 import '../features/maintenance/presentation/image_picker_photo_picker.dart';
+import '../features/maintenance/presentation/maintenance_detail_cubit.dart';
 import '../features/maintenance/presentation/maintenance_request_detail_screen.dart';
 import '../features/maintenance/presentation/maintenance_requests_cubit.dart';
 import '../features/maintenance/presentation/maintenance_requests_screen.dart';
@@ -293,7 +294,17 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
           return _documentsProviders(
             ownerType: DocumentOwnerType.maintenanceRequest,
             ownerId: request.id,
-            child: MaintenanceRequestDetailScreen(request: request),
+            child: BlocProvider(
+              create: (ctx) {
+                final repo = ctx.read<MaintenanceRepository>();
+                return MaintenanceDetailCubit(
+                  initial: request,
+                  confirmResolution: ConfirmMaintenanceResolution(repo),
+                  submitComplaint: SubmitMaintenanceComplaint(repo),
+                );
+              },
+              child: const MaintenanceRequestDetailScreen(),
+            ),
           );
         },
       ),

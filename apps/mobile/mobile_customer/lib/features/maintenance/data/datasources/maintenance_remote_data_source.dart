@@ -40,6 +40,18 @@ abstract interface class MaintenanceRemoteDataSource {
     required String mimeType,
     required int sizeBytes,
   });
+
+  /// Phase A — customer confirms resolution with a 1–5 rating + optional note.
+  /// Returns the updated request.
+  Future<MaintenanceRequestDto> confirmResolution({
+    required String requestId,
+    required int rating,
+    String? note,
+  });
+
+  /// Phase A — customer files a complaint on an overdue request. Returns the
+  /// updated request.
+  Future<MaintenanceRequestDto> submitComplaint({required String requestId});
 }
 
 class MaintenanceRemoteDataSourceImpl implements MaintenanceRemoteDataSource {
@@ -169,5 +181,29 @@ class MaintenanceRemoteDataSourceImpl implements MaintenanceRemoteDataSource {
         'sizeBytes': sizeBytes,
       },
     );
+  }
+
+  @override
+  Future<MaintenanceRequestDto> confirmResolution({
+    required String requestId,
+    required int rating,
+    String? note,
+  }) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/me/maintenance-requests/$requestId/confirm-resolution',
+      data: {
+        'rating': rating,
+        if (note != null && note.isNotEmpty) 'note': note,
+      },
+    );
+    return MaintenanceRequestDto.fromJson(res.data ?? const {});
+  }
+
+  @override
+  Future<MaintenanceRequestDto> submitComplaint({required String requestId}) async {
+    final res = await _dio.post<Map<String, dynamic>>(
+      '/me/maintenance-requests/$requestId/complaint',
+    );
+    return MaintenanceRequestDto.fromJson(res.data ?? const {});
   }
 }

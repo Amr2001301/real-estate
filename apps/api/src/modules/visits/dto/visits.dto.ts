@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -94,6 +95,25 @@ export class CustomerRequestRescheduleDto {
 
 export class AssignSalesDto {
   @IsUUID() assignedSalesId!: string;
+}
+
+/**
+ * Gap 7 — customer rates a COMPLETED visit (one-time). Rating is required and
+ * bounded 1–5; the comment is optional and length-capped.
+ */
+export class CustomerVisitFeedbackDto {
+  @Type(() => Number) @IsInt() @Min(1) @Max(5) rating!: number;
+  @IsOptional() @IsString() @MaxLength(1000) comment?: string;
+}
+
+/**
+ * Gap 7 — assigned sales / manager / admin records their own feedback on a
+ * COMPLETED visit. Rating is optional (1–5 when present); notes optional. The
+ * service rejects an entirely empty submission.
+ */
+export class SalesVisitFeedbackDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(5) rating?: number;
+  @IsOptional() @IsString() @MaxLength(1000) notes?: string;
 }
 
 export class CreateDirectAppointmentDto {

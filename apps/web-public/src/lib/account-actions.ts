@@ -194,6 +194,8 @@ export async function markNotificationReadAction(id: string): Promise<void> {
     // Non-auth failure: leave as-is; revalidate re-renders current state.
   }
   revalidatePath('/account/notifications');
+  // Refresh the account layout so the sidebar unread badge updates too.
+  revalidatePath('/account', 'layout');
 }
 
 /** Mark all notifications as read → PATCH /v1/me/notifications/read-all. */
@@ -204,6 +206,7 @@ export async function markAllNotificationsReadAction(): Promise<void> {
     if (e instanceof AuthError) redirect('/login');
   }
   revalidatePath('/account/notifications');
+  revalidatePath('/account', 'layout');
 }
 
 export type MaintenanceActionResult =

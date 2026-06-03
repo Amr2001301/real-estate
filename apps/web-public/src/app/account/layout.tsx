@@ -37,6 +37,17 @@ export default async function AccountLayout({ children }: { children: React.Reac
     /* ignore — initials fallback */
   }
 
+  // Unread notification count for the sidebar badge so customers see pending
+  // notifications without opening the notifications page. Non-fatal: any
+  // failure simply hides the badge (count 0).
+  let unreadNotifications = 0;
+  try {
+    const res = await authFetch<{ count: number }>('/me/notifications/unread-count');
+    unreadNotifications = Number(res.count) || 0;
+  } catch {
+    /* ignore — badge hidden */
+  }
+
   return (
     <>
       <PageHero
@@ -58,6 +69,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
             roleLabel={roleLabel}
             avatarUrl={avatarUrl}
             isCustomer={session.role === 'CUSTOMER'}
+            unreadNotifications={unreadNotifications}
           />
           <div className="min-w-0 pt-12 md:pt-16 lg:pt-28">{children}</div>
         </div>

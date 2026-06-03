@@ -10,6 +10,7 @@ import { ButtonLink } from '@/components/ui/Button';
 import { ErrorState } from '@/components/states/ErrorState';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { MaintenanceTag } from '@/components/account/MaintenanceRequestCard';
+import { MaintenanceResolution } from '@/components/account/MaintenanceResolution';
 import { DocumentDownloadById } from '@/components/account/DocumentDownloadById';
 
 /** Pristine micro-card stat: gold icon + label/value stack. */
@@ -128,6 +129,9 @@ export default async function AccountMaintenanceDetailPage({
           <InfoCard icon={RefreshCw} label="آخر تحديث" value={formatDate(req.updatedAt)} mono />
         </div>
       </PremiumCard>
+
+      {/* Resolution loop — SLA/overdue, complaint, confirm + rating. */}
+      <MaintenanceResolution request={req} />
 
       {/* Customer-visible documents — read/download only (upload is a later chunk) */}
       <PremiumCard className="p-6 sm:p-8">

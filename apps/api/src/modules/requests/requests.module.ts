@@ -423,6 +423,11 @@ export class RequestsService {
               location: true,
               meetingPoint: true,
               customerFeedback: true,
+              // Gap 7 — customer's own visit rating (so the card can show the
+              // form vs. read-only feedback). Sales feedback is NOT exposed.
+              customerRating: true,
+              customerRatingText: true,
+              customerRatingSubmittedAt: true,
             },
           },
         },

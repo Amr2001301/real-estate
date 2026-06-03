@@ -27,15 +27,18 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Max,
   MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   Prisma,
   MaintenanceStatus,
   MaintenancePriority,
+  MaintenanceResolutionConfirmedBy,
   MaintenanceReviewStatus,
   WarrantyStatus,
   NotificationChannel,
@@ -181,6 +184,12 @@ class MaintenanceStatusDto {
   @IsEnum(MaintenanceStatus) status!: MaintenanceStatus;
 }
 
+// Customer confirms a resolved request with a required 1–5 rating + optional note.
+class ConfirmResolutionDto {
+  @Type(() => Number) @IsInt() @Min(1) @Max(5) rating!: number;
+  @IsOptional() @IsString() @MaxLength(1000) note?: string;
+}
+
 // Scoped maintenance uploads (supervisor + customer) — presign + register.
 // Owner is forced server-side to the in-scope MAINTENANCE_REQUEST, so these
 // DTOs never carry ownerType/ownerId/category/visibility from the client.
@@ -235,6 +244,12 @@ const STATUS_LABEL_AR: Record<MaintenanceStatus, string> = {
   [MaintenanceStatus.CLOSED]: 'مغلق',
 };
 
+// Resolution-loop windows (Phase A). A complaint is allowed once a request is
+// this far past its dueAt; the cron flags it unresolved this long after the
+// complaint. Both 24h per the desired flow.
+const COMPLAINT_OVERDUE_MS = 24 * 60 * 60 * 1000;
+const UNRESOLVED_AFTER_COMPLAINT_MS = 24 * 60 * 60 * 1000;
+
 // Customer attachment limits (mirrored client-side). Images + PDF only.
 const ATTACH_MAX_BYTES = 5 * 1024 * 1024;
 const ATTACH_MIME: Record<string, string> = {
@@ -253,7 +268,7 @@ interface UploadedFile {
 }
 
 @Injectable()
-class MaintenanceService {
+export class MaintenanceService {
   private readonly logger = new Logger(MaintenanceService.name);
 
   constructor(
@@ -873,6 +888,181 @@ class MaintenanceService {
     return this.attachMaintenancePhoto(userId, id, dto, DocumentVisibility.CUSTOMER_VISIBLE);
   }
 
+  // ── Resolution loop (Phase A): confirm / complaint / unresolved ───────────
+
+  /** Derive resolvedBy from the two confirmation timestamps. */
+  private resolvedByFrom(
+    customerAt: Date | null,
+    supervisorAt: Date | null,
+  ): MaintenanceResolutionConfirmedBy | null {
+    if (customerAt && supervisorAt) return MaintenanceResolutionConfirmedBy.BOTH;
+    if (customerAt) return MaintenanceResolutionConfirmedBy.CUSTOMER;
+    if (supervisorAt) return MaintenanceResolutionConfirmedBy.SUPERVISOR;
+    return null;
+  }
+
+  /**
+   * Best-effort notification for resolution-loop events. Always reaches ADMINs
+   * (+ the assignee); the customer is added for the unresolved escalation.
+   * Payload carries deep-link metadata (entityType/entityId/requestId/action).
+   */
+  private async notifyResolutionEvent(
+    id: string,
+    code: string,
+    action: string,
+    opts: { toCustomer?: boolean; extra?: Record<string, unknown> } = {},
+  ) {
+    const r = await this.notifyContext(id);
+    if (!r) return;
+    const payload = {
+      unitCode: r.unitCode,
+      entityType: 'maintenance',
+      entityId: id,
+      requestId: id,
+      action,
+      ...(opts.extra ?? {}),
+    };
+    await this.notifications.sendToRoles([UserRole.ADMIN], code, payload);
+    if (r.assignedAdminId) await this.notifications.sendToUser(r.assignedAdminId, code, payload);
+    if (opts.toCustomer) await this.notifications.sendToUser(r.customerId, code, payload);
+  }
+
+  /**
+   * Customer confirms a RESOLVED/CLOSED request with a required 1–5 rating +
+   * optional note. One-time (customerConfirmedResolutionAt guards it). Sets
+   * resolvedBy = CUSTOMER, or BOTH if the supervisor already confirmed.
+   */
+  async customerConfirmResolution(userId: string, id: string, dto: ConfirmResolutionDto) {
+    const req = await this.assertCustomerOwns(userId, id);
+    if (req.status !== MaintenanceStatus.RESOLVED && req.status !== MaintenanceStatus.CLOSED) {
+      throw new BadRequestException('يمكن تأكيد الحل بعد إتمام الإصلاح فقط');
+    }
+    if (req.customerConfirmedResolutionAt) {
+      throw new BadRequestException('لقد قمت بتأكيد الحل وتقييمه مسبقاً');
+    }
+    const now = new Date();
+    await this.prisma.maintenanceRequest.update({
+      where: { id },
+      data: {
+        customerConfirmedResolutionAt: now,
+        customerRating: dto.rating,
+        customerRatingText: dto.note?.trim() || null,
+        customerRatingSubmittedAt: now,
+        resolvedBy: this.resolvedByFrom(now, req.supervisorConfirmedResolutionAt),
+      },
+    });
+    await this.notifyResolutionEvent(
+      id,
+      'maintenance_request_resolution_confirmed',
+      'view_maintenance_resolution',
+      { extra: { by: 'CUSTOMER', rating: dto.rating } },
+    );
+    return this.customerFindOne(userId, id);
+  }
+
+  /**
+   * Assigned supervisor explicitly confirms resolution (no rating). One-time.
+   * Status RESOLVED status means "work done"; this endpoint is the explicit
+   * supervisor attestation, kept separate from supervisorSetStatus so a RESOLVED
+   * transition is not silently treated as a confirmation. Sets resolvedBy =
+   * SUPERVISOR, or BOTH if the customer already confirmed.
+   */
+  async supervisorConfirmResolution(userId: string, id: string) {
+    const req = await this.assertSupervisorOwns(userId, id);
+    if (req.reviewStatus !== MaintenanceReviewStatus.APPROVED) {
+      throw new BadRequestException('Request is not approved');
+    }
+    if (req.status !== MaintenanceStatus.RESOLVED && req.status !== MaintenanceStatus.CLOSED) {
+      throw new BadRequestException('يمكن تأكيد الحل بعد وضع الطلب كمُنجز فقط');
+    }
+    if (req.supervisorConfirmedResolutionAt) {
+      throw new BadRequestException('تم تأكيد الحل من قبلك مسبقاً');
+    }
+    const now = new Date();
+    await this.prisma.maintenanceRequest.update({
+      where: { id },
+      data: {
+        supervisorConfirmedResolutionAt: now,
+        resolvedBy: this.resolvedByFrom(req.customerConfirmedResolutionAt, now),
+      },
+    });
+    await this.notifyResolutionEvent(
+      id,
+      'maintenance_request_resolution_confirmed',
+      'view_maintenance_resolution',
+      { extra: { by: 'SUPERVISOR' } },
+    );
+    return this.supervisorFindOne(userId, id);
+  }
+
+  /**
+   * Customer files a complaint — allowed only when the request is ≥24h past its
+   * dueAt and still unresolved, and only once.
+   */
+  async customerComplaint(userId: string, id: string) {
+    const req = await this.assertCustomerOwns(userId, id);
+    if (req.status === MaintenanceStatus.RESOLVED || req.status === MaintenanceStatus.CLOSED) {
+      throw new BadRequestException('لا يمكن تقديم شكوى على طلب تم حله أو إغلاقه');
+    }
+    if (!req.dueAt) {
+      throw new BadRequestException('لا يمكن تقديم شكوى قبل اعتماد الطلب وبدء مدة المعالجة');
+    }
+    if (Date.now() - req.dueAt.getTime() < COMPLAINT_OVERDUE_MS) {
+      throw new BadRequestException(
+        'يمكن تقديم شكوى بعد تجاوز الموعد المستهدف بـ 24 ساعة على الأقل',
+      );
+    }
+    if (req.complaintAt) {
+      throw new BadRequestException('تم تسجيل شكوى لهذا الطلب مسبقاً');
+    }
+    await this.prisma.maintenanceRequest.update({
+      where: { id },
+      data: { complaintAt: new Date() },
+    });
+    await this.notifyResolutionEvent(
+      id,
+      'maintenance_request_complaint_submitted',
+      'review_maintenance_complaint',
+    );
+    return this.customerFindOne(userId, id);
+  }
+
+  /**
+   * Cron sweep — flags complaints older than the unresolved window as
+   * unresolved (durable `unresolvedAt`, no status enum change). Idempotent: the
+   * updateMany guard (`unresolvedAt: null`) means a re-run never re-flags or
+   * re-notifies a row. Returns aggregate counts for logging/tests.
+   */
+  async markUnresolved(): Promise<{ scanned: number; marked: number }> {
+    const threshold = new Date(Date.now() - UNRESOLVED_AFTER_COMPLAINT_MS);
+    const candidates = await this.prisma.maintenanceRequest.findMany({
+      where: {
+        complaintAt: { not: null, lte: threshold },
+        unresolvedAt: null,
+        status: { notIn: [MaintenanceStatus.RESOLVED, MaintenanceStatus.CLOSED] },
+      },
+      select: { id: true },
+    });
+    let marked = 0;
+    for (const c of candidates) {
+      const res = await this.prisma.maintenanceRequest.updateMany({
+        where: { id: c.id, unresolvedAt: null },
+        data: { unresolvedAt: new Date() },
+      });
+      if (res.count > 0) {
+        marked++;
+        await this.notifyResolutionEvent(
+          c.id,
+          'maintenance_request_unresolved',
+          'maintenance_unresolved',
+          { toCustomer: true },
+        );
+      }
+    }
+    this.logger.log(`Maintenance unresolved sweep: scanned=${candidates.length} marked=${marked}`);
+    return { scanned: candidates.length, marked };
+  }
+
   // Shared document-create path: owner/category are forced server-side; only
   // the visibility differs per caller. Reuses the documents service so the
   // create logic (URL safety, owner existence) is never duplicated.
@@ -1411,6 +1601,36 @@ class MaintenanceController {
     return this.svc.supervisorSetStatus(user.sub, id, dto.status);
   }
 
+  // ── Resolution loop (Phase A) ────────────────────────────────────────────
+
+  // Customer confirms resolution + rating (one-time, after RESOLVED/CLOSED).
+  @Roles(UserRole.CUSTOMER)
+  @Post('me/maintenance-requests/:id/confirm-resolution')
+  myConfirmResolution(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ConfirmResolutionDto,
+  ) {
+    return this.svc.customerConfirmResolution(user.sub, id, dto);
+  }
+
+  // Customer files a complaint (only ≥24h overdue, once).
+  @Roles(UserRole.CUSTOMER)
+  @Post('me/maintenance-requests/:id/complaint')
+  myComplaint(@CurrentUser() user: AuthUser, @Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.customerComplaint(user.sub, id);
+  }
+
+  // Assigned supervisor explicitly confirms resolution (no rating; one-time).
+  @Roles(UserRole.MAINTENANCE_SUPERVISOR)
+  @Post('me/maintenance-requests/:id/supervisor-confirm')
+  mySupervisorConfirm(
+    @CurrentUser() user: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.svc.supervisorConfirmResolution(user.sub, id);
+  }
+
   // Scoped photo/document upload. Owner is forced to the in-scope request and
   // reuses the documents service (never the admin documents controller).
   // A MAINTENANCE_SUPERVISOR uploads to a request assigned to them (internal);
@@ -1588,9 +1808,24 @@ class MaintenanceController {
   }
 }
 
+/**
+ * Hourly sweep that flags complaints older than the unresolved window. Mirrors
+ * the always-on InstallmentsCron pattern; `markUnresolved()` is idempotent so
+ * re-runs are safe. ScheduleModule is registered globally in AppModule.
+ */
+@Injectable()
+class MaintenanceUnresolvedCron {
+  constructor(private readonly svc: MaintenanceService) {}
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async run() {
+    await this.svc.markUnresolved();
+  }
+}
+
 @Module({
   imports: [DocumentsModule, MediaModule, NotificationsModule],
   controllers: [MaintenanceController],
-  providers: [MaintenanceService],
+  providers: [MaintenanceService, MaintenanceUnresolvedCron],
 })
 export class MaintenanceModule {}

@@ -11,6 +11,9 @@ extension MaintenanceCategoryDtoMapper on MaintenanceCategoryDto {
       );
 }
 
+DateTime? _parseDate(String? iso) =>
+    (iso == null || iso.isEmpty) ? null : DateTime.tryParse(iso);
+
 extension MaintenanceRequestDtoMapper on MaintenanceRequestDto {
   MaintenanceRequest toEntity() => MaintenanceRequest(
         id: id,
@@ -21,6 +24,15 @@ extension MaintenanceRequestDtoMapper on MaintenanceRequestDto {
         categoryName: (categoryNameAr != null || categoryNameEn != null)
             ? Translatable(ar: categoryNameAr ?? '', en: categoryNameEn ?? '')
             : null,
-        createdAt: DateTime.tryParse(createdAt ?? ''),
+        createdAt: _parseDate(createdAt),
+        dueAt: _parseDate(dueAt),
+        complaintAt: _parseDate(complaintAt),
+        unresolvedAt: _parseDate(unresolvedAt),
+        customerConfirmedResolutionAt: _parseDate(customerConfirmedResolutionAt),
+        supervisorConfirmedResolutionAt: _parseDate(supervisorConfirmedResolutionAt),
+        resolvedBy: MaintenanceResolvedBy.fromWire(resolvedBy),
+        customerRating: customerRating,
+        customerRatingText: customerRatingText,
+        customerRatingSubmittedAt: _parseDate(customerRatingSubmittedAt),
       );
 }

@@ -19,9 +19,11 @@ import {
   AssignSalesDto,
   CreateDirectAppointmentDto,
   CustomerRequestRescheduleDto,
+  CustomerVisitFeedbackDto,
   ListAppointmentsDto,
   ListRequestsDto,
   RescheduleVisitDto,
+  SalesVisitFeedbackDto,
   ScheduleVisitDto,
   UpdateRequestStatusDto,
 } from './dto/visits.dto';
@@ -214,6 +216,20 @@ export class VisitsController {
     return this.visits.assignSales(id, dto, user);
   }
 
+  // Gap 7 — sales/manager/admin records their own feedback on a COMPLETED
+  // visit. Same role/permission floor as completion; per-record scope (SALES →
+  // own appointments) is enforced in the service via assertApptInScope.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('visits:complete')
+  @Post('visits/appointments/:id/sales-feedback')
+  salesFeedback(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: SalesVisitFeedbackDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.visits.salesSubmitFeedback(id, dto, user);
+  }
+
   // ─── Customer-side (two-sided confirmation, P2) ──────────────────────────
   // Routes a logged-in customer uses to react to a proposed appointment. The
   // service enforces ownership — anything that isn't theirs returns 404 (no
@@ -236,5 +252,17 @@ export class VisitsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.visits.customerRequestReschedule(id, dto, user);
+  }
+
+  // Gap 7 — customer rates a COMPLETED visit (one-time). Ownership enforced in
+  // the service (404 on non-owned, matching the confirm/reschedule routes).
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Post('me/visit-appointments/:id/feedback')
+  meSubmitFeedback(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CustomerVisitFeedbackDto,
+    @CurrentUser() user: AuthUser,
+  ) {
+    return this.visits.customerSubmitFeedback(id, dto, user);
   }
 }

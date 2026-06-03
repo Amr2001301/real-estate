@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Bell, CheckCheck, BookmarkCheck, FileText, Wallet, BadgePercent, Users, Activity, MessageSquareText } from 'lucide-react';
+import { Bell, CheckCheck, BookmarkCheck, FileText, Wallet, BadgePercent, Users, Activity, MessageSquareText, Wrench, CalendarClock } from 'lucide-react';
 import type { NotificationItem } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -66,6 +66,7 @@ interface RelatedLink {
 function relatedLink(
   payload: NotificationItem['payload'],
   base: '/dashboard' | '/portal',
+  templateCode: string,
 ): RelatedLink | null {
   if (!payload || typeof payload !== 'object') return null;
   const p = payload as Record<string, unknown>;
@@ -76,8 +77,31 @@ function relatedLink(
   const commissionId = id('commissionId');
   const payoutId = id('payoutId');
   const requestId = id('requestId');
+  // Gap 3 — payment-proof review payloads carry depositId + action + entityType.
+  const depositId = id('depositId');
+  const action = id('action');
+  const entityType = id('entityType');
+  const entityId = id('entityId');
 
   if (base === '/dashboard') {
+    // Maintenance resolution-loop notifications carry entityType='maintenance'
+    // (+ entityId). Checked BEFORE the generic `requestId` branch below —
+    // those payloads also carry requestId (= the maintenance request id), which
+    // would otherwise mis-route to the inquiries list (/dashboard/requests).
+    if (entityType === 'maintenance' && entityId) {
+      return { href: `/dashboard/maintenance/${entityId}`, icon: Wrench, label: 'طلب الصيانة' };
+    }
+    // Visit feedback notifications (visit_feedback_received) carry
+    // entityType='visit' + entityId (the appointment). Open the appointment.
+    if (entityType === 'visit' && entityId) {
+      return { href: `/dashboard/visits/appointments/${entityId}`, icon: CalendarClock, label: 'الزيارة' };
+    }
+    // Gap 3 — a payment-proof awaiting review (booking amount OR installment)
+    // opens the deposit detail where approve/reject lives. Checked early so it
+    // doesn't fall through to a contract/reservation link.
+    if (depositId && (action === 'review_payment_proof' || entityType === 'deposit')) {
+      return { href: `/dashboard/deposits/${depositId}`, icon: Wallet, label: 'الدفعة' };
+    }
     // P13 — info_request_created carries requestId; route to the inquiries list
     // (there is no per-request detail page — rows expand inline). Checked first
     // so an inquiry notification never falls through to a broker entity link.
@@ -85,7 +109,14 @@ function relatedLink(
     if (payoutId) return { href: `/dashboard/broker-payouts/${payoutId}`, icon: Wallet, label: 'الدفعة' };
     if (commissionId) return { href: `/dashboard/broker-commissions/${commissionId}`, icon: BadgePercent, label: 'العمولة' };
     if (contractId) return { href: `/dashboard/broker-contracts/${contractId}`, icon: FileText, label: 'العقد' };
-    if (reservationId) return { href: `/dashboard/broker-reservations/${reservationId}`, icon: BookmarkCheck, label: 'الحجز' };
+    // Reservation notifications: broker-attributed events keep the broker view;
+    // general events (reservation_submitted_admin, reservation_status_changed,
+    // reservation_booking_paid) open the standard reservation detail.
+    if (reservationId) {
+      return templateCode.startsWith('broker_')
+        ? { href: `/dashboard/broker-reservations/${reservationId}`, icon: BookmarkCheck, label: 'الحجز' }
+        : { href: `/dashboard/reservations/${reservationId}`, icon: BookmarkCheck, label: 'الحجز' };
+    }
     if (leadId) return { href: `/dashboard/broker-leads/${leadId}`, icon: Users, label: 'الفرصة' };
   } else {
     if (payoutId) return { href: `/portal/payouts/${payoutId}`, icon: Wallet, label: 'الدفعة' };
@@ -109,7 +140,7 @@ function summarisePayload(payload: NotificationItem['payload']): string | null {
 }
 
 export function NotificationList({ items, basePath }: Props) {
-  const unreadCount = items.filter((n) => !n.readAt).length;
+  const unreadCount = items.filter((n) => !n.read).length;
 
   if (items.length === 0) {
     return (
@@ -142,7 +173,7 @@ export function NotificationList({ items, basePath }: Props) {
       <Card className="overflow-hidden">
         <ul className="divide-y divide-hairline">
           {items.map((n) => {
-            const related = relatedLink(n.payload, basePath);
+            const related = relatedLink(n.payload, basePath, n.templateCode);
             const label = TEMPLATE_LABEL[n.templateCode] ?? n.templateCode;
             const summary = summarisePayload(n.payload);
             return (
@@ -150,7 +181,7 @@ export function NotificationList({ items, basePath }: Props) {
                 key={n.id}
                 className={cn(
                   'px-4 py-3 flex items-start gap-3',
-                  !n.readAt && 'bg-brand-50/40',
+                  !n.read && 'bg-brand-50/40',
                 )}
               >
                 <div className="mt-0.5">
@@ -158,7 +189,7 @@ export function NotificationList({ items, basePath }: Props) {
                     aria-hidden
                     className={cn(
                       'inline-block h-2 w-2 rounded-full',
-                      n.readAt ? 'bg-slate-300' : 'bg-brand-500',
+                      n.read ? 'bg-slate-300' : 'bg-brand-500',
                     )}
                   />
                 </div>
@@ -180,7 +211,7 @@ export function NotificationList({ items, basePath }: Props) {
                         فتح {related.label}
                       </Link>
                     )}
-                    {!n.readAt && (
+                    {!n.read && (
                       <form action={markNotificationReadAction}>
                         <input type="hidden" name="id" value={n.id} />
                         <input type="hidden" name="basePath" value={basePath} />

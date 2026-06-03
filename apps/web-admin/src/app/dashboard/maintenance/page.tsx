@@ -246,7 +246,20 @@ export default async function MaintenancePage({
                         {m.priority ? <MaintenancePriorityBadge priority={m.priority} /> : <span className="text-slate-300 text-xs">—</span>}
                       </td>
                       <td className="px-4 py-2.5 whitespace-nowrap"><MaintenanceReviewStatusBadge status={m.reviewStatus} /></td>
-                      <td className="px-4 py-2.5 whitespace-nowrap"><MaintenanceStatusBadge status={m.status} /></td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <MaintenanceStatusBadge status={m.status} />
+                          {m.unresolvedAt ? (
+                            <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-[10px] font-medium">
+                              لم تُحل
+                            </span>
+                          ) : m.complaintAt ? (
+                            <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-medium">
+                              شكوى
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
                       <td className="px-4 py-2.5 text-xs tabular-nums whitespace-nowrap">
                         {isApproved(m) && m.dueAt ? (
                           <span className={isOverdue(m) ? 'text-danger-600 font-semibold' : 'text-slate-500'}>

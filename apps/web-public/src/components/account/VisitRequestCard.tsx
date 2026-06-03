@@ -15,6 +15,7 @@ import { pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { MeVisitRequest, MeAppointmentSummary } from '@/lib/api-types';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { VisitConfirmActions } from '@/components/account/VisitConfirmActions';
+import { VisitFeedback } from '@/components/account/VisitFeedback';
 
 /** Visit statuses worth surfacing when there's no appointment yet. */
 const PROGRESSED = new Set(['APPROVED', 'SCHEDULED', 'COMPLETED']);
@@ -156,6 +157,14 @@ export function VisitRequestCard({ visit }: { visit: MeVisitRequest }) {
       {awaitingCustomer && appointment && (
         <div className="relative z-[2] mt-3">
           <VisitConfirmActions appointmentId={appointment.id} />
+        </div>
+      )}
+
+      {/* Gap 7 — post-visit feedback (form when COMPLETED + unrated, else the
+          read-only rating). Above the stretched link so the controls work. */}
+      {appointment?.status === 'COMPLETED' && (
+        <div className="relative z-[2]">
+          <VisitFeedback appointment={appointment} />
         </div>
       )}
     </div>

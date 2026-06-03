@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
+import { ConfigModule } from '@nestjs/config';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { UsersModule } from '../users.module';
@@ -95,7 +96,7 @@ describe('Users module · permissions enforcement', () => {
     class MockPrismaModule {}
 
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, UsersModule],
+      imports: [MockPrismaModule, ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }), UsersModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },

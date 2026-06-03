@@ -560,6 +560,18 @@ model VisitAppointment {
   resultNotes        String?
   cancellationReason String?
   noShowReason       String?
+
+  // ── Gap 7 — post-visit feedback/ratings. Dedicated columns; do NOT reuse the
+  // legacy free-text fields above (customerFeedback doubles as the reschedule
+  // reason). customer* = customer-submitted, sales* = staff-submitted. rating
+  // is 1–5; the submittedAt timestamps double as the "already submitted" guard.
+  customerRating            Int?
+  customerRatingText        String?
+  customerRatingSubmittedAt DateTime?
+  salesRating               Int?
+  salesRatingText           String?
+  salesRatingSubmittedAt    DateTime?
+
   createdById        String?           @db.Uuid
   createdBy          User?             @relation("AppointmentCreator", fields: [createdById], references: [id])
   updatedById        String?           @db.Uuid
@@ -1106,6 +1118,14 @@ enum MaintenanceReviewStatus {
   REJECTED
 }
 
+// Who has confirmed a maintenance request's resolution. BOTH once the customer
+// AND the assigned supervisor have each confirmed.
+enum MaintenanceResolutionConfirmedBy {
+  CUSTOMER
+  SUPERVISOR
+  BOTH
+}
+
 model MaintenanceCategory {
   id        String              @id @default(uuid()) @db.Uuid
   // Normalized slug for duplicate prevention (e.g. "plumbing"). Nullable so
@@ -1195,6 +1215,23 @@ model MaintenanceRequest {
   firstInProgressAt DateTime?
   resolvedAt        DateTime?
   closedAt          DateTime?
+
+  // ── Resolution loop (Phase A) — all additive/nullable ───────────────────
+  // complaintAt: customer raised a complaint (only allowed once the request is
+  // ≥24h overdue). unresolvedAt: durable "not solved" flag set by the cron a
+  // further window after the complaint (no UNRESOLVED status enum value — the
+  // timestamp is the flag). *ConfirmedResolutionAt: explicit two-sided sign-off.
+  // resolvedBy: derived from the two confirmation timestamps. customerRating*:
+  // the customer's 1–5 rating + optional note, mirrors the visit-feedback shape.
+  complaintAt                     DateTime?
+  unresolvedAt                    DateTime?
+  customerConfirmedResolutionAt   DateTime?
+  supervisorConfirmedResolutionAt DateTime?
+  resolvedBy                      MaintenanceResolutionConfirmedBy?
+  customerRating                  Int?
+  customerRatingText              String?
+  customerRatingSubmittedAt       DateTime?
+
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
@@ -1206,6 +1243,8 @@ model MaintenanceRequest {
   @@index([reviewStatus])
   @@index([resolvedAt])
   @@index([closedAt])
+  @@index([complaintAt])
+  @@index([unresolvedAt])
 }
 
 // One selected category/component on a maintenance request. Snapshots the

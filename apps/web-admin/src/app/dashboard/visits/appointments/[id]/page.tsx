@@ -1,13 +1,27 @@
 import Link from 'next/link';
-import { Phone, Mail, Building2, User, ExternalLink, AlertCircle, CalendarClock } from 'lucide-react';
+import { Phone, Mail, Building2, User, ExternalLink, AlertCircle, CalendarClock, Star } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, VisitAppointment, User as UserType, VisitActivity } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card';
 import { AppointmentStatusBadge } from '@/components/badges';
 import { VisitTimelineCard } from '../../_components/visit-timeline';
 import { AppointmentDetailActions } from './_components/appointment-detail-actions';
+import { SalesFeedbackForm } from './_components/sales-feedback-form';
+
+/** Read-only star row for displaying a 1–5 rating. */
+function Stars({ value }: { value: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-label={`${value} من 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star key={n} className={cn('h-4 w-4', n <= value ? 'fill-brand-500 text-brand-500' : 'text-slate-300')} />
+      ))}
+      <span className="ms-1 text-xs text-slate-500 tabular-nums">{value}/5</span>
+    </span>
+  );
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -127,16 +141,78 @@ export default async function AppointmentDetailPage({
               )}
               {appt.customerFeedback && (
                 <div className="col-span-2">
-                  {/* When the appointment is awaiting an admin reschedule the
-                      customer's reason was mirrored into customerFeedback.
-                      Relabel accordingly so admins know what they're reading. */}
+                  {/* Legacy free-text column. It carries the customer's
+                      reschedule reason (PENDING_RESCHEDULE) or a manually-typed
+                      note recorded at completion — NOT the structured customer
+                      rating below. Labeled honestly so it's never confused with
+                      the customer's own submitted feedback. */}
                   <p className="text-slate-500 mb-0.5">
                     {appt.status === 'PENDING_RESCHEDULE'
                       ? 'سبب طلب العميل لإعادة الجدولة'
-                      : 'تقييم العميل'}
+                      : 'ملاحظة مُدخلة يدوياً'}
                   </p>
                   <p className="text-slate-700 whitespace-pre-wrap">{appt.customerFeedback}</p>
                 </div>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Gap 7 — Customer feedback (customer-submitted rating). Separate
+              from the staff note above so the two are never conflated. */}
+          <Card>
+            <CardHeader>
+              <CardTitle>تقييم العميل للزيارة</CardTitle>
+            </CardHeader>
+            <CardBody className="text-sm">
+              {appt.customerRatingSubmittedAt && appt.customerRating ? (
+                <div className="space-y-2">
+                  <Stars value={appt.customerRating} />
+                  {appt.customerRatingText && (
+                    <p className="text-slate-700 whitespace-pre-wrap">{appt.customerRatingText}</p>
+                  )}
+                  <p className="text-xs text-slate-400">
+                    أُرسل في {formatDateTime(appt.customerRatingSubmittedAt)}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-slate-400">
+                  {appt.status === 'COMPLETED'
+                    ? 'لم يقم العميل بتقييم الزيارة بعد.'
+                    : 'يُتاح تقييم العميل بعد اكتمال الزيارة.'}
+                </p>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Gap 7 — Sales feedback (staff-submitted). Read-only history + a
+              form to add/update it once the visit is COMPLETED. The API gates
+              who may submit (assigned sales / manager / admin). */}
+          <Card>
+            <CardHeader>
+              <CardTitle>ملاحظات وتقييم المندوب</CardTitle>
+            </CardHeader>
+            <CardBody className="space-y-3 text-sm">
+              {appt.salesRatingSubmittedAt && (
+                <div className="space-y-2 rounded-xl bg-slate-50 p-3">
+                  {appt.salesRating ? <Stars value={appt.salesRating} /> : null}
+                  {appt.salesRatingText && (
+                    <p className="text-slate-700 whitespace-pre-wrap">{appt.salesRatingText}</p>
+                  )}
+                  <p className="text-xs text-slate-400">
+                    آخر تحديث {formatDateTime(appt.salesRatingSubmittedAt)}
+                  </p>
+                </div>
+              )}
+              {appt.status === 'COMPLETED' ? (
+                <SalesFeedbackForm
+                  appointmentId={appt.id}
+                  initialRating={appt.salesRating}
+                  initialNotes={appt.salesRatingText}
+                />
+              ) : (
+                !appt.salesRatingSubmittedAt && (
+                  <p className="text-slate-400">يُتاح تقييم المندوب بعد اكتمال الزيارة.</p>
+                )
               )}
             </CardBody>
           </Card>

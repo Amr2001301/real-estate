@@ -576,6 +576,7 @@ export class ContractsService {
         id: true,
         contractNumber: true,
         signedAt: true,
+        createdAt: true,
         unitId: true,
         customerId: true,
         pdfUrl: true,
@@ -608,7 +609,12 @@ export class ContractsService {
     // a failure here must never fail the sign. Idempotent — only items with no
     // warrantyStart yet are touched, and the per-item duration is snapshotted so
     // later category edits never change an already-started warranty.
-    await this.startUnitWarranties(before.unitId, signedAtDate).catch((e) =>
+    //
+    // Warranty START anchors to the contract's CREATION date (not the signed
+    // date) per product requirement — the warranty clock begins when the deal
+    // is created. Triggered here at sign time (the moment items first qualify);
+    // only affects future warranty starts, never already-started items.
+    await this.startUnitWarranties(before.unitId, before.createdAt).catch((e) =>
       this.logger.warn(`startUnitWarranties(${id}) failed on sign: ${(e as Error).message}`),
     );
 
@@ -698,11 +704,12 @@ export class ContractsService {
    * Start warranties for a sold unit's active maintenance items. For each item
    * that has not yet started (warrantyStart == null), freeze the warranty
    * duration (item snapshot if present, else the category's current duration)
-   * and set warrantyStart = signedAt, warrantyEnd = signedAt + duration months.
+   * and set warrantyStart = warrantyStartAt (the contract CREATION date — see
+   * caller), warrantyEnd = warrantyStartAt + duration months.
    * Idempotent: items already started are left untouched, so a re-sign (or a
    * later category-duration change) never mutates an existing warranty.
    */
-  private async startUnitWarranties(unitId: string, signedAt: Date) {
+  private async startUnitWarranties(unitId: string, warrantyStartAt: Date) {
     const items = await this.prisma.unitMaintenanceItem.findMany({
       where: { unitId, active: true, warrantyStart: null },
       include: { category: { select: { warrantyDurationMonths: true } } },
@@ -712,7 +719,7 @@ export class ContractsService {
       const warrantyEnd =
         months != null
           ? (() => {
-              const d = new Date(signedAt);
+              const d = new Date(warrantyStartAt);
               d.setMonth(d.getMonth() + months);
               return d;
             })()
@@ -720,7 +727,7 @@ export class ContractsService {
       await this.prisma.unitMaintenanceItem.update({
         where: { id: item.id },
         data: {
-          warrantyStart: signedAt,
+          warrantyStart: warrantyStartAt,
           warrantyEnd,
           warrantyDurationMonthsSnapshot: months,
         },

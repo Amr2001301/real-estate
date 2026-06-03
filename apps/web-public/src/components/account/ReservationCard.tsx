@@ -4,6 +4,7 @@ import { formatPrice, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeReservation, MeReservationBookingPaymentStatus } from '@/lib/api-types';
 import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
+import { BookingPaymentProof } from '@/components/account/BookingPaymentProof';
 
 // P8 — customer-facing payment-status copy. Aligned with the rename of the
 // admin action from "تأكيد سداد" → "تأكيد استلام": the admin records that
@@ -66,6 +67,25 @@ export function ReservationCard({ reservation }: { reservation: MeReservation })
     : '';
   const subtitle = [projectName, unitLabel].filter(Boolean).join(' — ');
   const payment = BOOKING_PAYMENT_LABELS[reservation.bookingPaymentStatus];
+
+  // Gap 3 — booking-amount payment proof entry point. Show only on active
+  // reservations (PENDING/APPROVED) with a positive booking amount that isn't
+  // already paid/waived or awaiting review. A rejected proof surfaces the
+  // reason and a resubmit CTA.
+  const bookingDeposit = reservation.bookingDeposit ?? null;
+  const isActive = reservation.status === 'PENDING' || reservation.status === 'APPROVED';
+  const hasBookingDue = Number(reservation.bookingAmount) > 0;
+  const rejected = bookingDeposit?.reviewStatus === 'REJECTED';
+  const awaitingReview =
+    reservation.bookingPaymentStatus === 'PENDING' ||
+    bookingDeposit?.reviewStatus === 'PENDING_REVIEW';
+  const canSubmitProof =
+    isActive &&
+    hasBookingDue &&
+    reservation.bookingPaymentStatus !== 'PAID' &&
+    reservation.bookingPaymentStatus !== 'WAIVED' &&
+    !awaitingReview;
+
   const accent: AccountCardAccent =
     reservation.status === 'CONVERTED'
       ? 'success'
@@ -147,6 +167,15 @@ export function ReservationCard({ reservation }: { reservation: MeReservation })
           أُنشئ في {formatDate(reservation.createdAt)}
         </span>
       </div>
+
+      {canSubmitProof && (
+        <BookingPaymentProof
+          reservationId={reservation.id}
+          bookingAmount={reservation.bookingAmount}
+          rejected={rejected}
+          rejectionReason={bookingDeposit?.rejectionReason}
+        />
+      )}
     </AccountCard>
   );
 }

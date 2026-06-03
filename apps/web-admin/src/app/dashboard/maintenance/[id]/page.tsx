@@ -1,9 +1,9 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { Wrench, User as UserIcon, Home, AlertCircle, UserCog, ArrowLeft, CheckCircle2, XCircle, ClipboardList } from 'lucide-react';
+import { Wrench, User as UserIcon, Home, AlertCircle, UserCog, ArrowLeft, CheckCircle2, XCircle, ClipboardList, Star, ShieldCheck } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { MaintenancePriority, MaintenanceReviewStatus, MaintenanceStatus, MaintenanceRequestItem, Paged, User } from '@/lib/types';
+import type { MaintenancePriority, MaintenanceResolutionConfirmedBy, MaintenanceReviewStatus, MaintenanceStatus, MaintenanceRequestItem, Paged, User } from '@/lib/types';
 import { formatDateTime, tx, maintenanceSlaLabel, formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
@@ -34,6 +34,15 @@ interface MaintenanceDetail {
   assignedAdmin?: { id: string; fullName: string } | null;
   assignedAdminId: string | null;
   items?: MaintenanceRequestItem[];
+  // Phase A — resolution loop (additive; defensively defaulted to null).
+  complaintAt?: string | null;
+  unresolvedAt?: string | null;
+  customerConfirmedResolutionAt?: string | null;
+  supervisorConfirmedResolutionAt?: string | null;
+  resolvedBy?: MaintenanceResolutionConfirmedBy | null;
+  customerRating?: number | null;
+  customerRatingText?: string | null;
+  customerRatingSubmittedAt?: string | null;
 }
 
 // Mirrors the Batch 3 backend transition guard.
@@ -294,6 +303,93 @@ export default async function MaintenanceDetailPage({
           </CardBody>
         </Card>
 
+        {/* Resolution loop (Phase A) — confirmations, rating, complaint,
+            unresolved. View-only: admins never submit the customer's rating. */}
+        <Card className="lg:col-span-3">
+          <CardHeader className="px-5 py-3.5">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-brand-500 shrink-0" />
+              <CardTitle className="text-sm">متابعة الحل والتقييم</CardTitle>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-4 text-sm">
+            {/* State badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              {(() => {
+                const by = m.resolvedBy ?? null;
+                const label =
+                  by === 'BOTH'
+                    ? 'أكد الطرفان الحل'
+                    : by === 'CUSTOMER'
+                      ? 'أكد العميل الحل'
+                      : by === 'SUPERVISOR'
+                        ? 'أكد مشرف الصيانة الحل'
+                        : 'لم يتم التأكيد بعد';
+                const cls =
+                  by === 'BOTH'
+                    ? 'bg-green-100 text-green-700'
+                    : by
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-slate-100 text-slate-500';
+                return (
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
+                    {label}
+                  </span>
+                );
+              })()}
+              {overdue && (
+                <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2.5 py-0.5 text-xs font-medium">
+                  متأخر عن SLA
+                </span>
+              )}
+              {m.complaintAt && (
+                <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2.5 py-0.5 text-xs font-medium">
+                  تم تقديم شكوى
+                </span>
+              )}
+              {m.unresolvedAt && (
+                <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-medium">
+                  لم تُحل
+                </span>
+              )}
+            </div>
+
+            {/* Confirmation + complaint timestamps */}
+            <div className="grid grid-cols-2 gap-3 border-t border-hairline pt-3 sm:grid-cols-4">
+              <Field
+                label="تأكيد العميل"
+                value={m.customerConfirmedResolutionAt ? formatDateTime(m.customerConfirmedResolutionAt) : 'لم يؤكد بعد'}
+              />
+              <Field
+                label="تأكيد مشرف الصيانة"
+                value={m.supervisorConfirmedResolutionAt ? formatDateTime(m.supervisorConfirmedResolutionAt) : 'لم يؤكد بعد'}
+              />
+              <Field label="تاريخ الشكوى" value={m.complaintAt ? formatDateTime(m.complaintAt) : '—'} />
+              <Field label="تاريخ عدم الحل" value={m.unresolvedAt ? formatDateTime(m.unresolvedAt) : '—'} />
+            </div>
+
+            {/* Customer rating (read-only) */}
+            <div className="border-t border-hairline pt-3">
+              <p className="text-[11px] font-medium text-slate-400 mb-1">تقييم العميل</p>
+              {m.customerRating ? (
+                <div className="space-y-1.5">
+                  <Stars value={m.customerRating} />
+                  {m.customerRatingText && (
+                    <p className="text-slate-700 whitespace-pre-wrap">{m.customerRatingText}</p>
+                  )}
+                  {m.customerRatingSubmittedAt && (
+                    <p className="text-[11px] text-slate-400">
+                      أُرسل في {formatDateTime(m.customerRatingSubmittedAt)}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-400">لم يقم العميل بتقييم الخدمة بعد.</p>
+              )}
+            </div>
+          </CardBody>
+        </Card>
+
         {/* Selected categories / items snapshot */}
         {items.length > 0 && (
           <Card className="lg:col-span-3">
@@ -411,6 +507,20 @@ export default async function MaintenanceDetailPage({
         العودة إلى قائمة الصيانة
       </Link>
     </div>
+  );
+}
+
+function Stars({ value }: { value: number }) {
+  return (
+    <span className="inline-flex items-center gap-0.5" aria-label={`${value} من 5`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <Star
+          key={n}
+          className={`h-4 w-4 ${n <= value ? 'fill-amber-400 text-amber-400' : 'text-slate-300'}`}
+        />
+      ))}
+      <span className="ms-1 text-xs text-slate-500 tabular-nums">{value}/5</span>
+    </span>
   );
 }
 

@@ -77,16 +77,20 @@ export function AccountSidebar({
   roleLabel,
   avatarUrl,
   isCustomer = false,
+  unreadNotifications = 0,
 }: {
   fullName?: string;
   roleLabel: string;
   avatarUrl?: string | null;
   isCustomer?: boolean;
+  /** Unread notification count → small gold badge on the notifications item. */
+  unreadNotifications?: number;
 }) {
   const pathname = usePathname();
 
   const renderItem = ({ href, label, icon: Icon }: NavItem) => {
     const active = isActive(pathname, href);
+    const badgeCount = href === routes.accountNotifications ? unreadNotifications : 0;
     return (
       <Link
         key={href}
@@ -101,6 +105,17 @@ export function AccountSidebar({
       >
         <Icon className={cn('h-[18px] w-[18px] shrink-0', active ? 'text-navy' : 'text-gold-300')} aria-hidden />
         {label}
+        {badgeCount > 0 && (
+          <span
+            aria-label={`${badgeCount} إشعار غير مقروء`}
+            className={cn(
+              'ms-auto inline-flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[11px] font-bold leading-none',
+              active ? 'bg-navy text-gold-200' : 'bg-gold-400 text-navy',
+            )}
+          >
+            {badgeCount > 99 ? '99+' : badgeCount}
+          </span>
+        )}
       </Link>
     );
   };

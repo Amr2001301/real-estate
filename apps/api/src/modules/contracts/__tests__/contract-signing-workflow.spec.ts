@@ -42,6 +42,7 @@ interface ContractFixture {
   id: string;
   contractNumber: string | null;
   signedAt: Date | null;
+  createdAt: Date;
   unitId: string;
   customerId: string;
   brokerId: string | null;
@@ -68,6 +69,8 @@ function resetFixture() {
     id: CONTRACT_ID,
     contractNumber: 'CT-0001',
     signedAt: null,
+    // Warranty now anchors to the contract CREATION date (not signedAt).
+    createdAt: new Date('2030-05-01T00:00:00Z'),
     unitId: 'unit-1',
     customerId: 'cust-1',
     pdfUrl: null,
@@ -307,11 +310,12 @@ describe('Contracts · signing workflow', () => {
     expect(mock.unitMaintenanceItem.update).toHaveBeenCalledTimes(2);
     const calls = mock.unitMaintenanceItem.update.mock.calls.map((c) => c[0] as { where: { id: string }; data: Record<string, unknown> });
     const plumbing = calls.find((c) => c.where.id === 'ui-plumbing')!;
-    expect(new Date(plumbing.data.warrantyStart as Date).toISOString()).toBe('2030-05-19T00:00:00.000Z');
+    // Warranty anchors to contract createdAt (2030-05-01), NOT signedAt.
+    expect(new Date(plumbing.data.warrantyStart as Date).toISOString()).toBe('2030-05-01T00:00:00.000Z');
     expect(plumbing.data.warrantyDurationMonthsSnapshot).toBe(12);
-    expect(new Date(plumbing.data.warrantyEnd as Date).toISOString()).toBe('2031-05-19T00:00:00.000Z');
+    expect(new Date(plumbing.data.warrantyEnd as Date).toISOString()).toBe('2031-05-01T00:00:00.000Z');
     const electrical = calls.find((c) => c.where.id === 'ui-electrical')!;
-    expect(new Date(electrical.data.warrantyEnd as Date).toISOString()).toBe('2032-05-19T00:00:00.000Z');
+    expect(new Date(electrical.data.warrantyEnd as Date).toISOString()).toBe('2032-05-01T00:00:00.000Z');
   });
 
   it('prefers an existing item duration snapshot over the category duration', async () => {
@@ -326,7 +330,7 @@ describe('Contracts · signing workflow', () => {
       .expect(201);
     const call = mock.unitMaintenanceItem.update.mock.calls[0]![0] as { data: Record<string, unknown> };
     expect(call.data.warrantyDurationMonthsSnapshot).toBe(24);
-    expect(new Date(call.data.warrantyEnd as Date).toISOString()).toBe('2032-05-19T00:00:00.000Z');
+    expect(new Date(call.data.warrantyEnd as Date).toISOString()).toBe('2032-05-01T00:00:00.000Z');
   });
 
   it('leaves warrantyEnd null when no duration is known', async () => {

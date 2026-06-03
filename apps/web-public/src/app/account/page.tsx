@@ -291,7 +291,7 @@ export default async function AccountPage() {
         key={`n-${n.id}`}
         title={notificationTitle(n.templateCode)}
         subtitle={formatDateTime(n.createdAt)}
-        trailing={n.readAt === null ? <Badge tone="gold">جديد</Badge> : undefined}
+        trailing={!n.read ? <Badge tone="gold">جديد</Badge> : undefined}
       />
     )),
     ...recentVisits.map((v) => (

@@ -63,3 +63,22 @@ export async function assignSalesAction(appointmentId: string, formData: FormDat
   revalidatePath('/dashboard/visits');
   revalidatePath(`/dashboard/visits/appointments/${appointmentId}`);
 }
+
+// Gap 7 — sales/manager/admin records their own feedback on a COMPLETED visit.
+// Returns a structured result so the form can surface inline errors (e.g. the
+// API's "rating or note required" / scope 403) without crashing.
+export async function submitSalesFeedbackAction(
+  appointmentId: string,
+  input: { rating?: number; notes?: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await api.post(`/visits/appointments/${appointmentId}/sales-feedback`, {
+      rating: input.rating ?? undefined,
+      notes: input.notes?.trim() || undefined,
+    });
+  } catch {
+    return { ok: false, error: 'تعذّر حفظ ملاحظات الزيارة. تأكد من إدخال تقييم أو ملاحظة وأنك مخوّل.' };
+  }
+  revalidatePath(`/dashboard/visits/appointments/${appointmentId}`);
+  return { ok: true };
+}

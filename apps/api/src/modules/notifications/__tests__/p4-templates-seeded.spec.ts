@@ -17,6 +17,9 @@ const REQUIRED_CODES = [
   'reservation_submitted_admin',
   'reservation_status_changed',
   'reservation_booking_paid',
+  'reservation_payment_requested',
+  // Booking-amount payment proof (Gap 3)
+  'booking_payment_proof_submitted',
   // Contracts
   'contract_created_customer',
   'contract_signed_customer',

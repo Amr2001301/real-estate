@@ -548,6 +548,33 @@ async function main() {
         ar_body: 'تم إغلاق طلب الصيانة للوحدة {{unitCode}}.',
         en_body: 'The maintenance request for unit {{unitCode}} was closed.',
       },
+      // Resolution loop (Phase A). complaint → staff; unresolved → staff +
+      // customer; resolution_confirmed → staff. Payloads carry deep-link
+      // metadata (entityType/entityId/requestId/action).
+      {
+        code: 'maintenance_request_complaint_submitted',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'شكوى على طلب صيانة متأخر',
+        en_subject: 'Complaint on overdue maintenance',
+        ar_body: 'قدّم العميل شكوى بشأن تأخر طلب الصيانة للوحدة {{unitCode}}.',
+        en_body: 'The customer filed a complaint about the overdue maintenance request for unit {{unitCode}}.',
+      },
+      {
+        code: 'maintenance_request_unresolved',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'طلب صيانة لم يُحل',
+        en_subject: 'Maintenance request unresolved',
+        ar_body: 'تم تصنيف طلب الصيانة للوحدة {{unitCode}} كغير مُنجز بعد تجاوز المهلة.',
+        en_body: 'The maintenance request for unit {{unitCode}} was marked unresolved after the deadline passed.',
+      },
+      {
+        code: 'maintenance_request_resolution_confirmed',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'تم تأكيد حل طلب الصيانة',
+        en_subject: 'Maintenance resolution confirmed',
+        ar_body: 'تم تأكيد حل طلب الصيانة للوحدة {{unitCode}}.',
+        en_body: 'Resolution of the maintenance request for unit {{unitCode}} was confirmed.',
+      },
       // ─── Visit lifecycle (P3) ────────────────────────────────────────────
       // Placeholders are restricted to identity / scheduling context only —
       // no phone, email, address, reservation amounts, or internal ids leak
@@ -644,6 +671,24 @@ async function main() {
         ar_body: 'لديك زيارة لمشروع {{projectName}} اليوم في {{scheduledAt}}.',
         en_body: 'You have a visit to {{projectName}} today at {{scheduledAt}}.',
       },
+      // Gap 7 — post-visit feedback. Request → customer (PUSH, actionable);
+      // received → assigned sales (IN_APP, informational).
+      {
+        code: 'visit_feedback_requested',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'قيّم زيارتك',
+        en_subject: 'Rate your visit',
+        ar_body: 'اكتملت زيارتك لمشروع {{projectName}} — يسعدنا تقييمك لها.',
+        en_body: 'Your visit to {{projectName}} is complete — we’d love your rating.',
+      },
+      {
+        code: 'visit_feedback_received',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'تقييم جديد لزيارة',
+        en_subject: 'New visit rating',
+        ar_body: 'قام العميل بتقييم زيارة {{projectName}} بـ {{rating}}/5.',
+        en_body: 'The customer rated the {{projectName}} visit {{rating}}/5.',
+      },
       // ─── Reservations (P4) ────────────────────────────────────────────────
       {
         code: 'reservation_submitted_admin',
@@ -668,6 +713,18 @@ async function main() {
         en_subject: 'Booking payment confirmed',
         ar_body: 'تم تأكيد استلام دفعة الحجز للوحدة {{unitCode}}.',
         en_body: 'We confirmed the booking payment for unit {{unitCode}}.',
+      },
+      // Gap 3 — customer is asked to pay the booking amount right after the
+      // reservation is created (fired only when a booking amount is due).
+      {
+        code: 'reservation_payment_requested',
+        channel: NotificationChannel.PUSH,
+        ar_subject: 'مطلوب سداد مبلغ الحجز',
+        en_subject: 'Booking payment required',
+        ar_body:
+          'تم إنشاء حجز للوحدة {{unitCode}} بمبلغ حجز {{bookingAmount}}. يُرجى رفع إثبات الدفع من صفحة الحجوزات.',
+        en_body:
+          'A reservation for unit {{unitCode}} was created with a booking amount of {{bookingAmount}}. Please upload your payment proof from the reservations page.',
       },
       // ─── Contracts (P4) ──────────────────────────────────────────────────
       {
@@ -745,6 +802,17 @@ async function main() {
         en_subject: 'Payment proof resubmitted',
         ar_body: 'تم إعادة إرسال إثبات دفع بقيمة {{amount}} لقسط مستحق بتاريخ {{installmentDueDate}}.',
         en_body: 'A payment proof of {{amount}} was resubmitted for an installment due {{installmentDueDate}}.',
+      },
+      // Gap 3 — booking-amount proof submitted by a customer (staff recipients).
+      // Distinct from the installment template so the copy reads correctly
+      // ("booking amount" not "installment").
+      {
+        code: 'booking_payment_proof_submitted',
+        channel: NotificationChannel.IN_APP,
+        ar_subject: 'إثبات دفع مبلغ حجز قيد المراجعة',
+        en_subject: 'Booking payment proof pending review',
+        ar_body: 'تم استلام إثبات دفع بقيمة {{amount}} لمبلغ حجز رقم {{reference}}.',
+        en_body: 'A payment proof of {{amount}} was submitted for booking {{reference}}.',
       },
       {
         code: 'payment_proof_approved',

@@ -24,6 +24,8 @@
     "backfill:broker-commissions:dry-run": "tsx scripts/backfill-broker-commissions.ts",
     "contracts:backfill-documents:dry-run": "tsx scripts/backfill-contract-documents.ts",
     "contracts:backfill-documents": "tsx scripts/backfill-contract-documents.ts --execute",
+    "deposits:backfill-booking-status:dry-run": "tsx scripts/backfill-booking-payment-status.ts",
+    "deposits:backfill-booking-status": "tsx scripts/backfill-booking-payment-status.ts --execute",
     "reminders:installments:due-soon:dry-run": "tsx scripts/send-installment-due-soon-reminders.ts",
     "reminders:installments:due-soon": "tsx scripts/send-installment-due-soon-reminders.ts --execute",
     "cleanup:duplicate-seed-data:dry-run": "tsx scripts/cleanup-duplicate-seed-data.ts"

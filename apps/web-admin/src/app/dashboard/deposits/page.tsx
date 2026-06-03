@@ -72,6 +72,7 @@ function buildApiUrl(sp: Record<string, string | undefined>, page: number, pageS
   params.set('page', String(page));
   params.set('pageSize', String(pageSize));
   if (sp.type) params.set('type', sp.type);
+  if (sp.reviewStatus) params.set('reviewStatus', sp.reviewStatus);
   if (sp.projectId) params.set('projectId', sp.projectId);
   if (sp.q) params.set('q', sp.q);
   if (sp.ref) params.set('ref', sp.ref);
@@ -153,7 +154,7 @@ export default async function DepositsPage({
   // URL builder for the advanced toggle link (preserves all active params)
   function pageUrl(overrides: Record<string, string | undefined>): string {
     const base: Record<string, string | undefined> = {
-      type: sp.type, projectId: sp.projectId, q: sp.q,
+      type: sp.type, reviewStatus: sp.reviewStatus, projectId: sp.projectId, q: sp.q,
       ref: sp.ref, paidAtFrom: sp.paidAtFrom, paidAtTo: sp.paidAtTo,
       dueDateFrom: sp.dueDateFrom, dueDateTo: sp.dueDateTo,
       verified: sp.verified, showFilters: sp.showFilters,
@@ -249,6 +250,16 @@ export default async function DepositsPage({
             <option value="DOWN_PAYMENT">دفعة أولى</option>
             <option value="INSTALLMENT">قسط شهري</option>
             <option value="FINAL_PAYMENT">دفعة أخيرة</option>
+          </Select>
+
+          {/* Review status — surfaces the payment-proof review queue
+              (PENDING_REVIEW) including customer-submitted booking proofs. */}
+          <Select name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40 shrink-0">
+            <option value="">كل حالات المراجعة</option>
+            <option value="PENDING_REVIEW">قيد المراجعة</option>
+            <option value="APPROVED">معتمد</option>
+            <option value="REJECTED">مرفوض</option>
+            <option value="NO_PROOF">بدون إثبات</option>
           </Select>
 
           {/* Project */}
@@ -508,6 +519,7 @@ export default async function DepositsPage({
           total={deposits.meta.total}
           params={{
             type: sp.type,
+            reviewStatus: sp.reviewStatus,
             projectId: sp.projectId,
             q: sp.q,
             ref: sp.ref,

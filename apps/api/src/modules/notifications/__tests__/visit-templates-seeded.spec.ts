@@ -25,6 +25,8 @@ const REQUIRED_CODES = [
   'visit_cancelled',
   'visit_no_show',
   'visit_day_reminder',
+  'visit_feedback_requested',
+  'visit_feedback_received',
 ];
 
 describe('Seed · visit lifecycle templates (P3)', () => {

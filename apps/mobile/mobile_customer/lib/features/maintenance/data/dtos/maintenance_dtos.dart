@@ -33,6 +33,15 @@ class MaintenanceRequestDto {
     this.categoryNameAr,
     this.categoryNameEn,
     this.createdAt,
+    this.dueAt,
+    this.complaintAt,
+    this.unresolvedAt,
+    this.customerConfirmedResolutionAt,
+    this.supervisorConfirmedResolutionAt,
+    this.resolvedBy,
+    this.customerRating,
+    this.customerRatingText,
+    this.customerRatingSubmittedAt,
   });
 
   final String id;
@@ -43,6 +52,16 @@ class MaintenanceRequestDto {
   final String? categoryNameAr;
   final String? categoryNameEn;
   final String? createdAt;
+  // Phase A — resolution loop (tolerate missing on older responses).
+  final String? dueAt;
+  final String? complaintAt;
+  final String? unresolvedAt;
+  final String? customerConfirmedResolutionAt;
+  final String? supervisorConfirmedResolutionAt;
+  final String? resolvedBy;
+  final int? customerRating;
+  final String? customerRatingText;
+  final String? customerRatingSubmittedAt;
 
   factory MaintenanceRequestDto.fromJson(Map<String, dynamic> json) {
     final unit = json['unit'] as Map<String, dynamic>?;
@@ -57,6 +76,15 @@ class MaintenanceRequestDto {
       categoryNameAr: categoryName?['ar'] as String?,
       categoryNameEn: categoryName?['en'] as String?,
       createdAt: json['createdAt'] as String?,
+      dueAt: json['dueAt'] as String?,
+      complaintAt: json['complaintAt'] as String?,
+      unresolvedAt: json['unresolvedAt'] as String?,
+      customerConfirmedResolutionAt: json['customerConfirmedResolutionAt'] as String?,
+      supervisorConfirmedResolutionAt: json['supervisorConfirmedResolutionAt'] as String?,
+      resolvedBy: json['resolvedBy'] as String?,
+      customerRating: (json['customerRating'] as num?)?.toInt(),
+      customerRatingText: json['customerRatingText'] as String?,
+      customerRatingSubmittedAt: json['customerRatingSubmittedAt'] as String?,
     );
   }
 }

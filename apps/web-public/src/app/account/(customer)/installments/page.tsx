@@ -1,12 +1,14 @@
 import { redirect } from 'next/navigation';
 import type { Route } from 'next';
 import Link from 'next/link';
-import { CalendarClock, CheckCircle2, Clock, AlertCircle, Building2, Home, Upload } from 'lucide-react';
+import {
+  CalendarClock, CheckCircle2, Clock, AlertCircle, Building2, Home, Upload, Wallet,
+} from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { pickAr, unitTypeLabel, formatPrice } from '@/lib/format';
-import type { Paginated, MeInstallment } from '@/lib/api-types';
+import type { MeInstallment, MeInstallmentsResponse } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
@@ -33,6 +35,20 @@ const STATUS_TONE_CLS: Record<'success' | 'accent' | 'muted' | 'error', string> 
   error: 'bg-error/10 text-error ring-1 ring-error/20',
 };
 
+// Allowed list filters → backend Installment.status (omitted for "all").
+const FILTERS = [
+  { key: 'all', label: 'الكل', status: undefined },
+  { key: 'PAID', label: 'مدفوع', status: 'PAID' as const },
+  { key: 'PENDING', label: 'قيد الاستحقاق', status: 'PENDING' as const },
+  { key: 'OVERDUE', label: 'متأخر', status: 'OVERDUE' as const },
+];
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+function firstStr(v: string | string[] | undefined): string {
+  return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
+}
+
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   try {
@@ -48,10 +64,19 @@ function statusIcon(status: MeInstallment['status']) {
   return Clock;
 }
 
-export default async function AccountInstallmentsPage() {
-  let result: Paginated<MeInstallment>;
+export default async function AccountInstallmentsPage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const statusParam = firstStr(sp.status).toUpperCase();
+  const activeStatus = (['PAID', 'PENDING', 'OVERDUE'] as const).find((s) => s === statusParam);
+  const activeContractId = firstStr(sp.contractId) || undefined;
+
+  const qs = new URLSearchParams({ page: '1', pageSize: '200' });
+  if (activeStatus) qs.set('status', activeStatus);
+  if (activeContractId) qs.set('contractId', activeContractId);
+
+  let result: MeInstallmentsResponse;
   try {
-    result = await authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200');
+    result = await authFetch<MeInstallmentsResponse>(`/me/installments?${qs.toString()}`);
   } catch (e) {
     if (e instanceof AuthError) redirect('/login');
     return (
@@ -67,12 +92,29 @@ export default async function AccountInstallmentsPage() {
   }
 
   const installments = result.data;
+  const summary = result.summary;
+  const contracts = summary?.contracts ?? [];
+  const activeFilterKey = activeStatus ?? 'all';
+
+  // Build a filter/contract href that preserves the other dimension.
+  const buildHref = (overrides: { status?: string; contractId?: string }): Route => {
+    const params = new URLSearchParams();
+    const status = 'status' in overrides ? overrides.status : activeStatus;
+    const contractId = 'contractId' in overrides ? overrides.contractId : activeContractId;
+    if (status) params.set('status', status);
+    if (contractId) params.set('contractId', contractId);
+    const query = params.toString();
+    return (query ? `${routes.accountInstallments}?${query}` : routes.accountInstallments) as Route;
+  };
+
+  // Nothing on the whole schedule (not just an empty filter result).
+  const scheduleEmpty = (summary?.counts.total ?? installments.length) === 0;
 
   return (
     <div className="space-y-8">
       <Header />
 
-      {installments.length === 0 ? (
+      {scheduleEmpty ? (
         <EmptyState
           title="لا توجد أقساط بعد"
           message="ستظهر هنا أقساط عقدك مع تاريخ كل قسط وحالته."
@@ -84,11 +126,76 @@ export default async function AccountInstallmentsPage() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {installments.map((inst) => (
-            <InstallmentRow key={inst.id} installment={inst} />
-          ))}
-        </div>
+        <>
+          {summary && <SummaryCards summary={summary} />}
+
+          {/* Unified filter control bar — contracts (start) ⟷ status segmented (end) */}
+          <div className="flex flex-col items-stretch gap-4 rounded-xl border border-hairline bg-surface-soft/60 p-3 md:flex-row md:items-center md:justify-between">
+            {contracts.length > 1 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-bold text-ink-muted">العقد:</span>
+                <FilterChip href={buildHref({ contractId: undefined })} active={!activeContractId}>
+                  كل العقود
+                </FilterChip>
+                {contracts.map((c) => (
+                  <FilterChip key={c.id} href={buildHref({ contractId: c.id })} active={activeContractId === c.id}>
+                    {c.contractNumber ?? `#${c.id.slice(0, 6)}`}
+                  </FilterChip>
+                ))}
+              </div>
+            ) : (
+              <span aria-hidden />
+            )}
+
+            {/* Status segmented control */}
+            <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-hairline/60 bg-surface p-1">
+              {FILTERS.map((f) => {
+                const count =
+                  f.key === 'all'
+                    ? summary?.counts.total
+                    : f.key === 'PAID'
+                      ? summary?.counts.paid
+                      : f.key === 'PENDING'
+                        ? summary?.counts.pending
+                        : summary?.counts.overdue;
+                const active = activeFilterKey === f.key;
+                return (
+                  <Link
+                    key={f.key}
+                    href={buildHref({ status: f.status })}
+                    aria-current={active ? 'true' : undefined}
+                    className={cn(
+                      'shrink-0 whitespace-nowrap rounded-md px-4 py-1.5 text-xs font-bold transition-all',
+                      active ? 'bg-navy text-white shadow-sm' : 'text-ink-muted hover:text-ink-strong',
+                    )}
+                  >
+                    {f.label}
+                    {typeof count === 'number' && <span className="ms-1 tabular-nums opacity-70">({count})</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+
+          {installments.length === 0 ? (
+            <EmptyState
+              title="لا توجد أقساط بهذا التصنيف"
+              message="جرّب تصفية مختلفة لعرض بقية الأقساط."
+              icon={<CalendarClock className="h-6 w-6" aria-hidden />}
+              action={
+                <ButtonLink href={routes.accountInstallments} variant="outline" size="md">
+                  عرض كل الأقساط
+                </ButtonLink>
+              }
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {installments.map((inst) => (
+                <InstallmentRow key={inst.id} installment={inst} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -100,6 +207,98 @@ function Header() {
       title="جدول الأقساط"
       description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع للأقساط غير المدفوعة."
     />
+  );
+}
+
+/** Summary cards — warm-luxe surfaces (NOT admin KPI tiles). Totals describe the
+ *  installment schedule only; the note clarifies booking amount is separate. */
+function SummaryCards({ summary }: { summary: NonNullable<MeInstallmentsResponse['summary']> }) {
+  const hasOverdue = Number(summary.overdue) > 0;
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryItem
+          icon={CheckCircle2}
+          chip="bg-emerald-50 text-emerald-600"
+          label="إجمالي المدفوع من الأقساط"
+          value={formatPrice(summary.totalPaid)}
+          sub={`${summary.counts.paid} قسط مدفوع`}
+        />
+        <SummaryItem
+          icon={Wallet}
+          chip="bg-blue-50 text-blue-600"
+          label="المتبقي من الأقساط"
+          value={formatPrice(summary.remaining)}
+          sub={`${summary.counts.pending + summary.counts.overdue} قسط غير مدفوع`}
+        />
+        <SummaryItem
+          icon={AlertCircle}
+          chip="bg-rose-50 text-rose-600"
+          pulse={hasOverdue}
+          label="المتأخرات"
+          value={formatPrice(summary.overdue)}
+          sub={`${summary.counts.overdue} قسط متأخر`}
+        />
+        <SummaryItem
+          icon={CalendarClock}
+          chip="bg-amber-50 text-amber-600"
+          label="القسط القادم"
+          value={summary.nextDue ? formatPrice(summary.nextDue.amount) : '—'}
+          sub={summary.nextDue ? `الاستحقاق: ${formatDate(summary.nextDue.dueDate)}` : 'لا يوجد قسط مستحق'}
+        />
+      </div>
+      <p className="text-[11px] text-ink-muted">
+        * هذه الإجماليات تخص جدول الأقساط فقط ولا تتضمن مبلغ الحجز — يظهر مبلغ الحجز في صفحتَي الحجوزات والدفعات.
+      </p>
+    </div>
+  );
+}
+
+function SummaryItem({
+  icon: Icon,
+  chip,
+  label,
+  value,
+  sub,
+  pulse,
+}: {
+  icon: typeof CheckCircle2;
+  chip: string;
+  label: string;
+  value: string;
+  sub?: string;
+  pulse?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface p-5 text-right shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+      <div className="min-w-0">
+        <div className="mb-1 text-[11px] font-bold text-ink-muted">{label}</div>
+        <div className="truncate font-mono text-lg font-black tracking-tight text-ink-strong" dir="auto">
+          {value}
+        </div>
+        {sub && <div className="mt-1 text-[11px] text-ink-muted">{sub}</div>}
+      </div>
+      <span className={cn('inline-flex shrink-0 items-center justify-center rounded-xl p-3', chip, pulse && 'animate-pulse')}>
+        <Icon className="h-5 w-5" aria-hidden />
+      </span>
+    </div>
+  );
+}
+
+function FilterChip({ href, active, children }: { href: Route; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? 'true' : undefined}
+      className={cn(
+        'inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
+        active
+          ? 'bg-navy text-white shadow-sm'
+          : 'border border-hairline bg-surface text-ink-strong hover:border-gold-300 hover:text-gold-600',
+      )}
+    >
+      {children}
+    </Link>
   );
 }
 

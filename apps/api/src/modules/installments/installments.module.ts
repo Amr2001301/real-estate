@@ -51,6 +51,7 @@ import {
 } from '../notifications/notifications.module';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
+import { paginate } from '../../common/utils/pagination';
 import { computeDurationOption } from './duration-calc';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
@@ -934,14 +935,25 @@ class MeInstallmentsService {
     userId: string,
     opts: { page: number; pageSize: number; contractId?: string; status?: InstallmentStatus },
   ) {
-    const where: Prisma.InstallmentWhereInput = {
-      plan: { contract: { customerId: userId } },
-      ...(opts.contractId ? { plan: { contract: { customerId: userId, id: opts.contractId } } } : {}),
+    // Customer ownership is anchored purely by plan.contract.customerId — a
+    // cross-customer read is impossible. The optional contractId narrows to one
+    // contract; status narrows the LIST only (the summary below ignores it so
+    // the cards always reflect the whole schedule).
+    const contractScope: Prisma.ContractWhereInput = {
+      customerId: userId,
+      ...(opts.contractId ? { id: opts.contractId } : {}),
+    };
+    const listWhere: Prisma.InstallmentWhereInput = {
+      plan: { contract: contractScope },
       ...(opts.status ? { status: opts.status } : {}),
     };
+    const summaryWhere: Prisma.InstallmentWhereInput = {
+      plan: { contract: contractScope },
+    };
+
     const [data, total] = await this.prisma.$transaction([
       this.prisma.installment.findMany({
-        where,
+        where: listWhere,
         skip: (opts.page - 1) * opts.pageSize,
         take: opts.pageSize,
         orderBy: { dueDate: 'asc' },
@@ -978,15 +990,71 @@ class MeInstallmentsService {
           },
         },
       }),
-      this.prisma.installment.count({ where }),
+      this.prisma.installment.count({ where: listWhere }),
     ]);
+
+    const [groups, nextDue, contracts] = await Promise.all([
+      // Summary buckets over the WHOLE schedule (per contract scope), grouped by
+      // status. Installment.status is the authoritative paid/overdue flag — it
+      // flips to PAID only when a deposit is APPROVED (see deposits.approveProof
+      // / record), so summing PAID here counts approved money only and never
+      // pending/rejected proofs. Booking amount lives on the reservation, NOT
+      // in this schedule, so it is never double-counted here.
+      this.prisma.installment.groupBy({
+        by: ['status'],
+        where: summaryWhere,
+        _sum: { amount: true },
+        _count: { _all: true },
+        orderBy: { status: 'asc' },
+      }),
+      // Next due = soonest unpaid installment (PENDING or OVERDUE).
+      this.prisma.installment.findFirst({
+        where: { ...summaryWhere, status: { not: InstallmentStatus.PAID } },
+        orderBy: { dueDate: 'asc' },
+        select: { amount: true, dueDate: true },
+      }),
+      // Contracts that carry a plan — drives the optional contract filter.
+      this.prisma.contract.findMany({
+        where: { customerId: userId, installmentPlan: { isNot: null } },
+        orderBy: { createdAt: 'asc' },
+        select: { id: true, contractNumber: true },
+      }),
+    ]);
+
+    const zero = new Prisma.Decimal(0);
+    const sumByStatus = new Map<InstallmentStatus, Prisma.Decimal>();
+    const countByStatus = new Map<InstallmentStatus, number>();
+    for (const g of groups) {
+      sumByStatus.set(g.status, g._sum.amount ?? zero);
+      countByStatus.set(g.status, g._count._all);
+    }
+    const paid = sumByStatus.get(InstallmentStatus.PAID) ?? zero;
+    const pending = sumByStatus.get(InstallmentStatus.PENDING) ?? zero;
+    const overdue = sumByStatus.get(InstallmentStatus.OVERDUE) ?? zero;
+    const remaining = pending.add(overdue); // everything not yet PAID
+    const paidCount = countByStatus.get(InstallmentStatus.PAID) ?? 0;
+    const pendingCount = countByStatus.get(InstallmentStatus.PENDING) ?? 0;
+    const overdueCount = countByStatus.get(InstallmentStatus.OVERDUE) ?? 0;
+
     return {
-      data,
-      meta: {
-        page: opts.page,
-        pageSize: opts.pageSize,
-        total,
-        totalPages: Math.max(1, Math.ceil(total / opts.pageSize)),
+      ...paginate(data, total, opts),
+      // Additive, backward-compatible. All money fields are Decimal-as-string.
+      // These totals describe the INSTALLMENT SCHEDULE only (not the booking
+      // amount) — the UI labels them accordingly.
+      summary: {
+        totalPaid: paid.toString(),
+        remaining: remaining.toString(),
+        overdue: overdue.toString(),
+        counts: {
+          total: paidCount + pendingCount + overdueCount,
+          paid: paidCount,
+          pending: pendingCount,
+          overdue: overdueCount,
+        },
+        nextDue: nextDue
+          ? { amount: nextDue.amount.toString(), dueDate: nextDue.dueDate }
+          : null,
+        contracts,
       },
     };
   }

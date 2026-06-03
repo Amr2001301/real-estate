@@ -1,10 +1,9 @@
-import Link from 'next/link';
-import { Bell, HelpCircle, Search } from 'lucide-react';
+import { HelpCircle, Search } from 'lucide-react';
 import type { SessionUser } from '@/lib/session';
 import { IconButton } from '@/components/ui/icon-button';
 import { UserMenu } from './user-menu';
+import { NotificationBell } from './notification-bell';
 import { api } from '@/lib/api';
-import type { NotificationItem } from '@/lib/types';
 
 interface Props {
   user: SessionUser;
@@ -15,8 +14,10 @@ interface Props {
 
 async function getUnreadCount(): Promise<number> {
   try {
-    const items = await api.get<NotificationItem[]>('/me/notifications?unreadOnly=1');
-    return items.length;
+    // Dedicated count endpoint → { count }. (The list endpoint is paginated, so
+    // counting its rows was wrong/always-0.)
+    const res = await api.get<{ count: number }>('/me/notifications/unread-count');
+    return Number(res.count) || 0;
   } catch {
     return 0;
   }
@@ -51,19 +52,7 @@ export async function Topbar({ user, notificationsHref, leading }: Props) {
             <HelpCircle />
           </IconButton>
 
-          <Link href={notificationsHref as never} className="relative inline-flex">
-            <IconButton label="الإشعارات" variant="ghost" size="md">
-              <Bell />
-            </IconButton>
-            {unread > 0 && (
-              <span
-                aria-label={`${unread} إشعار غير مقروء`}
-                className="absolute -top-0.5 -end-0.5 min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center rounded-full bg-brand-600 text-white text-[10px] font-semibold ring-2 ring-surface tabular-nums"
-              >
-                {unread > 99 ? '99+' : unread}
-              </span>
-            )}
-          </Link>
+          <NotificationBell href={notificationsHref} initialCount={unread} />
 
           <div className="h-7 w-px bg-hairline mx-1.5 hidden sm:block" />
 
