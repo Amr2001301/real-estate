@@ -190,6 +190,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCtaAction => 'Talk to an advisor';
 
   @override
+  String get homeCtaSecondary => 'Browse units';
+
+  @override
+  String get homeSearchAction => 'Search';
+
+  @override
+  String get homeTypeResidential => 'Residential';
+
+  @override
+  String get homeTypeOffice => 'Office';
+
+  @override
+  String get homeTypeCommercial => 'Commercial';
+
+  @override
+  String get homeTypeMedical => 'Medical';
+
+  @override
+  String get homeTypeHotel => 'Hospitality';
+
+  @override
   String get homeFeaturedProjects => 'Featured projects';
 
   @override

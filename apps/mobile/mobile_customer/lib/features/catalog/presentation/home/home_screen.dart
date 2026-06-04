@@ -13,6 +13,7 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
+import '../widgets/catalog_controls.dart';
 import '../widgets/catalog_skeletons.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
@@ -57,6 +58,9 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.xl),
           ] else ...[
             const _Hero(),
+            const SizedBox(height: AppSpacing.md),
+            // Website-inspired search card (the hero no longer carries a button).
+            const _HomeSearchCard(),
             const SizedBox(height: AppSpacing.xl),
           ],
           Padding(
@@ -71,6 +75,10 @@ class HomeScreen extends StatelessWidget {
           // Units preview (self-managing: renders its own header, hides if no
           // data). Shared by guest + customer as a discovery section.
           const _FeaturedUnits(),
+          if (!isCustomer) ...[
+            const SizedBox(height: AppSpacing.lg),
+            const _HomeCtaBand(),
+          ],
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),
@@ -358,8 +366,6 @@ class _Hero extends StatelessWidget {
                       height: 1.5,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  const _HeroSearch(),
                 ],
               ),
             ),
@@ -370,60 +376,188 @@ class _Hero extends StatelessWidget {
   }
 }
 
-/// Luxe search entry: a white pill with a soft lift and a gold search chip.
-class _HeroSearch extends StatelessWidget {
-  const _HeroSearch();
+/// Website-inspired Home search card: quick property-type search chips, a
+/// premium search field, and a primary search action. Search routes to
+/// `/projects?q=…` (projects support text query + city; the mobile units API
+/// has no text search). The type chips are honest quick-search shortcuts, not a
+/// backend category filter (mobile has none).
+class _HomeSearchCard extends StatefulWidget {
+  const _HomeSearchCard();
+
+  @override
+  State<_HomeSearchCard> createState() => _HomeSearchCardState();
+}
+
+class _HomeSearchCardState extends State<_HomeSearchCard> {
+  late final TextEditingController _search;
+
+  @override
+  void initState() {
+    super.initState();
+    _search = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  void _runSearch(String raw) {
+    final query = raw.trim();
+    context.push(
+      query.isEmpty ? '/projects' : '/projects?q=${Uri.encodeQueryComponent(query)}',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final types = [
+      l10n.homeTypeResidential,
+      l10n.homeTypeOffice,
+      l10n.homeTypeCommercial,
+      l10n.homeTypeMedical,
+      l10n.homeTypeHotel,
+    ];
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: PremiumCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SizedBox(
+              height: 34,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.zero,
+                itemCount: types.length,
+                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
+                itemBuilder: (context, i) =>
+                    _TypeChip(label: types[i], onTap: () => _runSearch(types[i])),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            CatalogSearchField(
+              controller: _search,
+              hint: l10n.homeSearchHint,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: _runSearch,
+              onClear: () {
+                _search.clear();
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: l10n.homeSearchAction,
+              icon: Icons.search_rounded,
+              variant: AppButtonVariant.gold,
+              expand: true,
+              onPressed: () => _runSearch(_search.text),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A small tappable quick-search pill for the Home search card.
+class _TypeChip extends StatelessWidget {
+  const _TypeChip({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Material(
+      color: colors.surfaceSoft,
+      borderRadius: AppRadii.pillAll,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact premium lower CTA — a small navy band with a gold primary action and
+/// a subtle secondary, not a tall web banner.
+class _HomeCtaBand extends StatelessWidget {
+  const _HomeCtaBand();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final theme = Theme.of(context);
-
-    return Material(
-      color: colors.surface,
-      borderRadius: AppRadii.pillAll,
-      clipBehavior: Clip.antiAlias,
-      elevation: 8,
-      shadowColor: Colors.black.withValues(alpha: 0.25),
-      child: InkWell(
-        onTap: () => context.push('/projects'),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.xs),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [AppPalette.gold300, AppPalette.gold500],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(AppRadii.md),
-                ),
-                child: Icon(
-                  Icons.search_rounded,
-                  color: colors.brandNavy,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  l10n.homeSearchHint,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.inkMuted,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-            ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppPalette.navy700, AppPalette.navy],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(AppRadii.xl),
+          boxShadow: colors.shadowCard,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.homeCtaTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              l10n.homeCtaSubtitle,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: Colors.white.withValues(alpha: 0.78),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                AppButton(
+                  label: l10n.homeCtaAction,
+                  icon: Icons.chat_bubble_outline_rounded,
+                  variant: AppButtonVariant.gold,
+                  size: AppButtonSize.small,
+                  onPressed: () => context.push('/chat'),
+                ),
+                const Spacer(),
+                TextButton(
+                  style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  onPressed: () => context.push('/units'),
+                  child: Text(l10n.homeCtaSecondary),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

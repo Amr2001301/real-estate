@@ -446,6 +446,48 @@ abstract class AppLocalizations {
   /// **'Talk to an advisor'**
   String get homeCtaAction;
 
+  /// No description provided for @homeCtaSecondary.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse units'**
+  String get homeCtaSecondary;
+
+  /// No description provided for @homeSearchAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get homeSearchAction;
+
+  /// No description provided for @homeTypeResidential.
+  ///
+  /// In en, this message translates to:
+  /// **'Residential'**
+  String get homeTypeResidential;
+
+  /// No description provided for @homeTypeOffice.
+  ///
+  /// In en, this message translates to:
+  /// **'Office'**
+  String get homeTypeOffice;
+
+  /// No description provided for @homeTypeCommercial.
+  ///
+  /// In en, this message translates to:
+  /// **'Commercial'**
+  String get homeTypeCommercial;
+
+  /// No description provided for @homeTypeMedical.
+  ///
+  /// In en, this message translates to:
+  /// **'Medical'**
+  String get homeTypeMedical;
+
+  /// No description provided for @homeTypeHotel.
+  ///
+  /// In en, this message translates to:
+  /// **'Hospitality'**
+  String get homeTypeHotel;
+
   /// No description provided for @homeFeaturedProjects.
   ///
   /// In en, this message translates to:

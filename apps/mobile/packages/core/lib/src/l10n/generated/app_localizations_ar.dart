@@ -187,6 +187,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeCtaAction => 'تواصل مع مستشار';
 
   @override
+  String get homeCtaSecondary => 'تصفح الوحدات';
+
+  @override
+  String get homeSearchAction => 'ابدأ البحث';
+
+  @override
+  String get homeTypeResidential => 'سكني';
+
+  @override
+  String get homeTypeOffice => 'إداري';
+
+  @override
+  String get homeTypeCommercial => 'تجاري';
+
+  @override
+  String get homeTypeMedical => 'طبي';
+
+  @override
+  String get homeTypeHotel => 'فندقي';
+
+  @override
   String get homeFeaturedProjects => 'مشاريع مميّزة';
 
   @override
