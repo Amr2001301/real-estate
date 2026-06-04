@@ -34,14 +34,16 @@ enum AppBottomNavStyle { adaptive, material, cupertino }
 
 /// iOS floating tab-bar visual variants (review options). Switch the default
 /// below to preview each:
+///   - [cream]       : warm cream frosted floating dock — matches the warm-luxe
+///                     UI; light and premium (default).
 ///   - [liquid]      : transparent frosted glass, glossy top, glowing gold dot.
 ///   - [darkGlass]   : navy translucent luxury glass, gold active.
 ///   - [minimalDock] : compact light Apple-style dock, subtle dot.
-enum IosTabBarStyle { liquid, darkGlass, minimalDock }
+enum IosTabBarStyle { cream, liquid, darkGlass, minimalDock }
 
 /// The active iOS tab-bar variant. Change this single constant to switch the
 /// look across the app for review (iOS only; Android is unaffected).
-const IosTabBarStyle kIosTabBarStyle = IosTabBarStyle.darkGlass;
+const IosTabBarStyle kIosTabBarStyle = IosTabBarStyle.cream;
 
 /// A premium, warm-luxe bottom navigation bar:
 /// - **Android (Material):** in-slot surface bar with a soft gold active pill.
@@ -100,7 +102,6 @@ class AppBottomNav extends StatelessWidget {
   /// iOS: a floating glass dock styled by [cfg]. The shell sets `extendBody` on
   /// iOS so the body scrolls behind it and the blur frosts real content.
   Widget _cupertinoBar(BuildContext context, Widget row, _IosTabConfig cfg) {
-    final colors = context.appColors;
     final bottomInset = MediaQuery.of(context).padding.bottom;
     final radius = BorderRadius.circular(cfg.radius);
     return Padding(
@@ -112,7 +113,7 @@ class AppBottomNav extends StatelessWidget {
       ),
       child: DecoratedBox(
         // Shadow on the unclipped outer box so it isn't clipped away.
-        decoration: BoxDecoration(borderRadius: radius, boxShadow: colors.shadowLift),
+        decoration: BoxDecoration(borderRadius: radius, boxShadow: cfg.shadow),
         child: ClipRRect(
           borderRadius: radius,
           child: BackdropFilter(
@@ -194,6 +195,7 @@ class _IosTabConfig {
     required this.dotSize,
     required this.glowDot,
     required this.glowActiveIcon,
+    required this.shadow,
   });
 
   final List<Color> fillColors;
@@ -201,6 +203,7 @@ class _IosTabConfig {
   final Color borderColor;
   final double borderWidth;
   final double blur;
+  final List<BoxShadow> shadow;
   final double radius;
   final double hMargin;
   final double vPadding;
@@ -215,6 +218,32 @@ class _IosTabConfig {
 
   static _IosTabConfig resolve(IosTabBarStyle style, AppColorsExt c) {
     switch (style) {
+      // Default — Premium Cream Floating Dock: warm cream frosted glass that
+      // matches the warm-luxe page; light, premium, not white, not navy.
+      case IosTabBarStyle.cream:
+        return _IosTabConfig(
+          fillColors: [
+            Colors.white.withValues(alpha: 0.55), // soft top highlight
+            c.canvas.withValues(alpha: 0.80), // warm cream body
+            c.surfaceSoft.withValues(alpha: 0.88), // slightly denser warm base
+          ],
+          fillStops: const [0.0, 0.32, 1.0],
+          borderColor: c.hairline.withValues(alpha: 0.55), // soft warm hairline
+          borderWidth: 1,
+          blur: 20,
+          radius: 32,
+          hMargin: 24,
+          vPadding: AppSpacing.xxs,
+          activeColor: c.brandGold,
+          inactiveColor: c.inkMuted, // warm muted gray/navy
+          iconSize: 21,
+          activeIconSize: 22,
+          labelSize: 10,
+          dotSize: 0, // no dot — gold icon+label carry the active state
+          glowDot: false,
+          glowActiveIcon: true,
+          shadow: c.shadowSoft, // soft, non-card-like warm shadow
+        );
       // A — Liquid Glass Dock: very transparent, glossy top, glowing gold dot.
       case IosTabBarStyle.liquid:
         return _IosTabConfig(
@@ -238,6 +267,7 @@ class _IosTabConfig {
           dotSize: 4,
           glowDot: true,
           glowActiveIcon: false,
+          shadow: c.shadowLift,
         );
       // B — Navy Frosted Dock: a LIGHT navy frosted glass (not a dark slab).
       // Low navy opacity + strong blur + a warm top gloss so the background
@@ -264,6 +294,7 @@ class _IosTabConfig {
           dotSize: 3,
           glowDot: false,
           glowActiveIcon: true,
+          shadow: c.shadowLift,
         );
       // C — Minimal iOS Dock: compact, light, subtle labels + tiny dot.
       case IosTabBarStyle.minimalDock:
@@ -287,6 +318,7 @@ class _IosTabConfig {
           dotSize: 3,
           glowDot: false,
           glowActiveIcon: false,
+          shadow: c.shadowCard,
         );
     }
   }
@@ -351,8 +383,8 @@ class _NavItemView extends StatelessWidget {
             shadows: cfg.glowActiveIcon && selected
                 ? [
                     Shadow(
-                      color: cfg.activeColor.withValues(alpha: 0.7),
-                      blurRadius: 12,
+                      color: cfg.activeColor.withValues(alpha: 0.55),
+                      blurRadius: 9,
                     ),
                   ]
                 : null,
@@ -368,25 +400,28 @@ class _NavItemView extends StatelessWidget {
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 2),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            height: cfg.dotSize,
-            width: selected ? cfg.dotSize : 0,
-            decoration: BoxDecoration(
-              color: cfg.activeColor,
-              shape: BoxShape.circle,
-              boxShadow: cfg.glowDot && selected
-                  ? [
-                      BoxShadow(
-                        color: cfg.activeColor.withValues(alpha: 0.6),
-                        blurRadius: 6,
-                        spreadRadius: 1,
-                      ),
-                    ]
-                  : null,
+          // Indicator dot — omitted entirely when dotSize == 0 (e.g. cream).
+          if (cfg.dotSize > 0) ...[
+            const SizedBox(height: 2),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: cfg.dotSize,
+              width: selected ? cfg.dotSize : 0,
+              decoration: BoxDecoration(
+                color: cfg.activeColor,
+                shape: BoxShape.circle,
+                boxShadow: cfg.glowDot && selected
+                    ? [
+                        BoxShadow(
+                          color: cfg.activeColor.withValues(alpha: 0.6),
+                          blurRadius: 6,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );
