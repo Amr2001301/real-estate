@@ -8,10 +8,19 @@ import '../favorites_cubit.dart';
 /// Heart toggle for a project/unit. Guests are prompted to sign in; signed-in
 /// users toggle the favorite via the app-wide [FavoritesCubit].
 class FavoriteToggleButton extends StatelessWidget {
-  const FavoriteToggleButton({super.key, required this.isProject, required this.id});
+  const FavoriteToggleButton({
+    super.key,
+    required this.isProject,
+    required this.id,
+    this.dense = false,
+  });
 
   final bool isProject;
   final String id;
+
+  /// Compact 38×38 variant for on-image card overlays (vs the default app-bar
+  /// size used by detail screens).
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +32,11 @@ class FavoriteToggleButton extends StatelessWidget {
 
     return IconButton(
       tooltip: context.l10n.accountFavorites,
+      iconSize: dense ? 18 : 24,
+      visualDensity: dense ? VisualDensity.compact : null,
+      padding: dense ? EdgeInsets.zero : null,
+      constraints:
+          dense ? const BoxConstraints.tightFor(width: 36, height: 36) : null,
       icon: Icon(
         isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
         color: isFav ? colors.error : null,

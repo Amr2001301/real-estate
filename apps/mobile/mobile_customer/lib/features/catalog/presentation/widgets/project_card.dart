@@ -5,10 +5,10 @@ import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
 import '../../domain/entities/project.dart';
 import 'glass.dart';
 
-/// Luxury project card (warm-luxe, website-parity): a 16:9 image with an
-/// elegant scrim, a frosted "مميز" pill and a frosted favorite action, then a
-/// city line, a strong title, a two-line description excerpt, and an
-/// available-units badge with a round open affordance.
+/// Executive project card (hard reset): an editorial hero — the city and the
+/// project title are composed over a 200px cover (with a frosted "مميز" pill
+/// and a small favorite) — then a tight content block of a 2-line description
+/// and a footer (soft-gold units chip + refined CTA). Minimal white area.
 class ProjectCard extends StatelessWidget {
   const ProjectCard({
     super.key,
@@ -23,6 +23,8 @@ class ProjectCard extends StatelessWidget {
   /// Fixed width for horizontal carousels; null = fill parent.
   final double? width;
 
+  static const double _imageHeight = 200;
+
   @override
   Widget build(BuildContext context) {
     final lang = Localizations.localeOf(context).languageCode;
@@ -34,21 +36,20 @@ class ProjectCard extends StatelessWidget {
     final city = project.city.trim();
     final units = project.availableUnitsCount;
 
-    final card = AppCard(
-      padding: EdgeInsets.zero,
-      elevation: AppCardElevation.card,
+    final card = LuxeCard(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AspectRatio(
-            aspectRatio: 16 / 9,
+          // ── Editorial hero: city + title over the image ─────────────────
+          SizedBox(
+            height: _imageHeight,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 AppNetworkImage(url: project.coverImage),
-                const _ScrimBottom(),
+                const ImageScrim(),
                 if (project.featured)
                   PositionedDirectional(
                     top: AppSpacing.sm,
@@ -72,62 +73,84 @@ class ProjectCard extends StatelessWidget {
                     ),
                   ),
                 PositionedDirectional(
-                  top: AppSpacing.xs,
-                  end: AppSpacing.xs,
-                  child: GlassActionBar(
-                    children: [FavoriteToggleButton(isProject: true, id: project.id)],
+                  top: AppSpacing.sm,
+                  end: AppSpacing.sm,
+                  child: GlassCircle(
+                    child: FavoriteToggleButton(
+                        isProject: true, id: project.id, dense: true),
+                  ),
+                ),
+                PositionedDirectional(
+                  bottom: AppSpacing.md,
+                  start: AppSpacing.md,
+                  end: AppSpacing.md,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (city.isNotEmpty)
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_rounded,
+                                size: 14, color: AppPalette.gold300),
+                            const SizedBox(width: AppSpacing.xxs),
+                            Expanded(
+                              child: Text(
+                                city,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        _resolveTitle(lang),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 23,
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          Padding(
+          // Subtle gold accent between image and content.
+          const GoldHairline(),
+          // ── Content (tight, subtle warm tint) ───────────────────────────
+          Container(
+            width: double.infinity,
+            color: Color.lerp(colors.surface, colors.surfaceSoft, 0.5),
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (city.isNotEmpty)
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_rounded, size: 14, color: colors.brandGold),
-                      const SizedBox(width: AppSpacing.xxs),
-                      Expanded(
-                        child: Text(
-                          city,
-                          style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  _resolveTitle(lang),
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
                 if (description.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     description,
-                    style: theme.textTheme.bodySmall
+                    style: theme.textTheme.bodyMedium
                         ?.copyWith(color: colors.inkMuted, height: 1.5),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: AppSpacing.md),
                 ],
-                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Expanded(
                       child: Align(
                         alignment: AlignmentDirectional.centerStart,
-                        child: StatusBadge(
-                          label: l10n.availableUnitsCount(units),
-                          tone: units > 0 ? BadgeTone.gold : BadgeTone.neutral,
-                        ),
+                        child: _UnitsChip(count: units),
                       ),
                     ),
                     const SizedBox(width: AppSpacing.sm),
@@ -153,18 +176,44 @@ class ProjectCard extends StatelessWidget {
   }
 }
 
-/// Soft bottom scrim — subtle depth under the image without darkening content.
-class _ScrimBottom extends StatelessWidget {
-  const _ScrimBottom();
+/// Soft-gold "available units" chip (icon + count); the card's single warm
+/// accent, muted when nothing is available.
+class _UnitsChip extends StatelessWidget {
+  const _UnitsChip({required this.count});
+  final int count;
+
   @override
-  Widget build(BuildContext context) => const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x33000000), Colors.transparent, Color(0x22000000)],
-            stops: [0.0, 0.4, 1.0],
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final has = count > 0;
+    final fg = has ? colors.brandGold : colors.inkMuted;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+      decoration: BoxDecoration(
+        color: has
+            ? colors.brandGold.withValues(alpha: 0.12)
+            : colors.surfaceSoft,
+        borderRadius: AppRadii.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(AppIcons.property, size: 15, color: fg),
+          const SizedBox(width: AppSpacing.xxs),
+          Flexible(
+            child: Text(
+              context.l10n.availableUnitsCount(count),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context)
+                  .textTheme
+                  .labelMedium
+                  ?.copyWith(color: fg, fontWeight: FontWeight.w700),
+            ),
           ),
-        ),
-      );
+        ],
+      ),
+    );
+  }
 }

@@ -10,17 +10,18 @@ import 'glass.dart';
 import 'price_text.dart';
 import 'unit_status_chip.dart';
 
-/// Luxury unit card (warm-luxe, website-parity): a 16:9 image with frosted
-/// glass status + project pills and grouped favorite/compare actions, then a
-/// type-tile + title + code-chip header, a location·floor line, a hairline
-/// divider, compact gold spec stats, and the price as the anchor with a round
-/// open affordance. Overflow-proof at any width.
+/// Executive unit card (hard reset): a compact 178px cover with the building
+/// name + availability + actions composed onto the image, then a dense content
+/// block — title and price share one anchor row, a single metadata line, and a
+/// specs + CTA row. No divider, no price label, no large white zones.
 class UnitCard extends StatelessWidget {
   const UnitCard({super.key, required this.unit, this.onTap, this.width});
 
   final Unit unit;
   final VoidCallback? onTap;
   final double? width;
+
+  static const double _imageHeight = 178;
 
   @override
   Widget build(BuildContext context) {
@@ -31,27 +32,42 @@ class UnitCard extends StatelessWidget {
 
     final projectName = unit.project?.name.resolve(lang).trim() ?? '';
     final city = unit.project?.city.trim() ?? '';
-    final locationParts = <String>[
+    final metaParts = <String>[
       if (city.isNotEmpty) city,
       if (unit.floor != null) '${l10n.labelFloor} ${unit.floor}',
+      unit.code,
     ];
 
-    final card = AppCard(
-      padding: EdgeInsets.zero,
-      elevation: AppCardElevation.card,
+    final card = LuxeCard(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Image ───────────────────────────────────────────────────────
-          AspectRatio(
-            aspectRatio: 16 / 9,
+          // ── Image (compact, info composed on it) ────────────────────────
+          SizedBox(
+            height: _imageHeight,
             child: Stack(
               fit: StackFit.expand,
               children: [
                 AppNetworkImage(url: unit.coverImage),
-                const _TopScrim(),
+                const ImageScrim(),
+                // Actions grouped on the visual LEFT (end in RTL).
+                PositionedDirectional(
+                  top: AppSpacing.sm,
+                  end: AppSpacing.sm,
+                  child: Row(
+                    children: [
+                      GlassCircle(
+                        child: FavoriteToggleButton(
+                            isProject: false, id: unit.id, dense: true),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      GlassCircle(child: _CompareButton(unit: unit)),
+                    ],
+                  ),
+                ),
+                // Availability on the visual RIGHT (start in RTL).
                 if (unit.status != UnitStatus.unknown)
                   PositionedDirectional(
                     top: AppSpacing.sm,
@@ -67,105 +83,104 @@ class UnitCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                PositionedDirectional(
-                  top: AppSpacing.xs,
-                  end: AppSpacing.xs,
-                  child: GlassActionBar(
-                    children: [
-                      _CompareButton(unit: unit),
-                      FavoriteToggleButton(isProject: false, id: unit.id),
-                    ],
-                  ),
-                ),
                 if (projectName.isNotEmpty)
                   PositionedDirectional(
                     bottom: AppSpacing.sm,
-                    start: AppSpacing.sm,
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 200),
-                      child: GlassPill(
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.apartment_rounded, color: AppPalette.gold300),
-                            const SizedBox(width: AppSpacing.xs),
-                            Flexible(
-                              child: Text(projectName,
-                                  maxLines: 1, overflow: TextOverflow.ellipsis),
+                    start: AppSpacing.md,
+                    end: AppSpacing.md,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.apartment_rounded,
+                            size: 14, color: AppPalette.gold300),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Expanded(
+                          child: Text(
+                            projectName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
               ],
             ),
           ),
-          // ── Content ─────────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+          // Subtle gold accent between image and content.
+          const GoldHairline(),
+          // ── Content (dense, subtle warm tint) ───────────────────────────
+          Container(
+            width: double.infinity,
+            color: Color.lerp(colors.surface, colors.surfaceSoft, 0.5),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Title + price share the anchor row.
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    IconChip(icon: _typeIcon(unit.type), tone: AppTone.gold, size: IconChipSize.sm),
-                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
                         unit.type,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: colors.inkStrong,
+                          fontSize: 21,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    const SizedBox(width: AppSpacing.xs),
-                    _CodeChip(code: unit.code),
+                    const SizedBox(width: AppSpacing.sm),
+                    PriceText(
+                      unit.price,
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800, fontSize: 18),
+                    ),
                   ],
                 ),
-                if (locationParts.isNotEmpty) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on_rounded, size: 14, color: colors.brandGold),
-                      const SizedBox(width: AppSpacing.xxs),
-                      Expanded(
-                        child: Text(
-                          locationParts.join('  ·  '),
-                          style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                  child: Divider(height: 1, color: colors.hairline),
-                ),
-                Wrap(
-                  spacing: AppSpacing.lg,
-                  runSpacing: AppSpacing.xs,
+                const SizedBox(height: AppSpacing.xs),
+                Row(
                   children: [
-                    if (unit.bedrooms > 0)
-                      _Spec(icon: Icons.bed_rounded, value: '${unit.bedrooms}'),
-                    if (unit.bathrooms > 0)
-                      _Spec(icon: Icons.bathtub_rounded, value: '${unit.bathrooms}'),
-                    if (unit.area > 0)
-                      _Spec(icon: Icons.square_foot_rounded, value: l10n.areaValue('${unit.area}')),
+                    Icon(Icons.location_on_rounded, size: 14, color: colors.brandGold),
+                    const SizedBox(width: AppSpacing.xxs),
+                    Expanded(
+                      child: Text(
+                        metaParts.join('  ·  '),
+                        style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: AppSpacing.sm),
+                const SizedBox(height: AppSpacing.md),
+                // Specs + CTA share one row.
                 Row(
                   children: [
                     Expanded(
-                      child: PriceText(
-                        unit.price,
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                      child: Wrap(
+                        spacing: AppSpacing.md,
+                        runSpacing: AppSpacing.xs,
+                        children: [
+                          if (unit.bedrooms > 0)
+                            _Spec(icon: Icons.bed_rounded, value: '${unit.bedrooms}'),
+                          if (unit.bathrooms > 0)
+                            _Spec(icon: Icons.bathtub_rounded, value: '${unit.bathrooms}'),
+                          if (unit.area > 0)
+                            _Spec(
+                                icon: Icons.square_foot_rounded,
+                                value: l10n.areaValue('${unit.area}')),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: AppSpacing.sm),
                     const CardOpenArrow(),
                   ],
                 ),
@@ -185,30 +200,6 @@ class UnitCard extends StatelessWidget {
         UnitStatus.sold => c.inkMuted,
         UnitStatus.unknown => c.inkMuted,
       };
-
-  IconData _typeIcon(String type) => switch (type.toLowerCase()) {
-        'office' => Icons.business_center_rounded,
-        'retail' => Icons.storefront_rounded,
-        'villa' => Icons.villa_rounded,
-        'townhouse' => Icons.holiday_village_rounded,
-        _ => Icons.apartment_rounded,
-      };
-}
-
-/// Top scrim so frosted pills stay legible over bright photos.
-class _TopScrim extends StatelessWidget {
-  const _TopScrim();
-  @override
-  Widget build(BuildContext context) => const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x40000000), Colors.transparent],
-            stops: [0.0, 0.35],
-          ),
-        ),
-      );
 }
 
 class _Dot extends StatelessWidget {
@@ -219,27 +210,7 @@ class _Dot extends StatelessWidget {
       Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle));
 }
 
-class _CodeChip extends StatelessWidget {
-  const _CodeChip({required this.code});
-  final String code;
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 2),
-      decoration: BoxDecoration(
-        color: colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-      ),
-      child: Text(
-        code,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colors.inkMuted),
-      ),
-    );
-  }
-}
-
-/// A gold-icon + bold-value stat. Sits in a [Wrap] so it never overflows.
+/// A compact gold-icon + bold-value stat. In a [Wrap] so it never overflows.
 class _Spec extends StatelessWidget {
   const _Spec({required this.icon, required this.value});
 
@@ -252,21 +223,22 @@ class _Spec extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: colors.brandGold),
+        Icon(icon, size: 15, color: colors.brandGold),
         const SizedBox(width: AppSpacing.xxs),
         Text(
           value,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(fontWeight: FontWeight.w700, color: colors.inkStrong),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colors.inkStrong,
+              ),
         ),
       ],
     );
   }
 }
 
-/// Compare toggle (local [CompareCubit]); works for guests.
+/// Compare toggle (local [CompareCubit]); works for guests. Compact for the
+/// on-image glass circle.
 class _CompareButton extends StatelessWidget {
   const _CompareButton({required this.unit});
   final Unit unit;
@@ -279,7 +251,10 @@ class _CompareButton extends StatelessWidget {
       builder: (context, units) {
         final inCompare = units.any((u) => u.id == unit.id);
         return IconButton(
+          iconSize: 19,
+          padding: EdgeInsets.zero,
           visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints.tightFor(width: 38, height: 38),
           tooltip: l10n.compareTitle,
           icon: Icon(
             inCompare ? Icons.check_circle_rounded : Icons.compare_arrows_rounded,
