@@ -202,6 +202,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeFilterAction => 'Filters';
 
   @override
+  String get homeFilterTypeLabel => 'Property type';
+
+  @override
+  String get homeFilterAllUnits => 'All units & filters';
+
+  @override
   String get homeTypeResidential => 'Residential';
 
   @override

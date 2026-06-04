@@ -199,6 +199,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeFilterAction => 'التصفية';
 
   @override
+  String get homeFilterTypeLabel => 'نوع العقار';
+
+  @override
+  String get homeFilterAllUnits => 'كل الوحدات والتصفية';
+
+  @override
   String get homeTypeResidential => 'سكني';
 
   @override

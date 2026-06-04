@@ -73,6 +73,8 @@
   "homeCtaEyebrow": "Get started",
   "homeSearchAction": "Search",
   "homeFilterAction": "Filters",
+  "homeFilterTypeLabel": "Property type",
+  "homeFilterAllUnits": "All units & filters",
   "homeTypeResidential": "Residential",
   "homeTypeOffice": "Office",
   "homeTypeCommercial": "Commercial",

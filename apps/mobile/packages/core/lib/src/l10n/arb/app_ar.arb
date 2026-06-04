@@ -70,6 +70,8 @@
   "homeCtaEyebrow": "ابدأ الآن",
   "homeSearchAction": "ابدأ البحث",
   "homeFilterAction": "التصفية",
+  "homeFilterTypeLabel": "نوع العقار",
+  "homeFilterAllUnits": "كل الوحدات والتصفية",
   "homeTypeResidential": "سكني",
   "homeTypeOffice": "إداري",
   "homeTypeCommercial": "تجاري",

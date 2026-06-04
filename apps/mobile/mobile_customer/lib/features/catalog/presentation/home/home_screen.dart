@@ -13,7 +13,6 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
-import '../widgets/catalog_controls.dart';
 import '../widgets/catalog_skeletons.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
@@ -258,13 +257,12 @@ const Color _webNavyLight = Color(0xFF24426A);
 const Color _webNavyMid = Color(0xFF14273F);
 const Color _webNavyDeep = Color(0xFF0B1726);
 
-/// Integrated guest hero + search dock — ONE premium module (not a navy banner
-/// plus a detached white form). A navy hero (website depth gradient + gold
-/// ambient glow) carries the eyebrow/headline/subtitle and embeds a warm search
-/// dock at its base, echoing the website's hero search panel. The dock offers
-/// honest property-type quick-search chips, a search field, a primary
-/// "ابدأ البحث" (→ /projects?q=…, the only text-searchable catalog route) and a
-/// compact "التصفية" shortcut into the full /units filters.
+/// Compact luxury guest hero — a short navy intro card (website depth gradient +
+/// gold glow) with a one-row search dock: a search pill (gold circular submit)
+/// plus a compact "التصفية" pill that opens the [_HomeFilterSheet]. Property-type
+/// selection lives in that sheet, NOT as a heavy chip row — so the hero stays
+/// short and the projects section appears sooner. Search → /projects?q=… (the
+/// only text-searchable catalog route on mobile).
 class _HeroSearchDock extends StatefulWidget {
   const _HeroSearchDock();
 
@@ -295,6 +293,25 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
       query.isEmpty
           ? '/projects'
           : '/projects?q=${Uri.encodeQueryComponent(query)}',
+    );
+  }
+
+  void _openFilters() {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      backgroundColor: context.appColors.surface,
+      shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheet),
+      builder: (sheetCtx) => _HomeFilterSheet(
+        onType: (label) {
+          Navigator.of(sheetCtx).pop();
+          _runSearch(label);
+        },
+        onBrowseUnits: () {
+          Navigator.of(sheetCtx).pop();
+          context.push('/units');
+        },
+      ),
     );
   }
 
@@ -334,7 +351,7 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      center: AlignmentDirectional(0.85, -0.7),
+                      center: AlignmentDirectional(0.85, -0.6),
                       radius: 1.0,
                       colors: [Color(0x2BC8A24B), Color(0x00C8A24B)],
                       stops: [0.0, 0.6],
@@ -344,7 +361,12 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,37 +393,41 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.homeHeroTitle,
-                    style: theme.textTheme.headlineMedium?.copyWith(
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
                       height: 1.15,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    width: 52,
-                    height: 3,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [AppPalette.gold300, AppPalette.gold500],
-                      ),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     l10n.homeHeroSubtitle,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.80),
-                      height: 1.5,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.lg),
-                  // Embedded warm search dock — visually part of the hero.
-                  _SearchDock(controller: _search, onSearch: _runSearch),
+                  const SizedBox(height: AppSpacing.md),
+                  // Compact one-row search dock.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _HeroSearchBar(
+                          controller: _search,
+                          onSearch: _runSearch,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _FilterPill(onTap: _openFilters),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -412,81 +438,71 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
   }
 }
 
-/// The warm search tray that sits at the base of the navy hero. Property-type
-/// chips (honest quick-search shortcuts), a search field, and a primary search
-/// action + compact filter shortcut.
-class _SearchDock extends StatelessWidget {
-  const _SearchDock({required this.controller, required this.onSearch});
+/// A compact white search pill with a trailing gold circular submit button,
+/// designed to float on the navy hero. Submitting (keyboard or gold button)
+/// runs the search.
+class _HeroSearchBar extends StatelessWidget {
+  const _HeroSearchBar({required this.controller, required this.onSearch});
 
   final TextEditingController controller;
   final ValueChanged<String> onSearch;
+
+  static const double _height = 50;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final types = [
-      l10n.homeTypeResidential,
-      l10n.homeTypeOffice,
-      l10n.homeTypeCommercial,
-      l10n.homeTypeMedical,
-      l10n.homeTypeHotel,
-    ];
+    final theme = Theme.of(context);
     return Container(
+      height: _height,
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
-        boxShadow: colors.shadowCard,
+        borderRadius: AppRadii.pillAll,
+        boxShadow: colors.shadowSoft,
       ),
-      padding: const EdgeInsets.all(AppSpacing.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsetsDirectional.only(
+        start: AppSpacing.md,
+        end: AppSpacing.xxs,
+      ),
+      child: Row(
         children: [
-          // Property-type quick-search chips.
-          SizedBox(
-            height: 34,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: EdgeInsets.zero,
-              itemCount: types.length,
-              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
-              itemBuilder: (context, i) =>
-                  _TypeChip(label: types[i], onTap: () => onSearch(types[i])),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          CatalogSearchField(
-            controller: controller,
-            hint: l10n.homeSearchHint,
-            onSubmitted: onSearch,
-            onClear: controller.clear,
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  label: l10n.homeSearchAction,
-                  icon: Icons.search_rounded,
-                  variant: AppButtonVariant.gold,
-                  size: AppButtonSize.medium,
-                  expand: true,
-                  onPressed: () => onSearch(controller.text),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              textInputAction: TextInputAction.search,
+              onSubmitted: onSearch,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.inkStrong,
+              ),
+              decoration: InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                hintText: l10n.homeSearchHint,
+                hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.inkMuted,
                 ),
               ),
-              const SizedBox(width: AppSpacing.sm),
-              // Compact shortcut into the full unit filters (price/status/area/
-              // bedrooms live in the /units filter sheet — not routable from
-              // Home, so we navigate there honestly rather than fake them).
-              AppButton(
-                label: l10n.homeFilterAction,
-                icon: Icons.tune_rounded,
-                variant: AppButtonVariant.outline,
-                size: AppButtonSize.medium,
-                onPressed: () => context.push('/units'),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xxs),
+          // Gold circular submit.
+          Material(
+            color: colors.brandGold,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () => onSearch(controller.text),
+              child: SizedBox(
+                width: 38,
+                height: 38,
+                child: Icon(
+                  Icons.search_rounded,
+                  size: 20,
+                  color: colors.brandNavy,
+                ),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -494,7 +510,119 @@ class _SearchDock extends StatelessWidget {
   }
 }
 
-/// A small tappable property-type quick-search pill (warm surface, on the dock).
+/// A compact glass "التصفية" pill (white-translucent on navy) that opens the
+/// Home filter sheet.
+class _FilterPill extends StatelessWidget {
+  const _FilterPill({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.white.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.pillAll,
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 50,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.tune_rounded, size: 18, color: Colors.white),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  l10n.homeFilterAction,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Home filter bottom sheet: property-type quick-search shortcuts (the mobile
+/// catalog has no backend type filter, so these run a text search on /projects)
+/// and a path into the full /units filters (price/status/area/bedrooms live
+/// there). Kept honest — no faked filters.
+class _HomeFilterSheet extends StatelessWidget {
+  const _HomeFilterSheet({required this.onType, required this.onBrowseUnits});
+
+  final ValueChanged<String> onType;
+  final VoidCallback onBrowseUnits;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final types = [
+      l10n.homeTypeResidential,
+      l10n.homeTypeOffice,
+      l10n.homeTypeCommercial,
+      l10n.homeTypeMedical,
+      l10n.homeTypeHotel,
+    ];
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          0,
+          AppSpacing.lg,
+          AppSpacing.lg,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.homeFilterTypeLabel,
+              style: theme.textTheme.titleMedium?.copyWith(
+                color: colors.inkStrong,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                for (final t in types)
+                  _TypeChip(label: t, onTap: () => onType(t)),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: l10n.homeFilterAllUnits,
+              icon: Icons.tune_rounded,
+              variant: AppButtonVariant.primary,
+              expand: true,
+              onPressed: onBrowseUnits,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A small tappable property-type quick-search pill (used inside the filter
+/// sheet).
 class _TypeChip extends StatelessWidget {
   const _TypeChip({required this.label, required this.onTap});
 
@@ -506,7 +634,10 @@ class _TypeChip extends StatelessWidget {
     final colors = context.appColors;
     return Material(
       color: colors.surfaceSoft,
-      borderRadius: AppRadii.pillAll,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.pillAll,
+        side: BorderSide(color: colors.hairline.withValues(alpha: 0.7)),
+      ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -519,9 +650,9 @@ class _TypeChip extends StatelessWidget {
             child: Text(
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: colors.inkStrong,
-                    fontWeight: FontWeight.w600,
-                  ),
+                color: colors.inkStrong,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -567,11 +698,7 @@ class _HomeCtaBand extends StatelessWidget {
                 ),
               ),
               // Faint dotted texture (so the navy never reads as a flat block).
-              const Positioned.fill(
-                child: IgnorePointer(
-                  child: _DotTexture(),
-                ),
-              ),
+              const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
               // Gold ambient glow in the end-corner.
               const Positioned.fill(
                 child: IgnorePointer(

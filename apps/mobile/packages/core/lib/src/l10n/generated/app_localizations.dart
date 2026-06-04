@@ -470,6 +470,18 @@ abstract class AppLocalizations {
   /// **'Filters'**
   String get homeFilterAction;
 
+  /// No description provided for @homeFilterTypeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Property type'**
+  String get homeFilterTypeLabel;
+
+  /// No description provided for @homeFilterAllUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'All units & filters'**
+  String get homeFilterAllUnits;
+
   /// No description provided for @homeTypeResidential.
   ///
   /// In en, this message translates to:
