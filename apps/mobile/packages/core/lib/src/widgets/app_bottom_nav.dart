@@ -41,7 +41,7 @@ enum IosTabBarStyle { liquid, darkGlass, minimalDock }
 
 /// The active iOS tab-bar variant. Change this single constant to switch the
 /// look across the app for review (iOS only; Android is unaffected).
-const IosTabBarStyle kIosTabBarStyle = IosTabBarStyle.liquid;
+const IosTabBarStyle kIosTabBarStyle = IosTabBarStyle.darkGlass;
 
 /// A premium, warm-luxe bottom navigation bar:
 /// - **Android (Material):** in-slot surface bar with a soft gold active pill.
@@ -108,7 +108,7 @@ class AppBottomNav extends StatelessWidget {
         cfg.hMargin,
         AppSpacing.xs,
         cfg.hMargin,
-        bottomInset + AppSpacing.md,
+        bottomInset + AppSpacing.sm,
       ),
       child: DecoratedBox(
         // Shadow on the unclipped outer box so it isn't clipped away.
@@ -189,9 +189,11 @@ class _IosTabConfig {
     required this.activeColor,
     required this.inactiveColor,
     required this.iconSize,
+    required this.activeIconSize,
     required this.labelSize,
     required this.dotSize,
     required this.glowDot,
+    required this.glowActiveIcon,
   });
 
   final List<Color> fillColors;
@@ -204,10 +206,12 @@ class _IosTabConfig {
   final double vPadding;
   final Color activeColor;
   final Color inactiveColor;
-  final double iconSize;
+  final double iconSize; // inactive glyph size
+  final double activeIconSize; // active glyph size (slightly larger)
   final double labelSize;
   final double dotSize;
-  final bool glowDot;
+  final bool glowDot; // gold glow on the indicator dot
+  final bool glowActiveIcon; // soft gold glow under the active glyph
 
   static _IosTabConfig resolve(IosTabBarStyle style, AppColorsExt c) {
     switch (style) {
@@ -225,34 +229,41 @@ class _IosTabConfig {
           blur: 34,
           radius: 34,
           hMargin: 20,
-          vPadding: AppSpacing.xs,
+          vPadding: AppSpacing.xxs,
           activeColor: c.brandGold,
           inactiveColor: c.inkMuted,
-          iconSize: 23,
+          iconSize: 22,
+          activeIconSize: 23,
           labelSize: 11,
           dotSize: 4,
           glowDot: true,
+          glowActiveIcon: false,
         );
-      // B — Dark Glass Luxury: navy translucent glass, gold active.
+      // B — Navy Frosted Dock: a LIGHT navy frosted glass (not a dark slab).
+      // Low navy opacity + strong blur + a warm top gloss so the background
+      // clearly shows through; bright-enough icons keep it readable.
       case IosTabBarStyle.darkGlass:
         return _IosTabConfig(
           fillColors: [
-            c.brandNavy.withValues(alpha: 0.60),
-            c.brandNavy.withValues(alpha: 0.78),
+            Colors.white.withValues(alpha: 0.16), // warm top gloss
+            c.brandNavy.withValues(alpha: 0.40),
+            c.brandNavy.withValues(alpha: 0.52),
           ],
-          fillStops: const [0.0, 1.0],
-          borderColor: Colors.white.withValues(alpha: 0.16),
+          fillStops: const [0.0, 0.30, 1.0],
+          borderColor: Colors.white.withValues(alpha: 0.24),
           borderWidth: 1,
-          blur: 24,
-          radius: 32,
-          hMargin: 20,
-          vPadding: AppSpacing.xs,
+          blur: 30,
+          radius: 30,
+          hMargin: 24,
+          vPadding: AppSpacing.xxs,
           activeColor: c.brandGold,
-          inactiveColor: Colors.white.withValues(alpha: 0.62),
-          iconSize: 23,
-          labelSize: 11,
-          dotSize: 4,
-          glowDot: true,
+          inactiveColor: Colors.white.withValues(alpha: 0.74),
+          iconSize: 22,
+          activeIconSize: 24,
+          labelSize: 10.5,
+          dotSize: 3,
+          glowDot: false,
+          glowActiveIcon: true,
         );
       // C — Minimal iOS Dock: compact, light, subtle labels + tiny dot.
       case IosTabBarStyle.minimalDock:
@@ -271,9 +282,11 @@ class _IosTabConfig {
           activeColor: c.brandGold,
           inactiveColor: c.inkMuted,
           iconSize: 22,
+          activeIconSize: 22,
           labelSize: 10,
           dotSize: 3,
           glowDot: false,
+          glowActiveIcon: false,
         );
     }
   }
@@ -326,12 +339,25 @@ class _NavItemView extends StatelessWidget {
     final color = selected ? cfg.activeColor : cfg.inactiveColor;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(iconData, size: cfg.iconSize, color: color),
-          const SizedBox(height: 3),
+          Icon(
+            iconData,
+            size: selected ? cfg.activeIconSize : cfg.iconSize,
+            color: color,
+            // Soft gold glow under the active glyph (premium depth).
+            shadows: cfg.glowActiveIcon && selected
+                ? [
+                    Shadow(
+                      color: cfg.activeColor.withValues(alpha: 0.7),
+                      blurRadius: 12,
+                    ),
+                  ]
+                : null,
+          ),
+          const SizedBox(height: 2),
           Text(
             item.label,
             maxLines: 1,
@@ -342,7 +368,7 @@ class _NavItemView extends StatelessWidget {
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             height: cfg.dotSize,
