@@ -398,6 +398,12 @@ abstract class AppLocalizations {
   /// **'This field is required'**
   String get galleryInputError;
 
+  /// No description provided for @homeHeroEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Curated properties'**
+  String get homeHeroEyebrow;
+
   /// No description provided for @homeHeroTitle.
   ///
   /// In en, this message translates to:

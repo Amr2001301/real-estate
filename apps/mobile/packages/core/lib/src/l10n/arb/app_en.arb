@@ -61,6 +61,7 @@
   "galleryInputHint": "Enter your full name",
   "galleryInputError": "This field is required",
 
+  "homeHeroEyebrow": "Curated properties",
   "homeHeroTitle": "Find your next home",
   "homeHeroSubtitle": "Premium projects and units, curated for you.",
   "homeSearchHint": "Search projects, cities…",

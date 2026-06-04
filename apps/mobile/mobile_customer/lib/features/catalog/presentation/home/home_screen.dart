@@ -197,8 +197,126 @@ class _CustomerDashboard extends StatelessWidget {
   }
 }
 
+/// Premium floating hero banner: a rounded navy card with a gold ambient glow,
+/// an eyebrow + display title + gold accent line + subtitle, and a luxe search
+/// pill with a gold search chip.
 class _Hero extends StatelessWidget {
   const _Hero();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        child: Stack(
+          children: [
+            // Base navy gradient.
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppPalette.navy700, AppPalette.navy],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+            ),
+            // Gold ambient glow in the top-end corner.
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: (rtl ? Alignment.topLeft : Alignment.topRight),
+                      radius: 1.05,
+                      colors: [
+                        AppPalette.gold400.withValues(alpha: 0.24),
+                        AppPalette.gold400.withValues(alpha: 0.0),
+                      ],
+                      stops: const [0.0, 0.62],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                          color: AppPalette.gold400,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Text(
+                        l10n.homeHeroEyebrow,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppPalette.gold300,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    l10n.homeHeroTitle,
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Container(
+                    width: 52,
+                    height: 3,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [AppPalette.gold300, AppPalette.gold500],
+                      ),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    l10n.homeHeroSubtitle,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.78),
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const _HeroSearch(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.03, end: 0);
+  }
+}
+
+/// Luxe search entry: a white pill with a soft lift and a gold search chip.
+class _HeroSearch extends StatelessWidget {
+  const _HeroSearch();
 
   @override
   Widget build(BuildContext context) {
@@ -206,56 +324,47 @@ class _Hero extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.xl),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [colors.brandNavy, colors.brandNavy.withValues(alpha: 0.82)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.homeHeroTitle,
-            style: theme.textTheme.displaySmall?.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            l10n.homeHeroSubtitle,
-            style: theme.textTheme.bodyLarge
-                ?.copyWith(color: Colors.white.withValues(alpha: 0.8)),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Material(
-            color: colors.surface,
-            borderRadius: AppRadii.pillAll,
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => context.push('/projects'),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.md, vertical: AppSpacing.md),
-                child: Row(
-                  children: [
-                    Icon(Icons.search_rounded, color: colors.inkMuted),
-                    const SizedBox(width: AppSpacing.sm),
-                    Text(
-                      l10n.homeSearchHint,
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: colors.inkMuted),
-                    ),
-                  ],
+    return Material(
+      color: colors.surface,
+      borderRadius: AppRadii.pillAll,
+      clipBehavior: Clip.antiAlias,
+      elevation: 8,
+      shadowColor: Colors.black.withValues(alpha: 0.25),
+      child: InkWell(
+        onTap: () => context.push('/projects'),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xs),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [AppPalette.gold300, AppPalette.gold500],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                ),
+                child: Icon(Icons.search_rounded, color: colors.brandNavy, size: 20),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  l10n.homeSearchHint,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            ),
+              const SizedBox(width: AppSpacing.xs),
+            ],
           ),
-        ],
+        ),
       ),
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.04, end: 0);
+    );
   }
 }
 

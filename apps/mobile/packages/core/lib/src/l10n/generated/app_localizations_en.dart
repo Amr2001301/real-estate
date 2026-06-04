@@ -165,6 +165,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get galleryInputError => 'This field is required';
 
   @override
+  String get homeHeroEyebrow => 'Curated properties';
+
+  @override
   String get homeHeroTitle => 'Find your next home';
 
   @override

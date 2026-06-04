@@ -163,6 +163,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get galleryInputError => 'هذا الحقل مطلوب';
 
   @override
+  String get homeHeroEyebrow => 'عقارات مختارة بعناية';
+
+  @override
   String get homeHeroTitle => 'اعثر على منزلك القادم';
 
   @override
