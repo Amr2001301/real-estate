@@ -190,7 +190,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeCtaSecondary => 'تصفح الوحدات';
 
   @override
+  String get homeCtaEyebrow => 'ابدأ الآن';
+
+  @override
   String get homeSearchAction => 'ابدأ البحث';
+
+  @override
+  String get homeFilterAction => 'التصفية';
 
   @override
   String get homeTypeResidential => 'سكني';

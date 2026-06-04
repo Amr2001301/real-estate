@@ -57,10 +57,9 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.xl),
           ] else ...[
-            const _Hero(),
-            const SizedBox(height: AppSpacing.md),
-            // Website-inspired search card (the hero no longer carries a button).
-            const _HomeSearchCard(),
+            // One integrated hero+search module (navy hero with an embedded
+            // warm search dock), inspired by the website hero search panel.
+            const _HeroSearchDock(),
             const SizedBox(height: AppSpacing.xl),
           ],
           Padding(
@@ -252,17 +251,57 @@ class _CustomerDashboard extends StatelessWidget {
   }
 }
 
-/// Premium floating hero banner: a rounded navy card with a gold ambient glow,
-/// an eyebrow + display title + gold accent line + subtitle, and a luxe search
-/// pill with a gold search chip.
-class _Hero extends StatelessWidget {
-  const _Hero();
+// ── Website-matched navy depth gradient stops (Hero + CTA) ──────────────────
+// Mirrors the web `radial-gradient(... #24426A → #14273F → #0B1726)` so the
+// mobile hero/CTA read as the same brand surface as the marketing site.
+const Color _webNavyLight = Color(0xFF24426A);
+const Color _webNavyMid = Color(0xFF14273F);
+const Color _webNavyDeep = Color(0xFF0B1726);
+
+/// Integrated guest hero + search dock — ONE premium module (not a navy banner
+/// plus a detached white form). A navy hero (website depth gradient + gold
+/// ambient glow) carries the eyebrow/headline/subtitle and embeds a warm search
+/// dock at its base, echoing the website's hero search panel. The dock offers
+/// honest property-type quick-search chips, a search field, a primary
+/// "ابدأ البحث" (→ /projects?q=…, the only text-searchable catalog route) and a
+/// compact "التصفية" shortcut into the full /units filters.
+class _HeroSearchDock extends StatefulWidget {
+  const _HeroSearchDock();
+
+  @override
+  State<_HeroSearchDock> createState() => _HeroSearchDockState();
+}
+
+class _HeroSearchDockState extends State<_HeroSearchDock> {
+  late final TextEditingController _search;
+
+  @override
+  void initState() {
+    super.initState();
+    _search = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  /// Free-text search targets /projects (the only catalog route that reads a
+  /// `?q=` query param on mobile; the units route takes no query).
+  void _runSearch(String raw) {
+    final query = raw.trim();
+    context.push(
+      query.isEmpty
+          ? '/projects'
+          : '/projects?q=${Uri.encodeQueryComponent(query)}',
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
-    final rtl = Directionality.of(context) == TextDirection.rtl;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
@@ -275,43 +314,37 @@ class _Hero extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadii.xl),
         child: Stack(
           children: [
-            // Base navy gradient.
+            // Base navy depth gradient — matches the website hero fallback
+            // (130% 120% at 80% 10%).
             const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [AppPalette.navy700, AppPalette.navy],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  gradient: RadialGradient(
+                    center: Alignment(0.6, -0.8),
+                    radius: 1.3,
+                    colors: [_webNavyLight, _webNavyMid, _webNavyDeep],
+                    stops: [0.0, 0.55, 1.0],
                   ),
                 ),
               ),
             ),
-            // Gold ambient glow in the top-end corner.
-            Positioned.fill(
+            // Gold ambient glow behind the start-side content (RTL-aware).
+            const Positioned.fill(
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      center: (rtl ? Alignment.topLeft : Alignment.topRight),
-                      radius: 1.05,
-                      colors: [
-                        AppPalette.gold400.withValues(alpha: 0.24),
-                        AppPalette.gold400.withValues(alpha: 0.0),
-                      ],
-                      stops: const [0.0, 0.62],
+                      center: AlignmentDirectional(0.85, -0.7),
+                      radius: 1.0,
+                      colors: [Color(0x2BC8A24B), Color(0x00C8A24B)],
+                      stops: [0.0, 0.6],
                     ),
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-              ),
+              padding: const EdgeInsets.all(AppSpacing.lg),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,10 +374,10 @@ class _Hero extends StatelessWidget {
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     l10n.homeHeroTitle,
-                    style: theme.textTheme.displaySmall?.copyWith(
+                    style: theme.textTheme.headlineMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
-                      height: 1.1,
+                      height: 1.15,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -362,10 +395,13 @@ class _Hero extends StatelessWidget {
                   Text(
                     l10n.homeHeroSubtitle,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.78),
+                      color: Colors.white.withValues(alpha: 0.80),
                       height: 1.5,
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  // Embedded warm search dock — visually part of the hero.
+                  _SearchDock(controller: _search, onSearch: _runSearch),
                 ],
               ),
             ),
@@ -376,43 +412,19 @@ class _Hero extends StatelessWidget {
   }
 }
 
-/// Website-inspired Home search card: quick property-type search chips, a
-/// premium search field, and a primary search action. Search routes to
-/// `/projects?q=…` (projects support text query + city; the mobile units API
-/// has no text search). The type chips are honest quick-search shortcuts, not a
-/// backend category filter (mobile has none).
-class _HomeSearchCard extends StatefulWidget {
-  const _HomeSearchCard();
+/// The warm search tray that sits at the base of the navy hero. Property-type
+/// chips (honest quick-search shortcuts), a search field, and a primary search
+/// action + compact filter shortcut.
+class _SearchDock extends StatelessWidget {
+  const _SearchDock({required this.controller, required this.onSearch});
 
-  @override
-  State<_HomeSearchCard> createState() => _HomeSearchCardState();
-}
-
-class _HomeSearchCardState extends State<_HomeSearchCard> {
-  late final TextEditingController _search;
-
-  @override
-  void initState() {
-    super.initState();
-    _search = TextEditingController();
-  }
-
-  @override
-  void dispose() {
-    _search.dispose();
-    super.dispose();
-  }
-
-  void _runSearch(String raw) {
-    final query = raw.trim();
-    context.push(
-      query.isEmpty ? '/projects' : '/projects?q=${Uri.encodeQueryComponent(query)}',
-    );
-  }
+  final TextEditingController controller;
+  final ValueChanged<String> onSearch;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.appColors;
     final types = [
       l10n.homeTypeResidential,
       l10n.homeTypeOffice,
@@ -420,50 +432,69 @@ class _HomeSearchCardState extends State<_HomeSearchCard> {
       l10n.homeTypeMedical,
       l10n.homeTypeHotel,
     ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: PremiumCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            SizedBox(
-              height: 34,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.zero,
-                itemCount: types.length,
-                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
-                itemBuilder: (context, i) =>
-                    _TypeChip(label: types[i], onTap: () => _runSearch(types[i])),
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
+        boxShadow: colors.shadowCard,
+      ),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Property-type quick-search chips.
+          SizedBox(
+            height: 34,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.zero,
+              itemCount: types.length,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
+              itemBuilder: (context, i) =>
+                  _TypeChip(label: types[i], onTap: () => onSearch(types[i])),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          CatalogSearchField(
+            controller: controller,
+            hint: l10n.homeSearchHint,
+            onSubmitted: onSearch,
+            onClear: controller.clear,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  label: l10n.homeSearchAction,
+                  icon: Icons.search_rounded,
+                  variant: AppButtonVariant.gold,
+                  size: AppButtonSize.medium,
+                  expand: true,
+                  onPressed: () => onSearch(controller.text),
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            CatalogSearchField(
-              controller: _search,
-              hint: l10n.homeSearchHint,
-              onChanged: (_) => setState(() {}),
-              onSubmitted: _runSearch,
-              onClear: () {
-                _search.clear();
-                setState(() {});
-              },
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AppButton(
-              label: l10n.homeSearchAction,
-              icon: Icons.search_rounded,
-              variant: AppButtonVariant.gold,
-              expand: true,
-              onPressed: () => _runSearch(_search.text),
-            ),
-          ],
-        ),
+              const SizedBox(width: AppSpacing.sm),
+              // Compact shortcut into the full unit filters (price/status/area/
+              // bedrooms live in the /units filter sheet — not routable from
+              // Home, so we navigate there honestly rather than fake them).
+              AppButton(
+                label: l10n.homeFilterAction,
+                icon: Icons.tune_rounded,
+                variant: AppButtonVariant.outline,
+                size: AppButtonSize.medium,
+                onPressed: () => context.push('/units'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-/// A small tappable quick-search pill for the Home search card.
+/// A small tappable property-type quick-search pill (warm surface, on the dock).
 class _TypeChip extends StatelessWidget {
   const _TypeChip({required this.label, required this.onTap});
 
@@ -499,8 +530,10 @@ class _TypeChip extends StatelessWidget {
   }
 }
 
-/// Compact premium lower CTA — a small navy band with a gold primary action and
-/// a subtle secondary, not a tall web banner.
+/// Lower CTA band — matches the website `CtaBand`: a contained navy card with
+/// the website depth gradient (120% 150% at 82% 0%), a faint dotted texture so
+/// it never reads as a flat block, gold ambient glow + top gold hairline, an
+/// eyebrow chip, and two real buttons (gold primary + white-outline secondary).
 class _HomeCtaBand extends StatelessWidget {
   const _HomeCtaBand();
 
@@ -511,53 +544,214 @@ class _HomeCtaBand extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Container(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppPalette.navy700, AppPalette.navy],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            boxShadow: colors.shadowLift,
           ),
-          borderRadius: BorderRadius.circular(AppRadii.xl),
-          boxShadow: colors.shadowCard,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.homeCtaTitle,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              l10n.homeCtaSubtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.78),
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                AppButton(
-                  label: l10n.homeCtaAction,
-                  icon: Icons.chat_bubble_outline_rounded,
-                  variant: AppButtonVariant.gold,
-                  size: AppButtonSize.small,
-                  onPressed: () => context.push('/chat'),
+          child: Stack(
+            children: [
+              // Website CtaBand depth gradient.
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment(0.64, -1.0),
+                      radius: 1.5,
+                      colors: [_webNavyLight, _webNavyMid, _webNavyDeep],
+                      stops: [0.0, 0.58, 1.0],
+                    ),
+                  ),
                 ),
-                const Spacer(),
-                TextButton(
-                  style: TextButton.styleFrom(foregroundColor: Colors.white),
-                  onPressed: () => context.push('/units'),
-                  child: Text(l10n.homeCtaSecondary),
+              ),
+              // Faint dotted texture (so the navy never reads as a flat block).
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: _DotTexture(),
+                ),
+              ),
+              // Gold ambient glow in the end-corner.
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        center: AlignmentDirectional(-0.9, 0.9),
+                        radius: 0.9,
+                        colors: [Color(0x1FC8A24B), Color(0x00C8A24B)],
+                        stops: [0.0, 0.7],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // Top gold hairline accent.
+              Positioned(
+                top: 0,
+                left: AppSpacing.xxl,
+                right: AppSpacing.xxl,
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppPalette.gold400.withValues(alpha: 0.0),
+                        AppPalette.gold400.withValues(alpha: 0.55),
+                        AppPalette.gold400.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xxs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppPalette.gold400.withValues(alpha: 0.15),
+                        borderRadius: AppRadii.pillAll,
+                        border: Border.all(
+                          color: AppPalette.gold400.withValues(alpha: 0.25),
+                        ),
+                      ),
+                      child: Text(
+                        l10n.homeCtaEyebrow,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: AppPalette.gold200,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      l10n.homeCtaTitle,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        height: 1.2,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      l10n.homeCtaSubtitle,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.75),
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            label: l10n.homeCtaAction,
+                            icon: Icons.headset_mic_rounded,
+                            variant: AppButtonVariant.gold,
+                            size: AppButtonSize.medium,
+                            expand: true,
+                            onPressed: () => context.push('/chat'),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: _GhostButton(
+                            label: l10n.homeCtaSecondary,
+                            icon: Icons.arrow_back_rounded,
+                            onPressed: () => context.push('/units'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A faint dotted overlay echoing the website CtaBand texture.
+class _DotTexture extends StatelessWidget {
+  const _DotTexture();
+
+  @override
+  Widget build(BuildContext context) =>
+      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
+}
+
+class _DotPainter extends CustomPainter {
+  const _DotPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.05);
+    const step = 22.0;
+    for (var y = 6.0; y < size.height; y += step) {
+      for (var x = 6.0; x < size.width; x += step) {
+        canvas.drawCircle(Offset(x, y), 1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotPainter oldDelegate) => false;
+}
+
+/// A white-outline pill button for use on dark surfaces (the CTA band), where
+/// the shared [AppButton] outline variant (dark ink/hairline) is invisible.
+/// Mirrors the website's `variant="outline"` on navy (white border + white text).
+class _GhostButton extends StatelessWidget {
+  const _GhostButton({required this.label, this.icon, this.onPressed});
+
+  final String label;
+  final IconData? icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final textStyle = Theme.of(context).textTheme.labelLarge;
+    return Material(
+      color: Colors.white.withValues(alpha: 0.08),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppRadii.pillAll,
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: SizedBox(
+          height: 48,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 18, color: Colors.white),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
+                Flexible(
+                  child: Text(
+                    label,
+                    style: textStyle?.copyWith(color: Colors.white),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

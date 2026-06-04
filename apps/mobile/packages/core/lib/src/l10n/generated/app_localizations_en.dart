@@ -193,7 +193,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeCtaSecondary => 'Browse units';
 
   @override
+  String get homeCtaEyebrow => 'Get started';
+
+  @override
   String get homeSearchAction => 'Search';
+
+  @override
+  String get homeFilterAction => 'Filters';
 
   @override
   String get homeTypeResidential => 'Residential';

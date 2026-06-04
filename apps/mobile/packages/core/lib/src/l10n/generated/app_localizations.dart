@@ -452,11 +452,23 @@ abstract class AppLocalizations {
   /// **'Browse units'**
   String get homeCtaSecondary;
 
+  /// No description provided for @homeCtaEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get homeCtaEyebrow;
+
   /// No description provided for @homeSearchAction.
   ///
   /// In en, this message translates to:
   /// **'Search'**
   String get homeSearchAction;
+
+  /// No description provided for @homeFilterAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get homeFilterAction;
 
   /// No description provided for @homeTypeResidential.
   ///
