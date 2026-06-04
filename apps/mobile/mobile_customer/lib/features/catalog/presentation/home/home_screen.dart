@@ -36,9 +36,17 @@ class HomeScreen extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: () => context.read<HomeCubit>().load(),
       child: ListView(
-        // Bottom clearance so content clears the iOS floating tab bar
-        // (extendBody); 0 on Android.
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+        // Single source of bottom clearance (no extra trailing spacer below).
+        // iOS: the floating dock overlays the body (extendBody) and stands
+        // ~79px tall above the safe-area inset, so clear that plus a small gap
+        // — anything less lets the dock cover the last content. Android: the
+        // in-slot bar handles its own safe area, so just a small comfortable
+        // gap above it.
+        padding: EdgeInsets.only(
+          bottom: context.isApplePlatform
+              ? MediaQuery.of(context).padding.bottom + 84
+              : AppSpacing.lg,
+        ),
         children: [
           if (isCustomer) ...[
             Padding(
@@ -77,7 +85,6 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             const _HomeCtaBand(),
           ],
-          const SizedBox(height: AppSpacing.xxl),
         ],
       ),
     );
@@ -510,8 +517,9 @@ class _HeroSearchBar extends StatelessWidget {
   }
 }
 
-/// A compact glass "التصفية" pill (white-translucent on navy) that opens the
-/// Home filter sheet.
+/// A compact glass filter button (icon-only, white-translucent on navy) that
+/// opens the Home filter sheet. Deliberately small so the search pill keeps
+/// most of the row width.
 class _FilterPill extends StatelessWidget {
   const _FilterPill({required this.onTap});
 
@@ -520,34 +528,21 @@ class _FilterPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final theme = Theme.of(context);
     return Material(
       color: Colors.white.withValues(alpha: 0.12),
       shape: RoundedRectangleBorder(
-        borderRadius: AppRadii.pillAll,
+        borderRadius: BorderRadius.circular(AppRadii.md),
         side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: SizedBox(
-          height: 50,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.tune_rounded, size: 18, color: Colors.white),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  l10n.homeFilterAction,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+        child: Tooltip(
+          message: l10n.homeFilterAction,
+          child: const SizedBox(
+            width: 50,
+            height: 50,
+            child: Icon(Icons.tune_rounded, size: 22, color: Colors.white),
           ),
         ),
       ),
@@ -775,27 +770,27 @@ class _HomeCtaBand extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            label: l10n.homeCtaAction,
-                            icon: Icons.headset_mic_rounded,
-                            variant: AppButtonVariant.gold,
-                            size: AppButtonSize.medium,
-                            expand: true,
-                            onPressed: () => context.push('/chat'),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _GhostButton(
-                            label: l10n.homeCtaSecondary,
-                            icon: Icons.arrow_back_rounded,
-                            onPressed: () => context.push('/units'),
-                          ),
-                        ),
-                      ],
+                    // Centered hug-content buttons (mirrors the website mobile
+                    // CtaBand): a gold primary above a clearly-bordered ghost
+                    // secondary. Hugging content keeps the gold pill from
+                    // reading as a bulky full-width block, and full labels never
+                    // truncate. RTL-safe.
+                    Align(
+                      child: AppButton(
+                        label: l10n.homeCtaAction,
+                        icon: Icons.headset_mic_rounded,
+                        variant: AppButtonVariant.gold,
+                        size: AppButtonSize.medium,
+                        onPressed: () => context.push('/chat'),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Align(
+                      child: _GhostButton(
+                        label: l10n.homeCtaSecondary,
+                        icon: Icons.arrow_back_rounded,
+                        onPressed: () => context.push('/units'),
+                      ),
                     ),
                   ],
                 ),
@@ -849,10 +844,10 @@ class _GhostButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context).textTheme.labelLarge;
     return Material(
-      color: Colors.white.withValues(alpha: 0.08),
+      color: Colors.white.withValues(alpha: 0.10),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadii.pillAll,
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.4)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.55), width: 1.4),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

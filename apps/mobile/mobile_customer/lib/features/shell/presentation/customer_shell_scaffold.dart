@@ -155,10 +155,17 @@ class CustomerShellScaffold extends StatelessWidget {
           : null,
       body: navigationShell,
       // Floating assistant — only on Home (avoids the maintenance tab's FAB).
+      // On iOS lift it clear of the floating glass dock so it never sits on the
+      // bar; Android's in-slot bar needs no extra lift.
       floatingActionButton: current == _Branch.home
-          ? _AssistantFab(
-              tooltip: l10n.homeAskAssistant,
-              onTap: () => context.push('/chat'),
+          ? Padding(
+              padding: EdgeInsets.only(
+                bottom: context.isApplePlatform ? AppSpacing.sm : 0,
+              ),
+              child: _AssistantFab(
+                tooltip: l10n.homeAskAssistant,
+                onTap: () => context.push('/chat'),
+              ),
             )
           : null,
       bottomNavigationBar: AppBottomNav(
@@ -210,8 +217,8 @@ class _AssistantFab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final button = Container(
-      width: 54,
-      height: 54,
+      width: 46,
+      height: 46,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [AppPalette.navy700, AppPalette.navy],
@@ -220,14 +227,14 @@ class _AssistantFab extends StatelessWidget {
         ),
         shape: BoxShape.circle,
         border: Border.all(
-          color: AppPalette.gold400.withValues(alpha: 0.45),
+          color: AppPalette.gold400.withValues(alpha: 0.35),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppPalette.navy.withValues(alpha: 0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: AppPalette.navy.withValues(alpha: 0.28),
+            blurRadius: 12,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -239,7 +246,7 @@ class _AssistantFab extends StatelessWidget {
           onTap: onTap,
           child: const Center(
             child: Icon(Icons.auto_awesome_rounded,
-                color: AppPalette.gold300, size: 24),
+                color: AppPalette.gold300, size: 20),
           ),
         ),
       ),
