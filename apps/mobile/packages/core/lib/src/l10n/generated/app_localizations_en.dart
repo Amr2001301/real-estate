@@ -39,6 +39,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get actionLogout => 'Log out';
 
   @override
+  String get logoutConfirmMessage => 'Are you sure you want to log out?';
+
+  @override
   String get actionRegister => 'Register';
 
   @override
@@ -608,6 +611,50 @@ class AppLocalizationsEn extends AppLocalizations {
   String get navMore => 'More';
 
   @override
+  String get navFinance => 'Finance';
+
+  @override
+  String get financeHubSubtitle =>
+      'Your installments, payments, and contracts in one place.';
+
+  @override
+  String get financeInstallmentsDesc =>
+      'Schedule, due dates, and payment proofs';
+
+  @override
+  String get financeDepositsDesc => 'Booking and down-payment receipts';
+
+  @override
+  String get financeContractsDesc => 'Signed contracts and documents';
+
+  @override
+  String get dashboardWelcome => 'Welcome back';
+
+  @override
+  String get dashboardQuickActions => 'Quick actions';
+
+  @override
+  String get dashboardOverview => 'Overview';
+
+  @override
+  String get accountSectionServices => 'Customer services';
+
+  @override
+  String get accountRoleCustomer => 'Customer';
+
+  @override
+  String get navCompare => 'Compare';
+
+  @override
+  String get featuredBadge => 'Featured';
+
+  @override
+  String get compareAddUnits => 'Add units to compare';
+
+  @override
+  String get accountSectionSettings => 'Settings';
+
+  @override
   String get authWelcomeTitle => 'Welcome';
 
   @override
@@ -1167,9 +1214,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navReservations => 'Reservations';
-
-  @override
-  String get dashboardQuickActions => 'Quick actions';
 
   @override
   String get visitsToday => 'Today';

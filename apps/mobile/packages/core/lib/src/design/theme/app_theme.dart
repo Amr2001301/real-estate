@@ -53,6 +53,19 @@ abstract final class AppTheme {
       textTheme: textTheme,
       fontFamily: AppTypography.bodyFamilyFor(isArabic: isArabic),
       splashFactory: InkSparkle.splashFactory,
+      // Native page transitions: Cupertino (with edge back-swipe) on Apple
+      // platforms, Material zoom elsewhere. Applies to routes pushed over the
+      // shell (detail screens) so back navigation feels native per platform.
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
+          TargetPlatform.fuchsia: ZoomPageTransitionsBuilder(),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
+        },
+      ),
       extensions: [ext],
       appBarTheme: AppBarTheme(
         backgroundColor: ext.canvas,

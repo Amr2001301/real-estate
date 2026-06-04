@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/unit.dart';
 import '../widgets/price_text.dart';
@@ -35,6 +36,14 @@ class CompareScreen extends StatelessWidget {
               icon: Icons.compare_arrows_rounded,
               title: l10n.compareEmptyTitle,
               message: l10n.compareEmptyMessage,
+              action: AppButton(
+                label: l10n.compareAddUnits,
+                icon: Icons.add_rounded,
+                variant: AppButtonVariant.gold,
+                // Opens the global units list (full-screen over the shell);
+                // the user adds units from a unit's detail, then returns here.
+                onPressed: () => context.push('/units'),
+              ),
             );
           }
           return SingleChildScrollView(

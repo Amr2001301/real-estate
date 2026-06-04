@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../design/theme/app_theme_ext.dart';
+import '../design/tokens/app_icons.dart';
 import '../design/tokens/app_spacing.dart';
 import '../env/app_environment.dart';
 import '../env/env_config.dart';
@@ -14,9 +15,15 @@ import '../widgets/app_button.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_skeleton.dart';
 import '../widgets/app_text_field.dart';
+import '../widgets/app_tone.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_state.dart';
+import '../widgets/gradient_avatar.dart';
+import '../widgets/icon_chip.dart';
+import '../widgets/premium_card.dart';
+import '../widgets/section_header.dart';
 import '../widgets/status_badge.dart';
+import '../widgets/summary_tile.dart';
 
 /// A living style guide. Both apps route to it (`/gallery`) to visually verify
 /// the design system across light/dark, Arabic-RTL/English-LTR, the skeleton
@@ -122,6 +129,107 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
           ),
           const SizedBox(height: AppSpacing.xl),
 
+          // ── Phase A premium widgets ─────────────────────────────────────
+          _section(context, 'Icon chips'),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: const [
+              IconChip(icon: AppIcons.property),
+              IconChip(icon: AppIcons.wallet, filled: true),
+              IconChip(icon: AppIcons.maintenance, tone: AppTone.navy),
+              IconChip(icon: AppIcons.contract, tone: AppTone.success),
+              IconChip(icon: AppIcons.visit, tone: AppTone.warning),
+              IconChip(icon: AppIcons.notification, tone: AppTone.error),
+              IconChip(icon: AppIcons.document, tone: AppTone.muted),
+              IconChip(icon: AppIcons.favorite, size: IconChipSize.sm),
+              IconChip(icon: AppIcons.profile, size: IconChipSize.lg),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          _section(context, 'Gradient avatar'),
+          const Row(
+            children: [
+              GradientAvatar(name: 'Amr Tarek'),
+              SizedBox(width: AppSpacing.lg),
+              Expanded(
+                child: GradientAvatar.identity(
+                  name: 'Amr Tarek',
+                  role: 'عميل / مالك وحدة',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          _section(context, 'Section header'),
+          AppSectionHeader(
+            eyebrow: 'نظرة عامة',
+            title: 'حسابي',
+            subtitle: 'ملخص سريع لعقاراتك ومدفوعاتك.',
+            action: AppButton(
+              label: l10n.actionViewMore,
+              size: AppButtonSize.small,
+              variant: AppButtonVariant.ghost,
+              onPressed: () {},
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          _section(context, 'Premium cards (accent rail + glow)'),
+          PremiumCard(
+            accentRail: AppTone.gold,
+            glow: true,
+            onTap: () {},
+            child: _railCardBody(context, 'حجز رقم 1024', AppIcons.property),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            accentRail: AppTone.success,
+            onTap: () {},
+            child: _railCardBody(context, 'عقد موقّع', AppIcons.contract),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          PremiumCard(
+            accentRail: AppTone.error,
+            child: _railCardBody(context, 'دفعة متأخرة', AppIcons.wallet),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          _section(context, 'Summary tiles'),
+          Row(
+            children: [
+              Expanded(
+                child: SummaryTile(
+                  icon: AppIcons.property,
+                  value: '3',
+                  label: 'عقاراتي',
+                  onTap: () {},
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: SummaryTile(
+                  icon: AppIcons.installments,
+                  value: '12,500',
+                  label: 'القسط القادم',
+                  subtitle: 'خلال ٧ أيام',
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Expanded(
+                child: SummaryTile(
+                  icon: AppIcons.maintenance,
+                  value: '0',
+                  label: 'طلبات الصيانة',
+                  loading: true,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
           _section(context, l10n.gallerySectionSkeleton),
           SwitchListTile.adaptive(
             value: _skeletonOn,
@@ -186,6 +294,42 @@ class _ComponentGalleryScreenState extends State<ComponentGalleryScreen> {
         padding: const EdgeInsets.only(bottom: AppSpacing.sm),
         child: Text(title, style: Theme.of(context).textTheme.titleMedium),
       );
+
+  /// Sample body for the PremiumCard accent-rail demo: an icon chip, a title,
+  /// a muted line, and a status badge — the shape account cards will take.
+  Widget _railCardBody(BuildContext context, String title, IconData icon) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        IconChip(icon: icon, size: IconChipSize.md),
+        const SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(color: colors.inkStrong),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                'سولارا هايتس — شقة ثلاث غرف',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodySmall
+                    ?.copyWith(color: colors.inkMuted),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        const StatusBadge(label: 'نشط', tone: BadgeTone.gold),
+      ],
+    );
+  }
 
   Widget _envBanner(BuildContext context) {
     final colors = context.appColors;

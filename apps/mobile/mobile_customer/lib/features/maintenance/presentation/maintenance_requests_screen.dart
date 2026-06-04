@@ -33,8 +33,9 @@ class _MaintenanceRequestsScreenState extends State<MaintenanceRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // App bar comes from the CustomerShellScaffold; we keep an app-bar-less
+    // Scaffold here so the "new request" FAB still has a host.
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.accountMaintenance)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _openCreate,
         icon: const Icon(Icons.add_rounded),

@@ -158,6 +158,12 @@ abstract class AppLocalizations {
   /// **'Log out'**
   String get actionLogout;
 
+  /// No description provided for @logoutConfirmMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out?'**
+  String get logoutConfirmMessage;
+
   /// No description provided for @actionRegister.
   ///
   /// In en, this message translates to:
@@ -1214,6 +1220,90 @@ abstract class AppLocalizations {
   /// **'More'**
   String get navMore;
 
+  /// No description provided for @navFinance.
+  ///
+  /// In en, this message translates to:
+  /// **'Finance'**
+  String get navFinance;
+
+  /// No description provided for @financeHubSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your installments, payments, and contracts in one place.'**
+  String get financeHubSubtitle;
+
+  /// No description provided for @financeInstallmentsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule, due dates, and payment proofs'**
+  String get financeInstallmentsDesc;
+
+  /// No description provided for @financeDepositsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking and down-payment receipts'**
+  String get financeDepositsDesc;
+
+  /// No description provided for @financeContractsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Signed contracts and documents'**
+  String get financeContractsDesc;
+
+  /// No description provided for @dashboardWelcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get dashboardWelcome;
+
+  /// No description provided for @dashboardQuickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get dashboardQuickActions;
+
+  /// No description provided for @dashboardOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get dashboardOverview;
+
+  /// No description provided for @accountSectionServices.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer services'**
+  String get accountSectionServices;
+
+  /// No description provided for @accountRoleCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get accountRoleCustomer;
+
+  /// No description provided for @navCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare'**
+  String get navCompare;
+
+  /// No description provided for @featuredBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Featured'**
+  String get featuredBadge;
+
+  /// No description provided for @compareAddUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Add units to compare'**
+  String get compareAddUnits;
+
+  /// No description provided for @accountSectionSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get accountSectionSettings;
+
   /// No description provided for @authWelcomeTitle.
   ///
   /// In en, this message translates to:
@@ -2239,12 +2329,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reservations'**
   String get navReservations;
-
-  /// No description provided for @dashboardQuickActions.
-  ///
-  /// In en, this message translates to:
-  /// **'Quick actions'**
-  String get dashboardQuickActions;
 
   /// No description provided for @visitsToday.
   ///

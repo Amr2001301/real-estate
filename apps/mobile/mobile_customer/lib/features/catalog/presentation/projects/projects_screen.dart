@@ -133,18 +133,15 @@ class _ProjectsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Single-column list of full-width premium cards — intrinsic height, so no
+    // fixed-cell vertical overflow and ample room for website-parity data.
     return RefreshIndicator(
       onRefresh: () => context.read<ProjectsCubit>().refresh(),
-      child: GridView.builder(
+      child: ListView.separated(
         controller: scroll,
         padding: const EdgeInsets.all(AppSpacing.lg),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 360,
-          mainAxisExtent: 280,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.md,
-        ),
         itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
         itemBuilder: (context, i) {
           if (i >= state.items.length) {
             return const Center(child: Padding(

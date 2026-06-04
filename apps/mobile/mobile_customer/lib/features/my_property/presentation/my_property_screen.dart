@@ -27,41 +27,39 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Scaffold(
-      appBar: AppBar(title: Text(l10n.accountMyProperty)),
-      body: BlocBuilder<MyPropertyCubit, MyPropertyState>(
-        builder: (context, state) {
-          switch (state.status) {
-            case DataStatus.initial:
-            case DataStatus.loading:
-              return const Center(child: CircularProgressIndicator());
-            case DataStatus.failure:
-              return ErrorState(
-                failure: state.failure,
-                onRetry: () => context.read<MyPropertyCubit>().load(),
-              );
-            case DataStatus.empty:
-              return EmptyState(
-                icon: Icons.home_work_outlined,
-                title: l10n.myPropertyEmptyTitle,
-                message: l10n.myPropertyEmptyMessage,
-              );
-            case DataStatus.success:
-              final properties = state.data!;
-              return RefreshIndicator(
-                onRefresh: () => context.read<MyPropertyCubit>().load(),
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
-                  itemCount: properties.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.lg),
-                  itemBuilder: (context, i) =>
-                      _PropertyCard(property: properties[i]),
-                ),
-              );
-          }
-        },
-      ),
+    // Body-only: the CustomerShellScaffold supplies the app bar + bottom nav.
+    return BlocBuilder<MyPropertyCubit, MyPropertyState>(
+      builder: (context, state) {
+        switch (state.status) {
+          case DataStatus.initial:
+          case DataStatus.loading:
+            return const Center(child: CircularProgressIndicator());
+          case DataStatus.failure:
+            return ErrorState(
+              failure: state.failure,
+              onRetry: () => context.read<MyPropertyCubit>().load(),
+            );
+          case DataStatus.empty:
+            return EmptyState(
+              icon: Icons.home_work_outlined,
+              title: l10n.myPropertyEmptyTitle,
+              message: l10n.myPropertyEmptyMessage,
+            );
+          case DataStatus.success:
+            final properties = state.data!;
+            return RefreshIndicator(
+              onRefresh: () => context.read<MyPropertyCubit>().load(),
+              child: ListView.separated(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                itemCount: properties.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(height: AppSpacing.lg),
+                itemBuilder: (context, i) =>
+                    _PropertyCard(property: properties[i]),
+              ),
+            );
+        }
+      },
     );
   }
 }

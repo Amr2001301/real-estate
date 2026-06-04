@@ -39,6 +39,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get actionLogout => 'تسجيل الخروج';
 
   @override
+  String get logoutConfirmMessage => 'هل أنت متأكد من تسجيل الخروج؟';
+
+  @override
   String get actionRegister => 'إنشاء حساب';
 
   @override
@@ -605,6 +608,49 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navMore => 'المزيد';
 
   @override
+  String get navFinance => 'المالية';
+
+  @override
+  String get financeHubSubtitle => 'أقساطك ودفعاتك وعقودك في مكان واحد.';
+
+  @override
+  String get financeInstallmentsDesc =>
+      'الجدول وتواريخ الاستحقاق وإثباتات الدفع';
+
+  @override
+  String get financeDepositsDesc => 'إيصالات الحجز والدفعة المقدمة';
+
+  @override
+  String get financeContractsDesc => 'العقود الموقّعة والمستندات';
+
+  @override
+  String get dashboardWelcome => 'مرحبًا بعودتك';
+
+  @override
+  String get dashboardQuickActions => 'إجراءات سريعة';
+
+  @override
+  String get dashboardOverview => 'نظرة عامة';
+
+  @override
+  String get accountSectionServices => 'خدمات العميل';
+
+  @override
+  String get accountRoleCustomer => 'عميل';
+
+  @override
+  String get navCompare => 'المقارنة';
+
+  @override
+  String get featuredBadge => 'مميز';
+
+  @override
+  String get compareAddUnits => 'أضف وحدات للمقارنة';
+
+  @override
+  String get accountSectionSettings => 'الإعدادات';
+
+  @override
   String get authWelcomeTitle => 'مرحبًا';
 
   @override
@@ -1157,9 +1203,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get navReservations => 'الحجوزات';
-
-  @override
-  String get dashboardQuickActions => 'إجراءات سريعة';
 
   @override
   String get visitsToday => 'اليوم';

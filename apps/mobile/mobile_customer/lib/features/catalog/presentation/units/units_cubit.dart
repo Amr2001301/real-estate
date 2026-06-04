@@ -5,14 +5,15 @@ import '../../domain/entities/unit.dart';
 import '../../domain/usecases/get_units.dart';
 import 'units_state.dart';
 
-/// Drives a project's units listing. Depends on the [GetUnits] use case only.
+/// Drives a units listing. With [projectId] it lists that project's units;
+/// with `null` it lists the global public catalog (used by the الوحدات tab).
 class UnitsCubit extends Cubit<UnitsState> {
-  UnitsCubit(this._getUnits, {required this.projectId}) : super(const UnitsState()) {
+  UnitsCubit(this._getUnits, {this.projectId}) : super(const UnitsState()) {
     load();
   }
 
   final GetUnits _getUnits;
-  final String projectId;
+  final String? projectId;
   static const _pageSize = 12;
 
   Future<void> load() async {

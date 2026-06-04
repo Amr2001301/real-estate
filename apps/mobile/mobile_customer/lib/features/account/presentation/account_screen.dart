@@ -26,111 +26,183 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final session = context.watch<SessionCubit>().state.sessionOrNull;
     final unread = context.watch<UnreadCountCubit>().state;
+    final name = session?.displayName ?? session?.email ?? l10n.accountRoleCustomer;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.navAccount),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.translate_rounded),
-            onPressed: () => context.read<LocaleCubit>().toggle(),
+    // Body-only: the CustomerShellScaffold supplies the app bar (with the
+    // language/theme toggles) + bottom nav.
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      children: [
+        // ── Identity header ────────────────────────────────────────────────
+        PremiumCard(
+          glow: true,
+          child: GradientAvatar.identity(
+            name: name,
+            role: l10n.accountRoleCustomer,
           ),
-          IconButton(
-            icon: const Icon(Icons.brightness_6_outlined),
-            onPressed: () => context.read<ThemeCubit>().cycle(),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
-        children: [
-          AppCard(
-            elevation: AppCardElevation.soft,
-            child: Row(
+        ),
+        const SizedBox(height: AppSpacing.xl),
+
+        // ── حسابي ─────────────────────────────────────────────────────────
+        _section(context, l10n.navAccount, [
+          _NavEntry(AppIcons.profile, AppTone.gold, l10n.accountProfile,
+              '/account/profile'),
+          _NavEntry(AppIcons.favorite, AppTone.gold, l10n.accountFavorites,
+              '/account/favorites'),
+          _NavEntry(AppIcons.visit, AppTone.navy, l10n.accountMyRequests,
+              '/account/requests'),
+          _NavEntry(AppIcons.notification, AppTone.gold,
+              l10n.accountNotifications, '/account/notifications',
+              badge: unread),
+        ]),
+        const SizedBox(height: AppSpacing.xl),
+
+        // ── خدمات العميل ───────────────────────────────────────────────────
+        _section(context, l10n.accountSectionServices, [
+          _NavEntry(AppIcons.property, AppTone.gold, l10n.accountMyProperty,
+              '/account/property'),
+          _NavEntry(AppIcons.contract, AppTone.success, l10n.accountContracts,
+              '/account/contracts'),
+          _NavEntry(AppIcons.installments, AppTone.navy, l10n.installmentsTitle,
+              '/account/installments'),
+          _NavEntry(AppIcons.deposit, AppTone.gold, l10n.accountDeposits,
+              '/account/deposits'),
+          _NavEntry(AppIcons.maintenance, AppTone.navy, l10n.accountMaintenance,
+              '/account/maintenance'),
+        ]),
+        const SizedBox(height: AppSpacing.xl),
+
+        // ── الإعدادات (language/theme — moved out of the app-bar menu) ──────
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppSectionHeader(title: l10n.accountSectionSettings),
+            const SizedBox(height: AppSpacing.sm),
+            StaggeredColumn(
+              spacing: AppSpacing.sm,
               children: [
-                CircleAvatar(
-                  backgroundColor: colors.brandGoldSoft,
-                  child: Icon(Icons.person, color: colors.brandGold),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(session?.displayName ?? session?.email ?? '—',
-                          style: Theme.of(context).textTheme.titleMedium),
-                      if (session?.email != null)
-                        Text(session!.email!,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: colors.inkMuted)),
-                    ],
-                  ),
-                ),
+                _actionRow(context, Icons.translate_rounded, AppTone.muted,
+                    l10n.galleryToggleLanguage,
+                    () => context.read<LocaleCubit>().toggle()),
+                _actionRow(context, Icons.brightness_6_outlined, AppTone.muted,
+                    l10n.galleryToggleTheme,
+                    () => context.read<ThemeCubit>().cycle()),
               ],
             ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl),
+
+        AppButton(
+          label: l10n.actionLogout,
+          icon: Icons.logout_rounded,
+          variant: AppButtonVariant.outline,
+          expand: true,
+          onPressed: () => _confirmLogout(context),
+        ),
+      ],
+    );
+  }
+
+  /// A premium row driven by a callback (settings toggles) rather than a route.
+  Widget _actionRow(BuildContext context, IconData icon, AppTone tone,
+      String label, VoidCallback onTap) {
+    final colors = context.appColors;
+    return PremiumCard(
+      elevation: AppCardElevation.soft,
+      onTap: onTap,
+      child: Row(
+        children: [
+          IconChip(icon: icon, tone: tone, size: IconChipSize.sm),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
           ),
-          const SizedBox(height: AppSpacing.lg),
-          _tile(context, Icons.home_work_outlined, l10n.accountMyProperty,
-              () => context.push('/account/property')),
-          _tile(context, Icons.account_balance_wallet_outlined, l10n.accountDeposits,
-              () => context.push('/account/deposits')),
-          _tile(context, Icons.event_repeat_outlined, l10n.installmentsTitle,
-              () => context.push('/account/installments')),
-          _tile(context, Icons.folder_outlined, l10n.accountContracts,
-              () => context.push('/account/contracts')),
-          _tile(context, Icons.build_outlined, l10n.accountMaintenance,
-              () => context.push('/account/maintenance')),
-          _tile(context, Icons.person_outline_rounded, l10n.accountProfile,
-              () => context.push('/account/profile')),
-          _tile(context, Icons.favorite_border_rounded, l10n.accountFavorites,
-              () => context.push('/account/favorites')),
-          _tile(context, Icons.event_note_outlined, l10n.accountMyRequests,
-              () => context.push('/account/requests')),
-          _tile(context, Icons.notifications_none_rounded, l10n.accountNotifications,
-              () => context.push('/account/notifications'), badge: unread),
-          const SizedBox(height: AppSpacing.lg),
-          AppButton(
-            label: l10n.actionLogout,
-            icon: Icons.logout_rounded,
-            variant: AppButtonVariant.outline,
-            expand: true,
-            onPressed: () => context.read<AuthCubit>().logout(),
-          ),
+          Icon(AppIcons.chevronForward, color: colors.inkMuted),
         ],
       ),
     );
   }
 
-  Widget _tile(
-    BuildContext context,
-    IconData icon,
-    String label,
-    VoidCallback onTap, {
-    int badge = 0,
-  }) {
-    final colors = context.appColors;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: AppCard(
-        onTap: onTap,
-        child: Row(
-          children: [
-            Badge(
-              isLabelVisible: badge > 0,
-              label: Text('$badge'),
-              child: Icon(icon, color: colors.brandGold),
-            ),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(child: Text(label, style: Theme.of(context).textTheme.titleSmall)),
-            const Icon(Icons.chevron_right_rounded),
-          ],
+  /// A titled group of premium navigation rows with a light staggered entrance.
+  Widget _section(BuildContext context, String title, List<_NavEntry> entries) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSectionHeader(title: title),
+        const SizedBox(height: AppSpacing.sm),
+        StaggeredColumn(
+          spacing: AppSpacing.sm,
+          children: [for (final e in entries) _navRow(context, e)],
         ),
+      ],
+    );
+  }
+
+  /// Confirms before signing out, using a platform-adaptive dialog
+  /// (Cupertino on iOS, Material on Android). The cubit is captured before the
+  /// await so we don't touch context across the async gap.
+  Future<void> _confirmLogout(BuildContext context) async {
+    final l10n = context.l10n;
+    final authCubit = context.read<AuthCubit>();
+    final confirmed = await showAdaptiveConfirm(
+      context,
+      title: l10n.actionLogout,
+      message: l10n.logoutConfirmMessage,
+      confirmLabel: l10n.actionLogout,
+      cancelLabel: l10n.actionCancel,
+      destructive: true,
+    );
+    if (confirmed) authCubit.logout();
+  }
+
+  /// A premium navigation row: gold/navy [IconChip], label, optional count
+  /// badge, and a chevron. Pushes the entry's route (full-screen over the
+  /// shell), preserving the existing navigation destinations.
+  Widget _navRow(BuildContext context, _NavEntry e) {
+    final colors = context.appColors;
+    return PremiumCard(
+      elevation: AppCardElevation.soft,
+      onTap: () => context.push(e.route),
+      child: Row(
+        children: [
+          IconChip(icon: e.icon, tone: e.tone, size: IconChipSize.sm),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              e.label,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          if (e.badge > 0) ...[
+            StatusBadge(label: '${e.badge}', tone: BadgeTone.gold),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          Icon(AppIcons.chevronForward, color: colors.inkMuted),
+        ],
       ),
     );
   }
+}
+
+/// A single account-hub navigation destination.
+class _NavEntry {
+  const _NavEntry(this.icon, this.tone, this.label, this.route, {this.badge = 0});
+
+  final IconData icon;
+  final AppTone tone;
+  final String label;
+  final String route;
+  final int badge;
 }

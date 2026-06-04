@@ -80,18 +80,15 @@ class _UnitsScreenState extends State<UnitsScreen> {
                 message: l10n.noUnitsMessage,
               );
             case DataStatus.success:
+              // Single-column list of full-width premium cards — intrinsic
+              // height + flexible spec row means no horizontal/vertical overflow.
               return RefreshIndicator(
                 onRefresh: () => context.read<UnitsCubit>().refresh(),
-                child: GridView.builder(
+                child: ListView.separated(
                   controller: _scroll,
                   padding: const EdgeInsets.all(AppSpacing.lg),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 360,
-                    mainAxisExtent: 320,
-                    crossAxisSpacing: AppSpacing.md,
-                    mainAxisSpacing: AppSpacing.md,
-                  ),
                   itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
+                  separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
                   itemBuilder: (context, i) {
                     if (i >= state.items.length) {
                       return const Center(

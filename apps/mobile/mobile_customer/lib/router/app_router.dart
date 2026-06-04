@@ -46,6 +46,7 @@ import '../features/deposits/domain/usecases/get_my_deposits.dart';
 import '../features/deposits/presentation/deposit_detail_screen.dart';
 import '../features/deposits/presentation/deposits_cubit.dart';
 import '../features/deposits/presentation/deposits_screen.dart';
+import '../features/finance/presentation/finance_hub_screen.dart';
 import '../features/installments/domain/entities/installment.dart';
 import '../features/installments/domain/repositories/installments_repository.dart';
 import '../features/installments/domain/usecases/get_my_installments.dart';
@@ -84,6 +85,8 @@ import '../features/profile/domain/usecases/get_my_profile.dart';
 import '../features/profile/domain/usecases/update_my_profile.dart';
 import '../features/profile/presentation/profile_cubit.dart';
 import '../features/profile/presentation/profile_screen.dart';
+import '../features/shell/presentation/customer_shell_scaffold.dart';
+import '../features/shell/presentation/more_screen.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/visits/domain/repositories/visits_repository.dart';
 import '../features/visits/domain/usecases/confirm_visit_appointment.dart';
@@ -132,8 +135,128 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/login/otp', builder: (_, _) => const OtpScreen()),
 
-      // ── Account area ───────────────────────────────────────────────────
-      GoRoute(path: '/account', builder: (_, _) => const AccountScreen()),
+      // ── Persistent shell ────────────────────────────────────────────────
+      // One StatefulShellRoute hosts BOTH the public browsing branches and the
+      // authenticated customer branches. The bottom nav (in CustomerShellScaffold)
+      // shows a different SUBSET per auth state:
+      //   guest  → branches 0,1,2  (home, projects, compare)
+      //   customer → branches 0,3,4,5,6  (home, property, finance, maintenance, account)
+      // Each branch keeps its own navigator/state. Detail + secondary routes
+      // live OUTSIDE the shell (below) and push full-screen over it, preserving
+      // their existing deep links unchanged. The redirect() guard still sends
+      // unauthenticated access to /account/* to /login.
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            CustomerShellScaffold(navigationShell: navigationShell),
+        branches: [
+          // 0 · الرئيسية (public home)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/home',
+                builder: (context, _) => BlocProvider(
+                  create: (ctx) =>
+                      HomeCubit(GetFeaturedProjects(ctx.read<CatalogRepository>()))
+                        ..load(),
+                  child: const HomeScreen(),
+                ),
+              ),
+            ],
+          ),
+          // 1 · المشاريع (public)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/projects',
+                builder: (context, state) => BlocProvider(
+                  create: (ctx) => ProjectsCubit(
+                    GetProjects(ctx.read<CatalogRepository>()),
+                    initialFilter: ProjectsFilter(
+                      city: state.uri.queryParameters['city'],
+                      query: state.uri.queryParameters['q'],
+                    ),
+                  ),
+                  child: const ProjectsScreen(),
+                ),
+              ),
+            ],
+          ),
+          // 2 · الوحدات (public — global units list; projectId null)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/units',
+                builder: (context, _) => BlocProvider(
+                  create: (ctx) => UnitsCubit(
+                    GetUnits(ctx.read<CatalogRepository>()),
+                  ),
+                  child: const UnitsScreen(),
+                ),
+              ),
+            ],
+          ),
+          // 3 · المقارنة (public)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/compare', builder: (_, _) => const CompareScreen()),
+            ],
+          ),
+          // 4 · المزيد (public hub: login, assistant, language, theme)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: '/more', builder: (_, _) => const MoreScreen()),
+            ],
+          ),
+          // 5 · عقاراتي
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/account/property',
+                builder: (context, _) => BlocProvider(
+                  create: (ctx) => MyPropertyCubit(
+                    GetMyProperties(ctx.read<MyPropertyRepository>()),
+                  ),
+                  child: const MyPropertyScreen(),
+                ),
+              ),
+            ],
+          ),
+          // 6 · المالية (navigation-only hub — no API calls)
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/account/finance',
+                builder: (_, _) => const FinanceHubScreen(),
+              ),
+            ],
+          ),
+          // 7 · الصيانة
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/account/maintenance',
+                builder: (context, _) => BlocProvider(
+                  create: (ctx) => MaintenanceRequestsCubit(
+                    GetMyMaintenanceRequests(ctx.read<MaintenanceRepository>()),
+                  ),
+                  child: const MaintenanceRequestsScreen(),
+                ),
+              ),
+            ],
+          ),
+          // 8 · حسابي
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/account',
+                builder: (_, _) => const AccountScreen(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // ── Account area (secondary routes — pushed over the shell) ──────────
       GoRoute(
         path: '/account/profile',
         builder: (context, _) => BlocProvider(
@@ -174,17 +297,6 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
             );
           },
           child: const NotificationsScreen(),
-        ),
-      ),
-
-      // ── My Property ──────────────────────────────────────────────────────
-      GoRoute(
-        path: '/account/property',
-        builder: (context, _) => BlocProvider(
-          create: (ctx) => MyPropertyCubit(
-            GetMyProperties(ctx.read<MyPropertyRepository>()),
-          ),
-          child: const MyPropertyScreen(),
         ),
       ),
 
@@ -257,16 +369,7 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
         },
       ),
 
-      // ── Maintenance (list + create + detail) ─────────────────────────────
-      GoRoute(
-        path: '/account/maintenance',
-        builder: (context, _) => BlocProvider(
-          create: (ctx) => MaintenanceRequestsCubit(
-            GetMyMaintenanceRequests(ctx.read<MaintenanceRepository>()),
-          ),
-          child: const MaintenanceRequestsScreen(),
-        ),
-      ),
+      // ── Maintenance (create + detail — list is a shell tab) ──────────────
       GoRoute(
         path: '/account/maintenance/new',
         builder: (context, state) {
@@ -324,28 +427,7 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
         },
       ),
 
-      // ── Public catalog ─────────────────────────────────────────────────
-      GoRoute(
-        path: '/home',
-        builder: (context, _) => BlocProvider(
-          create: (ctx) =>
-              HomeCubit(GetFeaturedProjects(ctx.read<CatalogRepository>()))..load(),
-          child: const HomeScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/projects',
-        builder: (context, state) => BlocProvider(
-          create: (ctx) => ProjectsCubit(
-            GetProjects(ctx.read<CatalogRepository>()),
-            initialFilter: ProjectsFilter(
-              city: state.uri.queryParameters['city'],
-              query: state.uri.queryParameters['q'],
-            ),
-          ),
-          child: const ProjectsScreen(),
-        ),
-      ),
+      // ── Public catalog (details — list/compare are shell branches above) ─
       GoRoute(
         path: '/projects/:id',
         builder: (context, state) => BlocProvider(
@@ -380,7 +462,6 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
           child: const UnitDetailsScreen(),
         ),
       ),
-      GoRoute(path: '/compare', builder: (_, _) => const CompareScreen()),
       GoRoute(
         path: '/chat',
         builder: (context, _) => BlocProvider(

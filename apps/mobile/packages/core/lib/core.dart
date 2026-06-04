@@ -20,7 +20,9 @@ export 'src/env/env_config.dart';
 export 'src/app/app_bootstrap.dart';
 
 // Design system
+export 'src/design/platform/app_platform.dart';
 export 'src/design/tokens/app_colors.dart';
+export 'src/design/tokens/app_icons.dart';
 export 'src/design/tokens/app_radii.dart';
 export 'src/design/tokens/app_shadows.dart';
 export 'src/design/tokens/app_spacing.dart';
@@ -73,16 +75,27 @@ export 'src/auth/session_cubit.dart';
 export 'src/auth/token_storage.dart';
 
 // Widgets
+export 'src/widgets/adaptive_app_bar.dart';
+export 'src/widgets/adaptive_dialog.dart';
+export 'src/widgets/adaptive_icon_button.dart';
+export 'src/widgets/app_bottom_nav.dart';
 export 'src/widgets/app_button.dart';
 export 'src/widgets/app_card.dart';
 export 'src/widgets/app_network_image.dart';
 export 'src/widgets/app_skeleton.dart';
 export 'src/widgets/app_text_field.dart';
+export 'src/widgets/app_tone.dart';
 export 'src/widgets/empty_state.dart';
 export 'src/widgets/error_state.dart';
+export 'src/widgets/gradient_avatar.dart';
+export 'src/widgets/icon_chip.dart';
 export 'src/widgets/placeholder_screen.dart';
+export 'src/widgets/premium_card.dart';
+export 'src/widgets/reveal.dart';
+export 'src/widgets/section_header.dart';
 export 'src/widgets/state_view.dart';
 export 'src/widgets/status_badge.dart';
+export 'src/widgets/summary_tile.dart';
 
 // Gallery (dev/visual verification)
 export 'src/gallery/component_gallery_screen.dart';
