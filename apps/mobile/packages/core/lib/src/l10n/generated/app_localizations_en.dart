@@ -201,6 +201,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectsSearchHint => 'Search projects';
 
   @override
+  String get unitsSearchHint => 'Search by code, type, project…';
+
+  @override
   String get unitsTitle => 'Units';
 
   @override

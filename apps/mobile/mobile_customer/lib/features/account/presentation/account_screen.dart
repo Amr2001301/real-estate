@@ -33,7 +33,8 @@ class _AccountScreenState extends State<AccountScreen> {
     // Body-only: the CustomerShellScaffold supplies the app bar (with the
     // language/theme toggles) + bottom nav.
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
+          AppSpacing.lg + MediaQuery.of(context).padding.bottom),
       children: [
         // ── Identity header ────────────────────────────────────────────────
         PremiumCard(

@@ -69,7 +69,8 @@ class _MaintenanceRequestsScreenState extends State<MaintenanceRequestsScreen> {
               return RefreshIndicator(
                 onRefresh: () => context.read<MaintenanceRequestsCubit>().load(),
                 child: ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.lg),
+                  padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg,
+                      AppSpacing.lg, AppSpacing.lg + MediaQuery.of(context).padding.bottom),
                   itemCount: requests.length,
                   separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
                   itemBuilder: (context, i) => _RequestTile(request: requests[i]),

@@ -50,7 +50,8 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
             return RefreshIndicator(
               onRefresh: () => context.read<MyPropertyCubit>().load(),
               child: ListView.separated(
-                padding: const EdgeInsets.all(AppSpacing.lg),
+                padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg,
+                    AppSpacing.lg, AppSpacing.lg + MediaQuery.of(context).padding.bottom),
                 itemCount: properties.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(height: AppSpacing.lg),

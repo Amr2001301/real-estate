@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../widgets/catalog_controls.dart';
 import '../widgets/catalog_skeletons.dart';
 import '../widgets/project_card.dart';
 import 'projects_cubit.dart';
@@ -56,44 +57,41 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.projectsTitle),
-        actions: [
-          BlocBuilder<ProjectsCubit, ProjectsState>(
-            buildWhen: (a, b) => a.filter != b.filter,
-            builder: (context, state) => IconButton(
-              tooltip: l10n.filtersTitle,
-              icon: Badge(
-                isLabelVisible: state.filter.activeCount > 0,
-                label: Text('${state.filter.activeCount}'),
-                child: const Icon(Icons.tune_rounded),
-              ),
-              onPressed: _openFilters,
-            ),
-          ),
-        ],
-      ),
+      appBar: AdaptiveAppBar(title: Text(l10n.projectsTitle)),
       body: Column(
         children: [
+          // Premium search + filter control area (filter moved out of the bar).
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.xs),
-            child: AppTextField(
-              controller: _search,
-              hint: l10n.projectsSearchHint,
-              prefixIcon: Icons.search_rounded,
-              textInputAction: TextInputAction.search,
-              onChanged: (_) => setState(() {}),
-              suffixIcon: _search.text.isEmpty
-                  ? null
-                  : IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () {
-                        _search.clear();
-                        context.read<ProjectsCubit>().search(null);
-                        setState(() {});
-                      },
-                    ),
+                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+            child: Row(
+              children: [
+                Expanded(
+                  child: CatalogSearchField(
+                    controller: _search,
+                    hint: l10n.projectsSearchHint,
+                    onChanged: (_) => setState(() {}),
+                    onSubmitted: (q) {
+                      final query = q.trim();
+                      context.read<ProjectsCubit>().search(query.isEmpty ? null : query);
+                    },
+                    onClear: () {
+                      _search.clear();
+                      context.read<ProjectsCubit>().search(null);
+                      setState(() {});
+                    },
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                BlocBuilder<ProjectsCubit, ProjectsState>(
+                  buildWhen: (a, b) => a.filter != b.filter,
+                  builder: (context, state) => CatalogFilterButton(
+                    activeCount: state.filter.activeCount,
+                    tooltip: l10n.filtersTitle,
+                    onTap: _openFilters,
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(
@@ -139,7 +137,12 @@ class _ProjectsGrid extends StatelessWidget {
       onRefresh: () => context.read<ProjectsCubit>().refresh(),
       child: ListView.separated(
         controller: scroll,
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg,
+          AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+        ),
         itemCount: state.items.length + (state.isLoadingMore ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
         itemBuilder: (context, i) {

@@ -83,30 +83,52 @@ class CustomerShellScaffold extends StatelessWidget {
 
     final branchOrder = shellBranchOrder(isCustomer: isCustomer);
 
+    // Native, always-bundled glyphs (no broken boxes): thin CupertinoIcons on
+    // iOS, outlined Material on Android (per AppBottomNav's adaptive rendering).
     final navItems = isCustomer
         ? [
             AppBottomNavItem(
-                icon: AppIcons.home, cupertinoIcon: CupertinoIcons.house_fill, label: l10n.navHome),
+                icon: Icons.home_outlined,
+                cupertinoIcon: CupertinoIcons.house,
+                label: l10n.navHome),
             AppBottomNavItem(
-                icon: AppIcons.property, cupertinoIcon: CupertinoIcons.house, label: l10n.accountMyProperty),
+                icon: Icons.home_work_outlined,
+                cupertinoIcon: CupertinoIcons.building_2_fill,
+                label: l10n.accountMyProperty),
             AppBottomNavItem(
-                icon: AppIcons.wallet, cupertinoIcon: CupertinoIcons.creditcard, label: l10n.navFinance),
+                icon: Icons.account_balance_wallet_outlined,
+                cupertinoIcon: CupertinoIcons.creditcard,
+                label: l10n.navFinance),
             AppBottomNavItem(
-                icon: AppIcons.maintenance, cupertinoIcon: CupertinoIcons.wrench, label: l10n.accountMaintenance),
+                icon: Icons.build_outlined,
+                cupertinoIcon: CupertinoIcons.wrench,
+                label: l10n.accountMaintenance),
             AppBottomNavItem(
-                icon: AppIcons.profile, cupertinoIcon: CupertinoIcons.person_crop_circle, label: l10n.navAccount),
+                icon: Icons.person_outline_rounded,
+                cupertinoIcon: CupertinoIcons.person_crop_circle,
+                label: l10n.navAccount),
           ]
         : [
             AppBottomNavItem(
-                icon: AppIcons.home, cupertinoIcon: CupertinoIcons.house_fill, label: l10n.navHome),
+                icon: Icons.home_outlined,
+                cupertinoIcon: CupertinoIcons.house,
+                label: l10n.navHome),
             AppBottomNavItem(
-                icon: AppIcons.property, cupertinoIcon: CupertinoIcons.building_2_fill, label: l10n.navProjects),
+                icon: Icons.location_city_outlined,
+                cupertinoIcon: CupertinoIcons.building_2_fill,
+                label: l10n.navProjects),
             AppBottomNavItem(
-                icon: AppIcons.search, cupertinoIcon: CupertinoIcons.square_grid_2x2, label: l10n.navUnits),
+                icon: Icons.grid_view_outlined,
+                cupertinoIcon: CupertinoIcons.square_grid_2x2,
+                label: l10n.navUnits),
             AppBottomNavItem(
-                icon: AppIcons.compare, cupertinoIcon: CupertinoIcons.arrow_right_arrow_left, label: l10n.navCompare),
+                icon: Icons.compare_arrows_rounded,
+                cupertinoIcon: CupertinoIcons.arrow_right_arrow_left,
+                label: l10n.navCompare),
             AppBottomNavItem(
-                icon: Icons.more_horiz_rounded, cupertinoIcon: CupertinoIcons.ellipsis, label: l10n.navMore),
+                icon: Icons.more_horiz_rounded,
+                cupertinoIcon: CupertinoIcons.ellipsis,
+                label: l10n.navMore),
           ];
 
     final selected = branchOrder.indexOf(current);
@@ -118,6 +140,10 @@ class CustomerShellScaffold extends StatelessWidget {
     final showShellAppBar = !_selfChromeBranches.contains(current);
 
     return Scaffold(
+      // iOS: let body content scroll behind the floating glass tab bar (real
+      // glass). Tab scrollables add MediaQuery.padding.bottom so nothing hides.
+      // Android keeps the in-slot Material bar (no overlap).
+      extendBody: context.isApplePlatform,
       appBar: showShellAppBar
           ? AdaptiveAppBar(
               title: Text(titles[current] ?? l10n.navHome),

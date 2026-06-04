@@ -14,7 +14,8 @@ class FinanceHubScreen extends StatelessWidget {
     final l10n = context.l10n;
 
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
+          AppSpacing.lg + MediaQuery.of(context).padding.bottom),
       children: [
         AppSectionHeader(
           eyebrow: l10n.navFinance,

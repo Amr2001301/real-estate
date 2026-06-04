@@ -470,6 +470,12 @@ abstract class AppLocalizations {
   /// **'Search projects'**
   String get projectsSearchHint;
 
+  /// No description provided for @unitsSearchHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search by code, type, project…'**
+  String get unitsSearchHint;
+
   /// No description provided for @unitsTitle.
   ///
   /// In en, this message translates to:

@@ -74,6 +74,7 @@
 
   "projectsTitle": "Projects",
   "projectsSearchHint": "Search projects",
+  "unitsSearchHint": "Search by code, type, project…",
   "unitsTitle": "Units",
   "filtersTitle": "Filters",
   "filterCity": "City",

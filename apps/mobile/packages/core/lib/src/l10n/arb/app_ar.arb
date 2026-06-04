@@ -71,6 +71,7 @@
 
   "projectsTitle": "المشاريع",
   "projectsSearchHint": "ابحث عن مشاريع",
+  "unitsSearchHint": "ابحث بالرمز أو النوع أو المشروع…",
   "unitsTitle": "الوحدات",
   "filtersTitle": "التصفية",
   "filterCity": "المدينة",

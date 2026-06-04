@@ -16,7 +16,7 @@ class CompareScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(
+      appBar: AdaptiveAppBar(
         title: Text(l10n.compareTitle),
         actions: [
           BlocBuilder<CompareCubit, List<Unit>>(
@@ -48,7 +48,8 @@ class CompareScreen extends StatelessWidget {
           }
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
+                AppSpacing.lg + MediaQuery.of(context).padding.bottom),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

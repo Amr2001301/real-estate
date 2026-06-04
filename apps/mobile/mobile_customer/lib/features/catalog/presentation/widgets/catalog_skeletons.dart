@@ -8,34 +8,38 @@ import '../../domain/entities/unit.dart';
 import 'project_card.dart';
 import 'unit_card.dart';
 
-final _dummyProject = const ProjectListItem(
+const _dummyProject = ProjectListItem(
   id: '0',
   name: Translatable(ar: 'مشروع تجريبي', en: 'Placeholder Project'),
-  description: Translatable(ar: '', en: ''),
-  city: 'City name',
+  description: Translatable(
+    ar: 'مجمع سكني فاخر بمساحات خضراء واسعة ومرافق متكاملة.',
+    en: 'A premium residential community with green spaces.',
+  ),
+  city: 'الرياض',
   services: [],
-  featured: false,
+  featured: true,
   availableUnitsCount: 12,
 );
 
-final _dummyUnit = Unit(
+const _dummyUnit = Unit(
   id: '0',
-  code: '000',
-  type: 'Apartment',
+  code: 'SH-000',
+  type: '2BR',
   area: 180,
   bedrooms: 3,
   bathrooms: 2,
+  floor: 3,
   price: '5800000',
   status: UnitStatus.available,
-  project: const UnitProjectRef(
+  project: UnitProjectRef(
     id: '0',
-    name: Translatable(ar: 'مشروع', en: 'Placeholder Project'),
-    city: 'City',
+    name: Translatable(ar: 'سولارا هايتس', en: 'Placeholder Project'),
+    city: 'الرياض',
   ),
 );
 
-/// Skeleton loaders that mirror the real card layouts (via Skeletonizer), so
-/// the loading state matches the loaded UI exactly.
+/// 1-column list skeleton mirroring the real project list (same `ListView`,
+/// same cards) so the loading state matches the loaded UI exactly.
 class ProjectsGridSkeleton extends StatelessWidget {
   const ProjectsGridSkeleton({super.key, this.itemCount = 4});
   final int itemCount;
@@ -44,21 +48,18 @@ class ProjectsGridSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSkeletonizer(
       enabled: true,
-      child: GridView.builder(
+      child: ListView.separated(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 360,
-          mainAxisExtent: 280,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.md,
-        ),
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: itemCount,
-        itemBuilder: (_, _) => ProjectCard(project: _dummyProject),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
+        itemBuilder: (_, _) => const ProjectCard(project: _dummyProject),
       ),
     );
   }
 }
 
+/// 1-column list skeleton mirroring the real unit list.
 class UnitsGridSkeleton extends StatelessWidget {
   const UnitsGridSkeleton({super.key, this.itemCount = 4});
   final int itemCount;
@@ -67,22 +68,19 @@ class UnitsGridSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSkeletonizer(
       enabled: true,
-      child: GridView.builder(
+      child: ListView.separated(
         padding: const EdgeInsets.all(AppSpacing.lg),
-        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-          maxCrossAxisExtent: 360,
-          mainAxisExtent: 320,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.md,
-        ),
+        physics: const NeverScrollableScrollPhysics(),
         itemCount: itemCount,
-        itemBuilder: (_, _) => UnitCard(unit: _dummyUnit),
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
+        itemBuilder: (_, _) => const UnitCard(unit: _dummyUnit),
       ),
     );
   }
 }
 
-/// Horizontal featured-projects skeleton for the home screen.
+/// Horizontal featured-projects skeleton for the home screen — matches the live
+/// carousel height (350) and card width (300).
 class FeaturedRowSkeleton extends StatelessWidget {
   const FeaturedRowSkeleton({super.key});
 
@@ -91,14 +89,15 @@ class FeaturedRowSkeleton extends StatelessWidget {
     return AppSkeletonizer(
       enabled: true,
       child: SizedBox(
-        height: 280,
+        height: 350,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
+          physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           itemCount: 3,
           separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
           itemBuilder: (_, _) =>
-              ProjectCard(project: _dummyProject, width: 300),
+              const ProjectCard(project: _dummyProject, width: 300),
         ),
       ),
     );

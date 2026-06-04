@@ -146,9 +146,10 @@ class GoldHairline extends StatelessWidget {
       );
 }
 
-/// The small round "open" affordance used as the card's CTA anchor — a
-/// surface-soft circle with a direction-aware arrow (points toward content flow
-/// in both RTL and LTR).
+/// The small round "open details" affordance used as the card's CTA anchor.
+/// A surface-soft circle with a direction-aware disclosure **chevron** — points
+/// in the reading-forward direction (left in RTL, right in LTR), like a native
+/// list disclosure indicator (cleaner than a full back/forward arrow).
 class CardOpenArrow extends StatelessWidget {
   const CardOpenArrow({super.key});
 
@@ -162,8 +163,8 @@ class CardOpenArrow extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(color: colors.surfaceSoft, shape: BoxShape.circle),
       child: Icon(
-        rtl ? Icons.arrow_back_rounded : Icons.arrow_forward_rounded,
-        size: 16,
+        rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+        size: 20,
         color: colors.inkStrong,
       ),
     );

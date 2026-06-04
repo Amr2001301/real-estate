@@ -27,7 +27,9 @@ class HomeScreen extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: () => context.read<HomeCubit>().load(),
       child: ListView(
-        padding: EdgeInsets.zero,
+        // Bottom clearance so content clears the iOS floating tab bar
+        // (extendBody); 0 on Android.
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
         children: [
           if (isCustomer) ...[
             Padding(

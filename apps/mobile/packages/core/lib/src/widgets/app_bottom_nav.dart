@@ -1,9 +1,10 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../design/platform/app_platform.dart';
 import '../design/theme/app_theme_ext.dart';
-import '../design/tokens/app_colors.dart';
 import '../design/tokens/app_spacing.dart';
 
 /// One destination in an [AppBottomNav].
@@ -21,28 +22,33 @@ class AppBottomNavItem {
   final IconData? activeIcon;
 
   /// Optional iOS/Cupertino glyph; used instead of [icon] when the bar renders
-  /// in its Cupertino style, so iPhone tabs feel native. Falls back to [icon].
+  /// in its Cupertino style. Falls back to [icon].
   final IconData? cupertinoIcon;
 
   final String label;
 }
 
-/// Selects the bottom-nav visual style. [adaptive] (default) picks Cupertino on
-/// iOS/macOS and Material elsewhere; the explicit values force a style (used by
-/// tests and previews).
+/// Selects the bottom-nav platform style. [adaptive] (default) picks Cupertino
+/// on iOS/macOS and Material elsewhere; explicit values force a style (tests).
 enum AppBottomNavStyle { adaptive, material, cupertino }
 
-/// A premium, warm-luxe bottom navigation bar that adapts per platform while
-/// keeping the Devora gold/navy brand:
+/// iOS floating tab-bar visual variants (review options). Switch the default
+/// below to preview each:
+///   - [liquid]      : transparent frosted glass, glossy top, glowing gold dot.
+///   - [darkGlass]   : navy translucent luxury glass, gold active.
+///   - [minimalDock] : compact light Apple-style dock, subtle dot.
+enum IosTabBarStyle { liquid, darkGlass, minimalDock }
+
+/// The active iOS tab-bar variant. Change this single constant to switch the
+/// look across the app for review (iOS only; Android is unaffected).
+const IosTabBarStyle kIosTabBarStyle = IosTabBarStyle.liquid;
+
+/// A premium, warm-luxe bottom navigation bar:
+/// - **Android (Material):** in-slot surface bar with a soft gold active pill.
+/// - **iOS (Cupertino):** a floating glass dock (see [kIosTabBarStyle]).
 ///
-/// - **Android (Material):** a gold-gradient active pill behind the glyph
-///   (navy icon + gold label) with ink ripple on tap.
-/// - **iOS (Cupertino):** no pill or ripple — the active destination is simply
-///   tinted gold (icon + label), lighter and more native to a tab bar.
-///
-/// Presentational only: takes [currentIndex] and reports taps via [onSelect],
-/// so it has no router dependency and is reusable by both apps. A light
-/// selection haptic fires on tap. RTL-safe and safe-area aware.
+/// Presentational only: takes [currentIndex] and reports taps via [onSelect].
+/// A light selection haptic fires on tap. RTL-safe and safe-area aware.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -70,39 +76,206 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     final cupertino = _useCupertino(context);
-
-    return Material(
-      color: colors.surface,
-      child: SafeArea(
-        top: false,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            border: Border(top: BorderSide(color: colors.hairline)),
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-              vertical: cupertino ? AppSpacing.xxs : AppSpacing.xs,
+    final iosCfg = cupertino
+        ? _IosTabConfig.resolve(kIosTabBarStyle, context.appColors)
+        : null;
+    final row = Row(
+      children: [
+        for (var i = 0; i < items.length; i++)
+          Expanded(
+            child: _NavItemView(
+              item: items[i],
+              selected: i == currentIndex,
+              cupertino: cupertino,
+              iosCfg: iosCfg,
+              onTap: () => _handleTap(i),
             ),
-            child: Row(
-              children: [
-                for (var i = 0; i < items.length; i++)
-                  Expanded(
-                    child: _NavItemView(
-                      item: items[i],
-                      selected: i == currentIndex,
-                      cupertino: cupertino,
-                      onTap: () => _handleTap(i),
-                    ),
-                  ),
-              ],
+          ),
+      ],
+    );
+    return cupertino ? _cupertinoBar(context, row, iosCfg!) : _materialBar(context, row);
+  }
+
+  /// iOS: a floating glass dock styled by [cfg]. The shell sets `extendBody` on
+  /// iOS so the body scrolls behind it and the blur frosts real content.
+  Widget _cupertinoBar(BuildContext context, Widget row, _IosTabConfig cfg) {
+    final colors = context.appColors;
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final radius = BorderRadius.circular(cfg.radius);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        cfg.hMargin,
+        AppSpacing.xs,
+        cfg.hMargin,
+        bottomInset + AppSpacing.md,
+      ),
+      child: DecoratedBox(
+        // Shadow on the unclipped outer box so it isn't clipped away.
+        decoration: BoxDecoration(borderRadius: radius, boxShadow: colors.shadowLift),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: cfg.blur, sigmaY: cfg.blur),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: cfg.fillColors,
+                  stops: cfg.fillStops,
+                ),
+                borderRadius: radius,
+                border: Border.all(color: cfg.borderColor, width: cfg.borderWidth),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: cfg.vPadding,
+                ),
+                child: row,
+              ),
             ),
           ),
         ),
       ),
     );
+  }
+
+  /// Android: a premium Material bar — surface fill, top hairline + soft shadow.
+  Widget _materialBar(BuildContext context, Widget row) {
+    final colors = context.appColors;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(top: BorderSide(color: colors.hairline)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xs,
+            ),
+            child: row,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Resolved visual values for one [IosTabBarStyle] — keeps the bar + item code
+/// variant-agnostic.
+class _IosTabConfig {
+  const _IosTabConfig({
+    required this.fillColors,
+    required this.fillStops,
+    required this.borderColor,
+    required this.borderWidth,
+    required this.blur,
+    required this.radius,
+    required this.hMargin,
+    required this.vPadding,
+    required this.activeColor,
+    required this.inactiveColor,
+    required this.iconSize,
+    required this.labelSize,
+    required this.dotSize,
+    required this.glowDot,
+  });
+
+  final List<Color> fillColors;
+  final List<double> fillStops;
+  final Color borderColor;
+  final double borderWidth;
+  final double blur;
+  final double radius;
+  final double hMargin;
+  final double vPadding;
+  final Color activeColor;
+  final Color inactiveColor;
+  final double iconSize;
+  final double labelSize;
+  final double dotSize;
+  final bool glowDot;
+
+  static _IosTabConfig resolve(IosTabBarStyle style, AppColorsExt c) {
+    switch (style) {
+      // A — Liquid Glass Dock: very transparent, glossy top, glowing gold dot.
+      case IosTabBarStyle.liquid:
+        return _IosTabConfig(
+          fillColors: [
+            Colors.white.withValues(alpha: 0.30),
+            c.surface.withValues(alpha: 0.34),
+            c.surface.withValues(alpha: 0.46),
+          ],
+          fillStops: const [0.0, 0.4, 1.0],
+          borderColor: Colors.white.withValues(alpha: 0.60),
+          borderWidth: 1.2,
+          blur: 34,
+          radius: 34,
+          hMargin: 20,
+          vPadding: AppSpacing.xs,
+          activeColor: c.brandGold,
+          inactiveColor: c.inkMuted,
+          iconSize: 23,
+          labelSize: 11,
+          dotSize: 4,
+          glowDot: true,
+        );
+      // B — Dark Glass Luxury: navy translucent glass, gold active.
+      case IosTabBarStyle.darkGlass:
+        return _IosTabConfig(
+          fillColors: [
+            c.brandNavy.withValues(alpha: 0.60),
+            c.brandNavy.withValues(alpha: 0.78),
+          ],
+          fillStops: const [0.0, 1.0],
+          borderColor: Colors.white.withValues(alpha: 0.16),
+          borderWidth: 1,
+          blur: 24,
+          radius: 32,
+          hMargin: 20,
+          vPadding: AppSpacing.xs,
+          activeColor: c.brandGold,
+          inactiveColor: Colors.white.withValues(alpha: 0.62),
+          iconSize: 23,
+          labelSize: 11,
+          dotSize: 4,
+          glowDot: true,
+        );
+      // C — Minimal iOS Dock: compact, light, subtle labels + tiny dot.
+      case IosTabBarStyle.minimalDock:
+        return _IosTabConfig(
+          fillColors: [
+            Colors.white.withValues(alpha: 0.22),
+            c.surface.withValues(alpha: 0.42),
+          ],
+          fillStops: const [0.0, 1.0],
+          borderColor: Colors.white.withValues(alpha: 0.50),
+          borderWidth: 1,
+          blur: 28,
+          radius: 30,
+          hMargin: 26,
+          vPadding: AppSpacing.xxs,
+          activeColor: c.brandGold,
+          inactiveColor: c.inkMuted,
+          iconSize: 22,
+          labelSize: 10,
+          dotSize: 3,
+          glowDot: false,
+        );
+    }
   }
 }
 
@@ -112,11 +285,13 @@ class _NavItemView extends StatelessWidget {
     required this.selected,
     required this.cupertino,
     required this.onTap,
+    this.iosCfg,
   });
 
   final AppBottomNavItem item;
   final bool selected;
   final bool cupertino;
+  final _IosTabConfig? iosCfg;
   final VoidCallback onTap;
 
   @override
@@ -141,20 +316,21 @@ class _NavItemView extends StatelessWidget {
     );
   }
 
-  /// iOS: tinted glyph + label, no pill, no ripple — light and native.
+  /// iOS: tinted glyph + label + tiny (optionally glowing) gold dot — no pill,
+  /// no ripple. Colors/sizes come from the active [IosTabBarStyle] config.
   Widget _cupertino(BuildContext context) {
-    final colors = context.appColors;
+    final cfg = iosCfg!;
     final theme = Theme.of(context);
     final iconData = item.cupertinoIcon ??
         (selected ? (item.activeIcon ?? item.icon) : item.icon);
-    final color = selected ? colors.brandGold : colors.inkMuted;
+    final color = selected ? cfg.activeColor : cfg.inactiveColor;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(iconData, size: 26, color: color),
+          Icon(iconData, size: cfg.iconSize, color: color),
           const SizedBox(height: 3),
           Text(
             item.label,
@@ -162,8 +338,27 @@ class _NavItemView extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(
               color: color,
-              fontSize: 10,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+              fontSize: cfg.labelSize,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 3),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: cfg.dotSize,
+            width: selected ? cfg.dotSize : 0,
+            decoration: BoxDecoration(
+              color: cfg.activeColor,
+              shape: BoxShape.circle,
+              boxShadow: cfg.glowDot && selected
+                  ? [
+                      BoxShadow(
+                        color: cfg.activeColor.withValues(alpha: 0.6),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                      ),
+                    ]
+                  : null,
             ),
           ),
         ],
@@ -171,7 +366,7 @@ class _NavItemView extends StatelessWidget {
     );
   }
 
-  /// Android: gold-gradient active pill behind the glyph (Material indicator).
+  /// Android: gold-tinted active pill behind the glyph (Material indicator).
   Widget _material(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
@@ -190,19 +385,13 @@ class _NavItemView extends StatelessWidget {
               vertical: 6,
             ),
             decoration: BoxDecoration(
-              gradient: selected
-                  ? const LinearGradient(
-                      colors: [AppPalette.gold300, AppPalette.gold500],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
+              color: selected ? colors.brandGold.withValues(alpha: 0.14) : null,
               borderRadius: BorderRadius.circular(999),
             ),
             child: Icon(
               iconData,
-              size: 22,
-              color: selected ? colors.brandNavy : colors.inkMuted,
+              size: 20,
+              color: selected ? colors.brandGold : colors.inkMuted,
             ),
           ),
           const SizedBox(height: 4),
