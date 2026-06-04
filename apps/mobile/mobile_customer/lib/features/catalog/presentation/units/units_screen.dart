@@ -46,6 +46,30 @@ class _UnitsScreenState extends State<UnitsScreen> {
     if (result != null) cubit.applyFilter(result);
   }
 
+  /// Resets the applied (backend) filters from an empty state.
+  Widget _clearFiltersButton(BuildContext context, AppLocalizations l10n) =>
+      AppButton(
+        label: l10n.clearFilters,
+        icon: Icons.tune_rounded,
+        variant: AppButtonVariant.outline,
+        size: AppButtonSize.small,
+        onPressed: () =>
+            context.read<UnitsCubit>().applyFilter(const UnitsFilter()),
+      );
+
+  /// Clears the local text search from an empty state.
+  Widget _clearSearchButton(BuildContext context, AppLocalizations l10n) =>
+      AppButton(
+        label: l10n.clearFilters,
+        icon: Icons.close_rounded,
+        variant: AppButtonVariant.outline,
+        size: AppButtonSize.small,
+        onPressed: () {
+          _search.clear();
+          setState(() {});
+        },
+      );
+
   /// Local, in-memory search over the currently-loaded units (the public units
   /// API exposes no text query). Matches code, type, project name (ar/en),
   /// city, and floor — works for Arabic and English.
@@ -119,15 +143,25 @@ class _UnitsScreenState extends State<UnitsScreen> {
                       icon: Icons.search_off_rounded,
                       title: l10n.noUnitsTitle,
                       message: l10n.noUnitsMessage,
+                      action: state.filter.activeCount > 0
+                          ? _clearFiltersButton(context, l10n)
+                          : null,
                     );
                   case DataStatus.success:
                     final visible = _applyQuery(state.items);
                     if (visible.isEmpty) {
-                      // Query matched nothing in the loaded set.
+                      // Query matched nothing in the loaded set (local search),
+                      // or the applied filters excluded everything.
+                      final searching = _search.text.trim().isNotEmpty;
                       return EmptyState(
                         icon: Icons.search_off_rounded,
                         title: l10n.noUnitsTitle,
                         message: l10n.noUnitsMessage,
+                        action: searching
+                            ? _clearSearchButton(context, l10n)
+                            : (state.filter.activeCount > 0
+                                ? _clearFiltersButton(context, l10n)
+                                : null),
                       );
                     }
                     final searching = _search.text.trim().isNotEmpty;

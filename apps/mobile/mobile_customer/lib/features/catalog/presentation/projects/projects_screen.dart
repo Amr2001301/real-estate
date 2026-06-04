@@ -107,10 +107,26 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       onRetry: () => context.read<ProjectsCubit>().load(),
                     );
                   case DataStatus.empty:
+                    final filtering = state.filter.activeCount > 0 ||
+                        (state.filter.query?.isNotEmpty ?? false);
                     return EmptyState(
                       icon: Icons.search_off_rounded,
                       title: l10n.noProjectsTitle,
                       message: l10n.noProjectsMessage,
+                      action: filtering
+                          ? AppButton(
+                              label: l10n.clearFilters,
+                              icon: Icons.tune_rounded,
+                              variant: AppButtonVariant.outline,
+                              size: AppButtonSize.small,
+                              onPressed: () {
+                                _search.clear();
+                                context
+                                    .read<ProjectsCubit>()
+                                    .applyFilter(const ProjectsFilter());
+                              },
+                            )
+                          : null,
                     );
                   case DataStatus.success:
                     return _ProjectsGrid(state: state, scroll: _scroll);
