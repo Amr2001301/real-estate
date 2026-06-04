@@ -67,7 +67,6 @@ class CustomerShellScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final session = context.watch<SessionCubit>().state;
     final isCustomer = session.isAuthenticated && session.role.isCustomerSide;
     final current = navigationShell.currentIndex;
@@ -122,8 +121,8 @@ class CustomerShellScaffold extends StatelessWidget {
                 cupertinoIcon: CupertinoIcons.square_grid_2x2,
                 label: l10n.navUnits),
             AppBottomNavItem(
-                icon: Icons.compare_arrows_rounded,
-                cupertinoIcon: CupertinoIcons.arrow_right_arrow_left,
+                icon: Icons.view_column_rounded,
+                cupertinoIcon: CupertinoIcons.square_split_2x1,
                 label: l10n.navCompare),
             AppBottomNavItem(
                 icon: Icons.more_horiz_rounded,
@@ -157,13 +156,9 @@ class CustomerShellScaffold extends StatelessWidget {
       body: navigationShell,
       // Floating assistant — only on Home (avoids the maintenance tab's FAB).
       floatingActionButton: current == _Branch.home
-          ? FloatingActionButton(
-              heroTag: 'assistantFab',
-              onPressed: () => context.push('/chat'),
-              backgroundColor: colors.brandGold,
-              foregroundColor: colors.brandNavy,
+          ? _AssistantFab(
               tooltip: l10n.homeAskAssistant,
-              child: const Icon(AppIcons.chat),
+              onTap: () => context.push('/chat'),
             )
           : null,
       bottomNavigationBar: AppBottomNav(
@@ -201,5 +196,58 @@ class CustomerShellScaffold extends StatelessWidget {
         ),
       ),
     ];
+  }
+}
+
+/// Premium AI assistant FAB: a compact navy circle with a gold ring and a gold
+/// sparkle glyph — refined and warm-luxe, not a plain gold square.
+class _AssistantFab extends StatelessWidget {
+  const _AssistantFab({required this.onTap, this.tooltip});
+
+  final VoidCallback onTap;
+  final String? tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final button = Container(
+      width: 54,
+      height: 54,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppPalette.navy700, AppPalette.navy],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppPalette.gold400.withValues(alpha: 0.45),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.navy.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: const Center(
+            child: Icon(Icons.auto_awesome_rounded,
+                color: AppPalette.gold300, size: 24),
+          ),
+        ),
+      ),
+    );
+    return Semantics(
+      button: true,
+      label: tooltip,
+      child: tooltip != null ? Tooltip(message: tooltip!, child: button) : button,
+    );
   }
 }

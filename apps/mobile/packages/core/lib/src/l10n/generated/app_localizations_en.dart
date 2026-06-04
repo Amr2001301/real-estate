@@ -177,6 +177,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeSearchHint => 'Search projects, cities…';
 
   @override
+  String get homeFeaturedUnits => 'Selected units';
+
+  @override
+  String get homeCtaTitle => 'Start your property journey with confidence';
+
+  @override
+  String get homeCtaSubtitle =>
+      'Our advisors are here to guide you every step of the way.';
+
+  @override
+  String get homeCtaAction => 'Talk to an advisor';
+
+  @override
   String get homeFeaturedProjects => 'Featured projects';
 
   @override

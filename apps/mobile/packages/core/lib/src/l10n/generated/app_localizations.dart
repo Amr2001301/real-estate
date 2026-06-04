@@ -422,6 +422,30 @@ abstract class AppLocalizations {
   /// **'Search projects, cities…'**
   String get homeSearchHint;
 
+  /// No description provided for @homeFeaturedUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected units'**
+  String get homeFeaturedUnits;
+
+  /// No description provided for @homeCtaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your property journey with confidence'**
+  String get homeCtaTitle;
+
+  /// No description provided for @homeCtaSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Our advisors are here to guide you every step of the way.'**
+  String get homeCtaSubtitle;
+
+  /// No description provided for @homeCtaAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to an advisor'**
+  String get homeCtaAction;
+
   /// No description provided for @homeFeaturedProjects.
   ///
   /// In en, this message translates to:

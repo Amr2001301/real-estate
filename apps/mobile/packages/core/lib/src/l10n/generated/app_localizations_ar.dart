@@ -175,6 +175,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeSearchHint => 'ابحث عن مشاريع أو مدن…';
 
   @override
+  String get homeFeaturedUnits => 'وحدات مختارة';
+
+  @override
+  String get homeCtaTitle => 'ابدأ رحلتك العقارية بثقة';
+
+  @override
+  String get homeCtaSubtitle => 'مستشارونا جاهزون لإرشادك في كل خطوة.';
+
+  @override
+  String get homeCtaAction => 'تواصل مع مستشار';
+
+  @override
   String get homeFeaturedProjects => 'مشاريع مميّزة';
 
   @override

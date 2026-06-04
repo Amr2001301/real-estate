@@ -218,31 +218,32 @@ class _IosTabConfig {
 
   static _IosTabConfig resolve(IosTabBarStyle style, AppColorsExt c) {
     switch (style) {
-      // Default — Premium Cream Floating Dock: warm cream frosted glass that
-      // matches the warm-luxe page; light, premium, not white, not navy.
+      // Default — Premium Cream Floating Dock: a crisp, warm, clearly-elevated
+      // cream panel (not white, not navy). Near-opaque so it reads as a defined
+      // dock — the float comes from a soft warm shadow, not heavy borders.
       case IosTabBarStyle.cream:
         return _IosTabConfig(
           fillColors: [
-            Colors.white.withValues(alpha: 0.55), // soft top highlight
-            c.canvas.withValues(alpha: 0.80), // warm cream body
-            c.surfaceSoft.withValues(alpha: 0.88), // slightly denser warm base
+            Colors.white.withValues(alpha: 0.85), // bright top sheen
+            c.canvas.withValues(alpha: 0.97), // warm cream body
+            c.surfaceSoft.withValues(alpha: 0.98), // denser warm base
           ],
-          fillStops: const [0.0, 0.32, 1.0],
-          borderColor: c.hairline.withValues(alpha: 0.55), // soft warm hairline
+          fillStops: const [0.0, 0.34, 1.0],
+          borderColor: c.hairline.withValues(alpha: 0.45), // whisper-thin rim
           borderWidth: 1,
-          blur: 20,
-          radius: 32,
-          hMargin: 24,
-          vPadding: AppSpacing.xxs,
+          blur: 14,
+          radius: 30,
+          hMargin: 22,
+          vPadding: AppSpacing.xs,
           activeColor: c.brandGold,
           inactiveColor: c.inkMuted, // warm muted gray/navy
           iconSize: 21,
-          activeIconSize: 22,
-          labelSize: 10,
+          activeIconSize: 23,
+          labelSize: 10.5,
           dotSize: 0, // no dot — gold icon+label carry the active state
           glowDot: false,
           glowActiveIcon: true,
-          shadow: c.shadowSoft, // soft, non-card-like warm shadow
+          shadow: c.shadowCard, // clear, soft warm float
         );
       // A — Liquid Glass Dock: very transparent, glossy top, glowing gold dot.
       case IosTabBarStyle.liquid:

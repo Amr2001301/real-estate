@@ -1,13 +1,22 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../favorites/presentation/favorites_cubit.dart';
+import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
 import '../../../notifications/presentation/unread_count_cubit.dart';
+import '../../domain/entities/catalog_enums.dart';
+import '../../domain/entities/project.dart';
+import '../../domain/entities/unit.dart';
+import '../../domain/repositories/catalog_repository.dart';
+import '../../domain/usecases/get_units.dart';
 import '../widgets/catalog_skeletons.dart';
-import '../widgets/project_card.dart';
+import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
+import '../widgets/unit_card.dart';
 import 'home_cubit.dart';
 
 /// The الرئيسية tab. For a signed-in customer it is a premium dashboard
@@ -40,7 +49,8 @@ class HomeScreen extends StatelessWidget {
                 0,
               ),
               child: _CustomerDashboard(
-                name: session.sessionOrNull?.displayName ??
+                name:
+                    session.sessionOrNull?.displayName ??
                     session.sessionOrNull?.email,
               ),
             ),
@@ -57,6 +67,10 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
           const _FeaturedProjects(),
+          const SizedBox(height: AppSpacing.xl),
+          // Units preview (self-managing: renders its own header, hides if no
+          // data). Shared by guest + customer as a discovery section.
+          const _FeaturedUnits(),
           const SizedBox(height: AppSpacing.xxl),
         ],
       ),
@@ -87,12 +101,42 @@ class _CustomerDashboard extends StatelessWidget {
     final l10n = context.l10n;
 
     final actions = <_QuickAction>[
-      _QuickAction(AppIcons.property, AppTone.gold, l10n.accountMyProperty, '/account/property'),
-      _QuickAction(AppIcons.installments, AppTone.navy, l10n.installmentsTitle, '/account/installments'),
-      _QuickAction(AppIcons.deposit, AppTone.gold, l10n.accountDeposits, '/account/deposits'),
-      _QuickAction(AppIcons.contract, AppTone.success, l10n.accountContracts, '/account/contracts'),
-      _QuickAction(AppIcons.maintenance, AppTone.navy, l10n.accountMaintenance, '/account/maintenance'),
-      _QuickAction(AppIcons.visit, AppTone.gold, l10n.navVisits, '/account/requests'),
+      _QuickAction(
+        AppIcons.property,
+        AppTone.gold,
+        l10n.accountMyProperty,
+        '/account/property',
+      ),
+      _QuickAction(
+        AppIcons.installments,
+        AppTone.navy,
+        l10n.installmentsTitle,
+        '/account/installments',
+      ),
+      _QuickAction(
+        AppIcons.deposit,
+        AppTone.gold,
+        l10n.accountDeposits,
+        '/account/deposits',
+      ),
+      _QuickAction(
+        AppIcons.contract,
+        AppTone.success,
+        l10n.accountContracts,
+        '/account/contracts',
+      ),
+      _QuickAction(
+        AppIcons.maintenance,
+        AppTone.navy,
+        l10n.accountMaintenance,
+        '/account/maintenance',
+      ),
+      _QuickAction(
+        AppIcons.visit,
+        AppTone.gold,
+        l10n.navVisits,
+        '/account/requests',
+      ),
     ];
 
     return StaggeredColumn(
@@ -107,9 +151,9 @@ class _CustomerDashboard extends StatelessWidget {
               Text(
                 l10n.dashboardWelcome,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: context.appColors.brandGold,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: context.appColors.brandGold,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: AppSpacing.xs),
               GradientAvatar.identity(
@@ -182,7 +226,8 @@ class _CustomerDashboard extends StatelessWidget {
                           a.label,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
                                 color: context.appColors.inkStrong,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -213,7 +258,11 @@ class _Hero extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
+        AppSpacing.lg,
+        AppSpacing.sm,
+        AppSpacing.lg,
+        0,
+      ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.xl),
         child: Stack(
@@ -249,7 +298,12 @@ class _Hero extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.xl),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,13 +404,19 @@ class _HeroSearch extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(AppRadii.md),
                 ),
-                child: Icon(Icons.search_rounded, color: colors.brandNavy, size: 20),
+                child: Icon(
+                  Icons.search_rounded,
+                  color: colors.brandNavy,
+                  size: 20,
+                ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   l10n.homeSearchHint,
-                  style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.inkMuted,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -392,26 +452,334 @@ class _FeaturedProjects extends StatelessWidget {
           case DataStatus.empty:
             return const SizedBox(height: 200, child: EmptyState());
           case DataStatus.success:
-            final projects = state.data!;
-            return SizedBox(
-              // Fits the luxury card (16:9 image + city + title + 2-line
-              // description + units/arrow row) without vertical overflow.
-              height: 350,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                itemCount: projects.length,
-                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-                itemBuilder: (context, i) => ProjectCard(
-                  project: projects[i],
-                  width: 300,
-                  onTap: () => context.push('/projects/${projects[i].id}'),
-                ).animate().fadeIn(delay: (60 * i).ms, duration: 350.ms),
-              ),
-            );
+            return _FeaturedProjectsCarousel(projects: state.data!);
         }
       },
     );
   }
 }
 
+/// Premium mobile projects carousel: a snapping [PageView] with the active card
+/// prominent and adjacent cards peeking at the sides, plus a page-dot indicator.
+/// RTL-aware (PageView follows the ambient text direction, like a ListView).
+class _FeaturedProjectsCarousel extends StatefulWidget {
+  const _FeaturedProjectsCarousel({required this.projects});
+
+  final List<ProjectListItem> projects;
+
+  @override
+  State<_FeaturedProjectsCarousel> createState() =>
+      _FeaturedProjectsCarouselState();
+}
+
+class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
+  late final PageController _controller;
+  Timer? _timer;
+  int _page = 0;
+
+  static const _interval = Duration(seconds: 5);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PageController(viewportFraction: 0.86);
+    _startAutoPlay();
+  }
+
+  void _startAutoPlay() {
+    _timer?.cancel();
+    if (widget.projects.length <= 1) return;
+    _timer = Timer.periodic(_interval, (_) {
+      if (!mounted || !_controller.hasClients) return;
+      final count = widget.projects.length;
+      if (count <= 1) return;
+      final next = (_page + 1) % count;
+      _controller.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  void _pauseAutoPlay() => _timer?.cancel();
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final projects = widget.projects;
+    return Column(
+      children: [
+        SizedBox(
+          height: 260,
+          // Pause auto-advance while the user is touching, resume after.
+          child: Listener(
+            onPointerDown: (_) => _pauseAutoPlay(),
+            onPointerUp: (_) => _startAutoPlay(),
+            onPointerCancel: (_) => _startAutoPlay(),
+            child: PageView.builder(
+              controller: _controller,
+              itemCount: projects.length,
+              onPageChanged: (i) => setState(() => _page = i),
+              itemBuilder: (context, i) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                child: _HomeProjectCard(
+                  project: projects[i],
+                  onTap: () => context.push('/projects/${projects[i].id}'),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (projects.length > 1) ...[
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              for (var i = 0; i < projects.length; i++)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: i == _page ? 18 : 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: i == _page ? colors.brandGold : colors.hairline,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// "وحدات مختارة" — a small units preview carousel below projects. Fetches a
+/// short page of available units via the existing [GetUnits] use case +
+/// app-wide [CatalogRepository] (no new API). Renders its own header and hides
+/// itself entirely when there's nothing to show.
+class _FeaturedUnits extends StatefulWidget {
+  const _FeaturedUnits();
+
+  @override
+  State<_FeaturedUnits> createState() => _FeaturedUnitsState();
+}
+
+class _FeaturedUnitsState extends State<_FeaturedUnits> {
+  late final Future<Result<Paginated<Unit>>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = GetUnits(context.read<CatalogRepository>())(
+      const GetUnitsParams(status: UnitStatus.available, page: 1, pageSize: 6),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return FutureBuilder<Result<Paginated<Unit>>>(
+      future: _future,
+      builder: (context, snap) {
+        if (!snap.hasData) return const SizedBox.shrink();
+        final units = snap.data!.when(
+          ok: (page) => page.data,
+          err: (_) => const <Unit>[],
+        );
+        if (units.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: SectionHeader(
+                title: l10n.homeFeaturedUnits,
+                onViewAll: () => context.push('/units'),
+              ),
+            ),
+            SizedBox(
+              height: 320,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                itemCount: units.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.md),
+                itemBuilder: (context, i) => UnitCard(
+                  unit: units[i],
+                  width: 290,
+                  onTap: () => context.push('/units/${units[i].id}'),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Home-only project showcase card: an IMAGE-ONLY overlay card (no white body)
+/// — full cover image with a bottom scrim and the featured/city/title/units
+/// composed on top, like the website's selected-project slider. Distinct from
+/// the /projects list [ProjectCard]; that one is unchanged.
+class _HomeProjectCard extends StatelessWidget {
+  const _HomeProjectCard({required this.project, this.onTap});
+
+  final ProjectListItem project;
+  final VoidCallback? onTap;
+
+  String _title(String lang) {
+    final name = project.name.resolve(lang).trim();
+    if (name.isNotEmpty) return name;
+    final city = project.city.trim();
+    return city.isNotEmpty ? city : '—';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+    final city = project.city.trim();
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    final radius = BorderRadius.circular(AppRadii.xl);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          boxShadow: colors.shadowCard,
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              AppNetworkImage(url: project.coverImage),
+              const ImageScrim(),
+              if (project.featured)
+                PositionedDirectional(
+                  top: AppSpacing.sm,
+                  start: AppSpacing.sm,
+                  child: GlassPill(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: AppPalette.gold400,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        Text(l10n.featuredBadge),
+                      ],
+                    ),
+                  ),
+                ),
+              PositionedDirectional(
+                top: AppSpacing.xs,
+                end: AppSpacing.xs,
+                child: GlassCircle(
+                  child: FavoriteToggleButton(
+                    isProject: true,
+                    id: project.id,
+                    dense: true,
+                  ),
+                ),
+              ),
+              PositionedDirectional(
+                bottom: AppSpacing.lg,
+                start: AppSpacing.lg,
+                end: AppSpacing.lg,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (city.isNotEmpty)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            size: 14,
+                            color: AppPalette.gold300,
+                          ),
+                          const SizedBox(width: AppSpacing.xxs),
+                          Flexible(
+                            child: Text(
+                              city,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      _title(lang),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      children: [
+                        GlassPill(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.apartment_rounded,
+                                color: AppPalette.gold300,
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              Text(
+                                l10n.availableUnitsCount(
+                                  project.availableUnitsCount,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        Icon(
+                          rtl
+                              ? Icons.chevron_left_rounded
+                              : Icons.chevron_right_rounded,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
