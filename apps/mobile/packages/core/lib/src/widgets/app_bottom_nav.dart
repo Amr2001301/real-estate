@@ -66,10 +66,10 @@ class AppBottomNav extends StatelessWidget {
   final AppBottomNavStyle style;
 
   bool _useCupertino(BuildContext context) => switch (style) {
-        AppBottomNavStyle.material => false,
-        AppBottomNavStyle.cupertino => true,
-        AppBottomNavStyle.adaptive => context.isApplePlatform,
-      };
+    AppBottomNavStyle.material => false,
+    AppBottomNavStyle.cupertino => true,
+    AppBottomNavStyle.adaptive => context.isApplePlatform,
+  };
 
   void _handleTap(int index) {
     HapticFeedback.selectionClick();
@@ -96,7 +96,9 @@ class AppBottomNav extends StatelessWidget {
           ),
       ],
     );
-    return cupertino ? _cupertinoBar(context, row, iosCfg!) : _materialBar(context, row);
+    return cupertino
+        ? _cupertinoBar(context, row, iosCfg!)
+        : _materialBar(context, row);
   }
 
   /// iOS: a floating glass dock styled by [cfg]. The shell sets `extendBody` on
@@ -109,7 +111,7 @@ class AppBottomNav extends StatelessWidget {
         cfg.hMargin,
         AppSpacing.xs,
         cfg.hMargin,
-        bottomInset + AppSpacing.sm,
+        bottomInset + AppSpacing.xs,
       ),
       child: DecoratedBox(
         // Shadow on the unclipped outer box so it isn't clipped away.
@@ -127,7 +129,10 @@ class AppBottomNav extends StatelessWidget {
                   stops: cfg.fillStops,
                 ),
                 borderRadius: radius,
-                border: Border.all(color: cfg.borderColor, width: cfg.borderWidth),
+                border: Border.all(
+                  color: cfg.borderColor,
+                  width: cfg.borderWidth,
+                ),
               ),
               child: Padding(
                 padding: EdgeInsets.symmetric(
@@ -237,9 +242,9 @@ class _IosTabConfig {
           vPadding: AppSpacing.xs,
           activeColor: c.brandGold,
           inactiveColor: c.inkMuted, // warm muted gray/navy
-          iconSize: 21,
-          activeIconSize: 23,
-          labelSize: 10.5,
+          iconSize: 20,
+          activeIconSize: 22,
+          labelSize: 10,
           dotSize: 0, // no dot — gold icon+label carry the active state
           glowDot: false,
           glowActiveIcon: true,
@@ -367,7 +372,8 @@ class _NavItemView extends StatelessWidget {
   Widget _cupertino(BuildContext context) {
     final cfg = iosCfg!;
     final theme = Theme.of(context);
-    final iconData = item.cupertinoIcon ??
+    final iconData =
+        item.cupertinoIcon ??
         (selected ? (item.activeIcon ?? item.icon) : item.icon);
     final color = selected ? cfg.activeColor : cfg.inactiveColor;
 

@@ -78,28 +78,3 @@ class UnitsGridSkeleton extends StatelessWidget {
     );
   }
 }
-
-/// Horizontal featured-projects skeleton for the home screen — matches the live
-/// carousel height (350) and card width (300).
-class FeaturedRowSkeleton extends StatelessWidget {
-  const FeaturedRowSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppSkeletonizer(
-      enabled: true,
-      child: SizedBox(
-        height: 350,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          itemCount: 3,
-          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
-          itemBuilder: (_, _) =>
-              const ProjectCard(project: _dummyProject, width: 300),
-        ),
-      ),
-    );
-  }
-}

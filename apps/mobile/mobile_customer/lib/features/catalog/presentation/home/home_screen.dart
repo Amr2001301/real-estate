@@ -13,7 +13,6 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
-import '../widgets/catalog_skeletons.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
@@ -37,14 +36,14 @@ class HomeScreen extends StatelessWidget {
       onRefresh: () => context.read<HomeCubit>().load(),
       child: ListView(
         // Single source of bottom clearance (no extra trailing spacer below).
-        // iOS: the floating dock overlays the body (extendBody) and stands
-        // ~79px tall above the safe-area inset, so clear that plus a small gap
-        // — anything less lets the dock cover the last content. Android: the
-        // in-slot bar handles its own safe area, so just a small comfortable
-        // gap above it.
+        // iOS: the floating dock overlays the body (extendBody) and floats
+        // ~40px above the safe-area inset; clear it plus a small premium gap so
+        // the CTA sits just above the dock (~16–24px breathing room) — never a
+        // large blank, never hidden behind the dock. Android: the in-slot bar
+        // handles its own safe area, so just a small comfortable gap above it.
         padding: EdgeInsets.only(
           bottom: context.isApplePlatform
-              ? MediaQuery.of(context).padding.bottom + 84
+              ? MediaQuery.of(context).padding.bottom + 32
               : AppSpacing.lg,
         ),
         children: [
@@ -338,30 +337,33 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
         borderRadius: BorderRadius.circular(AppRadii.xl),
         child: Stack(
           children: [
-            // Base navy depth gradient — matches the website hero fallback
-            // (130% 120% at 80% 10%).
+            // Base navy depth gradient — same direction/depth as the lower
+            // CtaBand so the two navy surfaces read as one design system.
             const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: Alignment(0.6, -0.8),
-                    radius: 1.3,
+                    center: Alignment(0.64, -1.0),
+                    radius: 1.5,
                     colors: [_webNavyLight, _webNavyMid, _webNavyDeep],
-                    stops: [0.0, 0.55, 1.0],
+                    stops: [0.0, 0.58, 1.0],
                   ),
                 ),
               ),
             ),
+            // Faint dotted texture — the same subtle pattern as the CtaBand, so
+            // the navy never reads as a flat block.
+            const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
             // Gold ambient glow behind the start-side content (RTL-aware).
             const Positioned.fill(
               child: IgnorePointer(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      center: AlignmentDirectional(0.85, -0.6),
-                      radius: 1.0,
-                      colors: [Color(0x2BC8A24B), Color(0x00C8A24B)],
-                      stops: [0.0, 0.6],
+                      center: AlignmentDirectional(-0.9, 0.9),
+                      radius: 0.9,
+                      colors: [Color(0x1FC8A24B), Color(0x00C8A24B)],
+                      stops: [0.0, 0.7],
                     ),
                   ),
                 ),
@@ -897,7 +899,7 @@ class _FeaturedProjects extends StatelessWidget {
         switch (state.status) {
           case DataStatus.initial:
           case DataStatus.loading:
-            return const FeaturedRowSkeleton();
+            return const _FeaturedProjectsSkeleton();
           case DataStatus.failure:
             return SizedBox(
               height: 240,
@@ -912,6 +914,63 @@ class _FeaturedProjects extends StatelessWidget {
             return _FeaturedProjectsCarousel(projects: state.data!);
         }
       },
+    );
+  }
+}
+
+/// Home-only loading skeleton for the featured-projects slider. Mirrors the
+/// live carousel exactly: image-only rounded cards (NO white content body), the
+/// same 260px height and side-peek feel, plus a dots placeholder — so the
+/// loading state reads as the real Home slider, not the /projects list card.
+class _FeaturedProjectsSkeleton extends StatelessWidget {
+  const _FeaturedProjectsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final radius = BorderRadius.circular(AppRadii.xl);
+    final cardWidth = MediaQuery.sizeOf(context).width * 0.8;
+    return Column(
+      children: [
+        SizedBox(
+          height: 260,
+          child: AppSkeletonizer(
+            enabled: true,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              itemCount: 3,
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+              itemBuilder: (_, _) => Container(
+                width: cardWidth,
+                decoration: BoxDecoration(
+                  color: colors.surfaceSoft,
+                  borderRadius: radius,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            for (var i = 0; i < 3; i++)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: i == 0 ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: i == 0
+                      ? colors.brandGold.withValues(alpha: 0.4)
+                      : colors.hairline,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -975,7 +1034,7 @@ class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 260,
+          height: 225,
           // Pause auto-advance while the user is touching, resume after.
           child: Listener(
             onPointerDown: (_) => _pauseAutoPlay(),
