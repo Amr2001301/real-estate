@@ -396,6 +396,38 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelProject => 'Project';
 
   @override
+  String get unitAbout => 'About this unit';
+
+  @override
+  String get unitAboutGeneric =>
+      'A carefully selected unit within a distinguished project — balancing comfort, location, and value.';
+
+  @override
+  String get unitWithinProject => 'Part of the project';
+
+  @override
+  String get viewProject => 'View project';
+
+  @override
+  String get viewProjectUnits => 'View units';
+
+  @override
+  String get unitPlanTitle => 'Unit plan';
+
+  @override
+  String get unitPlanOnRequest =>
+      'The detailed floor plan is available on request — contact us to receive it.';
+
+  @override
+  String get unitPlanRequest => 'Request the plan';
+
+  @override
+  String get unitOtherInProject => 'Other units in this project';
+
+  @override
+  String get requestInfo => 'Request info';
+
+  @override
   String areaValue(String value) {
     return '$value m²';
   }

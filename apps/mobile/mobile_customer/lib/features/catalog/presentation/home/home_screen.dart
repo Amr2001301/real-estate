@@ -775,22 +775,26 @@ class _HomeCtaBand extends StatelessWidget {
                     // secondary. Hugging content keeps the gold pill from
                     // reading as a bulky full-width block, and full labels never
                     // truncate. RTL-safe.
-                    Align(
-                      child: AppButton(
-                        label: l10n.homeCtaAction,
-                        icon: Icons.headset_mic_rounded,
-                        variant: AppButtonVariant.gold,
-                        size: AppButtonSize.medium,
-                        onPressed: () => context.push('/chat'),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Align(
-                      child: _GhostButton(
-                        label: l10n.homeCtaSecondary,
-                        icon: Icons.arrow_back_rounded,
-                        onPressed: () => context.push('/units'),
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AppButton(
+                            label: l10n.homeCtaAction,
+                            icon: Icons.headset_mic_rounded,
+                            variant: AppButtonVariant.gold,
+                            size: AppButtonSize.medium,
+                            onPressed: () => context.push('/chat'),
+                          ),
+                        ),
+                        // const SizedBox(width: AppSpacing.sm),
+                        // Expanded(
+                        //   child: _GhostButton(
+                        //     label: l10n.homeCtaSecondary,
+                        //     // icon: Icons.arrow_back_rounded,
+                        //     onPressed: () => context.push('/units'),
+                        //   ),
+                        // ),
+                      ],
                     ),
                   ],
                 ),
@@ -847,7 +851,10 @@ class _GhostButton extends StatelessWidget {
       color: Colors.white.withValues(alpha: 0.10),
       shape: RoundedRectangleBorder(
         borderRadius: AppRadii.pillAll,
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.55), width: 1.4),
+        side: BorderSide(
+          color: Colors.white.withValues(alpha: 0.55),
+          width: 1.4,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(

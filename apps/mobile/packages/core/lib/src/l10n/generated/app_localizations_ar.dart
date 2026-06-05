@@ -393,6 +393,38 @@ class AppLocalizationsAr extends AppLocalizations {
   String get labelProject => 'المشروع';
 
   @override
+  String get unitAbout => 'عن الوحدة';
+
+  @override
+  String get unitAboutGeneric =>
+      'وحدة مختارة بعناية ضمن مشروع مميز، تجمع بين الراحة والموقع والقيمة.';
+
+  @override
+  String get unitWithinProject => 'ضمن المشروع';
+
+  @override
+  String get viewProject => 'عرض المشروع';
+
+  @override
+  String get viewProjectUnits => 'عرض الوحدات';
+
+  @override
+  String get unitPlanTitle => 'مخطط الوحدة';
+
+  @override
+  String get unitPlanOnRequest =>
+      'المخطط التفصيلي متاح عند الطلب — تواصل معنا للحصول عليه.';
+
+  @override
+  String get unitPlanRequest => 'اطلب المخطط';
+
+  @override
+  String get unitOtherInProject => 'وحدات أخرى في المشروع';
+
+  @override
+  String get requestInfo => 'طلب معلومات';
+
+  @override
   String areaValue(String value) {
     return '$value م²';
   }

@@ -818,6 +818,66 @@ abstract class AppLocalizations {
   /// **'Project'**
   String get labelProject;
 
+  /// No description provided for @unitAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About this unit'**
+  String get unitAbout;
+
+  /// No description provided for @unitAboutGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'A carefully selected unit within a distinguished project — balancing comfort, location, and value.'**
+  String get unitAboutGeneric;
+
+  /// No description provided for @unitWithinProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Part of the project'**
+  String get unitWithinProject;
+
+  /// No description provided for @viewProject.
+  ///
+  /// In en, this message translates to:
+  /// **'View project'**
+  String get viewProject;
+
+  /// No description provided for @viewProjectUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'View units'**
+  String get viewProjectUnits;
+
+  /// No description provided for @unitPlanTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit plan'**
+  String get unitPlanTitle;
+
+  /// No description provided for @unitPlanOnRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'The detailed floor plan is available on request — contact us to receive it.'**
+  String get unitPlanOnRequest;
+
+  /// No description provided for @unitPlanRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Request the plan'**
+  String get unitPlanRequest;
+
+  /// No description provided for @unitOtherInProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Other units in this project'**
+  String get unitOtherInProject;
+
+  /// No description provided for @requestInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Request info'**
+  String get requestInfo;
+
   /// No description provided for @areaValue.
   ///
   /// In en, this message translates to:
