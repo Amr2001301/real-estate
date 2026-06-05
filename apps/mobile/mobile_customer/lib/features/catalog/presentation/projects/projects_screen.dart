@@ -21,13 +21,35 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
   final _scroll = ScrollController();
   late final TextEditingController _search;
 
+  // The last `?q=` we applied from the route. The route builder seeds the cubit
+  // on first build; on later visits the shell reuses this branch page (a
+  // query-only `go` doesn't rebuild the route), so we re-sync in
+  // didChangeDependencies — guarded by this so manual in-screen searches and
+  // unrelated dependency changes (e.g. a language toggle) never clobber it.
+  late String _lastRouteQuery;
+
   @override
   void initState() {
     super.initState();
-    _search = TextEditingController(
-      text: context.read<ProjectsCubit>().state.filter.query ?? '',
-    );
+    final initial = context.read<ProjectsCubit>().state.filter.query ?? '';
+    _search = TextEditingController(text: initial);
+    _lastRouteQuery = initial;
     _scroll.addListener(_onScroll);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // React to a fresh `?q=` arriving from elsewhere (e.g. the Home search,
+    // which switches to this tab via context.go).
+    final routeQuery =
+        GoRouterState.of(context).uri.queryParameters['q']?.trim() ?? '';
+    if (routeQuery == _lastRouteQuery) return;
+    _lastRouteQuery = routeQuery;
+    _search.text = routeQuery;
+    context
+        .read<ProjectsCubit>()
+        .search(routeQuery.isEmpty ? null : routeQuery);
   }
 
   void _onScroll() {

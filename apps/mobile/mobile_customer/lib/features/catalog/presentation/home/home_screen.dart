@@ -13,7 +13,6 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
-import '../widgets/filter_sheet.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
@@ -73,7 +72,7 @@ class HomeScreen extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             child: SectionHeader(
               title: l10n.homeFeaturedProjects,
-              onViewAll: () => context.push('/projects'),
+              onViewAll: () => context.go('/projects'),
             ),
           ),
           const _FeaturedProjects(),
@@ -292,28 +291,23 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
     super.dispose();
   }
 
-  /// Free-text search targets /projects (the only catalog route that reads a
-  /// `?q=` query param on mobile; the units route takes no query).
+  /// Free-text search targets the المشاريع tab (the only catalog route that
+  /// reads a `?q=` query param). Uses `context.go` so the Projects tab becomes
+  /// active (single app bar, no back arrow) instead of pushing it inside the
+  /// Home stack.
   void _runSearch(String raw) {
     final query = raw.trim();
-    context.push(
+    context.go(
       query.isEmpty
           ? '/projects'
           : '/projects?q=${Uri.encodeQueryComponent(query)}',
     );
   }
 
-  Future<void> _openFilters() async {
-    // Returns the selected property type ('' = none / show all), or null when
-    // dismissed. Honest behavior preserved: a text-shortcut search on /projects
-    // (no fake backend category filter).
-    final type = await showAppFilterSheet<String>(
-      context,
-      builder: (_) => const _HomeFilterSheet(),
-    );
-    if (!mounted || type == null) return;
-    _runSearch(type);
-  }
+  /// The hero filter shortcut switches to the المشاريع tab, where the real
+  /// (backend-supported) city / featured / sort filters live. There is no
+  /// backend property-type filter, so Home does not fake one with a text query.
+  void _openFilters() => context.go('/projects');
 
   @override
   Widget build(BuildContext context) {
@@ -542,88 +536,6 @@ class _FilterPill extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Home quick-filter sheet: a premium property-type picker (single select).
-/// The mobile catalog has no backend type filter, so the choice runs an honest
-/// text-shortcut search on /projects (no faked category filter). Shares the
-/// app's [FilterSheetShell] so it matches the projects/units filters.
-class _HomeFilterSheet extends StatefulWidget {
-  const _HomeFilterSheet();
-
-  @override
-  State<_HomeFilterSheet> createState() => _HomeFilterSheetState();
-}
-
-class _HomeFilterSheetState extends State<_HomeFilterSheet> {
-  String? _selected;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    final types = <(String, IconData)>[
-      (l10n.homeTypeResidential, Icons.home_work_outlined),
-      (l10n.homeTypeOffice, Icons.business_center_outlined),
-      (l10n.homeTypeCommercial, Icons.storefront_outlined),
-      (l10n.homeTypeMedical, Icons.local_hospital_outlined),
-      (l10n.homeTypeHotel, Icons.hotel_outlined),
-    ];
-
-    return FilterSheetShell(
-      title: l10n.homeFilterTypeLabel,
-      activeCount: _selected == null ? 0 : 1,
-      applyLabel: l10n.homeFilterViewResults,
-      resetLabel: l10n.homeFilterClearSelection,
-      onReset: () => setState(() => _selected = null),
-      onApply: () => Navigator.of(context).pop(_selected ?? ''),
-      sections: [
-        // Single premium card: helper text + single-select type chips in a tidy
-        // 2-column icon grid. (No duplicate bold title — the sheet header
-        // already reads "نوع العقار".)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm + 2,
-          ),
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(AppRadii.lg),
-            border: Border.all(color: colors.hairline.withValues(alpha: 0.8)),
-            boxShadow: colors.shadowSoft,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.homeFilterHelper,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.inkMuted,
-                  height: 1.4,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              FilterChipGrid(
-                items: [
-                  for (final (label, icon) in types)
-                    FilterChipItem(
-                      label: label,
-                      icon: icon,
-                      selected: _selected == label,
-                      onTap: () => setState(
-                        () => _selected = _selected == label ? null : label,
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }
@@ -1089,7 +1001,7 @@ class _FeaturedUnitsState extends State<_FeaturedUnits> {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: SectionHeader(
                 title: l10n.homeFeaturedUnits,
-                onViewAll: () => context.push('/units'),
+                onViewAll: () => context.go('/units'),
               ),
             ),
             SizedBox(
