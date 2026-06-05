@@ -1064,6 +1064,42 @@ abstract class AppLocalizations {
   /// **'{count} selected'**
   String compareCount(int count);
 
+  /// No description provided for @compareSelectUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose units to compare'**
+  String get compareSelectUnits;
+
+  /// No description provided for @compareSelectedCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}/{max} units'**
+  String compareSelectedCount(int count, int max);
+
+  /// No description provided for @compareNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare now'**
+  String get compareNow;
+
+  /// No description provided for @compareNeedMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Select another unit to compare'**
+  String get compareNeedMore;
+
+  /// No description provided for @compareAddAnother.
+  ///
+  /// In en, this message translates to:
+  /// **'Add another unit to start comparing'**
+  String get compareAddAnother;
+
+  /// No description provided for @compareSelectionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Select 2 to 4 units to compare'**
+  String get compareSelectionHint;
+
   /// No description provided for @chatTitle.
   ///
   /// In en, this message translates to:

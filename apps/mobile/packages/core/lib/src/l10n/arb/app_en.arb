@@ -185,6 +185,13 @@
   "compareEmptyMessage": "Add units from their details to compare them side by side.",
   "compareCount": "{count} selected",
   "@compareCount": { "placeholders": { "count": { "type": "int" } } },
+  "compareSelectUnits": "Choose units to compare",
+  "compareSelectedCount": "{count}/{max} units",
+  "@compareSelectedCount": { "placeholders": { "count": { "type": "int" }, "max": { "type": "int" } } },
+  "compareNow": "Compare now",
+  "compareNeedMore": "Select another unit to compare",
+  "compareAddAnother": "Add another unit to start comparing",
+  "compareSelectionHint": "Select 2 to 4 units to compare",
 
   "chatTitle": "Assistant",
   "chatInputHint": "Type a message…",

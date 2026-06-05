@@ -510,7 +510,7 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String compareFull(int max) {
-    return 'يمكنك مقارنة حتى $max وحدات';
+    return 'يمكنك مقارنة $max وحدات كحد أقصى';
   }
 
   @override
@@ -524,6 +524,26 @@ class AppLocalizationsAr extends AppLocalizations {
   String compareCount(int count) {
     return '$count محدد';
   }
+
+  @override
+  String get compareSelectUnits => 'اختر وحدات للمقارنة';
+
+  @override
+  String compareSelectedCount(int count, int max) {
+    return '$count/$max وحدات';
+  }
+
+  @override
+  String get compareNow => 'قارن الآن';
+
+  @override
+  String get compareNeedMore => 'اختر وحدة أخرى للمقارنة';
+
+  @override
+  String get compareAddAnother => 'أضف وحدة أخرى لبدء المقارنة';
+
+  @override
+  String get compareSelectionHint => 'اختر من 2 إلى 4 وحدات للمقارنة';
 
   @override
   String get chatTitle => 'المساعد';

@@ -12,10 +12,18 @@ enum CompareToggle { added, removed, full }
 class CompareCubit extends Cubit<List<Unit>> {
   CompareCubit() : super(const []);
 
+  /// Hard upper bound — enforced here (not only in the UI) so no caller can add
+  /// a 5th unit.
   static const maxItems = 4;
+
+  /// Minimum selected units before a comparison is meaningful.
+  static const minToCompare = 2;
 
   bool contains(String id) => state.any((u) => u.id == id);
   bool get isFull => state.length >= maxItems;
+
+  /// True once enough units are selected to open the comparison.
+  bool get canCompare => state.length >= minToCompare;
 
   CompareToggle toggle(Unit unit) {
     if (contains(unit.id)) {

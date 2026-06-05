@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/unit.dart';
+import '../compare/compare_cubit.dart';
+import '../compare/compare_selection_bar.dart';
 import '../widgets/catalog_controls.dart';
 import '../widgets/catalog_skeletons.dart';
 import '../widgets/unit_card.dart';
@@ -92,42 +94,54 @@ class _UnitsScreenState extends State<UnitsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    // Drive the sticky compare dock + reserved list padding off the shared
+    // selection. `watch` rebuilds the screen as units are (de)selected.
+    final compareCount = context.watch<CompareCubit>().state.length;
+    // Compare-selection entry (from the Compare tab CTA) shows a gentle hint.
+    final compareMode =
+        GoRouterState.of(context).uri.queryParameters['compare'] == 'true';
+
     return Scaffold(
       appBar: AdaptiveAppBar(title: Text(l10n.unitsTitle)),
-      body: Column(
+      body: Stack(
         children: [
-          // Premium search + filter control area (matches /projects).
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
-            child: Row(
-              children: [
-                Expanded(
-                  child: CatalogSearchField(
-                    controller: _search,
-                    hint: l10n.unitsSearchHint,
-                    onChanged: (_) => setState(() {}),
-                    onSubmitted: (_) => setState(() {}),
-                    onClear: () {
-                      _search.clear();
-                      setState(() {});
-                    },
-                  ),
+          Column(
+            children: [
+              // Premium search + filter control area (matches /projects).
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, AppSpacing.sm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CatalogSearchField(
+                        controller: _search,
+                        hint: l10n.unitsSearchHint,
+                        onChanged: (_) => setState(() {}),
+                        onSubmitted: (_) => setState(() {}),
+                        onClear: () {
+                          _search.clear();
+                          setState(() {});
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    BlocBuilder<UnitsCubit, UnitsState>(
+                      buildWhen: (a, b) => a.filter != b.filter,
+                      builder: (context, state) => CatalogFilterButton(
+                        activeCount: state.filter.activeCount,
+                        tooltip: l10n.filtersTitle,
+                        onTap: _openFilters,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: AppSpacing.sm),
-                BlocBuilder<UnitsCubit, UnitsState>(
-                  buildWhen: (a, b) => a.filter != b.filter,
-                  builder: (context, state) => CatalogFilterButton(
-                    activeCount: state.filter.activeCount,
-                    tooltip: l10n.filtersTitle,
-                    onTap: _openFilters,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: BlocBuilder<UnitsCubit, UnitsState>(
+              ),
+              // Optional guidance when the user arrived in compare-selection mode.
+              if (compareMode && compareCount == 0)
+                _SelectionHint(text: l10n.compareSelectionHint),
+              Expanded(
+                child: BlocBuilder<UnitsCubit, UnitsState>(
               builder: (context, state) {
                 switch (state.status) {
                   case DataStatus.initial:
@@ -173,7 +187,13 @@ class _UnitsScreenState extends State<UnitsScreen> {
                           AppSpacing.lg,
                           AppSpacing.lg,
                           AppSpacing.lg,
-                          AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+                          AppSpacing.lg +
+                              MediaQuery.of(context).padding.bottom +
+                              // Reserve room for the sticky compare dock so the
+                              // last card is never hidden behind it.
+                              (compareCount > 0
+                                  ? (context.isApplePlatform ? 144 : 96)
+                                  : 0),
                         ),
                         // Load-more spinner only when not locally filtering.
                         itemCount: visible.length +
@@ -199,9 +219,64 @@ class _UnitsScreenState extends State<UnitsScreen> {
                     );
                 }
               },
+                ),
+              ),
+            ],
+          ),
+          // Sticky compare dock — only visible when units are selected.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: CompareSelectionBar(
+              onCompare: () => context.go('/compare'),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A subtle one-line hint shown under the search when the Units tab is opened
+/// in compare-selection mode (from the Compare tab CTA).
+class _SelectionHint extends StatelessWidget {
+  const _SelectionHint({required this.text});
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        decoration: BoxDecoration(
+          color: colors.brandGoldSoft,
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          border: Border.all(color: colors.brandGold.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.compare_arrows_rounded,
+                size: 16, color: colors.brandGold),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: Text(
+                text,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: colors.inkStrong,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

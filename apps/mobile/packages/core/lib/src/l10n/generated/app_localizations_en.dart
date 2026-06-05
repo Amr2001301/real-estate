@@ -529,6 +529,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get compareSelectUnits => 'Choose units to compare';
+
+  @override
+  String compareSelectedCount(int count, int max) {
+    return '$count/$max units';
+  }
+
+  @override
+  String get compareNow => 'Compare now';
+
+  @override
+  String get compareNeedMore => 'Select another unit to compare';
+
+  @override
+  String get compareAddAnother => 'Add another unit to start comparing';
+
+  @override
+  String get compareSelectionHint => 'Select 2 to 4 units to compare';
+
+  @override
   String get chatTitle => 'Assistant';
 
   @override
