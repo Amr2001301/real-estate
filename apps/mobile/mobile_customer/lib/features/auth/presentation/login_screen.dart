@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'auth_cubit.dart';
 import 'auth_state.dart';
 import 'auth_validators.dart';
+import 'widgets/auth_widgets.dart';
 
 /// Customer email/password login. Links to register and phone (OTP) login.
 class LoginScreen extends StatefulWidget {
@@ -33,72 +34,87 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _back() => context.canPop() ? context.pop() : context.go('/home');
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final v = AuthValidators(l10n);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.actionLogin)),
+      backgroundColor: context.appColors.canvas,
       body: BlocConsumer<AuthCubit, AuthState>(
         listenWhen: (a, b) => a.failure != b.failure && b.failure != null,
-        listener: (context, state) => showFailureSnackBar(context, state.failure!),
+        listener: (context, state) =>
+            showFailureSnackBar(context, state.failure!),
         builder: (context, state) {
-          return SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                const SizedBox(height: AppSpacing.lg),
-                Text(l10n.authWelcomeBack,
-                    style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: AppSpacing.xl),
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(labelText: l10n.fieldEmail),
-                        validator: v.email,
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              AuthHeader(
+                title: l10n.authWelcomeBack,
+                subtitle: l10n.authLoginSubtitle,
+                onBack: _back,
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                  AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+                ),
+                child: Column(
+                  children: [
+                    Form(
+                      key: _formKey,
+                      child: AuthCard(
+                        child: Column(
+                          children: [
+                            AuthField(
+                              controller: _email,
+                              label: l10n.fieldEmail,
+                              icon: Icons.alternate_email_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: v.email,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthPasswordField(
+                              controller: _password,
+                              label: l10n.fieldPassword,
+                              textInputAction: TextInputAction.done,
+                              validator: v.password,
+                              onFieldSubmitted: (_) => _submit(),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _password,
-                        obscureText: true,
-                        textInputAction: TextInputAction.done,
-                        decoration: InputDecoration(labelText: l10n.fieldPassword),
-                        validator: v.password,
-                        onFieldSubmitted: (_) => _submit(),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    AppButton(
+                      label: l10n.actionLogin,
+                      icon: Icons.login_rounded,
+                      expand: true,
+                      isLoading: state.isSubmitting,
+                      onPressed: _submit,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    AppButton(
+                      label: l10n.authLoginWithPhone,
+                      icon: Icons.phone_android_rounded,
+                      variant: AppButtonVariant.outline,
+                      expand: true,
+                      onPressed: () => context.push('/login/otp'),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AuthFooterLink(
+                      text: l10n.authNoAccountCta,
+                      onTap: () => context.push('/register'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: AppSpacing.xl),
-                AppButton(
-                  label: l10n.actionLogin,
-                  expand: true,
-                  isLoading: state.isSubmitting,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                AppButton(
-                  label: l10n.authLoginWithPhone,
-                  icon: Icons.phone_android_rounded,
-                  variant: AppButtonVariant.outline,
-                  expand: true,
-                  onPressed: () => context.push('/login/otp'),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Center(
-                  child: TextButton(
-                    onPressed: () => context.push('/register'),
-                    child: Text(l10n.authNoAccountCta),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),

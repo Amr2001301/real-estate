@@ -7,6 +7,7 @@ import '../domain/repositories/auth_repository.dart';
 import 'auth_cubit.dart';
 import 'auth_state.dart';
 import 'auth_validators.dart';
+import 'widgets/auth_widgets.dart';
 
 /// Customer registration (email + password).
 class RegisterScreen extends StatefulWidget {
@@ -46,90 +47,184 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ));
   }
 
+  void _back() => context.canPop() ? context.pop() : context.go('/home');
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final v = AuthValidators(l10n);
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.authCreateAccount)),
+      backgroundColor: context.appColors.canvas,
       body: BlocConsumer<AuthCubit, AuthState>(
         listenWhen: (a, b) => a.failure != b.failure && b.failure != null,
-        listener: (context, state) => showFailureSnackBar(context, state.failure!),
+        listener: (context, state) =>
+            showFailureSnackBar(context, state.failure!),
         builder: (context, state) {
-          return SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              children: [
-                Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _fullName,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(labelText: l10n.fieldFullName),
-                        validator: v.required,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _phone,
-                        keyboardType: TextInputType.phone,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(labelText: l10n.fieldPhone),
-                        validator: v.phone,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _email,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(labelText: l10n.fieldEmail),
-                        validator: v.email,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _password,
-                        obscureText: true,
-                        decoration: InputDecoration(labelText: l10n.fieldPassword),
-                        validator: v.password,
-                      ),
-                    ],
-                  ),
+          return ListView(
+            padding: EdgeInsets.zero,
+            children: [
+              AuthHeader(
+                title: l10n.authCreateAccount,
+                subtitle: l10n.authRegisterSubtitle,
+                onBack: _back,
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                  AppSpacing.lg + MediaQuery.of(context).padding.bottom,
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                CheckboxListTile(
-                  value: _acceptTerms,
-                  onChanged: (val) =>
-                      setState(() => _acceptTerms = val ?? false),
-                  title: Text(l10n.authAcceptTerms,
-                      style: Theme.of(context).textTheme.bodyMedium),
-                  controlAffinity: ListTileControlAffinity.leading,
-                  contentPadding: EdgeInsets.zero,
-                  subtitle: _termsError
-                      ? Text(l10n.validationAcceptTerms,
-                          style: TextStyle(color: context.appColors.error))
+                child: Column(
+                  children: [
+                    Form(
+                      key: _formKey,
+                      child: AuthCard(
+                        child: Column(
+                          children: [
+                            AuthField(
+                              controller: _fullName,
+                              label: l10n.fieldFullName,
+                              icon: Icons.person_outline_rounded,
+                              textInputAction: TextInputAction.next,
+                              validator: v.required,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthField(
+                              controller: _phone,
+                              label: l10n.fieldPhone,
+                              icon: Icons.phone_outlined,
+                              keyboardType: TextInputType.phone,
+                              textInputAction: TextInputAction.next,
+                              validator: v.phone,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthField(
+                              controller: _email,
+                              label: l10n.fieldEmail,
+                              icon: Icons.alternate_email_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: v.email,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            AuthPasswordField(
+                              controller: _password,
+                              label: l10n.fieldPassword,
+                              textInputAction: TextInputAction.done,
+                              validator: v.password,
+                              onFieldSubmitted: (_) => _submit(),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    _TermsRow(
+                      value: _acceptTerms,
+                      error: _termsError,
+                      label: l10n.authAcceptTerms,
+                      errorText: l10n.validationAcceptTerms,
+                      onChanged: (val) => setState(() {
+                        _acceptTerms = val;
+                        if (val) _termsError = false;
+                      }),
+                    ),
+                    const SizedBox(height: AppSpacing.lg),
+                    AppButton(
+                      label: l10n.actionRegister,
+                      icon: Icons.person_add_alt_1_rounded,
+                      expand: true,
+                      isLoading: state.isSubmitting,
+                      onPressed: _submit,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    AuthFooterLink(
+                      text: l10n.authHaveAccountCta,
+                      onTap: _back,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// A premium terms checkbox row with an inline error.
+class _TermsRow extends StatelessWidget {
+  const _TermsRow({
+    required this.value,
+    required this.error,
+    required this.label,
+    required this.errorText,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final bool error;
+  final String label;
+  final String errorText;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => onChanged(!value),
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: value ? colors.brandGold : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppRadii.xs),
+                    border: Border.all(
+                      color: value
+                          ? colors.brandGold
+                          : (error ? colors.error : colors.hairline),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: value
+                      ? Icon(Icons.check_rounded,
+                          size: 16, color: colors.brandNavy)
                       : null,
                 ),
-                const SizedBox(height: AppSpacing.lg),
-                AppButton(
-                  label: l10n.actionRegister,
-                  expand: true,
-                  isLoading: state.isSubmitting,
-                  onPressed: _submit,
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Center(
-                  child: TextButton(
-                    onPressed: () => context.pop(),
-                    child: Text(l10n.authHaveAccountCta),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: colors.inkStrong),
                   ),
                 ),
               ],
             ),
-          );
-        },
-      ),
+          ),
+        ),
+        if (error)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 32, top: 2),
+            child: Text(
+              errorText,
+              style: theme.textTheme.labelSmall?.copyWith(color: colors.error),
+            ),
+          ),
+      ],
     );
   }
 }

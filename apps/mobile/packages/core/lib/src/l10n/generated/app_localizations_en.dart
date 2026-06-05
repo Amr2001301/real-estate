@@ -573,6 +573,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get authLoginWithPhone => 'Use phone instead';
 
   @override
+  String get authEyebrow => 'Devora Real Estate';
+
+  @override
+  String get authLoginSubtitle => 'Sign in to continue your property journey.';
+
+  @override
+  String get authRegisterSubtitle =>
+      'Create your account to unlock every feature.';
+
+  @override
+  String get authPhoneSubtitle =>
+      'Enter your phone and we\'ll send a verification code.';
+
+  @override
   String get authLoginWithEmail => 'Use email instead';
 
   @override
@@ -802,6 +816,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get accountSectionSettings => 'Settings';
+
+  @override
+  String get moreSignInTitle => 'Sign in to your account';
+
+  @override
+  String get moreSignInSubtitle =>
+      'Continue your journey and keep your favorites & comparisons.';
+
+  @override
+  String get moreSectionGeneral => 'General';
 
   @override
   String get authWelcomeTitle => 'Welcome';

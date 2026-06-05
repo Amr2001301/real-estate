@@ -1148,6 +1148,30 @@ abstract class AppLocalizations {
   /// **'Use phone instead'**
   String get authLoginWithPhone;
 
+  /// No description provided for @authEyebrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Devora Real Estate'**
+  String get authEyebrow;
+
+  /// No description provided for @authLoginSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue your property journey.'**
+  String get authLoginSubtitle;
+
+  /// No description provided for @authRegisterSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account to unlock every feature.'**
+  String get authRegisterSubtitle;
+
+  /// No description provided for @authPhoneSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your phone and we\'ll send a verification code.'**
+  String get authPhoneSubtitle;
+
   /// No description provided for @authLoginWithEmail.
   ///
   /// In en, this message translates to:
@@ -1591,6 +1615,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get accountSectionSettings;
+
+  /// No description provided for @moreSignInTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to your account'**
+  String get moreSignInTitle;
+
+  /// No description provided for @moreSignInSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue your journey and keep your favorites & comparisons.'**
+  String get moreSignInSubtitle;
+
+  /// No description provided for @moreSectionGeneral.
+  ///
+  /// In en, this message translates to:
+  /// **'General'**
+  String get moreSectionGeneral;
 
   /// No description provided for @authWelcomeTitle.
   ///

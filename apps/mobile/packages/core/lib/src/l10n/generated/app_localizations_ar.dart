@@ -570,6 +570,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get authLoginWithPhone => 'استخدم الهاتف بدلًا من ذلك';
 
   @override
+  String get authEyebrow => 'ديفورا العقارية';
+
+  @override
+  String get authLoginSubtitle => 'سجّل الدخول لمتابعة رحلتك العقارية.';
+
+  @override
+  String get authRegisterSubtitle => 'أنشئ حسابك للوصول إلى كل الميزات.';
+
+  @override
+  String get authPhoneSubtitle => 'أدخل رقم هاتفك وسنرسل لك رمز التحقق.';
+
+  @override
   String get authLoginWithEmail => 'استخدم البريد بدلًا من ذلك';
 
   @override
@@ -797,6 +809,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get accountSectionSettings => 'الإعدادات';
+
+  @override
+  String get moreSignInTitle => 'سجّل الدخول إلى حسابك';
+
+  @override
+  String get moreSignInSubtitle =>
+      'تابع رحلتك العقارية واحفظ مفضلاتك ومقارناتك.';
+
+  @override
+  String get moreSectionGeneral => 'عام';
 
   @override
   String get authWelcomeTitle => 'مرحبًا';
