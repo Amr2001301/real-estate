@@ -512,6 +512,24 @@ abstract class AppLocalizations {
   /// **'Hospitality'**
   String get homeTypeHotel;
 
+  /// No description provided for @homeFilterHelper.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a property type for a quick search.'**
+  String get homeFilterHelper;
+
+  /// No description provided for @homeFilterViewResults.
+  ///
+  /// In en, this message translates to:
+  /// **'View results'**
+  String get homeFilterViewResults;
+
+  /// No description provided for @homeFilterClearSelection.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get homeFilterClearSelection;
+
   /// No description provided for @homeFeaturedProjects.
   ///
   /// In en, this message translates to:
@@ -637,6 +655,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Max'**
   String get maxLabel;
+
+  /// No description provided for @filterPriceUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'EGP'**
+  String get filterPriceUnit;
+
+  /// No description provided for @filterAreaUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'m²'**
+  String get filterAreaUnit;
 
   /// No description provided for @sortTitle.
   ///

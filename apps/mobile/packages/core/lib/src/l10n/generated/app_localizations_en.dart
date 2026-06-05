@@ -223,6 +223,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeTypeHotel => 'Hospitality';
 
   @override
+  String get homeFilterHelper => 'Choose a property type for a quick search.';
+
+  @override
+  String get homeFilterViewResults => 'View results';
+
+  @override
+  String get homeFilterClearSelection => 'Clear selection';
+
+  @override
   String get homeFeaturedProjects => 'Featured projects';
 
   @override
@@ -284,6 +293,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get maxLabel => 'Max';
+
+  @override
+  String get filterPriceUnit => 'EGP';
+
+  @override
+  String get filterAreaUnit => 'm²';
 
   @override
   String get sortTitle => 'Sort by';

@@ -30,6 +30,14 @@ class _ProjectsFilterSheet extends StatefulWidget {
 class _ProjectsFilterSheetState extends State<_ProjectsFilterSheet> {
   late ProjectsFilter _f = widget.initial;
 
+  /// Display-only Arabic normalization for obvious English city values; the
+  /// backend value (used for filtering) is never changed.
+  String _cityLabel(String raw) => switch (raw) {
+        'Riyadh' => 'الرياض',
+        'New Damietta' => 'دمياط الجديدة',
+        _ => raw,
+      };
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -57,40 +65,33 @@ class _ProjectsFilterSheetState extends State<_ProjectsFilterSheet> {
                 ),
                 for (final city in widget.cities)
                   FilterChoiceChip(
-                    label: city,
+                    label: _cityLabel(city),
                     selected: _f.city == city,
                     onTap: () => setState(() => _f = _f.copyWith(city: city)),
                   ),
               ],
             ),
           ),
+        // Compact single-row toggle — no oversized card for one boolean.
         FilterSection(
           label: l10n.filterFeaturedOnly,
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: FilterChoiceChip(
-              label: l10n.filterFeaturedOnly,
-              icon: Icons.star_rounded,
-              selected: _f.featuredOnly,
-              onTap: () => setState(
-                () => _f = _f.copyWith(featuredOnly: !_f.featuredOnly),
-              ),
-            ),
+          icon: Icons.star_rounded,
+          trailing: _MiniToggle(value: _f.featuredOnly),
+          onTap: () => setState(
+            () => _f = _f.copyWith(featuredOnly: !_f.featuredOnly),
           ),
         ),
         FilterSection(
           label: l10n.sortTitle,
-          child: Wrap(
-            spacing: AppSpacing.xs,
-            runSpacing: AppSpacing.xs,
-            children: [
-              FilterChoiceChip(
+          child: FilterChipGrid(
+            items: [
+              FilterChipItem(
                 label: l10n.sortNewest,
                 selected: _f.sort == ProjectSort.newest,
                 onTap: () =>
                     setState(() => _f = _f.copyWith(sort: ProjectSort.newest)),
               ),
-              FilterChoiceChip(
+              FilterChipItem(
                 label: l10n.sortOldest,
                 selected: _f.sort == ProjectSort.oldest,
                 onTap: () =>
@@ -100,6 +101,54 @@ class _ProjectsFilterSheetState extends State<_ProjectsFilterSheet> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A small premium on/off switch (gold when on) for a one-line boolean filter.
+class _MiniToggle extends StatelessWidget {
+  const _MiniToggle({required this.value});
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      width: 46,
+      height: 28,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: value ? colors.brandGold : colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: value
+              ? colors.brandGold
+              : colors.hairline.withValues(alpha: 0.8),
+        ),
+      ),
+      child: AnimatedAlign(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        alignment:
+            value ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
+        child: Container(
+          width: 22,
+          height: 22,
+          decoration: BoxDecoration(
+            color: value ? colors.brandNavy : colors.surface,
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.12),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

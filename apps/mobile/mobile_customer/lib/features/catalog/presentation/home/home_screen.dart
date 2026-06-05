@@ -13,6 +13,7 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
+import '../widgets/filter_sheet.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
@@ -302,23 +303,16 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
     );
   }
 
-  void _openFilters() {
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      backgroundColor: context.appColors.surface,
-      shape: const RoundedRectangleBorder(borderRadius: AppRadii.sheet),
-      builder: (sheetCtx) => _HomeFilterSheet(
-        onType: (label) {
-          Navigator.of(sheetCtx).pop();
-          _runSearch(label);
-        },
-        onBrowseUnits: () {
-          Navigator.of(sheetCtx).pop();
-          context.push('/units');
-        },
-      ),
+  Future<void> _openFilters() async {
+    // Returns the selected property type ('' = none / show all), or null when
+    // dismissed. Honest behavior preserved: a text-shortcut search on /projects
+    // (no fake backend category filter).
+    final type = await showAppFilterSheet<String>(
+      context,
+      builder: (_) => const _HomeFilterSheet(),
     );
+    if (!mounted || type == null) return;
+    _runSearch(type);
   }
 
   @override
@@ -552,108 +546,84 @@ class _FilterPill extends StatelessWidget {
   }
 }
 
-/// Home filter bottom sheet: property-type quick-search shortcuts (the mobile
-/// catalog has no backend type filter, so these run a text search on /projects)
-/// and a path into the full /units filters (price/status/area/bedrooms live
-/// there). Kept honest — no faked filters.
-class _HomeFilterSheet extends StatelessWidget {
-  const _HomeFilterSheet({required this.onType, required this.onBrowseUnits});
+/// Home quick-filter sheet: a premium property-type picker (single select).
+/// The mobile catalog has no backend type filter, so the choice runs an honest
+/// text-shortcut search on /projects (no faked category filter). Shares the
+/// app's [FilterSheetShell] so it matches the projects/units filters.
+class _HomeFilterSheet extends StatefulWidget {
+  const _HomeFilterSheet();
 
-  final ValueChanged<String> onType;
-  final VoidCallback onBrowseUnits;
+  @override
+  State<_HomeFilterSheet> createState() => _HomeFilterSheetState();
+}
+
+class _HomeFilterSheetState extends State<_HomeFilterSheet> {
+  String? _selected;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final theme = Theme.of(context);
-    final types = [
-      l10n.homeTypeResidential,
-      l10n.homeTypeOffice,
-      l10n.homeTypeCommercial,
-      l10n.homeTypeMedical,
-      l10n.homeTypeHotel,
+    final types = <(String, IconData)>[
+      (l10n.homeTypeResidential, Icons.home_work_outlined),
+      (l10n.homeTypeOffice, Icons.business_center_outlined),
+      (l10n.homeTypeCommercial, Icons.storefront_outlined),
+      (l10n.homeTypeMedical, Icons.local_hospital_outlined),
+      (l10n.homeTypeHotel, Icons.hotel_outlined),
     ];
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          0,
-          AppSpacing.lg,
-          AppSpacing.lg,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              l10n.homeFilterTypeLabel,
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: colors.inkStrong,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.xs,
-              runSpacing: AppSpacing.xs,
-              children: [
-                for (final t in types)
-                  _TypeChip(label: t, onTap: () => onType(t)),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            AppButton(
-              label: l10n.homeFilterAllUnits,
-              icon: Icons.tune_rounded,
-              variant: AppButtonVariant.primary,
-              expand: true,
-              onPressed: onBrowseUnits,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
-/// A small tappable property-type quick-search pill (used inside the filter
-/// sheet).
-class _TypeChip extends StatelessWidget {
-  const _TypeChip({required this.label, required this.onTap});
-
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Material(
-      color: colors.surfaceSoft,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadii.pillAll,
-        side: BorderSide(color: colors.hairline.withValues(alpha: 0.7)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
+    return FilterSheetShell(
+      title: l10n.homeFilterTypeLabel,
+      activeCount: _selected == null ? 0 : 1,
+      applyLabel: l10n.homeFilterViewResults,
+      resetLabel: l10n.homeFilterClearSelection,
+      onReset: () => setState(() => _selected = null),
+      onApply: () => Navigator.of(context).pop(_selected ?? ''),
+      sections: [
+        // Single premium card: helper text + single-select type chips in a tidy
+        // 2-column icon grid. (No duplicate bold title — the sheet header
+        // already reads "نوع العقار".)
+        Container(
+          width: double.infinity,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
-            vertical: AppSpacing.xs,
+            vertical: AppSpacing.sm + 2,
           ),
-          child: Center(
-            child: Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colors.inkStrong,
-                fontWeight: FontWeight.w600,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(AppRadii.lg),
+            border: Border.all(color: colors.hairline.withValues(alpha: 0.8)),
+            boxShadow: colors.shadowSoft,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.homeFilterHelper,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.inkMuted,
+                  height: 1.4,
+                ),
               ),
-            ),
+              const SizedBox(height: AppSpacing.md),
+              FilterChipGrid(
+                items: [
+                  for (final (label, icon) in types)
+                    FilterChipItem(
+                      label: label,
+                      icon: icon,
+                      selected: _selected == label,
+                      onTap: () => setState(
+                        () => _selected = _selected == label ? null : label,
+                      ),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
-      ),
+      ],
     );
   }
 }

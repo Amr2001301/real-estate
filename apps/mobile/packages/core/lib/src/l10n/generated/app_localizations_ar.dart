@@ -220,6 +220,15 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeTypeHotel => 'فندقي';
 
   @override
+  String get homeFilterHelper => 'اختر نوع العقار للبحث السريع.';
+
+  @override
+  String get homeFilterViewResults => 'عرض النتائج';
+
+  @override
+  String get homeFilterClearSelection => 'مسح الاختيار';
+
+  @override
   String get homeFeaturedProjects => 'مشاريع مميّزة';
 
   @override
@@ -281,6 +290,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maxLabel => 'إلى';
+
+  @override
+  String get filterPriceUnit => 'ج.م';
+
+  @override
+  String get filterAreaUnit => 'م²';
 
   @override
   String get sortTitle => 'ترتيب حسب';
