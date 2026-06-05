@@ -367,6 +367,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get viewUnits => 'View units';
 
   @override
+  String get projectOverview => 'Overview';
+
+  @override
+  String get projectAbout => 'About the project';
+
+  @override
+  String get projectUnits => 'Project units';
+
+  @override
+  String get labelAvailableUnits => 'Available units';
+
+  @override
+  String get labelCity => 'City';
+
+  @override
+  String get labelAmenities => 'Amenities';
+
+  @override
+  String get browseUnits => 'Browse units';
+
+  @override
+  String get talkToAdvisor => 'Talk to an advisor';
+
+  @override
+  String get projectInterestedTitle => 'Interested in this project?';
+
+  @override
   String unitCode(String code) {
     return 'Unit $code';
   }

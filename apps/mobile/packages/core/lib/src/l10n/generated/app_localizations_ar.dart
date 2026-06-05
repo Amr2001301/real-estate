@@ -364,6 +364,33 @@ class AppLocalizationsAr extends AppLocalizations {
   String get viewUnits => 'عرض الوحدات';
 
   @override
+  String get projectOverview => 'نظرة عامة';
+
+  @override
+  String get projectAbout => 'عن المشروع';
+
+  @override
+  String get projectUnits => 'وحدات المشروع';
+
+  @override
+  String get labelAvailableUnits => 'وحدات متاحة';
+
+  @override
+  String get labelCity => 'المدينة';
+
+  @override
+  String get labelAmenities => 'المرافق';
+
+  @override
+  String get browseUnits => 'تصفح الوحدات';
+
+  @override
+  String get talkToAdvisor => 'تواصل مع مستشار';
+
+  @override
+  String get projectInterestedTitle => 'مهتم بهذا المشروع؟';
+
+  @override
   String unitCode(String code) {
     return 'وحدة $code';
   }

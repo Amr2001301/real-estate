@@ -764,6 +764,60 @@ abstract class AppLocalizations {
   /// **'View units'**
   String get viewUnits;
 
+  /// No description provided for @projectOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get projectOverview;
+
+  /// No description provided for @projectAbout.
+  ///
+  /// In en, this message translates to:
+  /// **'About the project'**
+  String get projectAbout;
+
+  /// No description provided for @projectUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Project units'**
+  String get projectUnits;
+
+  /// No description provided for @labelAvailableUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Available units'**
+  String get labelAvailableUnits;
+
+  /// No description provided for @labelCity.
+  ///
+  /// In en, this message translates to:
+  /// **'City'**
+  String get labelCity;
+
+  /// No description provided for @labelAmenities.
+  ///
+  /// In en, this message translates to:
+  /// **'Amenities'**
+  String get labelAmenities;
+
+  /// No description provided for @browseUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse units'**
+  String get browseUnits;
+
+  /// No description provided for @talkToAdvisor.
+  ///
+  /// In en, this message translates to:
+  /// **'Talk to an advisor'**
+  String get talkToAdvisor;
+
+  /// No description provided for @projectInterestedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Interested in this project?'**
+  String get projectInterestedTitle;
+
   /// No description provided for @unitCode.
   ///
   /// In en, this message translates to:
