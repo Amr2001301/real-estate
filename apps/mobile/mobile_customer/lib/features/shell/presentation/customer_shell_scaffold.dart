@@ -153,7 +153,18 @@ class CustomerShellScaffold extends StatelessWidget {
                   : null,
             )
           : null,
-      body: navigationShell,
+      // iOS: a subtle cream fade sits behind the floating dock so content
+      // scrolling under it dissolves into the canvas instead of butting up hard
+      // against the bar — content stays fully readable (the fade is transparent
+      // across its top). Android's in-slot bar needs no fade.
+      body: context.isApplePlatform
+          ? Stack(
+              children: [
+                navigationShell,
+                const _BottomNavScrim(),
+              ],
+            )
+          : navigationShell,
       // Floating assistant — only on Home (avoids the maintenance tab's FAB).
       // On iOS lift it clear of the floating glass dock so it never sits on the
       // bar; Android's in-slot bar needs no extra lift.
@@ -203,6 +214,42 @@ class CustomerShellScaffold extends StatelessWidget {
         ),
       ),
     ];
+  }
+}
+
+/// A subtle bottom fade painted behind the floating iOS dock: transparent
+/// across its top, softly resolving into the app canvas near the bottom. Just
+/// enough to separate the dock from scrolling content without dimming it.
+/// Non-interactive; iOS-only (the shell only mounts it when [extendBody] is on).
+class _BottomNavScrim extends StatelessWidget {
+  const _BottomNavScrim();
+
+  @override
+  Widget build(BuildContext context) {
+    final canvas = context.appColors.canvas;
+    final inset = MediaQuery.paddingOf(context).bottom;
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
+      height: inset + 60,
+      child: IgnorePointer(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                canvas.withValues(alpha: 0.0),
+                canvas.withValues(alpha: 0.0),
+                canvas.withValues(alpha: 0.9),
+              ],
+              stops: const [0.0, 0.35, 1.0],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
