@@ -1094,6 +1094,12 @@ abstract class AppLocalizations {
   /// **'Add another unit to start comparing'**
   String get compareAddAnother;
 
+  /// No description provided for @compareAddUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a unit'**
+  String get compareAddUnit;
+
   /// No description provided for @compareSelectionHint.
   ///
   /// In en, this message translates to:

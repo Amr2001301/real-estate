@@ -13,6 +13,7 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
+import '../compare/compare_cubit.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
@@ -29,6 +30,9 @@ class HomeScreen extends StatelessWidget {
     final l10n = context.l10n;
     final session = context.watch<SessionCubit>().state;
     final isCustomer = session.isAuthenticated && session.role.isCustomerSide;
+    // Reserve extra space when the shell's sticky compare dock is showing, so
+    // the last card/CTA is never hidden behind it.
+    final comparing = context.watch<CompareCubit>().state.isNotEmpty;
 
     // Body-only: the persistent CustomerShellScaffold supplies the app bar
     // (title, notification bell, language/theme toggles, avatar) + bottom nav.
@@ -42,9 +46,10 @@ class HomeScreen extends StatelessWidget {
         // large blank, never hidden behind the dock. Android: the in-slot bar
         // handles its own safe area, so just a small comfortable gap above it.
         padding: EdgeInsets.only(
-          bottom: context.isApplePlatform
-              ? MediaQuery.of(context).padding.bottom + 32
-              : AppSpacing.lg,
+          bottom: (context.isApplePlatform
+                  ? MediaQuery.of(context).padding.bottom + 32
+                  : AppSpacing.lg) +
+              (comparing ? (context.isApplePlatform ? 112 : 84) : 0),
         ),
         children: [
           if (isCustomer) ...[

@@ -188,6 +188,7 @@
   "compareNow": "قارن الآن",
   "compareNeedMore": "اختر وحدة أخرى للمقارنة",
   "compareAddAnother": "أضف وحدة أخرى لبدء المقارنة",
+  "compareAddUnit": "أضف وحدة",
   "compareSelectionHint": "اختر من 2 إلى 4 وحدات للمقارنة",
 
   "chatTitle": "المساعد",

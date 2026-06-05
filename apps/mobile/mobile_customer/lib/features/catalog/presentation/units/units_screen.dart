@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/unit.dart';
 import '../compare/compare_cubit.dart';
-import '../compare/compare_selection_bar.dart';
 import '../widgets/catalog_controls.dart';
 import '../widgets/catalog_skeletons.dart';
 import '../widgets/unit_card.dart';
@@ -103,10 +102,8 @@ class _UnitsScreenState extends State<UnitsScreen> {
 
     return Scaffold(
       appBar: AdaptiveAppBar(title: Text(l10n.unitsTitle)),
-      body: Stack(
+      body: Column(
         children: [
-          Column(
-            children: [
               // Premium search + filter control area (matches /projects).
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -219,17 +216,6 @@ class _UnitsScreenState extends State<UnitsScreen> {
                     );
                 }
               },
-                ),
-              ),
-            ],
-          ),
-          // Sticky compare dock — only visible when units are selected.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: CompareSelectionBar(
-              onCompare: () => context.go('/compare'),
             ),
           ),
         ],

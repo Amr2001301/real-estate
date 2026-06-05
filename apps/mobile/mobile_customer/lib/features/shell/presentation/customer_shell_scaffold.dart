@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../catalog/presentation/compare/compare_cubit.dart';
+import '../../catalog/presentation/compare/compare_selection_bar.dart';
 import '../../notifications/presentation/unread_count_cubit.dart';
 import 'notification_bell.dart';
 
@@ -70,6 +72,13 @@ class CustomerShellScaffold extends StatelessWidget {
     final session = context.watch<SessionCubit>().state;
     final isCustomer = session.isAuthenticated && session.role.isCustomerSide;
     final current = navigationShell.currentIndex;
+
+    // Compare is a global, cart-like selection. Surface the sticky compare dock
+    // on the browsing tabs that show unit cards (Home + Units), so a selection
+    // made anywhere is actionable without first opening the Compare tab.
+    final compareCount = context.watch<CompareCubit>().state.length;
+    final showCompareBar = compareCount > 0 &&
+        (current == _Branch.home || current == _Branch.units);
 
     final titles = <int, String>{
       _Branch.home: l10n.navHome,
@@ -157,18 +166,25 @@ class CustomerShellScaffold extends StatelessWidget {
       // scrolling under it dissolves into the canvas instead of butting up hard
       // against the bar — content stays fully readable (the fade is transparent
       // across its top). Android's in-slot bar needs no fade.
-      body: context.isApplePlatform
-          ? Stack(
-              children: [
-                navigationShell,
-                const _BottomNavScrim(),
-              ],
-            )
-          : navigationShell,
+      body: Stack(
+        children: [
+          navigationShell,
+          if (context.isApplePlatform) const _BottomNavScrim(),
+          if (showCompareBar)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: CompareSelectionBar(
+                onCompare: () => context.go('/compare'),
+              ),
+            ),
+        ],
+      ),
       // Floating assistant — only on Home (avoids the maintenance tab's FAB).
       // On iOS lift it clear of the floating glass dock so it never sits on the
       // bar; Android's in-slot bar needs no extra lift.
-      floatingActionButton: current == _Branch.home
+      floatingActionButton: current == _Branch.home && compareCount == 0
           ? Padding(
               padding: EdgeInsets.only(
                 bottom: context.isApplePlatform ? AppSpacing.sm : 0,
