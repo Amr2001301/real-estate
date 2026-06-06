@@ -13,8 +13,11 @@ class MyPropertyRemoteDataSourceImpl implements MyPropertyRemoteDataSource {
 
   @override
   Future<List<PropertyRowDto>> listContracts() async {
+    // Backend route is `@Controller('contracts')` + `@Get('me/contracts')` =
+    // `/v1/contracts/me/contracts`. The bare `/me/contracts` path 404s (no such
+    // route), which left My Property permanently empty on mobile.
     final res = await _dio.get<Map<String, dynamic>>(
-      '/me/contracts',
+      '/contracts/me/contracts',
       queryParameters: {'page': 1, 'pageSize': 100},
     );
     final data = (res.data?['data'] as List?) ?? const [];

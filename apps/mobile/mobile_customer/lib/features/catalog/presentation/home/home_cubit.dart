@@ -18,7 +18,9 @@ class HomeCubit extends Cubit<HomeState> {
     final result = await _getFeaturedProjects(const NoParams());
     result.when(
       ok: (projects) => emit(
-        projects.isEmpty ? const HomeState.empty() : HomeState.success(projects),
+        projects.isEmpty
+            ? const HomeState.empty()
+            : HomeState.success(projects),
       ),
       err: (failure) => emit(state.toFailure(failure)),
     );

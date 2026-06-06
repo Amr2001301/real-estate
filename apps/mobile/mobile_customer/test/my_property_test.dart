@@ -30,32 +30,32 @@ class _FakeRepo implements MyPropertyRepository {
 }
 
 Map<String, dynamic> _contractJson({String? signedAt}) => {
-      'id': 'c1',
-      'contractNumber': 'CT-100',
-      'signedAt': signedAt,
-      'reservation': {'reservationNumber': 'R-9'},
-      'installmentPlan': {'monthlyAmount': '5000', 'totalMonths': 24},
-      'unit': {
-        'id': 'u1',
-        'code': 'A-101',
-        'type': 'APARTMENT',
-        'building': {
-          'phase': {
-            'project': {
-              'id': 'p1',
-              'name': {'ar': 'مشروع', 'en': 'Project'},
-            },
-          },
+  'id': 'c1',
+  'contractNumber': 'CT-100',
+  'signedAt': signedAt,
+  'reservation': {'reservationNumber': 'R-9'},
+  'installmentPlan': {'monthlyAmount': '5000', 'totalMonths': 24},
+  'unit': {
+    'id': 'u1',
+    'code': 'A-101',
+    'type': 'APARTMENT',
+    'building': {
+      'phase': {
+        'project': {
+          'id': 'p1',
+          'name': {'ar': 'مشروع', 'en': 'Project'},
         },
       },
-    };
+    },
+  },
+};
 
 void main() {
   group('PropertyRowDto → entity', () {
     test('signed contract maps to owned with full details', () {
-      final entity =
-          PropertyRowDto.fromJson(_contractJson(signedAt: '2026-01-02T00:00:00.000Z'))
-              .toEntity();
+      final entity = PropertyRowDto.fromJson(
+        _contractJson(signedAt: '2026-01-02T00:00:00.000Z'),
+      ).toEntity();
       expect(entity.contractId, 'c1');
       expect(entity.unitCode, 'A-101');
       expect(entity.projectName.en, 'Project');
@@ -73,27 +73,64 @@ void main() {
     });
   });
 
+  group('MyPropertyRemoteDataSourceImpl endpoint', () {
+    // Regression guard: the impl previously GET'd `/me/contracts`, which 404s
+    // (the real route is `/v1/contracts/me/contracts`), leaving My Property
+    // permanently empty on mobile. Exercise the real impl with a Dio whose
+    // interceptor captures the requested path.
+    test('GETs /contracts/me/contracts (not the 404 /me/contracts)', () async {
+      final dio = Dio();
+      final pathsSeen = <String>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            pathsSeen.add(options.path);
+            handler.resolve(
+              Response<Map<String, dynamic>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: const {'data': <dynamic>[]},
+              ),
+            );
+          },
+        ),
+      );
+      final ds = MyPropertyRemoteDataSourceImpl(dio);
+      final rows = await ds.listContracts();
+      expect(rows, isEmpty);
+      expect(pathsSeen, ['/contracts/me/contracts']);
+    });
+  });
+
   group('MyPropertyRepositoryImpl error mapping', () {
     test('401 → Err(unauthorized), never throws', () async {
-      final repo = MyPropertyRepositoryImpl(_FakeDataSource(
-        error: DioException(
-          requestOptions: RequestOptions(path: '/me/contracts'),
-          type: DioExceptionType.badResponse,
-          response: Response(
+      final repo = MyPropertyRepositoryImpl(
+        _FakeDataSource(
+          error: DioException(
             requestOptions: RequestOptions(path: '/me/contracts'),
-            statusCode: 401,
+            type: DioExceptionType.badResponse,
+            response: Response(
+              requestOptions: RequestOptions(path: '/me/contracts'),
+              statusCode: 401,
+            ),
           ),
         ),
-      ));
+      );
       final result = await repo.getMyProperties();
       expect(result.isErr, isTrue);
       expect(result.failureOrNull?.type, FailureType.unauthorized);
     });
 
     test('success maps rows to entities', () async {
-      final repo = MyPropertyRepositoryImpl(_FakeDataSource(
-        rows: [PropertyRowDto.fromJson(_contractJson(signedAt: '2026-01-01T00:00:00.000Z'))],
-      ));
+      final repo = MyPropertyRepositoryImpl(
+        _FakeDataSource(
+          rows: [
+            PropertyRowDto.fromJson(
+              _contractJson(signedAt: '2026-01-01T00:00:00.000Z'),
+            ),
+          ],
+        ),
+      );
       final result = await repo.getMyProperties();
       expect(result.dataOrNull, hasLength(1));
     });
@@ -122,9 +159,11 @@ void main() {
     });
 
     test('failure emits failure state', () async {
-      final cubit = MyPropertyCubit(GetMyProperties(
-        _FakeRepo(Result.err(AppFailure(type: FailureType.server))),
-      ));
+      final cubit = MyPropertyCubit(
+        GetMyProperties(
+          _FakeRepo(Result.err(AppFailure(type: FailureType.server))),
+        ),
+      );
       await cubit.load();
       expect(cubit.state.status, DataStatus.failure);
     });

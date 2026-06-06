@@ -86,40 +86,32 @@ class HomeScreen extends StatelessWidget {
                   : _fabClearance),
         ),
         children: [
-          if (isCustomer) ...[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                0,
-              ),
-              child: CustomerHomeDashboard(
-                name:
-                    session.sessionOrNull?.displayName ??
-                    session.sessionOrNull?.email,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-          ] else ...[
-            // One integrated hero+search module (navy hero with an embedded
-            // warm search dock), inspired by the website hero search panel.
+          if (isCustomer)
+            // Ownership Command Center: the dashboard owns its premium in-body
+            // header (the shell AppBar is suppressed for this branch) and all
+            // its section padding. No catalog/discovery sections for customers.
+            CustomerHomeDashboard(
+              name:
+                  session.sessionOrNull?.displayName ??
+                  session.sessionOrNull?.email,
+            )
+          else ...[
+            // Guest Home — unchanged: integrated hero+search, featured
+            // projects/units discovery, and the marketing CTA band.
             const _HeroSearchDock(),
             const SizedBox(height: AppSpacing.xl),
-          ],
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: SectionHeader(
-              title: l10n.homeFeaturedProjects,
-              onViewAll: () => context.go('/projects'),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: SectionHeader(
+                title: l10n.homeFeaturedProjects,
+                onViewAll: () => context.go('/projects'),
+              ),
             ),
-          ),
-          const _FeaturedProjects(),
-          const SizedBox(height: AppSpacing.xl),
-          // Units preview (self-managing: renders its own header, hides if no
-          // data). Shared by guest + customer as a discovery section.
-          const _FeaturedUnits(),
-          if (!isCustomer) ...[
+            const _FeaturedProjects(),
+            const SizedBox(height: AppSpacing.xl),
+            // Units preview (self-managing: renders its own header, hides if no
+            // data).
+            const _FeaturedUnits(),
             const SizedBox(height: AppSpacing.lg),
             const _HomeCtaBand(),
           ],

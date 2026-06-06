@@ -30,26 +30,28 @@ class _FakeRepo implements ContractsRepository {
 }
 
 Map<String, dynamic> _json({String? signedAt}) => {
-      'id': 'c1',
-      'contractNumber': 'CT-1',
-      'signedAt': signedAt,
-      'unit': {
-        'code': 'A-1',
-        'type': 'VILLA',
-        'building': {
-          'phase': {
-            'project': {
-              'name': {'ar': 'فيلا', 'en': 'Villa Project'},
-            },
-          },
+  'id': 'c1',
+  'contractNumber': 'CT-1',
+  'signedAt': signedAt,
+  'unit': {
+    'code': 'A-1',
+    'type': 'VILLA',
+    'building': {
+      'phase': {
+        'project': {
+          'name': {'ar': 'فيلا', 'en': 'Villa Project'},
         },
       },
-    };
+    },
+  },
+};
 
 void main() {
   group('ContractDto → entity', () {
     test('signed maps to signed status', () {
-      final c = ContractDto.fromJson(_json(signedAt: '2026-02-01T00:00:00.000Z')).toEntity();
+      final c = ContractDto.fromJson(
+        _json(signedAt: '2026-02-01T00:00:00.000Z'),
+      ).toEntity();
       expect(c.status, ContractStatus.signed);
       expect(c.contractNumber, 'CT-1');
       expect(c.projectName.en, 'Villa Project');
@@ -62,26 +64,59 @@ void main() {
     });
   });
 
+  group('ContractsRemoteDataSourceImpl endpoint', () {
+    // Regression guard: the impl previously GET'd `/me/contracts` (404). The
+    // real route is `/v1/contracts/me/contracts`.
+    test('GETs /contracts/me/contracts (not the 404 /me/contracts)', () async {
+      final dio = Dio();
+      final pathsSeen = <String>[];
+      dio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            pathsSeen.add(options.path);
+            handler.resolve(
+              Response<Map<String, dynamic>>(
+                requestOptions: options,
+                statusCode: 200,
+                data: const {'data': <dynamic>[]},
+              ),
+            );
+          },
+        ),
+      );
+      final ds = ContractsRemoteDataSourceImpl(dio);
+      final rows = await ds.listContracts();
+      expect(rows, isEmpty);
+      expect(pathsSeen, ['/contracts/me/contracts']);
+    });
+  });
+
   group('ContractsRepositoryImpl error mapping', () {
     test('403 → Err(forbidden)', () async {
-      final repo = ContractsRepositoryImpl(_FakeDataSource(
-        error: DioException(
-          requestOptions: RequestOptions(path: '/me/contracts'),
-          type: DioExceptionType.badResponse,
-          response: Response(
+      final repo = ContractsRepositoryImpl(
+        _FakeDataSource(
+          error: DioException(
             requestOptions: RequestOptions(path: '/me/contracts'),
-            statusCode: 403,
+            type: DioExceptionType.badResponse,
+            response: Response(
+              requestOptions: RequestOptions(path: '/me/contracts'),
+              statusCode: 403,
+            ),
           ),
         ),
-      ));
+      );
       final result = await repo.getMyContracts();
       expect(result.failureOrNull?.type, FailureType.forbidden);
     });
 
     test('success maps rows to entities', () async {
-      final repo = ContractsRepositoryImpl(_FakeDataSource(
-        rows: [ContractDto.fromJson(_json(signedAt: '2026-02-01T00:00:00.000Z'))],
-      ));
+      final repo = ContractsRepositoryImpl(
+        _FakeDataSource(
+          rows: [
+            ContractDto.fromJson(_json(signedAt: '2026-02-01T00:00:00.000Z')),
+          ],
+        ),
+      );
       final result = await repo.getMyContracts();
       expect(result.isOk, isTrue);
       expect(result.dataOrNull?.single.status, ContractStatus.signed);
@@ -96,15 +131,21 @@ void main() {
     });
 
     test('success → data state', () async {
-      final cubit = ContractsCubit(GetMyContracts(_FakeRepo(Ok([
-        Contract(
-          id: 'c1',
-          unitCode: 'A-1',
-          unitType: 'VILLA',
-          projectName: const Translatable(ar: '', en: 'P'),
-          status: ContractStatus.signed,
+      final cubit = ContractsCubit(
+        GetMyContracts(
+          _FakeRepo(
+            Ok([
+              Contract(
+                id: 'c1',
+                unitCode: 'A-1',
+                unitType: 'VILLA',
+                projectName: const Translatable(ar: '', en: 'P'),
+                status: ContractStatus.signed,
+              ),
+            ]),
+          ),
         ),
-      ]))));
+      );
       await cubit.load();
       expect(cubit.state.status, DataStatus.success);
     });

@@ -77,7 +77,8 @@ class CustomerShellScaffold extends StatelessWidget {
     // on the browsing tabs that show unit cards (Home + Units), so a selection
     // made anywhere is actionable without first opening the Compare tab.
     final compareCount = context.watch<CompareCubit>().state.length;
-    final showCompareBar = compareCount > 0 &&
+    final showCompareBar =
+        compareCount > 0 &&
         (current == _Branch.home || current == _Branch.units);
 
     final titles = <int, String>{
@@ -96,47 +97,57 @@ class CustomerShellScaffold extends StatelessWidget {
     final navItems = isCustomer
         ? [
             AppBottomNavItem(
-                icon: Icons.home_outlined,
-                cupertinoIcon: CupertinoIcons.house,
-                label: l10n.navHome),
+              icon: Icons.home_outlined,
+              cupertinoIcon: CupertinoIcons.house,
+              label: l10n.navHome,
+            ),
             AppBottomNavItem(
-                icon: Icons.home_work_outlined,
-                cupertinoIcon: CupertinoIcons.building_2_fill,
-                label: l10n.accountMyProperty),
+              icon: Icons.home_work_outlined,
+              cupertinoIcon: CupertinoIcons.building_2_fill,
+              label: l10n.accountMyProperty,
+            ),
             AppBottomNavItem(
-                icon: Icons.account_balance_wallet_outlined,
-                cupertinoIcon: CupertinoIcons.creditcard,
-                label: l10n.navFinance),
+              icon: Icons.account_balance_wallet_outlined,
+              cupertinoIcon: CupertinoIcons.creditcard,
+              label: l10n.navFinance,
+            ),
             AppBottomNavItem(
-                icon: Icons.build_outlined,
-                cupertinoIcon: CupertinoIcons.wrench,
-                label: l10n.accountMaintenance),
+              icon: Icons.build_outlined,
+              cupertinoIcon: CupertinoIcons.wrench,
+              label: l10n.accountMaintenance,
+            ),
             AppBottomNavItem(
-                icon: Icons.person_outline_rounded,
-                cupertinoIcon: CupertinoIcons.person_crop_circle,
-                label: l10n.navAccount),
+              icon: Icons.person_outline_rounded,
+              cupertinoIcon: CupertinoIcons.person_crop_circle,
+              label: l10n.navAccount,
+            ),
           ]
         : [
             AppBottomNavItem(
-                icon: Icons.home_outlined,
-                cupertinoIcon: CupertinoIcons.house,
-                label: l10n.navHome),
+              icon: Icons.home_outlined,
+              cupertinoIcon: CupertinoIcons.house,
+              label: l10n.navHome,
+            ),
             AppBottomNavItem(
-                icon: Icons.location_city_outlined,
-                cupertinoIcon: CupertinoIcons.building_2_fill,
-                label: l10n.navProjects),
+              icon: Icons.location_city_outlined,
+              cupertinoIcon: CupertinoIcons.building_2_fill,
+              label: l10n.navProjects,
+            ),
             AppBottomNavItem(
-                icon: Icons.grid_view_outlined,
-                cupertinoIcon: CupertinoIcons.square_grid_2x2,
-                label: l10n.navUnits),
+              icon: Icons.grid_view_outlined,
+              cupertinoIcon: CupertinoIcons.square_grid_2x2,
+              label: l10n.navUnits,
+            ),
             AppBottomNavItem(
-                icon: Icons.view_column_rounded,
-                cupertinoIcon: CupertinoIcons.square_split_2x1,
-                label: l10n.navCompare),
+              icon: Icons.view_column_rounded,
+              cupertinoIcon: CupertinoIcons.square_split_2x1,
+              label: l10n.navCompare,
+            ),
             AppBottomNavItem(
-                icon: Icons.more_horiz_rounded,
-                cupertinoIcon: CupertinoIcons.ellipsis,
-                label: l10n.navMore),
+              icon: Icons.more_horiz_rounded,
+              cupertinoIcon: CupertinoIcons.ellipsis,
+              label: l10n.navMore,
+            ),
           ];
 
     final selected = branchOrder.indexOf(current);
@@ -145,7 +156,13 @@ class CustomerShellScaffold extends StatelessWidget {
     final session_ = session.sessionOrNull;
     final displayName = session_?.displayName ?? session_?.email;
 
-    final showShellAppBar = !_selfChromeBranches.contains(current);
+    // The authenticated CUSTOMER Home renders its own premium in-body header
+    // (CustomerHomeHeader) with identity + notification + profile, so the
+    // generic shell AppBar is suppressed there. Guests keep the shell AppBar on
+    // Home (their hero/search layout relies on it).
+    final showShellAppBar =
+        !_selfChromeBranches.contains(current) &&
+        !(isCustomer && current == _Branch.home);
 
     return Scaffold(
       // iOS: let body content scroll behind the floating glass tab bar (real
@@ -226,7 +243,10 @@ class CustomerShellScaffold extends StatelessWidget {
           onTap: () => context.push('/account/profile'),
           child: displayName != null
               ? GradientAvatar(name: displayName, size: 34)
-              : Icon(Icons.person_outline_rounded, color: context.appColors.inkMuted),
+              : Icon(
+                  Icons.person_outline_rounded,
+                  color: context.appColors.inkMuted,
+                ),
         ),
       ),
     ];
@@ -308,8 +328,11 @@ class _AssistantFab extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           child: const Center(
-            child: Icon(Icons.auto_awesome_rounded,
-                color: AppPalette.gold300, size: 20),
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              color: AppPalette.gold300,
+              size: 20,
+            ),
           ),
         ),
       ),
@@ -317,7 +340,9 @@ class _AssistantFab extends StatelessWidget {
     return Semantics(
       button: true,
       label: tooltip,
-      child: tooltip != null ? Tooltip(message: tooltip!, child: button) : button,
+      child: tooltip != null
+          ? Tooltip(message: tooltip!, child: button)
+          : button,
     );
   }
 }

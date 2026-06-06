@@ -602,6 +602,42 @@ abstract class AppLocalizations {
   /// **'Payments due'**
   String get homeDuePaymentsLabel;
 
+  /// No description provided for @homePaymentDueSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Due soon'**
+  String get homePaymentDueSoon;
+
+  /// No description provided for @homePaymentUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get homePaymentUpcoming;
+
+  /// No description provided for @homeServiceUnitSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Your unit details'**
+  String get homeServiceUnitSub;
+
+  /// No description provided for @homeServiceContractsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts & documents'**
+  String get homeServiceContractsSub;
+
+  /// No description provided for @homeServicePaymentsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment history'**
+  String get homeServicePaymentsSub;
+
+  /// No description provided for @homeServiceVisitsSub.
+  ///
+  /// In en, this message translates to:
+  /// **'Viewing appointments'**
+  String get homeServiceVisitsSub;
+
   /// No description provided for @homeOwnerEmptyTitle.
   ///
   /// In en, this message translates to:

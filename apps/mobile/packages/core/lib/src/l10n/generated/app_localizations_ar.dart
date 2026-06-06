@@ -269,6 +269,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeDuePaymentsLabel => 'أقساط مستحقة';
 
   @override
+  String get homePaymentDueSoon => 'مستحق قريبًا';
+
+  @override
+  String get homePaymentUpcoming => 'قادم';
+
+  @override
+  String get homeServiceUnitSub => 'تفاصيل وحدتك';
+
+  @override
+  String get homeServiceContractsSub => 'العقود والمستندات';
+
+  @override
+  String get homeServicePaymentsSub => 'سجل الدفعات';
+
+  @override
+  String get homeServiceVisitsSub => 'مواعيد المعاينة';
+
+  @override
   String get homeOwnerEmptyTitle => 'ابدأ رحلتك العقارية';
 
   @override

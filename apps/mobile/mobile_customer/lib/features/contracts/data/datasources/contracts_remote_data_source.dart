@@ -12,8 +12,10 @@ class ContractsRemoteDataSourceImpl implements ContractsRemoteDataSource {
 
   @override
   Future<List<ContractDto>> listContracts() async {
+    // Backend route is `@Controller('contracts')` + `@Get('me/contracts')` =
+    // `/v1/contracts/me/contracts`. The bare `/me/contracts` path 404s.
     final res = await _dio.get<Map<String, dynamic>>(
-      '/me/contracts',
+      '/contracts/me/contracts',
       queryParameters: {'page': 1, 'pageSize': 100},
     );
     final data = (res.data?['data'] as List?) ?? const [];

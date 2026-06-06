@@ -272,6 +272,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeDuePaymentsLabel => 'Payments due';
 
   @override
+  String get homePaymentDueSoon => 'Due soon';
+
+  @override
+  String get homePaymentUpcoming => 'Upcoming';
+
+  @override
+  String get homeServiceUnitSub => 'Your unit details';
+
+  @override
+  String get homeServiceContractsSub => 'Contracts & documents';
+
+  @override
+  String get homeServicePaymentsSub => 'Payment history';
+
+  @override
+  String get homeServiceVisitsSub => 'Viewing appointments';
+
+  @override
   String get homeOwnerEmptyTitle => 'Start your property journey';
 
   @override

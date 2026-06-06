@@ -12,14 +12,15 @@ import '../../../maintenance/presentation/maintenance_requests_cubit.dart';
 import '../../../my_property/domain/entities/property.dart';
 import '../../../my_property/presentation/my_property_cubit.dart';
 import '../../../notifications/presentation/unread_count_cubit.dart';
+import 'customer_home_header.dart';
 
-/// Ownership-first customer home dashboard.
+/// Customer Home V2 — *Ownership Command Center*.
 ///
 /// Reads only cubits already provided to the `/home` route (no new API calls of
-/// its own, no business-logic changes). The hierarchy answers the owner's
-/// questions in order: what do I own, what payment needs attention, what live
-/// counts matter, quick actions, and recent service updates — discovery
-/// (featured projects/units) stays BELOW this, owned by [HomeScreen].
+/// its own, no business-logic changes). Vertical order answers the owner's
+/// questions: who am I (header) → what do I owe (payment hero) → what do I own
+/// (property) → live counts (metric strip) → fast services → recent updates.
+/// Discovery (featured projects/units) is NOT part of the customer Home.
 class CustomerHomeDashboard extends StatelessWidget {
   const CustomerHomeDashboard({super.key, required this.name});
 
@@ -42,30 +43,46 @@ class CustomerHomeDashboard extends StatelessWidget {
                 .where((i) => i.status == InstallmentStatus.overdue)
                 .length;
             final next = _earliestDue(unpaid);
+            final loading = installmentState.status == DataStatus.loading;
 
-            return StaggeredColumn(
-              spacing: AppSpacing.lg,
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _OwnershipHero(
-                  name: name,
-                  hasProperty: primary != null,
-                  next: next,
-                  unpaidCount: unpaid.length,
-                  loading: installmentState.status == DataStatus.loading,
-                ),
-                if (primary != null)
-                  _MyPropertyCard(
-                    property: primary,
-                    extraCount: properties.length - 1,
+                // 1 · Premium in-body header (full-bleed, owns its top inset).
+                CustomerHomeHeader(name: name, hasProperty: primary != null),
+                const SizedBox(height: AppSpacing.lg),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
                   ),
-                _PrioritySummary(
-                  unpaidCount: unpaid.length,
-                  overdueCount: overdueCount,
-                  installmentsLoading:
-                      installmentState.status == DataStatus.loading,
+                  child: StaggeredColumn(
+                    spacing: AppSpacing.lg,
+                    children: [
+                      // 2 · Critical payment / status hero.
+                      _PaymentHero(
+                        next: next,
+                        unpaidCount: unpaid.length,
+                        loading: loading,
+                      ),
+                      // 3 · My Property (the ownership centerpiece).
+                      if (primary != null)
+                        _MyPropertyCard(
+                          property: primary,
+                          extraCount: properties.length - 1,
+                        ),
+                      // 4 · Compact live metric strip.
+                      _MetricStrip(
+                        unpaidCount: unpaid.length,
+                        overdueCount: overdueCount,
+                        installmentsLoading: loading,
+                      ),
+                      // 5 · Fast service launcher.
+                      const _ServiceLauncher(),
+                      // 6 · Recent activity (hides when empty).
+                      const _RecentActivity(),
+                    ],
+                  ),
                 ),
-                const _QuickActions(),
-                const _RecentActivity(),
               ],
             );
           },
@@ -81,116 +98,10 @@ class CustomerHomeDashboard extends StatelessWidget {
   }
 }
 
-// ── 1 · Ownership hero ──────────────────────────────────────────────────────
+// ── 2 · Critical payment / status hero ──────────────────────────────────────
 
-/// Compact, premium identity + next-payment highlight. Always fits in the first
-/// viewport: greeting, owner status, the single most urgent installment, and
-/// the two primary owner actions.
-class _OwnershipHero extends StatelessWidget {
-  const _OwnershipHero({
-    required this.name,
-    required this.hasProperty,
-    required this.next,
-    required this.unpaidCount,
-    required this.loading,
-  });
-
-  final String? name;
-  final bool hasProperty;
-  final Installment? next;
-  final int unpaidCount;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return PremiumCard(
-      glow: true,
-      accentRail: AppTone.gold,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              GradientAvatar(name: name, size: 46),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.dashboardWelcome,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colors.brandGold,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      name == null
-                          ? l10n.accountRoleCustomer
-                          : l10n.homeGreeting(name!),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: colors.inkStrong,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              StatusBadge(
-                label: hasProperty
-                    ? l10n.homeOwnerRole
-                    : l10n.accountRoleCustomer,
-                tone: hasProperty ? BadgeTone.gold : BadgeTone.navy,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          _NextPaymentBox(
-            next: next,
-            unpaidCount: unpaidCount,
-            loading: loading,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: AppButton(
-                  label: l10n.homeViewInstallments,
-                  icon: AppIcons.installments,
-                  variant: AppButtonVariant.primary,
-                  size: AppButtonSize.medium,
-                  onPressed: () => context.push('/account/installments'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: AppButton(
-                  label: l10n.myPropertyRequestMaintenance,
-                  icon: AppIcons.maintenance,
-                  variant: AppButtonVariant.outline,
-                  size: AppButtonSize.medium,
-                  onPressed: () => context.push('/account/maintenance/new'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// The next-due payment highlight inside the hero. Shows the amount + a due /
-/// overdue badge, or an "all caught up" state when nothing is owed.
-class _NextPaymentBox extends StatelessWidget {
-  const _NextPaymentBox({
+class _PaymentHero extends StatelessWidget {
+  const _PaymentHero({
     required this.next,
     required this.unpaidCount,
     required this.loading,
@@ -199,6 +110,9 @@ class _NextPaymentBox extends StatelessWidget {
   final Installment? next;
   final int unpaidCount;
   final bool loading;
+
+  /// "Due soon" window for the مستحق قريبًا badge.
+  static const _dueSoonDays = 14;
 
   @override
   Widget build(BuildContext context) {
@@ -210,110 +124,149 @@ class _NextPaymentBox extends StatelessWidget {
     final hasDue = next != null;
     final overdue = next?.status == InstallmentStatus.overdue;
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: colors.surfaceSoft,
-        borderRadius: AppRadii.input,
-        border: Border.all(color: colors.hairline),
-      ),
-      child: AppSkeletonizer(
-        enabled: loading,
-        child: hasDue
-            ? Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+    // Status badge label + tone for the upcoming payment.
+    String? badgeLabel;
+    BadgeTone badgeTone = BadgeTone.gold;
+    AppTone railTone = AppTone.success;
+    if (hasDue) {
+      if (overdue) {
+        badgeLabel = l10n.installmentStatusOverdue;
+        badgeTone = BadgeTone.error;
+        railTone = AppTone.error;
+      } else {
+        final days = next!.dueDate.difference(DateTime.now()).inDays;
+        if (days <= _dueSoonDays) {
+          badgeLabel = l10n.homePaymentDueSoon;
+          badgeTone = BadgeTone.warning;
+          railTone = AppTone.warning;
+        } else {
+          badgeLabel = l10n.homePaymentUpcoming;
+          badgeTone = BadgeTone.gold;
+          railTone = AppTone.gold;
+        }
+      }
+    }
+
+    final Widget body = hasDue
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.homeNextInstallment,
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: colors.inkMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          PriceFormatter.formatString(
-                            next!.amount,
-                            languageCode: lang,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            color: colors.inkStrong,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        if (unpaidCount > 1) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n.homeInstallmentsRemaining(unpaidCount),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: colors.inkMuted,
-                            ),
-                          ),
-                        ],
-                      ],
+                  Text(
+                    l10n.homeNextInstallment,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colors.inkMuted,
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.sm),
-                  StatusBadge(
-                    label: overdue
-                        ? l10n.installmentStatusOverdue
-                        : l10n.installmentDueOn(
-                            DateFormatter.mediumDate(
-                              next!.dueDate,
-                              languageCode: lang,
-                            ),
-                          ),
-                    tone: overdue ? BadgeTone.error : BadgeTone.gold,
-                    dot: true,
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  IconChip(
-                    icon: Icons.check_circle_rounded,
-                    tone: AppTone.success,
-                    size: IconChipSize.sm,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.homeNoDuePayments,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: colors.inkStrong,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          l10n.homeNoDuePaymentsHint,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.inkMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  const Spacer(),
+                  StatusBadge(label: badgeLabel!, tone: badgeTone, dot: true),
                 ],
               ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                PriceFormatter.formatString(next!.amount, languageCode: lang),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  color: colors.inkStrong,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                l10n.installmentDueOn(
+                  DateFormatter.mediumDate(next!.dueDate, languageCode: lang),
+                ),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.inkMuted,
+                ),
+              ),
+              if (unpaidCount > 1) ...[
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  l10n.homeInstallmentsRemaining(unpaidCount),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
+                ),
+              ],
+            ],
+          )
+        : Row(
+            children: [
+              IconChip(
+                icon: Icons.check_circle_rounded,
+                tone: AppTone.success,
+                size: IconChipSize.md,
+                filled: true,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.homeNoDuePayments,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      l10n.homeNoDuePaymentsHint,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+
+    return PremiumCard(
+      glow: true,
+      accentRail: railTone,
+      child: AppSkeletonizer(
+        enabled: loading,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            body,
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: AppButton(
+                    label: l10n.homeViewInstallments,
+                    icon: AppIcons.installments,
+                    variant: AppButtonVariant.primary,
+                    size: AppButtonSize.medium,
+                    onPressed: () => context.push('/account/installments'),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: AppButton(
+                    label: l10n.myPropertyRequestMaintenance,
+                    icon: AppIcons.maintenance,
+                    variant: AppButtonVariant.outline,
+                    size: AppButtonSize.medium,
+                    onPressed: () => context.push('/account/maintenance/new'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ── 2 · My property card ────────────────────────────────────────────────────
+// ── 3 · My property card ────────────────────────────────────────────────────
 
-/// The owned asset, presented as one premium card: project, unit, key contract
-/// details, and inline service actions. Mirrors the web PropertyFocus asset
-/// panel, sized for mobile.
 class _MyPropertyCard extends StatelessWidget {
   const _MyPropertyCard({required this.property, required this.extraCount});
 
@@ -422,6 +375,11 @@ class _MyPropertyCard extends StatelessWidget {
                 spacing: AppSpacing.sm,
                 runSpacing: AppSpacing.sm,
                 children: [
+                  _PropertyLink(
+                    icon: AppIcons.property,
+                    label: l10n.accountMyProperty,
+                    onTap: () => context.push('/account/property'),
+                  ),
                   _PropertyLink(
                     icon: AppIcons.contract,
                     label: l10n.accountContracts,
@@ -536,10 +494,10 @@ class _PropertyLink extends StatelessWidget {
   }
 }
 
-// ── 3 · Priority summary (live counts) ──────────────────────────────────────
+// ── 4 · Compact live metric strip ───────────────────────────────────────────
 
-class _PrioritySummary extends StatelessWidget {
-  const _PrioritySummary({
+class _MetricStrip extends StatelessWidget {
+  const _MetricStrip({
     required this.unpaidCount,
     required this.overdueCount,
     required this.installmentsLoading,
@@ -552,77 +510,80 @@ class _PrioritySummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.appColors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppSectionHeader(title: l10n.dashboardOverview),
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: SummaryTile(
-                icon: AppIcons.installments,
-                value: '$unpaidCount',
-                label: l10n.homeDuePaymentsLabel,
-                subtitle: overdueCount > 0
-                    ? '${l10n.installmentStatusOverdue}: $overdueCount'
-                    : null,
-                tone: overdueCount > 0 ? AppTone.error : AppTone.gold,
-                loading: installmentsLoading,
-                onTap: () => context.push('/account/installments'),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child:
-                  BlocBuilder<
-                    MaintenanceRequestsCubit,
-                    MaintenanceRequestsState
-                  >(
-                    builder: (context, state) {
-                      final open = (state.data ?? const <MaintenanceRequest>[])
-                          .where((r) => _isOpen(r.status))
-                          .length;
-                      return SummaryTile(
-                        icon: AppIcons.maintenance,
-                        value: '$open',
-                        label: l10n.accountMaintenance,
-                        tone: AppTone.navy,
-                        loading: state.status == DataStatus.loading,
-                        onTap: () => context.push('/account/maintenance'),
-                      );
-                    },
+        PremiumCard(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: _MetricCell(
+                    icon: AppIcons.installments,
+                    value: '$unpaidCount',
+                    label: l10n.installmentsTitle,
+                    tone: overdueCount > 0 ? AppTone.error : AppTone.gold,
+                    loading: installmentsLoading,
+                    onTap: () => context.push('/account/installments'),
                   ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: BlocBuilder<UnreadCountCubit, int>(
-                builder: (context, count) => SummaryTile(
-                  icon: AppIcons.notification,
-                  value: '$count',
-                  label: l10n.accountNotifications,
-                  onTap: () => context.push('/account/notifications'),
                 ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: BlocBuilder<FavoritesCubit, FavoritesState>(
-                builder: (context, state) => SummaryTile(
-                  icon: AppIcons.favorite,
-                  value: '${state.items.length}',
-                  label: l10n.accountFavorites,
-                  loading: state.status == DataStatus.loading,
-                  onTap: () => context.push('/account/favorites'),
+                _StripDivider(color: colors.hairline),
+                Expanded(
+                  child:
+                      BlocBuilder<
+                        MaintenanceRequestsCubit,
+                        MaintenanceRequestsState
+                      >(
+                        builder: (context, state) {
+                          final open =
+                              (state.data ?? const <MaintenanceRequest>[])
+                                  .where((r) => _isOpen(r.status))
+                                  .length;
+                          return _MetricCell(
+                            icon: AppIcons.maintenance,
+                            value: '$open',
+                            label: l10n.accountMaintenance,
+                            tone: AppTone.navy,
+                            loading: state.status == DataStatus.loading,
+                            onTap: () => context.push('/account/maintenance'),
+                          );
+                        },
+                      ),
                 ),
-              ),
+                _StripDivider(color: colors.hairline),
+                Expanded(
+                  child: BlocBuilder<UnreadCountCubit, int>(
+                    builder: (context, count) => _MetricCell(
+                      icon: AppIcons.notification,
+                      value: '$count',
+                      label: l10n.accountNotifications,
+                      tone: AppTone.gold,
+                      onTap: () => context.push('/account/notifications'),
+                    ),
+                  ),
+                ),
+                _StripDivider(color: colors.hairline),
+                Expanded(
+                  child: BlocBuilder<FavoritesCubit, FavoritesState>(
+                    builder: (context, state) => _MetricCell(
+                      icon: AppIcons.favorite,
+                      value: '${state.items.length}',
+                      label: l10n.accountFavorites,
+                      tone: AppTone.muted,
+                      loading: state.status == DataStatus.loading,
+                      onTap: () => context.push('/account/favorites'),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ],
     );
@@ -634,49 +595,139 @@ class _PrioritySummary extends StatelessWidget {
       s == MaintenanceStatus.inProgress;
 }
 
-// ── 4 · Quick actions (compact) ─────────────────────────────────────────────
+class _StripDivider extends StatelessWidget {
+  const _StripDivider({required this.color});
+  final Color color;
 
-class _QuickActionItem {
-  const _QuickActionItem(this.icon, this.tone, this.label, this.route);
+  @override
+  Widget build(BuildContext context) => VerticalDivider(
+    width: 1,
+    thickness: 1,
+    color: color,
+    indent: 6,
+    endIndent: 6,
+  );
+}
+
+class _MetricCell extends StatelessWidget {
+  const _MetricCell({
+    required this.icon,
+    required this.value,
+    required this.label,
+    required this.tone,
+    required this.onTap,
+    this.loading = false,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final AppTone tone;
+  final VoidCallback onTap;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+
+    return InkWell(
+      onTap: loading ? null : onTap,
+      borderRadius: AppRadii.input,
+      child: AppSkeletonizer(
+        enabled: loading,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconChip(icon: icon, tone: tone, size: IconChipSize.sm),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                loading ? '0' : value,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  color: colors.inkStrong,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.inkMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── 5 · Fast service launcher ───────────────────────────────────────────────
+
+class _ServiceItem {
+  const _ServiceItem(
+    this.icon,
+    this.tone,
+    this.title,
+    this.subtitle,
+    this.route,
+  );
   final IconData icon;
   final AppTone tone;
-  final String label;
+  final String title;
+  final String subtitle;
   final String route;
 }
 
-class _QuickActions extends StatelessWidget {
-  const _QuickActions();
+class _ServiceLauncher extends StatelessWidget {
+  const _ServiceLauncher();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final rtl = Directionality.of(context) == TextDirection.rtl;
 
-    final items = <_QuickActionItem>[
-      _QuickActionItem(
+    final items = <_ServiceItem>[
+      _ServiceItem(
         AppIcons.property,
         AppTone.gold,
         l10n.accountMyProperty,
+        l10n.homeServiceUnitSub,
         '/account/property',
       ),
-      _QuickActionItem(
+      _ServiceItem(
         AppIcons.contract,
         AppTone.navy,
         l10n.accountContracts,
+        l10n.homeServiceContractsSub,
         '/account/contracts',
       ),
-      _QuickActionItem(
+      _ServiceItem(
         AppIcons.deposit,
         AppTone.gold,
         l10n.accountDeposits,
+        l10n.homeServicePaymentsSub,
         '/account/deposits',
       ),
-      _QuickActionItem(
+      _ServiceItem(
         AppIcons.visit,
         AppTone.navy,
         l10n.navVisits,
+        l10n.homeServiceVisitsSub,
         '/account/requests',
       ),
     ];
+
+    final theme = Theme.of(context);
+    final colors = context.appColors;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -689,31 +740,51 @@ class _QuickActions extends StatelessWidget {
           crossAxisCount: 2,
           mainAxisSpacing: AppSpacing.sm,
           crossAxisSpacing: AppSpacing.sm,
-          // Compact rows — wide, short tap targets (no wasted whitespace).
-          childAspectRatio: 3.4,
+          childAspectRatio: 2.5,
           children: [
-            for (final a in items)
+            for (final s in items)
               PremiumCard(
                 elevation: AppCardElevation.soft,
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.sm,
                   vertical: AppSpacing.xs,
                 ),
-                onTap: () => context.push(a.route),
+                onTap: () => context.push(s.route),
                 child: Row(
                   children: [
-                    IconChip(icon: a.icon, tone: a.tone, size: IconChipSize.sm),
+                    IconChip(icon: s.icon, tone: s.tone, size: IconChipSize.sm),
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: Text(
-                        a.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: context.appColors.inkStrong,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            s.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              color: colors.inkStrong,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            s.subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: colors.inkMuted,
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    Icon(
+                      rtl
+                          ? Icons.chevron_left_rounded
+                          : Icons.chevron_right_rounded,
+                      size: 18,
+                      color: colors.inkMuted,
                     ),
                   ],
                 ),
@@ -725,11 +796,11 @@ class _QuickActions extends StatelessWidget {
   }
 }
 
-// ── 5 · Recent activity ─────────────────────────────────────────────────────
+// ── 6 · Recent activity ─────────────────────────────────────────────────────
 
-/// Latest maintenance updates (max 3), shown before discovery. Hides entirely
-/// when there's nothing to show. Uses the maintenance cubit already loaded for
-/// the priority summary — no extra fetch.
+/// Latest maintenance updates (max 3). Hides entirely when there's nothing to
+/// show. Uses the maintenance cubit already loaded for the metric strip — no
+/// extra fetch.
 class _RecentActivity extends StatelessWidget {
   const _RecentActivity();
 
