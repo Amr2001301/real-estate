@@ -546,6 +546,18 @@ class AppLocalizationsAr extends AppLocalizations {
   String get compareAddUnit => 'أضف وحدة';
 
   @override
+  String get compareStepSelect => 'اختر';
+
+  @override
+  String get compareStepLimit => 'حتى ٤';
+
+  @override
+  String get compareStepCompare => 'قارن';
+
+  @override
+  String get compareBrowseUnits => 'تصفّح الوحدات';
+
+  @override
   String get compareSelectionHint => 'اختر من 2 إلى 4 وحدات للمقارنة';
 
   @override

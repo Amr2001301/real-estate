@@ -189,6 +189,10 @@
   "compareNeedMore": "اختر وحدة أخرى للمقارنة",
   "compareAddAnother": "أضف وحدة أخرى لبدء المقارنة",
   "compareAddUnit": "أضف وحدة",
+  "compareStepSelect": "اختر",
+  "compareStepLimit": "حتى ٤",
+  "compareStepCompare": "قارن",
+  "compareBrowseUnits": "تصفّح الوحدات",
   "compareSelectionHint": "اختر من 2 إلى 4 وحدات للمقارنة",
 
   "chatTitle": "المساعد",

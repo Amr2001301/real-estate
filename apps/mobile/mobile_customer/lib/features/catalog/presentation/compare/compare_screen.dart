@@ -37,17 +37,7 @@ class CompareScreen extends StatelessWidget {
       body: BlocBuilder<CompareCubit, List<Unit>>(
         builder: (context, units) {
           if (units.isEmpty) {
-            return EmptyState(
-              icon: Icons.compare_arrows_rounded,
-              title: l10n.compareEmptyTitle,
-              message: l10n.compareEmptyMessage,
-              action: AppButton(
-                label: l10n.compareSelectUnits,
-                icon: Icons.add_rounded,
-                variant: AppButtonVariant.gold,
-                onPressed: () => context.go('/units?compare=true'),
-              ),
-            );
+            return const _CompareEmpty();
           }
 
           final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -465,6 +455,280 @@ class _AddUnitButton extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Premium compare empty state: a "two properties" illustration, clear copy, a
+/// compact how-it-works strip, and gold primary + outline browse actions.
+class _CompareEmpty extends StatelessWidget {
+  const _CompareEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final dockClear = context.isApplePlatform ? bottomInset + 60 : 16.0;
+
+    return Center(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.xl, AppSpacing.xl, AppSpacing.xl, dockClear),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const _CompareIllustration(),
+            const SizedBox(height: AppSpacing.xxl),
+            Text(
+              l10n.compareEmptyTitle,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: colors.inkStrong,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l10n.compareEmptyMessage,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.inkMuted,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            // How it works — three quick steps.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _Step(
+                  icon: Icons.touch_app_outlined,
+                  label: l10n.compareStepSelect,
+                ),
+                const _StepArrow(),
+                _Step(
+                  icon: Icons.layers_outlined,
+                  label: l10n.compareStepLimit,
+                ),
+                const _StepArrow(),
+                _Step(
+                  icon: Icons.compare_arrows_rounded,
+                  label: l10n.compareStepCompare,
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxl),
+            AppButton(
+              label: l10n.compareSelectUnits,
+              icon: Icons.add_rounded,
+              variant: AppButtonVariant.gold,
+              expand: true,
+              onPressed: () => context.go('/units?compare=true'),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: l10n.compareBrowseUnits,
+              icon: Icons.grid_view_rounded,
+              variant: AppButtonVariant.outline,
+              expand: true,
+              onPressed: () => context.go('/units'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Two overlapping mini unit-cards (one navy, one cream) with a central gold
+/// compare badge — an on-brand "compare two properties" motif.
+class _CompareIllustration extends StatelessWidget {
+  const _CompareIllustration();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 170,
+      width: 230,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Soft gold halo behind the cards.
+          Center(
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    context.appColors.brandGold.withValues(alpha: 0.14),
+                    context.appColors.brandGold.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Align(
+            alignment: const Alignment(-0.62, 0),
+            child: Transform.rotate(
+              angle: -0.14,
+              child: const _MiniCard(navy: true),
+            ),
+          ),
+          Align(
+            alignment: const Alignment(0.62, 0),
+            child: Transform.rotate(
+              angle: 0.14,
+              child: const _MiniCard(navy: false),
+            ),
+          ),
+          const _CompareBadge(),
+        ],
+      ),
+    );
+  }
+}
+
+/// A stylised mini unit card used in the empty-state illustration.
+class _MiniCard extends StatelessWidget {
+  const _MiniCard({required this.navy});
+  final bool navy;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final fg = navy ? Colors.white : colors.inkStrong;
+    final line = (navy ? Colors.white : colors.inkMuted).withValues(alpha: 0.28);
+    return Container(
+      width: 104,
+      height: 138,
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        gradient: navy
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppPalette.navy700, AppPalette.navy],
+              )
+            : null,
+        color: navy ? null : colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: navy
+            ? null
+            : Border.all(color: colors.hairline.withValues(alpha: 0.9)),
+        boxShadow: colors.shadowCard,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.apartment_rounded, size: 22, color: AppPalette.gold300),
+          const Spacer(),
+          for (var i = 0; i < 3; i++) ...[
+            Container(
+              height: 6,
+              width: i == 0 ? 60 : (i == 1 ? 44 : 52),
+              decoration: BoxDecoration(
+                color: i == 0 ? AppPalette.gold400.withValues(alpha: 0.8) : line,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            if (i < 2) const SizedBox(height: 6),
+          ],
+          const SizedBox(height: 2),
+          Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: Icon(Icons.favorite_border_rounded, size: 12, color: fg.withValues(alpha: 0.5)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The central gold compare badge.
+class _CompareBadge extends StatelessWidget {
+  const _CompareBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 58,
+      height: 58,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppPalette.gold300, AppPalette.gold500],
+        ),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.45),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: const Icon(Icons.compare_arrows_rounded,
+          color: AppPalette.navy, size: 28),
+    );
+  }
+}
+
+/// One labelled step in the how-it-works strip.
+class _Step extends StatelessWidget {
+  const _Step({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: colors.brandGoldSoft,
+            borderRadius: BorderRadius.circular(AppRadii.md),
+            border: Border.all(color: colors.brandGold.withValues(alpha: 0.25)),
+          ),
+          child: Icon(icon, size: 20, color: colors.brandGold),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: colors.inkMuted,
+                fontWeight: FontWeight.w600,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A muted directional connector between how-it-works steps.
+class _StepArrow extends StatelessWidget {
+  const _StepArrow();
+
+  @override
+  Widget build(BuildContext context) {
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      child: Icon(
+        rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+        size: 20,
+        color: context.appColors.hairline,
       ),
     );
   }

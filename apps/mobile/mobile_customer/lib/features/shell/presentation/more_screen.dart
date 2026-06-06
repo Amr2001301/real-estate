@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../common/brand_mark.dart';
+
 /// The guest "المزيد" tab: a premium hub — a navy sign-in banner up top, then
 /// the public quick actions (assistant) and app settings (language, theme). The
 /// shell supplies the app bar + bottom nav.
@@ -105,18 +107,11 @@ class _SignInBanner extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: AppPalette.gold400,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
+                      const BrandMark(size: 38),
+                      const SizedBox(width: AppSpacing.sm),
                       Text(
                         l10n.authEyebrow,
-                        style: theme.textTheme.labelMedium?.copyWith(
+                        style: theme.textTheme.labelLarge?.copyWith(
                           color: AppPalette.gold300,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.4,
@@ -124,7 +119,7 @@ class _SignInBanner extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     l10n.moreSignInTitle,
                     style: theme.textTheme.titleLarge?.copyWith(

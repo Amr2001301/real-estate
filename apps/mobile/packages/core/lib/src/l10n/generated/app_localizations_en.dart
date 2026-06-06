@@ -549,6 +549,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get compareAddUnit => 'Add a unit';
 
   @override
+  String get compareStepSelect => 'Select';
+
+  @override
+  String get compareStepLimit => 'Up to 4';
+
+  @override
+  String get compareStepCompare => 'Compare';
+
+  @override
+  String get compareBrowseUnits => 'Browse units';
+
+  @override
   String get compareSelectionHint => 'Select 2 to 4 units to compare';
 
   @override

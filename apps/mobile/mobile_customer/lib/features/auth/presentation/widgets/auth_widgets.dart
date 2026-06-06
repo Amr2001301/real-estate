@@ -1,6 +1,8 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
+import '../../../../common/brand_mark.dart';
+
 /// Premium navy hero header for the auth screens: gold eyebrow + brand, a large
 /// white title and a muted subtitle, over the website navy depth gradient with a
 /// soft gold glow and a faint dotted texture. Rounded bottom corners, with a
@@ -85,22 +87,15 @@ class AuthHeader extends StatelessWidget {
                       child: _GlassBack(onTap: onBack ?? () {}),
                     ),
                     const SizedBox(height: AppSpacing.lg),
-                    // Eyebrow.
+                    // Brand mark + name.
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: AppPalette.gold400,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.xs),
+                        const BrandMark(size: 38),
+                        const SizedBox(width: AppSpacing.sm),
                         Text(
                           l10n.authEyebrow,
-                          style: theme.textTheme.labelMedium?.copyWith(
+                          style: theme.textTheme.labelLarge?.copyWith(
                             color: AppPalette.gold300,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.4,
@@ -108,7 +103,7 @@ class AuthHeader extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.md),
                     Text(
                       title,
                       style: theme.textTheme.headlineMedium?.copyWith(

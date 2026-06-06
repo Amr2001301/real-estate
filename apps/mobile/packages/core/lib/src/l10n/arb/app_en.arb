@@ -192,6 +192,10 @@
   "compareNeedMore": "Select another unit to compare",
   "compareAddAnother": "Add another unit to start comparing",
   "compareAddUnit": "Add a unit",
+  "compareStepSelect": "Select",
+  "compareStepLimit": "Up to 4",
+  "compareStepCompare": "Compare",
+  "compareBrowseUnits": "Browse units",
   "compareSelectionHint": "Select 2 to 4 units to compare",
 
   "chatTitle": "Assistant",

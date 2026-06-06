@@ -13,6 +13,7 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
+import '../../../../common/brand_mark.dart';
 import '../compare/compare_cubit.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
@@ -376,14 +377,7 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: const BoxDecoration(
-                          color: AppPalette.gold400,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
+                      const BrandMark(size: 26),
                       const SizedBox(width: AppSpacing.xs),
                       Text(
                         l10n.homeHeroEyebrow,

@@ -1100,6 +1100,30 @@ abstract class AppLocalizations {
   /// **'Add a unit'**
   String get compareAddUnit;
 
+  /// No description provided for @compareStepSelect.
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get compareStepSelect;
+
+  /// No description provided for @compareStepLimit.
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 4'**
+  String get compareStepLimit;
+
+  /// No description provided for @compareStepCompare.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare'**
+  String get compareStepCompare;
+
+  /// No description provided for @compareBrowseUnits.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse units'**
+  String get compareBrowseUnits;
+
   /// No description provided for @compareSelectionHint.
   ///
   /// In en, this message translates to:
