@@ -54,9 +54,14 @@ export function PropertyFocus({
   const overdue = nextInstallment?.status === 'OVERDUE';
 
   return (
-    <div className="flex flex-col items-stretch justify-between gap-6 rounded-2xl border border-hairline bg-surface p-6 shadow-sm lg:flex-row">
+    <div className="relative flex flex-col items-stretch justify-between gap-6 overflow-hidden rounded-3xl border border-hairline bg-surface p-6 shadow-card lg:flex-row">
+      {/* Soft gold corner glow — the account gold-glow card language. */}
+      <span
+        className="pointer-events-none absolute -left-16 -top-20 h-44 w-44 rounded-full bg-gold-200/25 blur-3xl"
+        aria-hidden
+      />
       {/* ── Asset & contract panel (~65%) ── */}
-      <div className="flex w-full flex-col justify-between lg:w-2/3">
+      <div className="relative flex w-full flex-col justify-between lg:w-2/3">
         <div>
           <span className="text-sm font-medium text-gold-600">عقارك</span>
 
@@ -79,7 +84,10 @@ export function PropertyFocus({
           {/* Contract sub-grid */}
           <div className="my-2 grid grid-cols-3 gap-4 border-y border-hairline/80 py-4">
             <Stat label="رقم العقد" value={contract.contractNumber ?? '—'} />
-            <Stat label="تاريخ التوقيع" value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'} />
+            <Stat
+              label="تاريخ التوقيع"
+              value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'}
+            />
             {plan && <Stat label="خطة التقسيط" value={`${formatNumber(plan.totalMonths)} شهرًا`} />}
           </div>
         </div>
@@ -87,7 +95,12 @@ export function PropertyFocus({
         {/* Secondary actions */}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           {unit?.id && (
-            <ButtonLink href={`${routes.accountMaintenanceNew}?unitId=${unit.id}`} variant="ghost" size="sm" className={SECONDARY_PILL}>
+            <ButtonLink
+              href={`${routes.accountMaintenanceNew}?unitId=${unit.id}`}
+              variant="ghost"
+              size="sm"
+              className={SECONDARY_PILL}
+            >
               <Wrench className="h-4 w-4" aria-hidden />
               طلب صيانة
             </ButtonLink>
@@ -105,12 +118,14 @@ export function PropertyFocus({
       {/* ── Next-payment invoice box (~35%) ── */}
       <div
         className={cn(
-          'flex w-full flex-col items-center justify-between rounded-2xl border p-5 text-center lg:w-1/3',
+          'relative flex w-full flex-col items-center justify-between rounded-2xl border p-5 text-center lg:w-1/3',
           overdue ? 'border-error/20 bg-error/[0.05]' : 'border-gold-200/70 bg-gold-100/30',
         )}
       >
         <div className="flex flex-col items-center">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">القسط القادم</span>
+          <span className="text-[11px] font-bold uppercase tracking-wide text-ink-muted">
+            القسط القادم
+          </span>
 
           {nextInstallment ? (
             <>
@@ -127,7 +142,9 @@ export function PropertyFocus({
                 </span>
               )}
               {unpaidCount > 1 && (
-                <p className="mt-2 text-[11px] text-ink-muted">{formatNumber(unpaidCount)} أقساط متبقية</p>
+                <p className="mt-2 text-[11px] text-ink-muted">
+                  {formatNumber(unpaidCount)} أقساط متبقية
+                </p>
               )}
             </>
           ) : (

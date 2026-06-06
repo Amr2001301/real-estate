@@ -235,6 +235,47 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeExploreProjects => 'استكشف المشاريع';
 
   @override
+  String homeGreeting(String name) {
+    return 'مرحبًا، $name';
+  }
+
+  @override
+  String get homeOwnerRole => 'عميل · مالك وحدة';
+
+  @override
+  String get homeAfterSales => 'خدمات ما بعد الشراء';
+
+  @override
+  String get homeNextInstallment => 'القسط القادم';
+
+  @override
+  String homeInstallmentsRemaining(int count) {
+    return '$count أقساط متبقية';
+  }
+
+  @override
+  String get homeNoDuePayments => 'لا أقساط مستحقة';
+
+  @override
+  String get homeNoDuePaymentsHint => 'سجلّك خالٍ من المستحقات الحالية';
+
+  @override
+  String get homeViewInstallments => 'عرض الأقساط';
+
+  @override
+  String get homeRecentActivity => 'آخر التحديثات';
+
+  @override
+  String get homeDuePaymentsLabel => 'أقساط مستحقة';
+
+  @override
+  String get homeOwnerEmptyTitle => 'ابدأ رحلتك العقارية';
+
+  @override
+  String get homeOwnerEmptyMessage =>
+      'تصفّح المشاريع والوحدات، واحفظ ما يهمّك أو اطلب زيارة.';
+
+  @override
   String get homeContactUs => 'تواصل معنا';
 
   @override

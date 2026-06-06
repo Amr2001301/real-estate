@@ -238,6 +238,47 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeExploreProjects => 'Explore projects';
 
   @override
+  String homeGreeting(String name) {
+    return 'Hi, $name';
+  }
+
+  @override
+  String get homeOwnerRole => 'Customer · Unit owner';
+
+  @override
+  String get homeAfterSales => 'After-sales services';
+
+  @override
+  String get homeNextInstallment => 'Next installment';
+
+  @override
+  String homeInstallmentsRemaining(int count) {
+    return '$count installments remaining';
+  }
+
+  @override
+  String get homeNoDuePayments => 'No payments due';
+
+  @override
+  String get homeNoDuePaymentsHint => 'You\'re all caught up.';
+
+  @override
+  String get homeViewInstallments => 'View installments';
+
+  @override
+  String get homeRecentActivity => 'Recent updates';
+
+  @override
+  String get homeDuePaymentsLabel => 'Payments due';
+
+  @override
+  String get homeOwnerEmptyTitle => 'Start your property journey';
+
+  @override
+  String get homeOwnerEmptyMessage =>
+      'Browse projects and units, save what matters, or request a visit.';
+
+  @override
   String get homeContactUs => 'Contact us';
 
   @override

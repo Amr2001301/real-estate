@@ -5,9 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../favorites/presentation/favorites_cubit.dart';
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
-import '../../../notifications/presentation/unread_count_cubit.dart';
+import '../../../installments/presentation/cubit/installments_cubit.dart';
+import '../../../maintenance/presentation/maintenance_requests_cubit.dart';
+import '../../../my_property/presentation/my_property_cubit.dart';
 import '../../domain/entities/catalog_enums.dart';
 import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
@@ -18,11 +19,18 @@ import '../compare/compare_cubit.dart';
 import '../widgets/glass.dart';
 import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
+import 'customer_home_dashboard.dart';
 import 'home_cubit.dart';
 
-/// The الرئيسية tab. For a signed-in customer it is a premium dashboard
-/// (identity greeting + live summary tiles + quick actions) above the featured
-/// projects; for guests it stays the marketing hero + featured + CTAs.
+/// Bottom clearance reserved on the Home tab for the shell's floating assistant
+/// FAB (46px + lift), so the last discovery card / carousel dots never end up
+/// hidden behind it. Applied only when the compare dock isn't taking over.
+const double _fabClearance = 72;
+
+/// The الرئيسية tab. For a signed-in customer it is an ownership-first dashboard
+/// (greeting + owned property + next installment + live counts + quick actions
+/// + recent activity) above the featured projects/units; for guests it stays
+/// the marketing hero + featured + CTAs.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -38,7 +46,23 @@ class HomeScreen extends StatelessWidget {
     // Body-only: the persistent CustomerShellScaffold supplies the app bar
     // (title, notification bell, language/theme toggles, avatar) + bottom nav.
     return RefreshIndicator(
-      onRefresh: () => context.read<HomeCubit>().load(),
+      onRefresh: () async {
+        // Capture cubits before the await so no BuildContext is used across the
+        // async gap. Pull-to-refresh also refreshes the owner dashboard cubits
+        // that the /home route provides for a signed-in customer.
+        final home = context.read<HomeCubit>();
+        final property = isCustomer ? context.read<MyPropertyCubit>() : null;
+        final installments = isCustomer
+            ? context.read<InstallmentsCubit>()
+            : null;
+        final maintenance = isCustomer
+            ? context.read<MaintenanceRequestsCubit>()
+            : null;
+        await home.load();
+        property?.load();
+        installments?.load();
+        maintenance?.load();
+      },
       child: ListView(
         // Single source of bottom clearance (no extra trailing spacer below).
         // iOS: the floating dock overlays the body (extendBody) and floats
@@ -46,11 +70,20 @@ class HomeScreen extends StatelessWidget {
         // the CTA sits just above the dock (~16–24px breathing room) — never a
         // large blank, never hidden behind the dock. Android: the in-slot bar
         // handles its own safe area, so just a small comfortable gap above it.
+        //
+        // When NOT comparing, the shell floats the assistant FAB over the Home
+        // tab's bottom-start corner; reserve [_fabClearance] so the last
+        // discovery card + carousel dots always settle ABOVE the FAB rather than
+        // hidden behind it. While comparing, the sticky compare dock replaces
+        // the FAB, so its larger offset applies instead.
         padding: EdgeInsets.only(
-          bottom: (context.isApplePlatform
+          bottom:
+              (context.isApplePlatform
                   ? MediaQuery.of(context).padding.bottom + 32
                   : AppSpacing.lg) +
-              (comparing ? (context.isApplePlatform ? 112 : 84) : 0),
+              (comparing
+                  ? (context.isApplePlatform ? 112 : 84)
+                  : _fabClearance),
         ),
         children: [
           if (isCustomer) ...[
@@ -61,7 +94,7 @@ class HomeScreen extends StatelessWidget {
                 AppSpacing.lg,
                 0,
               ),
-              child: _CustomerDashboard(
+              child: CustomerHomeDashboard(
                 name:
                     session.sessionOrNull?.displayName ??
                     session.sessionOrNull?.email,
@@ -92,172 +125,6 @@ class HomeScreen extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-/// Quick-action destination used by the dashboard grid.
-class _QuickAction {
-  const _QuickAction(this.icon, this.tone, this.label, this.route);
-  final IconData icon;
-  final AppTone tone;
-  final String label;
-  final String route;
-}
-
-/// Premium authenticated-customer overview: identity greeting, two live
-/// summary tiles (unread notifications + favorites — both already loaded
-/// app-wide), and a quick-actions grid into the account areas. No new API
-/// calls; counts come from existing app-wide cubits and degrade gracefully.
-class _CustomerDashboard extends StatelessWidget {
-  const _CustomerDashboard({required this.name});
-
-  final String? name;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-
-    final actions = <_QuickAction>[
-      _QuickAction(
-        AppIcons.property,
-        AppTone.gold,
-        l10n.accountMyProperty,
-        '/account/property',
-      ),
-      _QuickAction(
-        AppIcons.installments,
-        AppTone.navy,
-        l10n.installmentsTitle,
-        '/account/installments',
-      ),
-      _QuickAction(
-        AppIcons.deposit,
-        AppTone.gold,
-        l10n.accountDeposits,
-        '/account/deposits',
-      ),
-      _QuickAction(
-        AppIcons.contract,
-        AppTone.success,
-        l10n.accountContracts,
-        '/account/contracts',
-      ),
-      _QuickAction(
-        AppIcons.maintenance,
-        AppTone.navy,
-        l10n.accountMaintenance,
-        '/account/maintenance',
-      ),
-      _QuickAction(
-        AppIcons.visit,
-        AppTone.gold,
-        l10n.navVisits,
-        '/account/requests',
-      ),
-    ];
-
-    return StaggeredColumn(
-      spacing: AppSpacing.lg,
-      children: [
-        // ── Identity greeting ──────────────────────────────────────────────
-        PremiumCard(
-          glow: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                l10n.dashboardWelcome,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: context.appColors.brandGold,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              GradientAvatar.identity(
-                name: name ?? l10n.accountRoleCustomer,
-                role: l10n.accountRoleCustomer,
-              ),
-            ],
-          ),
-        ),
-
-        // ── Live overview tiles ───────────────────────────────────────────
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppSectionHeader(title: l10n.dashboardOverview),
-            const SizedBox(height: AppSpacing.sm),
-            Row(
-              children: [
-                Expanded(
-                  child: BlocBuilder<UnreadCountCubit, int>(
-                    builder: (context, count) => SummaryTile(
-                      icon: AppIcons.notification,
-                      value: '$count',
-                      label: l10n.accountNotifications,
-                      onTap: () => context.push('/account/notifications'),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: BlocBuilder<FavoritesCubit, FavoritesState>(
-                    builder: (context, state) => SummaryTile(
-                      icon: AppIcons.favorite,
-                      value: '${state.items.length}',
-                      label: l10n.accountFavorites,
-                      loading: state.status == DataStatus.loading,
-                      onTap: () => context.push('/account/favorites'),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-
-        // ── Quick actions ─────────────────────────────────────────────────
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AppSectionHeader(title: l10n.dashboardQuickActions),
-            const SizedBox(height: AppSpacing.sm),
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              mainAxisSpacing: AppSpacing.sm,
-              crossAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 1.7,
-              children: [
-                for (final a in actions)
-                  PremiumCard(
-                    elevation: AppCardElevation.soft,
-                    onTap: () => context.push(a.route),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        IconChip(icon: a.icon, tone: a.tone),
-                        Text(
-                          a.label,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleSmall
-                              ?.copyWith(
-                                color: context.appColors.inkStrong,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ],
     );
   }
 }
@@ -715,59 +582,6 @@ class _DotPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_DotPainter oldDelegate) => false;
-}
-
-/// A white-outline pill button for use on dark surfaces (the CTA band), where
-/// the shared [AppButton] outline variant (dark ink/hairline) is invisible.
-/// Mirrors the website's `variant="outline"` on navy (white border + white text).
-class _GhostButton extends StatelessWidget {
-  const _GhostButton({required this.label, this.icon, this.onPressed});
-
-  final String label;
-  final IconData? icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final textStyle = Theme.of(context).textTheme.labelLarge;
-    return Material(
-      color: Colors.white.withValues(alpha: 0.10),
-      shape: RoundedRectangleBorder(
-        borderRadius: AppRadii.pillAll,
-        side: BorderSide(
-          color: Colors.white.withValues(alpha: 0.55),
-          width: 1.4,
-        ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        child: SizedBox(
-          height: 48,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (icon != null) ...[
-                  Icon(icon, size: 18, color: Colors.white),
-                  const SizedBox(width: AppSpacing.xs),
-                ],
-                Flexible(
-                  child: Text(
-                    label,
-                    style: textStyle?.copyWith(color: Colors.white),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _FeaturedProjects extends StatelessWidget {

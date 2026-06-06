@@ -11,6 +11,8 @@ import {
   FileText,
   Wallet,
   Wrench,
+  ArrowLeft,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -54,24 +56,41 @@ interface Metric {
   icon: LucideIcon;
   label: string;
   value: string;
+  hint: string;
   href: string;
   chip: string;
 }
 
-/** Compact executive metric card: tinted icon + label/value stack. */
-function HeroMetric({ icon: Icon, label, value, href, chip }: Metric) {
+/** Premium executive metric card: tinted icon chip + label / value / hint stack
+ *  with a gold ring + chevron affordance on hover. */
+function HeroMetric({ icon: Icon, label, value, hint, href, chip }: Metric) {
   return (
     <Link
       href={href as Route}
-      className="flex w-full items-center justify-between gap-3 rounded-xl border border-hairline bg-surface px-5 py-4 shadow-sm transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface px-5 py-4 shadow-soft ring-1 ring-transparent transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:shadow-card hover:ring-gold-200/70"
     >
       <div className="min-w-0">
-        <div className="text-[11px] font-medium text-ink-muted">{label}</div>
-        <div className="mt-0.5 truncate text-base font-black text-ink-strong" dir="auto">
+        <div className="text-[11px] font-semibold text-ink-muted">{label}</div>
+        <div
+          className="mt-1 truncate font-display text-xl font-black leading-none text-ink-strong"
+          dir="auto"
+        >
           {value}
         </div>
+        <div className="mt-1.5 flex items-center gap-1 text-[10px] font-medium text-ink-muted">
+          {hint}
+          <ArrowLeft
+            className="h-3 w-3 -translate-x-1 text-gold-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+            aria-hidden
+          />
+        </div>
       </div>
-      <span className={cn('inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl', chip)}>
+      <span
+        className={cn(
+          'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
+          chip,
+        )}
+      >
         <Icon className="h-5 w-5" aria-hidden />
       </span>
     </Link>
@@ -79,7 +98,15 @@ function HeroMetric({ icon: Icon, label, value, href, chip }: Metric) {
 }
 
 /** Left activity panel with a vertical timeline rail (RTL start edge). */
-function TimelinePanel({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
+function TimelinePanel({
+  title,
+  href,
+  children,
+}: {
+  title: string;
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
     <PremiumCard className="p-5">
       <div className="mb-4 flex h-8 items-center justify-between gap-3">
@@ -131,13 +158,19 @@ export const metadata = buildMetadata({
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
+    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium', timeStyle: 'short' }).format(
+      new Date(iso),
+    );
   } catch {
     return '—';
   }
 }
 
-function entityTitle(project: VisitProjectRef | null, unit: VisitUnitRef | null, fallback: string): string {
+function entityTitle(
+  project: VisitProjectRef | null,
+  unit: VisitUnitRef | null,
+  fallback: string,
+): string {
   if (project) return pickAr(project.name) || fallback;
   if (unit) return `${unitTypeLabel(unit.type)} · ${unit.code}`;
   return fallback;
@@ -164,7 +197,11 @@ export default async function AccountPage() {
     authFetch<Paginated<MeInfoRequest>>('/me/info-requests?page=1&pageSize=3'),
     authFetch<Paginated<MeReservation>>('/me/reservations?page=1&pageSize=3'),
   ]);
-  if ([favsR, visitsR, reqsR, resvR].some((r) => r.status === 'rejected' && r.reason instanceof AuthError)) {
+  if (
+    [favsR, visitsR, reqsR, resvR].some(
+      (r) => r.status === 'rejected' && r.reason instanceof AuthError,
+    )
+  ) {
     redirect('/login');
   }
 
@@ -207,7 +244,11 @@ export default async function AccountPage() {
       // focus band. Failure is non-fatal (band hides the payment side).
       authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200'),
     ]);
-    if ([contractsR, depositsR, maintR, notifsR, instR].some((r) => r.status === 'rejected' && r.reason instanceof AuthError)) {
+    if (
+      [contractsR, depositsR, maintR, notifsR, instR].some(
+        (r) => r.status === 'rejected' && r.reason instanceof AuthError,
+      )
+    ) {
       redirect('/login');
     }
 
@@ -247,16 +288,72 @@ export default async function AccountPage() {
   // ── Block 1: role-aware hero metrics ──
   const metrics: Metric[] = isCustomer
     ? [
-        { icon: Wallet, label: 'إجمالي المدفوعات', value: depositsTotalText ?? '—', href: routes.accountDeposits, chip: CHIP_SUCCESS },
-        { icon: FileText, label: 'العقود النشطة', value: fmt(contractsCount), href: routes.accountContracts, chip: CHIP_GOLD },
-        { icon: Wrench, label: 'طلبات الصيانة والزيارات', value: sum(maintenanceCount, visitsCount), href: routes.accountMaintenance, chip: CHIP_AMBER },
-        { icon: Heart, label: 'المفضلة', value: fmt(favoritesCount), href: routes.accountFavorites, chip: CHIP_ROSE },
+        {
+          icon: Wallet,
+          label: 'إجمالي المدفوعات',
+          value: depositsTotalText ?? '—',
+          hint: 'إجمالي محصّل',
+          href: routes.accountDeposits,
+          chip: CHIP_SUCCESS,
+        },
+        {
+          icon: FileText,
+          label: 'العقود النشطة',
+          value: fmt(contractsCount),
+          hint: 'عقود موثّقة',
+          href: routes.accountContracts,
+          chip: CHIP_GOLD,
+        },
+        {
+          icon: Wrench,
+          label: 'الصيانة والزيارات',
+          value: sum(maintenanceCount, visitsCount),
+          hint: 'قيد المتابعة',
+          href: routes.accountMaintenance,
+          chip: CHIP_AMBER,
+        },
+        {
+          icon: Heart,
+          label: 'المفضلة',
+          value: fmt(favoritesCount),
+          hint: 'عناصر محفوظة',
+          href: routes.accountFavorites,
+          chip: CHIP_ROSE,
+        },
       ]
     : [
-        { icon: Heart, label: 'المفضلة', value: fmt(favoritesCount), href: routes.accountFavorites, chip: CHIP_ROSE },
-        { icon: CalendarClock, label: 'طلبات الزيارة', value: fmt(visitsCount), href: routes.accountVisits, chip: CHIP_GOLD },
-        { icon: MessageSquareText, label: 'الاستفسارات', value: fmt(requestsCount), href: routes.accountRequests, chip: CHIP_AMBER },
-        { icon: BookmarkCheck, label: 'الحجوزات', value: fmt(reservationsCount), href: routes.accountReservations, chip: CHIP_SUCCESS },
+        {
+          icon: Heart,
+          label: 'المفضلة',
+          value: fmt(favoritesCount),
+          hint: 'عناصر محفوظة',
+          href: routes.accountFavorites,
+          chip: CHIP_ROSE,
+        },
+        {
+          icon: CalendarClock,
+          label: 'طلبات الزيارة',
+          value: fmt(visitsCount),
+          hint: 'مجدولة',
+          href: routes.accountVisits,
+          chip: CHIP_GOLD,
+        },
+        {
+          icon: MessageSquareText,
+          label: 'الاستفسارات',
+          value: fmt(requestsCount),
+          hint: 'قيد المعالجة',
+          href: routes.accountRequests,
+          chip: CHIP_AMBER,
+        },
+        {
+          icon: BookmarkCheck,
+          label: 'الحجوزات',
+          value: fmt(reservationsCount),
+          hint: 'نشطة',
+          href: routes.accountReservations,
+          chip: CHIP_SUCCESS,
+        },
       ];
 
   // ── Block 3: activity center ──
@@ -269,7 +366,11 @@ export default async function AccountPage() {
         icon={FileText}
         title={contractTitle(c)}
         subtitle={`عقد رقم ${c.contractNumber ?? '—'}`}
-        trailing={<span className="whitespace-nowrap text-sm font-bold text-ink-strong">{formatPrice(c.totalAmount)}</span>}
+        trailing={
+          <span className="whitespace-nowrap text-sm font-bold text-ink-strong">
+            {formatPrice(c.totalAmount)}
+          </span>
+        }
       />
     )),
     ...recentReservations.map((r) => (
@@ -323,8 +424,17 @@ export default async function AccountPage() {
       {/* ── Block 2: after-sales banner (customer + owned unit) ── */}
       {isCustomer && primaryContract && (
         <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-lg font-bold text-ink-strong">خدمات ما بعد الشراء</h2>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide text-gold-600">
+                <Sparkles className="h-3.5 w-3.5" aria-hidden />
+                منطقة الملكية
+              </span>
+              <h2 className="mt-1 text-lg font-bold text-ink-strong">خدمات ما بعد الشراء</h2>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                وحدتك، عقدك، وأقساطك القادمة في مكان واحد.
+              </p>
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <ButtonLink
                 href={routes.accountProperty}
@@ -346,7 +456,11 @@ export default async function AccountPage() {
               </ButtonLink>
             </div>
           </div>
-          <PropertyFocus contract={primaryContract} nextInstallment={nextInstallment} unpaidCount={unpaidCount} />
+          <PropertyFocus
+            contract={primaryContract}
+            nextInstallment={nextInstallment}
+            unpaidCount={unpaidCount}
+          />
         </section>
       )}
 

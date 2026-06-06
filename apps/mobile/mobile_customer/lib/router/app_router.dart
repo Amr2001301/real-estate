@@ -121,7 +121,8 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
       if (_authRoutes.contains(loc)) return authed ? '/account' : null;
       if (loc.startsWith('/account')) {
         if (!authed) return '/login';
-        if (!isCustomer) return '/home'; // staff roles can't enter customer account
+        if (!isCustomer)
+          return '/home'; // staff roles can't enter customer account
         return null;
       }
       if (loc == '/visit-request') return authed ? null : '/login';
@@ -154,12 +155,47 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
             routes: [
               GoRoute(
                 path: '/home',
-                builder: (context, _) => BlocProvider(
-                  create: (ctx) =>
-                      HomeCubit(GetFeaturedProjects(ctx.read<CatalogRepository>()))
-                        ..load(),
-                  child: const HomeScreen(),
-                ),
+                // Home is public, but for a signed-in customer it becomes an
+                // ownership-first dashboard. The ownership cubits below are
+                // ADDED only for customers (guests never hit the /me endpoints)
+                // — pure presentation wiring over the existing use cases /
+                // repositories; no business logic changes.
+                builder: (context, _) {
+                  final session = sessionCubit.state;
+                  final isCustomer =
+                      session.isAuthenticated && session.role.isCustomerSide;
+                  return MultiBlocProvider(
+                    providers: [
+                      BlocProvider(
+                        create: (ctx) => HomeCubit(
+                          GetFeaturedProjects(ctx.read<CatalogRepository>()),
+                        )..load(),
+                      ),
+                      if (isCustomer) ...[
+                        BlocProvider(
+                          create: (ctx) => MyPropertyCubit(
+                            GetMyProperties(ctx.read<MyPropertyRepository>()),
+                          )..load(),
+                        ),
+                        BlocProvider(
+                          create: (ctx) => InstallmentsCubit(
+                            GetMyInstallments(
+                              ctx.read<InstallmentsRepository>(),
+                            ),
+                          )..load(),
+                        ),
+                        BlocProvider(
+                          create: (ctx) => MaintenanceRequestsCubit(
+                            GetMyMaintenanceRequests(
+                              ctx.read<MaintenanceRepository>(),
+                            ),
+                          )..load(),
+                        ),
+                      ],
+                    ],
+                    child: const HomeScreen(),
+                  );
+                },
               ),
             ],
           ),
@@ -187,9 +223,8 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
               GoRoute(
                 path: '/units',
                 builder: (context, _) => BlocProvider(
-                  create: (ctx) => UnitsCubit(
-                    GetUnits(ctx.read<CatalogRepository>()),
-                  ),
+                  create: (ctx) =>
+                      UnitsCubit(GetUnits(ctx.read<CatalogRepository>())),
                   child: const UnitsScreen(),
                 ),
               ),
@@ -198,7 +233,10 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
           // 3 · المقارنة (public)
           StatefulShellBranch(
             routes: [
-              GoRoute(path: '/compare', builder: (_, _) => const CompareScreen()),
+              GoRoute(
+                path: '/compare',
+                builder: (_, _) => const CompareScreen(),
+              ),
             ],
           ),
           // 4 · المزيد (public hub: login, assistant, language, theme)
@@ -262,7 +300,8 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
         builder: (context, _) => BlocProvider(
           create: (ctx) {
             final repo = ctx.read<ProfileRepository>();
-            return ProfileCubit(GetMyProfile(repo), UpdateMyProfile(repo))..load();
+            return ProfileCubit(GetMyProfile(repo), UpdateMyProfile(repo))
+              ..load();
           },
           child: const ProfileScreen(),
         ),
@@ -358,10 +397,10 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
           final installment = state.extra! as Installment;
           return BlocProvider(
             create: (ctx) => SubmitProofCubit(
-              submit:
-                  SubmitPaymentProof(ctx.read<InstallmentsRepository>()),
-              resubmit:
-                  ResubmitPaymentProof(ctx.read<InstallmentsRepository>()),
+              submit: SubmitPaymentProof(ctx.read<InstallmentsRepository>()),
+              resubmit: ResubmitPaymentProof(
+                ctx.read<InstallmentsRepository>(),
+              ),
               installment: installment,
             ),
             child: const SubmitProofScreen(),
@@ -417,8 +456,9 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
         builder: (context, state) {
           final args = (state.extra as Map<String, dynamic>?) ?? const {};
           return BlocProvider(
-            create: (ctx) =>
-                VisitRequestCubit(CreateVisitRequest(ctx.read<VisitsRepository>())),
+            create: (ctx) => VisitRequestCubit(
+              CreateVisitRequest(ctx.read<VisitsRepository>()),
+            ),
             child: VisitRequestScreen(
               projectId: args['projectId'] as String? ?? '',
               unitId: args['unitId'] as String?,

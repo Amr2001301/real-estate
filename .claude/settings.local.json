@@ -69,7 +69,9 @@
       "Bash(echo \"WEB-ADMIN TS EXIT: $?\")",
       "Bash(grep -rnE \"Bearer [A-Za-z0-9._-]{20,}|eyJhbGciOi|sk_live\" apps/api/src/common/utils/xlsx.ts apps/api/src/modules/reports/reports.module.ts apps/api/src/modules/broker-reports/broker-reports.service.ts apps/api/src/modules/broker-reports/broker-reports.controller.ts apps/web-admin/src/app/api/export/route.ts)",
       "Bash(flutter pub *)",
-      "Bash(echo \"EXIT=$?\")"
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(flutter gen-l10n *)",
+      "Bash(dart format *)"
     ],
     "additionalDirectories": [
       "/Users/amr/Real Estate/apps/web-admin/src/app/dashboard/units/[id]",

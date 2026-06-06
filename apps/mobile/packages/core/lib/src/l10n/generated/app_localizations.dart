@@ -542,6 +542,78 @@ abstract class AppLocalizations {
   /// **'Explore projects'**
   String get homeExploreProjects;
 
+  /// No description provided for @homeGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Hi, {name}'**
+  String homeGreeting(String name);
+
+  /// No description provided for @homeOwnerRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer · Unit owner'**
+  String get homeOwnerRole;
+
+  /// No description provided for @homeAfterSales.
+  ///
+  /// In en, this message translates to:
+  /// **'After-sales services'**
+  String get homeAfterSales;
+
+  /// No description provided for @homeNextInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Next installment'**
+  String get homeNextInstallment;
+
+  /// No description provided for @homeInstallmentsRemaining.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} installments remaining'**
+  String homeInstallmentsRemaining(int count);
+
+  /// No description provided for @homeNoDuePayments.
+  ///
+  /// In en, this message translates to:
+  /// **'No payments due'**
+  String get homeNoDuePayments;
+
+  /// No description provided for @homeNoDuePaymentsHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re all caught up.'**
+  String get homeNoDuePaymentsHint;
+
+  /// No description provided for @homeViewInstallments.
+  ///
+  /// In en, this message translates to:
+  /// **'View installments'**
+  String get homeViewInstallments;
+
+  /// No description provided for @homeRecentActivity.
+  ///
+  /// In en, this message translates to:
+  /// **'Recent updates'**
+  String get homeRecentActivity;
+
+  /// No description provided for @homeDuePaymentsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Payments due'**
+  String get homeDuePaymentsLabel;
+
+  /// No description provided for @homeOwnerEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start your property journey'**
+  String get homeOwnerEmptyTitle;
+
+  /// No description provided for @homeOwnerEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse projects and units, save what matters, or request a visit.'**
+  String get homeOwnerEmptyMessage;
+
   /// No description provided for @homeContactUs.
   ///
   /// In en, this message translates to:
