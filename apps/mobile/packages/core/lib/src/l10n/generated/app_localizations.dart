@@ -614,6 +614,18 @@ abstract class AppLocalizations {
   /// **'Monthly'**
   String get homeMonthlyInstallment;
 
+  /// No description provided for @homeViewContractPdf.
+  ///
+  /// In en, this message translates to:
+  /// **'View contract PDF'**
+  String get homeViewContractPdf;
+
+  /// No description provided for @homeOwnershipSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Ownership summary'**
+  String get homeOwnershipSummary;
+
   /// No description provided for @homeOwnerEmptyTitle.
   ///
   /// In en, this message translates to:

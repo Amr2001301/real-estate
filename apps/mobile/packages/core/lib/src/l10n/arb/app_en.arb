@@ -99,6 +99,8 @@
   "homePaymentDueSoon": "Due soon",
   "homePaymentUpcoming": "Upcoming",
   "homeMonthlyInstallment": "Monthly",
+  "homeViewContractPdf": "View contract PDF",
+  "homeOwnershipSummary": "Ownership summary",
   "homeOwnerEmptyTitle": "Start your property journey",
   "homeOwnerEmptyMessage": "Browse projects and units, save what matters, or request a visit.",
   "homeContactUs": "Contact us",

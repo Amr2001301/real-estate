@@ -59,7 +59,7 @@ class CustomerHomeHeader extends StatelessWidget {
             GestureDetector(
               onTap: () => context.push('/account/profile'),
               behavior: HitTestBehavior.opaque,
-              child: GradientAvatar(name: name, size: 52),
+              child: GradientAvatar(name: name, size: 46),
             ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
@@ -138,8 +138,8 @@ class _NotificationButton extends StatelessWidget {
                 child: InkWell(
                   onTap: () => context.push('/account/notifications'),
                   child: SizedBox(
-                    width: 46,
-                    height: 46,
+                    width: 44,
+                    height: 44,
                     child: Stack(
                       clipBehavior: Clip.none,
                       alignment: Alignment.center,

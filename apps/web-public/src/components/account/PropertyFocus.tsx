@@ -63,10 +63,8 @@ export function PropertyFocus({
       {/* ── Asset & contract panel (~65%) ── */}
       <div className="relative flex w-full flex-col justify-between lg:w-2/3">
         <div>
-          <span className="text-sm font-medium text-gold-600">عقارك</span>
-
           {/* Asset header */}
-          <div className="mb-4 mt-2 flex items-center gap-3">
+          <div className="mb-4 flex items-center gap-3">
             <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70">
               <Home className="h-6 w-6" aria-hidden />
             </span>

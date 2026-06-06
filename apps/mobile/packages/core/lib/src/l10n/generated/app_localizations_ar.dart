@@ -275,6 +275,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeMonthlyInstallment => 'القسط الشهري';
 
   @override
+  String get homeViewContractPdf => 'عرض العقد PDF';
+
+  @override
+  String get homeOwnershipSummary => 'ملخص الملكية';
+
+  @override
   String get homeOwnerEmptyTitle => 'ابدأ رحلتك العقارية';
 
   @override

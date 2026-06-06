@@ -278,6 +278,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeMonthlyInstallment => 'Monthly';
 
   @override
+  String get homeViewContractPdf => 'View contract PDF';
+
+  @override
+  String get homeOwnershipSummary => 'Ownership summary';
+
+  @override
   String get homeOwnerEmptyTitle => 'Start your property journey';
 
   @override

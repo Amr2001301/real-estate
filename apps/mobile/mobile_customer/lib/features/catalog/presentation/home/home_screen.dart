@@ -23,9 +23,9 @@ import 'customer_home_dashboard.dart';
 import 'home_cubit.dart';
 
 /// Bottom clearance reserved on the Home tab for the shell's floating assistant
-/// FAB (46px + lift), so the last discovery card / carousel dots never end up
-/// hidden behind it. Applied only when the compare dock isn't taking over.
-const double _fabClearance = 72;
+/// FAB (46px + lift), so the last card never ends up hidden behind the FAB or
+/// the bottom nav. Applied only when the compare dock isn't taking over.
+const double _fabClearance = 96;
 
 /// The الرئيسية tab. For a signed-in customer it is an ownership-first dashboard
 /// (greeting + owned property + next installment + live counts + quick actions

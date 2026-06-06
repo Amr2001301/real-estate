@@ -65,7 +65,7 @@ class CustomerHomeDashboard extends StatelessWidget {
                       // 2 · The owned asset + its after-sales services.
                       if (primary != null) ...[
                         _SectionHeading(
-                          title: l10n.homeAfterSales,
+                          title: l10n.homeOwnershipSummary,
                           onViewAll: properties.length > 1
                               ? () => context.push('/account/property')
                               : null,
@@ -212,7 +212,7 @@ class _PaymentHero extends StatelessWidget {
                   StatusBadge(label: badgeLabel!, tone: badgeTone, dot: true),
                 ],
               ),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 PriceFormatter.formatString(next!.amount, languageCode: lang),
                 maxLines: 1,
@@ -273,14 +273,14 @@ class _PaymentHero extends StatelessWidget {
     return PremiumCard(
       glow: positiveGlow,
       accentRail: railTone,
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: const EdgeInsets.all(AppSpacing.md),
       child: AppSkeletonizer(
         enabled: loading,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             body,
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.md),
             SizedBox(
               width: double.infinity,
               child: AppButton(
@@ -352,11 +352,12 @@ class _MyPropertyCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Soft gold-tinted home tile (matches the web asset card — not a
+              // solid gold "property" block).
               IconChip(
-                icon: AppIcons.property,
+                icon: Icons.home_rounded,
                 tone: AppTone.gold,
                 size: IconChipSize.lg,
-                filled: true,
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
@@ -396,54 +397,44 @@ class _MyPropertyCard extends StatelessWidget {
             ],
           ),
 
-          // Contract facts — a clean inline stat grid (web parity).
+          // Contract facts — grouped into one organized block (label → value),
+          // so the contract number, signing date and monthly installment read
+          // together at a glance.
           if (stats.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.lg),
+            const SizedBox(height: AppSpacing.sm),
             Container(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(color: colors.hairline),
                   bottom: BorderSide(color: colors.hairline),
                 ),
               ),
-              child: IntrinsicHeight(
-                child: Row(
-                  children: [
-                    for (var i = 0; i < stats.length; i++) ...[
-                      if (i > 0)
-                        VerticalDivider(
-                          width: 1,
-                          thickness: 1,
-                          color: colors.hairline,
-                          indent: 2,
-                          endIndent: 2,
-                        ),
-                      Expanded(child: _StatColumn(stat: stats[i])),
-                    ],
-                  ],
-                ),
+              child: Column(
+                children: [
+                  for (var i = 0; i < stats.length; i++)
+                    _StatRow(stat: stats[i]),
+                ],
               ),
             ),
           ],
 
-          // After-sales services — the contextual quick actions for this unit.
+          // After-sales services for this unit.
           const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               Expanded(
                 child: _ServicePill(
                   icon: AppIcons.installments,
-                  label: l10n.installmentsTitle,
+                  label: l10n.homeViewInstallments,
                   onTap: () => context.push('/account/installments'),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _ServicePill(
-                  icon: AppIcons.contract,
-                  label: l10n.accountContracts,
-                  onTap: () => context.push('/account/contracts'),
+                  icon: AppIcons.deposit,
+                  label: l10n.accountDeposits,
+                  onTap: () => context.push('/account/deposits'),
                 ),
               ),
             ],
@@ -453,20 +444,20 @@ class _MyPropertyCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _ServicePill(
-                  icon: AppIcons.deposit,
-                  label: l10n.accountDeposits,
-                  onTap: () => context.push('/account/deposits'),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _ServicePill(
                   icon: AppIcons.maintenance,
                   label: l10n.myPropertyRequestMaintenance,
                   onTap: () => context.push(
                     '/account/maintenance/new',
                     extra: {'unitId': property.unitId},
                   ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _ServicePill(
+                  icon: AppIcons.contract,
+                  label: l10n.homeViewContractPdf,
+                  onTap: () => context.push('/account/contracts'),
                 ),
               ),
             ],
@@ -483,38 +474,37 @@ class _Stat {
   final String value;
 }
 
-class _StatColumn extends StatelessWidget {
-  const _StatColumn({required this.stat});
+class _StatRow extends StatelessWidget {
+  const _StatRow({required this.stat});
   final _Stat stat;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          stat.label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: colors.inkMuted,
-            fontWeight: FontWeight.w600,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          Text(
+            stat.label,
+            style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          stat.value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: colors.inkStrong,
-            fontWeight: FontWeight.w800,
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              stat.value,
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.inkStrong,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

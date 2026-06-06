@@ -89,12 +89,15 @@ class _PremiumCardState extends State<PremiumCard> {
               bottom: 0,
               start: 0,
               child: Container(
-                width: 4,
+                width: 3,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [railColor.withValues(alpha: 0.55), railColor],
+                    colors: [
+                      railColor.withValues(alpha: 0.35),
+                      railColor.withValues(alpha: 0.75),
+                    ],
                   ),
                 ),
               ),
@@ -110,7 +113,10 @@ class _PremiumCardState extends State<PremiumCard> {
       duration: const Duration(milliseconds: 140),
       curve: const Cubic(0.32, 0.72, 0, 1),
       child: DecoratedBox(
-        decoration: BoxDecoration(borderRadius: AppRadii.card, boxShadow: shadows),
+        decoration: BoxDecoration(
+          borderRadius: AppRadii.card,
+          boxShadow: shadows,
+        ),
         child: ClipRRect(borderRadius: AppRadii.card, child: inner),
       ),
     );
