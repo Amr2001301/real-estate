@@ -269,25 +269,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeRecentActivity => 'Recent updates';
 
   @override
-  String get homeDuePaymentsLabel => 'Payments due';
-
-  @override
   String get homePaymentDueSoon => 'Due soon';
 
   @override
   String get homePaymentUpcoming => 'Upcoming';
 
   @override
-  String get homeServiceUnitSub => 'Your unit details';
-
-  @override
-  String get homeServiceContractsSub => 'Contracts & documents';
-
-  @override
-  String get homeServicePaymentsSub => 'Payment history';
-
-  @override
-  String get homeServiceVisitsSub => 'Viewing appointments';
+  String get homeMonthlyInstallment => 'Monthly';
 
   @override
   String get homeOwnerEmptyTitle => 'Start your property journey';

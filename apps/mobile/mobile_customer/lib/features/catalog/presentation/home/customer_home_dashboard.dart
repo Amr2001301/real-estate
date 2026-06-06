@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../favorites/presentation/favorites_cubit.dart';
 import '../../../installments/domain/entities/installment.dart';
 import '../../../installments/presentation/cubit/installments_cubit.dart';
 import '../../../maintenance/domain/entities/maintenance_request.dart';
@@ -11,16 +10,15 @@ import '../../../maintenance/presentation/maintenance_format.dart';
 import '../../../maintenance/presentation/maintenance_requests_cubit.dart';
 import '../../../my_property/domain/entities/property.dart';
 import '../../../my_property/presentation/my_property_cubit.dart';
-import '../../../notifications/presentation/unread_count_cubit.dart';
 import 'customer_home_header.dart';
 
-/// Customer Home V2 — *Ownership Command Center*.
+/// Customer Home — an editorial, ownership-first dashboard.
 ///
-/// Reads only cubits already provided to the `/home` route (no new API calls of
-/// its own, no business-logic changes). Vertical order answers the owner's
-/// questions: who am I (header) → what do I owe (payment hero) → what do I own
-/// (property) → live counts (metric strip) → fast services → recent updates.
-/// Discovery (featured projects/units) is NOT part of the customer Home.
+/// Deliberately focused: identity → the next payment that needs attention → the
+/// owned asset and its after-sales services → recent service activity. Tab-level
+/// navigation lives in the bottom bar, so the home does NOT repeat it as a
+/// generic metric strip or quick-action grid. Reads only cubits already provided
+/// to the `/home` route (no new API calls, no business-logic changes).
 class CustomerHomeDashboard extends StatelessWidget {
   const CustomerHomeDashboard({super.key, required this.name});
 
@@ -28,6 +26,8 @@ class CustomerHomeDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
     return BlocBuilder<MyPropertyCubit, MyPropertyState>(
       builder: (context, propertyState) {
         return BlocBuilder<InstallmentsCubit, InstallmentsState>(
@@ -39,46 +39,46 @@ class CustomerHomeDashboard extends StatelessWidget {
             final unpaid = installments
                 .where((i) => i.status != InstallmentStatus.paid)
                 .toList();
-            final overdueCount = installments
-                .where((i) => i.status == InstallmentStatus.overdue)
-                .length;
             final next = _earliestDue(unpaid);
             final loading = installmentState.status == DataStatus.loading;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 1 · Premium in-body header (full-bleed, owns its top inset).
                 CustomerHomeHeader(name: name, hasProperty: primary != null),
                 const SizedBox(height: AppSpacing.lg),
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppSpacing.lg,
                   ),
-                  child: StaggeredColumn(
-                    spacing: AppSpacing.lg,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // 2 · Critical payment / status hero.
+                      // 1 · The single most urgent obligation.
                       _PaymentHero(
                         next: next,
                         unpaidCount: unpaid.length,
                         loading: loading,
                       ),
-                      // 3 · My Property (the ownership centerpiece).
-                      if (primary != null)
-                        _MyPropertyCard(
-                          property: primary,
-                          extraCount: properties.length - 1,
+                      const SizedBox(height: AppSpacing.xl),
+
+                      // 2 · The owned asset + its after-sales services.
+                      if (primary != null) ...[
+                        _SectionHeading(
+                          title: l10n.homeAfterSales,
+                          onViewAll: properties.length > 1
+                              ? () => context.push('/account/property')
+                              : null,
                         ),
-                      // 4 · Compact live metric strip.
-                      _MetricStrip(
-                        unpaidCount: unpaid.length,
-                        overdueCount: overdueCount,
-                        installmentsLoading: loading,
-                      ),
-                      // 5 · Fast service launcher.
-                      const _ServiceLauncher(),
-                      // 6 · Recent activity (hides when empty).
+                        const SizedBox(height: AppSpacing.sm),
+                        _MyPropertyCard(property: primary),
+                        const SizedBox(height: AppSpacing.xl),
+                      ] else ...[
+                        const _OwnerEmptyCard(),
+                        const SizedBox(height: AppSpacing.xl),
+                      ],
+
+                      // 3 · Recent service activity (hides when empty).
                       const _RecentActivity(),
                     ],
                   ),
@@ -98,7 +98,56 @@ class CustomerHomeDashboard extends StatelessWidget {
   }
 }
 
-// ── 2 · Critical payment / status hero ──────────────────────────────────────
+/// A refined section heading: a small gold tick + title, with an optional
+/// trailing "view all". Lighter and more editorial than a heavy card header.
+class _SectionHeading extends StatelessWidget {
+  const _SectionHeading({required this.title, this.onViewAll});
+
+  final String title;
+  final VoidCallback? onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 16,
+          decoration: BoxDecoration(
+            color: colors.brandGold,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Expanded(
+          child: Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: colors.inkStrong,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        if (onViewAll != null)
+          GestureDetector(
+            onTap: onViewAll,
+            behavior: HitTestBehavior.opaque,
+            child: Text(
+              context.l10n.viewAll,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: colors.brandGold,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── 1 · Critical payment / status hero ──────────────────────────────────────
 
 class _PaymentHero extends StatelessWidget {
   const _PaymentHero({
@@ -124,7 +173,6 @@ class _PaymentHero extends StatelessWidget {
     final hasDue = next != null;
     final overdue = next?.status == InstallmentStatus.overdue;
 
-    // Status badge label + tone for the upcoming payment.
     String? badgeLabel;
     BadgeTone badgeTone = BadgeTone.gold;
     AppTone railTone = AppTone.success;
@@ -157,46 +205,37 @@ class _PaymentHero extends StatelessWidget {
                     l10n.homeNextInstallment,
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: colors.inkMuted,
+                      letterSpacing: 0.2,
                     ),
                   ),
                   const Spacer(),
                   StatusBadge(label: badgeLabel!, tone: badgeTone, dot: true),
                 ],
               ),
-              const SizedBox(height: AppSpacing.xs),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 PriceFormatter.formatString(next!.amount, languageCode: lang),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.headlineSmall?.copyWith(
+                style: theme.textTheme.headlineMedium?.copyWith(
                   color: colors.inkStrong,
                   fontWeight: FontWeight.w800,
+                  height: 1.05,
                 ),
               ),
-              const SizedBox(height: AppSpacing.xxs),
+              const SizedBox(height: AppSpacing.xs),
               Text(
-                l10n.installmentDueOn(
-                  DateFormatter.mediumDate(next!.dueDate, languageCode: lang),
-                ),
+                _subline(l10n, lang),
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: colors.inkMuted,
                 ),
               ),
-              if (unpaidCount > 1) ...[
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  l10n.homeInstallmentsRemaining(unpaidCount),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.inkMuted,
-                  ),
-                ),
-              ],
             ],
           )
         : Row(
             children: [
               IconChip(
-                icon: Icons.check_circle_rounded,
+                icon: Icons.verified_rounded,
                 tone: AppTone.success,
                 size: IconChipSize.md,
                 filled: true,
@@ -210,9 +249,10 @@ class _PaymentHero extends StatelessWidget {
                       l10n.homeNoDuePayments,
                       style: theme.textTheme.titleSmall?.copyWith(
                         color: colors.inkStrong,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
+                    const SizedBox(height: 2),
                     Text(
                       l10n.homeNoDuePaymentsHint,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -225,53 +265,56 @@ class _PaymentHero extends StatelessWidget {
             ],
           );
 
+    // Keep the warm gold glow only for positive states; an overdue (red) or
+    // due-soon (amber) card shouldn't carry a celebratory glow behind its rail.
+    final positiveGlow =
+        railTone == AppTone.success || railTone == AppTone.gold;
+
     return PremiumCard(
-      glow: true,
+      glow: positiveGlow,
       accentRail: railTone,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: AppSkeletonizer(
         enabled: loading,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             body,
-            const SizedBox(height: AppSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: AppButton(
-                    label: l10n.homeViewInstallments,
-                    icon: AppIcons.installments,
-                    variant: AppButtonVariant.primary,
-                    size: AppButtonSize.medium,
-                    onPressed: () => context.push('/account/installments'),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: AppButton(
-                    label: l10n.myPropertyRequestMaintenance,
-                    icon: AppIcons.maintenance,
-                    variant: AppButtonVariant.outline,
-                    size: AppButtonSize.medium,
-                    onPressed: () => context.push('/account/maintenance/new'),
-                  ),
-                ),
-              ],
+            const SizedBox(height: AppSpacing.lg),
+            SizedBox(
+              width: double.infinity,
+              child: AppButton(
+                label: l10n.homeViewInstallments,
+                icon: AppIcons.installments,
+                variant: AppButtonVariant.primary,
+                size: AppButtonSize.medium,
+                onPressed: () => context.push('/account/installments'),
+              ),
             ),
           ],
         ),
       ),
     );
   }
+
+  /// "Due on {date} · {n} remaining" — one calm line instead of two.
+  String _subline(AppLocalizations l10n, String lang) {
+    final due = l10n.installmentDueOn(
+      DateFormatter.mediumDate(next!.dueDate, languageCode: lang),
+    );
+    if (unpaidCount > 1) {
+      return '$due  ·  ${l10n.homeInstallmentsRemaining(unpaidCount)}';
+    }
+    return due;
+  }
 }
 
-// ── 3 · My property card ────────────────────────────────────────────────────
+// ── 2 · My property card ────────────────────────────────────────────────────
 
 class _MyPropertyCard extends StatelessWidget {
-  const _MyPropertyCard({required this.property, required this.extraCount});
+  const _MyPropertyCard({required this.property});
 
   final Property property;
-  final int extraCount;
 
   @override
   Widget build(BuildContext context) {
@@ -281,166 +324,152 @@ class _MyPropertyCard extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final owned = property.status == PropertyStatus.owned;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppSectionHeader(
-          title: l10n.homeAfterSales,
-          action: extraCount > 0
-              ? TextButton(
-                  onPressed: () => context.push('/account/property'),
-                  child: Text(l10n.viewAll),
-                )
-              : null,
+    final stats = <_Stat>[
+      if (property.contractNumber != null)
+        _Stat(l10n.myPropertyContractNumber, property.contractNumber!),
+      if (property.signedAt != null)
+        _Stat(
+          l10n.myPropertySignedDate,
+          DateFormatter.mediumDate(property.signedAt!, languageCode: lang),
         ),
-        const SizedBox(height: AppSpacing.sm),
-        PremiumCard(
-          onTap: () => context.push('/account/property'),
-          child: Column(
+      if (property.hasInstallmentPlan)
+        _Stat(
+          l10n.homeMonthlyInstallment,
+          PriceFormatter.formatString(
+            property.monthlyAmount,
+            languageCode: lang,
+          ),
+        ),
+    ];
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      onTap: () => context.push('/account/property'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Identity row.
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  IconChip(
-                    icon: AppIcons.property,
-                    tone: AppTone.gold,
-                    filled: true,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          property.projectName.resolve(lang),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: colors.inkStrong,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${property.unitType} · ${property.unitCode}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colors.inkMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  StatusBadge(
-                    label: owned
-                        ? l10n.myPropertyStatusOwned
-                        : l10n.myPropertyStatusReserved,
-                    tone: owned ? BadgeTone.success : BadgeTone.warning,
-                    dot: true,
-                  ),
-                ],
+              IconChip(
+                icon: AppIcons.property,
+                tone: AppTone.gold,
+                size: IconChipSize.lg,
+                filled: true,
               ),
-              const SizedBox(height: AppSpacing.md),
-              Divider(height: 1, color: colors.hairline),
-              const SizedBox(height: AppSpacing.md),
-              if (property.contractNumber != null)
-                _MetaRow(
-                  label: l10n.myPropertyContractNumber,
-                  value: property.contractNumber!,
-                ),
-              if (property.signedAt != null)
-                _MetaRow(
-                  label: l10n.myPropertySignedDate,
-                  value: DateFormatter.mediumDate(
-                    property.signedAt!,
-                    languageCode: lang,
-                  ),
-                ),
-              if (property.hasInstallmentPlan)
-                _MetaRow(
-                  label: l10n.myPropertyInstallmentPlan,
-                  value: l10n.myPropertyInstallmentSummary(
-                    PriceFormatter.formatString(
-                      property.monthlyAmount,
-                      languageCode: lang,
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      property.projectName.resolve(lang),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    property.totalMonths!,
-                  ),
-                ),
-              const SizedBox(height: AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.sm,
-                runSpacing: AppSpacing.sm,
-                children: [
-                  _PropertyLink(
-                    icon: AppIcons.property,
-                    label: l10n.accountMyProperty,
-                    onTap: () => context.push('/account/property'),
-                  ),
-                  _PropertyLink(
-                    icon: AppIcons.contract,
-                    label: l10n.accountContracts,
-                    onTap: () => context.push('/account/contracts'),
-                  ),
-                  _PropertyLink(
-                    icon: AppIcons.deposit,
-                    label: l10n.accountDeposits,
-                    onTap: () => context.push('/account/deposits'),
-                  ),
-                  _PropertyLink(
-                    icon: AppIcons.maintenance,
-                    label: l10n.myPropertyRequestMaintenance,
-                    onTap: () => context.push(
-                      '/account/maintenance/new',
-                      extra: {'unitId': property.unitId},
+                    const SizedBox(height: 3),
+                    Text(
+                      '${property.unitType} · ${property.unitCode}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                        letterSpacing: 0.2,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              StatusBadge(
+                label: owned
+                    ? l10n.myPropertyStatusOwned
+                    : l10n.myPropertyStatusReserved,
+                tone: owned ? BadgeTone.success : BadgeTone.warning,
+                dot: true,
               ),
             ],
           ),
-        ),
-      ],
-    );
-  }
-}
 
-class _MetaRow extends StatelessWidget {
-  const _MetaRow({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.inkMuted,
+          // Contract facts — a clean inline stat grid (web parity).
+          if (stats.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.lg),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: colors.hairline),
+                  bottom: BorderSide(color: colors.hairline),
+                ),
+              ),
+              child: IntrinsicHeight(
+                child: Row(
+                  children: [
+                    for (var i = 0; i < stats.length; i++) ...[
+                      if (i > 0)
+                        VerticalDivider(
+                          width: 1,
+                          thickness: 1,
+                          color: colors.hairline,
+                          indent: 2,
+                          endIndent: 2,
+                        ),
+                      Expanded(child: _StatColumn(stat: stats[i])),
+                    ],
+                  ],
+                ),
               ),
             ),
+          ],
+
+          // After-sales services — the contextual quick actions for this unit.
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _ServicePill(
+                  icon: AppIcons.installments,
+                  label: l10n.installmentsTitle,
+                  onTap: () => context.push('/account/installments'),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _ServicePill(
+                  icon: AppIcons.contract,
+                  label: l10n.accountContracts,
+                  onTap: () => context.push('/account/contracts'),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: colors.inkStrong,
-                fontWeight: FontWeight.w700,
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _ServicePill(
+                  icon: AppIcons.deposit,
+                  label: l10n.accountDeposits,
+                  onTap: () => context.push('/account/deposits'),
+                ),
               ),
-            ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _ServicePill(
+                  icon: AppIcons.maintenance,
+                  label: l10n.myPropertyRequestMaintenance,
+                  onTap: () => context.push(
+                    '/account/maintenance/new',
+                    extra: {'unitId': property.unitId},
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -448,8 +477,52 @@ class _MetaRow extends StatelessWidget {
   }
 }
 
-class _PropertyLink extends StatelessWidget {
-  const _PropertyLink({
+class _Stat {
+  const _Stat(this.label, this.value);
+  final String label;
+  final String value;
+}
+
+class _StatColumn extends StatelessWidget {
+  const _StatColumn({required this.stat});
+  final _Stat stat;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          stat.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colors.inkMuted,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          stat.value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colors.inkStrong,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// A compact, premium after-sales action: soft surface, gold glyph, centered
+/// label. Equal-width so a row of them reads as a matched set.
+class _ServicePill extends StatelessWidget {
+  const _ServicePill({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -465,25 +538,29 @@ class _PropertyLink extends StatelessWidget {
     final theme = Theme.of(context);
     return Material(
       color: colors.surfaceSoft,
-      borderRadius: AppRadii.pillAll,
+      borderRadius: AppRadii.input,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs,
+            vertical: AppSpacing.sm + 1,
           ),
           child: Row(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: 16, color: colors.brandGold),
+              Icon(icon, size: 18, color: colors.brandGold),
               const SizedBox(width: AppSpacing.xs),
-              Text(
-                label,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: colors.inkStrong,
-                  fontWeight: FontWeight.w600,
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: colors.inkStrong,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -494,313 +571,62 @@ class _PropertyLink extends StatelessWidget {
   }
 }
 
-// ── 4 · Compact live metric strip ───────────────────────────────────────────
-
-class _MetricStrip extends StatelessWidget {
-  const _MetricStrip({
-    required this.unpaidCount,
-    required this.overdueCount,
-    required this.installmentsLoading,
-  });
-
-  final int unpaidCount;
-  final int overdueCount;
-  final bool installmentsLoading;
+/// Shown to a signed-in customer who owns nothing yet — a single warm prompt
+/// into discovery (the only place the customer home points outward).
+class _OwnerEmptyCard extends StatelessWidget {
+  const _OwnerEmptyCard();
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppSectionHeader(title: l10n.dashboardOverview),
-        const SizedBox(height: AppSpacing.sm),
-        PremiumCard(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: _MetricCell(
-                    icon: AppIcons.installments,
-                    value: '$unpaidCount',
-                    label: l10n.installmentsTitle,
-                    tone: overdueCount > 0 ? AppTone.error : AppTone.gold,
-                    loading: installmentsLoading,
-                    onTap: () => context.push('/account/installments'),
-                  ),
-                ),
-                _StripDivider(color: colors.hairline),
-                Expanded(
-                  child:
-                      BlocBuilder<
-                        MaintenanceRequestsCubit,
-                        MaintenanceRequestsState
-                      >(
-                        builder: (context, state) {
-                          final open =
-                              (state.data ?? const <MaintenanceRequest>[])
-                                  .where((r) => _isOpen(r.status))
-                                  .length;
-                          return _MetricCell(
-                            icon: AppIcons.maintenance,
-                            value: '$open',
-                            label: l10n.accountMaintenance,
-                            tone: AppTone.navy,
-                            loading: state.status == DataStatus.loading,
-                            onTap: () => context.push('/account/maintenance'),
-                          );
-                        },
-                      ),
-                ),
-                _StripDivider(color: colors.hairline),
-                Expanded(
-                  child: BlocBuilder<UnreadCountCubit, int>(
-                    builder: (context, count) => _MetricCell(
-                      icon: AppIcons.notification,
-                      value: '$count',
-                      label: l10n.accountNotifications,
-                      tone: AppTone.gold,
-                      onTap: () => context.push('/account/notifications'),
-                    ),
-                  ),
-                ),
-                _StripDivider(color: colors.hairline),
-                Expanded(
-                  child: BlocBuilder<FavoritesCubit, FavoritesState>(
-                    builder: (context, state) => _MetricCell(
-                      icon: AppIcons.favorite,
-                      value: '${state.items.length}',
-                      label: l10n.accountFavorites,
-                      tone: AppTone.muted,
-                      loading: state.status == DataStatus.loading,
-                      onTap: () => context.push('/account/favorites'),
-                    ),
-                  ),
-                ),
-              ],
+    final theme = Theme.of(context);
+    return PremiumCard(
+      glow: true,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          IconChip(
+            icon: AppIcons.property,
+            tone: AppTone.gold,
+            size: IconChipSize.lg,
+            filled: true,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            l10n.homeOwnerEmptyTitle,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: colors.inkStrong,
+              fontWeight: FontWeight.w800,
             ),
           ),
-        ),
-      ],
-    );
-  }
-
-  static bool _isOpen(MaintenanceStatus s) =>
-      s == MaintenanceStatus.open ||
-      s == MaintenanceStatus.assigned ||
-      s == MaintenanceStatus.inProgress;
-}
-
-class _StripDivider extends StatelessWidget {
-  const _StripDivider({required this.color});
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) => VerticalDivider(
-    width: 1,
-    thickness: 1,
-    color: color,
-    indent: 6,
-    endIndent: 6,
-  );
-}
-
-class _MetricCell extends StatelessWidget {
-  const _MetricCell({
-    required this.icon,
-    required this.value,
-    required this.label,
-    required this.tone,
-    required this.onTap,
-    this.loading = false,
-  });
-
-  final IconData icon;
-  final String value;
-  final String label;
-  final AppTone tone;
-  final VoidCallback onTap;
-  final bool loading;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-
-    return InkWell(
-      onTap: loading ? null : onTap,
-      borderRadius: AppRadii.input,
-      child: AppSkeletonizer(
-        enabled: loading,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconChip(icon: icon, tone: tone, size: IconChipSize.sm),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                loading ? '0' : value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: colors.inkStrong,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colors.inkMuted,
-                ),
-              ),
-            ],
+          const SizedBox(height: AppSpacing.xxs),
+          Text(
+            l10n.homeOwnerEmptyMessage,
+            style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
           ),
-        ),
+          const SizedBox(height: AppSpacing.md),
+          SizedBox(
+            width: double.infinity,
+            child: AppButton(
+              label: l10n.homeExploreProjects,
+              icon: AppIcons.property,
+              variant: AppButtonVariant.primary,
+              size: AppButtonSize.medium,
+              onPressed: () => context.go('/projects'),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── 5 · Fast service launcher ───────────────────────────────────────────────
-
-class _ServiceItem {
-  const _ServiceItem(
-    this.icon,
-    this.tone,
-    this.title,
-    this.subtitle,
-    this.route,
-  );
-  final IconData icon;
-  final AppTone tone;
-  final String title;
-  final String subtitle;
-  final String route;
-}
-
-class _ServiceLauncher extends StatelessWidget {
-  const _ServiceLauncher();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
-
-    final items = <_ServiceItem>[
-      _ServiceItem(
-        AppIcons.property,
-        AppTone.gold,
-        l10n.accountMyProperty,
-        l10n.homeServiceUnitSub,
-        '/account/property',
-      ),
-      _ServiceItem(
-        AppIcons.contract,
-        AppTone.navy,
-        l10n.accountContracts,
-        l10n.homeServiceContractsSub,
-        '/account/contracts',
-      ),
-      _ServiceItem(
-        AppIcons.deposit,
-        AppTone.gold,
-        l10n.accountDeposits,
-        l10n.homeServicePaymentsSub,
-        '/account/deposits',
-      ),
-      _ServiceItem(
-        AppIcons.visit,
-        AppTone.navy,
-        l10n.navVisits,
-        l10n.homeServiceVisitsSub,
-        '/account/requests',
-      ),
-    ];
-
-    final theme = Theme.of(context);
-    final colors = context.appColors;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppSectionHeader(title: l10n.dashboardQuickActions),
-        const SizedBox(height: AppSpacing.sm),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          mainAxisSpacing: AppSpacing.sm,
-          crossAxisSpacing: AppSpacing.sm,
-          childAspectRatio: 2.5,
-          children: [
-            for (final s in items)
-              PremiumCard(
-                elevation: AppCardElevation.soft,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.xs,
-                ),
-                onTap: () => context.push(s.route),
-                child: Row(
-                  children: [
-                    IconChip(icon: s.icon, tone: s.tone, size: IconChipSize.sm),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            s.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              color: colors.inkStrong,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            s.subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colors.inkMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      rtl
-                          ? Icons.chevron_left_rounded
-                          : Icons.chevron_right_rounded,
-                      size: 18,
-                      color: colors.inkMuted,
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ── 6 · Recent activity ─────────────────────────────────────────────────────
+// ── 3 · Recent activity ─────────────────────────────────────────────────────
 
 /// Latest maintenance updates (max 3). Hides entirely when there's nothing to
-/// show. Uses the maintenance cubit already loaded for the metric strip — no
-/// extra fetch.
+/// show. Uses the maintenance cubit already loaded by the /home route.
 class _RecentActivity extends StatelessWidget {
   const _RecentActivity();
 
@@ -818,20 +644,20 @@ class _RecentActivity extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppSectionHeader(
+            _SectionHeading(
               title: l10n.homeRecentActivity,
-              action: TextButton(
-                onPressed: () => context.push('/account/maintenance'),
-                child: Text(l10n.viewAll),
-              ),
+              onViewAll: () => context.push('/account/maintenance'),
             ),
             const SizedBox(height: AppSpacing.sm),
             PremiumCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.xs,
+              ),
               child: Column(
                 children: [
                   for (var i = 0; i < recent.length; i++) ...[
-                    if (i > 0)
-                      Divider(height: AppSpacing.lg, color: colors.hairline),
+                    if (i > 0) Divider(height: 1, color: colors.hairline),
                     _ActivityRow(request: recent[i]),
                   ],
                 ],
@@ -861,51 +687,53 @@ class _ActivityRow extends StatelessWidget {
       borderRadius: AppRadii.input,
       onTap: () =>
           context.push('/account/maintenance/${request.id}', extra: request),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IconChip(
-            icon: AppIcons.maintenance,
-            tone: AppTone.navy,
-            size: IconChipSize.sm,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  (title != null && title.isNotEmpty)
-                      ? title
-                      : request.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: colors.inkStrong,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (request.createdAt != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    DateFormatter.mediumDate(
-                      request.createdAt!,
-                      languageCode: lang,
-                    ),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colors.inkMuted,
-                    ),
-                  ),
-                ],
-              ],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+        child: Row(
+          children: [
+            IconChip(
+              icon: AppIcons.maintenance,
+              tone: AppTone.navy,
+              size: IconChipSize.sm,
             ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          StatusBadge(
-            label: maintenanceStatusLabel(l10n, request.status),
-            tone: maintenanceStatusTone(request.status),
-          ),
-        ],
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (title != null && title.isNotEmpty)
+                        ? title
+                        : request.description,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: colors.inkStrong,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  if (request.createdAt != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      DateFormatter.mediumDate(
+                        request.createdAt!,
+                        languageCode: lang,
+                      ),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            StatusBadge(
+              label: maintenanceStatusLabel(l10n, request.status),
+              tone: maintenanceStatusTone(request.status),
+            ),
+          ],
+        ),
       ),
     );
   }
