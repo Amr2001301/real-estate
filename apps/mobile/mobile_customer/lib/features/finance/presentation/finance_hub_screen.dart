@@ -14,11 +14,14 @@ class FinanceHubScreen extends StatelessWidget {
     final l10n = context.l10n;
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg, AppSpacing.lg,
-          AppSpacing.lg + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+      ),
       children: [
         AppSectionHeader(
-          eyebrow: l10n.navFinance,
           title: l10n.navFinance,
           subtitle: l10n.financeHubSubtitle,
         ),
@@ -95,8 +98,9 @@ class _FinanceCard extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   subtitle,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: colors.inkMuted),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
                 ),
               ],
             ),

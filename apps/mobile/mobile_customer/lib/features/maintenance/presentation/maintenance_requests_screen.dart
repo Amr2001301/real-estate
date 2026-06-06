@@ -13,7 +13,8 @@ class MaintenanceRequestsScreen extends StatefulWidget {
   const MaintenanceRequestsScreen({super.key});
 
   @override
-  State<MaintenanceRequestsScreen> createState() => _MaintenanceRequestsScreenState();
+  State<MaintenanceRequestsScreen> createState() =>
+      _MaintenanceRequestsScreenState();
 }
 
 class _MaintenanceRequestsScreenState extends State<MaintenanceRequestsScreen> {
@@ -67,13 +68,20 @@ class _MaintenanceRequestsScreenState extends State<MaintenanceRequestsScreen> {
             case DataStatus.success:
               final requests = state.data!;
               return RefreshIndicator(
-                onRefresh: () => context.read<MaintenanceRequestsCubit>().load(),
+                onRefresh: () =>
+                    context.read<MaintenanceRequestsCubit>().load(),
                 child: ListView.separated(
-                  padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg,
-                      AppSpacing.lg, AppSpacing.lg + MediaQuery.of(context).padding.bottom),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                    AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+                  ),
                   itemCount: requests.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, i) => _RequestTile(request: requests[i]),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (context, i) =>
+                      _RequestTile(request: requests[i]),
                 ),
               );
           }
@@ -96,42 +104,79 @@ class _RequestTile extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final category = request.categoryName?.resolve(lang);
 
-    return AppCard(
+    final title = category?.isNotEmpty == true
+        ? category!
+        : l10n.accountMaintenance;
+
+    return PremiumCard(
+      elevation: AppCardElevation.soft,
       onTap: () =>
           context.push('/account/maintenance/${request.id}', extra: request),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  category?.isNotEmpty == true ? category! : l10n.accountMaintenance,
-                  style: theme.textTheme.titleSmall,
+          IconChip(
+            icon: AppIcons.maintenance,
+            tone: AppTone.navy,
+            size: IconChipSize.md,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: colors.inkStrong,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    StatusBadge(
+                      label: maintenanceStatusLabel(l10n, request.status),
+                      tone: maintenanceStatusTone(request.status),
+                      dot: true,
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              StatusBadge(
-                label: maintenanceStatusLabel(l10n, request.status),
-                tone: maintenanceStatusTone(request.status),
-                dot: true,
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            request.description,
-            style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          if (request.createdAt != null) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              DateFormatter.shortDate(request.createdAt!, languageCode: lang),
-              style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  request.description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.inkMuted,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (request.createdAt != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Row(
+                    children: [
+                      Icon(AppIcons.calendar, size: 13, color: colors.inkMuted),
+                      const SizedBox(width: AppSpacing.xxs),
+                      Text(
+                        DateFormatter.shortDate(
+                          request.createdAt!,
+                          languageCode: lang,
+                        ),
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.inkMuted,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
-          ],
+          ),
         ],
       ),
     );

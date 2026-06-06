@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../catalog/presentation/widgets/contact_buttons.dart';
 import '../domain/entities/property.dart';
 import 'my_property_cubit.dart';
 
@@ -143,27 +142,66 @@ class _PropertyCard extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final owned = property.status == PropertyStatus.owned;
 
-    return AppCard(
-      elevation: AppCardElevation.soft,
+    final stats = <_Stat>[
+      if (property.contractNumber != null)
+        _Stat(l10n.myPropertyContractNumber, property.contractNumber!),
+      if (property.signedAt != null)
+        _Stat(
+          l10n.myPropertySignedDate,
+          DateFormatter.mediumDate(property.signedAt!, languageCode: lang),
+        ),
+      if (property.hasInstallmentPlan)
+        _Stat(
+          l10n.myPropertyInstallmentPlan,
+          l10n.myPropertyInstallmentSummary(
+            PriceFormatter.formatString(
+              property.monthlyAmount,
+              languageCode: lang,
+            ),
+            property.totalMonths!,
+          ),
+        ),
+    ];
+
+    return PremiumCard(
+      glow: true,
+      accentRail: AppTone.gold,
+      padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Identity row.
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              IconChip(
+                icon: AppIcons.property,
+                tone: AppTone.gold,
+                size: IconChipSize.lg,
+                filled: true,
+              ),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       property.projectName.resolve(lang),
-                      style: theme.textTheme.titleMedium,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     Text(
                       '${property.unitType} · ${property.unitCode}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
+                        letterSpacing: 0.2,
                       ),
                     ),
                   ],
@@ -179,78 +217,50 @@ class _PropertyCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          const Divider(height: 1),
-          const SizedBox(height: AppSpacing.md),
 
-          // ── Key details ──────────────────────────────────────────────────
-          if (property.contractNumber != null)
-            _DetailRow(
-              icon: Icons.description_outlined,
-              label: l10n.myPropertyContractNumber,
-              value: property.contractNumber!,
-            ),
-          if (property.reservationNumber != null)
-            _DetailRow(
-              icon: Icons.bookmark_outline_rounded,
-              label: l10n.myPropertyReservationNumber,
-              value: property.reservationNumber!,
-            ),
-          if (property.signedAt != null)
-            _DetailRow(
-              icon: Icons.event_available_outlined,
-              label: l10n.myPropertySignedDate,
-              value: DateFormatter.mediumDate(
-                property.signedAt!,
-                languageCode: lang,
-              ),
-            ),
-          if (property.hasInstallmentPlan)
-            _DetailRow(
-              icon: Icons.payments_outlined,
-              label: l10n.myPropertyInstallmentPlan,
-              value: l10n.myPropertyInstallmentSummary(
-                PriceFormatter.formatString(
-                  property.monthlyAmount,
-                  languageCode: lang,
+          // Contract facts — clean, aligned key/value table.
+          if (stats.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: colors.hairline),
+                  bottom: BorderSide(color: colors.hairline),
                 ),
-                property.totalMonths!,
+              ),
+              child: Column(
+                children: [for (final s in stats) _StatRow(stat: s)],
               ),
             ),
+          ],
 
-          const SizedBox(height: AppSpacing.md),
-
-          // ── Linked actions ───────────────────────────────────────────────
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
+          // Two clean actions, matching the web property card.
+          const SizedBox(height: AppSpacing.lg),
+          Row(
             children: [
-              _LinkChip(
-                icon: Icons.account_balance_wallet_outlined,
-                label: l10n.accountDeposits,
-                onTap: () => context.push('/account/deposits'),
+              Expanded(
+                child: AppButton(
+                  label: l10n.accountContracts,
+                  icon: AppIcons.contract,
+                  variant: AppButtonVariant.outline,
+                  size: AppButtonSize.medium,
+                  onPressed: () => context.push('/account/contracts'),
+                ),
               ),
-              _LinkChip(
-                icon: Icons.folder_outlined,
-                label: l10n.accountContracts,
-                onTap: () => context.push('/account/contracts'),
-              ),
-              _LinkChip(
-                icon: Icons.build_outlined,
-                label: l10n.myPropertyRequestMaintenance,
-                onTap: () => context.push(
-                  '/account/maintenance/new',
-                  extra: {'unitId': property.unitId},
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AppButton(
+                  label: l10n.myPropertyRequestMaintenance,
+                  icon: AppIcons.maintenance,
+                  variant: AppButtonVariant.primary,
+                  size: AppButtonSize.medium,
+                  onPressed: () => context.push(
+                    '/account/maintenance/new',
+                    extra: {'unitId': property.unitId},
+                  ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: AppSpacing.md),
-          ContactButtons(
-            whatsappMessage: l10n.myPropertyContactMessage(
-              property.projectName.resolve(lang),
-              property.unitCode,
-            ),
           ),
         ],
       ),
@@ -258,70 +268,44 @@ class _PropertyCard extends StatelessWidget {
   }
 }
 
-class _DetailRow extends StatelessWidget {
-  const _DetailRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  final IconData icon;
+class _Stat {
+  const _Stat(this.label, this.value);
   final String label;
   final String value;
+}
+
+/// Aligned key → value row used in the contract-facts table.
+class _StatRow extends StatelessWidget {
+  const _StatRow({required this.stat});
+  final _Stat stat;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: colors.inkMuted),
-          const SizedBox(width: AppSpacing.sm),
+          Text(
+            stat.label,
+            style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+          ),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
-              label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.inkMuted,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Flexible(
-            child: Text(
-              value,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
+              stat.value,
               textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.inkStrong,
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _LinkChip extends StatelessWidget {
-  const _LinkChip({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return ActionChip(
-      avatar: Icon(icon, size: 18, color: colors.brandGold),
-      label: Text(label),
-      onPressed: onTap,
     );
   }
 }
