@@ -30,11 +30,11 @@
   }
 
   ::selection {
-    @apply bg-brand-500/20 text-brand-800;
+    @apply bg-brand-200/60 text-navy;
   }
 
   *:focus-visible {
-    @apply outline-none ring-2 ring-brand-600/40 ring-offset-2 ring-offset-canvas;
+    @apply outline-none ring-2 ring-brand-500/45 ring-offset-2 ring-offset-canvas;
   }
 
   h1,

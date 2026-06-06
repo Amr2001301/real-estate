@@ -50,7 +50,7 @@ export function LeadSourceDonut({
             cy={SIZE / 2}
             r={RADIUS}
             fill="none"
-            stroke="rgb(226 232 240 / 0.6)"
+            stroke="rgb(231 223 211 / 0.7)"
             strokeWidth={STROKE}
           />
           {segments.map((seg) => (

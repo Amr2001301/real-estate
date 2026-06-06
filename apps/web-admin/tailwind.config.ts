@@ -6,35 +6,47 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        canvas: '#F4F7FB',
+        // Warm-luxe palette aligned with the public website ("Warm Luxe").
+        // Backgrounds/borders/accents are warm; text stays cool navy (slate)
+        // to match the website's cool-navy ink on a warm canvas.
+        canvas: '#FAF7F2',
         surface: {
           DEFAULT: '#FFFFFF',
-          muted: '#F1F5F9',
-          sunken: '#E2E8F0',
+          muted: '#F4EFE8',
+          sunken: '#EAE2D6',
         },
-        hairline: '#E5EAF0',
+        hairline: '#E7DFD3',
+
+        // Refined dark navy used by the website for nav/footer/CTAs — gives the
+        // admin shell the same branded identity.
+        navy: {
+          DEFAULT: '#0F1E33',
+          700: '#1C3050',
+          600: '#26405F',
+        },
 
         sidebar: {
-          bg: '#1E3348',
-          'bg-elev': '#263F59',
-          'bg-hover': '#22384F',
-          border: '#152538',
-          text: '#A8B5C8',
-          'text-muted': '#7A8AA0',
+          bg: '#0F1E33',
+          'bg-elev': '#1C3050',
+          'bg-hover': '#1A2A45',
+          border: '#0A1626',
+          text: '#9AA6B6',
+          'text-muted': '#6E7C90',
           'text-active': '#FFFFFF',
         },
 
+        // Gold accent matched to the website gold ramp (signature = 500/#C8A24B).
         brand: {
-          50: '#FBF7EE',
-          100: '#F4EAD0',
-          200: '#EAD9A6',
-          300: '#DDC275',
-          400: '#D2AD52',
-          500: '#C99A2E',
-          600: '#B7873A',
-          700: '#9C6E2A',
-          800: '#7E5821',
-          900: '#5C3F18',
+          50: '#FBF6EA',
+          100: '#F5E9CC',
+          200: '#E9D49B',
+          300: '#DABE6E',
+          400: '#CFAE57',
+          500: '#C8A24B',
+          600: '#AE8835',
+          700: '#8E6E29',
+          800: '#6E551F',
+          900: '#4F3D16',
         },
 
         accent: {
@@ -114,16 +126,20 @@ const config: Config = {
       },
 
       boxShadow: {
-        xs: '0 1px 2px 0 rgb(15 23 42 / 0.04)',
-        sm: '0 1px 2px 0 rgb(15 23 42 / 0.05), 0 1px 3px 0 rgb(15 23 42 / 0.04)',
-        md: '0 2px 4px -1px rgb(15 23 42 / 0.06), 0 4px 8px -2px rgb(15 23 42 / 0.06)',
-        lg: '0 4px 8px -2px rgb(15 23 42 / 0.06), 0 10px 20px -4px rgb(15 23 42 / 0.08)',
-        xl: '0 12px 24px -6px rgb(15 23 42 / 0.10), 0 20px 40px -8px rgb(15 23 42 / 0.12)',
-        ring: '0 0 0 3px rgb(201 154 46 / 0.18)',
+        // Navy-tinted shadows (rgb 15 30 51) to match the website's warm depth.
+        xs: '0 1px 2px 0 rgb(15 30 51 / 0.04)',
+        sm: '0 1px 2px 0 rgb(15 30 51 / 0.05), 0 1px 3px 0 rgb(15 30 51 / 0.04)',
+        soft: '0 1px 2px 0 rgb(15 30 51 / 0.04), 0 4px 16px -4px rgb(15 30 51 / 0.06)',
+        md: '0 2px 4px -1px rgb(15 30 51 / 0.06), 0 4px 8px -2px rgb(15 30 51 / 0.06)',
+        card: '0 8px 30px -12px rgb(15 30 51 / 0.12)',
+        lg: '0 4px 8px -2px rgb(15 30 51 / 0.06), 0 10px 20px -4px rgb(15 30 51 / 0.08)',
+        lift: '0 18px 48px -16px rgb(15 30 51 / 0.20)',
+        xl: '0 12px 24px -6px rgb(15 30 51 / 0.10), 0 20px 40px -8px rgb(15 30 51 / 0.12)',
+        ring: '0 0 0 3px rgb(200 162 75 / 0.20)',
       },
 
       ringColor: {
-        DEFAULT: '#C99A2E',
+        DEFAULT: '#C8A24B',
       },
 
       transitionTimingFunction: {

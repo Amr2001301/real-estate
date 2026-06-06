@@ -33,7 +33,7 @@ export interface PageKpiCardProps {
 
 export function PageKpiCard({ label, value, sub, icon, tone = 'brand' }: PageKpiCardProps) {
   return (
-    <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
+    <div className="bg-surface rounded-2xl border border-hairline shadow-soft overflow-hidden">
       <div className={cn('h-0.5', BAR[tone])} />
       <div className="px-4 py-4 flex items-start gap-3">
         {icon && (

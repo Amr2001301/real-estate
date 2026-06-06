@@ -17,7 +17,7 @@ interface Props<T> {
 
 export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا توجد بيانات', header }: Props<T>) {
   return (
-    <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
+    <div className="bg-surface rounded-2xl border border-hairline shadow-soft overflow-hidden">
       {header && (
         <div className="px-4 py-3 border-b border-hairline">
           {header}
@@ -25,7 +25,7 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا تو�
       )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+          <thead className="bg-surface-muted/60 text-xs text-slate-500 border-b border-hairline">
             <tr>
               {columns.map((col) => (
                 <th key={col.key} className={`text-right px-4 py-2.5 font-medium whitespace-nowrap ${col.className ?? ''}`}>
@@ -43,7 +43,7 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا تو�
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="hover:bg-slate-50/60 transition-colors">
+              <tr key={rowKey(row)} className="hover:bg-surface-muted/50 transition-colors">
                 {columns.map((col) => (
                   <td key={col.key} className={`px-4 py-2.5 align-middle ${col.className ?? ''}`}>
                     {col.cell(row)}

@@ -39,7 +39,7 @@ export function MonthlyTrendChart({ data }: Props) {
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={points} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-        <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" />
+        <CartesianGrid stroke="#E7DFD3" strokeDasharray="3 3" />
         <XAxis dataKey="label" tick={{ fontSize: 11 }} />
         <YAxis yAxisId="counts" tick={{ fontSize: 11 }} />
         <YAxis
@@ -53,7 +53,7 @@ export function MonthlyTrendChart({ data }: Props) {
         <Tooltip
           contentStyle={{
             background: 'white',
-            border: '1px solid #e2e8f0',
+            border: '1px solid #E7DFD3',
             borderRadius: 8,
             fontSize: 12,
           }}

@@ -94,7 +94,7 @@ export function Sidebar({ user, sections, className }: Omit<Props, 'onNavigate'>
       className={`hidden lg:flex w-[264px] shrink-0 relative z-20 ${className ?? ''}`}
       style={{
         // Soft elevation toward the content side (end edge in RTL = visual left)
-        boxShadow: '-12px 0 32px -16px rgb(15 23 42 / 0.18)',
+        boxShadow: '-12px 0 32px -16px rgb(15 30 51 / 0.20)',
       }}
     >
       <div className="sticky top-0 h-screen w-full">
