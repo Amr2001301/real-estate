@@ -17,42 +17,66 @@ class TargetProgressCard extends StatelessWidget {
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
 
-    return AppCard(
+    return PremiumCard(
       elevation: AppCardElevation.soft,
+      accentRail: AppTone.gold,
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.track_changes_rounded, color: colors.brandGold, size: 20),
+              const IconChip(
+                icon: Icons.track_changes_rounded,
+                tone: AppTone.gold,
+                size: IconChipSize.sm,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: Text(l10n.targetsTitle, style: Theme.of(context).textTheme.titleSmall),
+                child: Text(
+                  l10n.targetsTitle,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ),
-              Text(performance.period,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colors.inkMuted)),
+              Text(
+                performance.period,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
           if (!performance.hasTarget)
-            Text(l10n.targetsNone,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: colors.inkMuted))
+            Text(
+              l10n.targetsNone,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
+            )
           else ...[
             _Bar(
               label: l10n.targetAmount,
               percent: performance.targetAmountPercent,
-              achieved: PriceFormatter.format(performance.achievedAmount, languageCode: lang),
+              achieved: PriceFormatter.format(
+                performance.achievedAmount,
+                languageCode: lang,
+              ),
               target: performance.targetAmount == null
                   ? null
-                  : PriceFormatter.format(performance.targetAmount!, languageCode: lang),
+                  : PriceFormatter.format(
+                      performance.targetAmount!,
+                      languageCode: lang,
+                    ),
             ),
             const SizedBox(height: AppSpacing.md),
             _Bar(
               label: l10n.targetUnits,
               percent: performance.targetUnitsPercent,
               achieved: '${performance.achievedUnits}',
-              target: performance.targetUnits == null ? null : '${performance.targetUnits}',
+              target: performance.targetUnits == null
+                  ? null
+                  : '${performance.targetUnits}',
             ),
           ],
         ],
@@ -62,7 +86,12 @@ class TargetProgressCard extends StatelessWidget {
 }
 
 class _Bar extends StatelessWidget {
-  const _Bar({required this.label, required this.percent, required this.achieved, this.target});
+  const _Bar({
+    required this.label,
+    required this.percent,
+    required this.achieved,
+    this.target,
+  });
   final String label;
   final double? percent;
   final String achieved;
@@ -77,10 +106,14 @@ class _Bar extends StatelessWidget {
       children: [
         Row(
           children: [
-            Expanded(child: Text(label, style: Theme.of(context).textTheme.bodyMedium)),
+            Expanded(
+              child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
+            ),
             Text(
               target == null ? achieved : '$achieved / $target',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
             ),
           ],
         ),
@@ -95,8 +128,12 @@ class _Bar extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.xxs),
-        Text('${pct.toStringAsFixed(0)}%',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colors.inkMuted)),
+        Text(
+          '${pct.toStringAsFixed(0)}%',
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+        ),
       ],
     );
   }

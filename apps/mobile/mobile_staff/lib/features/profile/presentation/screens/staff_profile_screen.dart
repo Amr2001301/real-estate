@@ -30,10 +30,10 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     // P11.6 — payment review entry for ADMIN + SALES_MANAGER only.
     final role = context.read<SessionCubit>().state.role;
-    final canReviewPayments = role == AppRole.admin || role == AppRole.salesManager;
+    final canReviewPayments =
+        role == AppRole.admin || role == AppRole.salesManager;
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.navProfile)),
@@ -53,36 +53,42 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
                   );
                 case DataStatus.empty:
                 case DataStatus.success:
+                  final colors = context.appColors;
                   final p = state.data;
-                  final session = context.read<SessionCubit>().state.sessionOrNull;
+                  final session = context
+                      .read<SessionCubit>()
+                      .state
+                      .sessionOrNull;
                   final name = p?.fullName ?? session?.displayName ?? '—';
                   final email = p?.email ?? session?.email;
                   final role = p?.role ?? session?.role ?? AppRole.sales;
-                  return AppCard(
-                    elevation: AppCardElevation.soft,
+                  return PremiumCard(
+                    glow: true,
                     child: Row(
                       children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: colors.brandGoldSoft,
-                          child: Icon(Icons.person, color: colors.brandGold),
-                        ),
+                        GradientAvatar(name: name, size: 56),
                         const SizedBox(width: AppSpacing.md),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(name, style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                name,
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
                               if (email != null) ...[
                                 const SizedBox(height: 2),
-                                Text(email,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodySmall
-                                        ?.copyWith(color: colors.inkMuted)),
+                                Text(
+                                  email,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(color: colors.inkMuted),
+                                ),
                               ],
                               const SizedBox(height: AppSpacing.xs),
-                              StatusBadge(label: roleLabel(l10n, role), tone: BadgeTone.navy),
+                              StatusBadge(
+                                label: roleLabel(l10n, role),
+                                tone: BadgeTone.navy,
+                              ),
                             ],
                           ),
                         ),
@@ -149,15 +155,30 @@ class _PerformanceSection extends StatelessWidget {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(l10n.profilePerformance, style: Theme.of(context).textTheme.titleMedium),
+                AppSectionHeader(title: l10n.profilePerformance),
                 const SizedBox(height: AppSpacing.sm),
                 if (targetReady && perf != null) ...[
                   AppCard(
                     child: Row(
                       children: [
-                        Expanded(child: _Stat(label: l10n.profileActiveLeads, value: '${perf.openLeadsCount}')),
-                        Expanded(child: _Stat(label: l10n.navVisits, value: '${perf.visitsCount}')),
-                        Expanded(child: _Stat(label: l10n.navReservations, value: '${perf.reservationsCount}')),
+                        Expanded(
+                          child: _Stat(
+                            label: l10n.profileActiveLeads,
+                            value: '${perf.openLeadsCount}',
+                          ),
+                        ),
+                        Expanded(
+                          child: _Stat(
+                            label: l10n.navVisits,
+                            value: '${perf.visitsCount}',
+                          ),
+                        ),
+                        Expanded(
+                          child: _Stat(
+                            label: l10n.navReservations,
+                            value: '${perf.reservationsCount}',
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -169,12 +190,22 @@ class _PerformanceSection extends StatelessWidget {
                   AppCard(
                     child: Row(
                       children: [
-                        Icon(Icons.payments_outlined, color: colors.brandGold, size: 20),
+                        const IconChip(
+                          icon: Icons.payments_rounded,
+                          tone: AppTone.gold,
+                          size: IconChipSize.sm,
+                        ),
                         const SizedBox(width: AppSpacing.sm),
-                        Expanded(child: Text(l10n.bonusTitle, style: Theme.of(context).textTheme.titleSmall)),
+                        Expanded(
+                          child: Text(
+                            l10n.bonusTitle,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ),
                         Text(
                           '${l10n.bonusPaid}: ${PriceFormatter.format(bonus.overview!.paidTotal, languageCode: lang)}',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.inkMuted),
                         ),
                       ],
                     ),
@@ -202,11 +233,15 @@ class _Stat extends StatelessWidget {
       children: [
         Text(value, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 2),
-        Text(label,
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colors.inkMuted)),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+        ),
       ],
     );
   }
@@ -236,7 +271,9 @@ class _SettingTile extends StatelessWidget {
           children: [
             Icon(icon, color: colors.brandGold),
             const SizedBox(width: AppSpacing.md),
-            Expanded(child: Text(label, style: Theme.of(context).textTheme.titleSmall)),
+            Expanded(
+              child: Text(label, style: Theme.of(context).textTheme.titleSmall),
+            ),
             ?trailing,
           ],
         ),
@@ -252,19 +289,24 @@ class _ProfileHeaderSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSkeletonizer(
       enabled: true,
-      child: AppCard(
+      child: PremiumCard(
         child: Row(
           children: [
-            const CircleAvatar(radius: 28),
+            GradientAvatar(name: 'Staff Member', size: 56),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Staff Member', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Staff Member',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
-                  Text('staff@example.com',
-                      style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    'staff@example.com',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               ),
             ),

@@ -1,8 +1,8 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
+import '../../../../router/auth_navigation.dart';
 import '../favorites_cubit.dart';
 
 /// Heart toggle for a project/unit. Guests are prompted to sign in; signed-in
@@ -59,7 +59,7 @@ class FavoriteToggleButton extends StatelessWidget {
           content: Text(l10n.favoriteLoginPrompt),
           action: SnackBarAction(
             label: l10n.actionLogin,
-            onPressed: () => context.push('/login'),
+            onPressed: () => context.pushLoginWithRedirect(),
           ),
         ));
       return;

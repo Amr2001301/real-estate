@@ -78,7 +78,8 @@ class _DashboardBody extends StatelessWidget {
     // P11.6 — payment review is viewable by ADMIN + SALES_MANAGER (matches
     // GET /deposits/review-queue). Hidden for SALES/BROKER, who would 403.
     final role = context.read<SessionCubit>().state.role;
-    final canReviewPayments = role == AppRole.admin || role == AppRole.salesManager;
+    final canReviewPayments =
+        role == AppRole.admin || role == AppRole.salesManager;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       children: [
@@ -88,7 +89,7 @@ class _DashboardBody extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.md,
           crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: 1.6,
+          childAspectRatio: 1.45,
           children: [
             KpiCard(
               icon: Icons.people_alt_outlined,
@@ -124,7 +125,7 @@ class _DashboardBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         const DashboardBonusCard(),
         const SizedBox(height: AppSpacing.lg),
-        Text(l10n.dashboardQuickActions, style: Theme.of(context).textTheme.titleMedium),
+        AppSectionHeader(title: l10n.dashboardQuickActions),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: AppSpacing.sm,
@@ -164,7 +165,7 @@ class _DashboardBody extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
-        Text(l10n.dashboardPipeline, style: Theme.of(context).textTheme.titleMedium),
+        AppSectionHeader(title: l10n.dashboardPipeline),
         const SizedBox(height: AppSpacing.sm),
         AppCard(
           child: Column(
@@ -191,7 +192,10 @@ class _PipelineRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
-          StatusBadge(label: leadStageLabel(l10n, stage), tone: leadStageTone(stage)),
+          StatusBadge(
+            label: leadStageLabel(l10n, stage),
+            tone: leadStageTone(stage),
+          ),
           const Spacer(),
           Text('$count', style: Theme.of(context).textTheme.titleMedium),
         ],
@@ -212,12 +216,24 @@ class _DashboardSkeleton extends StatelessWidget {
         crossAxisCount: 2,
         mainAxisSpacing: AppSpacing.md,
         crossAxisSpacing: AppSpacing.md,
-        childAspectRatio: 1.6,
+        childAspectRatio: 1.45,
         children: const [
           KpiCard(icon: Icons.people_alt_outlined, label: 'Leads', value: '00'),
-          KpiCard(icon: Icons.event_available_outlined, label: 'Visits', value: '00'),
-          KpiCard(icon: Icons.calendar_month_outlined, label: 'Scheduled', value: '00'),
-          KpiCard(icon: Icons.bookmark_added_outlined, label: 'Reservations', value: '00'),
+          KpiCard(
+            icon: Icons.event_available_outlined,
+            label: 'Visits',
+            value: '00',
+          ),
+          KpiCard(
+            icon: Icons.calendar_month_outlined,
+            label: 'Scheduled',
+            value: '00',
+          ),
+          KpiCard(
+            icon: Icons.bookmark_added_outlined,
+            label: 'Reservations',
+            value: '00',
+          ),
         ],
       ),
     );

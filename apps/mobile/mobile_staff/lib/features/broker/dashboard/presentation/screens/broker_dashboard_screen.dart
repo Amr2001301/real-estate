@@ -40,7 +40,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
           switch (state.status) {
             case DataStatus.initial:
             case DataStatus.loading:
-              return const Center(child: CircularProgressIndicator());
+              return const _Skeleton();
             case DataStatus.failure:
               return ErrorState(
                 failure: state.failure,
@@ -80,7 +80,7 @@ class _Body extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.md,
           crossAxisSpacing: AppSpacing.md,
-          childAspectRatio: 1.6,
+          childAspectRatio: 1.45,
           children: [
             KpiCard(
               icon: Icons.people_alt_outlined,
@@ -112,25 +112,43 @@ class _Body extends StatelessWidget {
         ),
         if (canViewCommissions) ...[
           const SizedBox(height: AppSpacing.md),
-          AppCard(
+          PremiumCard(
             elevation: AppCardElevation.soft,
+            accentRail: AppTone.gold,
             onTap: () => context.push('/broker/commissions'),
             child: Row(
               children: [
-                Icon(Icons.payments_outlined, color: context.appColors.brandGold),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(child: Text(l10n.navCommissions, style: Theme.of(context).textTheme.titleSmall)),
-                Text(
-                  PriceFormatter.format(data.commissionsGross, languageCode: lang),
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(color: context.appColors.brandGold),
+                const IconChip(
+                  icon: Icons.payments_rounded,
+                  tone: AppTone.gold,
+                  size: IconChipSize.sm,
                 ),
-                const Icon(Icons.chevron_right_rounded),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    l10n.navCommissions,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                Text(
+                  PriceFormatter.format(
+                    data.commissionsGross,
+                    languageCode: lang,
+                  ),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: context.appColors.brandGold,
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: context.appColors.inkMuted,
+                ),
               ],
             ),
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
-        Text(l10n.dashboardQuickActions, style: Theme.of(context).textTheme.titleMedium),
+        AppSectionHeader(title: l10n.dashboardQuickActions),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: AppSpacing.sm,
@@ -150,14 +168,19 @@ class _Body extends StatelessWidget {
         ),
         if (data.recentLeads.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.lg),
-          Text(l10n.brokerRecentLeads, style: Theme.of(context).textTheme.titleMedium),
+          AppSectionHeader(title: l10n.brokerRecentLeads),
           const SizedBox(height: AppSpacing.sm),
           for (final lead in data.recentLeads.take(5)) ...[
             AppCard(
               onTap: () => context.push('/broker/leads/${lead.id}'),
               child: Row(
                 children: [
-                  Expanded(child: Text(lead.fullName, style: Theme.of(context).textTheme.titleSmall)),
+                  Expanded(
+                    child: Text(
+                      lead.fullName,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
+                  ),
                   StatusBadge(
                     label: brokerLeadStatusLabel(l10n, lead.approvalStatus),
                     tone: brokerLeadStatusTone(lead.approvalStatus),
@@ -170,7 +193,7 @@ class _Body extends StatelessWidget {
         ],
         if (data.recentReservations.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.md),
-          Text(l10n.brokerRecentReservations, style: Theme.of(context).textTheme.titleMedium),
+          AppSectionHeader(title: l10n.brokerRecentReservations),
           const SizedBox(height: AppSpacing.sm),
           for (final r in data.recentReservations.take(5)) ...[
             AppCard(
@@ -178,8 +201,10 @@ class _Body extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(r.reservationNumber ?? r.unitCode ?? l10n.navReservations,
-                        style: Theme.of(context).textTheme.titleSmall),
+                    child: Text(
+                      r.reservationNumber ?? r.unitCode ?? l10n.navReservations,
+                      style: Theme.of(context).textTheme.titleSmall,
+                    ),
                   ),
                   StatusBadge(
                     label: reservationStatusLabel(l10n, r.status),
@@ -192,6 +217,45 @@ class _Body extends StatelessWidget {
           ],
         ],
       ],
+    );
+  }
+}
+
+/// Loading placeholder mirroring the live KPI grid — a shimmering set of
+/// [KpiCard]s instead of a bare spinner, matching the Guest loading language.
+class _Skeleton extends StatelessWidget {
+  const _Skeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSkeletonizer(
+      enabled: true,
+      child: GridView.count(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        mainAxisSpacing: AppSpacing.md,
+        crossAxisSpacing: AppSpacing.md,
+        childAspectRatio: 1.45,
+        children: const [
+          KpiCard(icon: Icons.people_alt_outlined, label: 'Leads', value: '00'),
+          KpiCard(
+            icon: Icons.verified_outlined,
+            label: 'Approved',
+            value: '00',
+          ),
+          KpiCard(
+            icon: Icons.bookmark_added_outlined,
+            label: 'Reservations',
+            value: '00',
+          ),
+          KpiCard(
+            icon: Icons.check_circle_outline_rounded,
+            label: 'Approved',
+            value: '00',
+          ),
+        ],
+      ),
     );
   }
 }

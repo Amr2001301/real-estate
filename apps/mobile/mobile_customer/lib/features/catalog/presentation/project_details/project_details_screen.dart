@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../router/auth_navigation.dart';
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
 import '../../domain/entities/project.dart';
 import '../widgets/amenity_chips.dart';
@@ -817,7 +818,7 @@ void _showVisitPrompt(BuildContext context, ProjectDetail project) {
             expand: true,
             onPressed: () {
               Navigator.of(sheetContext).pop();
-              context.push('/login');
+              context.pushLoginWithRedirect();
             },
           ),
           const SizedBox(height: AppSpacing.sm),

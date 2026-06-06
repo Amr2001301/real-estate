@@ -17,12 +17,14 @@ class DashboardTargetCard extends StatelessWidget {
     return BlocBuilder<TargetSummaryCubit, TargetSummaryState>(
       builder: (context, state) => switch (state.status) {
         TargetSummaryStatus.loading => const _SummarySkeleton(),
-        TargetSummaryStatus.unavailable =>
-          _UnavailableCard(icon: Icons.track_changes_rounded, label: l10n.targetsTitle),
+        TargetSummaryStatus.unavailable => _UnavailableCard(
+          icon: Icons.track_changes_rounded,
+          label: l10n.targetsTitle,
+        ),
         TargetSummaryStatus.ready => TargetProgressCard(
-            performance: state.performance!,
-            onTap: () => context.push('/targets'),
-          ),
+          performance: state.performance!,
+          onTap: () => context.push('/targets'),
+        ),
       },
     );
   }
@@ -43,21 +45,34 @@ class DashboardBonusCard extends StatelessWidget {
           case SummaryStatus.loading:
             return const _SummarySkeleton();
           case SummaryStatus.unavailable:
-            return _UnavailableCard(icon: Icons.payments_outlined, label: l10n.bonusTitle);
+            return _UnavailableCard(
+              icon: Icons.payments_outlined,
+              label: l10n.bonusTitle,
+            );
           case SummaryStatus.ready:
             final o = state.overview!;
-            return AppCard(
+            return PremiumCard(
               elevation: AppCardElevation.soft,
+              accentRail: AppTone.gold,
               onTap: () => context.push('/bonus'),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.payments_outlined, color: colors.brandGold, size: 20),
+                      const IconChip(
+                        icon: Icons.payments_rounded,
+                        tone: AppTone.gold,
+                        size: IconChipSize.sm,
+                      ),
                       const SizedBox(width: AppSpacing.sm),
-                      Expanded(child: Text(l10n.bonusTitle, style: Theme.of(context).textTheme.titleSmall)),
-                      const Icon(Icons.chevron_right_rounded),
+                      Expanded(
+                        child: Text(
+                          l10n.bonusTitle,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: colors.inkMuted),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -66,14 +81,20 @@ class DashboardBonusCard extends StatelessWidget {
                       Expanded(
                         child: _Metric(
                           label: l10n.bonusPaid,
-                          value: PriceFormatter.format(o.paidTotal, languageCode: lang),
+                          value: PriceFormatter.format(
+                            o.paidTotal,
+                            languageCode: lang,
+                          ),
                           color: colors.success,
                         ),
                       ),
                       Expanded(
                         child: _Metric(
                           label: l10n.bonusPending,
-                          value: PriceFormatter.format(o.pendingTotal, languageCode: lang),
+                          value: PriceFormatter.format(
+                            o.pendingTotal,
+                            languageCode: lang,
+                          ),
                           color: colors.warning,
                         ),
                       ),
@@ -89,7 +110,11 @@ class DashboardBonusCard extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({required this.label, required this.value, required this.color});
+  const _Metric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final String label;
   final String value;
   final Color color;
@@ -100,9 +125,19 @@ class _Metric extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color)),
+        Text(
+          value,
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(color: color),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+        ),
       ],
     );
   }
@@ -116,14 +151,21 @@ class _UnavailableCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return AppCard(
+    return PremiumCard(
+      elevation: AppCardElevation.soft,
       child: Row(
         children: [
-          Icon(icon, color: colors.inkMuted, size: 20),
+          IconChip(icon: icon, tone: AppTone.muted, size: IconChipSize.sm),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(label, style: Theme.of(context).textTheme.titleSmall)),
-          Text(context.l10n.summaryUnavailable,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
+          Expanded(
+            child: Text(label, style: Theme.of(context).textTheme.titleSmall),
+          ),
+          Text(
+            context.l10n.summaryUnavailable,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+          ),
         ],
       ),
     );
@@ -137,11 +179,15 @@ class _SummarySkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSkeletonizer(
       enabled: true,
-      child: AppCard(
+      child: PremiumCard(
+        elevation: AppCardElevation.soft,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Summary title', style: Theme.of(context).textTheme.titleSmall),
+            Text(
+              'Summary title',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
             const SizedBox(height: AppSpacing.md),
             Text('0000 / 0000', style: Theme.of(context).textTheme.titleMedium),
           ],

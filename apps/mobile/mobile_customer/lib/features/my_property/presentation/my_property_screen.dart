@@ -33,7 +33,7 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
         switch (state.status) {
           case DataStatus.initial:
           case DataStatus.loading:
-            return const Center(child: CircularProgressIndicator());
+            return const _PropertySkeleton();
           case DataStatus.failure:
             return ErrorState(
               failure: state.failure,
@@ -50,8 +50,12 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
             return RefreshIndicator(
               onRefresh: () => context.read<MyPropertyCubit>().load(),
               child: ListView.separated(
-                padding: EdgeInsets.fromLTRB(AppSpacing.lg, AppSpacing.lg,
-                    AppSpacing.lg, AppSpacing.lg + MediaQuery.of(context).padding.bottom),
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg + MediaQuery.of(context).padding.bottom,
+                ),
                 itemCount: properties.length,
                 separatorBuilder: (_, _) =>
                     const SizedBox(height: AppSpacing.lg),
@@ -61,6 +65,67 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
             );
         }
       },
+    );
+  }
+}
+
+/// Loading placeholder mirroring the property cards — shimmering bones instead
+/// of a bare spinner, matching the Guest loading language.
+class _PropertySkeleton extends StatelessWidget {
+  const _PropertySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AppSkeletonizer(
+      enabled: true,
+      child: ListView.separated(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        itemCount: 2,
+        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.lg),
+        itemBuilder: (context, _) => AppCard(
+          elevation: AppCardElevation.soft,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Project name placeholder',
+                          style: theme.textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Unit type · code',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const StatusBadge(label: '••••', tone: BadgeTone.neutral),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Divider(height: 1),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                'Detail line placeholder',
+                style: theme.textTheme.bodyMedium,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'Detail line placeholder',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -97,8 +162,9 @@ class _PropertyCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       '${property.unitType} · ${property.unitCode}',
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: colors.inkMuted),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.inkMuted,
+                      ),
                     ),
                   ],
                 ),
@@ -134,16 +200,20 @@ class _PropertyCard extends StatelessWidget {
             _DetailRow(
               icon: Icons.event_available_outlined,
               label: l10n.myPropertySignedDate,
-              value: DateFormatter.mediumDate(property.signedAt!,
-                  languageCode: lang),
+              value: DateFormatter.mediumDate(
+                property.signedAt!,
+                languageCode: lang,
+              ),
             ),
           if (property.hasInstallmentPlan)
             _DetailRow(
               icon: Icons.payments_outlined,
               label: l10n.myPropertyInstallmentPlan,
               value: l10n.myPropertyInstallmentSummary(
-                PriceFormatter.formatString(property.monthlyAmount,
-                    languageCode: lang),
+                PriceFormatter.formatString(
+                  property.monthlyAmount,
+                  languageCode: lang,
+                ),
                 property.totalMonths!,
               ),
             ),
@@ -213,16 +283,18 @@ class _DetailRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style:
-                  theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.inkMuted,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Flexible(
             child: Text(
               value,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.end,
             ),
           ),

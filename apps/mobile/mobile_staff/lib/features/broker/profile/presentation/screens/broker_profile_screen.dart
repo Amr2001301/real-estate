@@ -24,34 +24,40 @@ class BrokerProfileScreen extends StatelessWidget {
         children: [
           BlocBuilder<BrokerProfileCubit, BrokerProfileState>(
             builder: (context, state) {
-              if (state.status == DataStatus.loading || state.status == DataStatus.initial) {
+              if (state.status == DataStatus.loading ||
+                  state.status == DataStatus.initial) {
                 return const _HeaderSkeleton();
               }
               final session = context.read<SessionCubit>().state.sessionOrNull;
               final p = state.data;
               final name = p?.fullName ?? session?.displayName ?? '—';
-              return AppCard(
-                elevation: AppCardElevation.soft,
+              return PremiumCard(
+                glow: true,
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      radius: 28,
-                      backgroundColor: colors.brandGoldSoft,
-                      child: Icon(Icons.handshake_outlined, color: colors.brandGold),
-                    ),
+                    GradientAvatar(name: name, size: 56),
                     const SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(name, style: Theme.of(context).textTheme.titleMedium),
+                          Text(
+                            name,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
                           if (p?.companyName != null) ...[
                             const SizedBox(height: 2),
-                            Text(p!.companyName!,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted)),
+                            Text(
+                              p!.companyName!,
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(color: colors.inkMuted),
+                            ),
                           ],
                           const SizedBox(height: AppSpacing.xs),
-                          StatusBadge(label: roleLabel(l10n, AppRole.broker), tone: BadgeTone.navy),
+                          StatusBadge(
+                            label: roleLabel(l10n, AppRole.broker),
+                            tone: BadgeTone.navy,
+                          ),
                         ],
                       ),
                     ),
@@ -62,9 +68,12 @@ class BrokerProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.lg),
           BlocBuilder<BrokerProfileCubit, BrokerProfileState>(
-            buildWhen: (a, b) => a.data?.canViewCommissions != b.data?.canViewCommissions,
+            buildWhen: (a, b) =>
+                a.data?.canViewCommissions != b.data?.canViewCommissions,
             builder: (context, state) {
-              if (state.data?.canViewCommissions != true) return const SizedBox.shrink();
+              if (state.data?.canViewCommissions != true) {
+                return const SizedBox.shrink();
+              }
               return _SettingTile(
                 icon: Icons.payments_outlined,
                 label: l10n.navCommissions,
@@ -98,7 +107,12 @@ class BrokerProfileScreen extends StatelessWidget {
 }
 
 class _SettingTile extends StatelessWidget {
-  const _SettingTile({required this.icon, required this.label, required this.onTap, this.trailing});
+  const _SettingTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.trailing,
+  });
   final IconData icon;
   final String label;
   final VoidCallback onTap;
@@ -115,7 +129,9 @@ class _SettingTile extends StatelessWidget {
           children: [
             Icon(icon, color: colors.brandGold),
             const SizedBox(width: AppSpacing.md),
-            Expanded(child: Text(label, style: Theme.of(context).textTheme.titleSmall)),
+            Expanded(
+              child: Text(label, style: Theme.of(context).textTheme.titleSmall),
+            ),
             ?trailing,
             const Icon(Icons.chevron_right_rounded),
           ],
@@ -131,16 +147,19 @@ class _HeaderSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppSkeletonizer(
       enabled: true,
-      child: AppCard(
+      child: PremiumCard(
         child: Row(
           children: [
-            const CircleAvatar(radius: 28),
+            GradientAvatar(name: 'Broker name', size: 56),
             const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Broker name', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    'Broker name',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   Text('Company', style: Theme.of(context).textTheme.bodySmall),
                 ],

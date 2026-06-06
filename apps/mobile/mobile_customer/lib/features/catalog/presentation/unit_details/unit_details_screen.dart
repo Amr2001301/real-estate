@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../router/auth_navigation.dart';
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
 import '../../domain/entities/catalog_enums.dart';
 import '../../domain/entities/unit.dart';
@@ -1052,7 +1053,7 @@ class _StickyActionBar extends StatelessWidget {
               expand: true,
               onPressed: () {
                 Navigator.of(sheetContext).pop();
-                context.push('/login');
+                context.pushLoginWithRedirect();
               },
             ),
             const SizedBox(height: AppSpacing.sm),

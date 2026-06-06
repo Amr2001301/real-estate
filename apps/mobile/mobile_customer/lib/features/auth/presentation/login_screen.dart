@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../router/auth_navigation.dart';
 import 'auth_cubit.dart';
 import 'auth_state.dart';
 import 'auth_validators.dart';
@@ -38,10 +39,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   /// Auth screens are opened with `push`, so the router's redirect guard (which
   /// keys off `matchedLocation`, still the underlying route) can't move an
-  /// authenticated user off them. Navigate to the account area ourselves.
+  /// authenticated user off them. Navigate ourselves: back to the route the
+  /// user came from (`?redirect=`) or `/account` as a safe fallback.
   void _onAuthState(BuildContext context, AuthState state) {
     if (state.status == AuthStatus.success) {
-      context.go('/account');
+      context.goPostAuth();
     } else if (state.failure != null) {
       showFailureSnackBar(context, state.failure!);
     }
@@ -116,12 +118,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       icon: Icons.phone_android_rounded,
                       variant: AppButtonVariant.outline,
                       expand: true,
-                      onPressed: () => context.push('/login/otp'),
+                      onPressed: () => context.pushAuthRoute('/login/otp'),
                     ),
                     const SizedBox(height: AppSpacing.md),
                     AuthFooterLink(
                       text: l10n.authNoAccountCta,
-                      onTap: () => context.push('/register'),
+                      onTap: () => context.pushAuthRoute('/register'),
                     ),
                   ],
                 ),
