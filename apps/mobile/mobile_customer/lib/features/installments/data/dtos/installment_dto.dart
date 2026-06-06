@@ -1,3 +1,5 @@
+import 'package:core/core_domain.dart';
+
 // Subset of a /me/installments row + the embedded customer-visible Deposit
 // (P11.5). Data layer only — domain layer never sees this shape.
 //
@@ -27,7 +29,7 @@ class InstallmentDto {
   final String amount;
   final String dueDate;
   final String status; // PENDING | PAID | OVERDUE
-  final String type;   // PlanPaymentType
+  final String type; // PlanPaymentType
   final String? paidAt;
   final String? contractId;
   final String? contractNumber;
@@ -43,8 +45,11 @@ class InstallmentDto {
     final unit = contract?['unit'] as Map<String, dynamic>?;
     final project =
         ((unit?['building'] as Map<String, dynamic>?)?['phase']
-                as Map<String, dynamic>?)?['project'] as Map<String, dynamic>?;
-    final projectName = project?['name'] as Map<String, dynamic>?;
+                as Map<String, dynamic>?)?['project']
+            as Map<String, dynamic>?;
+    // Tolerant: the locale interceptor may flatten `name` to a localized
+    // string, so never cast it directly to a Map.
+    final projectName = Translatable.fromJson(project?['name']);
 
     // The backend embeds latest deposit (if any) when the customer surface
     // is enriched. Today /me/installments is lean — we look up proof state
@@ -64,10 +69,11 @@ class InstallmentDto {
       contractNumber: contract?['contractNumber'] as String?,
       unitCode: unit?['code'] as String?,
       unitType: unit?['type'] as String?,
-      projectNameAr: projectName?['ar'] as String?,
-      projectNameEn: projectName?['en'] as String?,
-      latestProof:
-          deposit == null ? null : DepositProofSummaryDto.fromJson(deposit),
+      projectNameAr: projectName.ar.isEmpty ? null : projectName.ar,
+      projectNameEn: projectName.en.isEmpty ? null : projectName.en,
+      latestProof: deposit == null
+          ? null
+          : DepositProofSummaryDto.fromJson(deposit),
     );
   }
 }

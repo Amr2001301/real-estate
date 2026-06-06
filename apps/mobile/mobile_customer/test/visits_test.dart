@@ -24,6 +24,7 @@ class _FakeVisitsRepository implements VisitsRepository {
 
   /// When non-null, [confirmAppointment] returns this failure instead of `Ok`.
   final AppFailure? confirmFailure;
+
   /// When non-null, [requestReschedule] returns this failure instead of `Ok`.
   final AppFailure? rescheduleFailure;
 
@@ -45,16 +46,25 @@ class _FakeVisitsRepository implements VisitsRepository {
     int pageSize = 20,
   }) async {
     listCalls++;
-    return Result.ok(Paginated(
-      data: list,
-      meta: PageMeta(page: 1, pageSize: pageSize, total: list.length, totalPages: 1),
-    ));
+    return Result.ok(
+      Paginated(
+        data: list,
+        meta: PageMeta(
+          page: 1,
+          pageSize: pageSize,
+          total: list.length,
+          totalPages: 1,
+        ),
+      ),
+    );
   }
 
   @override
   Future<Result<void>> confirmAppointment(String appointmentId) async {
     confirmedIds.add(appointmentId);
-    return confirmFailure != null ? Result.err(confirmFailure!) : const Ok(null);
+    return confirmFailure != null
+        ? Result.err(confirmFailure!)
+        : const Ok(null);
   }
 
   @override
@@ -101,7 +111,9 @@ void main() {
         'preferredDate': '2026-06-01T15:00:00.000Z',
         'preferredTime': '15:00',
         'requestNotes': 'P2 message',
-        'project': {'name': {'ar': 'أبراج', 'en': 'Towers'}},
+        'project': {
+          'name': {'ar': 'أبراج', 'en': 'Towers'},
+        },
         'assignedSales': {'id': 's1', 'fullName': 'Sales One'},
         'appointments': [
           {
@@ -120,8 +132,10 @@ void main() {
       expect(entity.notes, 'P2 message');
       expect(entity.assignedSalesName, 'Sales One');
       expect(entity.appointments, hasLength(1));
-      expect(entity.appointments.first.status,
-          AppointmentStatus.pendingReschedule);
+      expect(
+        entity.appointments.first.status,
+        AppointmentStatus.pendingReschedule,
+      );
       expect(entity.appointments.first.customerFeedback, 'work conflict');
       expect(entity.latestAppointment?.id, 'a1');
     });
@@ -136,9 +150,27 @@ void main() {
       expect(entity.notes, 'old row message');
     });
 
+    test(
+      'flattened localized string project name parses (no Map cast crash)',
+      () {
+        // Regression: locale interceptor flattens `{ar,en}` → a localized string.
+        final entity = VisitRequestDto.fromJson({
+          'id': 'v2',
+          'projectId': 'p2',
+          'status': 'PENDING',
+          'project': {'name': 'أبراج النيل'},
+        }).toEntity();
+        expect(entity.projectName?.resolve('ar'), 'أبراج النيل');
+        expect(entity.projectName?.resolve('en'), 'أبراج النيل');
+      },
+    );
+
     test('unknown status falls back', () {
-      final e = VisitRequestDto.fromJson({'id': 'v', 'projectId': 'p', 'status': 'X'})
-          .toEntity();
+      final e = VisitRequestDto.fromJson({
+        'id': 'v',
+        'projectId': 'p',
+        'status': 'X',
+      }).toEntity();
       expect(e.status, VisitStatus.unknown);
     });
 
@@ -181,10 +213,18 @@ void main() {
 
   group('AppointmentSummary.awaitsCustomer', () {
     test('only SCHEDULED is "awaits customer"', () {
-      const a = AppointmentSummary(id: 'a', status: AppointmentStatus.scheduled);
-      const b = AppointmentSummary(id: 'a', status: AppointmentStatus.confirmed);
+      const a = AppointmentSummary(
+        id: 'a',
+        status: AppointmentStatus.scheduled,
+      );
+      const b = AppointmentSummary(
+        id: 'a',
+        status: AppointmentStatus.confirmed,
+      );
       const c = AppointmentSummary(
-          id: 'a', status: AppointmentStatus.pendingReschedule);
+        id: 'a',
+        status: AppointmentStatus.pendingReschedule,
+      );
       expect(a.awaitsCustomer, isTrue);
       expect(b.awaitsCustomer, isFalse);
       expect(c.awaitsCustomer, isFalse);
@@ -230,16 +270,23 @@ void main() {
   });
 
   group('VisitRequestCubit', () {
-    final params = CreateVisitParams(projectId: 'p1', preferredDate: DateTime(2026, 6, 1));
+    final params = CreateVisitParams(
+      projectId: 'p1',
+      preferredDate: DateTime(2026, 6, 1),
+    );
 
     test('submit success emits success', () async {
-      final cubit = VisitRequestCubit(CreateVisitRequest(_FakeVisitsRepository()));
+      final cubit = VisitRequestCubit(
+        CreateVisitRequest(_FakeVisitsRepository()),
+      );
       await cubit.submit(params);
       expect(cubit.state.status, VisitFormStatus.success);
     });
 
     test('submit failure surfaces an AppFailure', () async {
-      final repo = _FakeVisitsRepository(createFailure: AppFailure(type: FailureType.server));
+      final repo = _FakeVisitsRepository(
+        createFailure: AppFailure(type: FailureType.server),
+      );
       final cubit = VisitRequestCubit(CreateVisitRequest(repo));
       await cubit.submit(params);
       expect(cubit.state.status, VisitFormStatus.failure);
@@ -255,9 +302,7 @@ void main() {
     });
 
     test('success with requests', () async {
-      final repo = _FakeVisitsRepository(list: [
-        _visitWithAppointment(),
-      ]);
+      final repo = _FakeVisitsRepository(list: [_visitWithAppointment()]);
       final cubit = MyVisitsCubit(GetMyVisitRequests(repo));
       await cubit.load();
       expect(cubit.state.status, DataStatus.success);
@@ -265,50 +310,54 @@ void main() {
     });
 
     group('confirm action', () {
-      test('on success, emits success outcome and refreshes the list',
-          () async {
-        final repo = _FakeVisitsRepository(list: [_visitWithAppointment()]);
-        final cubit = MyVisitsCubit(
-          GetMyVisitRequests(repo),
-          confirmVisitAppointment: ConfirmVisitAppointment(repo),
-        );
-        await cubit.load();
-        final listCallsBefore = repo.listCalls;
+      test(
+        'on success, emits success outcome and refreshes the list',
+        () async {
+          final repo = _FakeVisitsRepository(list: [_visitWithAppointment()]);
+          final cubit = MyVisitsCubit(
+            GetMyVisitRequests(repo),
+            confirmVisitAppointment: ConfirmVisitAppointment(repo),
+          );
+          await cubit.load();
+          final listCallsBefore = repo.listCalls;
 
-        await cubit.confirmAppointment('appt-1');
+          await cubit.confirmAppointment('appt-1');
 
-        expect(repo.confirmedIds, ['appt-1']);
-        // List was re-fetched exactly once after the action.
-        expect(repo.listCalls, listCallsBefore + 1);
-        expect(cubit.state.lastOutcome?.isSuccess, isTrue);
-        expect(cubit.state.lastOutcome?.kind, VisitActionKind.confirm);
-        expect(cubit.state.inFlightAppointmentId, isNull);
-      });
+          expect(repo.confirmedIds, ['appt-1']);
+          // List was re-fetched exactly once after the action.
+          expect(repo.listCalls, listCallsBefore + 1);
+          expect(cubit.state.lastOutcome?.isSuccess, isTrue);
+          expect(cubit.state.lastOutcome?.kind, VisitActionKind.confirm);
+          expect(cubit.state.inFlightAppointmentId, isNull);
+        },
+      );
 
-      test('on failure, emits failure outcome and keeps the existing list',
-          () async {
-        final failure = AppFailure(type: FailureType.notFound);
-        final repo = _FakeVisitsRepository(
-          list: [_visitWithAppointment()],
-          confirmFailure: failure,
-        );
-        final cubit = MyVisitsCubit(
-          GetMyVisitRequests(repo),
-          confirmVisitAppointment: ConfirmVisitAppointment(repo),
-        );
-        await cubit.load();
-        final listCallsBefore = repo.listCalls;
+      test(
+        'on failure, emits failure outcome and keeps the existing list',
+        () async {
+          final failure = AppFailure(type: FailureType.notFound);
+          final repo = _FakeVisitsRepository(
+            list: [_visitWithAppointment()],
+            confirmFailure: failure,
+          );
+          final cubit = MyVisitsCubit(
+            GetMyVisitRequests(repo),
+            confirmVisitAppointment: ConfirmVisitAppointment(repo),
+          );
+          await cubit.load();
+          final listCallsBefore = repo.listCalls;
 
-        await cubit.confirmAppointment('appt-1');
+          await cubit.confirmAppointment('appt-1');
 
-        expect(cubit.state.lastOutcome?.isSuccess, isFalse);
-        expect(cubit.state.lastOutcome?.failure?.type, FailureType.notFound);
-        // No refresh on failure — the previous list view stays visible.
-        expect(repo.listCalls, listCallsBefore);
-        expect(cubit.state.inFlightAppointmentId, isNull);
-        // List data is still rendered.
-        expect(cubit.state.data, hasLength(1));
-      });
+          expect(cubit.state.lastOutcome?.isSuccess, isFalse);
+          expect(cubit.state.lastOutcome?.failure?.type, FailureType.notFound);
+          // No refresh on failure — the previous list view stays visible.
+          expect(repo.listCalls, listCallsBefore);
+          expect(cubit.state.inFlightAppointmentId, isNull);
+          // List data is still rendered.
+          expect(cubit.state.data, hasLength(1));
+        },
+      );
     });
 
     group('requestReschedule action', () {
@@ -327,8 +376,10 @@ void main() {
         expect(repo.rescheduleCalls.first.reason, 'work conflict');
         expect(repo.listCalls, before + 1);
         expect(cubit.state.lastOutcome?.isSuccess, isTrue);
-        expect(cubit.state.lastOutcome?.kind,
-            VisitActionKind.requestReschedule);
+        expect(
+          cubit.state.lastOutcome?.kind,
+          VisitActionKind.requestReschedule,
+        );
       });
 
       test('on failure, surfaces the AppFailure outcome', () async {

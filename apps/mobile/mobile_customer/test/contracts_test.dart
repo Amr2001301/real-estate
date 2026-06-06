@@ -62,6 +62,30 @@ void main() {
       final c = ContractDto.fromJson(_json()).toEntity();
       expect(c.status, ContractStatus.draft);
     });
+
+    test(
+      'flattened localized string project name parses (no Map cast crash)',
+      () {
+        // Regression: locale interceptor flattens `{ar,en}` → a localized string.
+        final c = ContractDto.fromJson({
+          'id': 'c9',
+          'contractNumber': 'CT-9',
+          'signedAt': '2026-02-01T00:00:00.000Z',
+          'unit': {
+            'code': 'A-9',
+            'type': 'VILLA',
+            'building': {
+              'phase': {
+                'project': {'name': 'مشروع النيل'},
+              },
+            },
+          },
+        }).toEntity();
+        expect(c.projectName.resolve('ar'), 'مشروع النيل');
+        expect(c.projectName.resolve('en'), 'مشروع النيل');
+        expect(c.unitCode, 'A-9');
+      },
+    );
   });
 
   group('ContractsRemoteDataSourceImpl endpoint', () {

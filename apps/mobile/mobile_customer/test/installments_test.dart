@@ -110,57 +110,55 @@ Map<String, dynamic> _installmentJson({
   String id = 'i1',
   String status = 'PENDING',
   String type = 'INSTALLMENT',
-}) =>
-    {
-      'id': id,
-      'amount': '5000.00',
-      'dueDate': '2026-06-01T00:00:00.000Z',
-      'status': status,
-      'type': type,
-      'paidAt': null,
-      'plan': {
-        'contract': {
-          'id': 'c1',
-          'contractNumber': 'CT-1',
-          'unit': {
-            'id': 'u1',
-            'code': 'A-101',
-            'type': 'APARTMENT',
-            'building': {
-              'phase': {
-                'project': {
-                  'id': 'p1',
-                  'name': {'ar': 'مشروع 1', 'en': 'Project 1'},
-                },
-              },
+}) => {
+  'id': id,
+  'amount': '5000.00',
+  'dueDate': '2026-06-01T00:00:00.000Z',
+  'status': status,
+  'type': type,
+  'paidAt': null,
+  'plan': {
+    'contract': {
+      'id': 'c1',
+      'contractNumber': 'CT-1',
+      'unit': {
+        'id': 'u1',
+        'code': 'A-101',
+        'type': 'APARTMENT',
+        'building': {
+          'phase': {
+            'project': {
+              'id': 'p1',
+              'name': {'ar': 'مشروع 1', 'en': 'Project 1'},
             },
           },
         },
       },
-    };
+    },
+  },
+};
 
 Installment _installmentEntity({
   String id = 'i1',
   InstallmentStatus status = InstallmentStatus.pending,
   PaymentProofSummary? proof,
-}) =>
-    Installment(
-      id: id,
-      amount: '5000.00',
-      dueDate: DateTime.parse('2026-06-01T00:00:00.000Z'),
-      status: status,
-      type: InstallmentPaymentType.installment,
-      latestProof: proof,
-    );
+}) => Installment(
+  id: id,
+  amount: '5000.00',
+  dueDate: DateTime.parse('2026-06-01T00:00:00.000Z'),
+  status: status,
+  type: InstallmentPaymentType.installment,
+  latestProof: proof,
+);
 
 DioException _dio(int status) => DioException(
-      requestOptions: RequestOptions(path: '/me/installments'),
-      type: DioExceptionType.badResponse,
-      response: Response(
-        requestOptions: RequestOptions(path: '/me/installments'),
-        statusCode: status,
-      ),
-    );
+  requestOptions: RequestOptions(path: '/me/installments'),
+  type: DioExceptionType.badResponse,
+  response: Response(
+    requestOptions: RequestOptions(path: '/me/installments'),
+    statusCode: status,
+  ),
+);
 
 // ── Tests ────────────────────────────────────────────────────────────────
 
@@ -185,45 +183,74 @@ void main() {
       expect(entity.status, InstallmentStatus.unknown);
       expect(entity.type, InstallmentPaymentType.unknown);
     });
+
+    test(
+      'flattened localized string project name parses (no Map cast crash)',
+      () {
+        // Regression: locale interceptor flattens `{ar,en}` → a localized string.
+        final json = _installmentJson();
+        ((((json['plan'] as Map)['contract'] as Map)['unit'] as Map)['building']
+            as Map)['phase'] = {
+          'project': {'id': 'p1', 'name': 'مشروع سولارا'},
+        };
+        final entity = InstallmentDto.fromJson(json).toEntity();
+        expect(entity.projectNameAr, 'مشروع سولارا');
+        expect(entity.projectNameEn, 'مشروع سولارا');
+        expect(entity.unitCode, 'A-101');
+      },
+    );
   });
 
   group('P11.5 — repository: merge /me/installments with /me/deposits', () {
-    test('attaches latestProof to the matching installment by installmentId', () async {
-      final repo = InstallmentsRepositoryImpl(_FakeDataSource(
-        installments: [InstallmentDto.fromJson(_installmentJson(id: 'i1'))],
-        deposits: [
-          const ProofDepositDto(
-            id: 'dep-9',
-            installmentId: 'i1',
-            reviewStatus: 'REJECTED',
-            paymentMethod: 'BANK_TRANSFER',
-            rejectionReason: 'Amount mismatch',
-            createdAt: '2026-05-30T10:00:00.000Z',
+    test(
+      'attaches latestProof to the matching installment by installmentId',
+      () async {
+        final repo = InstallmentsRepositoryImpl(
+          _FakeDataSource(
+            installments: [InstallmentDto.fromJson(_installmentJson(id: 'i1'))],
+            deposits: [
+              const ProofDepositDto(
+                id: 'dep-9',
+                installmentId: 'i1',
+                reviewStatus: 'REJECTED',
+                paymentMethod: 'BANK_TRANSFER',
+                rejectionReason: 'Amount mismatch',
+                createdAt: '2026-05-30T10:00:00.000Z',
+              ),
+            ],
           ),
-        ],
-      ));
-      final result = await repo.getMyInstallments();
-      final rows = result.dataOrNull;
-      expect(rows, hasLength(1));
-      expect(rows!.single.latestProof?.reviewStatus, PaymentProofStatus.rejected);
-      expect(rows.single.latestProof?.rejectionReason, 'Amount mismatch');
-      expect(rows.single.isResubmit, isTrue);
-    });
+        );
+        final result = await repo.getMyInstallments();
+        final rows = result.dataOrNull;
+        expect(rows, hasLength(1));
+        expect(
+          rows!.single.latestProof?.reviewStatus,
+          PaymentProofStatus.rejected,
+        );
+        expect(rows.single.latestProof?.rejectionReason, 'Amount mismatch');
+        expect(rows.single.isResubmit, isTrue);
+      },
+    );
 
-    test('keeps installment latestProof null when no matching deposit exists', () async {
-      final repo = InstallmentsRepositoryImpl(_FakeDataSource(
-        installments: [InstallmentDto.fromJson(_installmentJson(id: 'i1'))],
-        deposits: const [
-          ProofDepositDto(
-            id: 'dep-9',
-            installmentId: 'other-installment',
-            reviewStatus: 'APPROVED',
+    test(
+      'keeps installment latestProof null when no matching deposit exists',
+      () async {
+        final repo = InstallmentsRepositoryImpl(
+          _FakeDataSource(
+            installments: [InstallmentDto.fromJson(_installmentJson(id: 'i1'))],
+            deposits: const [
+              ProofDepositDto(
+                id: 'dep-9',
+                installmentId: 'other-installment',
+                reviewStatus: 'APPROVED',
+              ),
+            ],
           ),
-        ],
-      ));
-      final result = await repo.getMyInstallments();
-      expect(result.dataOrNull?.single.latestProof, isNull);
-    });
+        );
+        final result = await repo.getMyInstallments();
+        expect(result.dataOrNull?.single.latestProof, isNull);
+      },
+    );
 
     test('500 on /me/installments → Err(server, retryable)', () async {
       final repo = InstallmentsRepositoryImpl(
@@ -237,24 +264,28 @@ void main() {
 
   group('P11.5 — InstallmentsCubit', () {
     test('initial → loading → empty when no installments', () async {
-      final cubit = InstallmentsCubit(GetMyInstallments(_FakeRepo(list: const Ok([]))));
+      final cubit = InstallmentsCubit(
+        GetMyInstallments(_FakeRepo(list: const Ok([]))),
+      );
       await cubit.load();
       expect(cubit.state.status, DataStatus.empty);
     });
 
     test('failure → failure state', () async {
-      final cubit = InstallmentsCubit(GetMyInstallments(
-        _FakeRepo(list: Result.err(AppFailure(type: FailureType.network))),
-      ));
+      final cubit = InstallmentsCubit(
+        GetMyInstallments(
+          _FakeRepo(list: Result.err(AppFailure(type: FailureType.network))),
+        ),
+      );
       await cubit.load();
       expect(cubit.state.status, DataStatus.failure);
       expect(cubit.state.failure?.type, FailureType.network);
     });
 
     test('success emits the rows', () async {
-      final cubit = InstallmentsCubit(GetMyInstallments(_FakeRepo(list: Ok([
-        _installmentEntity(),
-      ]))));
+      final cubit = InstallmentsCubit(
+        GetMyInstallments(_FakeRepo(list: Ok([_installmentEntity()]))),
+      );
       await cubit.load();
       expect(cubit.state.status, DataStatus.success);
       expect(cubit.state.data, hasLength(1));
@@ -262,10 +293,7 @@ void main() {
   });
 
   group('P11.5 — SubmitProofCubit', () {
-    SubmitProofCubit makeCubit({
-      Installment? installment,
-      _FakeRepo? repo,
-    }) {
+    SubmitProofCubit makeCubit({Installment? installment, _FakeRepo? repo}) {
       final r = repo ?? _FakeRepo();
       return SubmitProofCubit(
         submit: SubmitPaymentProof(r),
@@ -274,18 +302,21 @@ void main() {
       );
     }
 
-    test('rejects oversized files client-side without hitting the network', () async {
-      final cubit = makeCubit();
-      final huge = Uint8List(kPaymentProofMaxBytes + 1);
-      final ok = cubit.attachFile(
-        bytes: huge,
-        fileName: 'big.pdf',
-        mimeType: 'application/pdf',
-      );
-      expect(ok, isFalse);
-      expect(cubit.state.clientError, 'paymentProofFileTooLarge');
-      expect(cubit.state.hasFile, isFalse);
-    });
+    test(
+      'rejects oversized files client-side without hitting the network',
+      () async {
+        final cubit = makeCubit();
+        final huge = Uint8List(kPaymentProofMaxBytes + 1);
+        final ok = cubit.attachFile(
+          bytes: huge,
+          fileName: 'big.pdf',
+          mimeType: 'application/pdf',
+        );
+        expect(ok, isFalse);
+        expect(cubit.state.clientError, 'paymentProofFileTooLarge');
+        expect(cubit.state.hasFile, isFalse);
+      },
+    );
 
     test('rejects unsupported MIME types client-side', () async {
       final cubit = makeCubit();
@@ -317,29 +348,29 @@ void main() {
       expect(cubit.state.failure, isNull);
     });
 
-    test('repo failure → SubmitProofStatus.failure with the AppFailure', () async {
-      final cubit = makeCubit(
-        repo: _FakeRepo(
-          submit: Result.err(AppFailure(type: FailureType.server)),
-        ),
-      );
-      cubit.attachFile(
-        bytes: Uint8List.fromList([1, 2, 3]),
-        fileName: 'receipt.pdf',
-        mimeType: 'application/pdf',
-      );
-      await cubit.submit();
-      expect(cubit.state.status, SubmitProofStatus.failure);
-      expect(cubit.state.failure?.type, FailureType.server);
-    });
+    test(
+      'repo failure → SubmitProofStatus.failure with the AppFailure',
+      () async {
+        final cubit = makeCubit(
+          repo: _FakeRepo(
+            submit: Result.err(AppFailure(type: FailureType.server)),
+          ),
+        );
+        cubit.attachFile(
+          bytes: Uint8List.fromList([1, 2, 3]),
+          fileName: 'receipt.pdf',
+          mimeType: 'application/pdf',
+        );
+        await cubit.submit();
+        expect(cubit.state.status, SubmitProofStatus.failure);
+        expect(cubit.state.failure?.type, FailureType.server);
+      },
+    );
 
     test('REJECTED installment routes through the resubmit use-case', () async {
       var resubmitCalled = false;
       var submitCalled = false;
-      final repo = _FakeRepo(
-        submit: const Ok(null),
-        resubmit: const Ok(null),
-      );
+      final repo = _FakeRepo(submit: const Ok(null), resubmit: const Ok(null));
       final cubit = SubmitProofCubit(
         submit: _TrackingSubmit(repo, () => submitCalled = true),
         resubmit: _TrackingResubmit(repo, () => resubmitCalled = true),
@@ -365,162 +396,202 @@ void main() {
 
   group('P11.5 — 3-step submission flow (CRITICAL: no auth on PUT)', () {
     test(
-        'PUT goes through the interceptor-free Dio instance — NOT the shared client — '
-        'so the bearer header NEVER reaches object storage',
-        () async {
-      // Auth Dio: simulates the production shared client with an
-      // Authorization interceptor. If the data source ever uses it for the
-      // PUT, the test fails (because this captures every header set on
-      // any outgoing request).
-      final authDio = Dio();
-      authDio.options.headers['Authorization'] = 'Bearer SECRET-TEST-TOKEN';
+      'PUT goes through the interceptor-free Dio instance — NOT the shared client — '
+      'so the bearer header NEVER reaches object storage',
+      () async {
+        // Auth Dio: simulates the production shared client with an
+        // Authorization interceptor. If the data source ever uses it for the
+        // PUT, the test fails (because this captures every header set on
+        // any outgoing request).
+        final authDio = Dio();
+        authDio.options.headers['Authorization'] = 'Bearer SECRET-TEST-TOKEN';
 
-      final authHeadersSeen = <Map<String, dynamic>>[];
-      authDio.interceptors.add(InterceptorsWrapper(
-        onRequest: (options, handler) {
-          authHeadersSeen.add({...options.headers});
-          // Return canned responses for the API calls we expect on this
-          // client (presign + submit). Reject everything else with 418
-          // so a misrouted PUT is loud.
-          if (options.method == 'POST' && options.path == '/me/payments/presign') {
-            return handler.resolve(Response<Map<String, dynamic>>(
-              requestOptions: options,
-              statusCode: 201,
-              data: {
-                'uploadUrl': 'https://r2.example/u/abc?sig=xyz',
-                'publicUrl': 'https://r2.example/o/abc',
-                'key': 'abc',
-              },
-            ));
-          }
-          if (options.method == 'POST' && options.path == '/me/deposits') {
-            return handler.resolve(Response<Map<String, dynamic>>(
-              requestOptions: options,
-              statusCode: 201,
-              data: {'id': 'dep-1', 'reviewStatus': 'PENDING_REVIEW'},
-            ));
-          }
-          return handler.reject(DioException(
-            requestOptions: options,
-            type: DioExceptionType.badResponse,
-            response: Response(requestOptions: options, statusCode: 418),
-          ));
-        },
-      ));
+        final authHeadersSeen = <Map<String, dynamic>>[];
+        authDio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              authHeadersSeen.add({...options.headers});
+              // Return canned responses for the API calls we expect on this
+              // client (presign + submit). Reject everything else with 418
+              // so a misrouted PUT is loud.
+              if (options.method == 'POST' &&
+                  options.path == '/me/payments/presign') {
+                return handler.resolve(
+                  Response<Map<String, dynamic>>(
+                    requestOptions: options,
+                    statusCode: 201,
+                    data: {
+                      'uploadUrl': 'https://r2.example/u/abc?sig=xyz',
+                      'publicUrl': 'https://r2.example/o/abc',
+                      'key': 'abc',
+                    },
+                  ),
+                );
+              }
+              if (options.method == 'POST' && options.path == '/me/deposits') {
+                return handler.resolve(
+                  Response<Map<String, dynamic>>(
+                    requestOptions: options,
+                    statusCode: 201,
+                    data: {'id': 'dep-1', 'reviewStatus': 'PENDING_REVIEW'},
+                  ),
+                );
+              }
+              return handler.reject(
+                DioException(
+                  requestOptions: options,
+                  type: DioExceptionType.badResponse,
+                  response: Response(requestOptions: options, statusCode: 418),
+                ),
+              );
+            },
+          ),
+        );
 
-      // Upload Dio: separate instance with its own interceptor that
-      // records the request headers on the PUT. Production wires this
-      // identically — a fresh `Dio()` with NO interceptors. The test
-      // intercepts only to capture and short-circuit; it doesn't add
-      // auth.
-      final putHeadersSeen = <Map<String, dynamic>>[];
-      final putUrls = <String>[];
-      final uploadDio = Dio();
-      uploadDio.interceptors.add(InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.method == 'PUT') {
-            putHeadersSeen.add({...options.headers});
-            putUrls.add(options.uri.toString());
-            return handler.resolve(Response<void>(
-              requestOptions: options,
-              statusCode: 200,
-            ));
-          }
-          return handler.next(options);
-        },
-      ));
+        // Upload Dio: separate instance with its own interceptor that
+        // records the request headers on the PUT. Production wires this
+        // identically — a fresh `Dio()` with NO interceptors. The test
+        // intercepts only to capture and short-circuit; it doesn't add
+        // auth.
+        final putHeadersSeen = <Map<String, dynamic>>[];
+        final putUrls = <String>[];
+        final uploadDio = Dio();
+        uploadDio.interceptors.add(
+          InterceptorsWrapper(
+            onRequest: (options, handler) {
+              if (options.method == 'PUT') {
+                putHeadersSeen.add({...options.headers});
+                putUrls.add(options.uri.toString());
+                return handler.resolve(
+                  Response<void>(requestOptions: options, statusCode: 200),
+                );
+              }
+              return handler.next(options);
+            },
+          ),
+        );
 
-      final ds = InstallmentsRemoteDataSourceImpl(authDio, uploadClient: uploadDio);
-      final repo = InstallmentsRepositoryImpl(ds);
+        final ds = InstallmentsRemoteDataSourceImpl(
+          authDio,
+          uploadClient: uploadDio,
+        );
+        final repo = InstallmentsRepositoryImpl(ds);
 
-      final result = await repo.submitProof(SubmitProofParams(
-        installmentId: 'i1',
-        amount: 5000,
-        paidAt: DateTime.parse('2026-06-01T00:00:00.000Z'),
-        method: PaymentMethod.bankTransfer,
-        bytes: Uint8List.fromList([1, 2, 3, 4]),
-        fileName: 'receipt.pdf',
-        mimeType: 'application/pdf',
-      ));
-      expect(result.isOk, isTrue);
+        final result = await repo.submitProof(
+          SubmitProofParams(
+            installmentId: 'i1',
+            amount: 5000,
+            paidAt: DateTime.parse('2026-06-01T00:00:00.000Z'),
+            method: PaymentMethod.bankTransfer,
+            bytes: Uint8List.fromList([1, 2, 3, 4]),
+            fileName: 'receipt.pdf',
+            mimeType: 'application/pdf',
+          ),
+        );
+        expect(result.isOk, isTrue);
 
-      // Exactly one PUT happened.
-      expect(putHeadersSeen, hasLength(1));
-      final putHeaders = putHeadersSeen.single;
-      // CRITICAL: no auth on the storage PUT, neither cased variant.
-      expect(putHeaders.containsKey('Authorization'), isFalse,
-          reason: 'Bearer must NEVER reach object storage');
-      expect(putHeaders.containsKey('authorization'), isFalse);
-      // Defensive: a token value never appears anywhere in the headers.
-      for (final v in putHeaders.values) {
-        expect('$v'.contains('SECRET-TEST-TOKEN'), isFalse,
-            reason: 'No token substring may appear on the storage PUT');
-      }
+        // Exactly one PUT happened.
+        expect(putHeadersSeen, hasLength(1));
+        final putHeaders = putHeadersSeen.single;
+        // CRITICAL: no auth on the storage PUT, neither cased variant.
+        expect(
+          putHeaders.containsKey('Authorization'),
+          isFalse,
+          reason: 'Bearer must NEVER reach object storage',
+        );
+        expect(putHeaders.containsKey('authorization'), isFalse);
+        // Defensive: a token value never appears anywhere in the headers.
+        for (final v in putHeaders.values) {
+          expect(
+            '$v'.contains('SECRET-TEST-TOKEN'),
+            isFalse,
+            reason: 'No token substring may appear on the storage PUT',
+          );
+        }
 
-      // Sanity: the presign POST DID carry the bearer (auth path healthy).
-      expect(authHeadersSeen, isNotEmpty);
-      expect(
-        authHeadersSeen.first['Authorization'],
-        'Bearer SECRET-TEST-TOKEN',
-      );
+        // Sanity: the presign POST DID carry the bearer (auth path healthy).
+        expect(authHeadersSeen, isNotEmpty);
+        expect(
+          authHeadersSeen.first['Authorization'],
+          'Bearer SECRET-TEST-TOKEN',
+        );
 
-      // The PUT actually targeted the signed URL, not the API host.
-      expect(putUrls.single, startsWith('https://r2.example/u/abc'));
-    });
+        // The PUT actually targeted the signed URL, not the API host.
+        expect(putUrls.single, startsWith('https://r2.example/u/abc'));
+      },
+    );
 
     test('PUT error is rethrown with the signed URL redacted', () async {
       // Auth Dio short-circuits the presign + a dummy submit (we won't
       // reach submit because PUT fails). Upload Dio rejects the PUT.
       final authDio = Dio();
-      authDio.interceptors.add(InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.path == '/me/payments/presign') {
-            return handler.resolve(Response<Map<String, dynamic>>(
-              requestOptions: options,
-              statusCode: 201,
-              data: {
-                'uploadUrl': 'https://r2.example/u/SECRET-SIG',
-                'publicUrl': 'https://r2.example/o/abc',
-              },
-            ));
-          }
-          return handler.reject(DioException(
-            requestOptions: options,
-            response: Response(requestOptions: options, statusCode: 418),
-          ));
-        },
-      ));
+      authDio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            if (options.path == '/me/payments/presign') {
+              return handler.resolve(
+                Response<Map<String, dynamic>>(
+                  requestOptions: options,
+                  statusCode: 201,
+                  data: {
+                    'uploadUrl': 'https://r2.example/u/SECRET-SIG',
+                    'publicUrl': 'https://r2.example/o/abc',
+                  },
+                ),
+              );
+            }
+            return handler.reject(
+              DioException(
+                requestOptions: options,
+                response: Response(requestOptions: options, statusCode: 418),
+              ),
+            );
+          },
+        ),
+      );
       final uploadDio = Dio();
-      uploadDio.interceptors.add(InterceptorsWrapper(
-        onRequest: (options, handler) {
-          if (options.method == 'PUT') {
-            return handler.reject(DioException(
-              requestOptions: options,
-              type: DioExceptionType.connectionError,
-            ));
-          }
-          return handler.next(options);
-        },
-      ));
+      uploadDio.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            if (options.method == 'PUT') {
+              return handler.reject(
+                DioException(
+                  requestOptions: options,
+                  type: DioExceptionType.connectionError,
+                ),
+              );
+            }
+            return handler.next(options);
+          },
+        ),
+      );
 
-      final ds = InstallmentsRemoteDataSourceImpl(authDio, uploadClient: uploadDio);
+      final ds = InstallmentsRemoteDataSourceImpl(
+        authDio,
+        uploadClient: uploadDio,
+      );
       final repo = InstallmentsRepositoryImpl(ds);
-      final result = await repo.submitProof(SubmitProofParams(
-        installmentId: 'i1',
-        amount: 5000,
-        paidAt: DateTime.now(),
-        method: PaymentMethod.bankTransfer,
-        bytes: Uint8List.fromList([1, 2, 3]),
-        fileName: 'r.pdf',
-        mimeType: 'application/pdf',
-      ));
+      final result = await repo.submitProof(
+        SubmitProofParams(
+          installmentId: 'i1',
+          amount: 5000,
+          paidAt: DateTime.now(),
+          method: PaymentMethod.bankTransfer,
+          bytes: Uint8List.fromList([1, 2, 3]),
+          fileName: 'r.pdf',
+          mimeType: 'application/pdf',
+        ),
+      );
       expect(result.isErr, isTrue);
       // The signed URL must not be embedded in the failure's
       // technicalMessage (we redact at the data source). technicalMessage
       // may be null — the important guarantee is the SUBSTRING absence.
       final tech = result.failureOrNull?.technicalMessage ?? '';
-      expect(tech.contains('SECRET-SIG'), isFalse,
-          reason: 'Signed URL must never leak into AppFailure');
+      expect(
+        tech.contains('SECRET-SIG'),
+        isFalse,
+        reason: 'Signed URL must never leak into AppFailure',
+      );
       expect(tech.contains('r2.example'), isFalse);
     });
   });

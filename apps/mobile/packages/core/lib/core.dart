@@ -62,7 +62,11 @@ export 'src/contact/contact_actions.dart';
 // Network
 export 'src/network/dio_client.dart';
 export 'src/network/interceptors/auth_interceptor.dart'
-    show AuthInterceptor, SessionRefresher, AccessTokenReader, SessionInvalidator;
+    show
+        AuthInterceptor,
+        SessionRefresher,
+        AccessTokenReader,
+        SessionInvalidator;
 export 'src/network/interceptors/request_id_interceptor.dart'
     show RequestIdInterceptor;
 export 'src/network/session_refresher_registry.dart';

@@ -7,7 +7,33 @@ void main() {
       const t = Translatable(ar: 'مشروع', en: 'Project');
       expect(t.resolve('ar'), 'مشروع');
       expect(t.resolve('en'), 'Project');
-      expect(const Translatable(ar: '', en: 'Only EN').resolve('ar'), 'Only EN');
+      expect(
+        const Translatable(ar: '', en: 'Only EN').resolve('ar'),
+        'Only EN',
+      );
+    });
+
+    group('fromJson (tolerant: Map | String | null)', () {
+      test('parses an { ar, en } map', () {
+        final t = Translatable.fromJson({'ar': ' مشروع ', 'en': ' Project '});
+        expect(t.ar, 'مشروع'); // trimmed
+        expect(t.en, 'Project');
+      });
+
+      test('parses a flattened localized string into both sides', () {
+        // The backend locale interceptor flattens `{ar,en}` → a localized
+        // string when Accept-Language is sent. Regression for the mobile crash
+        // "String is not a subtype of Map<String, dynamic>?".
+        final t = Translatable.fromJson('سولارا هايتس');
+        expect(t.ar, 'سولارا هايتس');
+        expect(t.en, 'سولارا هايتس');
+        expect(t.resolve('en'), 'سولارا هايتس');
+      });
+
+      test('null / non-string / non-map → empty', () {
+        expect(Translatable.fromJson(null).isEmpty, isTrue);
+        expect(Translatable.fromJson(42).isEmpty, isTrue);
+      });
     });
   });
 
@@ -36,7 +62,10 @@ void main() {
     });
 
     test('formats Arabic with currency suffix', () {
-      expect(PriceFormatter.format(5800000, languageCode: 'ar'), contains('ج.م'));
+      expect(
+        PriceFormatter.format(5800000, languageCode: 'ar'),
+        contains('ج.م'),
+      );
     });
 
     test('null price → empty string', () {

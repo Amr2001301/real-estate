@@ -71,6 +71,29 @@ void main() {
       expect(entity.status, PropertyStatus.pending);
       expect(entity.signedAt, isNull);
     });
+
+    test('flattened localized string project name parses (no Map cast crash)', () {
+      // The backend locale interceptor flattens `{ar,en}` → a localized string
+      // when Accept-Language is sent (which mobile always does). Regression for
+      // "String is not a subtype of Map<String, dynamic>?".
+      final entity = PropertyRowDto.fromJson({
+        'id': 'c2',
+        'signedAt': '2026-01-02T00:00:00.000Z',
+        'unit': {
+          'id': 'u2',
+          'code': 'B-2',
+          'type': 'VILLA',
+          'building': {
+            'phase': {
+              'project': {'id': 'p2', 'name': 'سولارا هايتس'},
+            },
+          },
+        },
+      }).toEntity();
+      expect(entity.projectName.resolve('ar'), 'سولارا هايتس');
+      expect(entity.projectName.resolve('en'), 'سولارا هايتس');
+      expect(entity.unitCode, 'B-2');
+    });
   });
 
   group('MyPropertyRemoteDataSourceImpl endpoint', () {

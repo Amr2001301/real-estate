@@ -1,3 +1,5 @@
+import 'package:core/core_domain.dart';
+
 // Wire shape of /me/visit-requests items. Data layer only.
 
 /// Summary of the most recent appointment attached to a visit request, as
@@ -72,7 +74,8 @@ class VisitRequestDto {
 
   factory VisitRequestDto.fromJson(Map<String, dynamic> json) {
     final project = json['project'] as Map<String, dynamic>?;
-    final nameMap = project?['name'] as Map<String, dynamic>?;
+    // Tolerant: the locale interceptor may flatten `name` to a localized string.
+    final name = Translatable.fromJson(project?['name']);
     final sales = json['assignedSales'] as Map<String, dynamic>?;
     final apps = (json['appointments'] as List?) ?? const [];
     return VisitRequestDto(
@@ -80,8 +83,8 @@ class VisitRequestDto {
       projectId: json['projectId'] as String? ?? '',
       unitId: json['unitId'] as String?,
       statusWire: json['status'] as String? ?? 'PENDING',
-      projectNameAr: nameMap?['ar'] as String?,
-      projectNameEn: nameMap?['en'] as String?,
+      projectNameAr: name.ar,
+      projectNameEn: name.en,
       preferredDate: json['preferredDate'] as String?,
       preferredTime: json['preferredTime'] as String?,
       notes: json['notes'] as String?,

@@ -26,14 +26,17 @@ class _FakeMaintenanceRepo implements MaintenanceRepository {
     this.requests = const Ok([]),
     Result<MaintenanceRequest>? createResult,
     List<Result<void>>? uploadResults,
-  })  : createResult = createResult ??
-            Ok(const MaintenanceRequest(
-              id: 'r1',
-              description: 'x',
-              status: MaintenanceStatus.open,
-              priority: MaintenancePriority.medium,
-            )),
-        _uploadResults = uploadResults ?? const [];
+  }) : createResult =
+           createResult ??
+           Ok(
+             const MaintenanceRequest(
+               id: 'r1',
+               description: 'x',
+               status: MaintenanceStatus.open,
+               priority: MaintenancePriority.medium,
+             ),
+           ),
+       _uploadResults = uploadResults ?? const [];
 
   final Result<List<MaintenanceCategory>> categories;
   final Result<List<MaintenanceRequest>> requests;
@@ -52,7 +55,9 @@ class _FakeMaintenanceRepo implements MaintenanceRepository {
   @override
   Future<Result<List<MaintenanceRequest>>> getMyRequests() async => requests;
   @override
-  Future<Result<MaintenanceRequest>> createRequest(NewMaintenanceRequest input) async {
+  Future<Result<MaintenanceRequest>> createRequest(
+    NewMaintenanceRequest input,
+  ) async {
     createCalls++;
     lastCreate = input;
     return createResult;
@@ -74,11 +79,11 @@ class _FakeMaintenanceRepo implements MaintenanceRepository {
     required String requestId,
     required int rating,
     String? note,
-  }) async =>
-      createResult;
+  }) async => createResult;
 
   @override
-  Future<Result<MaintenanceRequest>> submitComplaint(String requestId) async => createResult;
+  Future<Result<MaintenanceRequest>> submitComplaint(String requestId) async =>
+      createResult;
 }
 
 class _FakePhotoPicker implements PhotoPicker {
@@ -106,13 +111,12 @@ PickedPhoto _photo({
   String mime = 'image/jpeg',
   int size = 1024,
   String name = 'a.jpg',
-}) =>
-    PickedPhoto(
-      bytes: Uint8List.fromList([1, 2, 3]),
-      fileName: name,
-      mimeType: mime,
-      sizeBytes: size,
-    );
+}) => PickedPhoto(
+  bytes: Uint8List.fromList([1, 2, 3]),
+  fileName: name,
+  mimeType: mime,
+  sizeBytes: size,
+);
 
 class _FakePropertyRepo implements MyPropertyRepository {
   _FakePropertyRepo(this._result);
@@ -122,13 +126,13 @@ class _FakePropertyRepo implements MyPropertyRepository {
 }
 
 Property _property(String unitId) => Property(
-      contractId: 'c-$unitId',
-      unitId: unitId,
-      unitCode: unitId.toUpperCase(),
-      unitType: 'APARTMENT',
-      projectName: const Translatable(ar: '', en: 'P'),
-      status: PropertyStatus.owned,
-    );
+  contractId: 'c-$unitId',
+  unitId: unitId,
+  unitCode: unitId.toUpperCase(),
+  unitType: 'APARTMENT',
+  projectName: const Translatable(ar: '', en: 'P'),
+  status: PropertyStatus.owned,
+);
 
 void main() {
   group('Maintenance mappers', () {
@@ -169,6 +173,28 @@ void main() {
       expect(r.categoryName, isNull);
       expect(r.unitCode, isNull);
     });
+
+    test(
+      'flattened localized string category name parses (no Map cast crash)',
+      () {
+        // Regression: locale interceptor flattens `{ar,en}` → a localized string.
+        final c = MaintenanceCategoryDto.fromJson({
+          'id': 'cat2',
+          'name': 'سباكة',
+        }).toEntity();
+        expect(c.name.resolve('ar'), 'سباكة');
+        expect(c.name.resolve('en'), 'سباكة');
+
+        final r = MaintenanceRequestDto.fromJson({
+          'id': 'r3',
+          'description': 'Leak',
+          'status': 'OPEN',
+          'priority': 'LOW',
+          'category': {'name': 'سباكة'},
+        }).toEntity();
+        expect(r.categoryName?.resolve('ar'), 'سباكة');
+      },
+    );
   });
 
   group('MaintenanceRepositoryImpl error mapping', () {
@@ -189,16 +215,20 @@ void main() {
     });
 
     test('success → data state', () async {
-      final cubit = MaintenanceRequestsCubit(GetMyMaintenanceRequests(
-        _FakeMaintenanceRepo(requests: Ok([
-          const MaintenanceRequest(
-            id: 'r1',
-            description: 'Leak',
-            status: MaintenanceStatus.open,
-            priority: MaintenancePriority.high,
+      final cubit = MaintenanceRequestsCubit(
+        GetMyMaintenanceRequests(
+          _FakeMaintenanceRepo(
+            requests: Ok([
+              const MaintenanceRequest(
+                id: 'r1',
+                description: 'Leak',
+                status: MaintenanceStatus.open,
+                priority: MaintenancePriority.high,
+              ),
+            ]),
           ),
-        ])),
-      ));
+        ),
+      );
       await cubit.load();
       expect(cubit.state.status, DataStatus.success);
       expect(cubit.state.data, hasLength(1));
@@ -211,46 +241,50 @@ void main() {
       MyPropertyRepository? propertyRepo,
       PhotoPicker? picker,
       String? initialUnitId,
-    }) =>
-        CreateMaintenanceCubit(
-          GetMaintenanceCategories(repo),
-          GetMyProperties(propertyRepo ?? _FakePropertyRepo(const Ok([]))),
-          CreateMaintenanceRequest(repo),
-          UploadMaintenancePhoto(repo),
-          picker ?? _FakePhotoPicker(),
-          initialUnitId: initialUnitId,
-        );
+    }) => CreateMaintenanceCubit(
+      GetMaintenanceCategories(repo),
+      GetMyProperties(propertyRepo ?? _FakePropertyRepo(const Ok([]))),
+      CreateMaintenanceRequest(repo),
+      UploadMaintenancePhoto(repo),
+      picker ?? _FakePhotoPicker(),
+      initialUnitId: initialUnitId,
+    );
 
     _FakeMaintenanceRepo repoWithCat({
       Result<MaintenanceRequest>? createResult,
       List<Result<void>>? uploadResults,
-    }) =>
-        _FakeMaintenanceRepo(
-          categories: Ok([
-            const MaintenanceCategory(id: 'cat1', name: Translatable(ar: '', en: 'Plumbing')),
-          ]),
-          createResult: createResult,
-          uploadResults: uploadResults,
-        );
+    }) => _FakeMaintenanceRepo(
+      categories: Ok([
+        const MaintenanceCategory(
+          id: 'cat1',
+          name: Translatable(ar: '', en: 'Plumbing'),
+        ),
+      ]),
+      createResult: createResult,
+      uploadResults: uploadResults,
+    );
 
-    test('fixed unit skips unit loading and is valid after category+desc', () async {
-      final repo = repoWithCat();
-      final cubit = make(repo, initialUnitId: 'u1');
-      await cubit.load();
-      expect(cubit.state.fixedUnit, isTrue);
-      expect(cubit.state.unitsStatus, DataStatus.initial); // never loaded
-      expect(cubit.state.isValid, isFalse);
+    test(
+      'fixed unit skips unit loading and is valid after category+desc',
+      () async {
+        final repo = repoWithCat();
+        final cubit = make(repo, initialUnitId: 'u1');
+        await cubit.load();
+        expect(cubit.state.fixedUnit, isTrue);
+        expect(cubit.state.unitsStatus, DataStatus.initial); // never loaded
+        expect(cubit.state.isValid, isFalse);
 
-      cubit.toggleCategory('cat1');
-      cubit.setDescription('Water leak in kitchen');
-      expect(cubit.state.isValid, isTrue);
+        cubit.toggleCategory('cat1');
+        cubit.setDescription('Water leak in kitchen');
+        expect(cubit.state.isValid, isTrue);
 
-      await cubit.submit();
-      expect(cubit.state.submitted, isTrue);
-      expect(repo.createCalls, 1);
-      expect(repo.lastCreate?.unitId, 'u1');
-      expect(repo.lastCreate?.categoryIds, ['cat1']);
-    });
+        await cubit.submit();
+        expect(cubit.state.submitted, isTrue);
+        expect(repo.createCalls, 1);
+        expect(repo.lastCreate?.unitId, 'u1');
+        expect(repo.lastCreate?.categoryIds, ['cat1']);
+      },
+    );
 
     test('invalid submit surfaces validation, does not call backend', () async {
       final repo = repoWithCat();
@@ -264,14 +298,19 @@ void main() {
 
     test('no fixed unit loads units and auto-selects the only one', () async {
       final repo = repoWithCat();
-      final cubit = make(repo, propertyRepo: _FakePropertyRepo(Ok([_property('u9')])));
+      final cubit = make(
+        repo,
+        propertyRepo: _FakePropertyRepo(Ok([_property('u9')])),
+      );
       await cubit.load();
       expect(cubit.state.unitsStatus, DataStatus.success);
       expect(cubit.state.selectedUnitId, 'u9');
     });
 
     test('submit failure surfaces failure without marking submitted', () async {
-      final repo = repoWithCat(createResult: Result.err(AppFailure(type: FailureType.validation)));
+      final repo = repoWithCat(
+        createResult: Result.err(AppFailure(type: FailureType.validation)),
+      );
       final cubit = make(repo, initialUnitId: 'u1');
       await cubit.load();
       cubit.toggleCategory('cat1');
@@ -289,33 +328,51 @@ void main() {
       }
 
       test('accepts valid gallery photos', () async {
-        final cubit = await ready(_FakePhotoPicker(gallery: [_photo(), _photo(name: 'b.png', mime: 'image/png')]));
+        final cubit = await ready(
+          _FakePhotoPicker(
+            gallery: [
+              _photo(),
+              _photo(name: 'b.png', mime: 'image/png'),
+            ],
+          ),
+        );
         await cubit.addFromGallery();
         expect(cubit.state.photos, hasLength(2));
       });
 
       test('accepts a camera capture', () async {
-        final cubit = await ready(_FakePhotoPicker(camera: _photo(name: 'cam.jpg')));
+        final cubit = await ready(
+          _FakePhotoPicker(camera: _photo(name: 'cam.jpg')),
+        );
         await cubit.addFromCamera();
         expect(cubit.state.photos, hasLength(1));
       });
 
       test('rejects unsupported type with a pick issue', () async {
-        final cubit = await ready(_FakePhotoPicker(gallery: [_photo(mime: 'image/gif', name: 'a.gif')]));
+        final cubit = await ready(
+          _FakePhotoPicker(
+            gallery: [_photo(mime: 'image/gif', name: 'a.gif')],
+          ),
+        );
         await cubit.addFromGallery();
         expect(cubit.state.photos, isEmpty);
         expect(cubit.state.pickIssue, PhotoPickIssue.unsupportedType);
       });
 
       test('rejects oversized files', () async {
-        final cubit = await ready(_FakePhotoPicker(gallery: [_photo(size: kMaxPhotoBytes + 1)]));
+        final cubit = await ready(
+          _FakePhotoPicker(gallery: [_photo(size: kMaxPhotoBytes + 1)]),
+        );
         await cubit.addFromGallery();
         expect(cubit.state.photos, isEmpty);
         expect(cubit.state.pickIssue, PhotoPickIssue.tooLarge);
       });
 
       test('caps at the max photo count', () async {
-        final many = List.generate(kMaxPhotos + 2, (i) => _photo(name: 'p$i.jpg'));
+        final many = List.generate(
+          kMaxPhotos + 2,
+          (i) => _photo(name: 'p$i.jpg'),
+        );
         final cubit = await ready(_FakePhotoPicker(gallery: many));
         await cubit.addFromGallery();
         expect(cubit.state.photos, hasLength(kMaxPhotos));
@@ -324,7 +381,11 @@ void main() {
 
       test('permission denial surfaces a friendly pick issue', () async {
         final cubit = await ready(
-          _FakePhotoPicker(error: const PhotoPickerException(PhotoPickerErrorKind.permissionDenied)),
+          _FakePhotoPicker(
+            error: const PhotoPickerException(
+              PhotoPickerErrorKind.permissionDenied,
+            ),
+          ),
         );
         await cubit.addFromGallery();
         expect(cubit.state.pickIssue, PhotoPickIssue.permissionDenied);
@@ -340,8 +401,14 @@ void main() {
     });
 
     group('photo upload', () {
-      Future<CreateMaintenanceCubit> readyWithPhoto(_FakeMaintenanceRepo repo) async {
-        final cubit = make(repo, picker: _FakePhotoPicker(gallery: [_photo()]), initialUnitId: 'u1');
+      Future<CreateMaintenanceCubit> readyWithPhoto(
+        _FakeMaintenanceRepo repo,
+      ) async {
+        final cubit = make(
+          repo,
+          picker: _FakePhotoPicker(gallery: [_photo()]),
+          initialUnitId: 'u1',
+        );
         await cubit.load();
         cubit.toggleCategory('cat1');
         cubit.setDescription('Cracked tile in bathroom');
@@ -360,23 +427,26 @@ void main() {
         expect(cubit.state.submitted, isTrue);
       });
 
-      test('partial failure → phase partial, not submitted; retry succeeds', () async {
-        // First upload fails, the retry (2nd call) succeeds.
-        final repo = repoWithCat(
-          uploadResults: [Result.err(AppFailure(type: FailureType.network))],
-        );
-        final cubit = await readyWithPhoto(repo);
-        await cubit.submit();
-        expect(cubit.state.phase, CreatePhase.partial);
-        expect(cubit.state.submitted, isFalse);
-        expect(cubit.state.failedPhotoCount, 1);
-        expect(repo.createCalls, 1); // request created exactly once
+      test(
+        'partial failure → phase partial, not submitted; retry succeeds',
+        () async {
+          // First upload fails, the retry (2nd call) succeeds.
+          final repo = repoWithCat(
+            uploadResults: [Result.err(AppFailure(type: FailureType.network))],
+          );
+          final cubit = await readyWithPhoto(repo);
+          await cubit.submit();
+          expect(cubit.state.phase, CreatePhase.partial);
+          expect(cubit.state.submitted, isFalse);
+          expect(cubit.state.failedPhotoCount, 1);
+          expect(repo.createCalls, 1); // request created exactly once
 
-        await cubit.retryFailedUploads();
-        expect(repo.createCalls, 1); // never re-created
-        expect(cubit.state.photos.single.status, PhotoStatus.uploaded);
-        expect(cubit.state.submitted, isTrue);
-      });
+          await cubit.retryFailedUploads();
+          expect(repo.createCalls, 1); // never re-created
+          expect(cubit.state.photos.single.status, PhotoStatus.uploaded);
+          expect(cubit.state.submitted, isTrue);
+        },
+      );
 
       test('acceptPartial finishes without re-creating', () async {
         final repo = repoWithCat(
@@ -402,13 +472,15 @@ void main() {
     test('delegates to repository.uploadPhoto', () async {
       final repo = _FakeMaintenanceRepo();
       final useCase = UploadMaintenancePhoto(repo);
-      final result = await useCase(MaintenancePhotoUpload(
-        requestId: 'r1',
-        bytes: Uint8List.fromList([1]),
-        contentType: 'image/jpeg',
-        fileName: 'a.jpg',
-        sizeBytes: 1,
-      ));
+      final result = await useCase(
+        MaintenancePhotoUpload(
+          requestId: 'r1',
+          bytes: Uint8List.fromList([1]),
+          contentType: 'image/jpeg',
+          fileName: 'a.jpg',
+          sizeBytes: 1,
+        ),
+      );
       expect(result.isOk, isTrue);
       expect(repo.uploadCalls, 1);
     });
@@ -418,31 +490,37 @@ void main() {
     test('presign → put → register success returns Ok', () async {
       final ds = _RecordingUploadDataSource();
       final repo = MaintenanceRepositoryImpl(ds);
-      final result = await repo.uploadPhoto(MaintenancePhotoUpload(
-        requestId: 'r1',
-        bytes: Uint8List.fromList([1, 2, 3]),
-        contentType: 'image/jpeg',
-        fileName: 'a.jpg',
-        sizeBytes: 3,
-      ));
+      final result = await repo.uploadPhoto(
+        MaintenancePhotoUpload(
+          requestId: 'r1',
+          bytes: Uint8List.fromList([1, 2, 3]),
+          contentType: 'image/jpeg',
+          fileName: 'a.jpg',
+          sizeBytes: 3,
+        ),
+      );
       expect(result.isOk, isTrue);
       // The public (not signed) URL is what gets registered.
       expect(ds.registeredFileUrl, 'https://cdn.example/docs/x.jpg');
     });
 
     test('a failing PUT maps to Err and never registers', () async {
-      final ds = _RecordingUploadDataSource(putError: DioException(
-        requestOptions: RequestOptions(path: 'https://signed'),
-        type: DioExceptionType.connectionError,
-      ));
+      final ds = _RecordingUploadDataSource(
+        putError: DioException(
+          requestOptions: RequestOptions(path: 'https://signed'),
+          type: DioExceptionType.connectionError,
+        ),
+      );
       final repo = MaintenanceRepositoryImpl(ds);
-      final result = await repo.uploadPhoto(MaintenancePhotoUpload(
-        requestId: 'r1',
-        bytes: Uint8List.fromList([1]),
-        contentType: 'image/jpeg',
-        fileName: 'a.jpg',
-        sizeBytes: 1,
-      ));
+      final result = await repo.uploadPhoto(
+        MaintenancePhotoUpload(
+          requestId: 'r1',
+          bytes: Uint8List.fromList([1]),
+          contentType: 'image/jpeg',
+          fileName: 'a.jpg',
+          sizeBytes: 1,
+        ),
+      );
       expect(result.failureOrNull?.type, FailureType.network);
       expect(ds.registerCalls, 0);
     });
@@ -470,23 +548,26 @@ void main() {
       expect(r.customerHasConfirmed, isTrue);
     });
 
-    test('canConfirmResolution true on RESOLVED + unconfirmed, false once confirmed', () {
-      const resolved = MaintenanceRequest(
-        id: 'r1',
-        description: 'x',
-        status: MaintenanceStatus.resolved,
-        priority: MaintenancePriority.medium,
-      );
-      expect(resolved.canConfirmResolution, isTrue);
-      final confirmed = MaintenanceRequest(
-        id: 'r1',
-        description: 'x',
-        status: MaintenanceStatus.resolved,
-        priority: MaintenancePriority.medium,
-        customerConfirmedResolutionAt: DateTime(2026, 4, 5),
-      );
-      expect(confirmed.canConfirmResolution, isFalse);
-    });
+    test(
+      'canConfirmResolution true on RESOLVED + unconfirmed, false once confirmed',
+      () {
+        const resolved = MaintenanceRequest(
+          id: 'r1',
+          description: 'x',
+          status: MaintenanceStatus.resolved,
+          priority: MaintenancePriority.medium,
+        );
+        expect(resolved.canConfirmResolution, isTrue);
+        final confirmed = MaintenanceRequest(
+          id: 'r1',
+          description: 'x',
+          status: MaintenanceStatus.resolved,
+          priority: MaintenancePriority.medium,
+          customerConfirmedResolutionAt: DateTime(2026, 4, 5),
+        );
+        expect(confirmed.canConfirmResolution, isFalse);
+      },
+    );
 
     test('canComplain true only ≥24h overdue and unresolved', () {
       final overdue = MaintenanceRequest(
@@ -509,53 +590,59 @@ void main() {
       expect(freshlyOverdue.canComplain, isFalse);
     });
 
-    test('detail cubit confirmResolution success emits the updated request', () async {
-      const confirmed = MaintenanceRequest(
-        id: 'r1',
-        description: 'x',
-        status: MaintenanceStatus.resolved,
-        priority: MaintenancePriority.medium,
-        customerRating: 5,
-        resolvedBy: MaintenanceResolvedBy.customer,
-      );
-      // _FakeMaintenanceRepo.confirmResolution returns its createResult.
-      final repo = _FakeMaintenanceRepo(createResult: const Ok(confirmed));
-      final cubit = MaintenanceDetailCubit(
-        initial: const MaintenanceRequest(
+    test(
+      'detail cubit confirmResolution success emits the updated request',
+      () async {
+        const confirmed = MaintenanceRequest(
           id: 'r1',
           description: 'x',
           status: MaintenanceStatus.resolved,
           priority: MaintenancePriority.medium,
-        ),
-        confirmResolution: ConfirmMaintenanceResolution(repo),
-        submitComplaint: SubmitMaintenanceComplaint(repo),
-      );
-      final failure = await cubit.confirmResolution(rating: 5);
-      expect(failure, isNull);
-      expect(cubit.state.submitting, isFalse);
-      expect(cubit.state.request.customerRating, 5);
-      expect(cubit.state.request.resolvedBy, MaintenanceResolvedBy.customer);
-    });
+          customerRating: 5,
+          resolvedBy: MaintenanceResolvedBy.customer,
+        );
+        // _FakeMaintenanceRepo.confirmResolution returns its createResult.
+        final repo = _FakeMaintenanceRepo(createResult: const Ok(confirmed));
+        final cubit = MaintenanceDetailCubit(
+          initial: const MaintenanceRequest(
+            id: 'r1',
+            description: 'x',
+            status: MaintenanceStatus.resolved,
+            priority: MaintenancePriority.medium,
+          ),
+          confirmResolution: ConfirmMaintenanceResolution(repo),
+          submitComplaint: SubmitMaintenanceComplaint(repo),
+        );
+        final failure = await cubit.confirmResolution(rating: 5);
+        expect(failure, isNull);
+        expect(cubit.state.submitting, isFalse);
+        expect(cubit.state.request.customerRating, 5);
+        expect(cubit.state.request.resolvedBy, MaintenanceResolvedBy.customer);
+      },
+    );
 
-    test('detail cubit surfaces failure and keeps the original request', () async {
-      final repo = _FakeMaintenanceRepo(
-        createResult: Result.err(AppFailure(type: FailureType.validation)),
-      );
-      final cubit = MaintenanceDetailCubit(
-        initial: const MaintenanceRequest(
-          id: 'r1',
-          description: 'x',
-          status: MaintenanceStatus.resolved,
-          priority: MaintenancePriority.medium,
-        ),
-        confirmResolution: ConfirmMaintenanceResolution(repo),
-        submitComplaint: SubmitMaintenanceComplaint(repo),
-      );
-      final failure = await cubit.confirmResolution(rating: 4);
-      expect(failure?.type, FailureType.validation);
-      expect(cubit.state.submitting, isFalse);
-      expect(cubit.state.request.customerHasConfirmed, isFalse);
-    });
+    test(
+      'detail cubit surfaces failure and keeps the original request',
+      () async {
+        final repo = _FakeMaintenanceRepo(
+          createResult: Result.err(AppFailure(type: FailureType.validation)),
+        );
+        final cubit = MaintenanceDetailCubit(
+          initial: const MaintenanceRequest(
+            id: 'r1',
+            description: 'x',
+            status: MaintenanceStatus.resolved,
+            priority: MaintenancePriority.medium,
+          ),
+          confirmResolution: ConfirmMaintenanceResolution(repo),
+          submitComplaint: SubmitMaintenanceComplaint(repo),
+        );
+        final failure = await cubit.confirmResolution(rating: 4);
+        expect(failure?.type, FailureType.validation);
+        expect(cubit.state.submitting, isFalse);
+        expect(cubit.state.request.customerHasConfirmed, isFalse);
+      },
+    );
   });
 }
 
@@ -564,13 +651,13 @@ class _ThrowingDataSource implements MaintenanceRemoteDataSource {
   final int status;
 
   DioException get _e => DioException(
-        requestOptions: RequestOptions(path: '/me/maintenance-requests'),
-        type: DioExceptionType.badResponse,
-        response: Response(
-          requestOptions: RequestOptions(path: '/me/maintenance-requests'),
-          statusCode: status,
-        ),
-      );
+    requestOptions: RequestOptions(path: '/me/maintenance-requests'),
+    type: DioExceptionType.badResponse,
+    response: Response(
+      requestOptions: RequestOptions(path: '/me/maintenance-requests'),
+      statusCode: status,
+    ),
+  );
 
   @override
   Future<List<MaintenanceCategoryDto>> listCategories() async => throw _e;
@@ -581,24 +668,21 @@ class _ThrowingDataSource implements MaintenanceRemoteDataSource {
     required String unitId,
     required List<String> categoryIds,
     required String description,
-  }) async =>
-      throw _e;
+  }) async => throw _e;
   @override
   Future<PresignResponseDto> presignPhoto({
     required String requestId,
     required String contentType,
     required int sizeBytes,
     required String fileName,
-  }) async =>
-      throw _e;
+  }) async => throw _e;
   @override
   Future<void> putToSignedUrl({
     required String uploadUrl,
     required Uint8List bytes,
     required String contentType,
     void Function(double progress)? onProgress,
-  }) async =>
-      throw _e;
+  }) async => throw _e;
   @override
   Future<void> registerPhoto({
     required String requestId,
@@ -607,17 +691,17 @@ class _ThrowingDataSource implements MaintenanceRemoteDataSource {
     required String fileName,
     required String mimeType,
     required int sizeBytes,
-  }) async =>
-      throw _e;
+  }) async => throw _e;
   @override
   Future<MaintenanceRequestDto> confirmResolution({
     required String requestId,
     required int rating,
     String? note,
-  }) async =>
-      throw _e;
+  }) async => throw _e;
   @override
-  Future<MaintenanceRequestDto> submitComplaint({required String requestId}) async => throw _e;
+  Future<MaintenanceRequestDto> submitComplaint({
+    required String requestId,
+  }) async => throw _e;
 }
 
 /// Records the presign → PUT → register dance for orchestration tests.
@@ -634,12 +718,11 @@ class _RecordingUploadDataSource implements MaintenanceRemoteDataSource {
     required String contentType,
     required int sizeBytes,
     required String fileName,
-  }) async =>
-      const PresignResponseDto(
-        uploadUrl: 'https://signed.example/put?sig=secret',
-        publicUrl: 'https://cdn.example/docs/x.jpg',
-        key: 'docs/x.jpg',
-      );
+  }) async => const PresignResponseDto(
+    uploadUrl: 'https://signed.example/put?sig=secret',
+    publicUrl: 'https://cdn.example/docs/x.jpg',
+    key: 'docs/x.jpg',
+  );
 
   @override
   Future<void> putToSignedUrl({
@@ -674,16 +757,15 @@ class _RecordingUploadDataSource implements MaintenanceRemoteDataSource {
     required String unitId,
     required List<String> categoryIds,
     required String description,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
   @override
   Future<MaintenanceRequestDto> confirmResolution({
     required String requestId,
     required int rating,
     String? note,
-  }) async =>
-      throw UnimplementedError();
+  }) async => throw UnimplementedError();
   @override
-  Future<MaintenanceRequestDto> submitComplaint({required String requestId}) async =>
-      throw UnimplementedError();
+  Future<MaintenanceRequestDto> submitComplaint({
+    required String requestId,
+  }) async => throw UnimplementedError();
 }

@@ -23,16 +23,17 @@ abstract final class DioClientFactory {
     SessionRefresher? refreshSession,
   }) {
     BaseOptions baseOptions() => BaseOptions(
-          baseUrl: env.apiBaseUrl,
-          connectTimeout: const Duration(seconds: 15),
-          receiveTimeout: const Duration(seconds: 20),
-          sendTimeout: const Duration(seconds: 20),
-          contentType: 'application/json',
-          // Only 2xx is success; 4xx/5xx throw DioException so guardApiCall +
-          // DioErrorMapper turn them into AppFailure (and AuthInterceptor can
-          // catch 401 for refresh).
-          validateStatus: (status) => status != null && status >= 200 && status < 300,
-        );
+      baseUrl: env.apiBaseUrl,
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 20),
+      sendTimeout: const Duration(seconds: 20),
+      contentType: 'application/json',
+      // Only 2xx is success; 4xx/5xx throw DioException so guardApiCall +
+      // DioErrorMapper turn them into AppFailure (and AuthInterceptor can
+      // catch 401 for refresh).
+      validateStatus: (status) =>
+          status != null && status >= 200 && status < 300,
+    );
 
     // Bare client to replay a request after refresh without re-entering auth.
     final retryClient = Dio(baseOptions());
