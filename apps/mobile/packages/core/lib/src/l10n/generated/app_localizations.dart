@@ -2324,6 +2324,12 @@ abstract class AppLocalizations {
   /// **'Urgent'**
   String get maintenancePriorityUrgent;
 
+  /// No description provided for @maintenancePriorityValue.
+  ///
+  /// In en, this message translates to:
+  /// **'{value} priority'**
+  String maintenancePriorityValue(String value);
+
   /// No description provided for @maintenancePhotosLabel.
   ///
   /// In en, this message translates to:

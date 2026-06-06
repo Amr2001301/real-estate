@@ -1184,6 +1184,11 @@ class AppLocalizationsAr extends AppLocalizations {
   String get maintenancePriorityUrgent => 'عاجلة';
 
   @override
+  String maintenancePriorityValue(String value) {
+    return 'أولوية $value';
+  }
+
+  @override
   String get maintenancePhotosLabel => 'الصور (اختياري)';
 
   @override

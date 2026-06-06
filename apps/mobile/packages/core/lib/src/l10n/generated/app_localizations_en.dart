@@ -1198,6 +1198,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maintenancePriorityUrgent => 'Urgent';
 
   @override
+  String maintenancePriorityValue(String value) {
+    return '$value priority';
+  }
+
+  @override
   String get maintenancePhotosLabel => 'Photos (optional)';
 
   @override

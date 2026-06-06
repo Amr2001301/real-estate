@@ -421,6 +421,8 @@
   "maintenancePriorityMedium": "متوسطة",
   "maintenancePriorityHigh": "عالية",
   "maintenancePriorityUrgent": "عاجلة",
+  "maintenancePriorityValue": "أولوية {value}",
+  "@maintenancePriorityValue": { "placeholders": { "value": { "type": "String" } } },
 
   "maintenancePhotosLabel": "الصور (اختياري)",
   "maintenancePhotosHint": "حتى {count} صور، {mb} ميجابايت لكل صورة.",

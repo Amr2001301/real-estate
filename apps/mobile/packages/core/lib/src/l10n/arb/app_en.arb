@@ -424,6 +424,8 @@
   "maintenancePriorityMedium": "Medium",
   "maintenancePriorityHigh": "High",
   "maintenancePriorityUrgent": "Urgent",
+  "maintenancePriorityValue": "{value} priority",
+  "@maintenancePriorityValue": { "placeholders": { "value": { "type": "String" } } },
 
   "maintenancePhotosLabel": "Photos (optional)",
   "maintenancePhotosHint": "Up to {count} images, {mb} MB each.",
