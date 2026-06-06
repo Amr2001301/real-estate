@@ -36,6 +36,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _back() => context.canPop() ? context.pop() : context.go('/home');
 
+  /// Auth screens are opened with `push`, so the router's redirect guard (which
+  /// keys off `matchedLocation`, still the underlying route) can't move an
+  /// authenticated user off them. Navigate to the account area ourselves.
+  void _onAuthState(BuildContext context, AuthState state) {
+    if (state.status == AuthStatus.success) {
+      context.go('/account');
+    } else if (state.failure != null) {
+      showFailureSnackBar(context, state.failure!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -44,9 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: context.appColors.canvas,
       body: BlocConsumer<AuthCubit, AuthState>(
-        listenWhen: (a, b) => a.failure != b.failure && b.failure != null,
-        listener: (context, state) =>
-            showFailureSnackBar(context, state.failure!),
+        listenWhen: (a, b) =>
+            (a.failure != b.failure && b.failure != null) ||
+            (a.status != b.status && b.status == AuthStatus.success),
+        listener: _onAuthState,
         builder: (context, state) {
           return ListView(
             padding: EdgeInsets.zero,
