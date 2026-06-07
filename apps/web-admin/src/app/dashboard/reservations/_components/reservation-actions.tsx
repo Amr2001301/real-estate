@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Eye, CheckCircle2, X, Ban } from 'lucide-react';
 import type { Reservation } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { StatusDialog } from './status-dialog';
 import {
   approveReservationAction,
@@ -35,46 +36,50 @@ export function ReservationActions({ reservation }: Props) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       <Link href={`/dashboard/reservations/${reservation.id}`}>
-        <Button variant="outline" size="sm" leftIcon={<Eye className="h-3.5 w-3.5" />}>
-          عرض
-        </Button>
+        <IconButton label="عرض تفاصيل الحجز" variant="outline" size="sm">
+          <Eye />
+        </IconButton>
       </Link>
 
-      {isPending && (
+      {canCancel && (
         <>
-          <Button
-            variant="subtle"
-            size="sm"
-            leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
-            loading={approvePending}
-            onClick={handleApprove}
-            className="text-success-700 hover:bg-success-50"
-          >
-            موافقة
-          </Button>
+          <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
+
+          {isPending && (
+            <>
+              <Button
+                variant="subtle"
+                size="sm"
+                leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                loading={approvePending}
+                onClick={handleApprove}
+                className="text-success-700 hover:bg-success-50"
+              >
+                موافقة
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                leftIcon={<X className="h-3.5 w-3.5" />}
+                onClick={() => setRejectOpen(true)}
+                className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
+              >
+                رفض
+              </Button>
+            </>
+          )}
 
           <Button
             variant="ghost"
             size="sm"
-            leftIcon={<X className="h-3.5 w-3.5" />}
-            onClick={() => setRejectOpen(true)}
-            className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
+            leftIcon={<Ban className="h-3.5 w-3.5" />}
+            onClick={() => setCancelOpen(true)}
+            className="text-slate-500 hover:text-slate-700"
           >
-            رفض
+            إلغاء
           </Button>
         </>
-      )}
-
-      {canCancel && (
-        <Button
-          variant="ghost"
-          size="sm"
-          leftIcon={<Ban className="h-3.5 w-3.5" />}
-          onClick={() => setCancelOpen(true)}
-          className="text-slate-500 hover:text-slate-700"
-        >
-          إلغاء
-        </Button>
       )}
 
       <StatusDialog

@@ -153,7 +153,7 @@ export default async function ReservationsPage({
         {!showFilters && sp.dateFrom && <input type="hidden" name="dateFrom" value={sp.dateFrom} />}
         {!showFilters && sp.dateTo   && <input type="hidden" name="dateTo"   value={sp.dateTo} />}
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
           <Input
             name="q"
             inputSize="sm"
@@ -186,8 +186,10 @@ export default async function ReservationsPage({
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
           <Link
             href={toggleFiltersUrl as never}
-            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-medium shrink-0 transition-colors ${
-              showFilters ? 'text-brand-600' : 'text-slate-500 hover:text-slate-700'
+            className={`hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors ${
+              showFilters
+                ? 'bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100'
+                : 'bg-white border-hairline text-slate-600 hover:border-brand-200 hover:text-brand-700'
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -199,7 +201,7 @@ export default async function ReservationsPage({
         </div>
 
         {showFilters && (
-          <div className="mt-2 rounded-xl border border-hairline bg-white shadow-xs px-4 py-3.5">
+          <div className="mt-2 rounded-2xl border border-hairline bg-white shadow-soft px-4 py-3.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-400">المندوب</label>
@@ -243,7 +245,8 @@ export default async function ReservationsPage({
             cell: (r) => (
               <Link
                 href={`/dashboard/reservations/${r.id}`}
-                className="font-mono text-xs text-brand-700 hover:underline"
+                title="عرض تفاصيل الحجز"
+                className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
               >
                 {r.reservationNumber ?? r.id.slice(0, 8)}
               </Link>
