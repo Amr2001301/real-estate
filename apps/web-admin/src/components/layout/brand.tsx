@@ -32,7 +32,7 @@ export function Brand({
         width={40}
         height={40}
         priority
-        className="h-10 w-10 rounded-xl object-cover shadow-md ring-1 ring-inset ring-white/10"
+        className="h-10 w-10 rounded-lg object-cover shadow-md ring-1 ring-inset ring-white/10"
       />
       {!compact && (
         <span className="flex flex-col leading-tight">
@@ -47,7 +47,7 @@ export function Brand({
           <span
             className={cn(
               'text-[11px] mt-0.5',
-              isDark ? 'text-sidebar-text-muted' : 'text-slate-500',
+              isDark ? 'text-sidebar-text-muted/80' : 'text-slate-500',
             )}
           >
             بوابة المسؤولين

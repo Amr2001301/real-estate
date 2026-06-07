@@ -33,14 +33,14 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
 
   return (
     <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text">
-      <div className="px-5 h-[72px] flex items-center border-b border-sidebar-border shrink-0">
+      <div className="px-5 h-[72px] flex items-center border-b border-sidebar-border/40 shrink-0">
         <Brand theme="dark" />
       </div>
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-5 space-y-6">
         {resolved.map((section) => (
           <div key={section.title}>
-            <p className="px-3 mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-text-muted">
+            <p className="px-3 mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-text-muted/70">
               {section.title}
             </p>
             <div className="space-y-1">
@@ -61,9 +61,9 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
         ))}
       </nav>
 
-      <div className="border-t border-sidebar-border p-3 shrink-0">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-500/15 text-brand-300 text-xs font-bold ring-1 ring-inset ring-brand-500/20 shrink-0">
+      <div className="border-t border-sidebar-border/40 p-3 shrink-0">
+        <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-sidebar-bg-hover/40 transition-colors hover:bg-sidebar-bg-hover/70">
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500/20 text-brand-300 text-xs font-bold ring-1 ring-inset ring-brand-500/30 shrink-0">
             {initials(user.fullName)}
           </span>
           <div className="min-w-0 flex-1">
@@ -77,7 +77,7 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
               type="submit"
               aria-label="تسجيل الخروج"
               title="تسجيل الخروج"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-text-muted hover:text-white hover:bg-sidebar-bg-hover transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-text-muted hover:text-brand-400 hover:bg-sidebar-bg-elev/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
             >
               <LogOut className="h-4 w-4" />
             </button>
