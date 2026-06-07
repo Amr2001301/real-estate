@@ -5,7 +5,7 @@ import {
   CheckCircle2,
   Bookmark,
   CircleDollarSign,
-  ArrowRight,
+  Eye,
   Download,
   BedDouble,
   Ruler,
@@ -173,7 +173,7 @@ export default async function UnitsPage({
         {!showFilters && sp.areaMin  && <input type="hidden" name="areaMin"  value={sp.areaMin} />}
         {!showFilters && sp.areaMax  && <input type="hidden" name="areaMax"  value={sp.areaMax} />}
 
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
           <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
             <option value="">كل المشاريع</option>
             {projects.map((p) => (
@@ -210,7 +210,7 @@ export default async function UnitsPage({
         </div>
 
         {showFilters && (
-          <div className="mt-2 rounded-xl border border-hairline bg-white shadow-xs px-4 py-3.5">
+          <div className="mt-2 rounded-2xl border border-hairline bg-white shadow-soft px-4 py-3.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-[11px] font-medium text-slate-400">غرف النوم</label>
@@ -240,7 +240,7 @@ export default async function UnitsPage({
       <Card className="overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-surface-muted/60 text-xs text-slate-500">
               <tr>
                 <th className="text-start font-semibold py-3 ps-5 pe-4">كود الوحدة</th>
                 <th className="text-start font-semibold py-3 px-4">المشروع / المرحلة</th>
@@ -250,7 +250,7 @@ export default async function UnitsPage({
                 <th className="text-start font-semibold py-3 px-4">السعر</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
                 <th className="text-start font-semibold py-3 px-4">آخر تحديث</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
+                <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
@@ -284,12 +284,12 @@ export default async function UnitsPage({
                 return (
                   <tr
                     key={u.id}
-                    className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
+                    className="group border-t border-hairline hover:bg-brand-50/20 transition-colors"
                   >
                     <td className="py-3 ps-5 pe-4">
                       <Link
                         href={`/dashboard/units/${u.id}` as never}
-                        className="font-mono text-sm font-semibold text-brand-700 hover:text-brand-800"
+                        className="font-mono text-sm font-semibold text-brand-700 hover:text-brand-800 group-hover:underline underline-offset-2 decoration-brand-300/50"
                       >
                         {u.code}
                       </Link>
@@ -334,8 +334,8 @@ export default async function UnitsPage({
                     </td>
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/dashboard/units/${u.id}` as never}>
-                        <IconButton label="عرض الوحدة" variant="ghost" size="sm">
-                          <ArrowRight className="rtl:rotate-180" />
+                        <IconButton label="عرض تفاصيل الوحدة" variant="outline" size="sm">
+                          <Eye />
                         </IconButton>
                       </Link>
                     </td>

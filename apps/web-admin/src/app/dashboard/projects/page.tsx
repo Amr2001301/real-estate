@@ -239,7 +239,7 @@ export default async function ProjectsPage({
                     </td>
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/dashboard/projects/${p.id}` as never}>
-                        <IconButton label="عرض المشروع" variant="ghost" size="sm">
+                        <IconButton label="عرض تفاصيل المشروع" variant="outline" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
