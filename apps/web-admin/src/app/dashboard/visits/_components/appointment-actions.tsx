@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { RefreshCw, UserCheck, CheckCircle, X, UserX } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, RefreshCw, UserCheck, CheckCircle, X, UserX } from 'lucide-react';
 import type { VisitAppointment, AppointmentStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { RescheduleModal } from './reschedule-modal';
 import { AssignSalesModal } from './assign-sales-modal';
 import { updateAppointmentStatusAction } from '../actions';
@@ -23,8 +25,16 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
+      <Link href={`/dashboard/visits/appointments/${appointment.id}` as never}>
+        <IconButton label="عرض تفاصيل الزيارة" variant="outline" size="sm">
+          <Eye />
+        </IconButton>
+      </Link>
+
       {!isFinal && (
         <>
+          <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
+
           {/* "تأكيد" — admin-side confirm. Available only for SCHEDULED rows,
               and only useful to acknowledge a customer who can't use the
               portal; the new workflow expects the customer to confirm
