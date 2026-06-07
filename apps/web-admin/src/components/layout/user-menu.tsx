@@ -45,7 +45,7 @@ export function UserMenu({ user }: Props) {
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="inline-flex items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-surface-muted transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
+        className="inline-flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40"
       >
         <Avatar name={user.fullName} size="sm" />
         <span className="hidden sm:flex flex-col items-start leading-tight pe-1">
@@ -60,9 +60,9 @@ export function UserMenu({ user }: Props) {
       {open && (
         <div
           role="menu"
-          className="absolute end-0 mt-2 w-60 bg-surface border border-hairline rounded-2xl shadow-lg p-1.5 animate-fade-in z-50"
+          className="absolute end-0 mt-1 w-60 bg-surface border border-hairline rounded-lg shadow-card p-1 animate-fade-in z-50"
         >
-          <div className="px-3 py-2.5 border-b border-hairline mb-1.5">
+          <div className="px-3 py-2.5 border-b border-hairline/50 mb-1">
             <p className="text-sm font-semibold text-slate-900 truncate">{user.fullName}</p>
             <p className="text-2xs text-slate-500 mt-0.5">{ROLE_LABEL[user.role]}</p>
           </div>

@@ -26,7 +26,7 @@ async function getUnreadCount(): Promise<number> {
 export async function Topbar({ user, notificationsHref, leading }: Props) {
   const unread = await getUnreadCount();
   return (
-    <header className="sticky top-0 z-30 h-[72px] bg-surface/85 backdrop-blur-md border-b border-hairline">
+    <header className="sticky top-0 z-30 h-[72px] bg-surface/90 backdrop-blur-md border-b border-hairline/50 shadow-sm">
       <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center gap-3">
         {leading && <div className="lg:hidden shrink-0">{leading}</div>}
 
@@ -40,21 +40,21 @@ export async function Topbar({ user, notificationsHref, leading }: Props) {
               type="search"
               placeholder="بحث عن وحدات، عملاء، مشاريع…"
               aria-label="بحث"
-              className="h-10 w-full ps-10 pe-3 rounded-xl border border-hairline bg-surface-muted text-sm placeholder:text-slate-400 focus:outline-none focus:bg-surface focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 transition-colors"
+              className="h-10 w-full ps-10 pe-3 rounded-lg border border-hairline bg-surface text-sm placeholder:text-slate-400 text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 transition-colors shadow-xs"
             />
           </div>
         </div>
 
         <div className="flex md:hidden flex-1" />
 
-        <div className="flex items-center gap-1.5 ms-auto shrink-0">
-          <IconButton label="المساعدة" variant="ghost" size="md" className="hidden sm:inline-flex">
+        <div className="flex items-center gap-2 ms-auto shrink-0">
+          <IconButton label="المساعدة" variant="ghost" size="md" className="hidden sm:inline-flex text-slate-600 hover:text-slate-900">
             <HelpCircle />
           </IconButton>
 
           <NotificationBell href={notificationsHref} initialCount={unread} />
 
-          <div className="h-7 w-px bg-hairline mx-1.5 hidden sm:block" />
+          <div className="h-6 w-px bg-hairline/50 mx-1.5 hidden sm:block" />
 
           <UserMenu user={{ fullName: user.fullName, role: user.role }} />
         </div>
