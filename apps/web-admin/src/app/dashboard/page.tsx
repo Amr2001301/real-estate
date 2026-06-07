@@ -5,13 +5,11 @@ import {
   CalendarCheck2,
   Receipt,
   Wrench,
-  Banknote,
   AlertCircle,
-  FileText,
-  MessageSquare,
   Clock,
-  ArrowLeft,
   Plus,
+  Users,
+  UserCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
@@ -21,17 +19,14 @@ import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { ChartPanel } from '@/components/dashboard/chart-panel';
-import { BookingsTrendChart } from '@/components/dashboard/bookings-trend-chart';
+import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-chart';
 import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
-import { AlertList, type AlertItem } from '@/components/dashboard/alert-list';
 import { ActivityTable } from '@/components/dashboard/activity-table';
-import { SupportCard } from '@/components/dashboard/support-card';
+import { OperationalPanel } from '@/components/dashboard/operational-panel';
 import { GenerateReportButton } from '@/components/dashboard/generate-report-button';
 import { SalesDashboard } from './_components/sales-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
 
-// P14 — the single ADMIN dashboard feed. Every value is DB-derived; there is
-// no demo data on this screen anymore.
 interface AdminSummary {
   kpis: {
     projects: number;
@@ -64,7 +59,17 @@ interface AdminSummary {
 
 const DONUT_COLORS = ['#C8A24B', '#A855F7', '#14B8A6', '#0F1E33', '#26405F', '#94A3B8'];
 
-/** Server-rendered relative time in Arabic (no client JS needed). */
+function activityHref(type: string, id: string): string | undefined {
+  switch (type) {
+    case 'reservation': return `/dashboard/reservations/${id}`;
+    case 'deposit':     return `/dashboard/deposits/${id}`;
+    case 'contract':    return `/dashboard/contracts/${id}`;
+    case 'lead':        return `/dashboard/leads/${id}`;
+    case 'maintenance': return `/dashboard/maintenance/${id}`;
+    default:            return undefined;
+  }
+}
+
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.round(diffMs / 60000);
@@ -86,8 +91,6 @@ function EmptyBlock({ message }: { message: string }) {
 }
 
 export default async function DashboardHome() {
-  // Non-admin staff get their own home — the admin summary below is ADMIN-only
-  // and would 403 for them.
   const session = await getSession();
   if (session && session.role === 'SALES') {
     return <SalesDashboard userId={session.id} />;
@@ -96,11 +99,16 @@ export default async function DashboardHome() {
     return <SalesManagerDashboard />;
   }
 
-  const r = await safe(api.get<AdminSummary>('/reports/admin-summary'));
+  const [r, customersRes, teamRes] = await Promise.all([
+    safe(api.get<AdminSummary>('/reports/admin-summary')),
+    safe(api.get<{ meta: { total: number } }>('/users?role=CUSTOMER&pageSize=1')),
+    safe(api.get<{ meta: { total: number } }>('/users?role=ADMIN,SALES,SALES_MANAGER,MAINTENANCE_SUPERVISOR&pageSize=1')),
+  ]);
   const summary = r.data;
   const error = r.error;
+  const totalCustomers = customersRes.data?.meta.total ?? 0;
+  const totalTeam = teamRes.data?.meta.total ?? 0;
 
-  // Lead-source distribution → donut slices + center label (top source share).
   const leadSlices = (summary?.leadSources ?? []).map((s, i) => ({
     label: s.source,
     value: s.count,
@@ -111,71 +119,27 @@ export default async function DashboardHome() {
   const donutCenter =
     topSource && leadTotal > 0 ? `${Math.round((topSource.count / leadTotal) * 100)}%` : undefined;
 
-  // Reservation trend → bar chart (zeros render as empty bars — never faked).
-  const trendData = (summary?.reservationTrend ?? []).map((t) => ({ month: t.label, value: t.value }));
+  const trendData = (summary?.reservationTrend ?? []).map((t) => ({
+    month: t.label,
+    value: t.value,
+  }));
 
-  // Alerts → only actionable, non-zero counts (no fabricated rows).
   const a = summary?.alerts;
-  const alertItems: AlertItem[] = a
-    ? (
-        [
-          a.contractsAwaitingSignature > 0 && {
-            id: 'contracts',
-            tone: 'danger' as const,
-            title: `${a.contractsAwaitingSignature} عقود بانتظار التوقيع`,
-            description: 'عقود لم تُوقَّع بعد',
-            icon: <FileText />,
-          },
-          a.depositsPendingReview > 0 && {
-            id: 'deposits',
-            tone: 'info' as const,
-            title: `${a.depositsPendingReview} دفعات بانتظار المراجعة`,
-            description: 'إثباتات دفع مقدّمة من العملاء',
-            icon: <Banknote />,
-          },
-          a.openMaintenance > 0 && {
-            id: 'maintenance',
-            tone: 'warning' as const,
-            title: `${a.openMaintenance} طلبات صيانة مفتوحة`,
-            icon: <Wrench />,
-          },
-          a.reservationsExpiringSoon > 0 && {
-            id: 'reservations',
-            tone: 'warning' as const,
-            title: `${a.reservationsExpiringSoon} حجوزات تنتهي قريباً`,
-            description: 'خلال 7 أيام',
-            icon: <CalendarCheck2 />,
-          },
-          a.visitsAwaitingConfirmation > 0 && {
-            id: 'visits',
-            tone: 'info' as const,
-            title: `${a.visitsAwaitingConfirmation} زيارات بانتظار تأكيد العميل`,
-            icon: <CalendarCheck2 />,
-          },
-          a.infoRequestsOpen > 0 && {
-            id: 'info',
-            tone: 'neutral' as const,
-            title: `${a.infoRequestsOpen} استفسارات مفتوحة`,
-            icon: <MessageSquare />,
-          },
-        ].filter(Boolean) as AlertItem[]
-      )
-    : [];
 
-  // Recent activity → table rows (derived from real createdAt rows).
   const activityRows = (summary?.recentActivity ?? []).map((it) => ({
     id: it.id,
     user: it.title,
     action: it.action,
     entity: it.context ?? '—',
     time: relativeTime(it.createdAt),
+    href: activityHref(it.type, it.id),
   }));
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="مرحباً بك في المجلس الرقمي"
-        description="نظرة عامة على أداء المحفظة العقارية والعمليات الجارية اليوم."
+        title="مرحبًا بك في ديفورا"
+        description="تابع أداء محفظتك العقارية وعمليات فريقك من لوحة واحدة."
         actions={
           <>
             <GenerateReportButton />
@@ -198,82 +162,64 @@ export default async function DashboardHome() {
         </div>
       )}
 
+      {/* KPI strip — 4-col desktop, 2-col mobile */}
       {summary && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-          <PageKpiCard label="إجمالي المشاريع" value={summary.kpis.projects} icon={<Building2 />} tone="brand" />
-          <PageKpiCard
-            label="الوحدات المتاحة"
-            value={summary.kpis.availableUnits}
-            sub={`من إجمالي ${summary.kpis.totalUnits}`}
-            icon={<Home />}
-            tone="info"
-          />
-          <PageKpiCard
-            label="الفرص الجديدة"
-            value={summary.kpis.newLeadsThisMonth}
-            sub={summary.kpis.newLeadsThisMonth > 0 ? 'هذا الشهر' : undefined}
-            icon={<Zap />}
-            tone="accent"
-          />
-          <PageKpiCard label="الحجوزات النشطة" value={summary.kpis.reservedUnits} icon={<CalendarCheck2 />} tone="success" />
-          <PageKpiCard label="ودائع معلقة" value={summary.kpis.pendingDeposits} icon={<Receipt />} tone="warning" />
-          <PageKpiCard label="طلبات صيانة مفتوحة" value={summary.kpis.openMaintenance} icon={<Wrench />} tone="danger" />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Row 1 */}
+          <PageKpiCard label="إجمالي المشاريع"   value={summary.kpis.projects}       icon={<Building2 />}    tone="brand"   />
+          <PageKpiCard label="الوحدات المتاحة"   value={summary.kpis.availableUnits} sub={`من إجمالي ${summary.kpis.totalUnits}`} icon={<Home />} tone="info" />
+          <PageKpiCard label="الحجوزات النشطة"   value={summary.kpis.reservedUnits}  icon={<CalendarCheck2 />} tone="success" />
+          <PageKpiCard label="إجمالي العملاء"    value={totalCustomers}              icon={<UserCheck />}    tone="teal"    />
+          {/* Row 2 */}
+          <PageKpiCard label="الفرص الجديدة"     value={summary.kpis.newLeadsThisMonth} sub={summary.kpis.newLeadsThisMonth > 0 ? 'هذا الشهر' : undefined} icon={<Zap />} tone="accent" />
+          <PageKpiCard label="ودائع معلقة"       value={summary.kpis.pendingDeposits} icon={<Receipt />}     tone="warning" />
+          <PageKpiCard label="طلبات صيانة مفتوحة" value={summary.kpis.openMaintenance} icon={<Wrench />}    tone="danger"  />
+          <PageKpiCard label="أعضاء الفريق"      value={totalTeam}                   icon={<Users />}       tone="purple"  />
         </div>
       )}
 
+      {/* Row 2: Sales chart (2-col) + Lead Source Donut (1-col) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <ChartPanel title="توزيع العملاء المحتملين" description="حسب مصدر القناة" className="lg:col-span-1">
-          {leadSlices.length > 0 ? (
-            <LeadSourceDonut slices={leadSlices} centerLabel={donutCenter} centerSub={topSource?.source} />
+        <ChartPanel
+          title="أداء المبيعات الشهري"
+          description="الحجوزات المسجلة — آخر 6 أشهر"
+          className="lg:col-span-2"
+          trailing={
+            <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-brand-50 text-brand-700 text-2xs font-semibold">
+              آخر 6 أشهر
+            </span>
+          }
+        >
+          {trendData.length > 0 ? (
+            <SalesPerformanceChart data={trendData} />
           ) : (
             <EmptyBlock message="لا توجد بيانات كافية" />
           )}
         </ChartPanel>
 
         <ChartPanel
-          title="اتجاهات الحجوزات"
-          description="مقارنة الـ 6 أشهر الماضية"
-          className="lg:col-span-2"
-          trailing={
-            <span className="inline-flex items-center h-7 px-3 rounded-full bg-brand-50 text-brand-700 text-2xs font-semibold">
-              آخر 6 أشهر
-            </span>
-          }
+          title="توزيع العملاء المحتملين"
+          description="حسب مصدر القناة"
         >
-          {trendData.length > 0 ? (
-            <BookingsTrendChart data={trendData} />
+          {leadSlices.length > 0 ? (
+            <LeadSourceDonut slices={leadSlices} centerLabel={donutCenter} centerSub={topSource?.source} />
           ) : (
             <EmptyBlock message="لا توجد بيانات كافية" />
           )}
         </ChartPanel>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="overflow-hidden lg:col-span-1">
-          <div className="flex items-center gap-2 px-5 py-3 border-b border-hairline">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-danger-50 text-danger-600 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5">
-              <AlertCircle className="h-3.5 w-3.5" />
-            </span>
-            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">تنبيهات معلقة</h3>
-          </div>
-          <div className="p-4 sm:p-5">
-            {alertItems.length > 0 ? (
-              <AlertList items={alertItems} />
-            ) : (
-              <EmptyBlock message="لا توجد تنبيهات حالياً" />
-            )}
-          </div>
-        </Card>
-
+      {/* Row 3: Activity (2-col) + Operational Panel side column (1-col) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+        {/* Latest Activity — primary wide card */}
         <Card className="overflow-hidden lg:col-span-2">
           <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
             <h3 className="text-sm font-semibold text-slate-800 tracking-tight">آخر النشاطات</h3>
             <Link
               href={'/dashboard/audit' as never}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+              className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-brand-700 hover:bg-brand-50 hover:text-brand-800 transition-colors"
             >
               عرض الكل
-              <ArrowLeft className="h-3.5 w-3.5" />
             </Link>
           </div>
           <div className="p-4 sm:p-5">
@@ -284,9 +230,11 @@ export default async function DashboardHome() {
             )}
           </div>
         </Card>
+
+        {/* Side column: Operational Panel (consolidates alerts — same data source) */}
+        <OperationalPanel alerts={a} />
       </div>
 
-      <SupportCard />
     </div>
   );
 }
