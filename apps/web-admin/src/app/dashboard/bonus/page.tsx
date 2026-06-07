@@ -245,18 +245,21 @@ export default async function BonusPage({
           value={formatCurrency(pendingTotal)}
           icon={<Clock />}
           tone="warning"
+          compact
         />
         <PageKpiCard
           label="إجمالي المعتمد"
           value={formatCurrency(approvedTotal)}
           icon={<CheckCircle2 />}
           tone="info"
+          compact
         />
         <PageKpiCard
           label="إجمالي المدفوع"
           value={formatCurrency(paidTotal)}
           icon={<Banknote />}
           tone="success"
+          compact
         />
         <PageKpiCard
           label="عدد المستحقات"

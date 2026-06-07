@@ -13,8 +13,8 @@ interface Props {
   className?: string;
 }
 
-const SIZE = 180;
-const STROKE = 22;
+const SIZE = 152;
+const STROKE = 18;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -37,7 +37,7 @@ export function LeadSourceDonut({
   });
 
   return (
-    <div className={cn('flex flex-col items-center gap-5 py-2', className)}>
+    <div className={cn('flex flex-col items-center gap-3 py-1', className)}>
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
         <svg
           width={SIZE}

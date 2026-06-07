@@ -11,7 +11,6 @@ import {
   Building2,
   Layers,
   Home,
-  ArrowRight,
   Download,
   SlidersHorizontal,
 } from 'lucide-react';
@@ -263,20 +262,15 @@ export default async function InventoryPage({
           { label: 'المخزون' },
         ]}
         actions={
-          <>
-            <IconButton label="تصدير" variant="outline" size="md">
-              <Download />
-            </IconButton>
-            <Link href={unitsHref({})}>
-              <Button
-                variant="primary"
-                size="md"
-                leftIcon={<SlidersHorizontal className="h-4 w-4" />}
-              >
-                {isAdmin ? 'إدارة الوحدات' : 'عرض الوحدات'}
-              </Button>
-            </Link>
-          </>
+          <Link href={unitsHref({})}>
+            <Button
+              variant="primary"
+              size="md"
+              leftIcon={<SlidersHorizontal className="h-4 w-4" />}
+            >
+              {isAdmin ? 'إدارة الوحدات' : 'عرض الوحدات'}
+            </Button>
+          </Link>
         }
       />
 
@@ -314,12 +308,14 @@ export default async function InventoryPage({
           value={formatCurrency(inventoryValue)}
           icon={<CircleDollarSign />}
           tone="brand"
+          compact
         />
         <PageKpiCard
           label="متوسط سعر الوحدة"
           value={formatCurrency(avgPrice)}
           icon={<Calculator />}
           tone="accent"
+          compact
         />
       </div>
 
@@ -339,7 +335,7 @@ export default async function InventoryPage({
       )}
 
       {/* Status filter tabs */}
-      <div className="inline-flex flex-wrap items-center gap-1 rounded-2xl bg-surface-muted p-1 ring-1 ring-inset ring-hairline">
+      <div className="flex flex-wrap items-center gap-1.5">
         <StatusTab
           href={`/dashboard/inventory${qs({ status: undefined })}`}
           active={status === 'all'}
@@ -369,14 +365,13 @@ export default async function InventoryPage({
         />
       </div>
 
-      {/* Search + project filter */}
+      {/* Toolbar */}
       <form
         method="get"
         action="/dashboard/inventory"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-4 py-3 shadow-soft"
       >
-        {status !== 'all' && <input type="hidden" name="status" value={status} />}
-        <div className="flex-1 min-w-[180px]">
+        <div className="flex-1 min-w-[200px]">
           <Input
             name="q"
             inputSize="sm"
@@ -398,23 +393,32 @@ export default async function InventoryPage({
             </option>
           ))}
         </Select>
+        <Select
+          name="status"
+          inputSize="sm"
+          defaultValue={status}
+          className="w-36 shrink-0"
+        >
+          <option value="all">كل الحالات</option>
+          <option value="AVAILABLE">متاحة</option>
+          <option value="RESERVED">محجوزة</option>
+          <option value="SOLD">مباعة</option>
+        </Select>
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">
             تطبيق
           </Button>
-          {(q || projectId) && (
-            <Link
-              href={
-                `/dashboard/inventory${
-                  status !== 'all' ? `?status=${status}` : ''
-                }` as never
-              }
-            >
+          {(q || projectId || status !== 'all') && (
+            <Link href={'/dashboard/inventory' as never}>
               <Button type="button" variant="ghost" size="sm">
                 مسح
               </Button>
             </Link>
           )}
+          <span className="h-4 w-px bg-hairline mx-0.5" aria-hidden />
+          <IconButton label="تصدير" variant="outline" size="sm" type="button">
+            <Download />
+          </IconButton>
         </div>
       </form>
 
@@ -450,7 +454,6 @@ export default async function InventoryPage({
             <ProjectMatrixCard
               key={proj.id}
               proj={proj}
-              status={status}
               unitsHref={unitsHref}
             />
           ))}
@@ -475,11 +478,9 @@ export default async function InventoryPage({
 
 function ProjectMatrixCard({
   proj,
-  status,
   unitsHref,
 }: {
   proj: ProjectBucket;
-  status: StatusFilter;
   unitsHref: (overrides: Record<string, string | undefined>) => string;
 }) {
   const phases = [...proj.phases.values()].sort((a, b) =>
@@ -489,15 +490,15 @@ function ProjectMatrixCard({
   return (
     <Card className="overflow-hidden">
       {/* Project header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline bg-surface-muted/40 px-5 py-3.5">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 shrink-0">
-            <Building2 className="h-4 w-4" />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline bg-surface-muted/40 px-5 py-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 ring-1 ring-brand-100/80 shrink-0">
+            <Building2 className="h-4.5 w-4.5" />
           </span>
           <div className="min-w-0">
             <Link
               href={`/dashboard/projects/${proj.id}` as never}
-              className="font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+              className="font-bold text-[15px] text-slate-900 hover:text-brand-700 transition-colors truncate block leading-snug"
             >
               {proj.name}
             </Link>
@@ -506,18 +507,16 @@ function ProjectMatrixCard({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <CountChip tone="brand" label="إجمالي" value={proj.total} />
           <CountChip tone="success" label="متاحة" value={proj.available} />
           <CountChip tone="warning" label="محجوزة" value={proj.reserved} />
           <CountChip tone="info" label="مباعة" value={proj.sold} />
-          <span className="text-xs font-semibold text-slate-700 tabular-nums">
+          <span className="border-s border-hairline ps-2.5 text-xs font-semibold text-slate-600 tabular-nums">
             {formatCurrency(proj.totalValue)}
           </span>
           <Link href={unitsHref({ projectId: proj.id })}>
-            <IconButton label="عرض وحدات المشروع" variant="ghost" size="sm">
-              <ArrowRight className="rtl:rotate-180" />
-            </IconButton>
+            <Button variant="outline" size="sm">عرض التفاصيل</Button>
           </Link>
         </div>
       </div>
@@ -533,8 +532,7 @@ function ProjectMatrixCard({
               <th className="text-start font-semibold py-2.5 px-3">محجوزة</th>
               <th className="text-start font-semibold py-2.5 px-3">مباعة</th>
               <th className="text-start font-semibold py-2.5 px-3">القيمة</th>
-              <th className="text-start font-semibold py-2.5 px-3">التوفر</th>
-              <th className="text-start font-semibold py-2.5 ps-3 pe-5 w-px"></th>
+              <th className="text-start font-semibold py-2.5 ps-3 pe-5">التوفر</th>
             </tr>
           </thead>
           <tbody>
@@ -547,9 +545,6 @@ function ProjectMatrixCard({
                   key={ph.id}
                   ph={ph}
                   buildings={buildings}
-                  projectId={proj.id}
-                  status={status}
-                  unitsHref={unitsHref}
                 />
               );
             })}
@@ -563,15 +558,9 @@ function ProjectMatrixCard({
 function PhaseRows({
   ph,
   buildings,
-  projectId,
-  status,
-  unitsHref,
 }: {
   ph: PhaseBucket;
   buildings: BuildingBucket[];
-  projectId: string;
-  status: StatusFilter;
-  unitsHref: (overrides: Record<string, string | undefined>) => string;
 }) {
   return (
     <>
@@ -592,7 +581,7 @@ function PhaseRows({
         <td className="py-2.5 px-3 tabular-nums text-slate-700 text-sm whitespace-nowrap">
           {formatCurrency(ph.totalValue)}
         </td>
-        <td className="py-2.5 px-3" colSpan={2}>
+        <td className="py-2.5 ps-3 pe-5">
           <AvailabilityBar
             available={ph.available}
             reserved={ph.reserved}
@@ -640,25 +629,13 @@ function PhaseRows({
           <td className="py-2.5 px-3 tabular-nums text-slate-500 text-xs whitespace-nowrap">
             {formatCurrency(b.totalValue)}
           </td>
-          <td className="py-2.5 px-3 min-w-[140px]">
+          <td className="py-2.5 ps-3 pe-5 min-w-[160px]">
             <AvailabilityBar
               available={b.available}
               reserved={b.reserved}
               sold={b.sold}
               total={b.total}
             />
-          </td>
-          <td className="py-2.5 ps-3 pe-5">
-            <Link
-              href={unitsHref({
-                projectId,
-                ...(status === 'all' ? {} : { status }),
-              })}
-            >
-              <IconButton label="عرض وحدات المبنى" variant="ghost" size="sm">
-                <ArrowRight className="rtl:rotate-180" />
-              </IconButton>
-            </Link>
           </td>
         </tr>
       ))}
@@ -684,19 +661,24 @@ function AvailabilityBar({
   const rs = (reserved / total) * 100;
   const sl = (sold / total) * 100;
   return (
-    <div
-      className="inline-flex h-2 w-full max-w-[180px] overflow-hidden rounded-full bg-surface-muted ring-1 ring-inset ring-hairline"
-      role="img"
-      aria-label={`متاحة ${available} • محجوزة ${reserved} • مباعة ${sold}`}
-    >
+    <div className="flex items-center gap-1.5">
+      <div
+        className="inline-flex h-2 w-full max-w-[160px] overflow-hidden rounded-full bg-surface-muted ring-1 ring-inset ring-hairline"
+        role="img"
+        aria-label={`متاحة ${available} • محجوزة ${reserved} • مباعة ${sold}`}
+      >
+        {av > 0 && (
+          <span className="block h-full bg-success-500" style={{ width: `${av}%` }} />
+        )}
+        {rs > 0 && (
+          <span className="block h-full bg-warning-500" style={{ width: `${rs}%` }} />
+        )}
+        {sl > 0 && (
+          <span className="block h-full bg-info-500" style={{ width: `${sl}%` }} />
+        )}
+      </div>
       {av > 0 && (
-        <span className="block h-full bg-success-500/80" style={{ width: `${av}%` }} />
-      )}
-      {rs > 0 && (
-        <span className="block h-full bg-warning-500/80" style={{ width: `${rs}%` }} />
-      )}
-      {sl > 0 && (
-        <span className="block h-full bg-info-500/80" style={{ width: `${sl}%` }} />
+        <span className="text-2xs tabular-nums text-success-600 font-medium shrink-0">{Math.round(av)}%</span>
       )}
     </div>
   );
@@ -720,7 +702,7 @@ function CountChip({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-2xs font-semibold ring-1 ring-inset tabular-nums',
+        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-2xs font-semibold ring-1 ring-inset tabular-nums',
         TONE[tone],
       )}
     >
@@ -743,7 +725,7 @@ function StatusTab({
   count: number;
   tone?: 'brand' | 'success' | 'warning' | 'info';
 }) {
-  const ACTIVE_BADGE: Record<typeof tone, string> = {
+  const INACTIVE_BADGE: Record<typeof tone, string> = {
     brand: 'bg-brand-50 text-brand-700',
     success: 'bg-success-50 text-success-700',
     warning: 'bg-warning-50 text-warning-700',
@@ -755,17 +737,17 @@ function StatusTab({
       prefetch={false}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-colors',
+        'inline-flex items-center gap-2 h-9 px-3.5 rounded-full text-xs font-semibold transition-colors border',
         active
-          ? 'bg-surface text-slate-900 shadow-sm'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-surface',
+          ? 'bg-brand-500 text-navy border-brand-500 shadow-sm'
+          : 'bg-white text-slate-600 border-hairline hover:border-brand-200 hover:text-slate-900',
       )}
     >
       {label}
       <span
         className={cn(
-          'inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-md text-2xs font-bold',
-          active ? ACTIVE_BADGE[tone] : 'bg-slate-100 text-slate-600',
+          'inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-2xs font-bold',
+          active ? 'bg-navy/15 text-navy' : INACTIVE_BADGE[tone],
         )}
       >
         {count}

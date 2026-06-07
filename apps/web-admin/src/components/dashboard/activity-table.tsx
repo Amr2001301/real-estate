@@ -1,3 +1,6 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
 
 export interface ActivityRow {
@@ -6,6 +9,7 @@ export interface ActivityRow {
   action: string;
   entity: string;
   time: string;
+  href?: string;
 }
 
 interface Props {
@@ -33,6 +37,8 @@ function paletteFor(name: string): string {
 }
 
 export function ActivityTable({ rows, className }: Props) {
+  const router = useRouter();
+
   return (
     <div className={cn('w-full overflow-x-auto scrollbar-thin', className)}>
       <table className="w-full text-sm">
@@ -46,7 +52,21 @@ export function ActivityTable({ rows, className }: Props) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.id} className="border-t border-hairline">
+            <tr
+              key={r.id}
+              className={cn(
+                'border-t border-hairline transition-colors duration-100',
+                r.href && 'cursor-pointer hover:bg-brand-50/40',
+              )}
+              onClick={r.href ? () => router.push(r.href!) : undefined}
+              tabIndex={r.href ? 0 : undefined}
+              onKeyDown={r.href ? (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  router.push(r.href!);
+                }
+              } : undefined}
+            >
               <td className="py-3 pe-4">
                 <div className="flex items-center gap-2.5">
                   <span

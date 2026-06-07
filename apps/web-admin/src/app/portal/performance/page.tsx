@@ -120,9 +120,9 @@ export default async function PortalPerformancePage({
         <PageKpiCard label="فرص مُرسلة" value={summary.leadsSubmitted} icon={<UserPlus />} tone="brand" />
         <PageKpiCard label="حجوزات" value={summary.reservationsCreated} icon={<BookmarkCheck />} tone="info" />
         <PageKpiCard label="عقود موقّعة" value={summary.contractsSigned} icon={<FileText />} tone="accent" />
-        <PageKpiCard label="إجمالي المبيعات" value={formatCurrency(summary.salesGross)} icon={<Banknote />} tone="success" />
-        <PageKpiCard label="صافي العمولات" value={formatCurrency(summary.commissionsNet)} icon={<BadgePercent />} tone="warning" />
-        <PageKpiCard label="مدفوع" value={formatCurrency(summary.payoutsTotalNet)} icon={<Wallet />} tone="success" />
+        <PageKpiCard label="إجمالي المبيعات" value={formatCurrency(summary.salesGross)} icon={<Banknote />} tone="success" compact />
+        <PageKpiCard label="صافي العمولات" value={formatCurrency(summary.commissionsNet)} icon={<BadgePercent />} tone="warning" compact />
+        <PageKpiCard label="مدفوع" value={formatCurrency(summary.payoutsTotalNet)} icon={<Wallet />} tone="success" compact />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">

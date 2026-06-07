@@ -3,7 +3,6 @@ import { cn } from '@/lib/cn';
 
 type Tone = 'brand' | 'success' | 'warning' | 'danger' | 'info' | 'accent' | 'purple' | 'teal' | 'red' | 'neutral';
 
-// Top accent bar color for each tone variant
 const ACCENT_BAR: Record<Tone, string> = {
   brand:   'bg-brand-500',
   purple:  'bg-purple-500',
@@ -17,7 +16,6 @@ const ACCENT_BAR: Record<Tone, string> = {
   neutral: 'bg-slate-300',
 };
 
-// Icon container: background and text color for each tone variant
 const ICON_BG: Record<Tone, string> = {
   brand:   'bg-brand-50 text-brand-600',
   purple:  'bg-purple-50 text-purple-600',
@@ -37,37 +35,42 @@ export interface PageKpiCardProps {
   sub?: string;
   icon?: ReactNode;
   tone?: Tone;
+  /** Use for long values (currency, formatted numbers) in narrow grid columns. */
+  compact?: boolean;
 }
 
-export function PageKpiCard({ label, value, sub, icon, tone = 'brand' }: PageKpiCardProps) {
+export function PageKpiCard({ label, value, sub, icon, tone = 'brand', compact = false }: PageKpiCardProps) {
   return (
-    <div className="bg-surface rounded-2xl border border-hairline shadow-soft overflow-hidden transition-all duration-150 ease-smooth hover:shadow-card hover:border-brand-200">
-      {/* Accent bar at the top */}
-      <div className={cn('h-1 w-full', ACCENT_BAR[tone])} />
-      
-      {/* Card content */}
-      <div className="px-4 py-4 flex items-start gap-3">
+    <div className="relative bg-surface rounded-2xl border border-hairline shadow-soft overflow-hidden transition-all duration-150 ease-smooth hover:shadow-card hover:border-brand-200">
+      {/* RTL accent line — right/start side, clipped by overflow-hidden */}
+      <div className={cn('absolute inset-y-0 start-0 w-[2px]', ACCENT_BAR[tone])} />
+
+      <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[9px] font-semibold text-slate-500 leading-tight uppercase tracking-widest truncate">
+            {label}
+          </p>
+          <p className={cn(
+            'mt-0.5 font-bold tracking-tight tabular-nums text-slate-900',
+            compact ? 'text-xl leading-tight' : 'text-3xl leading-none',
+          )}>
+            {value}
+          </p>
+          {sub && (
+            <p className="mt-1 text-[11px] text-slate-400 leading-tight">{sub}</p>
+          )}
+        </div>
+
         {icon && (
           <div className={cn(
-            'inline-flex items-center justify-center rounded-lg shrink-0 flex-none',
+            'inline-flex items-center justify-center rounded-xl shrink-0 mt-0.5',
             'h-9 w-9 ring-1 ring-inset ring-black/5',
-            '[&_svg]:h-5 [&_svg]:w-5',
+            '[&_svg]:h-[18px] [&_svg]:w-[18px]',
             ICON_BG[tone],
           )}>
             {icon}
           </div>
         )}
-        
-        {/* Text content */}
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold text-slate-500 leading-tight uppercase tracking-wider">
-            {label}
-          </p>
-          <p className="mt-1 text-xl leading-tight font-bold tracking-tight tabular-nums text-slate-900 truncate">
-            {value}
-          </p>
-          {sub && <p className="mt-0.5 text-[11px] text-slate-400">{sub}</p>}
-        </div>
       </div>
     </div>
   );
