@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CalendarClock, CalendarCheck, CalendarDays, Clock, AlertCircle, Plus } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { api, safe } from '@/lib/api';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
@@ -13,6 +14,15 @@ import { RequestActions } from './_components/request-actions';
 import { AppointmentActions } from './_components/appointment-actions';
 
 export const dynamic = 'force-dynamic';
+
+function resolvedName(...parts: (string | null | undefined)[]): { name: string; isFallback: boolean } {
+  for (const p of parts) {
+    const n = p?.trim() ?? '';
+    if (n.length > 1) return { name: n, isFallback: false };
+    if (n.length === 1) return { name: 'عميل بدون اسم', isFallback: true };
+  }
+  return { name: '—', isFallback: false };
+}
 
 type Tab = 'requests' | 'appointments' | 'today' | 'past';
 
@@ -164,7 +174,8 @@ export default async function VisitsPage({
               cell: (r) => (
                 <Link
                   href={`/dashboard/visits/requests/${r.id}` as never}
-                  className="font-mono text-xs text-brand-700 hover:underline"
+                  title="عرض تفاصيل الزيارة"
+                  className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
                 >
                   {r.requestNumber ?? r.id.slice(0, 8)}
                 </Link>
@@ -173,16 +184,19 @@ export default async function VisitsPage({
             {
               key: 'customer',
               header: 'العميل',
-              cell: (r) => (
-                <div>
-                  <p className="font-medium text-slate-900">
-                    {r.customerName ?? r.user?.fullName ?? r.lead?.fullName ?? '—'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {r.customerPhone ?? r.user?.phone ?? r.lead?.phone ?? ''}
-                  </p>
-                </div>
-              ),
+              cell: (r) => {
+                const { name, isFallback } = resolvedName(r.customerName, r.user?.fullName, r.lead?.fullName);
+                return (
+                  <div>
+                    <p className={cn('font-medium', isFallback ? 'text-slate-400 italic text-xs' : 'text-slate-900')}>
+                      {name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {r.customerPhone ?? r.user?.phone ?? r.lead?.phone ?? ''}
+                    </p>
+                  </div>
+                );
+              },
             },
             {
               key: 'project',
@@ -254,7 +268,8 @@ export default async function VisitsPage({
               cell: (a) => (
                 <Link
                   href={`/dashboard/visits/appointments/${a.id}` as never}
-                  className="font-mono text-xs text-brand-700 hover:underline"
+                  title="عرض تفاصيل الزيارة"
+                  className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
                 >
                   {a.visitNumber}
                 </Link>
@@ -263,16 +278,19 @@ export default async function VisitsPage({
             {
               key: 'customer',
               header: 'العميل',
-              cell: (a) => (
-                <div>
-                  <p className="font-medium text-slate-900">
-                    {a.client?.fullName ?? a.lead?.fullName ?? a.visitRequest?.customerName ?? '—'}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {a.client?.phone ?? a.lead?.phone ?? a.visitRequest?.customerPhone ?? ''}
-                  </p>
-                </div>
-              ),
+              cell: (a) => {
+                const { name, isFallback } = resolvedName(a.client?.fullName, a.lead?.fullName, a.visitRequest?.customerName);
+                return (
+                  <div>
+                    <p className={cn('font-medium', isFallback ? 'text-slate-400 italic text-xs' : 'text-slate-900')}>
+                      {name}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {a.client?.phone ?? a.lead?.phone ?? a.visitRequest?.customerPhone ?? ''}
+                    </p>
+                  </div>
+                );
+              },
             },
             {
               key: 'project',

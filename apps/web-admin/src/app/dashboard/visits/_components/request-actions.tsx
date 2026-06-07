@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { Eye, CalendarPlus, X, Ban } from 'lucide-react';
+import { CalendarPlus, X, Ban } from 'lucide-react';
 import type { VisitRequest, VisitRequestStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ScheduleModal } from './schedule-modal';
@@ -23,12 +22,6 @@ export function RequestActions({ request, salesOptions }: Props) {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Link href={`/dashboard/visits/requests/${request.id}` as never}>
-        <Button variant="outline" size="sm" leftIcon={<Eye className="h-3.5 w-3.5" />}>
-          عرض
-        </Button>
-      </Link>
-
       {!isFinal && (
         <>
           <Button

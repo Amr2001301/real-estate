@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
-import { Eye, RefreshCw, UserCheck, CheckCircle, X, UserX } from 'lucide-react';
+import { RefreshCw, UserCheck, CheckCircle, X, UserX } from 'lucide-react';
 import type { VisitAppointment, AppointmentStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { RescheduleModal } from './reschedule-modal';
@@ -24,12 +23,6 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
-      <Link href={`/dashboard/visits/appointments/${appointment.id}` as never}>
-        <Button variant="outline" size="sm" leftIcon={<Eye className="h-3.5 w-3.5" />}>
-          عرض
-        </Button>
-      </Link>
-
       {!isFinal && (
         <>
           {/* "تأكيد" — admin-side confirm. Available only for SCHEDULED rows,

@@ -25,12 +25,12 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا تو�
       )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-muted/50 text-2xs text-slate-500 border-b border-hairline">
+          <thead className="bg-surface-muted/50 text-xs font-medium text-slate-500 border-b border-hairline">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={`text-right px-5 py-3 font-semibold uppercase tracking-wide whitespace-nowrap ${col.className ?? ''}`}
+                  className={`text-start px-5 py-3 font-semibold whitespace-nowrap ${col.className ?? ''}`}
                 >
                   {col.header}
                 </th>
