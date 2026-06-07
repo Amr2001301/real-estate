@@ -6,9 +6,9 @@ import {
   Mail,
   Download,
   Search,
-  ArrowRight,
+  Eye,
+  Info,
   ShieldCheck,
-  ShieldAlert,
   FileText,
   Wrench,
   Users as UsersIcon,
@@ -195,7 +195,7 @@ export default async function CustomersPage({
       <form
         method="get"
         action="/dashboard/customers"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft"
       >
         {statusFilter !== 'all' && (
           <input type="hidden" name="status" value={statusFilter} />
@@ -222,7 +222,7 @@ export default async function CustomersPage({
       <Card className="overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-surface-muted/60 text-xs font-medium text-slate-500">
               <tr>
                 <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
                 <th className="text-start font-semibold py-3 px-4">بيانات الاتصال</th>
@@ -251,7 +251,7 @@ export default async function CustomersPage({
               {rows.map((u) => (
                 <tr
                   key={u.id}
-                  className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
+                  className="group border-t border-hairline hover:bg-brand-50/20 transition-colors"
                 >
                   <td className="py-3 ps-5 pe-4">
                     <div className="flex items-center gap-3">
@@ -267,7 +267,7 @@ export default async function CustomersPage({
                       <div className="min-w-0">
                         <Link
                           href={`/dashboard/customers/${u.id}` as never}
-                          className="font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                          className="font-semibold text-[13px] text-slate-900 hover:text-brand-700 group-hover:underline underline-offset-2 decoration-brand-300/50 transition-colors truncate block"
                         >
                           {u.fullName ?? '—'}
                         </Link>
@@ -277,30 +277,34 @@ export default async function CustomersPage({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex flex-col gap-1">
+                  <td className="py-3 px-4 min-w-[190px]">
+                    <div className="flex flex-col gap-1.5">
                       {u.phone ? (
-                        <a
-                          href={`tel:${u.phone}`}
-                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 font-mono text-xs"
-                          dir="ltr"
-                        >
-                          <Phone className="h-3 w-3 text-slate-400" />
-                          {u.phone}
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <a
+                            href={`tel:${u.phone}`}
+                            className="font-mono text-xs text-slate-700 hover:text-brand-700 transition-colors"
+                            dir="ltr"
+                          >
+                            {u.phone}
+                          </a>
+                        </div>
                       ) : null}
                       {u.email ? (
-                        <a
-                          href={`mailto:${u.email}`}
-                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 text-xs"
-                          dir="ltr"
-                        >
-                          <Mail className="h-3 w-3 text-slate-400" />
-                          <span className="truncate max-w-[220px]">{u.email}</span>
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <a
+                            href={`mailto:${u.email}`}
+                            className="text-xs text-slate-600 hover:text-brand-700 transition-colors truncate max-w-[200px]"
+                            dir="ltr"
+                          >
+                            {u.email}
+                          </a>
+                        </div>
                       ) : null}
                       {!u.phone && !u.email && (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-slate-400 text-xs">—</span>
                       )}
                     </div>
                   </td>
@@ -322,28 +326,24 @@ export default async function CustomersPage({
                     {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
                   </td>
                   <td className="py-3 ps-4 pe-5">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <Link
                         href={`/dashboard/contracts?customerId=${u.id}` as never}
                       >
-                        <IconButton label="عقود العميل" variant="ghost" size="sm">
+                        <IconButton label="عقود العميل" variant="outline" size="sm">
                           <FileText />
                         </IconButton>
                       </Link>
                       <Link
                         href={`/dashboard/maintenance?customerId=${u.id}` as never}
                       >
-                        <IconButton
-                          label="طلبات الصيانة"
-                          variant="ghost"
-                          size="sm"
-                        >
+                        <IconButton label="طلبات الصيانة" variant="outline" size="sm">
                           <Wrench />
                         </IconButton>
                       </Link>
                       <Link href={`/dashboard/customers/${u.id}` as never}>
-                        <IconButton label="عرض الملف" variant="ghost" size="sm">
-                          <ArrowRight className="rtl:rotate-180" />
+                        <IconButton label="عرض تفاصيل العميل" variant="outline" size="sm">
+                          <Eye />
                         </IconButton>
                       </Link>
                     </div>
@@ -365,18 +365,20 @@ export default async function CustomersPage({
         )}
       </Card>
 
-      <p className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
-        <ShieldAlert className="h-3 w-3" />
-        لإدارة العملاء المتصفّحين قبل الشراء انتقل إلى{' '}
-        <Link
-          href={'/dashboard/clients?role=CLIENT' as never}
-          className="font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-0.5"
-        >
-          <UsersIcon className="h-3 w-3" />
-          صفحة المتصفّحين
-        </Link>
-        .
-      </p>
+      <div className="flex items-start gap-2.5 rounded-2xl border border-info-100 bg-info-50/60 px-4 py-3 text-xs text-info-700">
+        <Info className="h-4 w-4 shrink-0 mt-px text-info-500" />
+        <p>
+          هذه الصفحة تعرض العملاء المالكين فقط (بعد توقيع العقد). لإدارة العملاء المتصفّحين قبل الشراء انتقل إلى{' '}
+          <Link
+            href={'/dashboard/clients?role=CLIENT' as never}
+            className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2"
+          >
+            <UsersIcon className="h-3 w-3" />
+            صفحة المتصفّحين
+          </Link>
+          .
+        </p>
+      </div>
     </div>
   );
 }
@@ -398,8 +400,8 @@ function StatusTab({
       className={cn(
         'inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-colors',
         active
-          ? 'bg-surface text-slate-900 shadow-sm'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-surface',
+          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-brand-200/50'
+          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60',
       )}
     >
       {label}

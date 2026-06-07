@@ -8,7 +8,7 @@ import {
   Plus,
   Download,
   Search,
-  ArrowRight,
+  Eye,
   ShieldCheck,
   ShieldAlert,
 } from 'lucide-react';
@@ -193,7 +193,7 @@ export default async function ClientsPage({
       <form
         method="get"
         action="/dashboard/clients"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft"
       >
         <input type="hidden" name="role" value={role} />
         <div className="flex-1 min-w-[180px]">
@@ -218,7 +218,7 @@ export default async function ClientsPage({
       <Card className="overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-surface-muted/60 text-xs font-medium text-slate-500">
               <tr>
                 <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
                 <th className="text-start font-semibold py-3 px-4">بيانات الاتصال</th>
@@ -271,7 +271,7 @@ export default async function ClientsPage({
               {rows.map((u) => (
                 <tr
                   key={u.id}
-                  className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
+                  className="group border-t border-hairline hover:bg-brand-50/20 transition-colors"
                 >
                   <td className="py-3 ps-5 pe-4">
                     <div className="flex items-center gap-3">
@@ -287,7 +287,7 @@ export default async function ClientsPage({
                       <div className="min-w-0">
                         <Link
                           href={`/dashboard/clients/${u.id}` as never}
-                          className="font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                          className="font-semibold text-[13px] text-slate-900 hover:text-brand-700 group-hover:underline underline-offset-2 decoration-brand-300/50 transition-colors truncate block"
                         >
                           {u.fullName ?? '—'}
                         </Link>
@@ -297,30 +297,34 @@ export default async function ClientsPage({
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-4">
-                    <div className="flex flex-col gap-1">
+                  <td className="py-3 px-4 min-w-[190px]">
+                    <div className="flex flex-col gap-1.5">
                       {u.phone ? (
-                        <a
-                          href={`tel:${u.phone}`}
-                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 font-mono text-xs"
-                          dir="ltr"
-                        >
-                          <Phone className="h-3 w-3 text-slate-400" />
-                          {u.phone}
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <a
+                            href={`tel:${u.phone}`}
+                            className="font-mono text-xs text-slate-700 hover:text-brand-700 transition-colors"
+                            dir="ltr"
+                          >
+                            {u.phone}
+                          </a>
+                        </div>
                       ) : null}
                       {u.email ? (
-                        <a
-                          href={`mailto:${u.email}`}
-                          className="inline-flex items-center gap-1.5 text-slate-700 hover:text-brand-700 text-xs"
-                          dir="ltr"
-                        >
-                          <Mail className="h-3 w-3 text-slate-400" />
-                          <span className="truncate max-w-[220px]">{u.email}</span>
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <a
+                            href={`mailto:${u.email}`}
+                            className="text-xs text-slate-600 hover:text-brand-700 transition-colors truncate max-w-[200px]"
+                            dir="ltr"
+                          >
+                            {u.email}
+                          </a>
+                        </div>
                       ) : null}
                       {!u.phone && !u.email && (
-                        <span className="text-slate-400">—</span>
+                        <span className="text-slate-400 text-xs">—</span>
                       )}
                     </div>
                   </td>
@@ -352,8 +356,8 @@ export default async function ClientsPage({
                   </td>
                   <td className="py-3 ps-4 pe-5">
                     <Link href={`/dashboard/clients/${u.id}` as never}>
-                      <IconButton label="عرض الملف" variant="ghost" size="sm">
-                        <ArrowRight className="rtl:rotate-180" />
+                      <IconButton label="عرض تفاصيل العميل" variant="outline" size="sm">
+                        <Eye />
                       </IconButton>
                     </Link>
                   </td>
@@ -404,8 +408,8 @@ function RoleTab({
       className={cn(
         'inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-colors',
         active
-          ? 'bg-surface text-slate-900 shadow-sm'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-surface',
+          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-brand-200/50'
+          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60',
       )}
     >
       <span className={cn(active ? 'text-brand-600' : 'text-slate-400')}>{icon}</span>
