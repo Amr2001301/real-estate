@@ -6,6 +6,50 @@
   :root {
     --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-arabic: 'IBM Plex Sans Arabic', system-ui, 'Segoe UI', Tahoma, sans-serif;
+
+    /* Design System: Primary Colors */
+    --color-navy-deep: #0F1E33;
+    --color-navy-soft: #26405F;
+    --color-gold-primary: #C8A24B;
+    --color-gold-soft: #FBF6EA;
+
+    /* Design System: Page Background */
+    --color-canvas-warm: #FAF7F2;
+    --color-surface-white: #FFFFFF;
+    --color-surface-muted: #F4EFE8;
+
+    /* Design System: Borders & Dividers */
+    --color-border-soft: #E7DFD3;
+    --color-border-muted: #E5E7EB;
+
+    /* Design System: Text Hierarchy */
+    --color-text-primary: #0F1E33;
+    --color-text-secondary: #64748B;
+    --color-text-muted: #94A3B8;
+
+    /* Design System: Semantic Colors */
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-danger: #EF4444;
+    --color-info: #3B82F6;
+
+    /* Design System: Status/Stat Card Accents */
+    --color-stat-purple: #A855F7;
+    --color-stat-teal: #14B8A6;
+    --color-stat-gold: #C8A24B;
+    --color-stat-red: #EF4444;
+
+    /* Design System: Typography */
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    /* Design System: Borders & Radius */
+    --border-radius-sm: 0.5rem;
+    --border-radius-md: 0.75rem;
+    --border-radius-lg: 1.125rem;
+    --border-radius-xl: 1.5rem;
   }
 
   html,

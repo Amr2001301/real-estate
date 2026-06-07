@@ -59,6 +59,26 @@ const config: Config = {
           700: '#B45309',
         },
 
+        // Purple tone for stat card variations and accents.
+        purple: {
+          50: '#F3E8FF',
+          100: '#E9D5FF',
+          200: '#D8B4FE',
+          500: '#A855F7',
+          600: '#9333EA',
+          700: '#7E22CE',
+        },
+
+        // Teal/cyan tone for stat card variations and accents.
+        teal: {
+          50: '#F0FDFA',
+          100: '#CCFBF1',
+          200: '#99F6E4',
+          500: '#14B8A6',
+          600: '#0D9488',
+          700: '#0F766E',
+        },
+
         success: {
           50: '#ECFDF5',
           100: '#D1FAE5',
@@ -87,6 +107,11 @@ const config: Config = {
           600: '#2563EB',
           700: '#1D4ED8',
         },
+
+        // Semantic text colors for hierarchy and emphasis.
+        'text-primary': '#0F1E33',
+        'text-secondary': '#64748B',
+        'text-muted': '#94A3B8',
       },
 
       fontFamily: {
