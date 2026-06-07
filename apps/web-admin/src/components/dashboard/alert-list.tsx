@@ -32,20 +32,20 @@ interface Props {
 
 export function AlertList({ items, className }: Props) {
   return (
-    <ul className={cn('flex flex-col gap-3', className)}>
+    <ul className={cn('flex flex-col gap-2.5', className)}>
       {items.map((it) => (
         <li
           key={it.id}
           className={cn(
-            'relative flex items-start gap-3 rounded-2xl bg-surface-muted/60 px-4 py-3.5',
-            'before:absolute before:start-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-s-full',
+            'relative flex items-start gap-3 rounded-xl bg-surface border border-hairline px-4 py-3',
+            'before:absolute before:start-0 before:top-2.5 before:bottom-2.5 before:w-[2px] before:rounded-s-full',
             STRIPE[it.tone],
           )}
         >
           {it.icon && (
             <span
               className={cn(
-                'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0',
+                'inline-flex h-8 w-8 items-center justify-center rounded-lg shrink-0',
                 '[&_svg]:h-4 [&_svg]:w-4',
                 ICON_BG[it.tone],
               )}
@@ -54,11 +54,11 @@ export function AlertList({ items, className }: Props) {
             </span>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-slate-900 leading-tight">
+            <p className="text-sm font-medium text-slate-900 leading-tight">
               {it.title}
             </p>
             {it.description && (
-              <p className="mt-1 text-xs text-slate-500">{it.description}</p>
+              <p className="mt-0.5 text-xs text-slate-500">{it.description}</p>
             )}
           </div>
         </li>
