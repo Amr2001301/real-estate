@@ -1,9 +1,7 @@
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import {
   Boxes,
-  CheckCircle2,
-  Bookmark,
-  Tag,
   CircleDollarSign,
   Calculator,
   AlertCircle,
@@ -23,7 +21,6 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -254,9 +251,11 @@ export default async function InventoryPage({
 
   return (
     <div className="space-y-5">
+
+      {/* ── 1. Page header ──────────────────────────────────────────────────── */}
       <PageHeader
         title="لوحة المخزون"
-        description="نظرة شاملة على توفر الوحدات وقيمة المخزون عبر المشاريع والمراحل والمباني."
+        description="نظرة شاملة على توفر الوحدات وقيمة المخزون عبر المشاريع والمراحل."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'المخزون' },
@@ -274,51 +273,17 @@ export default async function InventoryPage({
         }
       />
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-        <PageKpiCard
-          label="إجمالي الوحدات"
-          value={total}
-          icon={<Boxes />}
-          tone="brand"
-        />
-        <PageKpiCard
-          label="متاحة"
-          value={available}
-          sub={total > 0 ? `${Math.round((available / total) * 100)}%` : '—'}
-          icon={<CheckCircle2 />}
-          tone="success"
-        />
-        <PageKpiCard
-          label="محجوزة"
-          value={reserved}
-          sub={total > 0 ? `${Math.round((reserved / total) * 100)}%` : '—'}
-          icon={<Bookmark />}
-          tone="warning"
-        />
-        <PageKpiCard
-          label="مباعة"
-          value={sold}
-          sub={total > 0 ? `${Math.round((sold / total) * 100)}%` : '—'}
-          icon={<Tag />}
-          tone="info"
-        />
-        <PageKpiCard
-          label="قيمة المخزون"
-          value={formatCurrency(inventoryValue)}
-          icon={<CircleDollarSign />}
-          tone="brand"
-          compact
-        />
-        <PageKpiCard
-          label="متوسط سعر الوحدة"
-          value={formatCurrency(avgPrice)}
-          icon={<Calculator />}
-          tone="accent"
-          compact
-        />
-      </div>
+      {/* ── 2. Inventory summary panel ──────────────────────────────────────── */}
+      <InventorySummaryPanel
+        inventoryValue={inventoryValue}
+        avgPrice={avgPrice}
+        total={total}
+        available={available}
+        reserved={reserved}
+        sold={sold}
+      />
 
+      {/* ── Error banners ────────────────────────────────────────────────────── */}
       {loadError && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -328,101 +293,96 @@ export default async function InventoryPage({
       {projectsError && !loadError && (
         <div className="flex items-start gap-3 rounded-2xl bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">
-            تعذر تحميل قائمة المشاريع للفلترة: {projectsError}
-          </p>
+          <p className="font-medium">تعذر تحميل قائمة المشاريع للفلترة: {projectsError}</p>
         </div>
       )}
 
-      {/* Status filter tabs */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        <StatusTab
-          href={`/dashboard/inventory${qs({ status: undefined })}`}
-          active={status === 'all'}
-          label="الكل"
-          count={total}
-        />
-        <StatusTab
-          href={`/dashboard/inventory${qs({ status: 'AVAILABLE' })}`}
-          active={status === 'AVAILABLE'}
-          label="متاحة"
-          count={available}
-          tone="success"
-        />
-        <StatusTab
-          href={`/dashboard/inventory${qs({ status: 'RESERVED' })}`}
-          active={status === 'RESERVED'}
-          label="محجوزة"
-          count={reserved}
-          tone="warning"
-        />
-        <StatusTab
-          href={`/dashboard/inventory${qs({ status: 'SOLD' })}`}
-          active={status === 'SOLD'}
-          label="مباعة"
-          count={sold}
-          tone="info"
-        />
-      </div>
-
-      {/* Toolbar */}
-      <form
-        method="get"
-        action="/dashboard/inventory"
-        className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-4 py-3 shadow-soft"
-      >
-        <div className="flex-1 min-w-[200px]">
-          <Input
-            name="q"
+      {/* ── 3. Filter panel — two rows, one card ────────────────────────────── */}
+      <div className="rounded-2xl border border-hairline bg-white shadow-soft overflow-hidden">
+        {/* Row 1: search + project + Apply + Export + optional Reset */}
+        <form
+          method="get"
+          action="/dashboard/inventory"
+          className="flex flex-wrap items-center gap-2 px-4 py-3"
+        >
+          {status !== 'all' && <input type="hidden" name="status" value={status} />}
+          {/* Search — widest control */}
+          <div className="flex-1 min-w-[180px]">
+            <Input
+              name="q"
+              inputSize="sm"
+              defaultValue={q}
+              placeholder="ابحث باسم المشروع، المبنى، أو كود الوحدة…"
+              leftAddon={<Search />}
+            />
+          </div>
+          {/* Project filter */}
+          <Select
+            name="projectId"
             inputSize="sm"
-            defaultValue={q}
-            placeholder="ابحث باسم المشروع، المبنى، أو كود الوحدة…"
-            leftAddon={<Search />}
+            defaultValue={projectId}
+            className="w-44 shrink-0"
+          >
+            <option value="">كل المشاريع</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {tx(p.name)}
+              </option>
+            ))}
+          </Select>
+          {/* Actions: Apply (gold) + Export (muted icon) + Reset (text link) */}
+          <div className="flex items-center gap-1.5 ms-auto shrink-0">
+            <Button type="submit" variant="primary" size="sm">
+              تطبيق
+            </Button>
+            <IconButton label="تصدير" variant="outline" size="sm" type="button">
+              <Download />
+            </IconButton>
+            {(q || projectId) && (
+              <Link
+                href={
+                  `/dashboard/inventory${status !== 'all' ? `?status=${status}` : ''}` as never
+                }
+                className="text-xs text-slate-400 hover:text-slate-600 transition-colors px-1 shrink-0"
+              >
+                مسح
+              </Link>
+            )}
+          </div>
+        </form>
+        {/* Row 2: status chips */}
+        <div className="border-t border-hairline px-4 py-2.5 bg-surface-muted/30 flex flex-wrap items-center gap-1.5">
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: undefined })}`}
+            active={status === 'all'}
+            label="الكل"
+            count={total}
+          />
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: 'AVAILABLE' })}`}
+            active={status === 'AVAILABLE'}
+            label="متاحة"
+            count={available}
+            tone="success"
+          />
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: 'RESERVED' })}`}
+            active={status === 'RESERVED'}
+            label="محجوزة"
+            count={reserved}
+            tone="warning"
+          />
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: 'SOLD' })}`}
+            active={status === 'SOLD'}
+            label="مباعة"
+            count={sold}
+            tone="info"
           />
         </div>
-        <Select
-          name="projectId"
-          inputSize="sm"
-          defaultValue={projectId}
-          className="w-44 shrink-0"
-        >
-          <option value="">كل المشاريع</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {tx(p.name)}
-            </option>
-          ))}
-        </Select>
-        <Select
-          name="status"
-          inputSize="sm"
-          defaultValue={status}
-          className="w-36 shrink-0"
-        >
-          <option value="all">كل الحالات</option>
-          <option value="AVAILABLE">متاحة</option>
-          <option value="RESERVED">محجوزة</option>
-          <option value="SOLD">مباعة</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">
-            تطبيق
-          </Button>
-          {(q || projectId || status !== 'all') && (
-            <Link href={'/dashboard/inventory' as never}>
-              <Button type="button" variant="ghost" size="sm">
-                مسح
-              </Button>
-            </Link>
-          )}
-          <span className="h-4 w-px bg-hairline mx-0.5" aria-hidden />
-          <IconButton label="تصدير" variant="outline" size="sm" type="button">
-            <Download />
-          </IconButton>
-        </div>
-      </form>
+      </div>
 
-      {/* Inventory matrix */}
+      {/* ── 4. Inventory matrix ──────────────────────────────────────────────── */}
       {projectBuckets.length === 0 ? (
         <Card className="p-0">
           <EmptyState
@@ -462,8 +422,7 @@ export default async function InventoryPage({
 
       <p className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
         <Boxes className="h-3 w-3" />
-        تُحسب القيم بناءً على لقطة فورية لأحدث {SNAPSHOT_SIZE} وحدة. للحصول على
-        تفاصيل وحدة بعينها، انتقل إلى{' '}
+        تُحسب القيم بناءً على لقطة فورية لأحدث {SNAPSHOT_SIZE} وحدة. للحصول على تفاصيل وحدة بعينها، انتقل إلى{' '}
         <Link
           href={'/dashboard/units' as never}
           className="font-semibold text-brand-700 hover:text-brand-800"
@@ -476,6 +435,133 @@ export default async function InventoryPage({
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Local inventory-specific components — do NOT affect any shared component.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── InventorySummaryPanel ────────────────────────────────────────────────────
+// Unified inventory KPI panel: gold top accent, two large financial metrics,
+// four full-width status count cells. No isolated cards, no empty space.
+
+type InvStatTone = 'brand' | 'success' | 'warning' | 'info';
+
+function InventorySummaryPanel({
+  inventoryValue, avgPrice, total, available, reserved, sold,
+}: {
+  inventoryValue: number; avgPrice: number;
+  total: number; available: number; reserved: number; sold: number;
+}) {
+  const avPct = total > 0 ? Math.round((available / total) * 100) : undefined;
+  const rsPct = total > 0 ? Math.round((reserved  / total) * 100) : undefined;
+  const slPct = total > 0 ? Math.round((sold      / total) * 100) : undefined;
+
+  return (
+    <div className="rounded-2xl border border-hairline bg-white shadow-soft overflow-hidden">
+      {/* Subtle 2px gold top accent — present but not dominant */}
+      <div className="h-[2px] bg-brand-400/60" />
+
+      {/* Financial metrics — 2 columns on sm+, stacked on mobile */}
+      <div className="grid grid-cols-1 sm:grid-cols-2">
+        {/* Primary: total inventory value */}
+        <div className="border-b border-hairline sm:border-b-0">
+          <InvFinancialMetric
+            label="قيمة المخزون"
+            value={formatCurrency(inventoryValue)}
+            icon={<CircleDollarSign />}
+            primary
+          />
+        </div>
+        {/* Secondary: average unit price */}
+        <div className="sm:border-s border-hairline">
+          <InvFinancialMetric
+            label="متوسط سعر الوحدة"
+            value={formatCurrency(avgPrice)}
+            icon={<Calculator />}
+          />
+        </div>
+      </div>
+
+      {/* Status counts — soft pill row, no harsh grid dividers */}
+      <div className="border-t border-hairline bg-surface-muted/10 px-5 py-3.5">
+        <div className="flex flex-wrap gap-2">
+          <InvStatCell label="إجمالي الوحدات" value={total}     tone="brand"   />
+          <InvStatCell label="متاحة"   value={available} pct={avPct} tone="success" />
+          <InvStatCell label="محجوزة"  value={reserved}  pct={rsPct} tone="warning" />
+          <InvStatCell label="مباعة"   value={sold}      pct={slPct} tone="info"    />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// InvFinancialMetric — label + small inline icon on top, large value below at full width.
+// primary=true → navy text + slightly larger; secondary → slate-600 + slightly smaller.
+// Note: no `uppercase` or heavy `tracking` on Arabic label — Arabic is cursive; tracking
+// breaks visual continuity. dir="rtl" on the value ensures correct bidi for currency strings.
+function InvFinancialMetric({
+  label, value, icon, primary = false,
+}: { label: string; value: string; icon: ReactNode; primary?: boolean }) {
+  return (
+    <div className="px-6 py-5">
+      {/* Label row: tiny icon + natural Arabic label (no forced uppercase/tracking) */}
+      <div className="flex items-center gap-1.5 mb-3">
+        <span className={cn('[&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
+          primary ? 'text-brand-400' : 'text-slate-300')}>
+          {icon}
+        </span>
+        <p className="text-xs font-medium text-slate-500 leading-none">
+          {label}
+        </p>
+      </div>
+      {/* Value — full cell width, dir=rtl guarantees correct currency bidi rendering */}
+      <p dir="rtl" className={cn('tabular-nums break-words leading-tight font-bold min-w-0',
+        primary
+          ? 'text-[2.1rem] text-navy'
+          : 'text-[1.85rem] text-slate-600')}>
+        {value}
+      </p>
+    </div>
+  );
+}
+
+// InvStatCell — soft pill for each status count in the bottom strip.
+// No grid placement, no harsh borders — just a toned pill that wraps naturally.
+// No `uppercase` or heavy `tracking` on Arabic labels.
+function InvStatCell({
+  tone, label, value, pct,
+}: { tone: InvStatTone; label: string; value: number; pct?: number }) {
+  const PILL: Record<InvStatTone, string> = {
+    brand:   'bg-brand-50   border-brand-100/80',
+    success: 'bg-success-50 border-success-100/80',
+    warning: 'bg-warning-50 border-warning-100/80',
+    info:    'bg-info-50    border-info-100/80',
+  };
+  const DOT: Record<InvStatTone, string> = {
+    brand:   'bg-brand-400',
+    success: 'bg-success-500',
+    warning: 'bg-warning-500',
+    info:    'bg-info-500',
+  };
+  const NUM: Record<InvStatTone, string> = {
+    brand:   'text-brand-700',
+    success: 'text-success-700',
+    warning: 'text-warning-700',
+    info:    'text-info-700',
+  };
+  return (
+    <div className={cn('inline-flex items-center gap-2 rounded-xl border px-3 py-2', PILL[tone])}>
+      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', DOT[tone])} />
+      <span className="text-xs text-slate-500 leading-none">{label}</span>
+      <span className={cn('text-sm font-bold tabular-nums leading-none', NUM[tone])}>{value}</span>
+      {pct !== undefined && (
+        <span className="text-[11px] text-slate-400 tabular-nums">({pct}%)</span>
+      )}
+    </div>
+  );
+}
+
+// ── ProjectMatrixCard ────────────────────────────────────────────────────────
+
 function ProjectMatrixCard({
   proj,
   unitsHref,
@@ -486,42 +572,96 @@ function ProjectMatrixCard({
   const phases = [...proj.phases.values()].sort((a, b) =>
     a.name.localeCompare(b.name, 'ar'),
   );
+  const av = proj.total > 0 ? (proj.available / proj.total) * 100 : 0;
+  const rs = proj.total > 0 ? (proj.reserved / proj.total) * 100 : 0;
+  const sl = proj.total > 0 ? (proj.sold / proj.total) * 100 : 0;
 
   return (
     <Card className="overflow-hidden">
-      {/* Project header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-hairline bg-surface-muted/40 px-5 py-4">
+      {/* A ── Card header: identity + muted action link — clear hierarchy */}
+      <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-hairline">
         <div className="flex items-center gap-3 min-w-0">
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 ring-1 ring-brand-100/80 shrink-0">
-            <Building2 className="h-4.5 w-4.5" />
+          <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100/80 shrink-0">
+            <Building2 className="h-4 w-4" />
           </span>
           <div className="min-w-0">
             <Link
               href={`/dashboard/projects/${proj.id}` as never}
-              className="font-bold text-[15px] text-slate-900 hover:text-brand-700 transition-colors truncate block leading-snug"
+              className="font-bold text-[15px] text-slate-900 hover:text-brand-700 transition-colors leading-snug block truncate"
             >
               {proj.name}
             </Link>
             {proj.city && (
-              <p className="text-2xs text-slate-500 mt-0.5">{proj.city}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{proj.city}</p>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <CountChip tone="brand" label="إجمالي" value={proj.total} />
-          <CountChip tone="success" label="متاحة" value={proj.available} />
-          <CountChip tone="warning" label="محجوزة" value={proj.reserved} />
-          <CountChip tone="info" label="مباعة" value={proj.sold} />
-          <span className="border-s border-hairline ps-2.5 text-xs font-semibold text-slate-600 tabular-nums">
-            {formatCurrency(proj.totalValue)}
-          </span>
-          <Link href={unitsHref({ projectId: proj.id })}>
-            <Button variant="outline" size="sm">عرض التفاصيل</Button>
-          </Link>
-        </div>
+        {/* Muted text link — secondary, attached to header, no dominant styling */}
+        <Link
+          href={unitsHref({ projectId: proj.id })}
+          className="shrink-0 text-xs font-medium text-slate-400 hover:text-brand-600 transition-colors"
+        >
+          عرض التفاصيل
+        </Link>
       </div>
 
-      {/* Phases / buildings table */}
+      {/* B ── Summary: chips + currency + availability bar */}
+      <div className="px-5 pb-4 border-b border-hairline space-y-2.5">
+        {/* Chips + currency value */}
+        <div className="flex flex-wrap items-center gap-1.5 pt-3">
+          <InvCountChip tone="brand"   label="إجمالي"  value={proj.total}     />
+          <InvCountChip tone="success" label="متاحة"   value={proj.available} />
+          <InvCountChip tone="warning" label="محجوزة"  value={proj.reserved}  />
+          <InvCountChip tone="info"    label="مباعة"   value={proj.sold}      />
+          {proj.totalValue > 0 && (
+            <span className="ms-auto text-xs font-semibold text-slate-500 tabular-nums">
+              {formatCurrency(proj.totalValue)}
+            </span>
+          )}
+        </div>
+        {/* Availability bar — h-1.5 (lighter than h-2) + tight legend */}
+        {proj.total > 0 && (
+          <div className="space-y-1">
+            <div
+              className="h-1.5 w-full rounded-full overflow-hidden flex bg-slate-100"
+              role="img"
+              aria-label={`متاحة ${proj.available} • محجوزة ${proj.reserved} • مباعة ${proj.sold}`}
+            >
+              {av > 0 && (
+                <span className="block h-full bg-success-500 transition-all" style={{ width: `${av}%` }} />
+              )}
+              {rs > 0 && (
+                <span className="block h-full bg-warning-500 transition-all" style={{ width: `${rs}%` }} />
+              )}
+              {sl > 0 && (
+                <span className="block h-full bg-info-500 transition-all" style={{ width: `${sl}%` }} />
+              )}
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+              {av > 0 && (
+                <span className="inline-flex items-center gap-1 text-2xs font-medium text-success-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-success-500 shrink-0" />
+                  متاحة {Math.round(av)}%
+                </span>
+              )}
+              {rs > 0 && (
+                <span className="inline-flex items-center gap-1 text-2xs font-medium text-warning-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-warning-500 shrink-0" />
+                  محجوزة {Math.round(rs)}%
+                </span>
+              )}
+              {sl > 0 && (
+                <span className="inline-flex items-center gap-1 text-2xs font-medium text-info-700">
+                  <span className="h-1.5 w-1.5 rounded-full bg-info-500 shrink-0" />
+                  مباعة {Math.round(sl)}%
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* C ── Phase / building breakdown table */}
       <div className="overflow-x-auto scrollbar-thin">
         <table className="w-full text-sm">
           <thead className="bg-surface-muted/30 text-2xs font-semibold uppercase tracking-wide text-slate-500">
@@ -541,11 +681,7 @@ function ProjectMatrixCard({
                 a.name.localeCompare(b.name, 'ar'),
               );
               return (
-                <PhaseRows
-                  key={ph.id}
-                  ph={ph}
-                  buildings={buildings}
-                />
+                <PhaseRows key={ph.id} ph={ph} buildings={buildings} />
               );
             })}
           </tbody>
@@ -554,6 +690,8 @@ function ProjectMatrixCard({
     </Card>
   );
 }
+
+// ── PhaseRows ────────────────────────────────────────────────────────────────
 
 function PhaseRows({
   ph,
@@ -569,9 +707,7 @@ function PhaseRows({
           <div className="inline-flex items-center gap-2">
             <Layers className="h-3.5 w-3.5 text-purple-500" />
             <span className="text-sm font-semibold text-slate-800">{ph.name}</span>
-            <Badge tone="purple" variant="soft" size="sm">
-              مرحلة
-            </Badge>
+            <Badge tone="purple" variant="soft" size="sm">مرحلة</Badge>
           </div>
         </td>
         <td className="py-2.5 px-3 tabular-nums text-slate-700 text-sm">{ph.total}</td>
@@ -582,16 +718,14 @@ function PhaseRows({
           {formatCurrency(ph.totalValue)}
         </td>
         <td className="py-2.5 ps-3 pe-5">
-          <AvailabilityBar
-            available={ph.available}
-            reserved={ph.reserved}
-            sold={ph.sold}
-            total={ph.total}
-          />
+          <RowAvailBar available={ph.available} reserved={ph.reserved} sold={ph.sold} total={ph.total} />
         </td>
       </tr>
       {buildings.map((b) => (
-        <tr key={b.id} className="border-t border-hairline hover:bg-surface-muted/40 transition-colors">
+        <tr
+          key={b.id}
+          className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
+        >
           <td className="py-2.5 ps-5 pe-4">
             <div className="inline-flex items-center gap-2 ps-6">
               <Home className="h-3.5 w-3.5 text-slate-400" />
@@ -600,42 +734,25 @@ function PhaseRows({
           </td>
           <td className="py-2.5 px-3 tabular-nums text-slate-700 text-sm">{b.total}</td>
           <td className="py-2.5 px-3 tabular-nums">
-            {b.available > 0 ? (
-              <Badge tone="success" variant="soft" size="sm">
-                {b.available}
-              </Badge>
-            ) : (
-              <span className="text-slate-400">—</span>
-            )}
+            {b.available > 0
+              ? <Badge tone="success" variant="soft" size="sm">{b.available}</Badge>
+              : <span className="text-slate-400">—</span>}
           </td>
           <td className="py-2.5 px-3 tabular-nums">
-            {b.reserved > 0 ? (
-              <Badge tone="warning" variant="soft" size="sm">
-                {b.reserved}
-              </Badge>
-            ) : (
-              <span className="text-slate-400">—</span>
-            )}
+            {b.reserved > 0
+              ? <Badge tone="warning" variant="soft" size="sm">{b.reserved}</Badge>
+              : <span className="text-slate-400">—</span>}
           </td>
           <td className="py-2.5 px-3 tabular-nums">
-            {b.sold > 0 ? (
-              <Badge tone="info" variant="soft" size="sm">
-                {b.sold}
-              </Badge>
-            ) : (
-              <span className="text-slate-400">—</span>
-            )}
+            {b.sold > 0
+              ? <Badge tone="info" variant="soft" size="sm">{b.sold}</Badge>
+              : <span className="text-slate-400">—</span>}
           </td>
           <td className="py-2.5 px-3 tabular-nums text-slate-500 text-xs whitespace-nowrap">
             {formatCurrency(b.totalValue)}
           </td>
-          <td className="py-2.5 ps-3 pe-5 min-w-[160px]">
-            <AvailabilityBar
-              available={b.available}
-              reserved={b.reserved}
-              sold={b.sold}
-              total={b.total}
-            />
+          <td className="py-2.5 ps-3 pe-5 min-w-[140px]">
+            <RowAvailBar available={b.available} reserved={b.reserved} sold={b.sold} total={b.total} />
           </td>
         </tr>
       ))}
@@ -643,48 +760,38 @@ function PhaseRows({
   );
 }
 
-function AvailabilityBar({
-  available,
-  reserved,
-  sold,
-  total,
-}: {
-  available: number;
-  reserved: number;
-  sold: number;
-  total: number;
-}) {
-  if (total === 0) {
-    return <span className="text-2xs text-slate-400">لا توجد وحدات</span>;
-  }
+// ── RowAvailBar — compact bar used inside the table rows ─────────────────────
+
+function RowAvailBar({
+  available, reserved, sold, total,
+}: { available: number; reserved: number; sold: number; total: number }) {
+  if (total === 0) return <span className="text-2xs text-slate-400">—</span>;
   const av = (available / total) * 100;
   const rs = (reserved / total) * 100;
   const sl = (sold / total) * 100;
   return (
     <div className="flex items-center gap-1.5">
       <div
-        className="inline-flex h-2 w-full max-w-[160px] overflow-hidden rounded-full bg-surface-muted ring-1 ring-inset ring-hairline"
+        className="h-1.5 flex-1 max-w-[100px] rounded-full overflow-hidden flex bg-slate-100"
         role="img"
         aria-label={`متاحة ${available} • محجوزة ${reserved} • مباعة ${sold}`}
       >
-        {av > 0 && (
-          <span className="block h-full bg-success-500" style={{ width: `${av}%` }} />
-        )}
-        {rs > 0 && (
-          <span className="block h-full bg-warning-500" style={{ width: `${rs}%` }} />
-        )}
-        {sl > 0 && (
-          <span className="block h-full bg-info-500" style={{ width: `${sl}%` }} />
-        )}
+        {av > 0 && <span className="h-full bg-success-500" style={{ width: `${av}%` }} />}
+        {rs > 0 && <span className="h-full bg-warning-500" style={{ width: `${rs}%` }} />}
+        {sl > 0 && <span className="h-full bg-info-500" style={{ width: `${sl}%` }} />}
       </div>
       {av > 0 && (
-        <span className="text-2xs tabular-nums text-success-600 font-medium shrink-0">{Math.round(av)}%</span>
+        <span className="text-2xs tabular-nums text-success-600 font-medium shrink-0">
+          {Math.round(av)}%
+        </span>
       )}
     </div>
   );
 }
 
-function CountChip({
+// ── InvCountChip — compact pill used in the card summary row ─────────────────
+
+function InvCountChip({
   tone,
   label,
   value,
@@ -693,26 +800,28 @@ function CountChip({
   label: string;
   value: number;
 }) {
-  const TONE: Record<typeof tone, string> = {
-    brand: 'bg-brand-50 text-brand-700 ring-brand-100',
+  const TONE_CLS: Record<typeof tone, string> = {
+    brand:   'bg-brand-50   text-brand-700   ring-brand-100',
     success: 'bg-success-50 text-success-700 ring-success-100',
     warning: 'bg-warning-50 text-warning-700 ring-warning-100',
-    info: 'bg-info-50 text-info-700 ring-info-100',
+    info:    'bg-info-50    text-info-700    ring-info-100',
   };
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-2xs font-semibold ring-1 ring-inset tabular-nums',
-        TONE[tone],
+        'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-2xs font-semibold ring-1 ring-inset tabular-nums',
+        TONE_CLS[tone],
       )}
     >
-      <span className="opacity-70">{label}</span>
-      <span>{value}</span>
+      <span className="opacity-60">{label}</span>
+      <span className="font-bold">{value}</span>
     </span>
   );
 }
 
-function StatusTab({
+// ── StatusChip — filter chip used in Row 2 of the filter panel ───────────────
+
+function StatusChip({
   href,
   active,
   label,
@@ -725,11 +834,11 @@ function StatusTab({
   count: number;
   tone?: 'brand' | 'success' | 'warning' | 'info';
 }) {
-  const INACTIVE_BADGE: Record<typeof tone, string> = {
-    brand: 'bg-brand-50 text-brand-700',
+  const BADGE_INACTIVE: Record<typeof tone, string> = {
+    brand:   'bg-brand-50   text-brand-700',
     success: 'bg-success-50 text-success-700',
     warning: 'bg-warning-50 text-warning-700',
-    info: 'bg-info-50 text-info-700',
+    info:    'bg-info-50    text-info-700',
   };
   return (
     <Link
@@ -737,17 +846,17 @@ function StatusTab({
       prefetch={false}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'inline-flex items-center gap-2 h-9 px-3.5 rounded-full text-xs font-semibold transition-colors border',
+        'inline-flex items-center gap-1.5 h-8 px-3 rounded-full text-xs font-semibold transition-colors border',
         active
           ? 'bg-brand-500 text-navy border-brand-500 shadow-sm'
-          : 'bg-white text-slate-600 border-hairline hover:border-brand-200 hover:text-slate-900',
+          : 'bg-white text-slate-600 border-hairline hover:border-brand-300 hover:text-slate-900',
       )}
     >
       {label}
       <span
         className={cn(
-          'inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-2xs font-bold',
-          active ? 'bg-navy/15 text-navy' : INACTIVE_BADGE[tone],
+          'inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold',
+          active ? 'bg-navy/15 text-navy' : BADGE_INACTIVE[tone],
         )}
       >
         {count}
