@@ -7,8 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../catalog/presentation/compare/compare_cubit.dart';
 import '../../catalog/presentation/compare/compare_selection_bar.dart';
-import '../../notifications/presentation/unread_count_cubit.dart';
-import 'notification_bell.dart';
+import '../../notifications/presentation/widgets/customer_notification_button.dart';
 
 /// Branch indices in the StatefulShellRoute (see app_router.dart).
 class _Branch {
@@ -175,7 +174,7 @@ class CustomerShellScaffold extends StatelessWidget {
               // Guests have no app-bar actions (login/language/theme live in the
               // المزيد tab). Authenticated users get the bell + avatar only.
               actions: isCustomer
-                  ? _customerActions(context, l10n, displayName)
+                  ? _customerActions(context, displayName)
                   : null,
             )
           : null,
@@ -220,29 +219,19 @@ class CustomerShellScaffold extends StatelessWidget {
     );
   }
 
-  /// Authenticated: notification bell + avatar (no overflow menu).
-  List<Widget> _customerActions(
-    BuildContext context,
-    AppLocalizations l10n,
-    String? displayName,
-  ) {
+  /// Authenticated: a premium contained notification button + profile avatar.
+  List<Widget> _customerActions(BuildContext context, String? displayName) {
     return [
-      BlocBuilder<UnreadCountCubit, int>(
-        builder: (context, count) => NotificationBell(
-          count: count,
-          tooltip: l10n.accountNotifications,
-          onTap: () => context.push('/account/notifications'),
-        ),
-      ),
+      const CustomerNotificationButton(size: 40),
       Padding(
         padding: const EdgeInsetsDirectional.only(
-          start: AppSpacing.xxs,
-          end: AppSpacing.sm,
+          start: AppSpacing.sm,
+          end: AppSpacing.md,
         ),
         child: GestureDetector(
           onTap: () => context.push('/account/profile'),
           child: displayName != null
-              ? GradientAvatar(name: displayName, size: 34)
+              ? GradientAvatar(name: displayName, size: 38)
               : Icon(
                   Icons.person_outline_rounded,
                   color: context.appColors.inkMuted,

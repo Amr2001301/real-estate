@@ -1,10 +1,9 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show SystemUiOverlayStyle;
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../notifications/presentation/unread_count_cubit.dart';
+import '../../../notifications/presentation/widgets/customer_notification_button.dart';
 
 /// Premium in-body header for the authenticated CUSTOMER Home.
 ///
@@ -97,99 +96,10 @@ class CustomerHomeHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            const _NotificationButton(),
+            const CustomerNotificationButton(size: 46),
           ],
         ),
       ),
-    );
-  }
-}
-
-/// A contained, premium notification control: a circular surface chip (hairline
-/// + soft shadow) with the bell and a live gold unread badge — so it reads as an
-/// intentional control rather than a bare floating glyph.
-class _NotificationButton extends StatelessWidget {
-  const _NotificationButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final l10n = context.l10n;
-
-    return BlocBuilder<UnreadCountCubit, int>(
-      builder: (context, count) {
-        final hasBadge = count > 0;
-        return Semantics(
-          button: true,
-          label: l10n.accountNotifications,
-          child: Tooltip(
-            message: l10n.accountNotifications,
-            child: Container(
-              decoration: BoxDecoration(
-                color: colors.surface,
-                shape: BoxShape.circle,
-                border: Border.all(color: colors.hairline),
-                boxShadow: colors.shadowSoft,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                clipBehavior: Clip.antiAlias,
-                child: InkWell(
-                  onTap: () => context.push('/account/notifications'),
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(
-                          AppIcons.notification,
-                          size: 22,
-                          color: colors.inkStrong,
-                        ),
-                        if (hasBadge)
-                          PositionedDirectional(
-                            top: 9,
-                            end: 9,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 4,
-                              ),
-                              constraints: const BoxConstraints(
-                                minWidth: 16,
-                                minHeight: 16,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colors.brandGold,
-                                borderRadius: BorderRadius.circular(999),
-                                border: Border.all(
-                                  color: colors.surface,
-                                  width: 1.5,
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                count > 9 ? '9+' : '$count',
-                                style: TextStyle(
-                                  color: colors.brandNavy,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1,
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 }
