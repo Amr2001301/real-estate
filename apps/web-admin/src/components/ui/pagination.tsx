@@ -42,19 +42,20 @@ export function Pagination({
     <nav
       aria-label="pagination"
       className={cn(
-        'flex items-center justify-between gap-3 px-4 py-3 border-t border-hairline bg-surface-muted/40 rounded-b-2xl',
+        'flex items-center justify-between gap-3 px-5 py-3 border-t border-hairline bg-surface-muted/30 rounded-b-2xl',
         className,
       )}
     >
       <p className="text-xs text-slate-500">
-        {from}–{to} <span className="text-slate-400">من</span> {total}
+        {from}–{to} <span className="text-slate-400">من</span>{' '}
+        <span className="font-medium text-slate-700">{total}</span>
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <PageLink href={buildHref(prev)} disabled={page <= 1}>
           السابق
         </PageLink>
-        <span className="text-xs text-slate-500 px-2">
-          {page} / {totalPages}
+        <span className="text-xs font-medium text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-2.5 h-8 inline-flex items-center tabular-nums">
+          {page} <span className="text-brand-400 mx-1">/</span> {totalPages}
         </span>
         <PageLink href={buildHref(next)} disabled={page >= totalPages}>
           التالي
@@ -74,10 +75,10 @@ function PageLink({
   children: React.ReactNode;
 }) {
   const className = cn(
-    'inline-flex items-center h-8 px-3 rounded-lg text-xs font-medium border transition-colors',
+    'inline-flex items-center h-8 px-3 rounded-lg text-xs font-medium border transition-colors duration-150',
     disabled
       ? 'border-hairline text-slate-300 cursor-not-allowed'
-      : 'border-hairline text-slate-700 hover:bg-surface hover:border-slate-300',
+      : 'border-hairline text-slate-700 hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700',
   );
   if (disabled)
     return (

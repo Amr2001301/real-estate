@@ -52,7 +52,7 @@ export function FilterField({ label, htmlFor, children, className }: FilterField
     <div className={cn('flex flex-col gap-1.5 min-w-[160px]', className)}>
       <label
         htmlFor={htmlFor}
-        className="text-2xs font-medium uppercase tracking-wide text-slate-500"
+        className="text-2xs font-semibold uppercase tracking-widest text-slate-400"
       >
         {label}
       </label>

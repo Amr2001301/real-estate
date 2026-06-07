@@ -10,7 +10,7 @@ const VARIANT: Record<Variant, string> = {
   secondary:
     'bg-navy text-white shadow-soft hover:bg-navy-700 active:bg-navy disabled:bg-navy/60',
   outline:
-    'bg-surface text-slate-800 border border-hairline shadow-soft hover:bg-surface-muted hover:border-brand-200 disabled:opacity-60',
+    'bg-surface text-slate-700 border border-hairline shadow-soft hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 disabled:opacity-60',
   ghost:
     'bg-transparent text-slate-700 hover:bg-surface-muted disabled:opacity-60',
   danger:

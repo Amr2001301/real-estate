@@ -19,16 +19,19 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا تو�
   return (
     <div className="bg-surface rounded-2xl border border-hairline shadow-soft overflow-hidden">
       {header && (
-        <div className="px-4 py-3 border-b border-hairline">
+        <div className="px-5 py-3.5 border-b border-hairline">
           {header}
         </div>
       )}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-surface-muted/60 text-xs text-slate-500 border-b border-hairline">
+          <thead className="bg-surface-muted/50 text-2xs text-slate-500 border-b border-hairline">
             <tr>
               {columns.map((col) => (
-                <th key={col.key} className={`text-right px-4 py-2.5 font-medium whitespace-nowrap ${col.className ?? ''}`}>
+                <th
+                  key={col.key}
+                  className={`text-right px-5 py-3 font-semibold uppercase tracking-wide whitespace-nowrap ${col.className ?? ''}`}
+                >
                   {col.header}
                 </th>
               ))}
@@ -37,15 +40,15 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا تو�
           <tbody className="divide-y divide-hairline">
             {rows.length === 0 && (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center text-sm text-slate-400">
+                <td colSpan={columns.length} className="px-5 py-12 text-center text-sm text-slate-400">
                   {emptyMessage}
                 </td>
               </tr>
             )}
             {rows.map((row) => (
-              <tr key={rowKey(row)} className="hover:bg-surface-muted/50 transition-colors">
+              <tr key={rowKey(row)} className="hover:bg-brand-50/40 transition-colors duration-100">
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-4 py-2.5 align-middle ${col.className ?? ''}`}>
+                  <td key={col.key} className={`px-5 py-3 align-middle ${col.className ?? ''}`}>
                     {col.cell(row)}
                   </td>
                 ))}
