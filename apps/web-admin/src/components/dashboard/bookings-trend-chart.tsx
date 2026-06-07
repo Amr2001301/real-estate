@@ -27,10 +27,10 @@ export function BookingsTrendChart({ data, className }: Props) {
               <div className="w-full flex flex-col items-center justify-end h-full relative group">
                 <div
                   className={cn(
-                    'w-full rounded-t-xl transition-all',
+                    'w-full rounded-t-lg transition-all',
                     d.highlight
-                      ? 'bg-gradient-to-b from-brand-500 to-brand-600'
-                      : 'bg-slate-200/80',
+                      ? 'bg-gradient-to-b from-brand-500 to-brand-600 shadow-md'
+                      : 'bg-brand-100/60 hover:bg-brand-100 hover:shadow-sm',
                   )}
                   style={{ height: `${Math.max(pct, 4)}%` }}
                   aria-label={`${d.month}: ${d.value}`}
@@ -38,7 +38,7 @@ export function BookingsTrendChart({ data, className }: Props) {
                 <div
                   className={cn(
                     'absolute -top-6 px-2 py-0.5 rounded-md text-2xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity',
-                    'bg-slate-900 text-white shadow-sm',
+                    'bg-slate-900 text-white shadow-md',
                   )}
                 >
                   {d.value}

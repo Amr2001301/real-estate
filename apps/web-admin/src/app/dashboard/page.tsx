@@ -62,7 +62,7 @@ interface AdminSummary {
   };
 }
 
-const DONUT_COLORS = ['#C8A24B', '#0F1E33', '#26405F', '#D4B36A', '#94A3B8', '#CBD5E1'];
+const DONUT_COLORS = ['#C8A24B', '#A855F7', '#14B8A6', '#0F1E33', '#26405F', '#94A3B8'];
 
 /** Server-rendered relative time in Arabic (no client JS needed). */
 function relativeTime(iso: string): string {

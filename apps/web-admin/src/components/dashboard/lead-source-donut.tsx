@@ -45,14 +45,16 @@ export function LeadSourceDonut({
           viewBox={`0 0 ${SIZE} ${SIZE}`}
           className="-rotate-90"
         >
+          {/* Background ring - soft hairline color */}
           <circle
             cx={SIZE / 2}
             cy={SIZE / 2}
             r={RADIUS}
             fill="none"
-            stroke="rgb(231 223 211 / 0.7)"
+            stroke="rgb(231 223 211 / 0.5)"
             strokeWidth={STROKE}
           />
+          {/* Data segments */}
           {segments.map((seg) => (
             <circle
               key={seg.label}
@@ -64,7 +66,8 @@ export function LeadSourceDonut({
               strokeWidth={STROKE}
               strokeDasharray={seg.dasharray}
               strokeDashoffset={seg.dashoffset}
-              strokeLinecap="butt"
+              strokeLinecap="round"
+              className="transition-opacity hover:opacity-80"
             />
           ))}
         </svg>
@@ -84,7 +87,7 @@ export function LeadSourceDonut({
           <li key={s.label} className="flex items-center gap-2 text-slate-600">
             <span
               aria-hidden
-              className="inline-block h-2 w-2 rounded-full shrink-0"
+              className="inline-block h-2 w-2 rounded-full shrink-0 ring-1 ring-inset ring-black/10"
               style={{ backgroundColor: s.color }}
             />
             <span className="font-medium text-slate-700">{s.label}</span>
