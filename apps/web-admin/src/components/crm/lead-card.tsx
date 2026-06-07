@@ -1,4 +1,5 @@
-import Link from 'next/link';
+'use client';
+
 import {
   Building2,
   Phone,
@@ -9,9 +10,9 @@ import {
   UserCog,
 } from 'lucide-react';
 import type { Lead, LeadStage } from '@/lib/types';
-import { formatDateTime } from '@/lib/format';
-import { tx } from '@/lib/format';
+import { formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import Link from 'next/link';
 
 type Tone = 'gray' | 'info' | 'purple' | 'warning' | 'success' | 'danger';
 
@@ -24,145 +25,152 @@ const STAGE_TONE: Record<LeadStage, Tone> = {
   LOST: 'danger',
 };
 
-// Stripe color per tone. NEGOTIATION uses the brand gold (most active = highlight).
+// Start-edge (visual right in RTL = reading-start) border accent per stage.
 const STRIPE: Record<Tone, string> = {
-  gray: 'before:bg-slate-300',
-  info: 'before:bg-info-400',
-  purple: 'before:bg-purple-400',
-  warning: 'before:bg-brand-500',
-  success: 'before:bg-success-400',
-  danger: 'before:bg-danger-400',
+  gray: 'border-s-slate-300',
+  info: 'border-s-info-400',
+  purple: 'border-s-purple-400',
+  warning: 'border-s-brand-500',
+  success: 'border-s-success-400',
+  danger: 'border-s-danger-300',
 };
 
+// Danger intentionally excluded — avatars must never look like error states.
 const AVATAR_PALETTE = [
   'bg-brand-50 text-brand-700',
   'bg-info-50 text-info-700',
   'bg-purple-50 text-purple-700',
   'bg-success-50 text-success-700',
   'bg-warning-50 text-warning-700',
-  'bg-danger-50 text-danger-700',
+  'bg-slate-100 text-slate-600',
 ];
 
-function paletteFor(s: string): string {
+function paletteFor(seed: string): string {
   let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
   return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length]!;
 }
 
-function firstLetter(name: string): string {
-  return name.trim().charAt(0) || '·';
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '؟';
+  if (parts.length === 1) return parts[0]!.charAt(0).toUpperCase();
+  return (parts[0]!.charAt(0) + parts[parts.length - 1]!.charAt(0)).toUpperCase();
 }
 
 interface InnerProps {
   lead: Lead;
-  /** Visual-only — emphasize the gold stripe even more while dragging. */
   dragging?: boolean;
-  /** Whether to render a small grip glyph indicating draggability. */
   showGrip?: boolean;
 }
 
-/** Pure card body. Used for both interactive (Link) and DragOverlay variants. */
 function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
   const tone = STAGE_TONE[lead.stage];
-  const isGold = tone === 'warning'; // NEGOTIATION
-  const name = lead.client?.fullName ?? lead.fullName;
+  const rawName = (lead.client?.fullName ?? lead.fullName)?.trim() ?? '';
+  const displayName = rawName || 'عميل غير مُعرَّف';
+  const isNameless = !rawName;
   const phone = lead.client?.phone ?? lead.phone;
   const email = lead.client?.email ?? lead.email;
-  // Broker-origin leads are identified generically by brokerId != null.
   const isBrokerLead = !!lead.brokerId;
   const brokerName =
     lead.broker?.commercialName || lead.broker?.companyName || lead.broker?.code || null;
+  // Use the real name or the lead ID as avatar seed — never a single letter like "X".
+  const avatarSeed = rawName.length > 1 ? rawName : lead.id;
+
   return (
     <div
       className={cn(
-        'group relative rounded-2xl bg-surface p-5 ring-1 ring-inset ring-hairline shadow-sm transition-all duration-150',
-        // End-edge stripe (in RTL, "end" = visual left)
-        'before:absolute before:end-0 before:top-3 before:bottom-3 before:rounded-e-full',
-        isGold
-          ? 'before:w-[4px] ring-brand-200/70 shadow-[0_8px_24px_-12px_rgb(201_154_46_/_0.45)]'
-          : 'before:w-[3px]',
+        'group relative rounded-xl bg-surface overflow-hidden',
+        'border border-hairline border-s-[3px]',
+        'shadow-[0_1px_3px_rgb(0_0_0_/_0.07)] transition-all duration-150',
         STRIPE[tone],
-        dragging && 'shadow-xl ring-brand-400/50 scale-[1.02] rotate-[1deg]',
+        dragging && 'shadow-xl ring-2 ring-brand-400/30 scale-[1.02] rotate-[0.5deg]',
       )}
     >
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <h4 className="text-[15px] font-semibold text-slate-900 leading-tight truncate flex-1">
-          {name}
-        </h4>
-        <span className="font-mono text-2xs text-slate-400 shrink-0 mt-0.5">
-          #{lead.id.slice(0, 4).toUpperCase()}-{lead.id.slice(4, 8).toUpperCase()}
-        </span>
-      </div>
-
-      {lead.client?.hasAccount && (
-        <div className="mb-2">
-          <span className="inline-flex items-center rounded-full bg-success-50 px-2 py-0.5 text-2xs font-semibold text-success-700 ring-1 ring-inset ring-success-200">
-            عميل مسجل
-          </span>
-        </div>
-      )}
-
-      {/* Broker attribution — generic for any broker-origin lead. */}
-      {isBrokerLead && (
-        <div className="mb-3 rounded-lg bg-brand-50/60 ring-1 ring-inset ring-brand-100 px-2.5 py-1.5">
-          <div className="flex items-center gap-1.5 text-2xs font-semibold text-brand-700">
-            <Briefcase className="h-3 w-3 shrink-0" />
-            <span>من وسيط</span>
-            {brokerName && (
-              <>
-                <span className="text-brand-300">·</span>
-                <span className="truncate text-slate-700 font-medium">{brokerName}</span>
-              </>
-            )}
+      {/* ── Header ──────────────────────────────────── */}
+      <div className="px-3.5 pt-3.5 pb-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h4
+              className={cn(
+                'text-[13.5px] font-semibold leading-snug truncate',
+                isNameless ? 'text-slate-400 italic' : 'text-slate-900',
+              )}
+            >
+              {displayName}
+            </h4>
+            <p className="font-mono text-[10px] text-slate-400 mt-0.5 leading-none">
+              #{lead.id.slice(0, 4).toUpperCase()}-{lead.id.slice(4, 8).toUpperCase()}
+            </p>
           </div>
-          {lead.brokerAgent?.fullName && (
-            <div className="mt-0.5 flex items-center gap-1.5 text-2xs text-slate-500">
-              <UserCog className="h-3 w-3 shrink-0 text-slate-400" />
-              <span className="truncate">المندوب: {lead.brokerAgent.fullName}</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex items-start gap-1.5 text-xs text-slate-500 mb-3 min-h-[18px]">
-        <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-px" />
-        <div className="min-w-0">
-          <span className="truncate block">
-            {lead.projectInterest ? tx(lead.projectInterest.name) : 'لم يتم تحديد مشروع'}
-          </span>
-          {lead.unitInterest && (
-            <span className="truncate block text-slate-400 text-2xs font-medium mt-0.5">
-              وحدة {lead.unitInterest.code}
+          {lead.client?.hasAccount && (
+            <span className="inline-flex shrink-0 items-center rounded-full bg-success-50 px-1.5 py-0.5 text-[10px] font-bold text-success-700 ring-1 ring-inset ring-success-200 whitespace-nowrap">
+              مسجل ✓
             </span>
           )}
         </div>
       </div>
 
-      {lead.upcomingVisit && (
-        <div className="flex items-center gap-1.5 text-xs text-purple-700 bg-purple-50 rounded-lg px-2 py-1 mb-3">
-          <CalendarClock className="h-3 w-3 shrink-0" />
-          <span className="truncate flex-1">{formatDateTime(lead.upcomingVisit.scheduledAt)}</span>
-          <span className="shrink-0 font-medium">
-            {lead.upcomingVisit.status === 'CONFIRMED' ? 'مؤكدة' : 'مجدولة'}
-          </span>
-        </div>
-      )}
+      {/* ── Body ────────────────────────────────────── */}
+      <div className="px-3.5 py-2.5 border-t border-hairline/60 space-y-2">
+        {isBrokerLead && (
+          <div className="flex items-center gap-1.5 rounded-lg bg-brand-50/80 ring-1 ring-inset ring-brand-100/70 px-2.5 py-1.5">
+            <Briefcase className="h-3 w-3 text-brand-600 shrink-0" />
+            <span className="text-[10px] font-bold text-brand-700">وسيط</span>
+            {brokerName && (
+              <>
+                <span className="text-brand-200 text-[10px]">·</span>
+                <span className="text-[10px] text-slate-600 truncate">{brokerName}</span>
+              </>
+            )}
+            {lead.brokerAgent?.fullName && (
+              <span className="ms-auto flex items-center gap-1 text-[10px] text-slate-500 shrink-0">
+                <UserCog className="h-2.5 w-2.5 shrink-0 text-slate-400" />
+                <span className="truncate max-w-[80px]">{lead.brokerAgent.fullName}</span>
+              </span>
+            )}
+          </div>
+        )}
 
-      <div className="flex items-center justify-between gap-2 pt-3 border-t border-hairline/80">
+        <div className="flex items-center gap-1.5">
+          <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
+          <span className="text-[11px] text-slate-500 truncate flex-1">
+            {lead.projectInterest ? tx(lead.projectInterest.name) : 'مشروع غير محدد'}
+          </span>
+          {lead.unitInterest && (
+            <span className="shrink-0 font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md">
+              {lead.unitInterest.code}
+            </span>
+          )}
+        </div>
+
+        {lead.upcomingVisit && (
+          <div className="flex items-center gap-1.5 text-[10px] font-medium text-purple-700 bg-purple-50 rounded-lg px-2.5 py-1.5 ring-1 ring-inset ring-purple-100/60">
+            <CalendarClock className="h-3 w-3 shrink-0" />
+            <span className="truncate flex-1">{formatDateTime(lead.upcomingVisit.scheduledAt)}</span>
+            <span className="shrink-0">
+              {lead.upcomingVisit.status === 'CONFIRMED' ? 'مؤكدة' : 'مجدولة'}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Footer ──────────────────────────────────── */}
+      <div className="flex items-center gap-2 px-3.5 py-2 border-t border-hairline/60 bg-surface-muted/20">
         <span
           className={cn(
-            'inline-flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold shrink-0 ring-2 ring-white',
-            paletteFor(name),
+            'inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold shrink-0 ring-1 ring-white',
+            paletteFor(avatarSeed),
           )}
           aria-hidden
         >
-          {firstLetter(name)}
+          {initials(displayName)}
         </span>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 ms-auto">
           {phone && (
             <span
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surface-muted text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
               aria-label={`هاتف ${phone}`}
               title={phone}
             >
@@ -171,7 +179,7 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
           )}
           {email && (
             <span
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surface-muted text-slate-500 hover:text-brand-600 hover:bg-brand-50 transition-colors"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
               aria-label={`بريد ${email}`}
               title={email}
             >
@@ -181,7 +189,7 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
           {showGrip && (
             <span
               aria-hidden
-              className="inline-flex h-7 w-5 items-center justify-center text-slate-300 group-hover:text-slate-500 transition-colors -ms-1"
+              className="inline-flex h-7 w-5 items-center justify-center text-slate-300 group-hover:text-slate-400 transition-colors"
             >
               <GripVertical className="h-4 w-4" />
             </span>
@@ -192,25 +200,25 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
   );
 }
 
-/** Static link card — used outside the DnD board (e.g. lead detail header, future widgets). */
+/** Static link card — used outside the DnD board. */
 export function LeadCard({ lead }: { lead: Lead }) {
   return (
     <Link
       href={`/dashboard/leads/${lead.id}` as never}
       prefetch={false}
-      className="block hover:-translate-y-px transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-2xl"
+      className="block hover:-translate-y-px transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-xl"
     >
       <LeadCardBody lead={lead} />
     </Link>
   );
 }
 
-/** Body-only variant for DragOverlay clones (no link wrapping). */
+/** Body-only variant for DragOverlay (no link wrapping). */
 export function LeadCardOverlay({ lead }: { lead: Lead }) {
   return <LeadCardBody lead={lead} dragging />;
 }
 
-/** Body variant for the draggable in-column card (handle + grip indicator visible). */
+/** Body variant for in-column draggable card (grip indicator visible). */
 export function LeadCardDraggableBody({ lead }: { lead: Lead }) {
   return <LeadCardBody lead={lead} showGrip />;
 }

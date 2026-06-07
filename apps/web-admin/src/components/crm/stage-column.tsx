@@ -13,13 +13,22 @@ const DOT: Record<Tone, string> = {
   danger: 'bg-danger-500',
 };
 
+const HEADER_BG: Record<Tone, string> = {
+  gray: 'bg-slate-50 border-slate-200/70',
+  info: 'bg-info-50/70 border-info-100',
+  purple: 'bg-purple-50/70 border-purple-100',
+  warning: 'bg-amber-50/80 border-brand-100',
+  success: 'bg-success-50/60 border-success-100',
+  danger: 'bg-danger-50/50 border-danger-100',
+};
+
 const COUNT_PILL: Record<Tone, string> = {
-  gray: 'bg-slate-100 text-slate-700',
-  info: 'bg-info-50 text-info-700',
-  purple: 'bg-purple-50 text-purple-700',
-  warning: 'bg-brand-50 text-brand-700',
-  success: 'bg-success-50 text-success-700',
-  danger: 'bg-danger-50 text-danger-700',
+  gray: 'bg-slate-200/80 text-slate-600',
+  info: 'bg-info-100/80 text-info-700',
+  purple: 'bg-purple-100/80 text-purple-700',
+  warning: 'bg-brand-100/80 text-brand-700',
+  success: 'bg-success-100/80 text-success-700',
+  danger: 'bg-danger-100/80 text-danger-700',
 };
 
 interface Props {
@@ -31,50 +40,52 @@ interface Props {
   children: ReactNode;
 }
 
-function pad2(n: number): string {
-  return n < 10 ? `0${n}` : String(n);
-}
-
 export function StageColumn({ label, count, tone, isOver, isEmpty, children }: Props) {
   return (
-    <div className="flex flex-col w-[320px] sm:w-[340px] lg:w-[360px] shrink-0">
-      <div className="flex items-center justify-between gap-2 px-1 mb-3">
-        <div className="flex items-center gap-2.5">
-          <span aria-hidden className={cn('h-2.5 w-2.5 rounded-full', DOT[tone])} />
-          <h3 className="text-sm font-semibold text-slate-700 tracking-tight">
-            {label}
-          </h3>
+    <div className="flex flex-col w-[300px] sm:w-[316px] shrink-0">
+      {/* Column header — styled tone-matched lane label */}
+      <div
+        className={cn(
+          'flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 mb-3',
+          HEADER_BG[tone],
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <span aria-hidden className={cn('h-2 w-2 rounded-full shrink-0', DOT[tone])} />
+          <h3 className="text-xs font-bold text-slate-700">{label}</h3>
         </div>
         <span
           className={cn(
-            'inline-flex items-center justify-center min-w-[30px] h-6 px-2 rounded-lg text-xs font-bold tabular-nums',
+            'inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 rounded-full text-[11px] font-bold tabular-nums',
             COUNT_PILL[tone],
           )}
         >
-          {pad2(count)}
+          {count}
         </span>
       </div>
 
+      {/* Cards area */}
       <div
         className={cn(
-          'flex flex-col gap-3 rounded-2xl p-3 min-h-[560px] transition-colors duration-150',
+          'flex flex-col gap-2.5 rounded-2xl p-2.5 min-h-[200px] transition-colors duration-150',
+          'ring-1 ring-inset ring-hairline/50',
           isOver
-            ? 'bg-brand-50/70 ring-2 ring-inset ring-brand-500/40'
-            : 'bg-info-50/50 ring-1 ring-inset ring-hairline/70',
+            ? 'bg-brand-50/70 ring-2 ring-inset ring-brand-400/40'
+            : 'bg-slate-50/60',
         )}
       >
         {isEmpty ? (
           <div
             className={cn(
-              'flex-1 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed transition-colors',
+              'flex-1 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-10 transition-colors',
               isOver
-                ? 'border-brand-500/60 bg-brand-50/40 text-brand-700'
-                : 'border-hairline text-slate-400',
+                ? 'border-brand-400/50 bg-brand-50/30 text-brand-500'
+                : 'border-slate-200 text-slate-400',
             )}
           >
-            <Inbox className="h-6 w-6" strokeWidth={1.5} />
-            <p className="text-2xs font-medium">
-              {isOver ? 'أفلت العميل هنا' : 'اسحب عميل إلى هذه المرحلة'}
+            <Inbox className="h-5 w-5 opacity-50" strokeWidth={1.5} />
+            <p className="text-[11px] font-medium text-center px-4 leading-relaxed">
+              {isOver ? 'أفلت العميل هنا' : 'لا توجد فرص\nفي هذه المرحلة'}
             </p>
           </div>
         ) : (

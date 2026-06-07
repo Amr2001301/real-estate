@@ -38,9 +38,7 @@ export function PipelineStatsBar({ totalLeads, wonCount, className }: Props) {
   return (
     <div
       className={cn(
-        'sticky bottom-0 z-10 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8',
-        'bg-canvas/90 backdrop-blur-md border-t border-hairline',
-        'py-4',
+        'rounded-2xl border border-hairline bg-white shadow-soft px-5 py-3.5',
         className,
       )}
     >

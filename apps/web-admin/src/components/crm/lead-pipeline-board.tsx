@@ -183,7 +183,7 @@ export function LeadPipelineBoard({ initialLeads, counts }: Props) {
 
       <DragOverlay dropAnimation={null}>
         {activeLead ? (
-          <div className="w-[320px] sm:w-[340px] lg:w-[360px] cursor-grabbing">
+          <div className="w-[300px] sm:w-[316px] cursor-grabbing">
             <LeadCardOverlay lead={activeLead} />
           </div>
         ) : null}
@@ -257,7 +257,7 @@ function DraggableLeadCard({ lead, isPending }: { lead: Lead; isPending: boolean
         {...listeners}
         {...attributes}
         onClick={(e) => e.preventDefault()}
-        className={`absolute bottom-4 end-4 h-7 w-7 rounded-lg bg-transparent z-10 select-none touch-none ${
+        className={`absolute bottom-3 end-3 h-7 w-7 appearance-none border-0 outline-none bg-transparent z-10 select-none touch-none ${
           isDragging ? 'cursor-grabbing' : 'cursor-grab'
         }`}
       />
