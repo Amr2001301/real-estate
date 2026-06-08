@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { Wrench, Plus, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Wrench, Plus, AlertCircle, Eye, Settings2, Clock, Shield } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import type { Paged, MaintenanceRequest, MaintenanceCategory, MaintenanceStatus, MaintenanceReviewStatus, User } from '@/lib/types';
 import { formatDate, tx, maintenanceSlaLabel, warrantyMonthsLabel } from '@/lib/format';
@@ -10,6 +11,7 @@ import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { IconButton } from '@/components/ui/icon-button';
 import { MaintenanceStatusBadge, MaintenancePriorityBadge, MaintenanceReviewStatusBadge } from '@/components/badges';
 import { ExportMenu } from '@/components/export-menu';
 import { MaintenanceReports } from './maintenance-reports';
@@ -26,6 +28,20 @@ const PRIORITY_LABEL: Record<string, string> = {
   LOW: 'منخفضة', MEDIUM: 'متوسطة', HIGH: 'عالية', URGENT: 'عاجلة',
 };
 
+const PRIORITY_DOT: Record<string, string> = {
+  LOW: 'bg-slate-400',
+  MEDIUM: 'bg-info-400',
+  HIGH: 'bg-warning-500',
+  URGENT: 'bg-danger-500',
+};
+
+const PRIORITY_BADGE: Record<string, string> = {
+  LOW: 'bg-slate-100 text-slate-600',
+  MEDIUM: 'bg-info-50 text-info-700',
+  HIGH: 'bg-warning-50 text-warning-700',
+  URGENT: 'bg-danger-50 text-danger-700',
+};
+
 export const dynamic = 'force-dynamic';
 
 const REVIEW_STATUSES: MaintenanceReviewStatus[] = ['PENDING', 'APPROVED', 'REJECTED'];
@@ -36,7 +52,7 @@ const REVIEW_LABEL: Record<MaintenanceReviewStatus, string> = {
 const STATUSES: MaintenanceStatus[] = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
 const STATUS_LABEL: Record<MaintenanceStatus, string> = {
   OPEN: 'مفتوح',
-  ASSIGNED: 'مسند',
+  ASSIGNED: 'مُسند',
   IN_PROGRESS: 'قيد التنفيذ',
   RESOLVED: 'تم الحل',
   CLOSED: 'مغلق',
@@ -71,7 +87,6 @@ export default async function MaintenancePage({
   searchParams: Promise<{ status?: string; assignedAdminId?: string; reviewStatus?: string; categoryId?: string; from?: string; to?: string; catErr?: string }>;
 }) {
   const sp = await searchParams;
-  // The list table and the report share the same filters.
   const listQs = new URLSearchParams({ pageSize: '100' });
   if (sp.status) listQs.set('status', sp.status);
   if (sp.assignedAdminId) listQs.set('assignedAdminId', sp.assignedAdminId);
@@ -98,7 +113,6 @@ export default async function MaintenancePage({
     from: sp.from,
     to: sp.to,
   };
-  // Forward only the truthy filters to the CSV export.
   const csvParams: Record<string, string | undefined> = {
     status: sp.status,
     reviewStatus: sp.reviewStatus,
@@ -135,68 +149,40 @@ export default async function MaintenancePage({
       />
 
       {/* Filters */}
-      <form method="get" action="/dashboard/maintenance">
-        <div className="flex flex-wrap items-end gap-3 bg-white rounded-xl border border-hairline shadow-xs px-4 py-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="from" className="text-[11px] font-medium text-slate-400">من تاريخ</label>
-            <Input id="from" name="from" type="date" inputSize="sm" defaultValue={sp.from ?? ''} className="w-40" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="to" className="text-[11px] font-medium text-slate-400">إلى تاريخ</label>
-            <Input id="to" name="to" type="date" inputSize="sm" defaultValue={sp.to ?? ''} className="w-40" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="categoryId" className="text-[11px] font-medium text-slate-400">التصنيف</label>
-            <Select id="categoryId" name="categoryId" inputSize="sm" defaultValue={sp.categoryId ?? ''} className="w-44">
-              <option value="">كل التصنيفات</option>
-              {cats.map((c) => (
-                <option key={c.id} value={c.id}>{tx(c.name)}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="status" className="text-[11px] font-medium text-slate-400">الحالة التشغيلية</label>
-            <Select id="status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40">
-              <option value="">كل الحالات</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="reviewStatus" className="text-[11px] font-medium text-slate-400">حالة المراجعة</label>
-            <Select id="reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40">
-              <option value="">كل المراجعات</option>
-              {REVIEW_STATUSES.map((s) => (
-                <option key={s} value={s}>{REVIEW_LABEL[s]}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="assignedAdminId" className="text-[11px] font-medium text-slate-400">المسؤول</label>
-            <Select id="assignedAdminId" name="assignedAdminId" inputSize="sm" defaultValue={sp.assignedAdminId ?? ''} className="w-48">
-              <option value="">كل المسؤولين</option>
-              {admins.map((a) => (
-                <option key={a.id} value={a.id}>{a.fullName}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
-            {hasFilters && (
-              <Link href="/dashboard/maintenance">
-                <Button type="button" variant="secondary" size="sm">مسح الفلاتر</Button>
-              </Link>
-            )}
-          </div>
+      <form method="get" action="/dashboard/maintenance" className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
+        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
+          <option value="">كل الحالات</option>
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+          ))}
+        </Select>
+        <Select name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-36 shrink-0">
+          <option value="">كل المراجعات</option>
+          {REVIEW_STATUSES.map((s) => (
+            <option key={s} value={s}>{REVIEW_LABEL[s]}</option>
+          ))}
+        </Select>
+        <Select name="categoryId" inputSize="sm" defaultValue={sp.categoryId ?? ''} className="w-44 shrink-0">
+          <option value="">كل التصنيفات</option>
+          {cats.map((c) => (
+            <option key={c.id} value={c.id}>{tx(c.name)}</option>
+          ))}
+        </Select>
+        <div className="flex items-center gap-1.5 ms-auto">
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          {hasFilters && (
+            <Link href="/dashboard/maintenance">
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
+            </Link>
+          )}
         </div>
       </form>
 
-      {/* Operational report (KPIs + panels) — respects the same filters. */}
+      {/* KPI + analytics */}
       <MaintenanceReports filters={reportFilters} />
 
       {reqsRes.error && (
-        <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm flex items-start gap-2">
+        <div className="flex items-start gap-2 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <p>تعذّر تحميل طلبات الصيانة: {reqsRes.error}</p>
         </div>
@@ -204,8 +190,8 @@ export default async function MaintenancePage({
 
       {/* Requests table */}
       <Card className="overflow-hidden">
-        <CardHeader className="px-5 py-3.5">
-          <CardTitle className="text-sm">طلبات الصيانة</CardTitle>
+        <CardHeader>
+          <CardTitle>طلبات الصيانة</CardTitle>
           {reqsRes.data && (
             <span className="text-xs text-slate-400 tabular-nums">
               {reqsRes.data.meta.total.toLocaleString('ar-EG')} طلب
@@ -214,73 +200,99 @@ export default async function MaintenancePage({
         </CardHeader>
         <CardBody className="p-0">
           {rows.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-center">
+            <div className="flex flex-col items-center gap-2 py-14 text-center">
               <Wrench className="h-8 w-8 text-slate-200" />
               <p className="text-sm text-slate-400">لا توجد طلبات صيانة تطابق الفلاتر المختارة</p>
+              {hasFilters && (
+                <Link href="/dashboard/maintenance" className="mt-1 text-xs text-brand-700 hover:underline">
+                  مسح الفلاتر
+                </Link>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[1020px]">
-                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+                <thead className="bg-surface-muted/50 text-xs font-medium text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-4 py-2.5 text-right font-medium">العميل</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الوحدة</th>
-                    <th className="px-4 py-2.5 text-right font-medium">التصنيف</th>
-                    <th className="px-4 py-2.5 text-right font-medium">الوصف</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الأولوية</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المراجعة</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الحالة</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الموعد المستهدف</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">التاريخ</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap"></th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">العميل</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الوحدة</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">التصنيف</th>
+                    <th className="px-5 py-3 text-start font-semibold">الوصف</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الأولوية</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المراجعة</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الحالة</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الموعد المستهدف</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">التاريخ</th>
+                    <th className="px-5 py-3" />
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-hairline">
-                  {rows.map((m) => (
-                    <tr key={m.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-2.5 font-medium text-slate-800">{m.customer?.fullName ?? '—'}</td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">{m.unit?.code ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-600">{m.category ? tx(m.category.name) : '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-600 max-w-[200px] truncate">{m.description}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        {m.priority ? <MaintenancePriorityBadge priority={m.priority} /> : <span className="text-slate-300 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap"><MaintenanceReviewStatusBadge status={m.reviewStatus} /></td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <div className="flex flex-wrap items-center gap-1">
-                          <MaintenanceStatusBadge status={m.status} />
-                          {m.unresolvedAt ? (
-                            <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2 py-0.5 text-[10px] font-medium">
-                              لم تُحل
-                            </span>
-                          ) : m.complaintAt ? (
-                            <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-medium">
-                              شكوى
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-4 py-2.5 text-xs tabular-nums whitespace-nowrap">
-                        {isApproved(m) && m.dueAt ? (
-                          <span className={isOverdue(m) ? 'text-danger-600 font-semibold' : 'text-slate-500'}>
-                            {formatDate(m.dueAt)}{isOverdue(m) ? ' · متأخر' : ''}
-                          </span>
-                        ) : (
-                          <span className="text-slate-300">—</span>
+                <tbody>
+                  {rows.map((m) => {
+                    const overdue = isOverdue(m);
+                    return (
+                      <tr
+                        key={m.id}
+                        className={cn(
+                          'group border-t border-hairline transition-colors',
+                          overdue ? 'bg-danger-50/20' : 'hover:bg-brand-50/20',
                         )}
-                      </td>
-                      <td className="px-4 py-2.5 text-xs text-slate-500 tabular-nums whitespace-nowrap">{formatDate(m.createdAt)}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <Link
-                          href={`/dashboard/maintenance/${m.id}`}
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
-                        >
-                          التفاصيل
-                          <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                      >
+                        <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap">
+                          {m.customer?.fullName ?? '—'}
+                        </td>
+                        <td className="px-5 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
+                          {m.unit?.code ?? '—'}
+                        </td>
+                        <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
+                          {m.category ? tx(m.category.name) : '—'}
+                        </td>
+                        <td className="px-5 py-3 text-slate-600 max-w-[200px] truncate">
+                          {m.description}
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          {m.priority
+                            ? <MaintenancePriorityBadge priority={m.priority} />
+                            : <span className="text-slate-300 text-xs">—</span>}
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          <MaintenanceReviewStatusBadge status={m.reviewStatus} />
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <MaintenanceStatusBadge status={m.status} />
+                            {m.unresolvedAt ? (
+                              <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2 py-0.5 text-[10px] font-medium">
+                                لم تُحل
+                              </span>
+                            ) : m.complaintAt ? (
+                              <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-medium">
+                                شكوى
+                              </span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-xs tabular-nums whitespace-nowrap">
+                          {isApproved(m) && m.dueAt ? (
+                            <span className={overdue ? 'text-danger-600 font-semibold' : 'text-slate-500'}>
+                              {formatDate(m.dueAt)}{overdue ? ' · متأخر' : ''}
+                            </span>
+                          ) : (
+                            <span className="text-slate-300">—</span>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-xs text-slate-500 tabular-nums whitespace-nowrap">
+                          {formatDate(m.createdAt)}
+                        </td>
+                        <td className="px-5 py-3 whitespace-nowrap">
+                          <Link href={`/dashboard/maintenance/${m.id}`}>
+                            <IconButton label="عرض تفاصيل الطلب" variant="outline" size="sm">
+                              <Eye />
+                            </IconButton>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -289,61 +301,107 @@ export default async function MaintenancePage({
       </Card>
 
       {/* Category management */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
-          <CardTitle className="text-sm">تصنيفات الصيانة</CardTitle>
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Settings2 className="h-4 w-4 text-slate-400" />
+            <CardTitle>تصنيفات الصيانة</CardTitle>
+          </div>
+          <span className="text-xs text-slate-400 tabular-nums">{cats.length} تصنيف</span>
         </CardHeader>
-        <CardBody className="space-y-3">
-          {sp.catErr && (
-            <div className="rounded-lg bg-warning-50 border border-warning-100 text-warning-700 px-3 py-2 text-xs flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <p>تعذّر إضافة التصنيف: {sp.catErr}</p>
-            </div>
-          )}
-          <ul className="flex flex-wrap gap-2">
+
+        {/* Premium category cards */}
+        {cats.length > 0 && (
+          <div className="px-5 pt-4 pb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {cats.map((c) => {
               const sla = maintenanceSlaLabel(c.slaDurationMinutes);
               const warranty = warrantyMonthsLabel(c.warrantyDurationMonths);
               return (
-                <li key={c.id} className="bg-surface-muted/60 ring-1 ring-inset ring-hairline rounded-full px-3 py-1 text-xs text-slate-700 inline-flex items-center gap-1.5">
-                  <span className="font-medium">{tx(c.name)}</span>
-                  <span className="text-slate-400">· {PRIORITY_LABEL[c.priority] ?? c.priority}</span>
-                  {sla && <span className="text-slate-400">· معالجة خلال {sla}</span>}
-                  {warranty && <span className="text-slate-400">· ضمان {warranty}</span>}
-                </li>
+                <div
+                  key={c.id}
+                  className="group flex overflow-hidden rounded-xl border border-hairline bg-white shadow-xs hover:shadow-soft transition-all duration-150"
+                >
+                  {/* Priority color bar — RTL start side (appears on right in Arabic) */}
+                  <div className={cn('w-1 shrink-0', PRIORITY_DOT[c.priority] ?? 'bg-slate-400')} />
+                  {/* Card body */}
+                  <div className="flex-1 px-4 py-3.5">
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <p className="text-sm font-bold text-slate-900 leading-tight">{tx(c.name)}</p>
+                      <span className={cn(
+                        'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0',
+                        PRIORITY_BADGE[c.priority] ?? 'bg-slate-100 text-slate-600',
+                      )}>
+                        {PRIORITY_LABEL[c.priority] ?? c.priority}
+                      </span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {sla ? (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                          <span>معالجة خلال {sla}</span>
+                        </div>
+                      ) : null}
+                      {warranty ? (
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                          <Shield className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                          <span>ضمان {warranty}</span>
+                        </div>
+                      ) : null}
+                      {!sla && !warranty && (
+                        <p className="text-[11px] text-slate-300">بدون مدد محددة</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               );
             })}
-            {cats.length === 0 && <li className="text-xs text-slate-400">لا توجد تصنيفات</li>}
-          </ul>
-          <form action={createCategoryAction} className="space-y-2">
+          </div>
+        )}
+
+        {/* Add category form */}
+        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-4">
+          {sp.catErr && (
+            <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 px-3 py-2 text-xs mb-3">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>تعذّر إضافة التصنيف: {sp.catErr}</p>
+            </div>
+          )}
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
+              <Plus className="h-3 w-3 text-brand-700" />
+            </div>
+            <p className="text-xs font-semibold text-slate-700">إضافة تصنيف جديد</p>
+          </div>
+          <form action={createCategoryAction}>
             <div className="flex flex-wrap items-center gap-2">
-              <Input name="ar" required dir="rtl" placeholder="بالعربية" inputSize="sm" className="w-36" />
-              <Input name="en" required dir="ltr" placeholder="English" inputSize="sm" className="w-36" />
-              <Select name="priority" inputSize="sm" defaultValue="MEDIUM" className="w-32" aria-label="الأولوية">
+              <Input name="ar" required dir="rtl" placeholder="بالعربية" inputSize="sm" className="w-32" />
+              <Input name="en" required dir="ltr" placeholder="English" inputSize="sm" className="w-32" />
+              <Select name="priority" inputSize="sm" defaultValue="MEDIUM" className="w-28" aria-label="الأولوية">
                 <option value="LOW">منخفضة</option>
                 <option value="MEDIUM">متوسطة</option>
                 <option value="HIGH">عالية</option>
                 <option value="URGENT">عاجلة</option>
               </Select>
+              <span className="w-px h-5 bg-hairline shrink-0" aria-hidden />
               <Input name="slaValue" type="number" min={1} placeholder="مدة المعالجة" inputSize="sm" className="w-28" />
-              <Select name="slaUnit" inputSize="sm" defaultValue="HOURS" className="w-24" aria-label="وحدة مدة المعالجة">
+              <Select name="slaUnit" inputSize="sm" defaultValue="HOURS" className="w-20" aria-label="وحدة مدة المعالجة">
                 <option value="HOURS">ساعات</option>
                 <option value="DAYS">أيام</option>
               </Select>
               <Input name="warrantyValue" type="number" min={1} placeholder="مدة الضمان" inputSize="sm" className="w-28" />
-              <Select name="warrantyUnit" inputSize="sm" defaultValue="MONTHS" className="w-24" aria-label="وحدة مدة الضمان">
+              <Select name="warrantyUnit" inputSize="sm" defaultValue="MONTHS" className="w-20" aria-label="وحدة مدة الضمان">
                 <option value="MONTHS">شهور</option>
                 <option value="YEARS">سنوات</option>
               </Select>
               <Button type="submit" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                إضافة تصنيف
+                إضافة
               </Button>
             </div>
-            <p className="text-[11px] text-slate-400">
-              مدة المعالجة تحدد الموعد المستهدف بعد اعتماد الطلب، ومدة الضمان تُحتسب تلقائياً للوحدة عند توقيع عقد البيع. اترك أي حقل فارغاً إن لم يكن مطلوباً.
+            <p className="text-[11px] text-slate-400 mt-2">
+              مدة المعالجة تحدد الموعد المستهدف بعد اعتماد الطلب. مدة الضمان تُحتسب تلقائياً للوحدة عند توقيع عقد البيع.
             </p>
           </form>
-        </CardBody>
+        </div>
       </Card>
     </div>
   );
