@@ -2,7 +2,7 @@ import Link from 'next/link';
 import {
   DollarSign, CreditCard, Landmark, Hash,
   SlidersHorizontal, ReceiptText, Search,
-  ExternalLink,
+  ExternalLink, Plus, AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
@@ -33,10 +33,10 @@ const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
 };
 
 const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700',
-  DOWN_PAYMENT:   'bg-amber-100 text-amber-700',
+  BOOKING_AMOUNT: 'bg-info-50 text-info-700',
+  DOWN_PAYMENT:   'bg-brand-50 text-brand-700',
   INSTALLMENT:    'bg-slate-100 text-slate-600',
-  FINAL_PAYMENT:  'bg-purple-100 text-purple-700',
+  FINAL_PAYMENT:  'bg-success-50 text-success-700',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -108,7 +108,7 @@ function SummaryCard({
   icon?: React.ReactNode; tone?: SummaryTone;
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden">
+    <div className="bg-white rounded-2xl border border-hairline shadow-soft overflow-hidden">
       <div className={cn('h-0.5', SUMMARY_BAR[tone])} />
       <div className="px-4 py-4 flex items-start gap-3">
         {icon && (
@@ -120,7 +120,7 @@ function SummaryCard({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium text-slate-400 leading-tight uppercase tracking-wide">{label}</p>
+          <p className="text-[11px] font-medium text-slate-400 leading-tight">{label}</p>
           <p className="mt-0.5 text-xl leading-tight font-bold tracking-tight tabular-nums text-slate-900 truncate">
             {value}
           </p>
@@ -191,11 +191,10 @@ export default async function DepositsPage({
         ]}
         actions={
           isAdmin ? (
-            <Link
-              href="/dashboard/deposits/new"
-              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 text-white px-4 py-2 text-sm font-medium hover:bg-brand-700 transition-colors shadow-xs"
-            >
-              + تسجيل دفعة
+            <Link href="/dashboard/deposits/new">
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                تسجيل دفعة
+              </Button>
             </Link>
           ) : undefined
         }
@@ -241,7 +240,7 @@ export default async function DepositsPage({
         {!showFilters && sp.dueDateTo  && <input type="hidden" name="dueDateTo"  value={sp.dueDateTo} />}
         {!showFilters && sp.verified   && <input type="hidden" name="verified"   value={sp.verified} />}
 
-        <div className="flex flex-wrap items-center gap-2 bg-white rounded-xl border border-hairline shadow-xs px-3 py-2.5">
+        <div className="flex flex-wrap items-center gap-2 bg-white rounded-2xl border border-hairline shadow-soft px-3 py-2.5">
 
           {/* Type */}
           <Select name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-36 shrink-0">
@@ -294,10 +293,10 @@ export default async function DepositsPage({
           <Link
             href={toggleFiltersUrl as never}
             className={cn(
-              'hidden sm:inline-flex items-center gap-1.5 text-xs font-medium shrink-0 transition-colors',
+              'hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors',
               showFilters
-                ? 'text-brand-600'
-                : 'text-slate-500 hover:text-slate-700',
+                ? 'bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100'
+                : 'bg-white border-hairline text-slate-600 hover:border-brand-200 hover:text-brand-700',
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -312,7 +311,7 @@ export default async function DepositsPage({
 
         {/* ── Advanced filters (collapsed by default) ──────────────────────── */}
         {showFilters && (
-          <div className="mt-2 rounded-xl border border-hairline bg-white shadow-xs px-4 py-3.5">
+          <div className="mt-2 rounded-2xl border border-hairline bg-white shadow-soft px-4 py-3.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
               <div className="flex flex-col gap-1">
@@ -355,8 +354,9 @@ export default async function DepositsPage({
       </form>
 
       {depositsRes.error && (
-        <div className="rounded-xl bg-red-50 text-red-700 px-4 py-3 text-sm border border-red-100">
-          {depositsRes.error}
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <p className="font-medium">{depositsRes.error}</p>
         </div>
       )}
 
@@ -382,24 +382,24 @@ export default async function DepositsPage({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[800px]">
-                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+                <thead className="bg-surface-muted/60 text-xs font-medium text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">نوع الدفعة</th>
-                    <th className="px-4 py-2.5 text-right font-medium">العميل</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الوحدة</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المرجع</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">تاريخ الاستحقاق</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المبلغ</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">تاريخ الدفع</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الإيصال</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">التحقق</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">نوع الدفعة</th>
+                    <th className="px-4 py-3 text-start font-semibold">العميل</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">الوحدة</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">المرجع</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">تاريخ الاستحقاق</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">المبلغ</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">تاريخ الدفع</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">الإيصال</th>
+                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">التحقق</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {deposits.data.map((d) => {
                     const dueDate = getDueDate(d);
                     return (
-                      <tr key={d.id} className="hover:bg-slate-50/60 transition-colors">
+                      <tr key={d.id} className="hover:bg-brand-50/20 transition-colors">
 
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           {isAdmin ? (
@@ -427,7 +427,7 @@ export default async function DepositsPage({
                           {getCustomerName(d)}
                         </td>
 
-                        <td className="px-4 py-2.5 font-mono text-xs text-slate-400 whitespace-nowrap">
+                        <td className="px-4 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">
                           {getUnitCode(d)}
                         </td>
 
@@ -435,14 +435,14 @@ export default async function DepositsPage({
                           {d.contractId && d.contract ? (
                             <Link
                               href={`/dashboard/contracts/${d.contractId}`}
-                              className="font-mono text-xs text-brand-600 hover:underline"
+                              className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
                             >
                               {d.contract.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
                             </Link>
                           ) : d.reservationId && d.reservation ? (
                             <Link
                               href={`/dashboard/reservations/${d.reservationId}`}
-                              className="font-mono text-xs text-indigo-600 hover:underline"
+                              className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
                             >
                               {d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
                             </Link>
