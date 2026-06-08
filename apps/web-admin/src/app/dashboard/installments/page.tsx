@@ -117,7 +117,7 @@ export default async function InstallmentPlansPage({
       )}
 
       {/* Filters */}
-      <form method="get" action="/dashboard/installments" className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+      <form method="get" action="/dashboard/installments" className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
         <Input
           name="q"
           inputSize="sm"
@@ -169,7 +169,8 @@ export default async function InstallmentPlansPage({
             cell: (r) => (
               <Link
                 href={`/dashboard/installments/${r.id}`}
-                className="font-medium text-brand-700 hover:underline"
+                title="عرض تفاصيل خطة التقسيط"
+                className="font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
               >
                 {r.name}
               </Link>
@@ -225,7 +226,7 @@ export default async function InstallmentPlansPage({
           {
             key: 'createdAt',
             header: 'تاريخ الإنشاء',
-            cell: (r) => <span className="text-xs">{formatDate(r.createdAt)}</span>,
+            cell: (r) => <span className="text-xs text-slate-500">{formatDate(r.createdAt)}</span>,
           },
           {
             key: 'actions',

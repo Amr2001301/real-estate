@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, FileText, CheckCircle2, Link2, Unlink } from 'lucide-react';
+import { Plus, FileText, CheckCircle2, Link2, Unlink, Eye } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
@@ -9,6 +9,7 @@ import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { IconButton } from '@/components/ui/icon-button';
 import { Pagination } from '@/components/ui/pagination';
 import { DataTable } from '@/components/table';
 
@@ -89,8 +90,7 @@ export default async function ContractsPage({
         actions={
           isAdmin ? (
             <Link href="/dashboard/contracts/new">
-              <Button variant="primary" size="md">
-                <Plus className="h-4 w-4 ml-2" />
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 عقد يدوي
               </Button>
             </Link>
@@ -123,7 +123,7 @@ export default async function ContractsPage({
       </div>
 
       {/* Filter strip */}
-      <form method="get" action="/dashboard/contracts" className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+      <form method="get" action="/dashboard/contracts" className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
         <Input
           name="q"
           inputSize="sm"
@@ -168,7 +168,8 @@ export default async function ContractsPage({
             cell: (c) => (
               <Link
                 href={`/dashboard/contracts/${c.id}`}
-                className="font-mono text-sm font-semibold text-brand-700 hover:underline"
+                title="عرض تفاصيل العقد"
+                className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
               >
                 {c.contractNumber ?? c.id.slice(0, 8)}
               </Link>
@@ -181,7 +182,7 @@ export default async function ContractsPage({
               <div>
                 <p className="font-medium text-slate-900">{c.customer?.fullName ?? '—'}</p>
                 {c.customer?.phone && (
-                  <p className="text-xs text-slate-400" dir="ltr">{c.customer.phone}</p>
+                  <p className="text-xs text-slate-500 font-mono" dir="ltr">{c.customer.phone}</p>
                 )}
               </div>
             ),
@@ -230,7 +231,7 @@ export default async function ContractsPage({
               c.reservation ? (
                 <Link
                   href={`/dashboard/reservations/${c.reservation.id}`}
-                  className="inline-flex items-center gap-1 text-xs text-indigo-700 hover:underline"
+                  className="inline-flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
                 >
                   <Link2 className="h-3 w-3" />
                   {c.reservation.reservationNumber ?? c.reservation.id.slice(0, 8)}
@@ -261,11 +262,10 @@ export default async function ContractsPage({
             key: 'actions',
             header: '',
             cell: (c) => (
-              <Link
-                href={`/dashboard/contracts/${c.id}`}
-                className="text-brand-600 hover:underline text-sm font-medium"
-              >
-                عرض
+              <Link href={`/dashboard/contracts/${c.id}`}>
+                <IconButton label="عرض تفاصيل العقد" variant="outline" size="sm">
+                  <Eye />
+                </IconButton>
               </Link>
             ),
           },

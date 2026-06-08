@@ -45,29 +45,31 @@ export function PlanActions({ plan, isAdmin }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+    <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       <Link href={`/dashboard/installments/${plan.id}`}>
-        <IconButton label="عرض" variant="ghost" size="sm">
+        <IconButton label="عرض تفاصيل خطة التقسيط" variant="outline" size="sm">
           <Eye />
         </IconButton>
       </Link>
 
       {isAdmin && (
         <>
+          <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
+
           <Link href={`/dashboard/installments/${plan.id}/edit`}>
-            <IconButton label="تعديل" variant="ghost" size="sm">
+            <IconButton label="تعديل خطة التقسيط" variant="outline" size="sm">
               <Pencil />
             </IconButton>
           </Link>
 
           {plan.status !== 'ACTIVE' && (
             <IconButton
-              label="تفعيل"
+              label="تفعيل خطة التقسيط"
               variant="ghost"
               size="sm"
               disabled={isPending}
               onClick={handleActivate}
-              className="text-green-600 hover:bg-green-50"
+              className="text-success-600 hover:bg-success-50"
             >
               <CheckCircle2 />
             </IconButton>
@@ -75,7 +77,7 @@ export function PlanActions({ plan, isAdmin }: Props) {
 
           {plan.status === 'ACTIVE' && (
             <IconButton
-              label="إيقاف"
+              label="إيقاف خطة التقسيط"
               variant="ghost"
               size="sm"
               disabled={isPending}
@@ -88,7 +90,7 @@ export function PlanActions({ plan, isAdmin }: Props) {
 
           {plan.status === 'DRAFT' && (
             <IconButton
-              label={confirmDelete ? 'تأكيد الحذف' : 'حذف'}
+              label={confirmDelete ? 'تأكيد الحذف' : 'حذف خطة التقسيط'}
               variant="ghost"
               size="sm"
               disabled={isPending}
