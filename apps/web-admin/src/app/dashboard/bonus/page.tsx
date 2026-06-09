@@ -8,6 +8,7 @@ import {
   Banknote,
   Hash,
   AlertCircle,
+  Info,
   Plus,
   Undo2,
   RotateCcw,
@@ -182,6 +183,8 @@ export default async function BonusPage({
   })();
 
   const hasFilters = !!(sp.salesId || sp.status || sp.period);
+  // Arabic-Indic zero "٠" renders as a tiny dot in most web fonts at display size
+  const entryCount = entries.length === 0 ? '0' : entries.length.toLocaleString('ar-EG');
 
   return (
     <div className="space-y-5">
@@ -213,15 +216,35 @@ export default async function BonusPage({
         </div>
       )}
 
-      {/* KPI cards */}
+      {/* ── KPI cards ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي المعلق" value={formatCurrency(pendingTotal)} icon={<Clock />} tone="warning" />
-        <PageKpiCard label="إجمالي المعتمد" value={formatCurrency(approvedTotal)} icon={<CheckCircle2 />} tone="info" />
-        <PageKpiCard label="إجمالي المدفوع" value={formatCurrency(paidTotal)} icon={<Banknote />} tone="success" />
-        <PageKpiCard label="عدد المستحقات" value={entries.length.toLocaleString('ar-EG')} icon={<Hash />} tone="brand" />
+        <PageKpiCard
+          label="إجمالي المعلق"
+          value={formatCurrency(pendingTotal)}
+          icon={<Clock className="h-5 w-5" />}
+          tone="warning"
+        />
+        <PageKpiCard
+          label="إجمالي المعتمد"
+          value={formatCurrency(approvedTotal)}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          tone="info"
+        />
+        <PageKpiCard
+          label="إجمالي المدفوع"
+          value={formatCurrency(paidTotal)}
+          icon={<Banknote className="h-5 w-5" />}
+          tone="success"
+        />
+        <PageKpiCard
+          label="عدد المستحقات"
+          value={entryCount}
+          icon={<Hash className="h-5 w-5" />}
+          tone="brand"
+        />
       </div>
 
-      {/* Filters */}
+      {/* ── Compact filter bar — sr-only labels ────────────────────────────── */}
       <FilterBar
         method="get"
         action="/dashboard/bonus"
@@ -257,37 +280,49 @@ export default async function BonusPage({
         </FilterField>
       </FilterBar>
 
-      {/* Create manual entry */}
+      {/* ── Manual entitlement ───────────────────────────────────────────────── */}
       <Card>
-        <CardHeader>
+        <CardHeader className="px-5 py-3.5">
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-              <Plus className="h-3 w-3 text-brand-700" />
+            <div className="w-6 h-6 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center shrink-0">
+              <Plus className="h-3 w-3 text-brand-600" />
             </div>
-            <CardTitle>إضافة مستحق يدوي</CardTitle>
+            <CardTitle className="text-sm">إضافة مستحق يدوي</CardTitle>
           </div>
         </CardHeader>
-        <CardBody>
+        <CardBody className="px-5 py-3">
           {rules.length === 0 || salesUsers.length === 0 ? (
             <p className="text-xs text-slate-400">
               يلزم وجود قاعدة عمولة ومندوب مبيعات واحد على الأقل قبل إنشاء مستحق.
             </p>
           ) : (
-            <form action={createEntryAction} className="flex flex-wrap items-center gap-2">
+            <form action={createEntryAction} className="flex flex-wrap items-end gap-2.5">
               <input type="hidden" name="returnTo" value={returnTo} />
-              <Select name="salesId" inputSize="sm" required className="w-48 shrink-0" aria-label="المندوب">
-                {salesUsers.map((u) => (
-                  <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
-                ))}
-              </Select>
-              <Select name="ruleId" inputSize="sm" required className="w-40 shrink-0" aria-label="القاعدة">
-                {rules.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </Select>
-              <Input name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-32 shrink-0" placeholder="المبلغ" aria-label="المبلغ" />
-              <Input name="period" type="month" required inputSize="sm" className="w-40 shrink-0" aria-label="شهر الاستحقاق" />
-              <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="be-salesId" className="text-[11px] font-medium text-slate-400">المندوب</label>
+                <Select id="be-salesId" name="salesId" inputSize="sm" required className="w-48 shrink-0">
+                  {salesUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="be-ruleId" className="text-[11px] font-medium text-slate-400">القاعدة</label>
+                <Select id="be-ruleId" name="ruleId" inputSize="sm" required className="w-40 shrink-0">
+                  {rules.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="be-amount" className="text-[11px] font-medium text-slate-400">المبلغ</label>
+                <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-32 shrink-0" placeholder="0" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="be-period" className="text-[11px] font-medium text-slate-400">شهر الاستحقاق</label>
+                <Input id="be-period" name="period" type="month" required inputSize="sm" className="w-40 shrink-0" />
+              </div>
+              <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} className="self-end">
                 إضافة المستحق
               </Button>
             </form>
@@ -295,54 +330,62 @@ export default async function BonusPage({
         </CardBody>
       </Card>
 
-      {/* Commission rules */}
+      {/* ── Commission rules ─────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
-        <CardHeader>
+        <CardHeader className="px-5 py-3.5">
           <div className="flex items-center gap-2">
             <BadgePercent className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle>قواعد العمولة</CardTitle>
+            <CardTitle className="text-sm">قواعد العمولة</CardTitle>
           </div>
           <span className="text-xs text-slate-400 tabular-nums">{rules.length} قاعدة</span>
         </CardHeader>
 
-        {/* Auto-commission status banner */}
+        {/* Auto-commission status banner — compact */}
         <div className={cn(
-          'mx-5 mt-4 mb-1 rounded-xl px-3 py-2.5 text-xs border flex items-center gap-2',
+          'mx-5 mt-3 rounded-lg px-3 py-2 text-[11px] border flex items-center gap-2',
           activeAutoRules.length === 0
             ? 'bg-warning-50 border-warning-100 text-warning-700'
             : activeAutoRules.length === 1
               ? 'bg-success-50 border-success-100 text-success-700'
               : 'bg-danger-50 border-danger-100 text-danger-700',
         )}>
-          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          {activeAutoRules.length === 0
-            ? 'لن يتم إنشاء عمولات تلقائية عند توقيع العقود حتى يتم تفعيل قاعدة واحدة.'
-            : activeAutoRules.length === 1
-              ? `العمولات التلقائية مفعّلة باستخدام قاعدة: ${activeAutoRules[0]!.name}`
-              : 'يوجد أكثر من قاعدة تلقائية مفعّلة. لن يتم إنشاء عمولات تلقائية حتى يتم إصلاح الإعداد.'}
+          {activeAutoRules.length === 1
+            ? <Info className="h-3 w-3 shrink-0" />
+            : <AlertCircle className="h-3 w-3 shrink-0" />
+          }
+          <span>
+            {activeAutoRules.length === 0
+              ? 'لن يتم إنشاء عمولات تلقائية عند توقيع العقود حتى يتم تفعيل قاعدة واحدة.'
+              : activeAutoRules.length === 1
+                ? `العمولات التلقائية مفعّلة باستخدام قاعدة: ${activeAutoRules[0]!.name}`
+                : 'يوجد أكثر من قاعدة تلقائية مفعّلة. لن يتم إنشاء عمولات تلقائية حتى يتم إصلاح الإعداد.'}
+          </span>
         </div>
 
         {/* Rules list */}
-        {rules.length > 0 && (
-          <ul className="px-5 py-3 divide-y divide-hairline">
+        {rules.length > 0 ? (
+          <ul className="px-5 py-1 divide-y divide-hairline">
             {rules.map((r) => {
               const isAmbiguous = activeAutoRules.length > 1 && r.active && r.autoApplyOnSignedContract;
               return (
                 <li
                   key={r.id}
                   className={cn(
-                    'flex flex-wrap items-center justify-between gap-3 py-3',
+                    'flex flex-wrap items-center justify-between gap-3 py-3 transition-opacity',
+                    !r.active && 'opacity-60',
                     isAmbiguous && 'bg-danger-50/40 -mx-2 px-2 rounded-lg',
                   )}
                 >
                   <div className="flex items-center gap-2 min-w-0">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-brand-50 text-brand-700 text-[10px] font-bold tabular-nums font-mono shrink-0">
+                      {r.percentage}%
+                    </span>
                     <span className="text-sm font-medium text-slate-800 truncate">{r.name}</span>
-                    <span className="text-xs text-slate-400 tabular-nums shrink-0 font-mono">{r.percentage}%</span>
-                    {!r.active && (
-                      <Badge tone="gray" size="sm" className="shrink-0">غير نشطة</Badge>
-                    )}
                     {r.autoApplyOnSignedContract && (
                       <Badge tone="info" size="sm" className="shrink-0">تلقائي عند التوقيع</Badge>
+                    )}
+                    {!r.active && (
+                      <Badge tone="gray" size="sm" className="shrink-0">غير نشطة</Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -363,41 +406,43 @@ export default async function BonusPage({
               );
             })}
           </ul>
-        )}
-        {rules.length === 0 && (
+        ) : (
           <p className="px-5 py-4 text-xs text-slate-400">لا توجد قواعد بعد.</p>
         )}
 
-        {/* Add rule form footer */}
-        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-3.5 space-y-2.5">
-          <p className="text-xs font-semibold text-slate-600">إضافة قاعدة جديدة</p>
+        {/* Add rule footer */}
+        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-3.5">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
+              <Plus className="h-3 w-3 text-brand-700" />
+            </div>
+            <p className="text-xs font-semibold text-slate-700">إضافة قاعدة جديدة</p>
+          </div>
           <form action={createRuleAction}>
             <input type="hidden" name="returnTo" value={returnTo} />
             <div className="flex flex-wrap items-center gap-2">
               <Input name="name" required placeholder="اسم القاعدة" inputSize="sm" className="flex-1 min-w-[160px]" />
-              <Input name="percentage" type="number" step="any" min={0} required placeholder="النسبة %" inputSize="sm" className="w-28" />
+              <Input name="percentage" type="number" step="any" min={0} required inputSize="sm" placeholder="النسبة %" className="w-28" />
               <Button type="submit" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
                 إضافة
               </Button>
             </div>
-            <label className="flex items-center gap-2 text-xs text-slate-600 mt-2 cursor-pointer">
+            <label className="flex items-center gap-2 text-xs text-slate-600 mt-2.5 cursor-pointer">
               <input type="checkbox" name="autoApplyOnSignedContract" className="rounded border-hairline" />
               تطبيق تلقائي عند توقيع العقد
             </label>
           </form>
-          <p className="text-[11px] text-slate-400">
+          <p className="text-[11px] text-slate-400 mt-2.5">
             يجب أن تكون هناك قاعدة واحدة فقط مفعّلة للتطبيق التلقائي. تغيير القاعدة لا يؤثر على المستحقات المنشأة مسبقاً.
           </p>
         </div>
       </Card>
 
-      {/* Entries table */}
+      {/* ── Entries table ────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>سجلّات المستحقات</CardTitle>
-          <span className="text-xs text-slate-400 tabular-nums">
-            {entries.length.toLocaleString('ar-EG')} مستحق
-          </span>
+        <CardHeader className="px-5 py-3.5">
+          <CardTitle className="text-sm">سجلّات المستحقات</CardTitle>
+          <span className="text-xs text-slate-400 tabular-nums">{entryCount} مستحق</span>
         </CardHeader>
         <CardBody className="p-0">
           {entriesRes.error ? (
@@ -421,16 +466,16 @@ export default async function BonusPage({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[780px]">
-                <thead className="bg-surface-muted/50 text-xs font-medium text-slate-500 border-b border-hairline">
+                <thead className="bg-surface-muted/50 text-xs font-semibold text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المندوب</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الفترة</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">القاعدة</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المصدر</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المبلغ</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الحالة</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">تاريخ الدفع</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الإجراءات</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">المندوب</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الفترة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">القاعدة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">المصدر</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">المبلغ</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الحالة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">تاريخ الدفع</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الإجراءات</th>
                   </tr>
                 </thead>
                 <tbody>

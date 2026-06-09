@@ -262,7 +262,7 @@ export function MaintenancePageSkeleton() {
   );
 }
 
-/** Full skeleton for /dashboard/bonus — matches KPI cards, filter, forms, rules list, entries table. */
+/** Full skeleton for /dashboard/bonus — matches KPI cards, filter, manual entry, rules, entries table. */
 export function BonusPageSkeleton() {
   return (
     <div className="space-y-5">
@@ -297,24 +297,68 @@ export function BonusPageSkeleton() {
       {/* Filter bar */}
       <FilterBarSkeleton fields={3} />
 
-      {/* Manual entry card */}
+      {/* Manual entry card — labeled field pairs */}
       <div className="bg-surface border border-hairline rounded-2xl shadow-xs">
-        <div className="px-5 py-3.5 border-b border-hairline">
+        <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-2">
+          <Skeleton className="h-6 w-6 rounded-full" />
           <Skeleton className="h-4 w-36" />
         </div>
         <div className="px-5 py-4">
-          <div className="flex flex-wrap gap-2">
-            <Skeleton className="h-8 w-48 rounded-xl" />
-            <Skeleton className="h-8 w-40 rounded-xl" />
-            <Skeleton className="h-8 w-32 rounded-xl" />
-            <Skeleton className="h-8 w-40 rounded-xl" />
+          <div className="flex flex-wrap items-end gap-3">
+            {(['w-48', 'w-40', 'w-32', 'w-40'] as const).map((w, i) => (
+              <div key={i} className="flex flex-col gap-1">
+                <Skeleton className="h-2.5 w-16" />
+                <Skeleton className={cn('h-8 rounded-xl', w)} />
+              </div>
+            ))}
             <Skeleton className="h-8 w-28 rounded-xl" />
           </div>
         </div>
       </div>
 
-      {/* Commission rules card */}
-      <SectionCardSkeleton rows={2} hasFooter />
+      {/* Commission rules card — banner + rows + labeled add-rule footer */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-hairline flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-4 w-4 rounded" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+          <Skeleton className="h-4 w-14" />
+        </div>
+        {/* Compact status banner */}
+        <div className="mx-5 mt-3">
+          <Skeleton className="h-7 w-full rounded-lg" />
+        </div>
+        {/* Rules rows */}
+        <div className="px-5 py-2 divide-y divide-hairline">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between gap-3 py-3">
+              <div className="flex items-center gap-2 flex-1">
+                <Skeleton className="h-5 w-10 rounded-md" />
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-5 w-20 rounded-full" />
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Skeleton className="h-7 w-14 rounded-xl" />
+                <Skeleton className="h-7 w-24 rounded-xl" />
+              </div>
+            </div>
+          ))}
+        </div>
+        {/* Add rule footer — unlabeled inline inputs */}
+        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-3.5">
+          <div className="flex items-center gap-2 mb-2">
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Skeleton className="h-8 flex-1 min-w-[160px] rounded-xl" />
+            <Skeleton className="h-8 w-28 rounded-xl" />
+            <Skeleton className="h-8 w-16 rounded-xl" />
+          </div>
+          <Skeleton className="h-3 w-52 mt-2" />
+        </div>
+      </div>
 
       {/* Entries table */}
       <TableCardSkeleton cols={8} rows={5} />
@@ -322,11 +366,11 @@ export function BonusPageSkeleton() {
   );
 }
 
-/** Full skeleton for /dashboard/targets — matches filter card, form card, performance table. */
+/** Full skeleton for /dashboard/targets — matches filter, KPI cards, form, insights, table. */
 export function TargetsPageSkeleton() {
   return (
     <div className="space-y-5">
-      {/* Page header (no actions) */}
+      {/* Page header */}
       <header className="mb-0 space-y-3">
         <Skeleton className="h-3 w-52" />
         <div className="space-y-2">
@@ -338,22 +382,56 @@ export function TargetsPageSkeleton() {
       {/* Filter bar */}
       <FilterBarSkeleton fields={2} />
 
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
+            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-2 w-20" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* Add/edit target form card */}
       <div className="bg-surface border border-hairline rounded-2xl shadow-xs">
-        <div className="px-5 py-3.5 border-b border-hairline">
+        <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-2">
+          <Skeleton className="h-6 w-6 rounded-full" />
           <Skeleton className="h-4 w-40" />
         </div>
-        <div className="px-5 py-4">
+        <div className="px-5 py-3.5">
           <div className="flex flex-wrap items-end gap-3">
             {(['w-44', 'w-40', 'w-36', 'w-28'] as const).map((w, i) => (
-              <div key={i} className="flex flex-col gap-1.5">
+              <div key={i} className="flex flex-col gap-1">
                 <Skeleton className="h-2.5 w-16" />
                 <Skeleton className={cn('h-8 rounded-xl', w)} />
               </div>
             ))}
             <Skeleton className="h-8 w-24 rounded-xl" />
           </div>
-          <Skeleton className="h-3 w-80 mt-3" />
+          <Skeleton className="h-3 w-80 mt-2" />
+        </div>
+      </div>
+
+      {/* Performance insights strip */}
+      <div className="rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-3 w-14" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-5 w-10 rounded-md" />
+        </div>
+        <Skeleton className="w-px h-4 hidden sm:block" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-3 w-16" />
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-5 w-10 rounded-md" />
         </div>
       </div>
 
