@@ -11,7 +11,6 @@ import {
   Plus,
   Undo2,
   RotateCcw,
-  Eye,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged } from '@/lib/types';
@@ -20,10 +19,12 @@ import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
-import { IconButton } from '@/components/ui/icon-button';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FilterBar, FilterField } from '@/components/ui/toolbar';
 import { ExportMenu } from '@/components/export-menu';
 
 export const dynamic = 'force-dynamic';
@@ -55,10 +56,6 @@ const SOURCE_LABEL: Record<EntrySource, string> = {
   MANUAL: 'يدوي',
   CONTRACT_AUTO: 'تلقائي من عقد',
 };
-const SOURCE_CLS: Record<EntrySource, string> = {
-  MANUAL: 'bg-slate-100 text-slate-600',
-  CONTRACT_AUTO: 'bg-info-50 text-info-700',
-};
 interface SalesUser {
   id: string;
   fullName: string;
@@ -73,11 +70,6 @@ const STATUS_LABEL: Record<EntryStatus, string> = {
   PENDING: 'معلق',
   APPROVED: 'معتمد',
   PAID: 'مدفوع',
-};
-const STATUS_CLS: Record<EntryStatus, string> = {
-  PENDING: 'bg-warning-50 text-warning-700',
-  APPROVED: 'bg-info-50 text-info-700',
-  PAID: 'bg-success-50 text-success-700',
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -230,29 +222,40 @@ export default async function BonusPage({
       </div>
 
       {/* Filters */}
-      <form method="get" action="/dashboard/bonus" className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
-        <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-48 shrink-0">
-          <option value="">كل المندوبين</option>
-          {salesUsers.map((u) => (
-            <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
-          ))}
-        </Select>
-        <Input name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40 shrink-0" />
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-32 shrink-0">
-          <option value="">كل الحالات</option>
-          <option value="PENDING">معلق</option>
-          <option value="APPROVED">معتمد</option>
-          <option value="PAID">مدفوع</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {hasFilters && (
-            <Link href="/dashboard/bonus">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+      <FilterBar
+        method="get"
+        action="/dashboard/bonus"
+        trailing={
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {hasFilters && (
+              <Link href="/dashboard/bonus">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+        }
+      >
+        <FilterField label="المندوب" htmlFor="bonus-sales">
+          <Select id="bonus-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-48">
+            <option value="">كل المندوبين</option>
+            {salesUsers.map((u) => (
+              <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label="الشهر" htmlFor="bonus-period">
+          <Input id="bonus-period" name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40" />
+        </FilterField>
+        <FilterField label="الحالة" htmlFor="bonus-status">
+          <Select id="bonus-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-32">
+            <option value="">كل الحالات</option>
+            <option value="PENDING">معلق</option>
+            <option value="APPROVED">معتمد</option>
+            <option value="PAID">مدفوع</option>
+          </Select>
+        </FilterField>
+      </FilterBar>
 
       {/* Create manual entry */}
       <Card>
@@ -336,14 +339,10 @@ export default async function BonusPage({
                     <span className="text-sm font-medium text-slate-800 truncate">{r.name}</span>
                     <span className="text-xs text-slate-400 tabular-nums shrink-0 font-mono">{r.percentage}%</span>
                     {!r.active && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 shrink-0">
-                        غير نشطة
-                      </span>
+                      <Badge tone="gray" size="sm" className="shrink-0">غير نشطة</Badge>
                     )}
                     {r.autoApplyOnSignedContract && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-info-50 text-info-700 shrink-0">
-                        تلقائي عند التوقيع
-                      </span>
+                      <Badge tone="info" size="sm" className="shrink-0">تلقائي عند التوقيع</Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -407,15 +406,18 @@ export default async function BonusPage({
               <p>{entriesRes.error}</p>
             </div>
           ) : entries.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-14 text-center">
-              <BadgePercent className="h-8 w-8 text-slate-200" />
-              <p className="text-sm text-slate-400">لا توجد مستحقات تطابق الفلاتر المختارة</p>
-              {hasFilters && (
-                <Link href="/dashboard/bonus" className="mt-1 text-xs text-brand-700 hover:underline">
-                  مسح الفلاتر
-                </Link>
-              )}
-            </div>
+            <EmptyState
+              icon={<BadgePercent />}
+              title="لا توجد مستحقات"
+              description={hasFilters ? 'لا توجد مستحقات تطابق الفلاتر المختارة' : 'لم يتم إنشاء أي مستحقات بعد'}
+              action={
+                hasFilters ? (
+                  <Link href="/dashboard/bonus">
+                    <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                  </Link>
+                ) : undefined
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[780px]">
@@ -445,9 +447,12 @@ export default async function BonusPage({
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium', SOURCE_CLS[e.source ?? 'MANUAL'])}>
+                          <Badge
+                            tone={e.source === 'CONTRACT_AUTO' ? 'info' : 'gray'}
+                            size="sm"
+                          >
                             {SOURCE_LABEL[e.source ?? 'MANUAL']}
-                          </span>
+                          </Badge>
                           {e.contractId && (
                             <Link
                               href={`/dashboard/contracts/${e.contractId}` as never}
@@ -462,9 +467,12 @@ export default async function BonusPage({
                         {formatCurrency(e.amount)}
                       </td>
                       <td className="px-5 py-3 whitespace-nowrap">
-                        <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium', STATUS_CLS[e.status])}>
+                        <Badge
+                          tone={e.status === 'PAID' ? 'success' : e.status === 'APPROVED' ? 'info' : 'warning'}
+                          size="sm"
+                        >
                           {STATUS_LABEL[e.status]}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-5 py-3 text-xs text-slate-500 tabular-nums whitespace-nowrap">
                         {formatDate(e.paidAt)}

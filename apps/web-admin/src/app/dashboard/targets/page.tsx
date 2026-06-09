@@ -9,6 +9,8 @@ import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FilterBar, FilterField } from '@/components/ui/toolbar';
 
 export const dynamic = 'force-dynamic';
 
@@ -143,31 +145,32 @@ export default async function TargetsPage({
       )}
 
       {/* ── Filter ─────────────────────────────────────────────────────────── */}
-      <form method="get" action="/dashboard/targets">
-        <div className="flex flex-wrap items-end gap-3 bg-white rounded-xl border border-hairline shadow-xs px-4 py-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="salesId" className="text-[11px] font-medium text-slate-400">المندوب</label>
-            <Select id="salesId" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-44">
-              <option value="">كل المندوبين</option>
-              {salesUsers.map((u) => (
-                <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="period" className="text-[11px] font-medium text-slate-400">الشهر</label>
-            <Input id="period" name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40" />
-          </div>
-          <div className="flex items-center gap-1.5">
+      <FilterBar
+        method="get"
+        action="/dashboard/targets"
+        trailing={
+          <div className="flex items-center gap-2">
             <Button type="submit" variant="primary" size="sm">تصفية</Button>
             {hasFilters && (
               <a href="/dashboard/targets">
-                <Button type="button" variant="secondary" size="sm">مسح الفلاتر</Button>
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
               </a>
             )}
           </div>
-        </div>
-      </form>
+        }
+      >
+        <FilterField label="المندوب" htmlFor="targets-salesId">
+          <Select id="targets-salesId" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-44">
+            <option value="">كل المندوبين</option>
+            {salesUsers.map((u) => (
+              <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label="الشهر" htmlFor="targets-period">
+          <Input id="targets-period" name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40" />
+        </FilterField>
+      </FilterBar>
 
       {/* ── Create / update target (ADMIN only) ───────────────────────────── */}
       {isAdmin && (
@@ -228,51 +231,57 @@ export default async function TargetsPage({
           {targetsRes.error ? (
             <div className="m-4 rounded-lg bg-red-50 text-red-700 p-3 text-sm">{targetsRes.error}</div>
           ) : targets.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-center">
-              <Target className="h-8 w-8 text-slate-200" />
-              <p className="text-sm text-slate-400">
-                {hasFilters ? 'لا توجد أهداف تطابق الفلاتر المختارة' : 'لا توجد أهداف مسجّلة'}
-              </p>
-            </div>
+            <EmptyState
+              icon={<Target />}
+              title={hasFilters ? 'لا توجد أهداف مطابقة' : 'لا توجد أهداف مسجّلة'}
+              description={hasFilters ? 'لا توجد أهداف تطابق الفلاتر المختارة' : 'أضف هدفاً لمندوب المبيعات للبدء'}
+              action={
+                hasFilters ? (
+                  <a href="/dashboard/targets">
+                    <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                  </a>
+                ) : undefined
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               {/* Achieved value/units come from GET /sales-targets/performance
                   (signed contracts in the period). Cells fall back to "—" when
                   performance data is unavailable for a row. */}
               <table className="w-full text-sm min-w-[860px]">
-                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+                <thead className="bg-surface-muted/50 text-xs font-semibold text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-4 py-2.5 text-right font-medium">المندوب</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الشهر</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">هدف القيمة</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المحقق (قيمة)</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">نسبة تحقيق القيمة</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">هدف الوحدات</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المحقق (وحدات)</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">نسبة تحقيق الوحدات</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">المندوب</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الشهر</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">هدف القيمة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">المحقق (قيمة)</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">نسبة القيمة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">هدف الوحدات</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">المحقق (وحدات)</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">نسبة الوحدات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-hairline">
+                <tbody>
                   {targets.map((t) => {
                     const perf = t.sales?.id
                       ? perfMap.get(`${t.sales.id}|${t.period}`)
                       : undefined;
                     return (
-                      <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
-                        <td className="px-4 py-2.5 font-medium text-slate-800">{t.sales?.fullName ?? '—'}</td>
-                        <td className="px-4 py-2.5 text-slate-500 tabular-nums whitespace-nowrap">{t.period}</td>
-                        <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">{formatCurrency(t.amountTarget)}</td>
-                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-700">{perf ? formatCurrency(perf.achievedAmount) : <span className="text-slate-300">—</span>}</td>
-                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-600">{perf ? pctLabel(perf.targetAmountPercent) : <span className="text-slate-300">—</span>}</td>
-                        <td className="px-4 py-2.5 text-slate-600 tabular-nums whitespace-nowrap">{t.unitsTarget.toLocaleString('ar-EG')}</td>
-                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-700">{perf ? perf.achievedUnits.toLocaleString('ar-EG') : <span className="text-slate-300">—</span>}</td>
-                        <td className="px-4 py-2.5 tabular-nums whitespace-nowrap text-slate-600">{perf ? pctLabel(perf.targetUnitsPercent) : <span className="text-slate-300">—</span>}</td>
+                      <tr key={t.id} className="group border-t border-hairline hover:bg-brand-50/20 transition-colors">
+                        <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap">{t.sales?.fullName ?? '—'}</td>
+                        <td className="px-5 py-3 text-slate-500 tabular-nums whitespace-nowrap font-mono text-xs">{t.period}</td>
+                        <td className="px-5 py-3 font-semibold tabular-nums whitespace-nowrap text-slate-800">{formatCurrency(t.amountTarget)}</td>
+                        <td className="px-5 py-3 tabular-nums whitespace-nowrap text-slate-700">{perf ? formatCurrency(perf.achievedAmount) : <span className="text-slate-300">—</span>}</td>
+                        <td className="px-5 py-3 tabular-nums whitespace-nowrap text-slate-600">{perf ? pctLabel(perf.targetAmountPercent) : <span className="text-slate-300">—</span>}</td>
+                        <td className="px-5 py-3 text-slate-600 tabular-nums whitespace-nowrap">{t.unitsTarget.toLocaleString('ar-EG')}</td>
+                        <td className="px-5 py-3 tabular-nums whitespace-nowrap text-slate-700">{perf ? perf.achievedUnits.toLocaleString('ar-EG') : <span className="text-slate-300">—</span>}</td>
+                        <td className="px-5 py-3 tabular-nums whitespace-nowrap text-slate-600">{perf ? pctLabel(perf.targetUnitsPercent) : <span className="text-slate-300">—</span>}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
-              <p className="px-4 py-3 text-[11px] text-slate-400 border-t border-hairline">
+              <p className="px-5 py-3 text-[11px] text-slate-400 border-t border-hairline">
                 القيم المحققة محسوبة من العقود الموقّعة خلال الشهر لكل مندوب.
               </p>
             </div>

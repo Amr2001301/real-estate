@@ -28,14 +28,16 @@ export function FilterBar({ children, trailing, className, ...rest }: FilterBarP
   return (
     <form
       className={cn(
-        'bg-surface border border-hairline rounded-2xl shadow-xs p-4 mb-4',
-        'flex flex-wrap items-end gap-3',
+        'flex flex-wrap items-center gap-2',
+        'bg-surface border border-hairline rounded-2xl shadow-xs px-3 py-2.5',
         className,
       )}
       {...rest}
     >
-      <div className="flex flex-wrap items-end gap-3 flex-1 min-w-0">{children}</div>
-      {trailing && <div className="flex items-center gap-2">{trailing}</div>}
+      {children}
+      {trailing && (
+        <div className="flex items-center gap-2 ms-auto shrink-0">{trailing}</div>
+      )}
     </form>
   );
 }
@@ -49,13 +51,9 @@ export interface FilterFieldProps {
 
 export function FilterField({ label, htmlFor, children, className }: FilterFieldProps) {
   return (
-    <div className={cn('flex flex-col gap-1.5 min-w-[160px]', className)}>
-      <label
-        htmlFor={htmlFor}
-        className="text-2xs font-semibold uppercase tracking-widest text-slate-400"
-      >
-        {label}
-      </label>
+    <div className={cn('shrink-0', className)}>
+      {/* sr-only keeps the label in the accessibility tree without showing it visually */}
+      <label htmlFor={htmlFor} className="sr-only">{label}</label>
       {children}
     </div>
   );

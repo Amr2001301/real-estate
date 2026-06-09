@@ -12,6 +12,8 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconButton } from '@/components/ui/icon-button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FilterBar, FilterField } from '@/components/ui/toolbar';
 import { MaintenanceStatusBadge, MaintenancePriorityBadge, MaintenanceReviewStatusBadge } from '@/components/badges';
 import { ExportMenu } from '@/components/export-menu';
 import { MaintenanceReports } from './maintenance-reports';
@@ -149,34 +151,53 @@ export default async function MaintenancePage({
       />
 
       {/* Filters */}
-      <form method="get" action="/dashboard/maintenance" className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
-          <option value="">كل الحالات</option>
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>{STATUS_LABEL[s]}</option>
-          ))}
-        </Select>
-        <Select name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-36 shrink-0">
-          <option value="">كل المراجعات</option>
-          {REVIEW_STATUSES.map((s) => (
-            <option key={s} value={s}>{REVIEW_LABEL[s]}</option>
-          ))}
-        </Select>
-        <Select name="categoryId" inputSize="sm" defaultValue={sp.categoryId ?? ''} className="w-44 shrink-0">
-          <option value="">كل التصنيفات</option>
-          {cats.map((c) => (
-            <option key={c.id} value={c.id}>{tx(c.name)}</option>
-          ))}
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {hasFilters && (
-            <Link href="/dashboard/maintenance">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+      <FilterBar
+        method="get"
+        action="/dashboard/maintenance"
+        trailing={
+          <div className="flex items-center gap-2">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {hasFilters && (
+              <Link href="/dashboard/maintenance">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+        }
+      >
+        <FilterField label="الحالة" htmlFor="maint-status">
+          <Select id="maint-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36">
+            <option value="">كل الحالات</option>
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>{STATUS_LABEL[s]}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label="المراجعة" htmlFor="maint-review">
+          <Select id="maint-review" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-36">
+            <option value="">كل المراجعات</option>
+            {REVIEW_STATUSES.map((s) => (
+              <option key={s} value={s}>{REVIEW_LABEL[s]}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label="التصنيف" htmlFor="maint-category">
+          <Select id="maint-category" name="categoryId" inputSize="sm" defaultValue={sp.categoryId ?? ''} className="w-44">
+            <option value="">كل التصنيفات</option>
+            {cats.map((c) => (
+              <option key={c.id} value={c.id}>{tx(c.name)}</option>
+            ))}
+          </Select>
+        </FilterField>
+        <FilterField label="المشرف" htmlFor="maint-admin">
+          <Select id="maint-admin" name="assignedAdminId" inputSize="sm" defaultValue={sp.assignedAdminId ?? ''} className="w-36">
+            <option value="">كل المشرفين</option>
+            {admins.map((a) => (
+              <option key={a.id} value={a.id}>{a.fullName}</option>
+            ))}
+          </Select>
+        </FilterField>
+      </FilterBar>
 
       {/* KPI + analytics */}
       <MaintenanceReports filters={reportFilters} />
@@ -200,15 +221,18 @@ export default async function MaintenancePage({
         </CardHeader>
         <CardBody className="p-0">
           {rows.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-14 text-center">
-              <Wrench className="h-8 w-8 text-slate-200" />
-              <p className="text-sm text-slate-400">لا توجد طلبات صيانة تطابق الفلاتر المختارة</p>
-              {hasFilters && (
-                <Link href="/dashboard/maintenance" className="mt-1 text-xs text-brand-700 hover:underline">
-                  مسح الفلاتر
-                </Link>
-              )}
-            </div>
+            <EmptyState
+              icon={<Wrench />}
+              title="لا توجد طلبات صيانة"
+              description={hasFilters ? 'لا توجد طلبات تطابق الفلاتر المختارة' : 'لم يتم تسجيل أي طلبات صيانة بعد'}
+              action={
+                hasFilters ? (
+                  <Link href="/dashboard/maintenance">
+                    <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                  </Link>
+                ) : undefined
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[1020px]">
@@ -246,7 +270,7 @@ export default async function MaintenancePage({
                         <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
                           {m.category ? tx(m.category.name) : '—'}
                         </td>
-                        <td className="px-5 py-3 text-slate-600 max-w-[200px] truncate">
+                        <td className="px-5 py-3 text-slate-600 max-w-[200px] truncate" title={m.description}>
                           {m.description}
                         </td>
                         <td className="px-5 py-3 whitespace-nowrap">
@@ -326,7 +350,12 @@ export default async function MaintenancePage({
                   {/* Card body */}
                   <div className="flex-1 px-4 py-3.5">
                     <div className="flex items-start justify-between gap-2 mb-3">
-                      <p className="text-sm font-bold text-slate-900 leading-tight">{tx(c.name)}</p>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-slate-900 leading-tight">{tx(c.name)}</p>
+                        {c.name.en && (
+                          <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{c.name.en}</p>
+                        )}
+                      </div>
                       <span className={cn(
                         'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0',
                         PRIORITY_BADGE[c.priority] ?? 'bg-slate-100 text-slate-600',

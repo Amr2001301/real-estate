@@ -1,5 +1,5 @@
-import { ListPageSkeleton } from '@/components/ui/skeletons';
+import { MaintenancePageSkeleton } from '@/components/ui/skeletons';
 
 export default function MaintenanceLoading() {
-  return <ListPageSkeleton kpis={4} cols={6} rows={8} />;
+  return <MaintenancePageSkeleton />;
 }

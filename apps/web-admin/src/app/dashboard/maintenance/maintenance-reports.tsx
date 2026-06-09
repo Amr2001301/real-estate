@@ -1,4 +1,4 @@
-import { ClipboardClock, AlarmClock, Loader2, CheckCircle2 } from 'lucide-react';
+import { BarChart3, Users2, ClipboardClock, AlarmClock, Loader2, CheckCircle2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { MaintenanceReportSummary } from '@/lib/types';
 import { tx } from '@/lib/format';
@@ -33,11 +33,15 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
   }
 
   const r = res.data;
-  const num = (n: number) => n.toLocaleString('ar-EG');
+  // Arabic-Indic zero "٠" renders as a small dot in most web fonts at display size;
+  // use Latin '0' for that case so the value is always clearly readable.
+  const num = (n: number) => n === 0 ? '0' : n.toLocaleString('ar-EG');
+  const maxCategoryCount = r.byCategory[0]?.count ?? 1;
+  const maxAssigneeCount = r.byAssignee[0]?.count ?? 1;
 
   return (
     <div className="space-y-4">
-      {/* Essential KPIs — 4 cards */}
+      {/* KPI cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <PageKpiCard
           label="قيد المراجعة"
@@ -65,32 +69,55 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
         />
       </div>
 
-      {/* Analytics — 2 ranked-list panels */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Analytics panels — items-start prevents the shorter card from stretching */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Top requested categories */}
         <Card>
           <CardHeader>
-            <CardTitle>التصنيفات الأكثر طلبًا</CardTitle>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4 text-brand-500 shrink-0" />
+              <CardTitle>التصنيفات الأكثر طلبًا</CardTitle>
+            </div>
             {r.byCategory.length > 0 && (
-              <span className="text-xs text-slate-400 tabular-nums">{r.byCategory.length} تصنيف</span>
+              <span className="text-xs text-slate-400 tabular-nums">
+                أعلى {Math.min(5, r.byCategory.length)}
+              </span>
             )}
           </CardHeader>
           <CardBody className="p-0">
             {r.byCategory.length === 0 ? (
-              <p className="px-5 py-8 text-center text-xs text-slate-400">لا توجد بيانات.</p>
+              <div className="py-10 flex flex-col items-center gap-2">
+                <BarChart3 className="h-8 w-8 text-slate-200" />
+                <p className="text-xs text-slate-400">لا توجد بيانات</p>
+              </div>
             ) : (
               <ul className="divide-y divide-hairline">
                 {r.byCategory.slice(0, 5).map((c, i) => (
-                  <li key={c.categoryId} className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/20 transition-colors">
-                    <span className="w-5 h-5 rounded-full bg-surface-muted/80 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0 tabular-nums">
-                      {i + 1}
-                    </span>
-                    <span className="flex-1 text-sm text-slate-700">{tx(c.categoryName)}</span>
-                    <div className="flex items-center gap-3 text-xs tabular-nums">
-                      <span className="text-slate-500">{num(c.count)} طلب</span>
-                      {c.overdueCount > 0 && (
-                        <span className="font-medium text-danger-600">{num(c.overdueCount)} متأخر</span>
-                      )}
+                  <li key={c.categoryId} className="px-5 py-3 hover:bg-brand-50/20 transition-colors">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="w-6 h-6 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-600 shrink-0 tabular-nums">
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 text-sm font-medium text-slate-700 truncate">
+                        {tx(c.categoryName)}
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-surface-muted text-slate-500 text-[10px] font-semibold tabular-nums">
+                          {num(c.count)} طلب
+                        </span>
+                        {c.overdueCount > 0 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-danger-50 text-danger-600 text-[10px] font-semibold tabular-nums">
+                            {num(c.overdueCount)} متأخر
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Progress bar — dir=ltr so fill grows left-to-right universally */}
+                    <div className="ms-9 h-0.5 bg-surface-muted rounded-full overflow-hidden" dir="ltr">
+                      <div
+                        className="h-full bg-brand-500/25 rounded-full"
+                        style={{ width: `${Math.round((c.count / maxCategoryCount) * 100)}%` }}
+                      />
                     </div>
                   </li>
                 ))}
@@ -102,30 +129,51 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
         {/* Supervisor workload */}
         <Card>
           <CardHeader>
-            <CardTitle>الأعباء على مشرفي الصيانة</CardTitle>
+            <div className="flex items-center gap-2">
+              <Users2 className="h-4 w-4 text-brand-500 shrink-0" />
+              <CardTitle>الأعباء على مشرفي الصيانة</CardTitle>
+            </div>
             {r.byAssignee.length > 0 && (
               <span className="text-xs text-slate-400 tabular-nums">{r.byAssignee.length} مشرف</span>
             )}
           </CardHeader>
           <CardBody className="p-0">
             {r.byAssignee.length === 0 ? (
-              <p className="px-5 py-8 text-center text-xs text-slate-400">لا توجد طلبات مُسندة.</p>
+              <div className="py-10 flex flex-col items-center gap-2">
+                <Users2 className="h-8 w-8 text-slate-200" />
+                <p className="text-xs text-slate-400">لا توجد طلبات مُسندة</p>
+              </div>
             ) : (
               <ul className="divide-y divide-hairline">
                 {r.byAssignee.slice(0, 5).map((a, i) => (
-                  <li key={a.userId} className="flex items-center gap-3 px-5 py-3 hover:bg-brand-50/20 transition-colors">
-                    <span className="w-5 h-5 rounded-full bg-surface-muted/80 flex items-center justify-center text-[10px] font-bold text-slate-500 shrink-0 tabular-nums">
-                      {i + 1}
-                    </span>
-                    <span className="flex-1 text-sm text-slate-700">{a.name}</span>
-                    <div className="flex items-center gap-3 text-xs tabular-nums">
-                      <span className="text-slate-500">{num(a.count)} طلب</span>
-                      {a.inProgressCount > 0 && (
-                        <span className="text-info-600">{num(a.inProgressCount)} جارٍ</span>
-                      )}
-                      {a.overdueCount > 0 && (
-                        <span className="font-medium text-danger-600">{num(a.overdueCount)} متأخر</span>
-                      )}
+                  <li key={a.userId} className="px-5 py-3 hover:bg-brand-50/20 transition-colors">
+                    <div className="flex items-center gap-3 mb-1.5">
+                      <span className="w-6 h-6 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-600 shrink-0 tabular-nums">
+                        {i + 1}
+                      </span>
+                      <span className="flex-1 text-sm font-medium text-slate-700 truncate">{a.name}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-surface-muted text-slate-500 text-[10px] font-semibold tabular-nums">
+                          {num(a.count)} طلب
+                        </span>
+                        {a.inProgressCount > 0 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-info-50 text-info-600 text-[10px] font-semibold tabular-nums">
+                            {num(a.inProgressCount)} جارٍ
+                          </span>
+                        )}
+                        {a.overdueCount > 0 && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-danger-50 text-danger-600 text-[10px] font-semibold tabular-nums">
+                            {num(a.overdueCount)} متأخر
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {/* Progress bar — dir=ltr so fill grows left-to-right universally */}
+                    <div className="ms-9 h-0.5 bg-surface-muted rounded-full overflow-hidden" dir="ltr">
+                      <div
+                        className="h-full bg-brand-500/25 rounded-full"
+                        style={{ width: `${Math.round((a.count / maxAssigneeCount) * 100)}%` }}
+                      />
                     </div>
                   </li>
                 ))}
