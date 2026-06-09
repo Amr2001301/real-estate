@@ -11,6 +11,7 @@ import {
   Plus,
   Undo2,
   RotateCcw,
+  Eye,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged } from '@/lib/types';
@@ -19,6 +20,7 @@ import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
+import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -55,7 +57,7 @@ const SOURCE_LABEL: Record<EntrySource, string> = {
 };
 const SOURCE_CLS: Record<EntrySource, string> = {
   MANUAL: 'bg-slate-100 text-slate-600',
-  CONTRACT_AUTO: 'bg-info-100 text-info-700',
+  CONTRACT_AUTO: 'bg-info-50 text-info-700',
 };
 interface SalesUser {
   id: string;
@@ -63,8 +65,6 @@ interface SalesUser {
   role?: 'SALES' | 'SALES_MANAGER';
 }
 
-// Sales actors include managers acting as reps; suffix the role so the two are
-// distinguishable in the dropdown.
 function salesActorLabel(u: SalesUser): string {
   return u.role === 'SALES_MANAGER' ? `${u.fullName} — مدير مبيعات` : `${u.fullName} — مبيعات`;
 }
@@ -75,9 +75,9 @@ const STATUS_LABEL: Record<EntryStatus, string> = {
   PAID: 'مدفوع',
 };
 const STATUS_CLS: Record<EntryStatus, string> = {
-  PENDING: 'bg-amber-100 text-amber-700',
-  APPROVED: 'bg-info-100 text-info-700',
-  PAID: 'bg-success-100 text-success-700',
+  PENDING: 'bg-warning-50 text-warning-700',
+  APPROVED: 'bg-info-50 text-info-700',
+  PAID: 'bg-success-50 text-success-700',
 };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -90,9 +90,6 @@ function buildEntriesUrl(sp: Record<string, string | undefined>): string {
   return `/bonus-entries${qs ? `?${qs}` : ''}`;
 }
 
-/** Redirect back to the page (preserving filters) with an error banner.
- *  Approve/pay are strict-permission routes — a 403 surfaces here instead of
- *  crashing the server action. */
 function redirectBack(formData: FormData, err?: string): never {
   const base = String(formData.get('returnTo') || '/dashboard/bonus');
   if (!err) redirect(base);
@@ -100,7 +97,7 @@ function redirectBack(formData: FormData, err?: string): never {
   redirect(`${base}${sep}err=${encodeURIComponent(err)}`);
 }
 
-// ── Server actions ───────────────────────────────────────────────────────────
+// ── Server actions ─────────────────────────────────────────────────────────
 async function createRuleAction(formData: FormData) {
   'use server';
   const res = await safe(
@@ -114,8 +111,6 @@ async function createRuleAction(formData: FormData) {
   revalidatePath('/dashboard/bonus');
 }
 
-// Toggle a single boolean field on a rule. `field` is bound server-side (never
-// from the client), so only active / autoApplyOnSignedContract can be flipped.
 async function toggleRuleAction(
   ruleId: string,
   field: 'active' | 'autoApplyOnSignedContract',
@@ -148,10 +143,6 @@ async function entryTransitionAction(
   formData: FormData,
 ) {
   'use server';
-  // Each transition has its own backend route:
-  //   approve → POST /bonus-entries/:id/approve  (strict bonus:entries:approve)
-  //   pay     → POST /bonus-entries/:id/pay      (strict bonus:entries:pay)
-  //   revert  → PATCH /bonus-entries/:id         (bonus:entries:approve)
   const res =
     kind === 'approve'
       ? await safe(api.post(`/bonus-entries/${id}/approve`, {}))
@@ -162,7 +153,7 @@ async function entryTransitionAction(
   revalidatePath('/dashboard/bonus');
 }
 
-// ── Page ─────────────────────────────────────────────────────────────────────
+// ── Page ───────────────────────────────────────────────────────────────────
 export default async function BonusPage({
   searchParams,
 }: {
@@ -177,24 +168,18 @@ export default async function BonusPage({
   ]);
 
   const rules = rulesRes.data ?? [];
-  // Active rules eligible for auto sales-commission generation. The generator
-  // requires exactly one; the banner below reflects zero / one / many.
   const activeAutoRules = rules.filter((r) => r.active && r.autoApplyOnSignedContract);
   const entries = Array.isArray(entriesRes.data)
     ? entriesRes.data
     : (entriesRes.data?.data ?? []);
   const salesUsers = salesRes.data?.data ?? [];
 
-  // KPIs computed over the filtered result set.
   const sumByStatus = (s: EntryStatus) =>
-    entries
-      .filter((e) => e.status === s)
-      .reduce((acc, e) => acc + Number(e.amount || 0), 0);
+    entries.filter((e) => e.status === s).reduce((acc, e) => acc + Number(e.amount || 0), 0);
   const pendingTotal = sumByStatus('PENDING');
   const approvedTotal = sumByStatus('APPROVED');
   const paidTotal = sumByStatus('PAID');
 
-  // returnTo preserves active filters across the action round-trip.
   const returnTo = (() => {
     const p = new URLSearchParams();
     if (sp.salesId) p.set('salesId', sp.salesId);
@@ -210,7 +195,7 @@ export default async function BonusPage({
     <div className="space-y-5">
       <PageHeader
         title="عمولات ومكافآت المبيعات"
-        description="إدارة يدوية لمستحقات العمولات والمكافآت (الإصدار الأول من نظام التعويضات). تُنشأ المستحقات يدوياً ثم تُعتمد وتُدفع."
+        description="إدارة يدوية لمستحقات العمولات والمكافآت. تُنشأ المستحقات يدوياً ثم تُعتمد وتُدفع."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'العمولات' },
@@ -225,95 +210,58 @@ export default async function BonusPage({
         }
       />
 
+      {/* Error banner */}
       {sp.err && (
-        <div className="rounded-2xl bg-warning-50 text-warning-700 p-4 text-sm flex items-start gap-3 border border-warning-100">
+        <div className="flex items-start gap-3 rounded-2xl bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">تعذّر تنفيذ العملية</p>
-            <p className="text-xs mt-0.5 text-warning-700/80">{sp.err}</p>
-            <p className="text-xs mt-1 text-warning-700/80">
-              إذا كانت العملية تتطلّب صلاحية اعتماد أو دفع، اطلب منحها من صفحة الصلاحيات.
-            </p>
+            <p className="text-xs mt-0.5 opacity-80">{sp.err}</p>
           </div>
         </div>
       )}
 
-      {/* ── KPI cards ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <PageKpiCard
-          label="إجمالي المعلق"
-          value={formatCurrency(pendingTotal)}
-          icon={<Clock />}
-          tone="warning"
-          compact
-        />
-        <PageKpiCard
-          label="إجمالي المعتمد"
-          value={formatCurrency(approvedTotal)}
-          icon={<CheckCircle2 />}
-          tone="info"
-          compact
-        />
-        <PageKpiCard
-          label="إجمالي المدفوع"
-          value={formatCurrency(paidTotal)}
-          icon={<Banknote />}
-          tone="success"
-          compact
-        />
-        <PageKpiCard
-          label="عدد المستحقات"
-          value={entries.length.toLocaleString('ar-EG')}
-          icon={<Hash />}
-          tone="brand"
-        />
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <PageKpiCard label="إجمالي المعلق" value={formatCurrency(pendingTotal)} icon={<Clock />} tone="warning" />
+        <PageKpiCard label="إجمالي المعتمد" value={formatCurrency(approvedTotal)} icon={<CheckCircle2 />} tone="info" />
+        <PageKpiCard label="إجمالي المدفوع" value={formatCurrency(paidTotal)} icon={<Banknote />} tone="success" />
+        <PageKpiCard label="عدد المستحقات" value={entries.length.toLocaleString('ar-EG')} icon={<Hash />} tone="brand" />
       </div>
 
-      {/* ── Filters ────────────────────────────────────────────────────────── */}
-      <form method="get" action="/dashboard/bonus">
-        <div className="flex flex-wrap items-end gap-3 bg-white rounded-xl border border-hairline shadow-xs px-4 py-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="salesId" className="text-[11px] font-medium text-slate-400">المندوب</label>
-            <Select id="salesId" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-44">
-              <option value="">كل المندوبين</option>
-              {salesUsers.map((u) => (
-                <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="period" className="text-[11px] font-medium text-slate-400">شهر الاستحقاق</label>
-            <Input id="period" name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40" />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="status" className="text-[11px] font-medium text-slate-400">الحالة</label>
-            <Select id="status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36">
-              <option value="">الكل</option>
-              <option value="PENDING">معلق</option>
-              <option value="APPROVED">معتمد</option>
-              <option value="PAID">مدفوع</option>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
-            {hasFilters && (
-              <a href="/dashboard/bonus">
-                <Button type="button" variant="secondary" size="sm">مسح الفلاتر</Button>
-              </a>
-            )}
-          </div>
+      {/* Filters */}
+      <form method="get" action="/dashboard/bonus" className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
+        <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-48 shrink-0">
+          <option value="">كل المندوبين</option>
+          {salesUsers.map((u) => (
+            <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
+          ))}
+        </Select>
+        <Input name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40 shrink-0" />
+        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-32 shrink-0">
+          <option value="">كل الحالات</option>
+          <option value="PENDING">معلق</option>
+          <option value="APPROVED">معتمد</option>
+          <option value="PAID">مدفوع</option>
+        </Select>
+        <div className="flex items-center gap-1.5 ms-auto">
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          {hasFilters && (
+            <Link href="/dashboard/bonus">
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
+            </Link>
+          )}
         </div>
       </form>
 
-      {/* ── Create manual entry ────────────────────────────────────────────── */}
+      {/* Create manual entry */}
       <Card>
-        <CardHeader className="px-5 py-3.5">
+        <CardHeader>
           <div className="flex items-center gap-2">
-            <Plus className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle className="text-sm">إضافة مستحق يدوي</CardTitle>
+            <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
+              <Plus className="h-3 w-3 text-brand-700" />
+            </div>
+            <CardTitle>إضافة مستحق يدوي</CardTitle>
           </div>
         </CardHeader>
         <CardBody>
@@ -322,32 +270,20 @@ export default async function BonusPage({
               يلزم وجود قاعدة عمولة ومندوب مبيعات واحد على الأقل قبل إنشاء مستحق.
             </p>
           ) : (
-            <form action={createEntryAction} className="flex flex-wrap items-end gap-3">
+            <form action={createEntryAction} className="flex flex-wrap items-center gap-2">
               <input type="hidden" name="returnTo" value={returnTo} />
-              <div className="flex flex-col gap-1">
-                <label htmlFor="entry-salesId" className="text-[11px] font-medium text-slate-400">المندوب</label>
-                <Select id="entry-salesId" name="salesId" inputSize="sm" required className="w-44">
-                  {salesUsers.map((u) => (
-                    <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="entry-ruleId" className="text-[11px] font-medium text-slate-400">القاعدة</label>
-                <Select id="entry-ruleId" name="ruleId" inputSize="sm" required className="w-44">
-                  {rules.map((r) => (
-                    <option key={r.id} value={r.id}>{r.name}</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="entry-amount" className="text-[11px] font-medium text-slate-400">المبلغ</label>
-                <Input id="entry-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-32" placeholder="0" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label htmlFor="entry-period" className="text-[11px] font-medium text-slate-400">شهر الاستحقاق</label>
-                <Input id="entry-period" name="period" type="month" required inputSize="sm" className="w-40" />
-              </div>
+              <Select name="salesId" inputSize="sm" required className="w-48 shrink-0" aria-label="المندوب">
+                {salesUsers.map((u) => (
+                  <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
+                ))}
+              </Select>
+              <Select name="ruleId" inputSize="sm" required className="w-40 shrink-0" aria-label="القاعدة">
+                {rules.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </Select>
+              <Input name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-32 shrink-0" placeholder="المبلغ" aria-label="المبلغ" />
+              <Input name="period" type="month" required inputSize="sm" className="w-40 shrink-0" aria-label="شهر الاستحقاق" />
               <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
                 إضافة المستحق
               </Button>
@@ -356,56 +292,61 @@ export default async function BonusPage({
         </CardBody>
       </Card>
 
-      {/* ── Rules ──────────────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
+      {/* Commission rules */}
+      <Card className="overflow-hidden">
+        <CardHeader>
           <div className="flex items-center gap-2">
             <BadgePercent className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle className="text-sm">قواعد العمولة</CardTitle>
+            <CardTitle>قواعد العمولة</CardTitle>
           </div>
+          <span className="text-xs text-slate-400 tabular-nums">{rules.length} قاعدة</span>
         </CardHeader>
-        <CardBody className="space-y-4">
-          {/* Auto-commission status banner */}
-          {activeAutoRules.length === 0 ? (
-            <div className="rounded-lg bg-amber-50 text-amber-700 px-3 py-2 text-xs border border-amber-100">
-              لن يتم إنشاء عمولات تلقائية عند توقيع العقود حتى يتم تفعيل قاعدة واحدة.
-            </div>
-          ) : activeAutoRules.length === 1 ? (
-            <div className="rounded-lg bg-success-50 text-success-700 px-3 py-2 text-xs border border-success-100">
-              العمولات التلقائية مفعّلة باستخدام قاعدة: {activeAutoRules[0]!.name}
-            </div>
-          ) : (
-            <div className="rounded-lg bg-danger-50 text-danger-700 px-3 py-2 text-xs border border-danger-100">
-              يوجد أكثر من قاعدة تلقائية مفعّلة. لن يتم إنشاء عمولات تلقائية حتى يتم إصلاح الإعداد.
-            </div>
-          )}
 
-          <ul className="text-sm divide-y divide-hairline">
+        {/* Auto-commission status banner */}
+        <div className={cn(
+          'mx-5 mt-4 mb-1 rounded-xl px-3 py-2.5 text-xs border flex items-center gap-2',
+          activeAutoRules.length === 0
+            ? 'bg-warning-50 border-warning-100 text-warning-700'
+            : activeAutoRules.length === 1
+              ? 'bg-success-50 border-success-100 text-success-700'
+              : 'bg-danger-50 border-danger-100 text-danger-700',
+        )}>
+          <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+          {activeAutoRules.length === 0
+            ? 'لن يتم إنشاء عمولات تلقائية عند توقيع العقود حتى يتم تفعيل قاعدة واحدة.'
+            : activeAutoRules.length === 1
+              ? `العمولات التلقائية مفعّلة باستخدام قاعدة: ${activeAutoRules[0]!.name}`
+              : 'يوجد أكثر من قاعدة تلقائية مفعّلة. لن يتم إنشاء عمولات تلقائية حتى يتم إصلاح الإعداد.'}
+        </div>
+
+        {/* Rules list */}
+        {rules.length > 0 && (
+          <ul className="px-5 py-3 divide-y divide-hairline">
             {rules.map((r) => {
               const isAmbiguous = activeAutoRules.length > 1 && r.active && r.autoApplyOnSignedContract;
               return (
                 <li
                   key={r.id}
                   className={cn(
-                    'flex flex-wrap items-center justify-between gap-2 py-2',
-                    isAmbiguous && 'bg-danger-50/50 -mx-1 px-1 rounded',
+                    'flex flex-wrap items-center justify-between gap-3 py-3',
+                    isAmbiguous && 'bg-danger-50/40 -mx-2 px-2 rounded-lg',
                   )}
                 >
-                  <span className="inline-flex items-center gap-2 min-w-0">
-                    <span className="text-slate-700 truncate">{r.name}</span>
-                    <span className="text-slate-400 tabular-nums shrink-0">{r.percentage}%</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm font-medium text-slate-800 truncate">{r.name}</span>
+                    <span className="text-xs text-slate-400 tabular-nums shrink-0 font-mono">{r.percentage}%</span>
                     {!r.active && (
-                      <span className="inline-block shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium leading-tight bg-slate-100 text-slate-500">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-500 shrink-0">
                         غير نشطة
                       </span>
                     )}
                     {r.autoApplyOnSignedContract && (
-                      <span className="inline-block shrink-0 px-2 py-0.5 rounded-full text-[10px] font-medium leading-tight bg-info-100 text-info-700">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-info-50 text-info-700 shrink-0">
                         تلقائي عند التوقيع
                       </span>
                     )}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 shrink-0">
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <form action={toggleRuleAction.bind(null, r.id, 'active', !r.active)}>
                       <input type="hidden" name="returnTo" value={returnTo} />
                       <Button type="submit" variant="outline" size="sm">
@@ -414,96 +355,121 @@ export default async function BonusPage({
                     </form>
                     <form action={toggleRuleAction.bind(null, r.id, 'autoApplyOnSignedContract', !r.autoApplyOnSignedContract)}>
                       <input type="hidden" name="returnTo" value={returnTo} />
-                      <Button type="submit" variant={r.autoApplyOnSignedContract ? 'secondary' : 'primary'} size="sm">
+                      <Button type="submit" variant={r.autoApplyOnSignedContract ? 'secondary' : 'outline'} size="sm">
                         {r.autoApplyOnSignedContract ? 'إلغاء التلقائي' : 'تفعيل التلقائي'}
                       </Button>
                     </form>
-                  </span>
+                  </div>
                 </li>
               );
             })}
-            {rules.length === 0 && <li className="text-xs text-slate-400 py-2">لا توجد قواعد</li>}
           </ul>
+        )}
+        {rules.length === 0 && (
+          <p className="px-5 py-4 text-xs text-slate-400">لا توجد قواعد بعد.</p>
+        )}
 
-          <form action={createRuleAction} className="space-y-2 border-t border-hairline pt-4">
+        {/* Add rule form footer */}
+        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-3.5 space-y-2.5">
+          <p className="text-xs font-semibold text-slate-600">إضافة قاعدة جديدة</p>
+          <form action={createRuleAction}>
+            <input type="hidden" name="returnTo" value={returnTo} />
             <div className="flex flex-wrap items-center gap-2">
-              <input type="hidden" name="returnTo" value={returnTo} />
               <Input name="name" required placeholder="اسم القاعدة" inputSize="sm" className="flex-1 min-w-[160px]" />
               <Input name="percentage" type="number" step="any" min={0} required placeholder="النسبة %" inputSize="sm" className="w-28" />
               <Button type="submit" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                إضافة قاعدة
+                إضافة
               </Button>
             </div>
-            <label className="flex items-center gap-2 text-xs text-slate-600">
-              <input type="checkbox" name="autoApplyOnSignedContract" className="rounded border-gray-300" />
-              استخدام تلقائي عند توقيع العقد
+            <label className="flex items-center gap-2 text-xs text-slate-600 mt-2 cursor-pointer">
+              <input type="checkbox" name="autoApplyOnSignedContract" className="rounded border-hairline" />
+              تطبيق تلقائي عند توقيع العقد
             </label>
           </form>
-
           <p className="text-[11px] text-slate-400">
-            يجب أن تكون هناك قاعدة واحدة نشطة فقط مفعّلة للتطبيق التلقائي عند توقيع العقد. تفعيل التلقائي على قاعدة يُلغيه تلقائياً عن باقي القواعد.
+            يجب أن تكون هناك قاعدة واحدة فقط مفعّلة للتطبيق التلقائي. تغيير القاعدة لا يؤثر على المستحقات المنشأة مسبقاً.
           </p>
-          <p className="text-[11px] text-slate-400">
-            تغيير القاعدة لا يغيّر المستحقات التي تم إنشاؤها سابقاً.
-          </p>
-        </CardBody>
+        </div>
       </Card>
 
-      {/* ── Entries table ──────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
-          <CardTitle className="text-sm">سجلّات المستحقات</CardTitle>
+      {/* Entries table */}
+      <Card className="overflow-hidden">
+        <CardHeader>
+          <CardTitle>سجلّات المستحقات</CardTitle>
           <span className="text-xs text-slate-400 tabular-nums">
             {entries.length.toLocaleString('ar-EG')} مستحق
           </span>
         </CardHeader>
         <CardBody className="p-0">
           {entriesRes.error ? (
-            <div className="m-4 rounded-lg bg-red-50 text-red-700 p-3 text-sm">{entriesRes.error}</div>
+            <div className="flex items-start gap-2 m-5 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>{entriesRes.error}</p>
+            </div>
           ) : entries.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-center">
+            <div className="flex flex-col items-center gap-2 py-14 text-center">
               <BadgePercent className="h-8 w-8 text-slate-200" />
               <p className="text-sm text-slate-400">لا توجد مستحقات تطابق الفلاتر المختارة</p>
+              {hasFilters && (
+                <Link href="/dashboard/bonus" className="mt-1 text-xs text-brand-700 hover:underline">
+                  مسح الفلاتر
+                </Link>
+              )}
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[760px]">
-                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+              <table className="w-full text-sm min-w-[780px]">
+                <thead className="bg-surface-muted/50 text-xs font-medium text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-4 py-2.5 text-right font-medium">المندوب</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الفترة</th>
-                    <th className="px-4 py-2.5 text-right font-medium">القاعدة</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المصدر</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">المبلغ</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الحالة</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">تاريخ الدفع</th>
-                    <th className="px-4 py-2.5 text-right font-medium whitespace-nowrap">الإجراءات</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المندوب</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الفترة</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">القاعدة</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المصدر</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المبلغ</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الحالة</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">تاريخ الدفع</th>
+                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الإجراءات</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-hairline">
+                <tbody>
                   {entries.map((e) => (
-                    <tr key={e.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-2.5 font-medium text-slate-800">{e.sales?.fullName ?? '—'}</td>
-                      <td className="px-4 py-2.5 text-slate-500 tabular-nums whitespace-nowrap">{e.period}</td>
-                      <td className="px-4 py-2.5 text-slate-600">{e.rule?.name ?? '—'}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', SOURCE_CLS[e.source ?? 'MANUAL'])}>
-                          {SOURCE_LABEL[e.source ?? 'MANUAL']}
-                        </span>
-                        {e.contractId && (
-                          <Link href={`/dashboard/contracts/${e.contractId}` as never} className="ms-2 text-[11px] text-brand-700 hover:underline">
-                            العقد
-                          </Link>
-                        )}
+                    <tr key={e.id} className="group border-t border-hairline hover:bg-brand-50/20 transition-colors">
+                      <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap">
+                        {e.sales?.fullName ?? '—'}
                       </td>
-                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">{formatCurrency(e.amount)}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', STATUS_CLS[e.status])}>
+                      <td className="px-5 py-3 text-slate-500 tabular-nums whitespace-nowrap font-mono text-xs">
+                        {e.period}
+                      </td>
+                      <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
+                        {e.rule?.name ?? '—'}
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium', SOURCE_CLS[e.source ?? 'MANUAL'])}>
+                            {SOURCE_LABEL[e.source ?? 'MANUAL']}
+                          </span>
+                          {e.contractId && (
+                            <Link
+                              href={`/dashboard/contracts/${e.contractId}` as never}
+                              className="text-[11px] text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
+                            >
+                              عرض العقد
+                            </Link>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 font-semibold tabular-nums whitespace-nowrap text-slate-800">
+                        {formatCurrency(e.amount)}
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium', STATUS_CLS[e.status])}>
                           {STATUS_LABEL[e.status]}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-slate-500 tabular-nums whitespace-nowrap">{formatDate(e.paidAt)}</td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="px-5 py-3 text-xs text-slate-500 tabular-nums whitespace-nowrap">
+                        {formatDate(e.paidAt)}
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           {e.status === 'PENDING' && (
                             <form action={entryTransitionAction.bind(null, e.id, 'approve')}>
