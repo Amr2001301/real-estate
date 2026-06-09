@@ -220,21 +220,24 @@ export default async function BonusPage({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <PageKpiCard
           label="إجمالي المعلق"
-          value={formatCurrency(pendingTotal)}
+          value={pendingTotal === 0 ? '0 ر.س.' : formatCurrency(pendingTotal)}
           icon={<Clock className="h-5 w-5" />}
           tone="warning"
+          compact
         />
         <PageKpiCard
           label="إجمالي المعتمد"
-          value={formatCurrency(approvedTotal)}
+          value={approvedTotal === 0 ? '0 ر.س.' : formatCurrency(approvedTotal)}
           icon={<CheckCircle2 className="h-5 w-5" />}
           tone="info"
+          compact
         />
         <PageKpiCard
           label="إجمالي المدفوع"
-          value={formatCurrency(paidTotal)}
+          value={paidTotal === 0 ? '0 ر.س.' : formatCurrency(paidTotal)}
           icon={<Banknote className="h-5 w-5" />}
           tone="success"
+          compact
         />
         <PageKpiCard
           label="عدد المستحقات"

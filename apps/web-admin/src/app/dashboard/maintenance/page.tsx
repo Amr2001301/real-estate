@@ -236,17 +236,17 @@ export default async function MaintenancePage({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[1020px]">
-                <thead className="bg-surface-muted/50 text-xs font-medium text-slate-500 border-b border-hairline">
+                <thead className="bg-surface-muted/50 text-xs font-semibold text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">العميل</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الوحدة</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">التصنيف</th>
-                    <th className="px-5 py-3 text-start font-semibold">الوصف</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الأولوية</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">المراجعة</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الحالة</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">الموعد المستهدف</th>
-                    <th className="px-5 py-3 text-start font-semibold whitespace-nowrap">التاريخ</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">العميل</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الوحدة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">التصنيف</th>
+                    <th className="px-5 py-3 text-start">الوصف</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الأولوية</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">المراجعة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الحالة</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">الموعد المستهدف</th>
+                    <th className="px-5 py-3 text-start whitespace-nowrap">التاريخ</th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
@@ -328,7 +328,7 @@ export default async function MaintenancePage({
       <Card className="overflow-hidden">
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-slate-400" />
+            <Settings2 className="h-4 w-4 text-brand-500 shrink-0" />
             <CardTitle>تصنيفات الصيانة</CardTitle>
           </div>
           <span className="text-xs text-slate-400 tabular-nums">{cats.length} تصنيف</span>
