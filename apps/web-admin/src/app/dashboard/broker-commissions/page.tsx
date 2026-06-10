@@ -94,9 +94,9 @@ export default async function AdminBrokerCommissionsPage({
       <form
         method="get"
         action="/dashboard/broker-commissions"
-        className="rounded-xl border border-hairline bg-white p-3 shadow-xs grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs"
       >
-        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
+        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
           <option value="">كل الوسطاء</option>
           {brokers.map((b) => (
             <option key={b.id} value={b.id}>
@@ -104,14 +104,14 @@ export default async function AdminBrokerCommissionsPage({
             </option>
           ))}
         </Select>
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
           <option value="">كل الحالات</option>
           <option value="PENDING">قيد المراجعة</option>
           <option value="APPROVED">موافق عليها</option>
           <option value="REJECTED">مرفوضة</option>
           <option value="CANCELLED">ملغاة</option>
         </Select>
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
           <option value="">كل المشاريع</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -124,14 +124,16 @@ export default async function AdminBrokerCommissionsPage({
           inputSize="sm"
           type="date"
           defaultValue={sp.from ?? ''}
+          className="w-36 shrink-0"
         />
         <Input
           name="to"
           inputSize="sm"
           type="date"
           defaultValue={sp.to ?? ''}
+          className="w-36 shrink-0"
         />
-        <div className="col-span-2 md:col-span-1 flex items-center gap-1.5 justify-end ms-auto">
+        <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">
             تصفية
           </Button>

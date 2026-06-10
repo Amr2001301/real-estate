@@ -78,15 +78,15 @@ export default async function AdminBrokerPayoutsPage({
       <form
         method="get"
         action="/dashboard/broker-payouts"
-        className="rounded-xl border border-hairline bg-white p-3 shadow-xs grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs"
       >
-        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
+        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
           <option value="">كل الوسطاء</option>
           {brokers.map((b) => (
             <option key={b.id} value={b.id}>{b.companyName}</option>
           ))}
         </Select>
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
           <option value="">كل الحالات</option>
           <option value="DRAFT">مسودة</option>
           <option value="APPROVED">موافق عليها</option>
@@ -100,10 +100,11 @@ export default async function AdminBrokerPayoutsPage({
           placeholder="الفترة (مثال: 2026-05)"
           dir="ltr"
           defaultValue={sp.period ?? ''}
+          className="w-44 shrink-0"
         />
-        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
-        <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
-        <div className="col-span-2 md:col-span-1 flex items-center gap-1.5 justify-end ms-auto">
+        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-36 shrink-0" />
+        <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-36 shrink-0" />
+        <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {Object.values(sp).some(Boolean) && (
             <Link href="/dashboard/broker-payouts">

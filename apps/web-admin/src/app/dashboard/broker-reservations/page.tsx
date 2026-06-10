@@ -91,9 +91,9 @@ export default async function AdminBrokerReservationsPage({
       <form
         method="get"
         action="/dashboard/broker-reservations"
-        className="rounded-xl border border-hairline bg-white p-3 shadow-xs grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-2"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs"
       >
-        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
+        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
           <option value="">كل الوسطاء</option>
           {brokers.map((b) => (
             <option key={b.id} value={b.id}>
@@ -101,7 +101,7 @@ export default async function AdminBrokerReservationsPage({
             </option>
           ))}
         </Select>
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
+        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44 shrink-0">
           <option value="">كل الحالات</option>
           <option value="PENDING">قيد المراجعة</option>
           <option value="APPROVED">تمت الموافقة</option>
@@ -110,7 +110,7 @@ export default async function AdminBrokerReservationsPage({
           <option value="EXPIRED">منتهي</option>
           <option value="CONVERTED">محوّل إلى عقد</option>
         </Select>
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
           <option value="">كل المشاريع</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -118,7 +118,7 @@ export default async function AdminBrokerReservationsPage({
             </option>
           ))}
         </Select>
-        <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+        <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-44 shrink-0">
           <option value="">كل المندوبين</option>
           {salesUsers.map((u) => (
             <option key={u.id} value={u.id}>
@@ -126,7 +126,7 @@ export default async function AdminBrokerReservationsPage({
             </option>
           ))}
         </Select>
-        <div className="col-span-2 md:col-span-1 flex items-center gap-1.5 justify-end ms-auto">
+        <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">
             تصفية
           </Button>

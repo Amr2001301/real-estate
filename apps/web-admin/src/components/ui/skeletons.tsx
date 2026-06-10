@@ -366,6 +366,209 @@ export function BonusPageSkeleton() {
   );
 }
 
+// ── Broker section skeletons ────────────────────────────────────────────────
+
+/** Full skeleton for /dashboard/brokers — header + KPI cards + insight strip + filter + table. */
+export function BrokersPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Page header */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-52" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-32" />
+            <Skeleton className="h-4 w-[440px] max-w-full" />
+          </div>
+          <Skeleton className="h-10 w-36 rounded-xl shrink-0" />
+        </div>
+      </header>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
+            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-2 w-20" />
+                <Skeleton className="h-8 w-10" />
+              </div>
+              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Insight strip */}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs">
+        {[28, 36, 40, 20].map((w, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Skeleton className="h-3.5 w-3.5 rounded-full shrink-0" />
+            <Skeleton className={`h-3 w-${w === 28 ? '24' : w === 36 ? '28' : w === 40 ? '32' : '10'}`} />
+            <Skeleton className="h-4 w-10" />
+          </div>
+        ))}
+      </div>
+
+      {/* Filter bar */}
+      <FilterBarSkeleton fields={3} />
+
+      {/* Table — 8 cols (company+code merged, status, city, employees, projects, units, date, actions) */}
+      <TableCardSkeleton cols={8} rows={7} />
+    </div>
+  );
+}
+
+/**
+ * Generic broker list-page skeleton (leads / reservations / contracts /
+ * commissions / payouts) — compact header + filter + table.
+ */
+export function BrokerListPageSkeleton({
+  cols = 8,
+  filterFields = 4,
+  hasAction = false,
+}: {
+  cols?: number;
+  filterFields?: number;
+  hasAction?: boolean;
+}) {
+  return (
+    <div className="space-y-5">
+      {/* Page header */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-60" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-[420px] max-w-full" />
+          </div>
+          {hasAction && <Skeleton className="h-10 w-44 rounded-xl shrink-0" />}
+        </div>
+      </header>
+
+      {/* Filter bar */}
+      <FilterBarSkeleton fields={filterFields} />
+
+      {/* Table */}
+      <TableCardSkeleton cols={cols} rows={8} />
+    </div>
+  );
+}
+
+/** Full skeleton for /dashboard/broker-leads — header + status summary strip + filter + table. */
+export function BrokerLeadsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Page header */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-64" />
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-[400px] max-w-full" />
+        </div>
+      </header>
+
+      {/* Status summary strip */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        {/* Total — larger prominent number */}
+        <div className="flex items-baseline gap-1.5 shrink-0">
+          <Skeleton className="h-6 w-8" />
+          <Skeleton className="h-2.5 w-8" />
+        </div>
+        <Skeleton className="w-px h-5" />
+        {/* Status pill chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className={`h-6 rounded-full ${['w-28', 'w-24', 'w-16', 'w-16'][i]}`} />
+          ))}
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <FilterBarSkeleton fields={5} />
+
+      {/* Table — 8 cols (client, broker, project, review, stage, sales, date, action) */}
+      <TableCardSkeleton cols={8} rows={8} />
+    </div>
+  );
+}
+
+/** Full skeleton for /dashboard/broker-reports — filter + 6 KPIs + funnel + rate cards + 2 tables. */
+export function BrokerReportsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Page header with two export buttons */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-52" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-40" />
+            <Skeleton className="h-4 w-[460px] max-w-full" />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Skeleton className="h-10 w-36 rounded-xl" />
+            <Skeleton className="h-10 w-40 rounded-xl" />
+          </div>
+        </div>
+      </header>
+
+      {/* Filter bar */}
+      <FilterBarSkeleton fields={5} />
+
+      {/* 6 KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
+            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
+              <div className="space-y-1.5 flex-1">
+                <Skeleton className="h-2 w-20" />
+                <Skeleton className="h-7 w-24" />
+              </div>
+              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Funnel card */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        <div className="px-5 pt-5 pb-3 flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="px-5 pb-5 space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <Skeleton className="h-3 w-20 shrink-0" />
+              <Skeleton className={cn('h-7 rounded', i === 0 ? 'w-full' : `w-${['4/5', '3/5', '3/4', '3/5', '2/5'][i - 1] ?? '1/2'}`)} />
+              <Skeleton className="h-4 w-8 shrink-0" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 4 conversion rate mini-cards */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs p-4 space-y-1.5">
+            <Skeleton className="h-2.5 w-24" />
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-2.5 w-32" />
+          </div>
+        ))}
+      </div>
+
+      {/* Top brokers table */}
+      <TableCardSkeleton cols={8} rows={5} />
+
+      {/* Projects table */}
+      <TableCardSkeleton cols={7} rows={4} />
+    </div>
+  );
+}
+
 /** Full skeleton for /dashboard/targets — matches filter, KPI cards, form, insights, table. */
 export function TargetsPageSkeleton() {
   return (

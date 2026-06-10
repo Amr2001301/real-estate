@@ -91,9 +91,9 @@ export default async function AdminBrokerContractsPage({
       <form
         method="get"
         action="/dashboard/broker-contracts"
-        className="rounded-xl border border-hairline bg-white p-3 shadow-xs grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs"
       >
-        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
+        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
           <option value="">كل الوسطاء</option>
           {brokers.map((b) => (
             <option key={b.id} value={b.id}>
@@ -101,7 +101,7 @@ export default async function AdminBrokerContractsPage({
             </option>
           ))}
         </Select>
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
           <option value="">كل المشاريع</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
@@ -109,7 +109,7 @@ export default async function AdminBrokerContractsPage({
             </option>
           ))}
         </Select>
-        <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+        <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-44 shrink-0">
           <option value="">كل المندوبين</option>
           {salesUsers.map((u) => (
             <option key={u.id} value={u.id}>
@@ -117,7 +117,7 @@ export default async function AdminBrokerContractsPage({
             </option>
           ))}
         </Select>
-        <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
+        <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-36 shrink-0">
           <option value="">كل العقود</option>
           <option value="yes">موقعة</option>
           <option value="no">قيد التوقيع</option>
@@ -127,14 +127,16 @@ export default async function AdminBrokerContractsPage({
           inputSize="sm"
           type="date"
           defaultValue={sp.dateFrom ?? ''}
+          className="w-36 shrink-0"
         />
         <Input
           name="dateTo"
           inputSize="sm"
           type="date"
           defaultValue={sp.dateTo ?? ''}
+          className="w-36 shrink-0"
         />
-        <div className="col-span-2 md:col-span-1 flex items-center gap-1.5 justify-end ms-auto">
+        <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">
             تصفية
           </Button>
@@ -221,12 +223,12 @@ export default async function AdminBrokerContractsPage({
                   </td>
                   <td className="py-3 px-4">
                     {c.signedAt ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
-                        <CheckCircle2 className="h-3 w-3" />
+                      <span className="inline-flex items-center gap-1 rounded-full bg-success-50 text-success-700 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
+                        <CheckCircle2 className="h-3 w-3 shrink-0" />
                         موقع
                       </span>
                     ) : (
-                      <span className="inline-block rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium">
+                      <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
                         قيد التوقيع
                       </span>
                     )}

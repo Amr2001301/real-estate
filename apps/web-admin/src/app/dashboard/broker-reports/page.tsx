@@ -132,28 +132,28 @@ export default async function AdminBrokerReportsPage({
       <form
         method="get"
         action="/dashboard/broker-reports"
-        className="rounded-xl border border-hairline bg-white p-3 shadow-xs grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
+        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs"
       >
-        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
+        <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
           <option value="">كل الوسطاء</option>
           {brokers.map((b) => (
             <option key={b.id} value={b.id}>{b.companyName}</option>
           ))}
         </Select>
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
           <option value="">كل المشاريع</option>
           {projectList.map((p) => (
             <option key={p.id} value={p.id}>{tx(p.name)}</option>
           ))}
         </Select>
-        <Select name="metric" inputSize="sm" defaultValue={sp.metric ?? 'salesGross'}>
+        <Select name="metric" inputSize="sm" defaultValue={sp.metric ?? 'salesGross'} className="w-52 shrink-0">
           {Object.entries(METRIC_LABEL).map(([v, l]) => (
             <option key={v} value={v}>أعلى الوسطاء: {l}</option>
           ))}
         </Select>
-        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
-        <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
-        <div className="col-span-2 md:col-span-1 flex items-center gap-1.5 justify-end ms-auto">
+        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-36 shrink-0" />
+        <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-36 shrink-0" />
+        <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {Object.values(sp).some(Boolean) && (
             <Link href="/dashboard/broker-reports">
