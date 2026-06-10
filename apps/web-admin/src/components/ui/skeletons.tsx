@@ -541,6 +541,54 @@ export function BrokerReservationsPageSkeleton() {
   );
 }
 
+/** Full skeleton for /dashboard/broker-contracts — header + action + summary strip + filter + table. */
+export function BrokerContractsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Page header with primary action */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-72" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-[440px] max-w-full" />
+          </div>
+          <Skeleton className="h-10 w-56 rounded-xl shrink-0" />
+        </div>
+      </header>
+
+      {/* Summary strip */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        <div className="flex items-baseline gap-1.5 shrink-0">
+          <Skeleton className="h-6 w-8" />
+          <Skeleton className="h-2.5 w-8" />
+        </div>
+        <Skeleton className="w-px h-5" />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Skeleton className="h-6 rounded-full w-20" />
+          <Skeleton className="h-6 rounded-full w-28" />
+        </div>
+        <Skeleton className="w-px h-5 hidden sm:block" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-32" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <Skeleton className="w-px h-5 hidden sm:block" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      </div>
+
+      {/* Filter bar — 4 selects + 2 date inputs */}
+      <FilterBarSkeleton fields={6} />
+
+      {/* Table — 10 cols (number, broker, client, unit, value, status, sales, commission, date, action) */}
+      <TableCardSkeleton cols={10} rows={8} />
+    </div>
+  );
+}
+
 /** Full skeleton for /dashboard/broker-reports — filter + 6 KPIs + funnel + rate cards + 2 tables. */
 export function BrokerReportsPageSkeleton() {
   return (
