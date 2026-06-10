@@ -681,17 +681,18 @@ export function BrokerPayoutsPageSkeleton() {
   );
 }
 
-/** Full skeleton for /dashboard/broker-reports — filter + 6 KPIs + funnel + rate cards + 2 tables. */
+/** Full skeleton for /dashboard/broker-reports — premium enterprise redesign. */
 export function BrokerReportsPageSkeleton() {
   return (
     <div className="space-y-5">
-      {/* Page header with two export buttons */}
+
+      {/* Header — title + description + 2 export buttons */}
       <header className="mb-0 space-y-3">
         <Skeleton className="h-3 w-52" />
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-2">
             <Skeleton className="h-8 w-40" />
-            <Skeleton className="h-4 w-[460px] max-w-full" />
+            <Skeleton className="h-4 w-[440px] max-w-full" />
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Skeleton className="h-10 w-36 rounded-xl" />
@@ -700,58 +701,131 @@ export function BrokerReportsPageSkeleton() {
         </div>
       </header>
 
-      {/* Filter bar */}
+      {/* Report control bar — 5 fields */}
       <FilterBarSkeleton fields={5} />
 
-      {/* 6 KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="relative bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-            <div className="absolute inset-y-0 start-0 w-0.5 bg-slate-200" />
-            <div className="ps-5 pe-4 py-3 flex items-start justify-between gap-3">
-              <div className="space-y-1.5 flex-1">
-                <Skeleton className="h-2 w-20" />
-                <Skeleton className="h-7 w-24" />
+      {/* Executive financial overview — hero card + 3 secondary cards in row */}
+      {/* Hero sales card */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        <div className="h-0.5 bg-slate-200 w-full" />
+        <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-x-8 gap-y-3">
+          <div className="space-y-2">
+            <Skeleton className="h-2.5 w-24" />
+            <Skeleton className="h-11 w-72 max-w-full" />
+            <Skeleton className="h-3 w-64 max-w-full" />
+          </div>
+          <div className="flex items-center gap-4 shrink-0">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-1 items-center">
+                <Skeleton className="h-5 w-8" />
+                <Skeleton className="h-2.5 w-14" />
               </div>
-              <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Secondary financial cards — 3-column row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4 flex items-center justify-between gap-3">
+            <div className="space-y-1.5 flex-1">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-2.5 w-28" />
+            </div>
+            <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+          </div>
+        ))}
+      </div>
+
+      {/* Pipeline summary row — 3 volume tiles */}
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-3.5 flex items-center gap-3.5">
+            <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+            <div className="space-y-1.5">
+              <Skeleton className="h-7 w-10" />
+              <Skeleton className="h-2.5 w-20" />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Funnel card */}
+      {/* Section label + Conversion Journey card */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
+          <Skeleton className="h-3.5 w-24" />
+          <div className="flex-1 h-px bg-hairline" />
+        </div>
+        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+          <div className="flex flex-col lg:flex-row">
+            {/* Stepper pane */}
+            <div className="flex-1 px-6 py-5 space-y-3.5">
+              <Skeleton className="h-3.5 w-32" />
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <Skeleton className="h-6 w-6 rounded-full shrink-0 mt-0.5" />
+                  <div className="flex-1 space-y-1.5 pb-1">
+                    <div className="flex justify-between gap-3">
+                      <Skeleton className="h-3.5 w-24" />
+                      <Skeleton className="h-4.5 w-8 shrink-0" />
+                    </div>
+                    {i > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="flex-1 h-1.5 rounded-full" />
+                        <Skeleton className="h-3 w-10 shrink-0" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Divider */}
+            <div className="h-px bg-hairline lg:h-auto lg:w-px shrink-0" aria-hidden />
+            {/* Ratios pane */}
+            <div className="lg:w-72 shrink-0 px-6 py-5">
+              <Skeleton className="h-3.5 w-36 mb-3" />
+              <div className="divide-y divide-hairline">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-3 w-28" />
+                      <Skeleton className="h-2.5 w-40" />
+                    </div>
+                    <Skeleton className="h-8 w-14 shrink-0" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Financial realization — Card with header */}
       <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-        <div className="px-5 pt-5 pb-3 flex items-center gap-2">
-          <Skeleton className="h-4 w-4 rounded" />
+        <div className="px-5 pt-4 pb-3 border-b border-hairline flex items-center gap-2">
+          <Skeleton className="h-4 w-4 rounded shrink-0" />
           <Skeleton className="h-4 w-28" />
         </div>
-        <div className="px-5 pb-5 space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="h-3 w-20 shrink-0" />
-              <Skeleton className={cn('h-7 rounded', i === 0 ? 'w-full' : `w-${['4/5', '3/5', '3/4', '3/5', '2/5'][i - 1] ?? '1/2'}`)} />
-              <Skeleton className="h-4 w-8 shrink-0" />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="bg-surface px-5 py-5 space-y-2">
+              <Skeleton className="h-2.5 w-28" />
+              <Skeleton className="h-6 w-36" />
+              <Skeleton className="h-2.5 w-32" />
             </div>
           ))}
         </div>
       </div>
 
-      {/* 4 conversion rate mini-cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs p-4 space-y-1.5">
-            <Skeleton className="h-2.5 w-24" />
-            <Skeleton className="h-8 w-20" />
-            <Skeleton className="h-2.5 w-32" />
-          </div>
-        ))}
-      </div>
+      {/* Top brokers ranking — 9 cols */}
+      <TableCardSkeleton cols={9} rows={5} />
 
-      {/* Top brokers table */}
-      <TableCardSkeleton cols={8} rows={5} />
+      {/* Project performance — 8 cols */}
+      <TableCardSkeleton cols={8} rows={4} />
 
-      {/* Projects table */}
-      <TableCardSkeleton cols={7} rows={4} />
     </div>
   );
 }
