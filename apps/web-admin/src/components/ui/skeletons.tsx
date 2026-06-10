@@ -494,6 +494,53 @@ export function BrokerLeadsPageSkeleton() {
   );
 }
 
+/** Full skeleton for /dashboard/broker-reservations — header + action + summary strip + filter + table. */
+export function BrokerReservationsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Page header with primary action */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-72" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-52" />
+            <Skeleton className="h-4 w-[440px] max-w-full" />
+          </div>
+          <Skeleton className="h-10 w-52 rounded-xl shrink-0" />
+        </div>
+      </header>
+
+      {/* Status summary strip */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        {/* Total */}
+        <div className="flex items-baseline gap-1.5 shrink-0">
+          <Skeleton className="h-6 w-8" />
+          <Skeleton className="h-2.5 w-8" />
+        </div>
+        <Skeleton className="w-px h-5" />
+        {/* Status pill chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {(['w-28', 'w-24', 'w-32'] as const).map((w, i) => (
+            <Skeleton key={i} className={`h-6 rounded-full ${w}`} />
+          ))}
+        </div>
+        <Skeleton className="w-px h-5 hidden sm:block" />
+        {/* Commission total */}
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      </div>
+
+      {/* Filter bar — 4 selects */}
+      <FilterBarSkeleton fields={4} />
+
+      {/* Table — 9 cols (number, broker, client, unit, status, sales, commission, date, action) */}
+      <TableCardSkeleton cols={9} rows={8} />
+    </div>
+  );
+}
+
 /** Full skeleton for /dashboard/broker-reports — filter + 6 KPIs + funnel + rate cards + 2 tables. */
 export function BrokerReportsPageSkeleton() {
   return (
