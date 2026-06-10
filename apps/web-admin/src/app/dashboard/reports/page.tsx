@@ -121,14 +121,14 @@ export default async function ReportsPage({
           tone="brand"
           label="المبيعات"
           icon={<BarChart2 />}
-          value={formatCurrency(salesRes.data?.total ?? 0)}
+          value={<span dir="ltr" className="whitespace-nowrap">{formatCurrency(salesRes.data?.total ?? 0)}</span>}
           sub={`${salesRes.data?.contracts ?? 0} عقد`}
         />
         <KpiCard
           tone="success"
           label="الدفعات المسجلة"
           icon={<DollarSign />}
-          value={formatCurrency(financialRes.data?.total ?? 0)}
+          value={<span dir="ltr" className="whitespace-nowrap">{formatCurrency(financialRes.data?.total ?? 0)}</span>}
           sub={`${financialRes.data?.deposits ?? 0} دفعة`}
         />
         <KpiCard
@@ -168,7 +168,7 @@ export default async function ReportsPage({
                         )}
                       </td>
                       <td className="px-4 py-2.5 tabular-nums text-slate-600">{p.count} عقد</td>
-                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
+                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800" dir="ltr">
                         {formatCurrency(p.total)}
                       </td>
                     </tr>

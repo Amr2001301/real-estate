@@ -19,6 +19,8 @@
     "prisma:seed:e2e": "tsx prisma/seed-e2e.ts",
     "prisma:seed:brokers": "tsx prisma/seed-broker-demo.ts",
     "prisma:seed:brokers:cleanup": "tsx prisma/seed-broker-demo.ts --cleanup",
+    "prisma:seed:cms": "tsx prisma/seed-cms-demo.ts",
+    "prisma:seed:cms:cleanup": "tsx prisma/seed-cms-demo.ts --cleanup",
     "prisma:studio": "prisma studio",
     "openapi:export": "tsx scripts/export-openapi.ts",
     "smoke:broker": "tsx scripts/smoke-broker-module.ts",
