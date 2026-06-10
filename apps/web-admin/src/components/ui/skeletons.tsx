@@ -589,6 +589,50 @@ export function BrokerContractsPageSkeleton() {
   );
 }
 
+/** Full skeleton for /dashboard/broker-commissions — header + summary strip + filter + table. */
+export function BrokerCommissionsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Page header — no action button */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-64" />
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-4 w-[480px] max-w-full" />
+        </div>
+      </header>
+
+      {/* Summary strip — total + status chips + financial totals */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        <div className="flex items-baseline gap-1.5 shrink-0">
+          <Skeleton className="h-6 w-8" />
+          <Skeleton className="h-2.5 w-10" />
+        </div>
+        <Skeleton className="w-px h-5" />
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Skeleton className="h-6 rounded-full w-28" />
+          <Skeleton className="h-6 rounded-full w-24" />
+        </div>
+        <Skeleton className="w-px h-5 hidden sm:block" />
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+      </div>
+
+      {/* Filter bar — 3 selects + 2 date inputs */}
+      <FilterBarSkeleton fields={5} />
+
+      {/* Table — 11 cols (number, broker, contract, unit/project, basis, %, gross, net, status, date, action) */}
+      <TableCardSkeleton cols={11} rows={8} />
+    </div>
+  );
+}
+
 /** Full skeleton for /dashboard/broker-reports — filter + 6 KPIs + funnel + rate cards + 2 tables. */
 export function BrokerReportsPageSkeleton() {
   return (
