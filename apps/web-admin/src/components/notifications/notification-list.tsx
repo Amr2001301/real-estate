@@ -2,11 +2,11 @@ import {
   Bell, CheckCheck, BookmarkCheck, FileText, Wallet, BadgePercent, Users,
   MessageSquareText, Wrench, CalendarClock, type LucideIcon,
 } from 'lucide-react';
-import type { NotificationItem } from '@/lib/types';
+import type { NotificationItem, NotificationChannel } from '@/lib/types';
 import { Card } from '@/components/ui/card';
+import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
-import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { markAllNotificationsReadAction } from '@/app/_actions/notifications';
 import { AdminNotificationRow } from './notification-row';
@@ -211,6 +211,34 @@ function resolveBody(n: NotificationItem): string | null {
   return summarisePayload(n.payload);
 }
 
+// Short Arabic channel labels for the compact row badge.
+const CHANNEL_LABEL: Record<NotificationChannel, string> = {
+  IN_APP: 'تطبيق',
+  PUSH:   'فوري',
+  EMAIL:  'بريد',
+  SMS:    'رسالة',
+};
+
+const CHANNEL_TONE: Record<NotificationChannel, BadgeTone> = {
+  IN_APP: 'success',
+  PUSH:   'info',
+  EMAIL:  'brand',
+  SMS:    'warning',
+};
+
+/** Shows time-only for today, short date for older notifications. */
+function formatCompact(value: string): string {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const isToday = d.toDateString() === now.toDateString();
+  if (isToday) {
+    return new Intl.DateTimeFormat('ar-EG', { timeStyle: 'short' }).format(d);
+  }
+  return new Intl.DateTimeFormat('ar-EG', { dateStyle: 'short' }).format(d);
+}
+
 export function NotificationList({ items, basePath }: Props) {
   const unreadCount = items.filter((n) => !n.read).length;
 
@@ -227,11 +255,13 @@ export function NotificationList({ items, basePath }: Props) {
   }
 
   return (
-    <div className="space-y-3">
+    <Card className="overflow-hidden">
+      {/* Inbox header: unread count + mark-all — only when there are unread items */}
       {unreadCount > 0 && (
-        <div className="flex items-center justify-between rounded-xl border border-hairline bg-white px-3 py-2 shadow-xs">
-          <p className="text-sm text-slate-700">
-            <span className="font-semibold tabular-nums">{unreadCount}</span> إشعار غير مقروء
+        <div className="flex items-center justify-between border-b border-hairline bg-brand-50/50 px-4 py-2.5">
+          <p className="text-xs text-slate-600">
+            <span className="font-semibold tabular-nums text-brand-700">{unreadCount}</span>
+            {' '}غير مقروء
           </p>
           <form action={markAllNotificationsReadAction}>
             <input type="hidden" name="basePath" value={basePath} />
@@ -242,55 +272,72 @@ export function NotificationList({ items, basePath }: Props) {
         </div>
       )}
 
-      <Card className="overflow-hidden">
-        <ul className="divide-y divide-hairline">
-          {items.map((n) => {
-            const related = relatedLink(n.payload, basePath, n.templateCode);
-            const title = resolveTitle(n);
-            const body = resolveBody(n);
-            const { Icon, chip } = categoryVisual(n.templateCode, related);
-            const unread = !n.read;
-            const rowClass = cn(
-              'flex w-full items-start gap-3.5 px-4 py-3.5 text-start transition-colors',
-              (unread || related) && 'cursor-pointer hover:bg-slate-50',
-              unread && 'bg-brand-50/40',
-            );
-            return (
-              <li key={n.id}>
-                <AdminNotificationRow
-                  id={n.id}
-                  href={related?.href ?? null}
-                  unread={unread}
-                  basePath={basePath}
-                  className={rowClass}
-                >
-                  <span className={cn('mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl', chip)}>
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className={cn('text-sm', unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-700')}>
-                        {title}
-                      </p>
-                      <span className="shrink-0 text-2xs text-slate-400">{formatDateTime(n.createdAt)}</span>
-                    </div>
-                    {body && <p className="mt-0.5 truncate text-xs text-slate-500">{body}</p>}
-                    {related && (
-                      <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-700">
-                        <related.icon className="h-3 w-3" />
-                        فتح {related.label}
-                      </span>
+      <ul className="divide-y divide-hairline">
+        {items.map((n) => {
+          const related = relatedLink(n.payload, basePath, n.templateCode);
+          const title = resolveTitle(n);
+          const body = resolveBody(n);
+          const { Icon, chip } = categoryVisual(n.templateCode, related);
+          const unread = !n.read;
+          const rowClass = cn(
+            'flex w-full items-start gap-3 px-4 py-3 text-start transition-colors',
+            (unread || related) && 'cursor-pointer hover:bg-slate-50',
+            unread && 'bg-brand-50/30',
+          );
+          return (
+            <li key={n.id}>
+              <AdminNotificationRow
+                id={n.id}
+                href={related?.href ?? null}
+                unread={unread}
+                basePath={basePath}
+                className={rowClass}
+              >
+                {/* Category icon chip */}
+                <span className={cn('mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg', chip)}>
+                  <Icon className="h-4 w-4" />
+                </span>
+
+                {/* Content */}
+                <div className="min-w-0 flex-1">
+                  {/* Row 1: title + date */}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={cn('text-sm leading-snug', unread ? 'font-semibold text-slate-900' : 'font-medium text-slate-700')}>
+                      {title}
+                    </p>
+                    <span className="shrink-0 text-xs text-slate-400 whitespace-nowrap tabular-nums leading-snug" dir="ltr">
+                      {formatCompact(n.createdAt)}
+                    </span>
+                  </div>
+
+                  {/* Row 2: channel badge + body preview */}
+                  <div className="mt-0.5 flex items-center gap-1.5 min-w-0">
+                    <Badge tone={CHANNEL_TONE[n.channel]} size="sm" className="shrink-0">
+                      {CHANNEL_LABEL[n.channel]}
+                    </Badge>
+                    {body && (
+                      <span className="truncate text-xs text-slate-500">{body}</span>
                     )}
                   </div>
-                  {unread && (
-                    <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-brand-500" aria-hidden />
+
+                  {/* Row 3: entity action pill */}
+                  {related && (
+                    <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-700">
+                      <related.icon className="h-3 w-3 shrink-0" />
+                      فتح {related.label}
+                    </span>
                   )}
-                </AdminNotificationRow>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
-    </div>
+                </div>
+
+                {/* Unread dot */}
+                {unread && (
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-500" aria-hidden />
+                )}
+              </AdminNotificationRow>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }

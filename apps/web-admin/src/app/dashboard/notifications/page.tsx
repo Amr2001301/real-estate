@@ -1,10 +1,13 @@
 import Link from 'next/link';
-import { FileEdit } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { FileEdit, Inbox, Bell, CheckCheck, Clock } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { NotificationItem, Paged } from '@/lib/types';
+import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { NotificationList } from '@/components/notifications/notification-list';
+import { cn } from '@/lib/cn';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -33,11 +36,16 @@ export default async function AdminNotificationsInboxPage() {
   );
   const items = extractItems(res.data);
 
+  const unreadCount = items.filter((n) => !n.read).length;
+  const readCount = items.length - unreadCount;
+  // Backend returns items sorted newest-first; first item is the most recent.
+  const lastDate = items.length > 0 ? (items[0]?.createdAt ?? null) : null;
+
   return (
     <div className="space-y-5">
       <PageHeader
         title="الإشعارات"
-        description="جميع الإشعارات الواردة. اضغط على الإشعار للانتقال إلى السجل المرتبط."
+        description="متابعة تنبيهات النظام ورسائل المستخدمين وقوالب الإشعارات."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الإشعارات' },
@@ -51,6 +59,38 @@ export default async function AdminNotificationsInboxPage() {
         }
       />
 
+      {/* ── Summary strip ──────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        <SummaryPill
+          icon={<Inbox className="h-3.5 w-3.5" />}
+          label="الإجمالي"
+          value={items.length}
+        />
+        <div className="w-px h-6 bg-hairline shrink-0 hidden sm:block" aria-hidden />
+        <SummaryPill
+          icon={<Bell className="h-3.5 w-3.5" />}
+          label="غير مقروءة"
+          value={unreadCount}
+          emphasis={unreadCount > 0}
+        />
+        <div className="w-px h-6 bg-hairline shrink-0 hidden sm:block" aria-hidden />
+        <SummaryPill
+          icon={<CheckCheck className="h-3.5 w-3.5" />}
+          label="مقروءة"
+          value={readCount}
+        />
+        {lastDate && (
+          <>
+            <div className="w-px h-6 bg-hairline shrink-0 hidden sm:block" aria-hidden />
+            <SummaryPill
+              icon={<Clock className="h-3.5 w-3.5" />}
+              label="آخر إشعار"
+              value={formatDate(lastDate)}
+            />
+          </>
+        )}
+      </div>
+
       {res.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           تعذر تحميل الإشعارات: {res.error}
@@ -58,6 +98,32 @@ export default async function AdminNotificationsInboxPage() {
       )}
 
       <NotificationList items={items} basePath="/dashboard" />
+    </div>
+  );
+}
+
+function SummaryPill({
+  icon,
+  label,
+  value,
+  emphasis,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: ReactNode;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2.5 shrink-0">
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+        {icon}
+      </span>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-2xs text-slate-500 leading-none">{label}</span>
+        <span className={cn('text-sm font-bold tabular-nums leading-none', emphasis ? 'text-brand-700' : 'text-slate-800')}>
+          {value}
+        </span>
+      </div>
     </div>
   );
 }

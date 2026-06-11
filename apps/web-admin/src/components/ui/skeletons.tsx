@@ -1158,7 +1158,8 @@ export function AdminSettingsPageSkeleton() {
 
 /**
  * Full page skeleton for /dashboard/notifications.
- * Structure: page header with templates action button · notification inbox list.
+ * Structure: page header · summary strip (4 icon-backed pills) · card with
+ * inbox-header bar + compact notification rows (8×8 icon, 2-line content).
  */
 export function AdminNotificationsPageSkeleton() {
   return (
@@ -1174,18 +1175,90 @@ export function AdminNotificationsPageSkeleton() {
         </div>
       </header>
 
+      {/* Summary strip — 4 icon-backed pills */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-2.5 shrink-0">
+            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+            <div className="space-y-1">
+              <Skeleton className="h-2.5 w-14" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Card: inbox header + compact rows */}
       <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        {/* Inbox header (unread bar) */}
+        <div className="border-b border-hairline bg-brand-50/50 px-4 py-2.5 flex items-center justify-between">
+          <Skeleton className="h-3.5 w-28" />
+          <Skeleton className="h-7 w-32 rounded-xl" />
+        </div>
+        {/* Rows */}
         <div className="divide-y divide-hairline">
-          {(['w-64', 'w-72', 'w-56', 'w-80', 'w-60', 'w-52', 'w-48', 'w-64'] as const).map((w, i) => (
-            <div key={i} className="px-5 py-4 flex items-start gap-3">
-              <Skeleton className="h-8 w-8 rounded-full shrink-0 mt-0.5" />
+          {(['w-56', 'w-64', 'w-48', 'w-72', 'w-52', 'w-60', 'w-44', 'w-56'] as const).map((w, i) => (
+            <div key={i} className="px-4 py-3 flex items-start gap-3">
+              <Skeleton className="h-8 w-8 rounded-lg shrink-0 mt-0.5" />
               <div className="flex-1 space-y-1.5">
-                <Skeleton className={cn('h-4', w)} />
-                <Skeleton className="h-3 w-32" />
+                <div className="flex items-start justify-between gap-2">
+                  <Skeleton className={cn('h-4', w)} />
+                  <Skeleton className="h-3 w-12 shrink-0" />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Skeleton className="h-4 w-10 rounded-full shrink-0" />
+                  <Skeleton className="h-3 w-32" />
+                </div>
               </div>
-              <Skeleton className="h-3 w-16 shrink-0" />
+              <Skeleton className="h-2 w-2 rounded-full shrink-0 mt-1.5" />
             </div>
           ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Full page skeleton for /dashboard/notifications/templates.
+ * Structure: page header · templates list card with form toggle.
+ */
+export function AdminNotificationsTemplatesPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-64" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
+          <Skeleton className="h-9 w-36 rounded-xl shrink-0" />
+        </div>
+      </header>
+
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        {/* Card header */}
+        <div className="px-5 py-3.5 border-b border-hairline flex items-center gap-3">
+          <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-5 w-8 rounded-full ms-2" />
+        </div>
+        {/* Template rows */}
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="px-5 py-3.5 border-b border-hairline flex items-center gap-4">
+            <Skeleton className="h-3.5 w-36 font-mono" />
+            <Skeleton className="h-5 w-20 rounded-full ms-2" />
+            <Skeleton className="h-3.5 w-32 flex-1" />
+            <Skeleton className="h-5 w-14 rounded-full" />
+            <Skeleton className="h-3 w-20 shrink-0" />
+          </div>
+        ))}
+        {/* Form toggle row */}
+        <div className="px-5 py-3.5 border-t border-hairline flex items-center gap-3">
+          <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+          <Skeleton className="h-4 w-44" />
+          <Skeleton className="h-4 w-4 rounded ms-auto" />
         </div>
       </div>
     </div>
