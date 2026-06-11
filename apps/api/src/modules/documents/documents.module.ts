@@ -18,6 +18,7 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -136,6 +137,7 @@ class DocumentsQueryDto {
   @IsOptional() @IsDateString() to?: string;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) pageSize?: number;
+  @IsOptional() @IsIn(['asc', 'desc']) sortOrder?: 'asc' | 'desc';
 }
 
 class CreateDocumentDto {
@@ -241,6 +243,8 @@ export class DocumentsService {
               { title: { contains: query.q, mode: 'insensitive' } },
               { description: { contains: query.q, mode: 'insensitive' } },
               { fileName: { contains: query.q, mode: 'insensitive' } },
+              { uploadedBy: { fullName: { contains: query.q, mode: 'insensitive' } } },
+              { uploadedBy: { email: { contains: query.q, mode: 'insensitive' } } },
             ],
           }
         : {}),
@@ -249,7 +253,7 @@ export class DocumentsService {
     const [rows, total] = await this.prisma.$transaction([
       this.prisma.document.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: query.sortOrder ?? 'asc' },
         include: DOCUMENT_INCLUDE,
         ...takeSkip({ page, pageSize }),
       }),

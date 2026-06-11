@@ -869,6 +869,91 @@ export function AdminTablePageSkeleton({
 }
 
 /**
+ * Full page skeleton for /dashboard/documents.
+ * Structure: page header with action · summary strip (3 icon-backed pills) ·
+ * filter bar (6 fields) · table (7 cols, 8 rows).
+ */
+export function AdminDocumentsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-52" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-[460px] max-w-full" />
+          </div>
+          <Skeleton className="h-10 w-40 rounded-xl shrink-0" />
+        </div>
+      </header>
+
+      {/* Summary strip */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex items-center gap-2.5 shrink-0">
+            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+            <div className="space-y-1">
+              <Skeleton className="h-2.5 w-16" />
+              <Skeleton className="h-4 w-10" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Filter bar — single row */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-3 py-3 shadow-xs">
+        <Skeleton className="h-8 flex-1 min-w-[180px] rounded-lg" />
+        <Skeleton className="h-8 w-36 rounded-lg" />
+        <Skeleton className="h-8 w-36 rounded-lg" />
+        <Skeleton className="h-8 w-36 rounded-lg" />
+        <Skeleton className="h-8 w-20 rounded-lg ms-auto" />
+      </div>
+
+      {/* Table */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        {/* Header row */}
+        <div className="grid gap-3 px-5 py-2.5 border-b border-hairline bg-surface-muted/60"
+          style={{ gridTemplateColumns: '2.5fr 1fr 1fr 0.7fr 1.2fr 1fr 0.8fr' }}>
+          {['العنوان','التصنيف','المالك','الحجم','رفع بواسطة','الوقت','إجراءات'].map((_, i) => (
+            <Skeleton key={i} className="h-2.5 w-14" />
+          ))}
+        </div>
+        {/* Data rows */}
+        {Array.from({ length: 7 }).map((_, r) => (
+          <div key={r} className="grid gap-3 px-5 py-3 border-t border-hairline items-center"
+            style={{ gridTemplateColumns: '2.5fr 1fr 1fr 0.7fr 1.2fr 1fr 0.8fr' }}>
+            {/* Title: 2 lines */}
+            <div className="space-y-1.5">
+              <Skeleton className="h-3.5 w-4/5" />
+              <Skeleton className="h-2.5 w-3/5 opacity-60" />
+            </div>
+            {/* Category chip */}
+            <Skeleton className="h-5 w-14 rounded-full" />
+            {/* Owner chip */}
+            <Skeleton className="h-5 w-16 rounded-full" />
+            {/* Size */}
+            <Skeleton className="h-3 w-10" />
+            {/* Uploader: 2 lines */}
+            <div className="space-y-1.5">
+              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-2.5 w-28 opacity-60" />
+            </div>
+            {/* Date */}
+            <Skeleton className="h-3 w-24" />
+            {/* Two action buttons */}
+            <div className="flex items-center justify-end gap-1.5">
+              <Skeleton className="h-8 w-8 rounded-lg" />
+              <Skeleton className="h-8 w-8 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * Reusable admin cards/content-page skeleton.
  * Used by: /dashboard/operations (hasKpiRow=true), /dashboard/permissions (hasSidePanel=true).
  * Structure varies by props — see usage comments.
@@ -1336,6 +1421,96 @@ export function TargetsPageSkeleton() {
 
       {/* Targets performance table */}
       <TableCardSkeleton cols={8} rows={5} />
+    </div>
+  );
+}
+
+/**
+ * Full page skeleton for /dashboard/reports.
+ * Structure: header (with export actions) · tabs · period filter ·
+ * 3 KPI cards · two-col lower section (sales table + reservation table).
+ */
+export function AdminReportsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-40" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-4 w-[420px] max-w-full" />
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <Skeleton className="h-9 w-36 rounded-xl" />
+            <Skeleton className="h-9 w-36 rounded-xl" />
+            <Skeleton className="h-9 w-36 rounded-xl" />
+          </div>
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <div className="flex gap-0 border-b border-hairline pb-0">
+        <Skeleton className="h-9 w-36 rounded-none" />
+        <Skeleton className="h-9 w-24 rounded-none" />
+      </div>
+
+      {/* Period filter */}
+      <div className="flex items-center gap-3 rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs">
+        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+        <Skeleton className="h-4 w-24" />
+        <div className="ms-auto flex gap-2">
+          <Skeleton className="h-8 w-36 rounded-xl" />
+          <Skeleton className="h-8 w-16 rounded-xl" />
+        </div>
+      </div>
+
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-3">
+            <Skeleton className="h-10 w-10 rounded-xl" />
+            <Skeleton className="h-3.5 w-24" />
+            <Skeleton className="h-7 w-32" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        ))}
+      </div>
+
+      {/* Two-col lower section */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
+        {/* Sales table */}
+        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden lg:col-span-3">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <Skeleton className="h-7 w-7 rounded-lg" />
+            <Skeleton className="h-4 w-36" />
+          </div>
+          <div className="divide-y divide-hairline">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-3">
+                <Skeleton className="h-4 flex-1" />
+                <Skeleton className="h-4 w-12" />
+                <Skeleton className="h-4 w-24" />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Reservations table */}
+        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden lg:col-span-2">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <Skeleton className="h-7 w-7 rounded-lg" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+          <div className="divide-y divide-hairline">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center justify-between px-5 py-3">
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-4 w-6" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
