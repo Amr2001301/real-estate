@@ -4,7 +4,6 @@ import {
   FileText, DollarSign, Clock, AlertTriangle,
   CalendarDays, CreditCard, Wallet, ReceiptText,
   CheckCircle2, XCircle, BadgeCheck, Activity, Bookmark, Coins, FileWarning,
-  Filter,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
@@ -25,16 +24,12 @@ import {
   type PeriodMode,
 } from '@/lib/report-filter';
 import { PageHeader } from '@/components/ui/page-header';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { ExportMenu } from '@/components/export-menu';
-import { ReportFilterBar } from '@/components/reports/report-filter-bar';
 import { ReportsTabs } from '../_components/reports-tabs';
+import { FinancialFilterBar } from './_components/financial-filter-bar';
 import { CashflowBarChart } from './_components/cashflow-bar-chart';
 import { PaymentDonutChart } from './_components/payment-donut-chart';
-import { ProjectSelect } from './_components/project-select';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -43,7 +38,7 @@ export const fetchCache = 'force-no-store';
 interface Search {
   mode?: string; month?: string; year?: string; quarter?: string;
   dateFrom?: string; dateTo?: string; compare?: string;
-  projectId?: string; q?: string; type?: string;
+  projectId?: string; q?: string; type?: string; showFilters?: string;
 }
 interface ProjectOption { id: string; name: { ar: string; en: string } }
 
@@ -77,6 +72,13 @@ function decimal(v: string | number | null | undefined): number {
 
 function daysOverdue(dueDate: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(dueDate).getTime()) / 86_400_000));
+}
+
+function formatDaysLabel(days: number): string {
+  if (days === 0) return 'اليوم';
+  if (days === 1) return 'يوم';
+  if (days <= 10) return `${days} أيام`;
+  return `${days} يوم`;
 }
 
 function getDepositCustomer(d: FinancialDepositRow): string {
@@ -215,16 +217,18 @@ function OverdueTable({ rows }: { rows: FinancialInstallmentRow[] }) {
                   </span>
                 </td>
                 <td className="py-2.5 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(row.dueDate)}</td>
-                <td className="py-2.5 px-4 font-bold tabular-nums whitespace-nowrap text-slate-900" dir="ltr">{formatCurrency(row.amount)}</td>
+                <td className="py-2.5 px-4 whitespace-nowrap">
+                  <span className="font-bold tabular-nums text-slate-900" dir="ltr">{formatCurrency(row.amount)}</span>
+                </td>
                 <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
                   <span className={cn(
-                    'inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold leading-tight',
+                    'inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold leading-tight whitespace-nowrap',
                     days > 60 ? 'bg-danger-100 text-danger-700'
                       : days > 30 ? 'bg-red-100 text-red-600'
                       : days > 7  ? 'bg-amber-100 text-amber-700'
                       : 'bg-orange-100 text-orange-600',
                   )}>
-                    {days}د
+                    {formatDaysLabel(days)}
                   </span>
                 </td>
               </tr>
@@ -273,29 +277,6 @@ export default async function FinancialReportsPage({
   const compare   = (sp.compare ?? 'none') as CompareMode;
   const cmpRange  = resolveComparisonDateRange(resolved, compare);
 
-  // URL to clear q/type while preserving period+project
-  const clearFiltersUrl = (() => {
-    const p = new URLSearchParams({ mode, year: String(year) });
-    if (mode === 'monthly')   p.set('month',    String(month));
-    if (mode === 'quarterly') p.set('quarter',  String(quarter));
-    if (mode === 'custom')    { p.set('dateFrom', dateFrom); p.set('dateTo', dateTo); }
-    if (compare !== 'none')   p.set('compare',  compare);
-    if (sp.projectId)         p.set('projectId', sp.projectId);
-    return `/dashboard/reports/financial?${p.toString()}`;
-  })();
-
-  // Preserve period+q+type for ProjectSelect navigation
-  const preserveForProject: Record<string, string> = {
-    mode,
-    year: String(year),
-    ...(mode === 'monthly'   ? { month:   String(month) }   : {}),
-    ...(mode === 'quarterly' ? { quarter: String(quarter) } : {}),
-    ...(mode === 'custom'    ? { dateFrom, dateTo }          : {}),
-    ...(compare !== 'none'   ? { compare }                   : {}),
-    ...(sp.q    ? { q:    sp.q }    : {}),
-    ...(sp.type ? { type: sp.type } : {}),
-  };
-
   const [dashRes, cmpDashRes, projectsRes] = await Promise.all([
     safe(api.get<FinancialDashboard>(buildApiUrl({ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }))),
     cmpRange
@@ -330,7 +311,9 @@ export default async function FinancialReportsPage({
   const booking          = dash?.booking;
   const liabilities      = dash?.liabilities;
   const docsHealth       = dash?.documentsHealth;
-  const hasAdvancedFilters = !!(sp.q || sp.type);
+  const hasAdvancedFilters = !!(sp.q || sp.type || sp.projectId);
+  const showFilters        = hasAdvancedFilters || sp.showFilters === '1';
+  const projectOptions     = projects.map((p) => ({ id: p.id, name: tx(p.name) }));
 
   return (
     <div className="space-y-5">
@@ -360,8 +343,8 @@ export default async function FinancialReportsPage({
       {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <ReportsTabs active="financial" />
 
-      {/* ── Period / comparison filter ────────────────────────────────────── */}
-      <ReportFilterBar
+      {/* ── Unified period + advanced filters ─────────────────────────────── */}
+      <FinancialFilterBar
         defaultMode={mode as PeriodMode}
         defaultMonth={month}
         defaultYear={year}
@@ -369,57 +352,12 @@ export default async function FinancialReportsPage({
         defaultDateFrom={dateFrom}
         defaultDateTo={dateTo}
         defaultCompare={compare}
-        basePath="/dashboard/reports/financial"
+        defaultProjectId={sp.projectId ?? ''}
+        defaultQ={sp.q ?? ''}
+        defaultType={sp.type ?? ''}
+        defaultShowFilters={showFilters}
+        projects={projectOptions}
       />
-
-      {/* ── Advanced filters — project / customer / type ──────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface-muted/50 px-4 py-2.5 shadow-xs">
-        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-          <Filter className="h-3.5 w-3.5" />
-        </span>
-        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest shrink-0 hidden sm:inline">فلاتر متقدمة</span>
-        <div className="w-px h-4 bg-hairline shrink-0 hidden sm:block" />
-
-        <ProjectSelect
-          value={sp.projectId ?? ''}
-          projects={projects.map((p) => ({ id: p.id, name: tx(p.name) }))}
-          preserveParams={preserveForProject}
-        />
-
-        <div className="w-px h-4 bg-hairline shrink-0 hidden sm:block" />
-
-        <form method="get" action="/dashboard/reports/financial" className="flex flex-wrap items-center gap-2">
-          <input type="hidden" name="mode"  value={mode} />
-          <input type="hidden" name="year"  value={String(year)} />
-          {mode === 'monthly'   && <input type="hidden" name="month"    value={String(month)} />}
-          {mode === 'quarterly' && <input type="hidden" name="quarter"  value={String(quarter)} />}
-          {mode === 'custom'    && <input type="hidden" name="dateFrom" value={dateFrom} />}
-          {mode === 'custom'    && <input type="hidden" name="dateTo"   value={dateTo} />}
-          {compare !== 'none'   && <input type="hidden" name="compare"  value={compare} />}
-          {sp.projectId         && <input type="hidden" name="projectId" value={sp.projectId} />}
-
-          <Input
-            name="q"
-            inputSize="sm"
-            placeholder="ابحث باسم العميل"
-            defaultValue={sp.q ?? ''}
-            className="w-40"
-          />
-          <Select name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-40">
-            <option value="">كل الأنواع</option>
-            <option value="BOOKING_AMOUNT">مبلغ الحجز</option>
-            <option value="DOWN_PAYMENT">دفعة أولى</option>
-            <option value="INSTALLMENT">قسط شهري</option>
-            <option value="FINAL_PAYMENT">دفعة أخيرة</option>
-          </Select>
-          <Button type="submit" variant="secondary" size="sm">تطبيق</Button>
-          {hasAdvancedFilters && (
-            <Link href={clearFiltersUrl}>
-              <Button type="button" variant="secondary" size="sm">مسح</Button>
-            </Link>
-          )}
-        </form>
-      </div>
 
       {/* ── Error ────────────────────────────────────────────────────────── */}
       {dashRes.error && (
@@ -738,9 +676,15 @@ export default async function FinancialReportsPage({
                         </span>
                       </td>
                       <td className="py-2.5 px-4 tabular-nums text-slate-600">{c.count.toLocaleString('ar-EG')}</td>
-                      <td className="py-2.5 px-4 tabular-nums font-bold text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll)}</td>
-                      <td className="py-2.5 px-4 tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified)}</td>
-                      <td className="py-2.5 ps-4 pe-5 tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalUnverified)}</td>
+                      <td className="py-2.5 px-4 whitespace-nowrap">
+                        <span className="tabular-nums font-bold text-slate-900" dir="ltr">{formatCurrency(c.totalAll)}</span>
+                      </td>
+                      <td className="py-2.5 px-4 whitespace-nowrap">
+                        <span className="tabular-nums text-success-700" dir="ltr">{formatCurrency(c.totalVerified)}</span>
+                      </td>
+                      <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
+                        <span className="tabular-nums text-amber-600" dir="ltr">{formatCurrency(c.totalUnverified)}</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -969,7 +913,9 @@ export default async function FinancialReportsPage({
                         )}
                       </td>
                       <td className="py-2.5 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(d.paidAt)}</td>
-                      <td className="py-2.5 px-4 font-bold tabular-nums whitespace-nowrap text-slate-900" dir="ltr">{formatCurrency(d.amount)}</td>
+                      <td className="py-2.5 px-4 whitespace-nowrap">
+                        <span className="font-bold tabular-nums text-slate-900" dir="ltr">{formatCurrency(d.amount)}</span>
+                      </td>
                       <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
                         {d.verified ? (
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-700">
