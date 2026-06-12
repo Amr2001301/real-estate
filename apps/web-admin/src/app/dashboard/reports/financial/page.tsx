@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   FileText, DollarSign, Clock, AlertTriangle,
   CalendarDays, CreditCard, Wallet, ReceiptText,
   CheckCircle2, XCircle, BadgeCheck, Activity, Bookmark, Coins, FileWarning,
+  Filter,
 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import type {
   FinancialDashboard,
@@ -14,56 +17,58 @@ import type {
   Paged,
 } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
-import { cn } from '@/lib/cn';
+import {
+  resolveReportDateRange,
+  resolveComparisonDateRange,
+  computeDelta,
+  type CompareMode,
+  type PeriodMode,
+} from '@/lib/report-filter';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
-import { ReportsTabs } from '../_components/reports-tabs';
 import { ExportMenu } from '@/components/export-menu';
-import { ProjectSelect } from './_components/project-select';
+import { ReportFilterBar } from '@/components/reports/report-filter-bar';
+import { ReportsTabs } from '../_components/reports-tabs';
 import { CashflowBarChart } from './_components/cashflow-bar-chart';
 import { PaymentDonutChart } from './_components/payment-donut-chart';
+import { ProjectSelect } from './_components/project-select';
 
-export const dynamic = 'force-dynamic';
+export const dynamic    = 'force-dynamic';
+export const fetchCache = 'force-no-store';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-
+interface Search {
+  mode?: string; month?: string; year?: string; quarter?: string;
+  dateFrom?: string; dateTo?: string; compare?: string;
+  projectId?: string; q?: string; type?: string;
+}
 interface ProjectOption { id: string; name: { ar: string; en: string } }
 
 // ── Label / class maps ────────────────────────────────────────────────────────
-
 const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
-  RESERVATION: 'مبلغ الحجز',
-  DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط شهري',
-  FINAL_PAYMENT: 'دفعة أخيرة',
+  RESERVATION: 'مبلغ الحجز', DOWN_PAYMENT: 'دفعة أولى',
+  INSTALLMENT: 'قسط شهري',   FINAL_PAYMENT: 'دفعة أخيرة',
 };
-
 const PAYMENT_TYPE_CLS: Record<PlanPaymentType, string> = {
-  RESERVATION: 'bg-indigo-100 text-indigo-700',
-  DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
-  INSTALLMENT: 'bg-slate-100 text-slate-600',
-  FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+  RESERVATION: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
+  INSTALLMENT: 'bg-slate-100 text-slate-600',   FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
 };
-
 const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'مبلغ الحجز',
-  DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط شهري',
-  FINAL_PAYMENT: 'دفعة أخيرة',
+  BOOKING_AMOUNT: 'مبلغ الحجز', DOWN_PAYMENT: 'دفعة أولى',
+  INSTALLMENT: 'قسط شهري',      FINAL_PAYMENT: 'دفعة أخيرة',
 };
-
 const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700',
-  DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
-  INSTALLMENT: 'bg-slate-100 text-slate-600',
-  FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+  BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
+  INSTALLMENT: 'bg-slate-100 text-slate-600',       FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+};
+const AGING_LABELS: Record<string, string> = {
+  '1-30': '1–30 يوم', '31-60': '31–60 يوم', '61-90': '61–90 يوم', '90+': '+90 يوم',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
 function decimal(v: string | number | null | undefined): number {
   if (v == null) return 0;
   const n = Number(v);
@@ -82,70 +87,89 @@ function getDepositUnit(d: FinancialDepositRow): string {
   return d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '—';
 }
 
-function buildApiUrl(sp: Record<string, string | undefined>): string {
+function buildApiUrl(p: { dateFrom?: string; dateTo?: string; projectId?: string; q?: string; type?: string }): string {
   const params = new URLSearchParams();
-  if (sp.projectId) params.set('projectId', sp.projectId);
-  if (sp.q) params.set('q', sp.q);
-  if (sp.type) params.set('type', sp.type);
-  if (sp.dateFrom) params.set('dateFrom', sp.dateFrom);
-  if (sp.dateTo) params.set('dateTo', sp.dateTo);
+  if (p.projectId) params.set('projectId', p.projectId);
+  if (p.q)         params.set('q',         p.q);
+  if (p.type)      params.set('type',      p.type);
+  if (p.dateFrom)  params.set('dateFrom',  p.dateFrom);
+  if (p.dateTo)    params.set('dateTo',    p.dateTo);
   const qs = params.toString();
   return `/reports/financial-dashboard${qs ? `?${qs}` : ''}`;
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+// ── UI primitives ─────────────────────────────────────────────────────────────
 
-type PrimaryTone = 'brand' | 'success' | 'info' | 'danger';
-
-const PRIMARY_TONE: Record<PrimaryTone, { icon: string; bar: string; value: string }> = {
-  brand:   { icon: 'bg-brand-50 text-brand-600',    bar: 'bg-brand-500',   value: 'text-slate-900' },
-  success: { icon: 'bg-success-50 text-success-600', bar: 'bg-success-500', value: 'text-slate-900' },
-  info:    { icon: 'bg-info-50 text-info-600',        bar: 'bg-info-500',    value: 'text-slate-900' },
-  danger:  { icon: 'bg-danger-50 text-danger-600',    bar: 'bg-danger-500',  value: 'text-danger-700' },
-};
-
-function PrimaryKpiCard({
-  label, value, sub, icon, tone = 'brand',
-}: {
-  label: string; value: React.ReactNode; sub?: string;
-  icon?: React.ReactNode; tone?: PrimaryTone;
-}) {
-  const cls = PRIMARY_TONE[tone];
+function SectionDivider({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <div className="bg-white rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-      <div className={`h-0.5 ${cls.bar}`} />
-      <div className="p-5 flex flex-col gap-3 flex-1">
-        {icon && (
-          <div className={cn(
-            'inline-flex h-9 w-9 items-center justify-center rounded-xl ring-1 ring-inset ring-black/5 shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px]',
-            cls.icon,
-          )}>
-            {icon}
-          </div>
-        )}
-        <div>
-          <p className="text-[12px] font-medium text-slate-500 leading-tight uppercase tracking-wide">{label}</p>
-          <p className={cn('mt-1 text-[26px] leading-none font-bold tracking-tight tabular-nums', cls.value)}>
-            {value}
-          </p>
-          {sub && <p className="mt-1.5 text-[11px] text-slate-400">{sub}</p>}
-        </div>
-      </div>
+    <div className="flex items-center gap-2 pt-1">
+      <span className="[&_svg]:h-3.5 [&_svg]:w-3.5 text-slate-400 shrink-0">{icon}</span>
+      <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">{label}</span>
+      <div className="flex-1 h-px bg-hairline" />
     </div>
   );
 }
 
-function PeriodLink({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+type DeltaShape = { value: string; direction: 'up' | 'down' | 'flat' };
+
+function DeltaChip({ delta, invert }: { delta: DeltaShape; invert?: boolean }) {
+  const up   = delta.direction === 'up';
+  const down = delta.direction === 'down';
+  const isGood = invert ? down : up;
+  const isBad  = invert ? up   : down;
   return (
-    <Link
-      href={href as never}
-      className={cn(
-        'px-3.5 py-2 text-xs font-medium transition-colors whitespace-nowrap',
-        active ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-800',
-      )}
-    >
-      {children}
-    </Link>
+    <span className={cn(
+      'inline-flex items-center gap-0.5 rounded-full px-1.5 h-4 text-[10px] font-semibold shrink-0',
+      isGood && 'bg-success-50 text-success-700',
+      isBad  && 'bg-danger-50 text-danger-700',
+      delta.direction === 'flat' && 'bg-slate-100 text-slate-500',
+    )}>
+      <span aria-hidden>{up ? '▲' : down ? '▼' : '•'}</span>
+      {delta.value}
+    </span>
+  );
+}
+
+type PrimaryTone = 'brand' | 'success' | 'info' | 'danger';
+const TONE_CLS: Record<PrimaryTone, { icon: string; bar: string; val: string }> = {
+  brand:   { icon: 'bg-amber-50 text-amber-700',      bar: 'bg-amber-400',    val: 'text-slate-900' },
+  success: { icon: 'bg-emerald-50 text-emerald-600',  bar: 'bg-emerald-400',  val: 'text-slate-900' },
+  info:    { icon: 'bg-slate-100 text-slate-500',     bar: 'bg-slate-300',    val: 'text-slate-900' },
+  danger:  { icon: 'bg-danger-50 text-danger-600',    bar: 'bg-danger-500',   val: 'text-danger-700' },
+};
+
+function PrimaryKpiCard({
+  label, value, sub, icon, tone = 'brand', delta, invertDelta,
+}: {
+  label: string; value: ReactNode; sub?: string;
+  icon?: ReactNode; tone?: PrimaryTone;
+  delta?: DeltaShape; invertDelta?: boolean;
+}) {
+  const cls = TONE_CLS[tone];
+  return (
+    <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+      <div className={`h-0.5 ${cls.bar}`} />
+      <div className="p-5 flex flex-col gap-3 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          {icon && (
+            <div className={cn(
+              'inline-flex h-9 w-9 items-center justify-center rounded-xl ring-1 ring-inset ring-black/5 shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px]',
+              cls.icon,
+            )}>
+              {icon}
+            </div>
+          )}
+          {delta && <DeltaChip delta={delta} invert={invertDelta} />}
+        </div>
+        <div>
+          <p className="text-[11px] font-semibold text-slate-500 leading-tight uppercase tracking-wide">{label}</p>
+          <p className={cn('mt-1 text-[22px] leading-none font-bold tracking-tight tabular-nums whitespace-nowrap', cls.val)}>
+            {value}
+          </p>
+          {sub && <p className="mt-1.5 text-[11px] text-slate-500 leading-tight">{sub}</p>}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -159,17 +183,17 @@ function OverdueTable({ rows }: { rows: FinancialInstallmentRow[] }) {
     );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm min-w-[560px]">
-        <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+    <div className="overflow-x-auto overflow-y-auto max-h-[380px]">
+      <table className="w-full text-sm min-w-[600px]">
+        <thead className="bg-surface-muted/60 text-2xs font-semibold tracking-wide text-slate-500 border-b border-hairline sticky top-0 z-10">
           <tr>
-            <th className="px-4 py-2 text-right font-medium">العميل</th>
-            <th className="px-4 py-2 text-right font-medium whitespace-nowrap">رقم العقد</th>
-            <th className="px-4 py-2 text-right font-medium whitespace-nowrap">الوحدة</th>
-            <th className="px-4 py-2 text-right font-medium whitespace-nowrap">النوع</th>
-            <th className="px-4 py-2 text-right font-medium whitespace-nowrap">الاستحقاق</th>
-            <th className="px-4 py-2 text-right font-medium whitespace-nowrap">المبلغ</th>
-            <th className="px-4 py-2 text-right font-medium whitespace-nowrap">التأخر</th>
+            <th className="text-start font-semibold py-2.5 ps-5 pe-4">العميل</th>
+            <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">رقم العقد</th>
+            <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">الوحدة</th>
+            <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">النوع</th>
+            <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">الاستحقاق</th>
+            <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">المبلغ</th>
+            <th className="text-start font-semibold py-2.5 ps-4 pe-5 whitespace-nowrap">التأخر</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-hairline">
@@ -177,39 +201,28 @@ function OverdueTable({ rows }: { rows: FinancialInstallmentRow[] }) {
             const c = row.plan.contract;
             const days = daysOverdue(row.dueDate);
             return (
-              <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
-                <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">
-                  {c.customer.fullName}
-                </td>
-                <td className="px-4 py-2.5 whitespace-nowrap">
-                  <Link
-                    href={`/dashboard/contracts/${c.id}`}
-                    className="font-mono text-xs text-brand-600 hover:underline"
-                  >
+              <tr key={row.id} className="hover:bg-surface-muted/40 transition-colors align-middle">
+                <td className="py-2.5 ps-5 pe-4 font-medium text-slate-800 max-w-[160px] truncate">{c.customer.fullName}</td>
+                <td className="py-2.5 px-4 whitespace-nowrap">
+                  <Link href={`/dashboard/contracts/${c.id}`} className="font-mono text-xs text-brand-600 hover:underline">
                     {c.contractNumber ?? `#${c.id.slice(0, 8)}`}
                   </Link>
                 </td>
-                <td className="px-4 py-2.5 font-mono text-xs text-slate-400 whitespace-nowrap">{c.unit.code}</td>
-                <td className="px-4 py-2.5 whitespace-nowrap">
-                  <span className={cn(
-                    'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
-                    PAYMENT_TYPE_CLS[row.type] ?? 'bg-slate-100 text-slate-600',
-                  )}>
+                <td className="py-2.5 px-4 font-mono text-xs text-slate-400 whitespace-nowrap">{c.unit.code}</td>
+                <td className="py-2.5 px-4 whitespace-nowrap">
+                  <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', PAYMENT_TYPE_CLS[row.type] ?? 'bg-slate-100 text-slate-600')}>
                     {PAYMENT_TYPE_LABELS[row.type] ?? row.type}
                   </span>
                 </td>
-                <td className="px-4 py-2.5 text-xs text-slate-400 whitespace-nowrap tabular-nums">
-                  {formatDate(row.dueDate)}
-                </td>
-                <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
-                  {formatCurrency(row.amount)}
-                </td>
-                <td className="px-4 py-2.5 whitespace-nowrap">
+                <td className="py-2.5 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(row.dueDate)}</td>
+                <td className="py-2.5 px-4 font-bold tabular-nums whitespace-nowrap text-slate-900" dir="ltr">{formatCurrency(row.amount)}</td>
+                <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
                   <span className={cn(
                     'inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold leading-tight',
-                    days > 30 ? 'bg-red-100 text-red-700'
-                      : days > 7 ? 'bg-amber-100 text-amber-700'
-                      : 'bg-orange-100 text-orange-700',
+                    days > 60 ? 'bg-danger-100 text-danger-700'
+                      : days > 30 ? 'bg-red-100 text-red-600'
+                      : days > 7  ? 'bg-amber-100 text-amber-700'
+                      : 'bg-orange-100 text-orange-600',
                   )}>
                     {days}د
                   </span>
@@ -223,10 +236,7 @@ function OverdueTable({ rows }: { rows: FinancialInstallmentRow[] }) {
   );
 }
 
-function CompactPaymentList({ rows, emptyMessage }: {
-  rows: FinancialInstallmentRow[];
-  emptyMessage: string;
-}) {
+function CompactPaymentList({ rows, emptyMessage }: { rows: FinancialInstallmentRow[]; emptyMessage: string }) {
   if (rows.length === 0) {
     return (
       <div className="flex flex-col items-center gap-1.5 py-6 text-center">
@@ -240,534 +250,251 @@ function CompactPaymentList({ rows, emptyMessage }: {
       {rows.map((row) => (
         <div key={row.id} className="flex items-center justify-between py-2.5 px-5">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-[11px] text-slate-400 whitespace-nowrap tabular-nums shrink-0">
-              {formatDate(row.dueDate)}
-            </span>
-            <span className="text-sm font-medium text-slate-700 truncate">
-              {row.plan.contract.customer.fullName}
-            </span>
+            <span className="text-[11px] text-slate-400 whitespace-nowrap tabular-nums shrink-0">{formatDate(row.dueDate)}</span>
+            <span className="text-sm font-medium text-slate-700 truncate">{row.plan.contract.customer.fullName}</span>
           </div>
-          <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-slate-800 ms-3">
-            {formatCurrency(row.amount)}
-          </span>
+          <span className="text-sm font-bold tabular-nums whitespace-nowrap text-slate-900 ms-3" dir="ltr">{formatCurrency(row.amount)}</span>
         </div>
       ))}
     </div>
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
-
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default async function FinancialReportsPage({
   searchParams,
 }: {
-  searchParams: Promise<Record<string, string | undefined>>;
+  searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
 
-  // Period preset date computation
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const y = now.getUTCFullYear();
-  const mo = now.getUTCMonth();
-  const monthStartStr = `${y}-${String(mo + 1).padStart(2, '0')}-01`;
-  const quarterStartStr = `${y}-${String(Math.floor(mo / 3) * 3 + 1).padStart(2, '0')}-01`;
-  const yearStartStr = `${y}-01-01`;
+  const resolved  = resolveReportDateRange(sp);
+  const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
+  const compare   = (sp.compare ?? 'none') as CompareMode;
+  const cmpRange  = resolveComparisonDateRange(resolved, compare);
 
-  const activePeriod =
-    sp.dateFrom === monthStartStr   ? 'month'   :
-    sp.dateFrom === quarterStartStr ? 'quarter' :
-    sp.dateFrom === yearStartStr    ? 'year'    : null;
-
-  function presetUrl(dateFrom: string): string {
-    const p = new URLSearchParams({ dateFrom, dateTo: todayStr });
-    if (sp.projectId) p.set('projectId', sp.projectId);
+  // URL to clear q/type while preserving period+project
+  const clearFiltersUrl = (() => {
+    const p = new URLSearchParams({ mode, year: String(year) });
+    if (mode === 'monthly')   p.set('month',    String(month));
+    if (mode === 'quarterly') p.set('quarter',  String(quarter));
+    if (mode === 'custom')    { p.set('dateFrom', dateFrom); p.set('dateTo', dateTo); }
+    if (compare !== 'none')   p.set('compare',  compare);
+    if (sp.projectId)         p.set('projectId', sp.projectId);
     return `/dashboard/reports/financial?${p.toString()}`;
-  }
+  })();
 
-  function pageUrl(overrides: Record<string, string | undefined>): string {
-    const base: Record<string, string | undefined> = {
-      projectId: sp.projectId, q: sp.q, type: sp.type,
-      dateFrom: sp.dateFrom, dateTo: sp.dateTo, showFilters: sp.showFilters,
-    };
-    const merged = { ...base, ...overrides };
-    const p = new URLSearchParams();
-    for (const [k, v] of Object.entries(merged)) { if (v) p.set(k, v); }
-    return `/dashboard/reports/financial?${p.toString()}`;
-  }
+  // Preserve period+q+type for ProjectSelect navigation
+  const preserveForProject: Record<string, string> = {
+    mode,
+    year: String(year),
+    ...(mode === 'monthly'   ? { month:   String(month) }   : {}),
+    ...(mode === 'quarterly' ? { quarter: String(quarter) } : {}),
+    ...(mode === 'custom'    ? { dateFrom, dateTo }          : {}),
+    ...(compare !== 'none'   ? { compare }                   : {}),
+    ...(sp.q    ? { q:    sp.q }    : {}),
+    ...(sp.type ? { type: sp.type } : {}),
+  };
 
-  const hasAdvancedFilters = !!(sp.q || sp.type || (sp.dateFrom && !activePeriod) || (sp.dateTo && !activePeriod));
-  const showFilters = hasAdvancedFilters || sp.showFilters === '1';
-  const toggleFiltersUrl = showFilters
-    ? pageUrl({ showFilters: undefined })
-    : pageUrl({ showFilters: '1' });
-
-  const preserveForProject: Record<string, string> = {};
-  if (sp.dateFrom) preserveForProject.dateFrom = sp.dateFrom;
-  if (sp.dateTo)   preserveForProject.dateTo   = sp.dateTo;
-  if (sp.q)        preserveForProject.q        = sp.q;
-  if (sp.type)     preserveForProject.type     = sp.type;
-  if (sp.showFilters) preserveForProject.showFilters = sp.showFilters;
-
-  const [dashRes, projectsRes] = await Promise.all([
-    safe(api.get<FinancialDashboard>(buildApiUrl(sp))),
+  const [dashRes, cmpDashRes, projectsRes] = await Promise.all([
+    safe(api.get<FinancialDashboard>(buildApiUrl({ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }))),
+    cmpRange
+      ? safe(api.get<FinancialDashboard>(buildApiUrl({ dateFrom: cmpRange.dateFrom, dateTo: cmpRange.dateTo, projectId: sp.projectId, q: sp.q, type: sp.type })))
+      : Promise.resolve({ data: null, error: null }),
     safe(api.get<Paged<ProjectOption>>('/projects?pageSize=100')),
   ]);
 
   const dash     = dashRes.data;
   const s        = dash?.summary;
   const projects = projectsRes.data?.data ?? [];
+  const cmpS     = cmpDashRes.data?.summary;
 
-  // Corrected metrics (fall back to legacy fields for older API responses).
-  const collectedVerified = decimal(s?.totalCollectedVerified ?? s?.totalCollected);
-  const collectedAll = decimal(s?.totalCollectedAll ?? s?.totalCollected);
-  const collectedUnverified = decimal(
-    s?.totalCollectedUnverified ?? String(collectedAll - collectedVerified),
-  );
-  const outstanding = decimal(s?.totalOutstanding ?? s?.totalRemaining);
-  const overdueComputed = decimal(s?.overdueAmountComputed ?? s?.totalOverdue);
+  // Primary financial values (unchanged calculations)
+  const collectedVerified    = decimal(s?.totalCollectedVerified ?? s?.totalCollected);
+  const collectedAll         = decimal(s?.totalCollectedAll ?? s?.totalCollected);
+  const collectedUnverified  = decimal(s?.totalCollectedUnverified ?? String(collectedAll - collectedVerified));
+  const outstanding          = decimal(s?.totalOutstanding ?? s?.totalRemaining);
+  const overdueComputed      = decimal(s?.overdueAmountComputed ?? s?.totalOverdue);
   const overdueCountComputed = s?.overdueInstallmentCountComputed ?? s?.overdueInstallmentCount ?? 0;
-  const dueSoon = decimal(s?.dueSoonAmount);
-  const contractVal = decimal(s?.totalContractValue);
+  const dueSoon              = decimal(s?.dueSoonAmount);
+  const contractVal          = decimal(s?.totalContractValue);
+
+  // Comparison deltas
+  const contractDelta  = cmpS ? computeDelta(contractVal,       decimal(cmpS.totalContractValue)) : undefined;
+  const collectedDelta = cmpS ? computeDelta(collectedVerified, decimal(cmpS.totalCollectedVerified ?? cmpS.totalCollected)) : undefined;
+  const remainingDelta = cmpS ? computeDelta(outstanding,       decimal(cmpS.totalOutstanding ?? cmpS.totalRemaining)) : undefined;
+  const overdueDelta   = cmpS ? computeDelta(overdueComputed,   decimal(cmpS.overdueAmountComputed ?? cmpS.totalOverdue)) : undefined;
 
   const collectionByType = dash?.collectionByType ?? [];
-  const aging = dash?.aging ?? [];
-  const booking = dash?.booking;
-  const liabilities = dash?.liabilities;
-  const docsHealth = dash?.documentsHealth;
-
-  const AGING_LABELS: Record<string, string> = {
-    '1-30': '1-30 يوم',
-    '31-60': '31-60 يوم',
-    '61-90': '61-90 يوم',
-    '90+': '90+ يوم',
-  };
+  const aging            = dash?.aging ?? [];
+  const booking          = dash?.booking;
+  const liabilities      = dash?.liabilities;
+  const docsHealth       = dash?.documentsHealth;
+  const hasAdvancedFilters = !!(sp.q || sp.type);
 
   return (
     <div className="space-y-5">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* ── Header ───────────────────────────────────────────────────────── */}
       <PageHeader
         className="mb-0"
         title="التقارير المالية"
-        description="ملخص مالي شامل — المحصّل، المتبقي، المتأخر، والمستحقات القادمة."
+        description="تقرير الرقابة المالية — المحصّل، المتبقي، المتأخر، والمستحقات القادمة."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'التقارير', href: '/dashboard/reports' },
           { label: 'المالي' },
         ]}
+        actions={
+          <div className="inline-flex items-center gap-1 rounded-xl border border-hairline bg-surface shadow-xs px-1.5 py-1.5">
+            <ExportMenu
+              label="تصدير"
+              xlsxPath="/reports/financial-dashboard/export.xlsx"
+              csvPath="/reports/financial-dashboard/export.csv"
+              filenameBase="financial-dashboard"
+              params={{ dateFrom, dateTo, projectId: sp.projectId, q: sp.q, type: sp.type }}
+            />
+          </div>
+        }
       />
 
+      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <ReportsTabs active="financial" />
 
-      {/* ── Controls row ───────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex rounded-xl border border-hairline bg-white shadow-xs overflow-hidden divide-x divide-x-reverse divide-hairline">
-            <PeriodLink href={presetUrl(monthStartStr)} active={activePeriod === 'month'}>
-              الشهر الحالي
-            </PeriodLink>
-            <PeriodLink href={presetUrl(quarterStartStr)} active={activePeriod === 'quarter'}>
-              الربع السنوي
-            </PeriodLink>
-            <PeriodLink href={presetUrl(yearStartStr)} active={activePeriod === 'year'}>
-              السنوي
-            </PeriodLink>
-          </div>
+      {/* ── Period / comparison filter ────────────────────────────────────── */}
+      <ReportFilterBar
+        defaultMode={mode as PeriodMode}
+        defaultMonth={month}
+        defaultYear={year}
+        defaultQuarter={quarter}
+        defaultDateFrom={dateFrom}
+        defaultDateTo={dateTo}
+        defaultCompare={compare}
+        basePath="/dashboard/reports/financial"
+      />
 
-          <ProjectSelect
-            value={sp.projectId ?? ''}
-            projects={projects.map((p) => ({ id: p.id, name: tx(p.name) }))}
-            preserveParams={preserveForProject}
-          />
-        </div>
+      {/* ── Advanced filters — project / customer / type ──────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface-muted/50 px-4 py-2.5 shadow-xs">
+        <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+          <Filter className="h-3.5 w-3.5" />
+        </span>
+        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest shrink-0 hidden sm:inline">فلاتر متقدمة</span>
+        <div className="w-px h-4 bg-hairline shrink-0 hidden sm:block" />
 
-        <div className="flex items-center gap-2">
-          <Link
-            href={toggleFiltersUrl as never}
-            className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
-          >
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
-          </Link>
-          <ExportMenu
-            xlsxPath="/reports/financial-dashboard/export.xlsx"
-            csvPath="/reports/financial-dashboard/export.csv"
-            filenameBase="financial-dashboard"
-            params={{
-              projectId: sp.projectId,
-              q: sp.q,
-              type: sp.type,
-              dateFrom: sp.dateFrom,
-              dateTo: sp.dateTo,
-            }}
+        <ProjectSelect
+          value={sp.projectId ?? ''}
+          projects={projects.map((p) => ({ id: p.id, name: tx(p.name) }))}
+          preserveParams={preserveForProject}
+        />
+
+        <div className="w-px h-4 bg-hairline shrink-0 hidden sm:block" />
+
+        <form method="get" action="/dashboard/reports/financial" className="flex flex-wrap items-center gap-2">
+          <input type="hidden" name="mode"  value={mode} />
+          <input type="hidden" name="year"  value={String(year)} />
+          {mode === 'monthly'   && <input type="hidden" name="month"    value={String(month)} />}
+          {mode === 'quarterly' && <input type="hidden" name="quarter"  value={String(quarter)} />}
+          {mode === 'custom'    && <input type="hidden" name="dateFrom" value={dateFrom} />}
+          {mode === 'custom'    && <input type="hidden" name="dateTo"   value={dateTo} />}
+          {compare !== 'none'   && <input type="hidden" name="compare"  value={compare} />}
+          {sp.projectId         && <input type="hidden" name="projectId" value={sp.projectId} />}
+
+          <Input
+            name="q"
+            inputSize="sm"
+            placeholder="ابحث باسم العميل"
+            defaultValue={sp.q ?? ''}
+            className="w-40"
           />
-        </div>
+          <Select name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-40">
+            <option value="">كل الأنواع</option>
+            <option value="BOOKING_AMOUNT">مبلغ الحجز</option>
+            <option value="DOWN_PAYMENT">دفعة أولى</option>
+            <option value="INSTALLMENT">قسط شهري</option>
+            <option value="FINAL_PAYMENT">دفعة أخيرة</option>
+          </Select>
+          <Button type="submit" variant="secondary" size="sm">تطبيق</Button>
+          {hasAdvancedFilters && (
+            <Link href={clearFiltersUrl}>
+              <Button type="button" variant="secondary" size="sm">مسح</Button>
+            </Link>
+          )}
+        </form>
       </div>
 
-      {/* ── Advanced filters ───────────────────────────────────────────────── */}
-      {showFilters && (
-        <Card>
-          <CardBody className="px-5 py-4">
-            <form
-              method="get"
-              action="/dashboard/reports/financial"
-              className="flex flex-wrap items-end gap-x-4 gap-y-3"
-            >
-              {sp.projectId && <input type="hidden" name="projectId" value={sp.projectId} />}
-
-              <div className="flex flex-col gap-1 min-w-[150px]">
-                <label htmlFor="q" className="text-xs font-medium text-slate-500">العميل</label>
-                <Input id="q" name="q" inputSize="sm" placeholder="ابحث باسم العميل" defaultValue={sp.q ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1 min-w-[140px]">
-                <label htmlFor="type" className="text-xs font-medium text-slate-500">نوع الدفعة</label>
-                <Select id="type" name="type" inputSize="sm" defaultValue={sp.type ?? ''}>
-                  <option value="">كل الأنواع</option>
-                  <option value="BOOKING_AMOUNT">مبلغ الحجز</option>
-                  <option value="DOWN_PAYMENT">دفعة أولى</option>
-                  <option value="INSTALLMENT">قسط شهري</option>
-                  <option value="FINAL_PAYMENT">دفعة أخيرة</option>
-                </Select>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="dateFrom" className="text-xs font-medium text-slate-500">من تاريخ</label>
-                <Input id="dateFrom" name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label htmlFor="dateTo" className="text-xs font-medium text-slate-500">إلى تاريخ</label>
-                <Input id="dateTo" name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} />
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" variant="primary" size="sm">تطبيق</Button>
-                <Link href="/dashboard/reports/financial">
-                  <Button type="button" variant="secondary" size="sm">مسح</Button>
-                </Link>
-              </div>
-            </form>
-          </CardBody>
-        </Card>
-      )}
-
+      {/* ── Error ────────────────────────────────────────────────────────── */}
       {dashRes.error && (
-        <div className="rounded-lg bg-red-50 text-red-700 p-4 text-sm">{dashRes.error}</div>
+        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          {dashRes.error}
+        </div>
       )}
 
-      {/* ── A. Contracted Sales + B/C headline KPIs ──────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ═══════════════════════════════════════════════════════════════════
+          1 — Primary KPI cards
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <PrimaryKpiCard
-          tone="brand"
-          label="إجمالي قيمة العقود"
-          icon={<FileText />}
-          value={formatCurrency(contractVal)}
+          tone="brand" label="إجمالي قيمة العقود" icon={<FileText />}
+          value={<span dir="ltr">{formatCurrency(contractVal)}</span>}
           sub={s ? `${s.contractCount} عقد` : undefined}
+          delta={contractDelta}
         />
         <PrimaryKpiCard
-          tone="success"
-          label="المحصّل المؤكد"
-          icon={<DollarSign />}
-          value={formatCurrency(collectedVerified)}
+          tone="success" label="المحصّل المؤكد" icon={<DollarSign />}
+          value={<span dir="ltr">{formatCurrency(collectedVerified)}</span>}
           sub={`إجمالي مسجل: ${formatCurrency(collectedAll)} · غير مؤكد: ${formatCurrency(collectedUnverified)}`}
+          delta={collectedDelta}
         />
         <PrimaryKpiCard
-          tone="info"
-          label="المتبقي للتحصيل"
-          icon={<Clock />}
-          value={formatCurrency(outstanding)}
+          tone="info" label="المتبقي للتحصيل" icon={<Clock />}
+          value={<span dir="ltr">{formatCurrency(outstanding)}</span>}
+          delta={remainingDelta} invertDelta
         />
         <PrimaryKpiCard
-          tone="danger"
-          label="المتأخر المحسوب"
-          icon={<AlertTriangle />}
-          value={formatCurrency(overdueComputed)}
+          tone="danger" label="المتأخر المحسوب" icon={<AlertTriangle />}
+          value={<span dir="ltr">{formatCurrency(overdueComputed)}</span>}
           sub={`${overdueCountComputed.toLocaleString('ar-EG')} قسط · مستحق خلال 7 أيام: ${formatCurrency(dueSoon)}`}
+          delta={overdueDelta} invertDelta
         />
       </div>
 
-      {/* ── B. Cash Collection by type ───────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle className="text-sm">التحصيل حسب نوع الدفعة</CardTitle>
+      {/* Secondary stats strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {[
+          { label: 'المحصّل هذا الشهر',       value: formatCurrency(s?.collectedThisMonth ?? 0), cls: 'text-success-700', ltr: true },
+          { label: 'المستحق هذا الشهر',       value: formatCurrency(s?.dueThisMonth ?? 0),       cls: 'text-amber-600',  ltr: true },
+          { label: 'عدد العقود',              value: (s?.contractCount ?? 0).toLocaleString('ar-EG'),              cls: 'text-slate-900', ltr: false },
+          { label: 'عدد الدفعات',             value: (s?.depositCount ?? 0).toLocaleString('ar-EG'),               cls: 'text-slate-900', ltr: false },
+          { label: 'أقساط متأخرة (محسوبة)', value: overdueCountComputed.toLocaleString('ar-EG'),                   cls: 'text-danger-700', ltr: false },
+        ].map((item) => (
+          <div key={item.label} className="bg-surface rounded-xl border border-hairline shadow-xs px-4 py-3.5">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 leading-tight">{item.label}</p>
+            <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)} dir={item.ltr ? 'ltr' : undefined}>{item.value}</p>
           </div>
-        </CardHeader>
-        <CardBody className="p-0">
-          {collectionByType.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-8 text-center">
-              <CreditCard className="h-7 w-7 text-slate-200" />
-              <p className="text-sm text-slate-400">لا توجد دفعات ضمن الفلاتر المختارة</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[560px]">
-                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
-                  <tr>
-                    <th className="px-4 py-2 text-right font-medium">نوع الدفعة</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">العدد</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">إجمالي مسجل</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">مؤكد</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">غير مؤكد</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {collectionByType.map((c) => (
-                    <tr key={c.type} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className={cn(
-                          'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
-                          DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600',
-                        )}>
-                          {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5 tabular-nums text-slate-500">{c.count.toLocaleString('ar-EG')}</td>
-                      <td className="px-4 py-2.5 tabular-nums font-semibold text-slate-800">{formatCurrency(c.totalAll)}</td>
-                      <td className="px-4 py-2.5 tabular-nums text-emerald-700">{formatCurrency(c.totalVerified)}</td>
-                      <td className="px-4 py-2.5 tabular-nums text-amber-600">{formatCurrency(c.totalUnverified)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="px-5 py-2.5 text-[11px] text-slate-400 border-t border-hairline">
-            المحصّل المؤكد يعتمد على الدفعات التي تم التحقق منها فقط.
-          </p>
-        </CardBody>
-      </Card>
+        ))}
+      </div>
 
-      {/* ── C. Receivables ───────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle className="text-sm">المستحقات (الذمم المدينة)</CardTitle>
-          </div>
-        </CardHeader>
-        <CardBody className="space-y-3">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              { label: 'المتبقي للتحصيل', value: formatCurrency(outstanding), cls: 'text-slate-800' },
-              { label: 'مستحق خلال 7 أيام', value: formatCurrency(dueSoon), cls: 'text-amber-600' },
-              { label: 'المتأخر المحسوب', value: formatCurrency(overdueComputed), cls: 'text-red-600' },
-              { label: 'عدد الأقساط المتأخرة', value: overdueCountComputed.toLocaleString('ar-EG'), cls: 'text-red-600' },
-            ].map((item) => (
-              <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
-                <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>
-                <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-[11px] text-slate-400">
-            يتم احتساب المتأخرات بناءً على تاريخ الاستحقاق وحالة السداد، وليس على حالة OVERDUE المخزنة فقط.
-          </p>
-        </CardBody>
-      </Card>
+      {/* ═══════════════════════════════════════════════════════════════════
+          2 — Cashflow & Collection Health
+      ════════════════════════════════════════════════════════════════════ */}
+      <SectionDivider icon={<Activity />} label="التدفق النقدي وصحة التحصيل" />
 
-      {/* ── D. Overdue Aging buckets ─────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-            <CardTitle className="text-sm">أعمار المتأخرات</CardTitle>
-          </div>
-        </CardHeader>
-        <CardBody>
-          {aging.length === 0 || aging.every((b) => b.count === 0) ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <BadgeCheck className="h-7 w-7 text-slate-200" />
-              <p className="text-sm text-slate-400">لا توجد متأخرات</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {aging.map((b) => (
-                <div key={b.label} className="rounded-xl border border-hairline px-4 py-3">
-                  <p className="text-[11px] text-slate-400 mb-1 leading-tight">{AGING_LABELS[b.label] ?? b.label}</p>
-                  <p className="text-lg font-bold tabular-nums leading-tight text-red-600">{formatCurrency(b.amount)}</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{b.count.toLocaleString('ar-EG')} قسط</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardBody>
-      </Card>
-
-      {/* ── E. Booking Pipeline ──────────────────────────────────────────────── */}
-      {booking && (
-        <Card>
-          <CardHeader className="px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Bookmark className="h-4 w-4 text-indigo-500 shrink-0" />
-              <CardTitle className="text-sm">خط الحجوزات</CardTitle>
-            </div>
-          </CardHeader>
-          <CardBody className="space-y-3">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                { label: 'حجوزات قيد المراجعة', value: `${booking.pendingReservationsCount.toLocaleString('ar-EG')} · ${formatCurrency(booking.pendingReservationsBookingAmount)}`, cls: 'text-amber-600' },
-                { label: 'حجوزات معتمدة', value: `${booking.approvedReservationsCount.toLocaleString('ar-EG')} · ${formatCurrency(booking.approvedReservationsBookingAmount)}`, cls: 'text-slate-800' },
-                { label: 'مبالغ الحجز المؤكدة', value: formatCurrency(booking.bookingCollectedVerified), cls: 'text-emerald-700' },
-                { label: 'تقدير غير المحصّل', value: formatCurrency(booking.bookingUncollectedEstimate), cls: 'text-slate-800' },
-              ].map((item) => (
-                <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
-                  <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>
-                  <p className={cn('text-base font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-[11px] text-slate-400">
-              الحجوزات ليست إيرادًا تعاقديًا حتى تتحول إلى عقد. (إجمالي مبالغ الحجز المسجلة: {formatCurrency(booking.bookingCollectedAll)})
-            </p>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* ── Commissions & Liabilities ────────────────────────────────────────── */}
-      {liabilities && (
-        <Card>
-          <CardHeader className="px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Coins className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle className="text-sm">العمولات والالتزامات</CardTitle>
-            </div>
-          </CardHeader>
-          <CardBody className="space-y-4">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[
-                { label: 'مستحقات المبيعات غير المدفوعة', value: formatCurrency(liabilities.salesBonus.unpaidAmount), cls: 'text-amber-600' },
-                { label: 'عمولات الوسطاء غير المدفوعة', value: formatCurrency(liabilities.brokerCommissions.unpaidAmount), cls: 'text-amber-600' },
-                { label: 'إجمالي الالتزامات غير المدفوعة', value: formatCurrency(liabilities.totalUnpaidLiabilities), cls: 'text-red-600' },
-                { label: 'المدفوع من العمولات', value: formatCurrency(decimal(liabilities.salesBonus.paidAmount) + decimal(liabilities.brokerCommissions.paidAmount)), cls: 'text-emerald-700' },
-              ].map((item) => (
-                <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
-                  <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>
-                  <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-              {/* A. Sales bonus */}
-              <div className="rounded-xl border border-hairline overflow-hidden">
-                <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-600 border-b border-hairline">مستحقات المبيعات</div>
-                <div className="divide-y divide-hairline text-sm">
-                  {[
-                    { label: 'معلّق', amount: liabilities.salesBonus.pendingAmount, count: liabilities.salesBonus.pendingCount },
-                    { label: 'معتمد', amount: liabilities.salesBonus.approvedAmount, count: liabilities.salesBonus.approvedCount },
-                    { label: 'مدفوع', amount: liabilities.salesBonus.paidAmount, count: liabilities.salesBonus.paidCount },
-                  ].map((r) => (
-                    <div key={r.label} className="flex items-center justify-between px-4 py-2">
-                      <span className="text-slate-500 text-xs">{r.label} <span className="text-slate-300">({r.count.toLocaleString('ar-EG')})</span></span>
-                      <span className="font-semibold tabular-nums text-slate-800">{formatCurrency(r.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* B. Broker commissions */}
-              <div className="rounded-xl border border-hairline overflow-hidden">
-                <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-600 border-b border-hairline">عمولات الوسطاء</div>
-                <div className="divide-y divide-hairline text-sm">
-                  {[
-                    { label: 'معلّق', amount: liabilities.brokerCommissions.pendingAmount, count: liabilities.brokerCommissions.pendingCount },
-                    { label: 'معتمد', amount: liabilities.brokerCommissions.approvedAmount, count: liabilities.brokerCommissions.approvedCount },
-                    { label: 'مدفوع (عبر دفعة)', amount: liabilities.brokerCommissions.paidAmount, count: liabilities.brokerCommissions.paidCount },
-                    { label: 'غير مدفوع', amount: liabilities.brokerCommissions.unpaidAmount, count: liabilities.brokerCommissions.unpaidCount },
-                  ].map((r) => (
-                    <div key={r.label} className="flex items-center justify-between px-4 py-2">
-                      <span className="text-slate-500 text-xs">{r.label} <span className="text-slate-300">({r.count.toLocaleString('ar-EG')})</span></span>
-                      <span className="font-semibold tabular-nums text-slate-800">{formatCurrency(r.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* C. Broker payouts */}
-              <div className="rounded-xl border border-hairline overflow-hidden">
-                <div className="px-4 py-2 bg-slate-50 text-xs font-semibold text-slate-600 border-b border-hairline">دفعات الوسطاء</div>
-                <div className="divide-y divide-hairline text-sm">
-                  {[
-                    { label: 'مسودة', amount: liabilities.brokerPayouts.draftAmount, count: liabilities.brokerPayouts.draftCount },
-                    { label: 'معتمدة', amount: liabilities.brokerPayouts.approvedAmount, count: liabilities.brokerPayouts.approvedCount },
-                    { label: 'قيد المعالجة', amount: liabilities.brokerPayouts.processingAmount, count: liabilities.brokerPayouts.processingCount },
-                    { label: 'مدفوعة', amount: liabilities.brokerPayouts.paidAmount, count: liabilities.brokerPayouts.paidCount },
-                  ].map((r) => (
-                    <div key={r.label} className="flex items-center justify-between px-4 py-2">
-                      <span className="text-slate-500 text-xs">{r.label} <span className="text-slate-300">({r.count.toLocaleString('ar-EG')})</span></span>
-                      <span className="font-semibold tabular-nums text-slate-800">{formatCurrency(r.amount)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <p className="text-[11px] text-slate-400">
-              لا يتم جمع دفعات الوسطاء مرة أخرى داخل إجمالي الالتزامات لتجنب العد المزدوج.
-            </p>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* ── Documents / Receipts health ──────────────────────────────────────── */}
-      {docsHealth && (
-        <Card>
-          <CardHeader className="px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <FileWarning className="h-4 w-4 text-amber-500 shrink-0" />
-              <CardTitle className="text-sm">سلامة المستندات والإيصالات</CardTitle>
-            </div>
-          </CardHeader>
-          <CardBody className="space-y-3">
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-              {[
-                { label: 'دفعات مؤكدة بدون إيصال', entry: docsHealth.depositsMissingReceipt },
-                { label: 'دفعات مؤكدة بدون مستند إيصال', entry: docsHealth.verifiedDepositsMissingReceiptDocument },
-                { label: 'إيصالات قديمة غير مربوطة كمستند', entry: docsHealth.depositsWithLegacyReceiptUrlMissingDocument },
-                { label: 'عقود موقعة بدون مستند عقد', entry: docsHealth.signedContractsMissingDocument },
-                { label: 'ملفات عقود قديمة غير مربوطة كمستند', entry: docsHealth.contractsWithLegacyPdfUrlMissingDocument },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className={cn(
-                    'rounded-xl border px-4 py-3',
-                    item.entry.count > 0 ? 'border-amber-200 bg-amber-50/50' : 'border-hairline',
-                  )}
-                >
-                  <p className="text-[11px] text-slate-500 mb-1 leading-tight min-h-[28px]">{item.label}</p>
-                  <p className={cn('text-lg font-bold tabular-nums leading-tight', item.entry.count > 0 ? 'text-amber-700' : 'text-slate-400')}>
-                    {item.entry.count.toLocaleString('ar-EG')}
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{formatCurrency(item.entry.amount)}</p>
-                </div>
-              ))}
-            </div>
-            <p className="text-[11px] text-slate-400">
-              هذه المؤشرات تساعد على مراجعة اكتمال مستندات الدفعات والعقود.
-            </p>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* ── Analytics row ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        {/* Cashflow trend chart — 2/3 */}
-        <Card className="xl:col-span-2">
-          <CardHeader className="px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Activity className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle className="text-sm">اتجاهات التدفق النقدي</CardTitle>
+        {/* Cashflow trend — 2/3 */}
+        <Card className="xl:col-span-2 overflow-hidden">
+          <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+              <Activity className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm font-semibold text-slate-800">اتجاهات التدفق النقدي</CardTitle>
+              <p className="text-xs text-slate-400 mt-0.5">المدفوعات والمستحقات خلال الأشهر الستة الماضية</p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="h-2 w-2 rounded-sm bg-emerald-500 shrink-0" />
-                المحصّل
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                <span className="h-2.5 w-2.5 rounded-sm bg-emerald-500 shrink-0" />المحصّل
               </span>
-              <span className="flex items-center gap-1.5 text-xs text-slate-500">
-                <span className="h-2 w-2 rounded-sm bg-amber-400 shrink-0" />
-                المستحق
+              <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
+                <span className="h-2.5 w-2.5 rounded-sm bg-amber-400 shrink-0" />المستحق
               </span>
             </div>
           </CardHeader>
@@ -777,11 +504,14 @@ export default async function FinancialReportsPage({
         </Card>
 
         {/* Payment status donut — 1/3 */}
-        <Card className="flex flex-col">
-          <CardHeader className="px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle className="text-sm">تحليل حالة الدفع</CardTitle>
+        <Card className="flex flex-col overflow-hidden">
+          <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+              <CreditCard className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm font-semibold text-slate-800">تحليل حالة الدفع</CardTitle>
+              <p className="text-xs text-slate-400 mt-0.5">توزيع قيم العقود</p>
             </div>
           </CardHeader>
           <CardBody className="px-5 py-4 flex flex-col gap-3 flex-1">
@@ -795,130 +525,403 @@ export default async function FinancialReportsPage({
               {((): { label: string; amount: number; pct: number; dot: string; text: string }[] => {
                 const base = contractVal > 0 ? contractVal : collectedVerified + overdueComputed + outstanding || 1;
                 return [
-                  { label: 'المحصّل المؤكد', amount: collectedVerified, pct: Math.round((collectedVerified / base) * 100), dot: 'bg-emerald-500', text: 'text-emerald-700' },
-                  { label: 'المتأخر', amount: overdueComputed,   pct: Math.round((overdueComputed / base) * 100),   dot: 'bg-red-500',     text: 'text-red-700' },
-                  { label: 'المتبقي', amount: outstanding,  pct: Math.round((outstanding / base) * 100),  dot: 'bg-slate-300',   text: 'text-slate-600' },
+                  { label: 'المحصّل المؤكد', amount: collectedVerified, pct: Math.round((collectedVerified / base) * 100), dot: 'bg-emerald-500', text: 'text-success-700' },
+                  { label: 'المتأخر',         amount: overdueComputed,   pct: Math.round((overdueComputed   / base) * 100), dot: 'bg-red-500',     text: 'text-danger-700' },
+                  { label: 'المتبقي',         amount: outstanding,       pct: Math.round((outstanding       / base) * 100), dot: 'bg-slate-300',   text: 'text-slate-600' },
                 ];
               })().map((r) => (
                 <div key={r.label} className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <span className={cn('h-2 w-2 rounded-full shrink-0', r.dot)} />
-                    <span className="text-xs text-slate-500">{r.label}</span>
+                    <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', r.dot)} />
+                    <span className="text-xs font-medium text-slate-600">{r.label}</span>
                   </div>
                   <div className="flex items-baseline gap-1.5">
-                    <span className={cn('text-xs font-semibold tabular-nums', r.text)}>
-                      {formatCurrency(r.amount)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 tabular-nums">{r.pct}٪</span>
+                    <span className={cn('text-xs font-bold tabular-nums whitespace-nowrap', r.text)} dir="ltr">{formatCurrency(r.amount)}</span>
+                    <span className="text-[11px] font-medium text-slate-400 tabular-nums">{r.pct}٪</span>
                   </div>
                 </div>
               ))}
             </div>
             <div className="pt-2 mt-auto border-t border-hairline">
-              <p className="text-[10px] text-slate-400 mb-0.5">إجمالي قيمة العقود</p>
-              <p className="text-base font-bold text-slate-800 tabular-nums leading-tight">
-                {formatCurrency(contractVal)}
-              </p>
+              <p className="text-[10px] text-slate-400 mb-0.5 uppercase tracking-wide font-semibold">إجمالي قيمة العقود</p>
+              <p className="text-base font-bold text-slate-900 tabular-nums leading-tight whitespace-nowrap" dir="ltr">{formatCurrency(contractVal)}</p>
               {s && <p className="text-[10px] text-slate-400 mt-0.5">{s.contractCount} عقد</p>}
             </div>
           </CardBody>
         </Card>
       </div>
 
-      {/* ── Secondary stats strip ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {[
-          { label: 'المحصّل هذا الشهر',  value: formatCurrency(s?.collectedThisMonth ?? 0), cls: 'text-emerald-600' },
-          { label: 'المستحق هذا الشهر',  value: formatCurrency(s?.dueThisMonth ?? 0),       cls: 'text-amber-600' },
-          { label: 'عدد العقود',          value: (s?.contractCount ?? 0).toLocaleString('ar-EG'),             cls: 'text-slate-800' },
-          { label: 'عدد الدفعات',         value: (s?.depositCount ?? 0).toLocaleString('ar-EG'),              cls: 'text-slate-800' },
-          { label: 'أقساط متأخرة (محسوبة)', value: overdueCountComputed.toLocaleString('ar-EG'),  cls: 'text-red-600' },
-        ].map((item) => (
-          <div key={item.label} className="bg-white rounded-xl border border-hairline shadow-xs px-4 py-3.5">
-            <p className="text-[11px] text-slate-400 mb-1 leading-tight">{item.label}</p>
-            <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
-          </div>
-        ))}
+      {/* ═══════════════════════════════════════════════════════════════════
+          3 — Receivables & Overdue Risk
+      ════════════════════════════════════════════════════════════════════ */}
+      <SectionDivider icon={<AlertTriangle />} label="الذمم المدينة والمتأخرات" />
+
+      {/* Receivables summary tile row */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { label: 'المتبقي للتحصيل',      value: formatCurrency(outstanding),                               cls: 'text-slate-900' },
+            { label: 'مستحق خلال 7 أيام',    value: formatCurrency(dueSoon),                                   cls: 'text-amber-600' },
+            { label: 'المتأخر المحسوب',      value: formatCurrency(overdueComputed),                            cls: 'text-danger-700' },
+            { label: 'عدد الأقساط المتأخرة', value: overdueCountComputed.toLocaleString('ar-EG'),               cls: 'text-danger-700' },
+          ].map((item) => (
+            <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1 leading-tight">{item.label}</p>
+              <p className={cn('text-lg font-bold tabular-nums leading-tight whitespace-nowrap', item.cls)} dir="ltr">{item.value}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[11px] text-slate-400">
+          يتم احتساب المتأخرات بناءً على تاريخ الاستحقاق وحالة السداد، وليس على حالة OVERDUE المخزنة فقط.
+        </p>
       </div>
 
-      {/* ── Overdue installments (max 5) ─────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5 bg-red-50/60 border-b border-red-100">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
-            <CardTitle className="text-sm text-red-700">الأقساط المتأخرة</CardTitle>
-            {s && s.overdueInstallmentCount > 0 && (
-              <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-red-100 text-red-700 text-[11px] font-semibold">
-                {s.overdueInstallmentCount}
-              </span>
-            )}
+      {/* Aging buckets */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-50 text-danger-600">
+            <AlertTriangle className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-sm font-semibold text-slate-800">أعمار المتأخرات</CardTitle>
+            <p className="text-xs text-slate-400 mt-0.5">توزيع المبالغ المتأخرة حسب عمر الدين</p>
           </div>
-          {dash && dash.overdue.length > 0 && (
-            <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap">
-              عرض الكل
-            </Link>
-          )}
         </CardHeader>
-        <CardBody className="p-0">
-          <OverdueTable rows={(dash?.overdue ?? []).slice(0, 5)} />
+        <CardBody>
+          {aging.length === 0 || aging.every((b) => b.count === 0) ? (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <BadgeCheck className="h-7 w-7 text-slate-200" />
+              <p className="text-sm text-slate-400">لا توجد متأخرات</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {aging.map((b) => {
+                const isHigh = b.label === '90+' || b.label === '61-90';
+                return (
+                  <div key={b.label} className={cn(
+                    'rounded-xl border px-4 py-3',
+                    b.count > 0 && isHigh  ? 'border-danger-200 bg-danger-50/40'
+                      : b.count > 0        ? 'border-amber-200 bg-amber-50/30'
+                      : 'border-hairline opacity-50',
+                  )}>
+                    <p className={cn(
+                      'text-[10px] font-semibold uppercase tracking-wide mb-1 leading-tight',
+                      b.count > 0 ? 'text-slate-500' : 'text-slate-400',
+                    )}>
+                      {AGING_LABELS[b.label] ?? b.label}
+                    </p>
+                    <p className={cn(
+                      'text-lg font-bold tabular-nums leading-tight whitespace-nowrap',
+                      b.count > 0 && isHigh ? 'text-danger-700' : b.count > 0 ? 'text-amber-700' : 'text-slate-400',
+                    )} dir="ltr">
+                      {formatCurrency(b.amount)}
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{b.count.toLocaleString('ar-EG')} قسط</p>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </CardBody>
       </Card>
 
-      {/* ── Upcoming payments — compact lists ───────────────────────────────── */}
+      {/* Overdue installments — all rows with scroll */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-danger-100 bg-danger-50/30">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-100 text-danger-600">
+            <AlertTriangle className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-sm font-semibold text-danger-800">الأقساط المتأخرة</CardTitle>
+            {overdueCountComputed > 0 && (
+              <p className="text-2xs text-danger-600 mt-0.5">{overdueCountComputed} قسط متأخر محسوب</p>
+            )}
+          </div>
+          {s && s.overdueInstallmentCount > 0 && (
+            <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 rounded-full bg-danger-100 text-danger-700 text-[11px] font-semibold shrink-0">
+              {s.overdueInstallmentCount}
+            </span>
+          )}
+          <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap shrink-0">
+            عرض الكل
+          </Link>
+        </CardHeader>
+        <CardBody className="p-0">
+          <OverdueTable rows={dash?.overdue ?? []} />
+        </CardBody>
+      </Card>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          4 — Upcoming Payments
+      ════════════════════════════════════════════════════════════════════ */}
+      <SectionDivider icon={<CalendarDays />} label="المستحقات القادمة" />
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle className="text-sm">المستحقات هذا الأسبوع</CardTitle>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+              <CalendarDays className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm font-semibold text-slate-800">المستحقات هذا الأسبوع</CardTitle>
             </div>
             {(dash?.upcomingThisWeek?.length ?? 0) > 0 && (
-              <span className="text-xs font-semibold tabular-nums text-slate-600">
-                {formatCurrency(
-                  (dash?.upcomingThisWeek ?? []).reduce((acc, r) => acc + decimal(r.amount), 0)
-                )}
+              <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap shrink-0" dir="ltr">
+                {formatCurrency((dash?.upcomingThisWeek ?? []).reduce((acc, r) => acc + decimal(r.amount), 0))}
               </span>
             )}
           </CardHeader>
-          <CardBody className="p-0 pb-1">
-            <CompactPaymentList
-              rows={(dash?.upcomingThisWeek ?? []).slice(0, 6)}
-              emptyMessage="لا توجد مستحقات هذا الأسبوع"
-            />
+          <CardBody className="p-0 pb-1 min-h-[72px]">
+            <CompactPaymentList rows={dash?.upcomingThisWeek ?? []} emptyMessage="لا توجد مستحقات هذا الأسبوع" />
           </CardBody>
         </Card>
 
-        <Card>
-          <CardHeader className="px-5 py-3.5">
-            <div className="flex items-center gap-2">
-              <Wallet className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle className="text-sm">بقية مستحقات الشهر</CardTitle>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+              <Wallet className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm font-semibold text-slate-800">بقية مستحقات الشهر</CardTitle>
             </div>
             {(dash?.upcomingThisMonth?.length ?? 0) > 0 && (
-              <span className="text-xs font-semibold tabular-nums text-slate-600">
-                {formatCurrency(
-                  (dash?.upcomingThisMonth ?? []).reduce((acc, r) => acc + decimal(r.amount), 0)
-                )}
+              <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap shrink-0" dir="ltr">
+                {formatCurrency((dash?.upcomingThisMonth ?? []).reduce((acc, r) => acc + decimal(r.amount), 0))}
               </span>
             )}
           </CardHeader>
-          <CardBody className="p-0 pb-1">
-            <CompactPaymentList
-              rows={(dash?.upcomingThisMonth ?? []).slice(0, 6)}
-              emptyMessage="لا توجد مستحقات إضافية هذا الشهر"
-            />
+          <CardBody className="p-0 pb-1 min-h-[72px]">
+            <CompactPaymentList rows={dash?.upcomingThisMonth ?? []} emptyMessage="لا توجد مستحقات إضافية هذا الشهر" />
           </CardBody>
         </Card>
       </div>
 
-      {/* ── Recent deposits (max 8) ──────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <ReceiptText className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle className="text-sm">آخر الدفعات</CardTitle>
+      {/* ═══════════════════════════════════════════════════════════════════
+          5 — Collection by payment type
+      ════════════════════════════════════════════════════════════════════ */}
+      <SectionDivider icon={<CreditCard />} label="التحصيل حسب نوع الدفعة" />
+
+      <Card className="overflow-hidden">
+        <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+            <CreditCard className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-sm font-semibold text-slate-800">التحصيل حسب نوع الدفعة</CardTitle>
+            <p className="text-xs text-slate-400 mt-0.5">توزيع الدفعات المسجلة والمؤكدة حسب التصنيف</p>
           </div>
-          <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap">
+        </CardHeader>
+        <CardBody className="p-0">
+          {collectionByType.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-center">
+              <CreditCard className="h-7 w-7 text-slate-200" />
+              <p className="text-sm text-slate-400">لا توجد دفعات ضمن الفلاتر المختارة</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[560px]">
+                <thead className="bg-surface-muted/60 text-2xs font-semibold tracking-wide text-slate-500 border-b border-hairline">
+                  <tr>
+                    <th className="text-start font-semibold py-2.5 ps-5 pe-4">نوع الدفعة</th>
+                    <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">العدد</th>
+                    <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">إجمالي مسجل</th>
+                    <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">مؤكد</th>
+                    <th className="text-start font-semibold py-2.5 ps-4 pe-5 whitespace-nowrap">غير مؤكد</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {collectionByType.map((c) => (
+                    <tr key={c.type} className="hover:bg-surface-muted/40 transition-colors align-middle">
+                      <td className="py-2.5 ps-5 pe-4 whitespace-nowrap">
+                        <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600')}>
+                          {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-4 tabular-nums text-slate-600">{c.count.toLocaleString('ar-EG')}</td>
+                      <td className="py-2.5 px-4 tabular-nums font-bold text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll)}</td>
+                      <td className="py-2.5 px-4 tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified)}</td>
+                      <td className="py-2.5 ps-4 pe-5 tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalUnverified)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="px-5 py-2.5 text-[11px] text-slate-400 border-t border-hairline">
+            المحصّل المؤكد يعتمد على الدفعات التي تم التحقق منها فقط.
+          </p>
+        </CardBody>
+      </Card>
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          6 — Liabilities, quality, booking
+      ════════════════════════════════════════════════════════════════════ */}
+      {(liabilities || docsHealth || booking) && (
+        <SectionDivider icon={<Coins />} label="الالتزامات والجودة التشغيلية" />
+      )}
+
+      {booking && (
+        <Card className="overflow-hidden">
+          <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+              <Bookmark className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm font-semibold text-slate-800">خط الحجوزات</CardTitle>
+              <p className="text-xs text-slate-400 mt-0.5">الحجوزات ليست إيرادًا تعاقديًا حتى تتحول إلى عقد</p>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'حجوزات قيد المراجعة', value: `${booking.pendingReservationsCount.toLocaleString('ar-EG')} · ${formatCurrency(booking.pendingReservationsBookingAmount)}`, cls: 'text-amber-600' },
+                { label: 'حجوزات معتمدة',       value: `${booking.approvedReservationsCount.toLocaleString('ar-EG')} · ${formatCurrency(booking.approvedReservationsBookingAmount)}`, cls: 'text-slate-900' },
+                { label: 'مبالغ الحجز المؤكدة', value: formatCurrency(booking.bookingCollectedVerified), cls: 'text-success-700' },
+                { label: 'تقدير غير المحصّل',   value: formatCurrency(booking.bookingUncollectedEstimate), cls: 'text-slate-700' },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1 leading-tight">{item.label}</p>
+                  <p className={cn('text-base font-bold tabular-nums leading-tight', item.cls)}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-slate-400">إجمالي مبالغ الحجز المسجلة: {formatCurrency(booking.bookingCollectedAll)}</p>
+          </CardBody>
+        </Card>
+      )}
+
+      {liabilities && (
+        <Card className="overflow-hidden">
+          <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+              <Coins className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <CardTitle className="text-sm font-semibold text-slate-800">العمولات والالتزامات</CardTitle>
+              <p className="text-xs text-slate-400 mt-0.5">لا يتم جمع دفعات الوسطاء داخل إجمالي الالتزامات لتجنب العد المزدوج</p>
+            </div>
+          </CardHeader>
+          <CardBody className="space-y-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {[
+                { label: 'مستحقات المبيعات غير المدفوعة',  value: formatCurrency(liabilities.salesBonus.unpaidAmount),           cls: 'text-amber-600' },
+                { label: 'عمولات الوسطاء غير المدفوعة',   value: formatCurrency(liabilities.brokerCommissions.unpaidAmount),     cls: 'text-amber-600' },
+                { label: 'إجمالي الالتزامات غير المدفوعة', value: formatCurrency(liabilities.totalUnpaidLiabilities),              cls: 'text-danger-700' },
+                { label: 'المدفوع من العمولات', value: formatCurrency(decimal(liabilities.salesBonus.paidAmount) + decimal(liabilities.brokerCommissions.paidAmount)), cls: 'text-success-700' },
+              ].map((item) => (
+                <div key={item.label} className="rounded-xl bg-surface-muted/50 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1 leading-tight">{item.label}</p>
+                  <p className={cn('text-lg font-bold tabular-nums leading-tight whitespace-nowrap', item.cls)} dir="ltr">{item.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+              {[
+                {
+                  title: 'مستحقات المبيعات',
+                  rows: [
+                    { label: 'معلّق', amount: liabilities.salesBonus.pendingAmount,  count: liabilities.salesBonus.pendingCount },
+                    { label: 'معتمد', amount: liabilities.salesBonus.approvedAmount, count: liabilities.salesBonus.approvedCount },
+                    { label: 'مدفوع', amount: liabilities.salesBonus.paidAmount,     count: liabilities.salesBonus.paidCount },
+                  ],
+                },
+                {
+                  title: 'عمولات الوسطاء',
+                  rows: [
+                    { label: 'معلّق',           amount: liabilities.brokerCommissions.pendingAmount,  count: liabilities.brokerCommissions.pendingCount },
+                    { label: 'معتمد',           amount: liabilities.brokerCommissions.approvedAmount, count: liabilities.brokerCommissions.approvedCount },
+                    { label: 'مدفوع (عبر دفعة)', amount: liabilities.brokerCommissions.paidAmount,   count: liabilities.brokerCommissions.paidCount },
+                    { label: 'غير مدفوع',       amount: liabilities.brokerCommissions.unpaidAmount,  count: liabilities.brokerCommissions.unpaidCount },
+                  ],
+                },
+                {
+                  title: 'دفعات الوسطاء',
+                  rows: [
+                    { label: 'مسودة',        amount: liabilities.brokerPayouts.draftAmount,      count: liabilities.brokerPayouts.draftCount },
+                    { label: 'معتمدة',       amount: liabilities.brokerPayouts.approvedAmount,   count: liabilities.brokerPayouts.approvedCount },
+                    { label: 'قيد المعالجة', amount: liabilities.brokerPayouts.processingAmount, count: liabilities.brokerPayouts.processingCount },
+                    { label: 'مدفوعة',       amount: liabilities.brokerPayouts.paidAmount,       count: liabilities.brokerPayouts.paidCount },
+                  ],
+                },
+              ].map((panel) => (
+                <div key={panel.title} className="rounded-xl border border-hairline overflow-hidden">
+                  <div className="px-4 py-2 bg-surface-muted/60 text-2xs font-semibold tracking-wide text-slate-500 border-b border-hairline">
+                    {panel.title}
+                  </div>
+                  <div className="divide-y divide-hairline">
+                    {panel.rows.map((r) => (
+                      <div key={r.label} className="flex items-center justify-between px-4 py-2">
+                        <span className="text-xs text-slate-500">
+                          {r.label} <span className="text-slate-300">({r.count.toLocaleString('ar-EG')})</span>
+                        </span>
+                        <span className="font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
+                          {formatCurrency(r.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {docsHealth && (
+        <details className="group">
+          <summary className="flex items-center gap-2 cursor-pointer list-none select-none rounded-xl border border-hairline bg-surface-muted/50 px-4 py-2.5 shadow-xs hover:bg-surface-muted/80 transition-colors">
+            <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <FileWarning className="h-3.5 w-3.5" />
+            </span>
+            <span className="text-xs font-semibold text-slate-600 flex-1">سلامة المستندات والإيصالات</span>
+            <span className="text-[10px] font-medium text-slate-400 group-open:hidden">عرض</span>
+            <span className="text-[10px] font-medium text-slate-400 hidden group-open:inline">إخفاء</span>
+          </summary>
+          <div className="mt-2">
+            <Card className="overflow-hidden">
+              <CardBody>
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                  {[
+                    { label: 'دفعات مؤكدة بدون إيصال',         entry: docsHealth.depositsMissingReceipt },
+                    { label: 'دفعات مؤكدة بدون مستند إيصال',  entry: docsHealth.verifiedDepositsMissingReceiptDocument },
+                    { label: 'إيصالات قديمة غير مربوطة',      entry: docsHealth.depositsWithLegacyReceiptUrlMissingDocument },
+                    { label: 'عقود موقعة بدون مستند عقد',     entry: docsHealth.signedContractsMissingDocument },
+                    { label: 'ملفات عقود قديمة غير مربوطة',  entry: docsHealth.contractsWithLegacyPdfUrlMissingDocument },
+                  ].map((item) => (
+                    <div key={item.label} className={cn(
+                      'rounded-xl border px-4 py-3',
+                      item.entry.count > 0 ? 'border-amber-200 bg-amber-50/50' : 'border-hairline opacity-60',
+                    )}>
+                      <p className="text-[11px] text-slate-500 mb-1.5 leading-tight min-h-[30px]">{item.label}</p>
+                      <p className={cn('text-xl font-bold tabular-nums leading-tight', item.entry.count > 0 ? 'text-amber-700' : 'text-slate-400')}>
+                        {item.entry.count.toLocaleString('ar-EG')}
+                      </p>
+                      <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap" dir="ltr">{formatCurrency(item.entry.amount)}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
+          </div>
+        </details>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
+          7 — Recent deposits
+      ════════════════════════════════════════════════════════════════════ */}
+      <SectionDivider icon={<ReceiptText />} label="آخر الدفعات" />
+
+      <Card className="overflow-hidden">
+        <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
+            <ReceiptText className="h-3.5 w-3.5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-sm font-semibold text-slate-800">آخر الدفعات</CardTitle>
+            <p className="text-xs text-slate-400 mt-0.5">أحدث الدفعات المسجلة حسب الفلاتر المختارة</p>
+          </div>
+          <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap shrink-0">
             عرض الكل
           </Link>
         </CardHeader>
@@ -931,69 +934,50 @@ export default async function FinancialReportsPage({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[600px]">
-                <thead className="bg-slate-50 text-xs text-slate-400 border-b border-hairline">
+                <thead className="bg-surface-muted/60 text-2xs font-semibold tracking-wide text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">النوع</th>
-                    <th className="px-4 py-2 text-right font-medium">العميل</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">الوحدة</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">المرجع</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">تاريخ الدفع</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">المبلغ</th>
-                    <th className="px-4 py-2 text-right font-medium whitespace-nowrap">التحقق</th>
+                    <th className="text-start font-semibold py-2.5 ps-5 pe-4 whitespace-nowrap">النوع</th>
+                    <th className="text-start font-semibold py-2.5 px-4">العميل</th>
+                    <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">الوحدة</th>
+                    <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">المرجع</th>
+                    <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">تاريخ الدفع</th>
+                    <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">المبلغ</th>
+                    <th className="text-start font-semibold py-2.5 ps-4 pe-5 whitespace-nowrap">التحقق</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {dash.recentDeposits.slice(0, 8).map((d) => (
-                    <tr key={d.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="px-4 py-2.5 whitespace-nowrap">
-                        <span className={cn(
-                          'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
-                          DEPOSIT_TYPE_CLS[d.type] ?? 'bg-slate-100 text-slate-600',
-                        )}>
+                    <tr key={d.id} className="hover:bg-surface-muted/40 transition-colors align-middle">
+                      <td className="py-2.5 ps-5 pe-4 whitespace-nowrap">
+                        <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', DEPOSIT_TYPE_CLS[d.type] ?? 'bg-slate-100 text-slate-600')}>
                           {DEPOSIT_TYPE_LABELS[d.type] ?? d.type}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">
-                        {getDepositCustomer(d)}
-                      </td>
-                      <td className="px-4 py-2.5 font-mono text-xs text-slate-400 whitespace-nowrap">
-                        {getDepositUnit(d)}
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="py-2.5 px-4 font-medium text-slate-800 max-w-[160px] truncate">{getDepositCustomer(d)}</td>
+                      <td className="py-2.5 px-4 font-mono text-xs text-slate-400 whitespace-nowrap">{getDepositUnit(d)}</td>
+                      <td className="py-2.5 px-4 whitespace-nowrap">
                         {d.contract ? (
-                          <Link
-                            href={`/dashboard/contracts/${d.contract.id}`}
-                            className="font-mono text-xs text-brand-600 hover:underline"
-                          >
+                          <Link href={`/dashboard/contracts/${d.contract.id}`} className="font-mono text-xs text-brand-600 hover:underline">
                             {d.contract.contractNumber ?? `#${d.contract.id.slice(0, 8)}`}
                           </Link>
                         ) : d.reservation ? (
-                          <Link
-                            href={`/dashboard/reservations/${d.reservation.id}`}
-                            className="font-mono text-xs text-indigo-600 hover:underline"
-                          >
+                          <Link href={`/dashboard/reservations/${d.reservation.id}`} className="font-mono text-xs text-indigo-600 hover:underline">
                             {d.reservation.reservationNumber ?? `#${d.reservation.id.slice(0, 8)}`}
                           </Link>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-2.5 text-xs text-slate-400 whitespace-nowrap tabular-nums">
-                        {formatDate(d.paidAt)}
-                      </td>
-                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
-                        {formatCurrency(d.amount)}
-                      </td>
-                      <td className="px-4 py-2.5 whitespace-nowrap">
+                      <td className="py-2.5 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(d.paidAt)}</td>
+                      <td className="py-2.5 px-4 font-bold tabular-nums whitespace-nowrap text-slate-900" dir="ltr">{formatCurrency(d.amount)}</td>
+                      <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
                         {d.verified ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-green-700">
-                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-                            متحقق
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-700">
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />متحقق
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600">
-                            <XCircle className="h-3.5 w-3.5 shrink-0" />
-                            غير متحقق
+                            <XCircle className="h-3.5 w-3.5 shrink-0" />غير متحقق
                           </span>
                         )}
                       </td>

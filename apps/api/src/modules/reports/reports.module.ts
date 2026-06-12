@@ -108,11 +108,24 @@ class ReportsService {
     };
   }
 
-  async sales(period?: string) {
-    // period: YYYY-MM
-    const where: Prisma.ContractWhereInput = period
-      ? this.periodWhereContract(period)
-      : {};
+  async sales(period?: string, dateFrom?: string, dateTo?: string) {
+    let where: Prisma.ContractWhereInput = {};
+    let rawWhere = '';
+    if (dateFrom || dateTo) {
+      where = {
+        createdAt: {
+          ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+          ...(dateTo ? { lte: new Date(dateTo) } : {}),
+        },
+      };
+      const parts: string[] = [];
+      if (dateFrom) parts.push(`c."createdAt" >= '${dateFrom.replace(/[^0-9T:Z.-]/g, '')}'`);
+      if (dateTo) parts.push(`c."createdAt" <= '${dateTo.replace(/[^0-9T:Z.-]/g, '')}T23:59:59.999Z'`);
+      rawWhere = `WHERE ${parts.join(' AND ')}`;
+    } else if (period) {
+      where = this.periodWhereContract(period);
+      rawWhere = `WHERE to_char(c."createdAt", 'YYYY-MM') = '${period.replace(/[^0-9-]/g, '')}'`;
+    }
     const [count, totalAmount, byProject] = await this.prisma.$transaction([
       this.prisma.contract.count({ where }),
       this.prisma.contract.aggregate({ where, _sum: { totalAmount: true } }),
@@ -123,7 +136,7 @@ class ReportsService {
         JOIN "Building" b ON b.id = u."buildingId"
         JOIN "Phase" ph ON ph.id = b."phaseId"
         JOIN "Project" p ON p.id = ph."projectId"
-        ${period ? `WHERE to_char(c."createdAt", 'YYYY-MM') = '${period.replace(/[^0-9-]/g, '')}'` : ''}
+        ${rawWhere}
         GROUP BY p.id
         ORDER BY total DESC
       `),
@@ -135,10 +148,18 @@ class ReportsService {
     };
   }
 
-  async financial(period?: string) {
-    const where: Prisma.DepositWhereInput = period
-      ? this.periodWhereDeposit(period)
-      : {};
+  async financial(period?: string, dateFrom?: string, dateTo?: string) {
+    let where: Prisma.DepositWhereInput = {};
+    if (dateFrom || dateTo) {
+      where = {
+        paidAt: {
+          ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+          ...(dateTo ? { lte: new Date(dateTo) } : {}),
+        },
+      };
+    } else if (period) {
+      where = this.periodWhereDeposit(period);
+    }
     const [count, sum, verified] = await this.prisma.$transaction([
       this.prisma.deposit.count({ where }),
       this.prisma.deposit.aggregate({ where, _sum: { amount: true } }),
@@ -151,15 +172,56 @@ class ReportsService {
     };
   }
 
-  async reservations() {
+  async reservations(dateFrom?: string, dateTo?: string) {
+    const where: Prisma.ReservationWhereInput =
+      dateFrom || dateTo
+        ? {
+            createdAt: {
+              ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+              ...(dateTo ? { lte: new Date(dateTo) } : {}),
+            },
+          }
+        : {};
     const groups = await this.prisma.reservation.groupBy({
       by: ['status'],
+      where,
       _count: { _all: true },
     });
     return groups.reduce<Record<string, number>>(
       (acc, g) => ((acc[g.status] = g._count._all), acc),
       {},
     );
+  }
+
+  async salesTrend(year: number, projectId?: string) {
+    const safeYear = Math.floor(year);
+    const safeProjectId = projectId?.replace(/[^a-zA-Z0-9-]/g, '');
+    const projectJoin = safeProjectId
+      ? `JOIN "Unit" u ON u.id = c."unitId"
+         JOIN "Building" b ON b.id = u."buildingId"
+         JOIN "Phase" ph ON ph.id = b."phaseId"`
+      : '';
+    const projectFilter = safeProjectId
+      ? `AND ph."projectId" = '${safeProjectId}'`
+      : '';
+    const rows = await this.prisma.$queryRawUnsafe<
+      Array<{ month: number; contracts: number; total: number }>
+    >(
+      `SELECT EXTRACT(MONTH FROM c."createdAt")::int AS month,
+              COUNT(c.*)::int AS contracts,
+              COALESCE(SUM(c."totalAmount"), 0)::float AS total
+       FROM "Contract" c
+       ${projectJoin}
+       WHERE EXTRACT(YEAR FROM c."createdAt") = ${safeYear}
+       ${projectFilter}
+       GROUP BY EXTRACT(MONTH FROM c."createdAt")`,
+    );
+    const byMonth = new Map(rows.map((r) => [r.month, r]));
+    return Array.from({ length: 12 }, (_, i) => {
+      const m = i + 1;
+      const row = byMonth.get(m);
+      return { month: m, label: AR_MONTHS[i], contracts: row?.contracts ?? 0, total: row?.total ?? 0 };
+    });
   }
 
   // ── P14 — Admin dashboard summary ────────────────────────────────────────
@@ -1343,8 +1405,8 @@ class ReportsService {
   // string with a UTF-8 BOM (Excel-friendly Arabic). Reuses the service's
   // existing data methods — no new business logic.
 
-  async salesCsv(period?: string): Promise<string> {
-    const data = await this.sales(period);
+  async salesCsv(period?: string, dateFrom?: string, dateTo?: string): Promise<string> {
+    const data = await this.sales(period, dateFrom, dateTo);
 
     // Section 1 — summary KPIs (one row per metric)
     const summaryRows: CsvCell[][] = [
@@ -1374,8 +1436,8 @@ class ReportsService {
    * sheet. Same real `sales()` + `kpis()` data as the CSV; project names resolved
    * for the chart/table. Chart degrades gracefully to tables-only on failure.
    */
-  async salesBoardXlsx(period?: string): Promise<Buffer> {
-    const [data, k] = await Promise.all([this.sales(period), this.kpis()]);
+  async salesBoardXlsx(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
+    const [data, k] = await Promise.all([this.sales(period, dateFrom, dateTo), this.kpis()]);
 
     const ids = (data.byProject ?? []).map((p) => p.projectId);
     const projects = ids.length
@@ -1426,8 +1488,8 @@ class ReportsService {
     return workbookToBuffer(wb);
   }
 
-  async financialCsv(period?: string): Promise<string> {
-    const data = await this.financial(period);
+  async financialCsv(period?: string, dateFrom?: string, dateTo?: string): Promise<string> {
+    const data = await this.financial(period, dateFrom, dateTo);
     const rows: CsvCell[][] = [
       ['الفترة', period ?? 'الكل'],
       ['عدد الدفعات', data.deposits],
@@ -1442,8 +1504,8 @@ class ReportsService {
    * executive summary and a verified-vs-unverified deposit doughnut. Same real
    * `financial()` data as the CSV. Chart degrades gracefully to tables-only.
    */
-  async financialBoardXlsx(period?: string): Promise<Buffer> {
-    const data = await this.financial(period);
+  async financialBoardXlsx(period?: string, dateFrom?: string, dateTo?: string): Promise<Buffer> {
+    const data = await this.financial(period, dateFrom, dateTo);
     const unverified = Math.max(0, data.deposits - data.verified);
 
     const statusChart = await renderDoughnutChartPng({
@@ -1940,22 +2002,44 @@ class ReportsController {
   @Roles(UserRole.ADMIN)
   @Permissions('reports:sales:read')
   @Get('sales')
-  sales(@Query('period') period?: string) {
-    return this.svc.sales(period);
+  sales(
+    @Query('period') period?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.svc.sales(period, dateFrom, dateTo);
   }
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:financial:read')
   @Get('financial')
-  financial(@Query('period') period?: string) {
-    return this.svc.financial(period);
+  financial(
+    @Query('period') period?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.svc.financial(period, dateFrom, dateTo);
   }
 
   @Roles(UserRole.ADMIN)
   @Permissions('reports:operational:read')
   @Get('reservations')
-  reservations() {
-    return this.svc.reservations();
+  reservations(
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.svc.reservations(dateFrom, dateTo);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:sales:read')
+  @Get('sales-trend')
+  salesTrend(
+    @Query('year') year?: string,
+    @Query('projectId') projectId?: string,
+  ) {
+    const y = year ? parseInt(year, 10) : new Date().getFullYear();
+    return this.svc.salesTrend(y, projectId);
   }
 
   @Roles(UserRole.ADMIN)
@@ -1981,8 +2065,12 @@ class ReportsController {
   @Get('sales/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="sales-report.csv"')
-  salesCsv(@Query('period') period?: string) {
-    return this.svc.salesCsv(period);
+  salesCsv(
+    @Query('period') period?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.svc.salesCsv(period, dateFrom, dateTo);
   }
 
   // P15.4 — board-style XLSX (default UI download). Same ADMIN + sales gate;
@@ -1995,8 +2083,12 @@ class ReportsController {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
   @Header('Content-Disposition', 'attachment; filename="sales-report.xlsx"')
-  async salesXlsx(@Query('period') period?: string): Promise<StreamableFile> {
-    return new StreamableFile(await this.svc.salesBoardXlsx(period));
+  async salesXlsx(
+    @Query('period') period?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.salesBoardXlsx(period, dateFrom, dateTo));
   }
 
   @Roles(UserRole.ADMIN)
@@ -2004,8 +2096,12 @@ class ReportsController {
   @Get('financial/export.csv')
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header('Content-Disposition', 'attachment; filename="financial-report.csv"')
-  financialCsv(@Query('period') period?: string) {
-    return this.svc.financialCsv(period);
+  financialCsv(
+    @Query('period') period?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.svc.financialCsv(period, dateFrom, dateTo);
   }
 
   // P15.4 — board-style XLSX (default UI download). Same ADMIN + financial gate.
@@ -2017,8 +2113,12 @@ class ReportsController {
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   )
   @Header('Content-Disposition', 'attachment; filename="financial-report.xlsx"')
-  async financialXlsx(@Query('period') period?: string): Promise<StreamableFile> {
-    return new StreamableFile(await this.svc.financialBoardXlsx(period));
+  async financialXlsx(
+    @Query('period') period?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ): Promise<StreamableFile> {
+    return new StreamableFile(await this.svc.financialBoardXlsx(period, dateFrom, dateTo));
   }
 
   @Roles(UserRole.ADMIN)

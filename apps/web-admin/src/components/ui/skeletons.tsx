@@ -1455,62 +1455,329 @@ export function AdminReportsPageSkeleton() {
         <Skeleton className="h-9 w-24 rounded-none" />
       </div>
 
-      {/* Period filter */}
-      <div className="flex items-center gap-3 rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs">
+      {/* ReportFilterBar */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs">
         <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
-        <Skeleton className="h-4 w-24" />
-        <div className="ms-auto flex gap-2">
-          <Skeleton className="h-8 w-36 rounded-xl" />
-          <Skeleton className="h-8 w-16 rounded-xl" />
+        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
+        <Skeleton className="h-8 w-36 rounded-lg" />
+        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-36 rounded-lg" />
+        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
+        <Skeleton className="h-8 w-48 rounded-lg" />
+        <Skeleton className="h-8 w-20 rounded-lg ms-auto" />
+      </div>
+
+      {/* Hero KPI banner */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs px-6 py-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-10 w-56" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <div className="flex items-center gap-6 shrink-0">
+            <div className="space-y-1.5 text-center">
+              <Skeleton className="h-6 w-10 mx-auto" />
+              <Skeleton className="h-2.5 w-14" />
+            </div>
+            <Skeleton className="w-px h-8" />
+            <div className="space-y-1.5 text-center">
+              <Skeleton className="h-6 w-20 mx-auto" />
+              <Skeleton className="h-2.5 w-20" />
+            </div>
+            <Skeleton className="w-px h-8" />
+            <div className="space-y-1.5 text-center">
+              <Skeleton className="h-5 w-24 mx-auto" />
+              <Skeleton className="h-2.5 w-16" />
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Secondary KPI cards — 3 col */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs p-5 space-y-3">
-            <Skeleton className="h-10 w-10 rounded-xl" />
-            <Skeleton className="h-3.5 w-24" />
-            <Skeleton className="h-7 w-32" />
-            <Skeleton className="h-3 w-16" />
+          <div key={i} className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4 flex items-center justify-between gap-3">
+            <div className="space-y-1.5 flex-1">
+              <Skeleton className="h-2.5 w-20" />
+              <Skeleton className="h-6 w-28" />
+              <Skeleton className="h-2.5 w-16" />
+            </div>
+            <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
           </div>
         ))}
       </div>
 
-      {/* Two-col lower section */}
+      {/* Section divider */}
+      <div className="flex items-center gap-2 pt-1">
+        <Skeleton className="h-3.5 w-3.5 rounded" />
+        <Skeleton className="h-3 w-36" />
+        <div className="flex-1 h-px bg-slate-200" />
+      </div>
+
+      {/* Middle: trend + reservations */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
-        {/* Sales table */}
+        {/* Trend card */}
         <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden lg:col-span-3">
+          <div className="flex items-start gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+            <div className="text-end space-y-1">
+              <Skeleton className="h-4 w-12 ms-auto" />
+              <Skeleton className="h-3 w-20 ms-auto" />
+            </div>
+          </div>
+          <div className="px-5 pt-4 pb-5">
+            <div className="h-44 flex items-end gap-1 sm:gap-1.5">
+              {[30, 55, 45, 70, 40, 80, 60, 50, 65, 35, 75, 45].map((h, i) => (
+                <div
+                  key={i}
+                  className="flex-1 animate-pulse rounded-t-sm bg-slate-200/70"
+                  style={{ height: `${h}%` }}
+                />
+              ))}
+            </div>
+            <div className="mt-2.5 flex gap-1 sm:gap-1.5">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <Skeleton key={i} className="flex-1 h-2.5" />
+              ))}
+            </div>
+          </div>
+        </div>
+        {/* Reservations card */}
+        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden lg:col-span-2">
           <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
             <Skeleton className="h-7 w-7 rounded-lg" />
-            <Skeleton className="h-4 w-36" />
+            <div className="space-y-1.5 flex-1">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-36" />
+            </div>
+            <div className="shrink-0 space-y-1 text-end">
+              <Skeleton className="h-4 w-8 ms-auto" />
+              <Skeleton className="h-2.5 w-10 ms-auto" />
+            </div>
           </div>
-          <div className="divide-y divide-hairline">
-            {[0, 1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 px-5 py-3">
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="h-4 w-12" />
+          <div className="divide-y divide-hairline min-h-[140px]">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-center justify-between px-5 py-2.5">
+                <Skeleton className="h-5 w-24 rounded-full" />
+                <Skeleton className="h-4 w-6" />
+              </div>
+            ))}
+            <div className="flex items-center justify-between px-5 py-2 border-t-2 border-slate-100">
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-4 w-8" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section divider — projects */}
+      <div className="flex items-center gap-2 pt-1">
+        <Skeleton className="h-3.5 w-3.5 rounded" />
+        <Skeleton className="h-3 w-24" />
+        <div className="flex-1 h-px bg-slate-200" />
+      </div>
+
+      {/* Sales by project — full width */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+          <Skeleton className="h-7 w-7 rounded-lg" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-44" />
+          </div>
+          <Skeleton className="h-3 w-12 ms-auto" />
+        </div>
+        <div className="divide-y divide-hairline">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-4 px-5 py-3">
+              <Skeleton className="h-3 w-4 shrink-0" />
+              <Skeleton className="h-4 flex-1 max-w-[180px]" />
+              <Skeleton className="h-4 w-14" />
+              <Skeleton className="h-4 w-28" />
+              <div className="flex items-center gap-2 ms-auto">
+                <Skeleton className="h-3 w-8" />
+                <Skeleton className="h-1.5 w-20 rounded-full" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Operational insights strip */}
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-hairline bg-surface px-5 py-4 shadow-xs">
+        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+        <Skeleton className="h-3 w-20" />
+        <div className="w-px h-5 bg-slate-200 hidden sm:block" />
+        <div className="space-y-1">
+          <Skeleton className="h-2.5 w-16" />
+          <Skeleton className="h-4 w-28" />
+        </div>
+        <div className="w-px h-5 bg-slate-200 hidden sm:block" />
+        <div className="space-y-1">
+          <Skeleton className="h-2.5 w-20" />
+          <Skeleton className="h-4 w-24" />
+        </div>
+        <div className="w-px h-5 bg-slate-200 hidden sm:block" />
+        <div className="space-y-1">
+          <Skeleton className="h-2.5 w-24" />
+          <Skeleton className="h-4 w-20" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Full page skeleton for /dashboard/reports/financial.
+ * Structure: header · tabs · ReportFilterBar · advanced filters strip ·
+ * 4 primary KPI cards · 5 secondary stat tiles · section dividers + cards.
+ */
+export function AdminFinancialReportsPageSkeleton() {
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <header className="mb-0 space-y-3">
+        <Skeleton className="h-3 w-44" />
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="h-4 w-[440px] max-w-full" />
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <Skeleton className="h-9 w-36 rounded-xl" />
+          </div>
+        </div>
+      </header>
+
+      {/* Tabs */}
+      <div className="flex gap-0 border-b border-hairline pb-0">
+        <Skeleton className="h-9 w-36 rounded-none" />
+        <Skeleton className="h-9 w-24 rounded-none" />
+      </div>
+
+      {/* ReportFilterBar */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs">
+        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
+        <Skeleton className="h-8 w-36 rounded-lg" />
+        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="h-8 w-36 rounded-lg" />
+        <div className="w-px h-5 bg-slate-200 shrink-0 hidden sm:block" />
+        <Skeleton className="h-8 w-48 rounded-lg" />
+        <Skeleton className="h-8 w-20 rounded-lg ms-auto" />
+      </div>
+
+      {/* Advanced filters strip */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-2.5 shadow-xs">
+        <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+        <div className="w-px h-4 bg-slate-200 shrink-0 hidden sm:block" />
+        <Skeleton className="h-8 w-44 rounded-lg" />
+        <div className="w-px h-4 bg-slate-200 shrink-0 hidden sm:block" />
+        <Skeleton className="h-8 w-40 rounded-lg" />
+        <Skeleton className="h-8 w-40 rounded-lg" />
+        <Skeleton className="h-8 w-20 rounded-lg" />
+      </div>
+
+      {/* 4 Primary KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+            <div className="h-0.5 bg-slate-200" />
+            <div className="p-5 flex flex-col gap-3 flex-1">
+              <div className="flex items-start justify-between gap-2">
+                <Skeleton className="h-9 w-9 rounded-xl shrink-0" />
+                <Skeleton className="h-4 w-14 rounded-full" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-2.5 w-24" />
+                <Skeleton className="h-7 w-36" />
+                <Skeleton className="h-2.5 w-40" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 5 secondary stat tiles */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="bg-surface rounded-xl border border-hairline shadow-xs px-4 py-3.5">
+            <Skeleton className="h-2.5 w-20 mb-1.5" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+        ))}
+      </div>
+
+      {/* Section divider */}
+      <div className="flex items-center gap-2 pt-1">
+        <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
+        <Skeleton className="h-3 w-40" />
+        <div className="flex-1 h-px bg-slate-200" />
+      </div>
+
+      {/* Cashflow chart (2/3) + Donut (1/3) */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+        <div className="xl:col-span-2 bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-44" />
+            </div>
+          </div>
+          <div className="px-4 pt-2 pb-4">
+            <Skeleton className="h-44 w-full rounded-lg" />
+          </div>
+        </div>
+        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
+            <Skeleton className="h-7 w-7 rounded-lg shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-28" />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-3">
+            <Skeleton className="h-36 w-36 rounded-full mx-auto" />
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-2 w-2 rounded-full shrink-0" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
                 <Skeleton className="h-4 w-24" />
               </div>
             ))}
           </div>
         </div>
-        {/* Reservations table */}
-        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden lg:col-span-2">
-          <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
-            <Skeleton className="h-7 w-7 rounded-lg" />
-            <Skeleton className="h-4 w-28" />
-          </div>
-          <div className="divide-y divide-hairline">
-            {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center justify-between px-5 py-3">
-                <Skeleton className="h-5 w-24 rounded-full" />
-                <Skeleton className="h-4 w-6" />
-              </div>
-            ))}
-          </div>
+      </div>
+
+      {/* Section divider — overdue */}
+      <div className="flex items-center gap-2 pt-1">
+        <Skeleton className="h-3.5 w-3.5 rounded shrink-0" />
+        <Skeleton className="h-3 w-36" />
+        <div className="flex-1 h-px bg-slate-200" />
+      </div>
+
+      {/* Receivables tile row */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl bg-surface-muted/50 px-4 py-3 space-y-1.5">
+              <Skeleton className="h-2.5 w-28" />
+              <Skeleton className="h-6 w-32" />
+            </div>
+          ))}
         </div>
       </div>
+
+      {/* Overdue table */}
+      <TableCardSkeleton cols={7} rows={5} />
     </div>
   );
 }
