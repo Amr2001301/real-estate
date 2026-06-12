@@ -1,5 +1,13 @@
 import Link from 'next/link';
-import { Settings, Lock, Save } from 'lucide-react';
+import {
+  Settings,
+  Database,
+  Layers,
+  ShieldAlert,
+  Clock,
+  Info,
+  Search,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { SettingItem } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
@@ -7,10 +15,9 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { EmptyState } from '@/components/ui/empty-state';
-import { patchSettingAction } from './actions';
+import { cn } from '@/lib/cn';
+import { SettingCard } from './_components/setting-row';
+import { AddSettingPanel } from './_components/add-setting-panel';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -22,35 +29,101 @@ interface Search {
   err?: string;
 }
 
+// ── Group metadata ─────────────────────────────────────────────────────────────
+
+const GROUP_ORDER = ['company', 'broker', 'sales', 'notifications', 'reports', 'security'];
+
 const GROUP_LABEL: Record<string, string> = {
-  company: 'الشركة',
-  localization: 'اللغة والتوطين',
-  reservations: 'الحجوزات',
-  reservation: 'الحجوزات',
-  broker: 'الوسطاء',
-  brokers: 'الوسطاء',
-  payments: 'المدفوعات',
-  payment: 'المدفوعات',
+  company:       'الشركة',
+  broker:        'الوسطاء',
+  brokers:       'الوسطاء',
+  sales:         'المبيعات',
+  payments:      'المدفوعات',
+  payment:       'المدفوعات',
   notifications: 'الإشعارات',
-  notification: 'الإشعارات',
-  system: 'النظام',
+  notification:  'الإشعارات',
+  security:      'الأمان',
+  reports:       'التقارير',
+  localization:  'اللغة والتوطين',
+  system:        'النظام',
 };
 
-function groupLabel(g: string): string {
-  return GROUP_LABEL[g] ?? g;
+const GROUP_ICON: Record<string, string> = {
+  company:       '🏢',
+  broker:        '🤝',
+  brokers:       '🤝',
+  sales:         '📊',
+  payments:      '💳',
+  payment:       '💳',
+  notifications: '🔔',
+  notification:  '🔔',
+  security:      '🔐',
+  reports:       '📈',
+  localization:  '🌐',
+  system:        '⚙️',
+};
+
+const KEY_LABEL: Record<string, string> = {
+  'company.name':                'اسم الشركة',
+  'company.phone':               'هاتف الشركة',
+  'company.email':               'البريد الإلكتروني',
+  'company.address':             'عنوان الشركة',
+  'company.website':             'الموقع الإلكتروني',
+  'company.logo':                'شعار الشركة',
+  'company.vatNumber':           'الرقم الضريبي',
+  'broker.defaultCommission':    'عمولة الوسيط الافتراضية',
+  'broker.defaultCommissionPct': 'نسبة العمولة الافتراضية (%)',
+  'broker.payoutCycleDays':      'دورة صرف المدفوعات (أيام)',
+  'broker.minPayoutAmount':      'الحد الأدنى للصرف',
+  'broker.autoApproveLeads':     'موافقة تلقائية على العملاء',
+  'sales.leadExpireDays':        'مدة صلاحية العميل المحتمل (أيام)',
+  'sales.reservationExpireDays': 'مدة صلاحية الحجز (أيام)',
+  'sales.allowMultiReservation': 'السماح بحجوزات متعددة',
+  'notifications.smsEnabled':    'الرسائل النصية',
+  'notifications.emailEnabled':  'البريد الإلكتروني',
+  'notifications.fromEmail':     'بريد إرسال الإشعارات',
+  'security.sessionTimeoutMins': 'مهلة انتهاء الجلسة (دقيقة)',
+  'security.maxLoginAttempts':   'محاولات الدخول القصوى',
+  'security.requireMfa':         'المصادقة الثنائية',
+  'reports.currency':            'عملة التقارير',
+  'reports.dateFormat':          'تنسيق التاريخ',
+  'reports.timezone':            'المنطقة الزمنية',
+};
+
+function groupLabel(g: string) { return GROUP_LABEL[g] ?? g; }
+function groupIcon(g: string)  { return GROUP_ICON[g] ?? '⚙️'; }
+function keyLabel(key: string) { return KEY_LABEL[key] ?? key; }
+
+// ── Value helpers ─────────────────────────────────────────────────────────────
+
+function detectType(value: unknown): 'نص' | 'رقم' | 'منطقي' | 'JSON' {
+  if (typeof value === 'string')  return 'نص';
+  if (typeof value === 'number')  return 'رقم';
+  if (typeof value === 'boolean') return 'منطقي';
+  return 'JSON';
 }
 
-function renderValue(s: SettingItem): string {
-  if (s.sensitive) return '***محجوب***';
+const TYPE_CLS: Record<string, string> = {
+  'نص':    'bg-sky-50    text-sky-700    border border-sky-100',
+  'رقم':   'bg-purple-50 text-purple-700 border border-purple-100',
+  'منطقي': 'bg-teal-50   text-teal-700   border border-teal-100',
+  'JSON':  'bg-amber-50  text-amber-700  border border-amber-100',
+};
+
+function valuePreview(s: SettingItem): string {
+  if (s.sensitive) return '••••••••';
   if (s.value === null || s.value === undefined) return '—';
-  if (typeof s.value === 'string') return s.value;
+  if (typeof s.value === 'string') {
+    return s.value.length > 100 ? s.value.slice(0, 100) + '…' : s.value;
+  }
   if (typeof s.value === 'number' || typeof s.value === 'boolean') return String(s.value);
   try {
-    return JSON.stringify(s.value, null, 2);
-  } catch {
-    return String(s.value);
-  }
+    const j = JSON.stringify(s.value, null, 2);
+    return j.length > 300 ? j.slice(0, 300) + '\n…' : j;
+  } catch { return String(s.value); }
 }
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function SettingsPage({
   searchParams,
@@ -59,164 +132,270 @@ export default async function SettingsPage({
 }) {
   const sp = await searchParams;
   const qs = new URLSearchParams();
-  if (sp.q) qs.set('q', sp.q);
+  if (sp.q)     qs.set('q', sp.q);
   if (sp.group) qs.set('group', sp.group);
 
-  const res = await safe(api.get<SettingItem[]>(`/settings${qs.toString() ? `?${qs.toString()}` : ''}`));
+  const res   = await safe(api.get<SettingItem[]>(`/settings${qs.toString() ? `?${qs}` : ''}`));
   const items = res.data ?? [];
 
-  // Group settings by their derived group prefix; settings without a dot
-  // land under "system".
+  // ── Group items ─────────────────────────────────────────────────────────────
   const grouped = new Map<string, SettingItem[]>();
   for (const item of items) {
     const arr = grouped.get(item.group) ?? [];
     arr.push(item);
     grouped.set(item.group, arr);
   }
-  const knownGroups = Array.from(grouped.keys()).sort();
+
+  // Ordered: known groups first, then any extras
+  const orderedGroups: [string, SettingItem[]][] = [
+    ...GROUP_ORDER
+      .filter((g) => grouped.has(g))
+      .map((g) => [g, grouped.get(g)!] as [string, SettingItem[]]),
+    ...[...grouped.entries()].filter(([g]) => !GROUP_ORDER.includes(g)),
+  ];
+
+  // ── KPI ─────────────────────────────────────────────────────────────────────
+  const sensitiveCount = items.filter((i) => i.sensitive).length;
+  const lastUpdated    = items.length > 0
+    ? items.reduce((a, b) => (a.updatedAt > b.updatedAt ? a : b)).updatedAt
+    : null;
+
+  const hasSearch = !!sp.q;
+  const hasFilter = !!(sp.q || sp.group);
+
+  // ── Group tab hrefs ─────────────────────────────────────────────────────────
+  const activeHref = sp.group
+    ? `/dashboard/settings?group=${sp.group}`
+    : '/dashboard/settings';
+
+  const pillGroups = GROUP_ORDER.filter((g) => grouped.has(g));
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="إعدادات النظام"
-        description="القيم العامة للنظام. التعديل يكتب فورًا في قاعدة البيانات ويُسجّل في سجل التدقيق."
-        breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'إعدادات النظام' },
-        ]}
-        meta={<Settings className="h-4 w-4 text-brand-600" />}
-      />
+    <div className="space-y-4">
 
+      {/* ── Header row ──────────────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <PageHeader
+          title="إعدادات النظام"
+          description="إدارة إعدادات المنصة وقيمها التشغيلية. كل تعديل يُسجَّل تلقائياً في سجل التدقيق."
+          breadcrumbs={[
+            { label: 'لوحة التحكم', href: '/dashboard' },
+            { label: 'إعدادات النظام' },
+          ]}
+          meta={<Settings className="h-4 w-4 text-brand-600" />}
+        />
+        <div className="shrink-0 pt-1">
+          <AddSettingPanel />
+        </div>
+      </div>
+
+      {/* ── Toast banners ───────────────────────────────────────────────── */}
       {sp.err && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           {sp.err}
         </div>
       )}
       {sp.ok && (
-        <div className="rounded-2xl bg-success-50 border border-success-100 text-success-700 p-4 text-sm">
-          تم حفظ «{sp.ok}» بنجاح.
+        <div className="rounded-2xl bg-success-50 border border-success-100 text-success-700 px-4 py-3 text-sm">
+          تم حفظ إعداد «{sp.ok}» بنجاح.
         </div>
       )}
       {res.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           تعذر تحميل الإعدادات: {res.error}
         </div>
       )}
 
-      <div className="rounded-2xl bg-info-50 border border-info-100 text-info-800 p-4 text-sm">
-        بعض الإعدادات محفوظة فقط ولا تُؤثر تلقائيًا على منطق الأعمال بعد. راجع تقرير المرحلة 16 لتفاصيل الإعدادات الموصولة بالنظام.
+      {/* ── KPI strip ───────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-x-1 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
+        {[
+          {
+            icon:  <Database className="h-3.5 w-3.5" />,
+            label: 'إجمالي الإعدادات',
+            value: String(items.length),
+            cls:   'bg-brand-50 text-brand-600',
+          },
+          {
+            icon:  <Layers className="h-3.5 w-3.5" />,
+            label: 'المجموعات',
+            value: String(grouped.size),
+            cls:   'bg-slate-100 text-slate-500',
+          },
+          {
+            icon:  <ShieldAlert className="h-3.5 w-3.5" />,
+            label: 'محمية / حساسة',
+            value: String(sensitiveCount),
+            cls:   'bg-amber-50 text-amber-600',
+          },
+          {
+            icon:  <Clock className="h-3.5 w-3.5" />,
+            label: 'آخر تحديث',
+            value: lastUpdated ? formatDateTime(lastUpdated) : '—',
+            cls:   'bg-slate-100 text-slate-500',
+          },
+        ].map((kpi, i, arr) => (
+          <div key={i} className="flex items-center shrink-0">
+            <div className="flex items-center gap-2.5 px-4 first:ps-0 last:pe-0">
+              <span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0', kpi.cls)}>
+                {kpi.icon}
+              </span>
+              <div>
+                <p className="text-2xs text-slate-500 font-medium leading-tight">{kpi.label}</p>
+                <p className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{kpi.value}</p>
+              </div>
+            </div>
+            {i < arr.length - 1 && <div className="hidden sm:block h-8 w-px bg-hairline shrink-0" />}
+          </div>
+        ))}
       </div>
 
-      <form
-        method="get"
-        action="/dashboard/settings"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white p-3 shadow-xs"
-      >
-        <Input
-          name="q"
-          inputSize="sm"
-          placeholder="بحث في المفاتيح"
-          defaultValue={sp.q ?? ''}
-          className="w-64"
-          dir="ltr"
-        />
-        <Select name="group" inputSize="sm" defaultValue={sp.group ?? ''} className="w-48">
-          <option value="">كل المجموعات</option>
-          {knownGroups.map((g) => (
-            <option key={g} value={g}>{groupLabel(g)}</option>
-          ))}
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.q || sp.group) && (
-            <Link href="/dashboard/settings">
+      {/* ── Info banner ─────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 rounded-2xl bg-info-50 border border-info-100 text-info-800 px-4 py-3 text-sm">
+        <Info className="h-4 w-4 shrink-0 text-info-500" />
+        <p>بعض الإعدادات محفوظة للعرض فقط. كل تعديل يُسجَّل تلقائياً في سجل التدقيق.</p>
+      </div>
+
+      {/* ── Group nav + search ───────────────────────────────────────────── */}
+      <Card className="overflow-hidden">
+
+        {/* Group pills */}
+        <div className="flex items-center gap-2 px-4 pt-3 pb-2.5 overflow-x-auto scrollbar-thin border-b border-hairline flex-nowrap">
+          {/* الكل pill */}
+          <Link
+            href="/dashboard/settings"
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors shrink-0',
+              activeHref === '/dashboard/settings'
+                ? 'bg-brand-600 text-white'
+                : 'bg-surface-muted/50 text-slate-600 hover:bg-surface-muted/80 border border-hairline',
+            )}
+          >
+            الكل
+            <span className={cn(
+              'inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold',
+              activeHref === '/dashboard/settings'
+                ? 'bg-white/25 text-white'
+                : 'bg-slate-200 text-slate-600',
+            )}>
+              {items.length}
+            </span>
+          </Link>
+
+          {/* One pill per group */}
+          {pillGroups.map((g) => {
+            const href     = `/dashboard/settings?group=${g}`;
+            const isActive = activeHref === href;
+            return (
+              <Link
+                key={g}
+                href={href}
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors shrink-0',
+                  isActive
+                    ? 'bg-brand-600 text-white'
+                    : 'bg-surface-muted/50 text-slate-600 hover:bg-surface-muted/80 border border-hairline',
+                )}
+              >
+                <span aria-hidden>{groupIcon(g)}</span>
+                {groupLabel(g)}
+                <span className={cn(
+                  'inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-semibold',
+                  isActive ? 'bg-white/25 text-white' : 'bg-slate-200 text-slate-600',
+                )}>
+                  {grouped.get(g)!.length}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Search bar */}
+        <form method="get" action="/dashboard/settings" className="flex items-center gap-2 px-4 py-3">
+          {sp.group && <input type="hidden" name="group" value={sp.group} />}
+          <div className="flex-1">
+            <Input
+              name="q"
+              inputSize="sm"
+              placeholder="بحث بالاسم أو المفتاح..."
+              defaultValue={sp.q ?? ''}
+              dir="ltr"
+              leftAddon={<Search className="h-3.5 w-3.5" />}
+            />
+          </div>
+          <Button type="submit" variant="primary" size="sm">بحث</Button>
+          {hasSearch && (
+            <Link href={sp.group ? `/dashboard/settings?group=${sp.group}` : '/dashboard/settings'}>
               <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
           )}
-        </div>
-      </form>
-
-      {items.length === 0 ? (
-        <Card className="overflow-hidden">
-          <EmptyState
-            icon={<Settings />}
-            title="لا توجد إعدادات"
-            description="لا توجد قيم محفوظة بعد. يمكنك إضافة قيمة جديدة من القسم أدناه."
-          />
-        </Card>
-      ) : (
-        Array.from(grouped.entries())
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([group, rows]) => (
-            <Card key={group} className="overflow-hidden">
-              <div className="px-5 pt-5 pb-3 flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-slate-900">{groupLabel(group)}</h2>
-                <span className="text-2xs text-slate-500 font-mono" dir="ltr">{group}.*</span>
-                <span className="ms-auto text-2xs text-slate-500">{rows.length} عنصر</span>
-              </div>
-              <ul className="divide-y divide-hairline">
-                {rows.map((row) => (
-                  <li key={row.key} className="px-5 py-3 grid grid-cols-1 md:grid-cols-12 gap-3 items-start">
-                    <div className="md:col-span-4 min-w-0">
-                      <p className="font-mono text-xs text-slate-800 truncate" dir="ltr">{row.key}</p>
-                      <p className="text-2xs text-slate-500 mt-0.5">{formatDateTime(row.updatedAt)}</p>
-                      {row.sensitive && (
-                        <p className="text-2xs text-amber-700 mt-1 inline-flex items-center gap-1">
-                          <Lock className="h-3 w-3" />
-                          قيمة حساسة — يجب إعادة إدخالها بالكامل لتحديثها
-                        </p>
-                      )}
-                    </div>
-                    <pre
-                      className="md:col-span-5 max-h-32 overflow-auto rounded-lg border border-hairline bg-surface-muted/40 p-2 text-2xs text-slate-800 scrollbar-thin"
-                      dir="ltr"
-                    >
-                      {renderValue(row)}
-                    </pre>
-                    <form action={patchSettingAction} className="md:col-span-3 flex flex-col gap-1.5">
-                      <input type="hidden" name="key" value={row.key} />
-                      <Textarea
-                        name="value"
-                        rows={3}
-                        dir="ltr"
-                        placeholder={row.sensitive ? 'القيمة الجديدة (لن تظهر مرة أخرى)' : 'القيمة الجديدة (نص أو JSON)'}
-                      />
-                      <Button type="submit" variant="outline" size="sm" leftIcon={<Save className="h-3.5 w-3.5" />}>
-                        حفظ
-                      </Button>
-                    </form>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))
-      )}
-
-      <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-3">إضافة إعداد جديد</h2>
-        <form action={patchSettingAction} className="grid grid-cols-1 md:grid-cols-12 gap-3">
-          <Input
-            name="key"
-            placeholder="مفتاح (مثال: company.name أو broker.defaultCommissionPct)"
-            className="md:col-span-4"
-            dir="ltr"
-            required
-          />
-          <Textarea
-            name="value"
-            rows={3}
-            placeholder='القيمة (نص بسيط، رقم، أو JSON كائن/مصفوفة)'
-            className="md:col-span-6"
-            dir="ltr"
-            required
-          />
-          <div className="md:col-span-2 flex items-start">
-            <Button type="submit" variant="primary" size="md" leftIcon={<Save className="h-4 w-4" />}>
-              إنشاء
-            </Button>
-          </div>
         </form>
       </Card>
+
+      {/* ── Empty state ──────────────────────────────────────────────────── */}
+      {items.length === 0 && (
+        <div className="rounded-2xl border border-hairline bg-surface shadow-xs px-5 py-12 flex flex-col items-center text-center gap-3">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+            <Settings className="h-6 w-6" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">
+              {hasFilter ? 'لا توجد إعدادات مطابقة' : 'لا توجد إعدادات محفوظة بعد'}
+            </p>
+            <p className="text-xs text-slate-500 mt-1 max-w-sm">
+              {hasFilter
+                ? 'جرّب تعديل معايير البحث، أو انقر على "مسح" لإعادة ضبط الفلتر.'
+                : 'انقر على "إضافة إعداد" أعلاه لإضافة أول إعداد.'}
+            </p>
+          </div>
+          {hasFilter && (
+            <Link href="/dashboard/settings">
+              <Button variant="outline" size="sm">مسح الفلاتر</Button>
+            </Link>
+          )}
+        </div>
+      )}
+
+      {/* ── Group cards ──────────────────────────────────────────────────── */}
+      {orderedGroups.map(([group, rows]) => (
+        <Card key={group} className="overflow-hidden">
+
+          {/* Group header */}
+          <div className="flex items-center gap-3 px-5 py-3.5 bg-surface-muted/30 border-b border-hairline">
+            <span className="text-xl leading-none" aria-hidden>{groupIcon(group)}</span>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-slate-900">{groupLabel(group)}</h2>
+              <p className="font-mono text-[11px] text-slate-400 mt-0.5" dir="ltr">{group}.*</p>
+            </div>
+            <span className="ms-auto inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10px] font-semibold bg-surface border border-hairline text-slate-600 tabular-nums">
+              {rows.length}
+            </span>
+          </div>
+
+          {/* Responsive card grid — 1 col mobile / 2 col tablet / 3 col desktop */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+            {rows.map((row) => {
+              const label    = keyLabel(row.key);
+              const type     = detectType(row.value);
+              const preview  = valuePreview(row);
+              const hasLabel = label !== row.key;
+              return (
+                <SettingCard
+                  key={row.key}
+                  settingKey={row.key}
+                  label={label}
+                  hasLabel={hasLabel}
+                  type={type}
+                  typeCls={TYPE_CLS[type] ?? ''}
+                  preview={preview}
+                  sensitive={row.sensitive}
+                  updatedAt={formatDateTime(row.updatedAt)}
+                />
+              );
+            })}
+          </div>
+        </Card>
+      ))}
+
     </div>
   );
 }
