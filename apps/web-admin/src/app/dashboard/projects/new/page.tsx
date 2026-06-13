@@ -6,7 +6,7 @@ export default function NewProjectPage() {
     <div className="space-y-6 lg:space-y-8">
       <PageHeader
         title="إضافة مشروع جديد"
-        description="قم بتعبئة التفاصيل المعمارية والمكانية للمشروع الجديد. سيتم مراجعة البيانات قبل النشر النهائي في المحفظة الاستثمارية."
+        description="أضف تفاصيل المشروع الجديد. سيُحفظ كمسودة حتى تقوم بنشره."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'المشاريع', href: '/dashboard/projects' },

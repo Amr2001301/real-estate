@@ -135,7 +135,7 @@ export default function ProjectForm({ project }: Props) {
               defaultValue={project?.city}
             />
           </Field>
-          <Field label="خط العرض (Lat)" name="lat" hint="-90 → 90" required>
+          <Field label="دائرة العرض" name="lat" hint="من -90 إلى 90" required>
             <Input
               id="lat"
               name="lat"
@@ -148,7 +148,7 @@ export default function ProjectForm({ project }: Props) {
               onChange={(e) => setLat(parseCoord(e.target.value))}
             />
           </Field>
-          <Field label="خط الطول (Lng)" name="lng" hint="-180 → 180" required>
+          <Field label="خط الطول" name="lng" hint="من -180 إلى 180" required>
             <Input
               id="lng"
               name="lng"
@@ -230,7 +230,7 @@ export default function ProjectForm({ project }: Props) {
               </Button>
             </Link>
             <SubmitButton>
-              {isEdit ? 'حفظ التغييرات' : 'حفظ ونشر المشروع'}
+              {isEdit ? 'حفظ التغييرات' : 'إنشاء المشروع'}
             </SubmitButton>
           </>
         }

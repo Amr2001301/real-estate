@@ -56,7 +56,7 @@ export function TranslatableInput({
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-2xs font-medium uppercase tracking-wide text-slate-500" htmlFor={`${name}_en`}>
-            English
+            الإنجليزية
           </label>
           {multiline ? (
             <Textarea

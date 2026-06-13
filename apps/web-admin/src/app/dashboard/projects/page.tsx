@@ -13,6 +13,7 @@ import { getSession } from '@/lib/session';
 import type { Paged, Project } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
@@ -30,6 +31,7 @@ interface Search {
   page?: string;
   status?: string;
   city?: string;
+  q?: string;
 }
 
 const PAGE_SIZE = 12;
@@ -48,6 +50,7 @@ export default async function ProjectsPage({
   });
   if (sp.status) qs.set('status', sp.status);
   if (sp.city) qs.set('city', sp.city);
+  if (sp.q) qs.set('q', sp.q);
 
   // For the city dropdown + KPI strip we also pull a wider snapshot.
   const [pagedRes, snapshotRes] = await Promise.all([
@@ -58,10 +61,14 @@ export default async function ProjectsPage({
   const paged = pagedRes.data;
   const snapshot = snapshotRes.data;
 
-  // Client-side filter fallback: if API ignores ?status / ?city, narrow down here.
+  // Client-side filter fallback: if API ignores ?status / ?city / ?q, narrow down here.
   let rows = paged?.data ?? [];
   if (sp.status) rows = rows.filter((p) => p.status === sp.status);
   if (sp.city) rows = rows.filter((p) => p.city === sp.city);
+  if (sp.q) {
+    const needle = sp.q.toLowerCase();
+    rows = rows.filter((p) => tx(p.name).toLowerCase().includes(needle));
+  }
 
   const allProjects = snapshot?.data ?? [];
   const cities = Array.from(new Set(allProjects.map((p) => p.city).filter(Boolean)));
@@ -131,6 +138,13 @@ export default async function ProjectsPage({
       )}
 
       <form method="get" action="/dashboard/projects" className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+        <Input
+          name="q"
+          type="search"
+          placeholder="بحث باسم المشروع..."
+          defaultValue={sp.q ?? ''}
+          className="flex-1 min-w-40 h-8 text-sm"
+        />
         <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
           <option value="">كل الحالات</option>
           <option value="DRAFT">مسودة</option>
@@ -145,7 +159,7 @@ export default async function ProjectsPage({
         </Select>
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.status || sp.city) && (
+          {(sp.status || sp.city || sp.q) && (
             <Link href="/dashboard/projects">
               <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
@@ -227,11 +241,11 @@ export default async function ProjectsPage({
                     </td>
                     <td className="py-3 px-4">
                       {p.featured ? (
-                        <span className="inline-flex items-center gap-1 text-accent-700 text-xs font-semibold">
-                          <Star className="h-3.5 w-3.5 fill-current" /> مميز
+                        <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
+                          <Star className="h-3 w-3 fill-current" /> مميز
                         </span>
                       ) : (
-                        <span className="text-xs text-slate-500">قياسي</span>
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-500">قياسي</span>
                       )}
                     </td>
                     <td className="py-3 px-4 text-slate-500 text-xs">
@@ -256,7 +270,7 @@ export default async function ProjectsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/dashboard/projects"
-            params={{ status: sp.status, city: sp.city }}
+            params={{ status: sp.status, city: sp.city, q: sp.q }}
           />
         )}
       </Card>
