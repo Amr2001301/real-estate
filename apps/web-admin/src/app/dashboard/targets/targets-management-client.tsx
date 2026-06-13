@@ -141,16 +141,19 @@ export function TargetsManagementClient({
       {/* ── Targets table card ──────────────────────────────────────────── */}
       <Card>
         <CardHeader className="px-5 py-3">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-sm">الأهداف المسجّلة</CardTitle>
-            <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-surface-muted text-slate-500 text-2xs font-bold px-1.5 tabular-nums">
-              {targets.length}
-            </span>
+          <div className="flex items-center justify-between gap-3 w-full">
+            {/* Right side: title + count */}
+            <div className="flex items-center gap-2 min-w-0">
+              <CardTitle className="text-sm">الأهداف المسجّلة</CardTitle>
+              <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-surface-muted text-slate-500 text-2xs font-bold px-1.5 tabular-nums">
+                {targets.length}
+              </span>
+            </div>
+            {/* Left side: primary action */}
             {canManage && (
               <Button
                 variant="primary"
                 size="sm"
-                className="ms-auto"
                 leftIcon={<Plus className="h-3.5 w-3.5" />}
                 onClick={openAdd}
               >
