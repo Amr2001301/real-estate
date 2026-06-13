@@ -1194,13 +1194,13 @@ async function main() {
   }
 
   // ---- Grant the SALES_MANAGER default tier to every SALES_MANAGER user ----
-  // The SALES work/read tier; team scoping (Batch 9) restricts the data each
-  // manager sees to their own reps. NO strict/admin/finance codes are granted.
+  // Extends the SALES read/work tier with targets:manage so managers can set and
+  // update team targets (POST /sales-targets is scope-enforced server-side).
   // Reports (sales/operational) are intentionally NOT granted: those report
   // endpoints aggregate ALL sales data and are not team-scoped, so they remain
   // ADMIN-only until a team-scoped reporting surface exists. Idempotent via
   // skipDuplicates.
-  const SALES_MANAGER_DEFAULT_PERMISSIONS = [...SALES_DEFAULT_PERMISSIONS];
+  const SALES_MANAGER_DEFAULT_PERMISSIONS = [...SALES_DEFAULT_PERMISSIONS, 'targets:manage'];
 
   const managerUsers = await prisma.user.findMany({
     where: { role: UserRole.SALES_MANAGER },

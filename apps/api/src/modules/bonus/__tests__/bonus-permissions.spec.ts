@@ -79,6 +79,10 @@ function makePrismaMock() {
         ...create,
       })),
     },
+    user: {
+      // Default: empty team — scope assertions use this to resolve managerId's team.
+      findMany: jest.fn().mockResolvedValue([]),
+    },
   };
 }
 
@@ -132,6 +136,9 @@ describe('Bonus module · permissions enforcement', () => {
     prismaMock.bonusEntry.create.mockClear();
     prismaMock.bonusRule.create.mockClear();
     prismaMock.salesTarget.upsert.mockClear();
+    prismaMock.user.findMany.mockClear();
+    // Reset to empty-team default so scope assertions work without a team in scope
+    prismaMock.user.findMany.mockResolvedValue([]);
   });
 
   // ── Metadata ───────────────────────────────────────────────────────────
@@ -285,6 +292,70 @@ describe('Bonus module · permissions enforcement', () => {
         })
         .expect(201);
       expect(prismaMock.salesTarget.upsert).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── SALES_MANAGER target management ────────────────────────────────────────
+
+  describe('POST /sales-targets — SALES_MANAGER scope', () => {
+    const MANAGER_ID = 'b3333333-3333-4333-8333-333333333333';
+    const TEAM_SALES_ID = 'c4444444-4444-4444-8444-444444444444';
+    const OTHER_SALES_ID = 'a1111111-1111-4111-8111-111111111111';
+
+    it('SALES_MANAGER with targets:manage + own salesId → 201', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: MANAGER_ID,
+        role: UserRole.SALES_MANAGER,
+        codes: ['targets:manage'],
+      };
+      await request(app.getHttpServer())
+        .post('/sales-targets')
+        .send({ salesId: MANAGER_ID, period: '2026-06', amountTarget: 200000, unitsTarget: 6 })
+        .expect(201);
+      expect(prismaMock.salesTarget.upsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('SALES_MANAGER with targets:manage + in-team salesId → 201', async () => {
+      // Mock team: manager has TEAM_SALES_ID as a direct report
+      prismaMock.user.findMany.mockResolvedValueOnce([{ id: TEAM_SALES_ID }]);
+      FakeAuthGuard.currentUser = {
+        sub: MANAGER_ID,
+        role: UserRole.SALES_MANAGER,
+        codes: ['targets:manage'],
+      };
+      await request(app.getHttpServer())
+        .post('/sales-targets')
+        .send({ salesId: TEAM_SALES_ID, period: '2026-06', amountTarget: 150000, unitsTarget: 3 })
+        .expect(201);
+      expect(prismaMock.salesTarget.upsert).toHaveBeenCalledTimes(1);
+    });
+
+    it('SALES_MANAGER with targets:manage + out-of-scope salesId → 403', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: MANAGER_ID,
+        role: UserRole.SALES_MANAGER,
+        codes: ['targets:manage'],
+      };
+      const res = await request(app.getHttpServer())
+        .post('/sales-targets')
+        .send({ salesId: OTHER_SALES_ID, period: '2026-06', amountTarget: 100000, unitsTarget: 4 })
+        .expect(403);
+      expect(res.body.message).toContain('outside your team');
+      expect(prismaMock.salesTarget.upsert).not.toHaveBeenCalled();
+    });
+
+    it('SALES_MANAGER without targets:manage → structured 403', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: MANAGER_ID,
+        role: UserRole.SALES_MANAGER,
+        codes: [],
+      };
+      const res = await request(app.getHttpServer())
+        .post('/sales-targets')
+        .send({ salesId: MANAGER_ID, period: '2026-06', amountTarget: 200000, unitsTarget: 6 })
+        .expect(403);
+      expect(res.body).toMatchObject({ code: 'missing_permission', permissions: ['targets:manage'] });
+      expect(prismaMock.salesTarget.upsert).not.toHaveBeenCalled();
     });
   });
 

@@ -47,6 +47,7 @@ import {
   resolveSalesScope,
   salesActorIds,
   managerScopeIds,
+  assertSalesRecordInScope,
 } from '../../common/utils/sales-scope';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions, PermissionsStrict } from '../../common/decorators/permissions.decorator';
@@ -691,10 +692,15 @@ class BonusController {
   }
 
   // Targets
-  @Roles(UserRole.ADMIN)
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
   @Permissions('targets:manage')
   @Post('sales-targets')
-  upsertTarget(@Body() dto: CreateTargetDto) {
+  async upsertTarget(@CurrentUser() user: AuthUser, @Body() dto: CreateTargetDto) {
+    // SALES_MANAGER may only set targets for salesIds within their own scope
+    // (self + direct team members). ADMIN is unrestricted.
+    if (user.role !== UserRole.ADMIN) {
+      await assertSalesRecordInScope(this.prisma, user, dto.salesId, { mode: 'forbidden' });
+    }
     return this.svc.upsertTarget(dto);
   }
 
@@ -704,6 +710,30 @@ class BonusController {
   async listTargets(@CurrentUser() user: AuthUser, @Query('salesId') salesId?: string) {
     const scope = await resolveSalesScope(this.prisma, user, salesId);
     return this.svc.listTargets(scope);
+  }
+
+  // Returns the set of users this actor may set targets for.
+  // ADMIN → all SALES + SALES_MANAGER users.
+  // SALES_MANAGER → themselves + their direct team (managerScopeIds).
+  // Uses targets:read (not targets:manage) so it works even when the manage
+  // permission hasn't been seeded yet for older SALES_MANAGER accounts.
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('targets:read')
+  @Get('sales-targets/actors')
+  async listTargetActors(@CurrentUser() user: AuthUser) {
+    if (user.role === UserRole.ADMIN) {
+      return this.prisma.user.findMany({
+        where: { role: { in: [UserRole.SALES, UserRole.SALES_MANAGER] } },
+        select: { id: true, fullName: true, role: true },
+        orderBy: { fullName: 'asc' },
+      });
+    }
+    const ids = await managerScopeIds(this.prisma, user.sub);
+    return this.prisma.user.findMany({
+      where: { id: { in: ids } },
+      select: { id: true, fullName: true, role: true },
+      orderBy: { fullName: 'asc' },
+    });
   }
 
   // Read-only target-achievement / performance report. Reuses targets:read so
