@@ -1,13 +1,9 @@
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   Mail,
   Phone,
   Building2,
-  Home,
-  CalendarRange,
   CalendarClock,
-  ChevronLeft,
   AlertTriangle,
   Send,
   Search,
@@ -15,49 +11,33 @@ import {
   XCircle,
   Copy,
   StickyNote,
+  Clock,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PortalLead } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { CodeText } from '@/components/ui/code-text';
 import {
   BrokerLeadStatusBadge,
   LeadStageBadge,
   AppointmentStatusBadge,
 } from '@/components/badges';
+import {
+  DetailHero,
+  DetailHeroCol,
+  HeroColLabel,
+  HeroDateRow,
+  avatarColor,
+  initials,
+  type DetailHeroStatus,
+} from '@/components/portal/detail-hero';
+import { DetailSection } from '@/components/portal/detail-section';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-function InfoRow({
-  icon,
-  label,
-  value,
-  dir,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-  dir?: 'ltr' | 'rtl';
-}) {
-  return (
-    <div className="flex items-start gap-3 py-2">
-      <span className="mt-0.5 text-slate-400 [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-sm text-slate-800 mt-0.5" dir={dir}>
-          {value ?? '—'}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/** Read-only status timeline for the broker: submitted → under review →
- *  final decision. Purely cosmetic; the backend owns the real state. */
 function StatusTimeline({
   status,
   submittedAt,
@@ -83,13 +63,7 @@ function StatusTimeline({
 
   const steps = [
     { icon: <Send />, label: 'أُرسلت للإدارة', tone: 'brand' as const, at: submittedAt, done: true },
-    {
-      icon: <Search />,
-      label: 'قيد المراجعة',
-      tone: 'brand' as const,
-      at: null,
-      done: true,
-    },
+    { icon: <Search />, label: 'قيد المراجعة', tone: 'brand' as const, at: null, done: true },
     { icon: finalStep.icon, label: finalStep.label, tone: finalStep.tone, at: finalStep.at, done: resolved },
   ];
 
@@ -102,8 +76,7 @@ function StatusTimeline({
   };
 
   return (
-    <Card className="p-5">
-      <h2 className="text-sm font-bold text-slate-900 mb-4">حالة الفرصة</h2>
+    <DetailSection title="مسار الفرصة">
       <ol className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-0">
         {steps.map((s, i) => (
           <li key={i} className="flex sm:flex-col sm:flex-1 items-center gap-3 sm:gap-2 sm:text-center">
@@ -118,14 +91,12 @@ function StatusTimeline({
               <p className={`text-xs font-medium ${s.done ? 'text-slate-800' : 'text-slate-400'}`}>
                 {s.label}
               </p>
-              {s.at && (
-                <p className="text-2xs text-slate-400 mt-0.5">{formatDate(s.at)}</p>
-              )}
+              {s.at && <p className="text-2xs text-slate-400 mt-0.5">{formatDate(s.at)}</p>}
             </div>
           </li>
         ))}
       </ol>
-    </Card>
+    </DetailSection>
   );
 }
 
@@ -139,11 +110,19 @@ export default async function PortalLeadDetailPage({
   if (r.error || !r.data) notFound();
   const lead = r.data;
 
+  const isDuplicate = lead.brokerApprovalStatus === 'DUPLICATE';
+  const isRejected  = lead.brokerApprovalStatus === 'REJECTED';
+
+  const heroStatus: DetailHeroStatus =
+    lead.brokerApprovalStatus === 'APPROVED' ? 'success' :
+    lead.brokerApprovalStatus === 'REJECTED' ? 'danger' :
+    lead.brokerApprovalStatus === 'DUPLICATE' ? 'neutral' :
+    'warning';
+
   return (
     <div className="space-y-5">
       <PageHeader
         title={lead.fullName}
-        description={lead.brokerApprovalStatus === 'REJECTED' ? 'الفرصة مرفوضة من الإدارة.' : undefined}
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },
           { label: 'الفرص', href: '/portal/leads' },
@@ -157,16 +136,10 @@ export default async function PortalLeadDetailPage({
             <LeadStageBadge stage={lead.stage} />
           </>
         }
-        actions={
-          <Link href="/portal/leads">
-            <Button variant="ghost" size="md" leftIcon={<ChevronLeft className="h-4 w-4" />}>
-              العودة للقائمة
-            </Button>
-          </Link>
-        }
       />
 
-      {lead.brokerApprovalStatus === 'REJECTED' && lead.brokerRejectionReason && (
+      {/* ── Rejection reason ──────────────────────────────────────────── */}
+      {isRejected && lead.brokerRejectionReason && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
@@ -176,97 +149,186 @@ export default async function PortalLeadDetailPage({
         </div>
       )}
 
+      {/* ── Hero summary card ──────────────────────────────────────────── */}
+      <DetailHero status={heroStatus}>
+        {/* Client */}
+        <DetailHeroCol position="first">
+          <div className="flex items-start gap-4">
+            <div
+              className={cn(
+                'h-14 w-14 rounded-2xl flex items-center justify-center shrink-0',
+                isDuplicate ? 'bg-slate-100 text-slate-500' : avatarColor(lead.fullName),
+              )}
+            >
+              {isDuplicate ? (
+                <Copy className="h-6 w-6" />
+              ) : (
+                <span className="text-lg font-bold">{initials(lead.fullName)}</span>
+              )}
+            </div>
+            <div className="min-w-0">
+              <HeroColLabel>العميل</HeroColLabel>
+              <p className="text-xl font-bold text-slate-900 leading-snug">{lead.fullName}</p>
+              <a
+                href={`tel:${lead.phone}`}
+                className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-brand-700 transition-colors"
+                dir="ltr"
+              >
+                <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                {lead.phone}
+              </a>
+              {lead.email && (
+                <a
+                  href={`mailto:${lead.email}`}
+                  className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 hover:text-brand-700 transition-colors"
+                  dir="ltr"
+                >
+                  <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span className="truncate max-w-[200px]">{lead.email}</span>
+                </a>
+              )}
+            </div>
+          </div>
+        </DetailHeroCol>
+
+        {/* Interest */}
+        <DetailHeroCol position="middle">
+          <HeroColLabel>الاهتمام والمرحلة</HeroColLabel>
+          {lead.projectInterest ? (
+            <>
+              <p className="text-lg font-bold text-slate-900 leading-snug">
+                {tx(lead.projectInterest.name)}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                <Building2 className="h-3 w-3 shrink-0" />
+                {lead.projectInterest.city ?? ''}
+              </p>
+              <div className="mt-3">
+                {lead.unitInterest ? (
+                  <>
+                    <CodeText className="text-base font-bold text-slate-800">
+                      {lead.unitInterest.code}
+                    </CodeText>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      <CodeText>{lead.unitInterest.type}</CodeText>
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-400">أي وحدة متاحة في المشروع</p>
+                )}
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-slate-400">لم يُحدد مشروع بعد</p>
+          )}
+          <div className="mt-4 pt-3 border-t border-hairline flex items-center gap-2">
+            <span className="text-2xs text-slate-400 shrink-0">المرحلة</span>
+            <LeadStageBadge stage={lead.stage} />
+          </div>
+        </DetailHeroCol>
+
+        {/* Dates + context */}
+        <DetailHeroCol position="last">
+          <HeroColLabel>التواريخ والإحصاء</HeroColLabel>
+          <div className="space-y-2.5">
+            <HeroDateRow
+              label="تاريخ الإرسال"
+              value={lead.brokerSubmittedAt ? formatDate(lead.brokerSubmittedAt) : '—'}
+            />
+            {lead.brokerApprovedAt && (
+              <HeroDateRow
+                label="تاريخ الموافقة"
+                value={formatDate(lead.brokerApprovedAt)}
+                tone="success"
+              />
+            )}
+            {lead.brokerRejectedAt && (
+              <HeroDateRow
+                label="تاريخ الرفض"
+                value={formatDate(lead.brokerRejectedAt)}
+                tone="warning"
+              />
+            )}
+          </div>
+          <div className="mt-4 pt-3 border-t border-hairline grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-2xs text-slate-400">الزيارات</p>
+              <p className="text-lg font-bold text-slate-800 mt-0.5 tabular-nums">
+                {lead.appointments?.length ?? 0}
+              </p>
+            </div>
+            {lead.notes && lead.notes.length > 0 && (
+              <div>
+                <p className="text-2xs text-slate-400">الملاحظات</p>
+                <p className="text-lg font-bold text-slate-800 mt-0.5 tabular-nums">
+                  {lead.notes.length}
+                </p>
+              </div>
+            )}
+          </div>
+        </DetailHeroCol>
+      </DetailHero>
+
+      {/* ── Approval timeline ──────────────────────────────────────────── */}
       <StatusTimeline
         status={lead.brokerApprovalStatus}
-        submittedAt={lead.brokerSubmittedAt ?? lead.createdAt}
+        submittedAt={lead.brokerSubmittedAt ?? ''}
         approvedAt={lead.brokerApprovedAt}
         rejectedAt={lead.brokerRejectedAt}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3">معلومات العميل</h2>
-          <InfoRow icon={<Mail />} label="البريد الإلكتروني" value={lead.email} dir="ltr" />
-          <InfoRow icon={<Phone />} label="رقم الجوال" value={lead.phone} dir="ltr" />
-          <InfoRow
-            icon={<CalendarRange />}
-            label="تاريخ الإرسال"
-            value={formatDate(lead.brokerSubmittedAt ?? lead.createdAt)}
-          />
-          {lead.brokerApprovedAt && (
-            <InfoRow
-              icon={<CalendarRange />}
-              label="تاريخ الموافقة"
-              value={formatDate(lead.brokerApprovedAt)}
-            />
-          )}
-        </Card>
-
-        <Card className="p-5 lg:col-span-2">
-          <h2 className="text-sm font-bold text-slate-900 mb-3">الاهتمام</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 divide-y sm:divide-y-0 divide-hairline">
-            <InfoRow
-              icon={<Building2 />}
-              label="المشروع"
-              value={lead.projectInterest ? tx(lead.projectInterest.name) : '—'}
-            />
-            <InfoRow
-              icon={<Home />}
-              label="الوحدة"
-              value={
-                lead.unitInterest ? (
-                  <CodeText>{lead.unitInterest.code} • {lead.unitInterest.type}</CodeText>
-                ) : (
-                  '—'
-                )
-              }
-            />
-          </div>
-        </Card>
-      </div>
-
+      {/* ── Linked visits ─────────────────────────────────────────────── */}
       {lead.appointments && lead.appointments.length > 0 && (
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <CalendarClock className="h-4 w-4 text-brand-600" />
-            الزيارات المرتبطة
-          </h2>
-          <ul className="divide-y divide-hairline">
-            {lead.appointments.map((a) => (
-              <li key={a.id} className="py-2 flex items-center justify-between gap-3">
-                <div>
-                  <CodeText className="text-xs text-slate-700">{a.visitNumber}</CodeText>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    <CodeText>{formatDateTime(a.scheduledAt)}</CodeText>
-                  </p>
-                </div>
-                <AppointmentStatusBadge status={a.status} />
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <DetailSection
+          icon={<CalendarClock />}
+          title="الزيارات المرتبطة"
+          count={lead.appointments.length}
+        >
+          <ol className="relative border-s border-hairline ms-2 space-y-0">
+            {lead.appointments.map((a, i) => {
+              const isLast = i === lead.appointments!.length - 1;
+              return (
+                <li key={a.id} className={cn('ms-5', !isLast && 'pb-4')}>
+                  <span className="absolute -start-2 flex h-4 w-4 items-center justify-center rounded-full bg-brand-50 ring-2 ring-white">
+                    <Clock className="h-2.5 w-2.5 text-brand-500" />
+                  </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <CodeText className="text-xs font-semibold text-slate-800">
+                        {a.visitNumber}
+                      </CodeText>
+                      <p className="text-2xs text-slate-500 mt-0.5">
+                        <CodeText>{formatDateTime(a.scheduledAt)}</CodeText>
+                      </p>
+                    </div>
+                    <AppointmentStatusBadge status={a.status} />
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </DetailSection>
       )}
 
+      {/* ── Notes ─────────────────────────────────────────────────────── */}
       {lead.notes && lead.notes.length > 0 && (
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <StickyNote className="h-4 w-4 text-brand-600" />
-            ملاحظات
-          </h2>
+        <DetailSection icon={<StickyNote />} title="ملاحظات فريق المبيعات">
           <ul className="divide-y divide-hairline">
             {lead.notes.map((n) => (
-              <li key={n.id} className="py-2.5">
+              <li key={n.id} className="py-3 first:pt-0 last:pb-0">
                 <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                   {n.body}
                 </p>
-                <p className="text-2xs text-slate-500 mt-1">
-                  {n.sales?.fullName ? `${n.sales.fullName} • ` : ''}
+                <p className="text-2xs text-slate-400 mt-1.5">
+                  {n.sales?.fullName && (
+                    <span className="font-medium text-slate-500">{n.sales.fullName} · </span>
+                  )}
                   {formatDateTime(n.createdAt)}
                 </p>
               </li>
             ))}
           </ul>
-        </Card>
+        </DetailSection>
       )}
     </div>
   );

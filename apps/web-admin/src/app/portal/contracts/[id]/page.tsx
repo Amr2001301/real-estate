@@ -2,50 +2,33 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import {
   FileText,
-  ChevronLeft,
   Phone,
   Mail,
   Building2,
-  Home,
-  UserCircle,
-  CalendarRange,
   Banknote,
   CheckCircle2,
+  CalendarRange,
+  ExternalLink,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PortalContract } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { CodeText } from '@/components/ui/code-text';
+import {
+  DetailHero,
+  DetailHeroCol,
+  HeroColLabel,
+  HeroDateRow,
+  avatarColor,
+  initials,
+  type DetailHeroStatus,
+} from '@/components/portal/detail-hero';
+import { MetricGrid, MetricTile } from '@/components/portal/metric-grid';
+import { DetailSection } from '@/components/portal/detail-section';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-function InfoRow({
-  icon,
-  label,
-  value,
-  dir,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: React.ReactNode;
-  dir?: 'ltr' | 'rtl';
-}) {
-  return (
-    <div className="flex items-start gap-3 py-2">
-      <span className="mt-0.5 text-slate-400 [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-sm text-slate-800 mt-0.5" dir={dir}>
-          {value ?? '—'}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 export default async function PortalContractDetailPage({
   params,
@@ -58,11 +41,18 @@ export default async function PortalContractDetailPage({
   const contract = r.data;
   const project = contract.unit?.building?.phase.project;
 
+  const clientName  = contract.customer?.fullName ?? contract.reservation?.lead?.fullName ?? '';
+  const clientPhone = contract.customer?.phone    ?? contract.reservation?.lead?.phone    ?? '';
+  const clientEmail = contract.customer?.email    ?? '';
+
+  const isSigned = !!contract.signedAt;
+  const heroStatus: DetailHeroStatus = isSigned ? 'success' : 'warning';
+  const balance = Number(contract.totalAmount) - Number(contract.downPayment);
+
   return (
     <div className="space-y-5">
       <PageHeader
         title={contract.contractNumber ?? 'عقد'}
-        description={project ? tx(project.name) : undefined}
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },
           { label: 'العقود', href: '/portal/contracts' },
@@ -70,10 +60,10 @@ export default async function PortalContractDetailPage({
         ]}
         meta={
           <>
-            {contract.signedAt ? (
+            {isSigned ? (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
                 <CheckCircle2 className="h-3 w-3" />
-                موقع — {formatDate(contract.signedAt)}
+                موقع
               </span>
             ) : (
               <span className="inline-block rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium">
@@ -81,167 +71,210 @@ export default async function PortalContractDetailPage({
               </span>
             )}
             {contract.reservation?.reservationNumber && (
-              <span className="text-xs text-slate-600">
-                من الحجز:{' '}
-                <Link
-                  href={`/portal/reservations/${contract.reservation.id}` as never}
-                  className="text-brand-700 hover:text-brand-800 underline"
-                >
-                  <CodeText>{contract.reservation.reservationNumber}</CodeText>
-                </Link>
-              </span>
+              <Link
+                href={`/portal/reservations/${contract.reservation.id}` as never}
+                className="inline-flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800"
+              >
+                <FileText className="h-3 w-3 text-slate-400" />
+                <CodeText>{contract.reservation.reservationNumber}</CodeText>
+              </Link>
             )}
           </>
         }
-        actions={
-          <Link href="/portal/contracts">
-            <Button variant="ghost" size="md" leftIcon={<ChevronLeft className="h-4 w-4" />}>
-              العودة للقائمة
-            </Button>
-          </Link>
-        }
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3">العميل</h2>
-          <InfoRow
-            icon={<UserCircle />}
-            label="الاسم"
-            value={contract.customer?.fullName ?? contract.reservation?.lead?.fullName}
-          />
-          <InfoRow
-            icon={<Phone />}
-            label="الجوال"
-            value={contract.customer?.phone ?? contract.reservation?.lead?.phone}
-            dir="ltr"
-          />
-          <InfoRow
-            icon={<Mail />}
-            label="البريد"
-            value={contract.customer?.email}
-            dir="ltr"
-          />
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3">الوحدة والمشروع</h2>
-          <InfoRow
-            icon={<Building2 />}
-            label="المشروع"
-            value={project ? tx(project.name) : '—'}
-          />
-          <InfoRow
-            icon={<Home />}
-            label="الوحدة"
-            value={
-              contract.unit ? (
-                <CodeText>{contract.unit.code} • {contract.unit.type}</CodeText>
-              ) : (
-                '—'
-              )
-            }
-          />
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3">المالية</h2>
-          <InfoRow
-            icon={<Banknote />}
-            label="قيمة العقد"
-            value={formatCurrency(contract.totalAmount)}
-          />
-          <InfoRow
-            icon={<Banknote />}
-            label="الدفعة المقدمة"
-            value={formatCurrency(contract.downPayment)}
-          />
-          <InfoRow
-            icon={<CalendarRange />}
-            label="تاريخ الإنشاء"
-            value={formatDateTime(contract.createdAt)}
-          />
-          {contract.signedAt && (
-            <InfoRow
-              icon={<CheckCircle2 />}
-              label="تاريخ التوقيع"
-              value={formatDate(contract.signedAt)}
-            />
-          )}
-        </Card>
-      </div>
-
-      {contract.reservation && (
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <Banknote className="h-4 w-4 text-brand-600" />
-            لقطة العمولة (Snapshot)
-          </h2>
-          <p className="text-xs text-slate-500 mb-3">
-            مأخوذة من الحجز المصدر وقت إنشائه. لا تتغير بعد إنشاء العقد.
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <div className="rounded-xl border border-hairline px-3 py-3">
-              <p className="text-xs text-slate-500">النسبة المُقفلة</p>
-              <p className="font-semibold mt-1 text-slate-900">
-                {contract.reservation.commissionLockedPct !== null &&
-                contract.reservation.commissionLockedPct !== undefined
-                  ? `${Number(contract.reservation.commissionLockedPct).toFixed(2)}%`
-                  : '—'}
-              </p>
+      {/* ── Hero summary card ──────────────────────────────────────────── */}
+      <DetailHero status={heroStatus}>
+        {/* Client */}
+        <DetailHeroCol position="first">
+          <div className="flex items-start gap-4">
+            <div
+              className={`h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 text-lg font-bold ${avatarColor(clientName)}`}
+            >
+              {initials(clientName)}
             </div>
-            <div className="rounded-xl border border-hairline px-3 py-3">
-              <p className="text-xs text-slate-500">المبلغ المُقفل</p>
-              <p className="font-semibold mt-1 text-slate-900">
-                {contract.reservation.commissionLockedAmount !== null &&
-                contract.reservation.commissionLockedAmount !== undefined
-                  ? formatCurrency(contract.reservation.commissionLockedAmount)
-                  : '—'}
-              </p>
-            </div>
-            <div className="rounded-xl border border-hairline px-3 py-3">
-              <p className="text-xs text-slate-500">المندوب الداخلي</p>
-              <p className="font-semibold mt-1 text-slate-900">
-                {contract.reservation.sales?.fullName ?? '—'}
-              </p>
-            </div>
-            <div className="rounded-xl border border-hairline px-3 py-3">
-              <p className="text-xs text-slate-500">الفرصة</p>
-              <p className="font-semibold mt-1 text-slate-900">
-                {contract.reservation.lead?.fullName ?? '—'}
-              </p>
+            <div className="min-w-0">
+              <HeroColLabel>العميل</HeroColLabel>
+              <p className="text-xl font-bold text-slate-900 leading-snug">{clientName || '—'}</p>
+              {clientPhone && (
+                <a
+                  href={`tel:${clientPhone}`}
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-brand-700 transition-colors"
+                  dir="ltr"
+                >
+                  <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                  {clientPhone}
+                </a>
+              )}
+              {clientEmail && (
+                <a
+                  href={`mailto:${clientEmail}`}
+                  className="mt-1 flex items-center gap-1.5 text-xs text-slate-500 hover:text-brand-700 transition-colors"
+                  dir="ltr"
+                >
+                  <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                  <span className="truncate max-w-[200px]">{clientEmail}</span>
+                </a>
+              )}
             </div>
           </div>
-        </Card>
+        </DetailHeroCol>
+
+        {/* Unit / Project */}
+        <DetailHeroCol position="middle">
+          <HeroColLabel>الوحدة والمشروع</HeroColLabel>
+          {project ? (
+            <>
+              <p className="text-lg font-bold text-slate-900 leading-snug">{tx(project.name)}</p>
+              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
+                <Building2 className="h-3 w-3 shrink-0" />
+                {project.city ?? ''}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm text-slate-400">—</p>
+          )}
+          {contract.unit && (
+            <div className="mt-4">
+              <CodeText className="text-base font-bold text-slate-800">{contract.unit.code}</CodeText>
+              <p className="text-xs text-slate-500 mt-0.5">
+                <CodeText>{contract.unit.type}</CodeText>
+              </p>
+            </div>
+          )}
+        </DetailHeroCol>
+
+        {/* Status + dates */}
+        <DetailHeroCol position="last" highlight={isSigned ? 'success' : 'warning'}>
+          <HeroColLabel>الحالة والتواريخ</HeroColLabel>
+          <div className="flex items-center gap-2 mb-4">
+            {isSigned ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0" />
+            ) : (
+              <CalendarRange className="h-5 w-5 text-amber-500 shrink-0" />
+            )}
+            <p className={`text-base font-bold ${isSigned ? 'text-emerald-700' : 'text-amber-700'}`}>
+              {isSigned ? 'تم التوقيع' : 'قيد التوقيع'}
+            </p>
+          </div>
+          <div className="space-y-2.5">
+            <HeroDateRow
+              label={<span className="flex items-center gap-1"><CalendarRange className="h-3 w-3 text-slate-400" />تاريخ الإنشاء</span>}
+              value={formatDate(contract.createdAt)}
+            />
+            {isSigned && (
+              <HeroDateRow
+                label={<span className="flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-emerald-500" />تاريخ التوقيع</span>}
+                value={formatDate(contract.signedAt!)}
+                tone="success"
+              />
+            )}
+            {contract.reservation?.reservationNumber && (
+              <HeroDateRow
+                label="رقم الحجز"
+                value={<CodeText className="text-xs">{contract.reservation.reservationNumber}</CodeText>}
+              />
+            )}
+          </div>
+        </DetailHeroCol>
+      </DetailHero>
+
+      {/* ── Financial summary (always) ────────────────────────────────── */}
+      <DetailSection icon={<Banknote />} title="الملخص المالي">
+        <MetricGrid cols={3}>
+          <MetricTile
+            label="إجمالي العقد"
+            value={formatCurrency(contract.totalAmount)}
+            variant="accent"
+            size="md"
+          />
+          <MetricTile
+            label="الدفعة المقدمة"
+            value={formatCurrency(contract.downPayment)}
+            size="md"
+          />
+          <MetricTile
+            label="المبلغ المتبقي"
+            value={formatCurrency(balance)}
+            variant={balance > 0 ? 'default' : 'highlight'}
+            size="md"
+          />
+        </MetricGrid>
+      </DetailSection>
+
+      {/* ── Commission snapshot ────────────────────────────────────────── */}
+      {contract.reservation && (
+        <DetailSection
+          icon={<Banknote />}
+          title="لقطة العمولة المُقفلة"
+          description="تم تثبيت هذه القيم عند إنشاء الحجز المصدر ولن تتغير بعد توقيع العقد."
+        >
+          <MetricGrid cols={4}>
+            <MetricTile
+              label="النسبة المُقفلة"
+              value={
+                contract.reservation.commissionLockedPct !== null &&
+                contract.reservation.commissionLockedPct !== undefined
+                  ? `${Number(contract.reservation.commissionLockedPct).toFixed(2)}%`
+                  : '—'
+              }
+              variant="accent"
+            />
+            <MetricTile
+              label="المبلغ المُقفل"
+              value={
+                contract.reservation.commissionLockedAmount !== null &&
+                contract.reservation.commissionLockedAmount !== undefined
+                  ? formatCurrency(contract.reservation.commissionLockedAmount)
+                  : '—'
+              }
+            />
+            <MetricTile
+              label="المندوب الداخلي"
+              value={contract.reservation.sales?.fullName ?? '—'}
+            />
+            <MetricTile
+              label="الفرصة"
+              value={contract.reservation.lead?.fullName ?? '—'}
+            />
+          </MetricGrid>
+        </DetailSection>
       )}
 
+      {/* ── Contract PDF ───────────────────────────────────────────────── */}
       {contract.pdfUrl && (
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-brand-600" />
-            ملف العقد
-          </h2>
+        <DetailSection icon={<FileText />} title="ملف العقد">
           <a
             href={contract.pdfUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-brand-700 hover:text-brand-800 underline"
+            className="inline-flex items-center gap-2 text-sm text-brand-700 hover:text-brand-800 font-medium"
             dir="ltr"
           >
+            <ExternalLink className="h-4 w-4" />
             فتح الملف (PDF)
           </a>
-        </Card>
+        </DetailSection>
       )}
 
+      {/* ── Installment plan ──────────────────────────────────────────── */}
       {contract.installmentPlan && (
-        <Card className="p-5">
-          <h2 className="text-sm font-bold text-slate-900 mb-3">خطة التقسيط</h2>
-          <p className="text-xs text-slate-500">
-            {contract.installmentPlan.totalMonths} شهر • قسط شهري{' '}
-            {formatCurrency(contract.installmentPlan.monthlyAmount)} • تبدأ في{' '}
-            {formatDate(contract.installmentPlan.startsAt)}
-          </p>
-        </Card>
+        <DetailSection icon={<CalendarRange />} title="خطة التقسيط">
+          <MetricGrid cols={3}>
+            <MetricTile
+              label="مدة التقسيط"
+              value={`${contract.installmentPlan.totalMonths} شهر`}
+            />
+            <MetricTile
+              label="القسط الشهري"
+              value={formatCurrency(contract.installmentPlan.monthlyAmount)}
+            />
+            <MetricTile
+              label="تاريخ أول قسط"
+              value={formatDate(contract.installmentPlan.startsAt)}
+            />
+          </MetricGrid>
+        </DetailSection>
       )}
     </div>
   );

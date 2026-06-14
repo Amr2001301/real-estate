@@ -193,8 +193,8 @@ export default function PortalVisitForm({ projects, units, leads }: Props) {
               )}
             </Select>
           </Field>
-          <Field label="التاريخ المقترح" name="preferredDate" required>
-            <Input id="preferredDate" name="preferredDate" type="date" required />
+          <Field label="التاريخ المقترح" name="preferredDate" required hint="يوم/شهر/سنة">
+            <Input id="preferredDate" name="preferredDate" type="date" required dir="ltr" />
           </Field>
         </div>
       </FormSection>
