@@ -1,5 +1,12 @@
 import Link from 'next/link';
-import { Wallet, Eye } from 'lucide-react';
+import {
+  Wallet,
+  Eye,
+  Clock,
+  CircleDollarSign,
+  Loader2,
+  Ban,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalPayout } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
@@ -11,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
@@ -18,9 +26,9 @@ export const fetchCache = 'force-no-store';
 
 const METHOD_LABEL: Record<string, string> = {
   BANK_TRANSFER: 'تحويل بنكي',
-  CHEQUE: 'شيك',
-  CASH: 'نقدي',
-  OTHER: 'أخرى',
+  CHEQUE:        'شيك',
+  CASH:          'نقدي',
+  OTHER:         'أخرى',
 };
 
 interface Search {
@@ -47,17 +55,31 @@ export default async function PortalPayoutsPage({
     if (v) qs.set(key, v);
   }
 
-  const r = await safe(api.get<Paged<PortalPayout>>(`/portal/payouts?${qs.toString()}`));
-  const paged = r.data;
-  const rows = paged?.data ?? [];
+  const [r, rPaid, rApproved, rProcessing] = await Promise.all([
+    safe(api.get<Paged<PortalPayout>>(`/portal/payouts?${qs.toString()}`)),
+    safe(api.get<Paged<PortalPayout>>('/portal/payouts?page=1&pageSize=1&status=PAID')),
+    safe(api.get<Paged<PortalPayout>>('/portal/payouts?page=1&pageSize=1&status=APPROVED')),
+    safe(api.get<Paged<PortalPayout>>('/portal/payouts?page=1&pageSize=1&status=PROCESSING')),
+  ]);
 
-  const totalNet = rows.reduce((s, p) => s + Number(p.totalNet || 0), 0);
+  const paged           = r.data;
+  const rows            = paged?.data ?? [];
+  const paidCount       = rPaid.data?.meta.total       ?? 0;
+  const approvedCount   = rApproved.data?.meta.total   ?? 0;
+  const processingCount = rProcessing.data?.meta.total ?? 0;
+
+  const pageNet = rows.reduce((s, p) => s + Number(p.totalNet || 0), 0);
+  const paidNet = rows
+    .filter((p) => p.status === 'PAID')
+    .reduce((s, p) => s + Number(p.totalNet || 0), 0);
 
   return (
     <div className="space-y-5">
+
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
       <PageHeader
         title="مدفوعاتي"
-        description="الدفعات المالية المرتبطة بعمولاتك. مدفوعة = تم صرفها خارجياً وسجلت الإدارة الإشعار."
+        description="الدفعات المالية المرتبطة بعمولاتك — دفعة «مدفوعة» تعني أن الإدارة صرفتها خارجياً وسجّلتها."
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },
           { label: 'المدفوعات' },
@@ -65,7 +87,7 @@ export default async function PortalPayoutsPage({
         meta={
           rows.length > 0 ? (
             <span className="text-xs text-slate-600 tabular-nums">
-              صافي هذه الصفحة: {formatCurrency(totalNet)}
+              صافي هذه الصفحة: {formatCurrency(pageNet)}
             </span>
           ) : undefined
         }
@@ -77,6 +99,15 @@ export default async function PortalPayoutsPage({
         </div>
       )}
 
+      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <PageKpiCard label="إجمالي الدفعات"  value={paged?.meta.total ?? 0} icon={<Wallet />}          tone="brand"   />
+        <PageKpiCard label="مدفوعة"          value={paidCount}              icon={<CircleDollarSign />} tone="success" />
+        <PageKpiCard label="قيد التنفيذ"     value={processingCount}        icon={<Loader2 />}          tone="warning" />
+        <PageKpiCard label="معتمدة بانتظار صرف" value={approvedCount}      icon={<Clock />}            tone="info"    />
+      </div>
+
+      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <form
         method="get"
         action="/portal/payouts"
@@ -99,7 +130,7 @@ export default async function PortalPayoutsPage({
           className="w-40 shrink-0"
         />
         <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
-        <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-40 shrink-0" />
+        <Input name="to"   inputSize="sm" type="date" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {(sp.status || sp.period || sp.from || sp.to) && (
@@ -110,7 +141,29 @@ export default async function PortalPayoutsPage({
         </div>
       </form>
 
+      {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
+        {rows.length > 0 && (
+          <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
+            <div className="flex items-center gap-1.5">
+              <span className="font-semibold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
+              <span>دفعة</span>
+            </div>
+            {pageNet > 0 && (
+              <>
+                <div className="w-px h-4 bg-hairline" />
+                <span>صافي الصفحة: <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageNet)}</span></span>
+              </>
+            )}
+            {paidNet > 0 && (
+              <>
+                <div className="w-px h-4 bg-hairline" />
+                <span>مدفوع منها: <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(paidNet)}</span></span>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
@@ -119,9 +172,9 @@ export default async function PortalPayoutsPage({
                 <th className="text-start font-semibold py-3 px-4">الفترة</th>
                 <th className="text-start font-semibold py-3 px-4">صافي</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">تاريخ الدفع</th>
-                <th className="text-start font-semibold py-3 px-4">طريقة الدفع</th>
-                <th className="text-start font-semibold py-3 px-4">مرجع</th>
+                <th className="text-start font-semibold py-3 px-4">طريقة الصرف</th>
+                <th className="text-start font-semibold py-3 px-4">تاريخ الصرف</th>
+                <th className="text-start font-semibold py-3 px-4">المرجع</th>
                 <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -137,33 +190,82 @@ export default async function PortalPayoutsPage({
                   </td>
                 </tr>
               )}
-              {rows.map((p) => (
-                <tr key={p.id} className="border-t border-hairline hover:bg-surface-muted/40 transition-colors">
-                  <td className="py-3 ps-5 pe-4 font-mono text-xs text-slate-700" dir="ltr">{p.payoutNumber}</td>
-                  <td className="py-3 px-4 text-xs text-slate-700 font-mono" dir="ltr">{p.period ?? '—'}</td>
-                  <td className="py-3 px-4 font-semibold text-slate-900 tabular-nums">{formatCurrency(p.totalNet)}</td>
-                  <td className="py-3 px-4">
-                    <BrokerPayoutStatusBadge status={p.status} />
-                  </td>
-                  <td className="py-3 px-4 text-2xs text-slate-500">{formatDate(p.paidAt)}</td>
-                  <td className="py-3 px-4 text-xs text-slate-700">
-                    {p.paymentMethod ? METHOD_LABEL[p.paymentMethod] : '—'}
-                  </td>
-                  <td className="py-3 px-4 text-2xs text-slate-500 font-mono" dir="ltr">
-                    {p.paymentReference ?? '—'}
-                  </td>
-                  <td className="py-3 ps-4 pe-5">
-                    <Link href={`/portal/payouts/${p.id}` as never}>
-                      <IconButton label="عرض" variant="ghost" size="sm">
-                        <Eye />
-                      </IconButton>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
+              {rows.map((p) => {
+                const isCancelled = p.status === 'CANCELLED';
+                const isPaid      = p.status === 'PAID';
+                return (
+                  <tr
+                    key={p.id}
+                    className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
+                  >
+                    {/* Payout number */}
+                    <td className="py-3 ps-5 pe-4">
+                      <span className="font-mono text-xs text-brand-700 font-semibold" dir="ltr">
+                        {p.payoutNumber}
+                      </span>
+                    </td>
+
+                    {/* Period */}
+                    <td className="py-3 px-4 font-mono text-xs text-slate-600" dir="ltr">
+                      {p.period ?? '—'}
+                    </td>
+
+                    {/* Net amount */}
+                    <td className="py-3 px-4">
+                      <p
+                        className={`text-xs font-bold tabular-nums ${
+                          isCancelled ? 'text-slate-400 line-through' : 'text-slate-900'
+                        }`}
+                      >
+                        {formatCurrency(p.totalNet)}
+                      </p>
+                      {isPaid && (
+                        <p className="text-2xs text-success-600 mt-0.5 flex items-center gap-0.5">
+                          <CircleDollarSign className="h-3 w-3" />
+                          تم الصرف
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="py-3 px-4">
+                      <BrokerPayoutStatusBadge status={p.status} />
+                    </td>
+
+                    {/* Payment method */}
+                    <td className="py-3 px-4 text-xs text-slate-700">
+                      {p.paymentMethod ? METHOD_LABEL[p.paymentMethod] : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+
+                    {/* Paid date */}
+                    <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
+                      {p.paidAt ? formatDate(p.paidAt) : (
+                        <span className="text-slate-400">لم يُصرف بعد</span>
+                      )}
+                    </td>
+
+                    {/* Reference */}
+                    <td className="py-3 px-4 font-mono text-2xs text-slate-500" dir="ltr">
+                      {p.paymentReference ?? '—'}
+                    </td>
+
+                    {/* Action */}
+                    <td className="py-3 ps-4 pe-5">
+                      <Link href={`/portal/payouts/${p.id}` as never}>
+                        <IconButton label="عرض" variant="ghost" size="sm">
+                          <Eye />
+                        </IconButton>
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
+
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination
             page={paged.meta.page}

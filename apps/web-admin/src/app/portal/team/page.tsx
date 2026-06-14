@@ -1,5 +1,19 @@
 import Link from 'next/link';
-import { Plus, Users, Crown, ShieldCheck, BadgePercent, Mail, Phone, Pencil, UserCheck, UserMinus, UserX } from 'lucide-react';
+import {
+  Plus,
+  Users,
+  Crown,
+  ShieldCheck,
+  BadgePercent,
+  Mail,
+  Phone,
+  Pencil,
+  UserCheck,
+  UserMinus,
+  UserX,
+  UserPlus,
+  PauseCircle,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { BrokerUser, BrokerUserStatus, Paged } from '@/lib/types';
 import { formatDate } from '@/lib/format';
@@ -10,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerUserStatusBadge } from '@/components/badges';
 import { ConfirmingForm } from '@/components/confirming-form';
 import { setTeamMemberStatusAction } from './actions';
@@ -26,10 +41,44 @@ interface Search {
 
 const PAGE_SIZE = 25;
 
-function FlagPill({ icon: Icon, label, on }: { icon: typeof Crown; label: string; on: boolean }) {
+const AVATAR_COLORS = [
+  'bg-blue-100 text-blue-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-violet-100 text-violet-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+  'bg-cyan-100 text-cyan-700',
+  'bg-teal-100 text-teal-700',
+  'bg-indigo-100 text-indigo-700',
+];
+
+function avatarColor(name: string): string {
+  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
+  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
+}
+
+function initials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
+
+function PermissionPill({
+  icon: Icon,
+  label,
+  on,
+}: {
+  icon: typeof Crown;
+  label: string;
+  on: boolean;
+}) {
   if (!on) return null;
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-2xs font-medium text-brand-700">
+    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2 py-0.5 text-2xs font-medium text-brand-700 ring-1 ring-inset ring-brand-100">
       <Icon className="h-3 w-3" />
       {label}
     </span>
@@ -46,17 +95,29 @@ export default async function PortalTeamPage({
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (sp.status) qs.set('status', sp.status);
-  if (sp.q) qs.set('q', sp.q);
+  if (sp.q)      qs.set('q', sp.q);
 
-  const res = await safe(api.get<Paged<BrokerUser>>(`/portal/team?${qs.toString()}`));
-  const items = res.data?.data ?? [];
-  const meta = res.data?.meta;
+  const [res, rActive, rInvited, rSuspended] = await Promise.all([
+    safe(api.get<Paged<BrokerUser>>(`/portal/team?${qs.toString()}`)),
+    safe(api.get<Paged<BrokerUser>>('/portal/team?page=1&pageSize=1&status=ACTIVE')),
+    safe(api.get<Paged<BrokerUser>>('/portal/team?page=1&pageSize=1&status=INVITED')),
+    safe(api.get<Paged<BrokerUser>>('/portal/team?page=1&pageSize=1&status=SUSPENDED')),
+  ]);
+
+  const items          = res.data?.data ?? [];
+  const meta           = res.data?.meta;
+  const totalAll       = meta?.total       ?? 0;
+  const activeCount    = rActive.data?.meta.total    ?? 0;
+  const invitedCount   = rInvited.data?.meta.total   ?? 0;
+  const suspendedCount = rSuspended.data?.meta.total ?? 0;
 
   return (
     <div className="space-y-5">
+
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
       <PageHeader
         title="فريق العمل"
-        description="إدارة الموظفين المنضمين لشركة الوساطة الخاصة بك."
+        description="إدارة الموظفين المنضمين لشركة الوساطة — التحكم بالصلاحيات والحالة."
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },
           { label: 'فريق العمل' },
@@ -75,13 +136,21 @@ export default async function PortalTeamPage({
           {sp.err}
         </div>
       )}
-
       {res.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           تعذر تحميل الفريق: {res.error}
         </div>
       )}
 
+      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <PageKpiCard label="إجمالي الأعضاء"  value={totalAll}       icon={<Users />}      tone="brand"   />
+        <PageKpiCard label="نشط"             value={activeCount}    icon={<UserCheck />}  tone="success" />
+        <PageKpiCard label="دعوة معلقة"      value={invitedCount}   icon={<UserPlus />}   tone="warning" />
+        <PageKpiCard label="موقوف"           value={suspendedCount} icon={<PauseCircle />} tone="danger"  />
+      </div>
+
+      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <form
         method="get"
         action="/portal/team"
@@ -111,6 +180,7 @@ export default async function PortalTeamPage({
         </div>
       </form>
 
+      {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
         {items.length === 0 ? (
           <EmptyState
@@ -119,105 +189,148 @@ export default async function PortalTeamPage({
             description="ابدأ بإضافة أول عضو من زر «إضافة عضو» أعلى الصفحة."
           />
         ) : (
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="text-start font-semibold py-3 ps-5 pe-4">العضو</th>
-                  <th className="text-start font-semibold py-3 px-4">المسمى</th>
-                  <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                  <th className="text-start font-semibold py-3 px-4">الصلاحيات</th>
-                  <th className="text-start font-semibold py-3 px-4">انضم</th>
-                  <th className="text-end font-semibold py-3 ps-4 pe-5">إجراءات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((m) => (
-                  <tr key={m.id} className="border-t border-hairline align-top hover:bg-surface-muted/40 transition-colors">
-                    <td className="py-3 ps-5 pe-4 min-w-0">
-                      <p className="font-medium text-slate-900 truncate">{m.user.fullName}</p>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-2xs text-slate-500" dir="ltr">
-                        {m.user.email && (
-                          <span className="inline-flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {m.user.email}
-                          </span>
-                        )}
-                        {m.user.phone && (
-                          <span className="inline-flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {m.user.phone}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">{m.jobTitle ?? '—'}</td>
-                    <td className="py-3 px-4">
-                      <BrokerUserStatusBadge status={m.status} />
-                    </td>
-                    <td className="py-3 px-4">
-                      <div className="flex flex-wrap items-center gap-1">
-                        <FlagPill icon={Crown} label="جهة اتصال رئيسية" on={m.isPrimaryContact} />
-                        <FlagPill icon={ShieldCheck} label="إدارة الفريق" on={m.canManageBrokerUsers} />
-                        <FlagPill icon={BadgePercent} label="عرض العمولات" on={m.canViewCommissions} />
-                        {!m.isPrimaryContact && !m.canManageBrokerUsers && !m.canViewCommissions && (
-                          <span className="text-2xs text-slate-400">—</span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-xs text-slate-600">
-                      {m.joinedAt ? formatDate(m.joinedAt) : <span className="text-slate-400">دعوة معلقة</span>}
-                    </td>
-                    <td className="py-3 ps-4 pe-5">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Link href={`/portal/team/${m.id}/edit`}>
-                          <Button variant="ghost" size="sm" leftIcon={<Pencil className="h-3.5 w-3.5" />}>
-                            تعديل
-                          </Button>
-                        </Link>
-                        {m.status !== 'ACTIVE' && (
-                          <form action={setTeamMemberStatusAction}>
-                            <input type="hidden" name="id" value={m.id} />
-                            <input type="hidden" name="status" value="ACTIVE" />
-                            <Button type="submit" variant="ghost" size="sm" leftIcon={<UserCheck className="h-3.5 w-3.5" />}>
-                              تفعيل
-                            </Button>
-                          </form>
-                        )}
-                        {m.status === 'ACTIVE' && (
-                          <form action={setTeamMemberStatusAction}>
-                            <input type="hidden" name="id" value={m.id} />
-                            <input type="hidden" name="status" value="SUSPENDED" />
-                            <Button type="submit" variant="ghost" size="sm" leftIcon={<UserMinus className="h-3.5 w-3.5" />}>
-                              إيقاف
-                            </Button>
-                          </form>
-                        )}
-                        {m.status !== 'REMOVED' && (
-                          <ConfirmingForm
-                            action={setTeamMemberStatusAction}
-                            confirmMessage={`سيتم إزالة «${m.user.fullName}» من فريق العمل. هل أنت متأكد؟`}
-                          >
-                            <input type="hidden" name="id" value={m.id} />
-                            <input type="hidden" name="status" value="REMOVED" />
-                            <Button
-                              type="submit"
-                              variant="ghost"
-                              size="sm"
-                              leftIcon={<UserX className="h-3.5 w-3.5" />}
-                              className="text-danger-700 hover:text-danger-800 hover:bg-danger-50"
-                            >
-                              إزالة
-                            </Button>
-                          </ConfirmingForm>
-                        )}
-                      </div>
-                    </td>
+          <>
+            {meta && (
+              <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
+                <span className="font-semibold text-slate-700">{meta.total}</span>
+                <span>عضو في الفريق</span>
+              </div>
+            )}
+            <div className="overflow-x-auto scrollbar-thin">
+              <table className="w-full text-sm">
+                <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="text-start font-semibold py-3 ps-5 pe-4">العضو</th>
+                    <th className="text-start font-semibold py-3 px-4">المسمى</th>
+                    <th className="text-start font-semibold py-3 px-4">الحالة</th>
+                    <th className="text-start font-semibold py-3 px-4">الصلاحيات</th>
+                    <th className="text-start font-semibold py-3 px-4">انضم</th>
+                    <th className="text-end font-semibold py-3 ps-4 pe-5">إجراءات</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {items.map((m) => (
+                    <tr
+                      key={m.id}
+                      className="border-t border-hairline align-middle hover:bg-surface-muted/40 transition-colors"
+                    >
+                      {/* Member identity */}
+                      <td className="py-3 ps-5 pe-4">
+                        <div className="flex items-center gap-2.5">
+                          <div
+                            className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${avatarColor(m.user.fullName)}`}
+                          >
+                            {initials(m.user.fullName)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 truncate">{m.user.fullName}</p>
+                            <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-slate-400" dir="ltr">
+                              {m.user.email && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  <span className="truncate max-w-[140px]">{m.user.email}</span>
+                                </span>
+                              )}
+                              {m.user.phone && (
+                                <span className="inline-flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {m.user.phone}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Job title */}
+                      <td className="py-3 px-4 text-xs text-slate-600">
+                        {m.jobTitle ?? <span className="text-slate-400">—</span>}
+                      </td>
+
+                      {/* Status */}
+                      <td className="py-3 px-4">
+                        <BrokerUserStatusBadge status={m.status} />
+                      </td>
+
+                      {/* Permissions */}
+                      <td className="py-3 px-4">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <PermissionPill icon={Crown}       label="جهة اتصال رئيسية" on={m.isPrimaryContact} />
+                          <PermissionPill icon={ShieldCheck} label="إدارة الفريق"      on={m.canManageBrokerUsers} />
+                          <PermissionPill icon={BadgePercent} label="عرض العمولات"     on={m.canViewCommissions} />
+                          {!m.isPrimaryContact && !m.canManageBrokerUsers && !m.canViewCommissions && (
+                            <span className="text-2xs text-slate-400">لا توجد صلاحيات إضافية</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Join date */}
+                      <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
+                        {m.joinedAt ? (
+                          formatDate(m.joinedAt)
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-amber-600 text-2xs">
+                            <Mail className="h-3 w-3" />
+                            دعوة معلقة
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3 ps-4 pe-5">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link href={`/portal/team/${m.id}/edit`}>
+                            <Button variant="ghost" size="sm" leftIcon={<Pencil className="h-3.5 w-3.5" />}>
+                              تعديل
+                            </Button>
+                          </Link>
+
+                          {m.status !== 'ACTIVE' && (
+                            <form action={setTeamMemberStatusAction}>
+                              <input type="hidden" name="id"     value={m.id} />
+                              <input type="hidden" name="status" value="ACTIVE" />
+                              <Button type="submit" variant="ghost" size="sm" leftIcon={<UserCheck className="h-3.5 w-3.5" />}>
+                                تفعيل
+                              </Button>
+                            </form>
+                          )}
+
+                          {m.status === 'ACTIVE' && (
+                            <form action={setTeamMemberStatusAction}>
+                              <input type="hidden" name="id"     value={m.id} />
+                              <input type="hidden" name="status" value="SUSPENDED" />
+                              <Button type="submit" variant="ghost" size="sm" leftIcon={<UserMinus className="h-3.5 w-3.5" />}>
+                                إيقاف
+                              </Button>
+                            </form>
+                          )}
+
+                          {m.status !== 'REMOVED' && (
+                            <ConfirmingForm
+                              action={setTeamMemberStatusAction}
+                              confirmMessage={`سيتم إزالة «${m.user.fullName}» من فريق العمل. هل أنت متأكد؟`}
+                            >
+                              <input type="hidden" name="id"     value={m.id} />
+                              <input type="hidden" name="status" value="REMOVED" />
+                              <Button
+                                type="submit"
+                                variant="ghost"
+                                size="sm"
+                                leftIcon={<UserX className="h-3.5 w-3.5" />}
+                                className="text-danger-700 hover:text-danger-800 hover:bg-danger-50"
+                              >
+                                إزالة
+                              </Button>
+                            </ConfirmingForm>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </Card>
 

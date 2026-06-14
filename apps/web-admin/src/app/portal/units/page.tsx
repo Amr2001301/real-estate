@@ -1,5 +1,12 @@
 import Link from 'next/link';
-import { Home, ShieldCheck, Layers } from 'lucide-react';
+import {
+  Home,
+  ShieldCheck,
+  Layers,
+  CheckCircle2,
+  BookmarkCheck,
+  Tag,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
@@ -10,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { UnitStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +39,7 @@ const PAGE_SIZE = 20;
 
 const ACCESS_LABEL: Record<'PROJECT_ACCESS' | 'UNIT_ACCESS', string> = {
   PROJECT_ACCESS: 'صلاحية مشروع',
-  UNIT_ACCESS: 'صلاحية وحدة',
+  UNIT_ACCESS:    'صلاحية وحدة',
 };
 
 export default async function PortalUnitsPage({
@@ -42,25 +50,27 @@ export default async function PortalUnitsPage({
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
-  const qs = new URLSearchParams({
-    page: String(page),
-    pageSize: String(PAGE_SIZE),
-  });
+  const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   for (const key of ['projectId', 'status', 'type', 'minPrice', 'maxPrice', 'bedrooms', 'bathrooms', 'q'] as const) {
     const value = sp[key];
     if (value) qs.set(key, value);
   }
 
-  const [unitsRes, projectsRes] = await Promise.all([
+  const [unitsRes, projectsRes, rAvailable, rReserved, rSold] = await Promise.all([
     safe(api.get<Paged<PortalUnit>>(`/portal/units?${qs.toString()}`)),
     safe(api.get<PortalProject[]>('/portal/projects')),
+    safe(api.get<Paged<PortalUnit>>('/portal/units?page=1&pageSize=1&status=AVAILABLE')),
+    safe(api.get<Paged<PortalUnit>>('/portal/units?page=1&pageSize=1&status=RESERVED')),
+    safe(api.get<Paged<PortalUnit>>('/portal/units?page=1&pageSize=1&status=SOLD')),
   ]);
 
-  const paged = unitsRes.data;
-  const rows = paged?.data ?? [];
-  const projects = projectsRes.data ?? [];
+  const paged          = unitsRes.data;
+  const rows           = paged?.data ?? [];
+  const projects       = projectsRes.data ?? [];
+  const availableCount = rAvailable.data?.meta.total ?? 0;
+  const reservedCount  = rReserved.data?.meta.total  ?? 0;
+  const soldCount      = rSold.data?.meta.total      ?? 0;
 
-  // Unit-type options derived from current page rows; falls back to common types.
   const knownTypes = Array.from(new Set(rows.map((u) => u.type))).filter(Boolean);
   const typeOptions = knownTypes.length > 0
     ? knownTypes
@@ -68,9 +78,11 @@ export default async function PortalUnitsPage({
 
   return (
     <div className="space-y-5">
+
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
       <PageHeader
         title="الوحدات المتاحة"
-        description="استعراض الوحدات التي تستطيع العمل عليها وفقاً للصلاحيات الممنوحة."
+        description="استعرض الوحدات التي يحق لك العمل عليها — متاحة، محجوزة، أو مباعة."
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },
           { label: 'الوحدات' },
@@ -83,6 +95,15 @@ export default async function PortalUnitsPage({
         </div>
       )}
 
+      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <PageKpiCard label="إجمالي الوحدات"  value={paged?.meta.total ?? 0} icon={<Home />}          tone="brand"   />
+        <PageKpiCard label="متاحة للبيع"     value={availableCount}         icon={<CheckCircle2 />}  tone="success" />
+        <PageKpiCard label="محجوزة"          value={reservedCount}          icon={<BookmarkCheck />} tone="warning" />
+        <PageKpiCard label="مباعة"           value={soldCount}              icon={<Tag />}           tone="info"    />
+      </div>
+
+      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <form
         method="get"
         action="/portal/units"
@@ -96,28 +117,28 @@ export default async function PortalUnitsPage({
             </option>
           ))}
         </Select>
+
         <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
           <option value="">كل الحالات</option>
           <option value="AVAILABLE">متاحة</option>
           <option value="RESERVED">محجوزة</option>
           <option value="SOLD">مباعة</option>
         </Select>
+
         <Select name="type" inputSize="sm" defaultValue={sp.type ?? ''}>
           <option value="">كل الأنواع</option>
           {typeOptions.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
+            <option key={t} value={t}>{t}</option>
           ))}
         </Select>
+
         <Select name="bedrooms" inputSize="sm" defaultValue={sp.bedrooms ?? ''}>
           <option value="">عدد الغرف</option>
           {[1, 2, 3, 4, 5].map((n) => (
-            <option key={n} value={String(n)}>
-              {n} غرف
-            </option>
+            <option key={n} value={String(n)}>{n} غرف</option>
           ))}
         </Select>
+
         <Input
           inputSize="sm"
           name="minPrice"
@@ -144,43 +165,45 @@ export default async function PortalUnitsPage({
         <Select name="bathrooms" inputSize="sm" defaultValue={sp.bathrooms ?? ''}>
           <option value="">عدد الحمامات</option>
           {[1, 2, 3, 4].map((n) => (
-            <option key={n} value={String(n)}>
-              {n}
-            </option>
+            <option key={n} value={String(n)}>{n}</option>
           ))}
         </Select>
+
         <div className="col-span-2 md:col-span-1 flex items-center gap-1.5 justify-end ms-auto">
-          <Button type="submit" variant="primary" size="sm">
-            تصفية
-          </Button>
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {(sp.projectId || sp.status || sp.type || sp.q || sp.minPrice || sp.maxPrice || sp.bedrooms || sp.bathrooms) && (
             <Link href="/portal/units">
-              <Button type="button" variant="ghost" size="sm">
-                مسح
-              </Button>
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
           )}
         </div>
       </form>
 
+      {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
+        {rows.length > 0 && (
+          <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
+            <span className="font-semibold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
+            <span>وحدة مطابقة للتصفية</span>
+          </div>
+        )}
+
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="text-start font-semibold py-3 ps-5 pe-4">الوحدة</th>
-                <th className="text-start font-semibold py-3 px-4">المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">المبنى</th>
+                <th className="text-start font-semibold py-3 px-4">المشروع / المبنى</th>
                 <th className="text-start font-semibold py-3 px-4">المواصفات</th>
                 <th className="text-start font-semibold py-3 px-4">السعر</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">الصلاحية</th>
+                <th className="text-start font-semibold py-3 px-4">نوع الصلاحية</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-0">
+                  <td colSpan={6} className="p-0">
                     <EmptyState
                       icon={<Home />}
                       title="لا توجد وحدات متاحة بعد"
@@ -194,34 +217,52 @@ export default async function PortalUnitsPage({
                   key={u.id}
                   className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
                 >
+                  {/* Unit code + type */}
                   <td className="py-3 ps-5 pe-4">
-                    <p className="font-mono font-semibold text-slate-900" dir="ltr">
+                    <p className="font-mono font-bold text-slate-900 text-sm" dir="ltr">
                       {u.code}
                     </p>
-                    <p className="text-2xs text-slate-500 mt-0.5">{u.type}</p>
-                  </td>
-                  <td className="py-3 px-4 text-slate-700">
-                    {tx(u.building.phase.project.name)}
-                    <p className="text-2xs text-slate-400">{u.building.phase.project.city}</p>
-                  </td>
-                  <td className="py-3 px-4 text-xs text-slate-600">
-                    <span className="inline-flex items-center gap-1.5">
-                      <Layers className="h-3.5 w-3.5 text-slate-400" />
-                      {u.building.name} • {tx(u.building.phase.name)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-xs text-slate-700 space-y-0.5">
-                    <p>المساحة: {u.area} م²</p>
-                    <p>
-                      {u.bedrooms} غرف • {u.bathrooms} حمامات • الدور {u.floor}
+                    <p className="text-2xs text-slate-500 mt-0.5 uppercase tracking-wide">
+                      {u.type}
                     </p>
                   </td>
-                  <td className="py-3 px-4 font-semibold text-slate-900 tabular-nums">
+
+                  {/* Project / Building */}
+                  <td className="py-3 px-4">
+                    <p className="font-medium text-slate-800 text-xs">
+                      {tx(u.building.phase.project.name)}
+                    </p>
+                    <p className="text-2xs text-slate-400 mt-0.5">
+                      {u.building.phase.project.city}
+                    </p>
+                    <p className="text-2xs text-slate-500 mt-1 inline-flex items-center gap-1">
+                      <Layers className="h-3 w-3 text-slate-400" />
+                      {u.building.name}
+                    </p>
+                  </td>
+
+                  {/* Specs */}
+                  <td className="py-3 px-4">
+                    <div className="text-xs text-slate-700 space-y-0.5">
+                      <p className="font-medium tabular-nums">{u.area} م²</p>
+                      <p className="text-slate-500">
+                        {u.bedrooms} غرف • {u.bathrooms} حمامات
+                      </p>
+                      <p className="text-slate-400 text-2xs">دور {u.floor}</p>
+                    </div>
+                  </td>
+
+                  {/* Price */}
+                  <td className="py-3 px-4 tabular-nums font-bold text-slate-900 text-xs">
                     {formatCurrency(u.price)}
                   </td>
+
+                  {/* Status */}
                   <td className="py-3 px-4">
                     <UnitStatusBadge status={u.status} />
                   </td>
+
+                  {/* Access source */}
                   <td className="py-3 px-4">
                     <span className="inline-flex items-center gap-1 text-2xs text-slate-600">
                       <ShieldCheck className="h-3 w-3 text-brand-500" />
@@ -233,6 +274,7 @@ export default async function PortalUnitsPage({
             </tbody>
           </table>
         </div>
+
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination
             page={paged.meta.page}
@@ -241,13 +283,13 @@ export default async function PortalUnitsPage({
             basePath="/portal/units"
             params={{
               projectId: sp.projectId,
-              status: sp.status,
-              type: sp.type,
-              minPrice: sp.minPrice,
-              maxPrice: sp.maxPrice,
-              bedrooms: sp.bedrooms,
+              status:    sp.status,
+              type:      sp.type,
+              minPrice:  sp.minPrice,
+              maxPrice:  sp.maxPrice,
+              bedrooms:  sp.bedrooms,
               bathrooms: sp.bathrooms,
-              q: sp.q,
+              q:         sp.q,
             }}
           />
         )}
