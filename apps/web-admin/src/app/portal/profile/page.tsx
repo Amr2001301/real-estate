@@ -43,6 +43,7 @@ const AVATAR_COLORS = [
 ];
 
 function avatarColor(name: string): string {
+  if (!name) return AVATAR_COLORS[0]!;
   const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
   return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
 }
@@ -199,14 +200,21 @@ export default async function PortalProfilePage() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 sm:grid-cols-3 gap-0 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-hairline">
-            <div className="sm:pe-6">
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-hairline">
+            <div className="lg:pe-6 pb-0">
               <InfoCell icon={<Mail />}    label="البريد الإلكتروني" value={me.user.email}  dir="ltr" />
             </div>
-            <div className="sm:px-6">
+            <div className="lg:px-6">
               <InfoCell icon={<Phone />}   label="رقم الجوال"       value={me.user.phone}  dir="ltr" />
             </div>
-            <div className="sm:ps-6">
+            <div className="lg:px-6">
+              <InfoCell
+                icon={<CalendarRange />}
+                label="تاريخ الانضمام"
+                value={formatDate(me.brokerUser.joinedAt ?? me.brokerUser.invitedAt)}
+              />
+            </div>
+            <div className="lg:ps-6">
               <InfoCell
                 icon={<CalendarClock />}
                 label="آخر دخول"
@@ -223,9 +231,18 @@ export default async function PortalProfilePage() {
         {/* Broker company card */}
         <Card className="p-5 lg:col-span-2 space-y-1">
           <div className="flex items-start gap-3 mb-4">
-            <span className="h-10 w-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
-              <Building2 className="h-5 w-5" />
-            </span>
+            {me.broker.logoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={me.broker.logoUrl}
+                alt={me.broker.companyName}
+                className="h-10 w-10 rounded-xl object-contain bg-slate-50 border border-hairline shrink-0"
+              />
+            ) : (
+              <span className="h-10 w-10 rounded-xl bg-brand-50 text-brand-700 flex items-center justify-center shrink-0">
+                <Building2 className="h-5 w-5" />
+              </span>
+            )}
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900">{me.broker.companyName}</h2>

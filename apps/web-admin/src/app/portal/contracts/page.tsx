@@ -42,6 +42,7 @@ const AVATAR_COLORS = [
 ];
 
 function avatarColor(name: string): string {
+  if (!name) return AVATAR_COLORS[0]!;
   const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
   return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
 }
@@ -77,8 +78,7 @@ export default async function PortalContractsPage({
   const signedCount  = rSigned.data?.meta.total  ?? 0;
   const pendingCount = rPending.data?.meta.total  ?? 0;
 
-  const pageValue      = rows.reduce((s, c) => s + Number(c.totalAmount || 0), 0);
-  const withCommission = rows.filter((c) => c.reservation?.commissionLockedPct != null).length;
+  const pageValue = rows.reduce((s, c) => s + Number(c.totalAmount || 0), 0);
 
   const isFiltered = !!(sp.projectId || sp.signed);
 
@@ -103,11 +103,10 @@ export default async function PortalContractsPage({
       )}
 
       {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي العقود"   value={totalAll}        icon={<FileText />}     tone="brand"   />
-        <PageKpiCard label="موقّعة"          value={signedCount}     icon={<CheckCircle2 />} tone="success" />
-        <PageKpiCard label="قيد التوقيع"     value={pendingCount}    icon={<Clock />}        tone="warning" />
-        <PageKpiCard label="بعمولة مُقفلة"   value={withCommission}  icon={<BadgePercent />} tone="accent"  />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <PageKpiCard label="إجمالي العقود" value={totalAll}     icon={<FileText />}     tone="brand"   />
+        <PageKpiCard label="موقّعة"        value={signedCount}  icon={<CheckCircle2 />} tone="success" />
+        <PageKpiCard label="قيد التوقيع"   value={pendingCount} icon={<Clock />}        tone="warning" />
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}

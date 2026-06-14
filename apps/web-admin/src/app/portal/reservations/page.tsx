@@ -46,6 +46,7 @@ const AVATAR_COLORS = [
 ];
 
 function avatarColor(name: string): string {
+  if (!name) return AVATAR_COLORS[0]!;
   const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
   return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
 }
@@ -198,8 +199,8 @@ export default async function PortalReservationsPage({
                 </tr>
               )}
               {rows.map((r) => {
-                const clientName  = r.lead?.fullName;
-                const clientPhone = r.lead?.phone;
+                const clientName  = r.lead?.fullName ?? r.client?.fullName;
+                const clientPhone = r.lead?.phone ?? r.client?.phone ?? undefined;
                 const isConverted = r.status === 'CONVERTED';
                 const isApproved  = r.status === 'APPROVED';
 

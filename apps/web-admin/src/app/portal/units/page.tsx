@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { IconButton } from '@/components/ui/icon-button';
 import {
   Home,
   ShieldCheck,
@@ -7,6 +8,7 @@ import {
   BookmarkCheck,
   Tag,
   AlertCircle,
+  Plus,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
@@ -200,12 +202,13 @@ export default async function PortalUnitsPage({
                 <th className="text-start font-semibold py-3 px-4">السعر</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
                 <th className="text-start font-semibold py-3 px-4">نوع الصلاحية</th>
+                <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-0">
+                  <td colSpan={7} className="p-0">
                     <EmptyState
                       icon={<Home />}
                       title="لا توجد وحدات متاحة بعد"
@@ -270,6 +273,17 @@ export default async function PortalUnitsPage({
                       <ShieldCheck className="h-3 w-3 text-brand-500" />
                       {ACCESS_LABEL[u.accessSource]}
                     </span>
+                  </td>
+
+                  {/* Reserve action */}
+                  <td className="py-3 ps-4 pe-5">
+                    {u.status === 'AVAILABLE' && (
+                      <Link href="/portal/reservations/new">
+                        <IconButton label="احجز" variant="ghost" size="sm">
+                          <Plus />
+                        </IconButton>
+                      </Link>
+                    )}
                   </td>
                 </tr>
               ))}

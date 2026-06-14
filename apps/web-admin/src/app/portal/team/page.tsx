@@ -54,6 +54,7 @@ const AVATAR_COLORS = [
 ];
 
 function avatarColor(name: string): string {
+  if (!name) return AVATAR_COLORS[0]!;
   const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
   return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
 }
@@ -229,16 +230,22 @@ export default async function PortalTeamPage({
                             <p className="font-semibold text-slate-900 truncate">{m.user.fullName}</p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-slate-400" dir="ltr">
                               {m.user.email && (
-                                <span className="inline-flex items-center gap-1">
+                                <a
+                                  href={`mailto:${m.user.email}`}
+                                  className="inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
+                                >
                                   <Mail className="h-3 w-3" />
                                   <span className="truncate max-w-[140px]">{m.user.email}</span>
-                                </span>
+                                </a>
                               )}
                               {m.user.phone && (
-                                <span className="inline-flex items-center gap-1">
+                                <a
+                                  href={`tel:${m.user.phone}`}
+                                  className="inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
+                                >
                                   <Phone className="h-3 w-3" />
                                   {m.user.phone}
-                                </span>
+                                </a>
                               )}
                             </div>
                           </div>
