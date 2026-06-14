@@ -224,10 +224,11 @@ export default async function PortalUnitsPage({
                 >
                   {/* Unit code + type */}
                   <td className="py-3 ps-5 pe-4">
-                    <p className="font-mono font-bold text-slate-900 text-sm" dir="ltr">
+                    <p className="font-mono font-bold text-slate-900 text-sm" dir="ltr"
+                       style={{ unicodeBidi: 'isolate' }}>
                       {u.code}
                     </p>
-                    <p className="text-2xs text-slate-500 mt-0.5 uppercase tracking-wide">
+                    <p className="text-2xs text-slate-500 mt-0.5 uppercase tracking-wide" dir="ltr">
                       {u.type}
                     </p>
                   </td>
@@ -237,12 +238,14 @@ export default async function PortalUnitsPage({
                     <p className="font-semibold text-slate-800 text-xs">
                       {tx(u.building.phase.project.name)}
                     </p>
-                    <p className="text-2xs text-slate-400 mt-0.5">
+                    <p className="text-2xs text-slate-400 mt-0.5" dir="ltr">
                       {u.building.phase.project.city}
                     </p>
                     <p className="text-2xs text-slate-500 mt-1 inline-flex items-center gap-1">
-                      <Layers className="h-3 w-3 text-slate-400" />
-                      {u.building.name}
+                      <Layers className="h-3 w-3 text-slate-400 shrink-0" />
+                      <span dir="ltr" style={{ unicodeBidi: 'isolate' }}>
+                        {u.building.name}
+                      </span>
                     </p>
                   </td>
 

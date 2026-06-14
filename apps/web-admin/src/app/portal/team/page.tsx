@@ -205,7 +205,6 @@ export default async function PortalTeamPage({
                 <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
                   <tr>
                     <th className="text-start font-semibold py-3 ps-5 pe-4">العضو</th>
-                    <th className="text-start font-semibold py-3 px-4">المسمى</th>
                     <th className="text-start font-semibold py-3 px-4">الحالة</th>
                     <th className="text-start font-semibold py-3 px-4">الصلاحيات</th>
                     <th className="text-start font-semibold py-3 px-4">انضم</th>
@@ -228,6 +227,9 @@ export default async function PortalTeamPage({
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-slate-900 truncate">{m.user.fullName}</p>
+                            {m.jobTitle && (
+                              <p className="text-2xs text-slate-500 mt-0.5 truncate">{m.jobTitle}</p>
+                            )}
                             <div className="mt-0.5 flex flex-wrap items-center gap-2 text-2xs text-slate-400" dir="ltr">
                               {m.user.email && (
                                 <a
@@ -250,11 +252,6 @@ export default async function PortalTeamPage({
                             </div>
                           </div>
                         </div>
-                      </td>
-
-                      {/* Job title */}
-                      <td className="py-3 px-4 text-xs text-slate-600">
-                        {m.jobTitle ?? <span className="text-slate-400">—</span>}
                       </td>
 
                       {/* Status */}

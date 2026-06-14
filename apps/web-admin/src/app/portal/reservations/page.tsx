@@ -17,6 +17,7 @@ import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { CodeText } from '@/components/ui/code-text';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
@@ -165,20 +166,19 @@ export default async function PortalReservationsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">رقم الحجز</th>
-                <th className="text-start font-semibold py-3 px-4">العميل</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
                 <th className="text-start font-semibold py-3 px-4">الوحدة / المشروع</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
                 <th className="text-start font-semibold py-3 px-4">العمولة المُقفلة</th>
-                <th className="text-start font-semibold py-3 px-4">المندوب</th>
+                <th className="text-start font-semibold py-3 px-4">رقم الحجز</th>
                 <th className="text-start font-semibold py-3 px-4">التاريخ</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
+                <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-0">
+                  <td colSpan={7} className="p-0">
                     <EmptyState
                       icon={<BookmarkCheck />}
                       title="لا توجد حجوزات بعد"
@@ -216,21 +216,10 @@ export default async function PortalReservationsPage({
                           : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Reservation number */}
+                    {/* Client + phone (entity first) */}
                     <td className="py-3 ps-5 pe-4">
-                      <span
-                        className="inline-flex items-center gap-1.5 font-mono text-xs text-brand-700 font-semibold"
-                        dir="ltr"
-                      >
-                        <BookmarkCheck className="h-3 w-3 text-brand-500 shrink-0" />
-                        {r.reservationNumber ?? '—'}
-                      </span>
-                    </td>
-
-                    {/* Client */}
-                    <td className="py-3 px-4">
                       {clientName ? (
-                        <div className="flex items-center gap-2.5">
+                        <div className="flex items-start gap-2.5">
                           <span
                             className={cn(
                               'h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
@@ -260,9 +249,7 @@ export default async function PortalReservationsPage({
 
                     {/* Unit / Project */}
                     <td className="py-3 px-4">
-                      <p className="font-mono text-xs font-semibold text-slate-800" dir="ltr">
-                        {r.unit?.code ?? '—'}
-                      </p>
+                      <CodeText className="text-xs font-semibold text-slate-800">{r.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
                         {r.unit?.building ? tx(r.unit.building.phase.project.name) : '—'}
                       </p>
@@ -290,9 +277,9 @@ export default async function PortalReservationsPage({
                       )}
                     </td>
 
-                    {/* Sales agent */}
-                    <td className="py-3 px-4 text-xs text-slate-600">
-                      {r.sales?.fullName ?? <span className="text-slate-400">—</span>}
+                    {/* Reservation number (reference, de-emphasised) */}
+                    <td className="py-3 px-4">
+                      <CodeText className="text-2xs text-slate-500">{r.reservationNumber ?? '—'}</CodeText>
                     </td>
 
                     {/* Date */}

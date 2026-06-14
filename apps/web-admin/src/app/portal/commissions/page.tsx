@@ -14,6 +14,7 @@ import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { CodeText } from '@/components/ui/code-text';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
@@ -119,8 +120,8 @@ export default async function PortalCommissionsPage({
             </option>
           ))}
         </Select>
-        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
-        <Input name="to"   inputSize="sm" type="date" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
+        <Input name="from" inputSize="sm" type="date" dir="ltr" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
+        <Input name="to"   inputSize="sm" type="date" dir="ltr" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {isFiltered && (
@@ -160,20 +161,18 @@ export default async function PortalCommissionsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">رقم العمولة</th>
-                <th className="text-start font-semibold py-3 px-4">العقد</th>
-                <th className="text-start font-semibold py-3 px-4">الوحدة / المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">إجمالي</th>
-                <th className="text-start font-semibold py-3 px-4">صافي</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">الوحدة / المشروع</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
+                <th className="text-start font-semibold py-3 px-4">الصافي</th>
+                <th className="text-start font-semibold py-3 px-4">المرجع</th>
                 <th className="text-start font-semibold py-3 px-4">تاريخ الاستحقاق</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
+                <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-0">
+                  <td colSpan={6} className="p-0">
                     <EmptyState
                       icon={<BadgePercent />}
                       title="لا توجد عمولات بعد"
@@ -198,52 +197,41 @@ export default async function PortalCommissionsPage({
                         : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Commission number */}
+                    {/* Unit / Project (what this commission is for) */}
                     <td className="py-3 ps-5 pe-4">
-                      <span
-                        className="inline-flex items-center gap-1.5 font-mono text-xs text-brand-700 font-semibold"
-                        dir="ltr"
-                      >
-                        <BadgePercent className="h-3 w-3 text-brand-500 shrink-0" />
-                        {c.commissionNumber}
-                      </span>
-                    </td>
-
-                    {/* Contract */}
-                    <td className="py-3 px-4 font-mono text-xs text-slate-600" dir="ltr">
-                      {c.contract?.contractNumber ?? '—'}
-                    </td>
-
-                    {/* Unit / Project */}
-                    <td className="py-3 px-4">
-                      <p className="font-mono text-xs font-semibold text-slate-800" dir="ltr">
-                        {c.unit?.code ?? '—'}
-                      </p>
+                      <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
                         {c.project ? tx(c.project.name) : '—'}
                       </p>
                     </td>
 
-                    {/* Gross */}
-                    <td className="py-3 px-4 text-xs text-slate-600 tabular-nums">
-                      {formatCurrency(c.grossAmount)}
-                    </td>
-
-                    {/* Net */}
-                    <td className="py-3 px-4">
-                      <p className="text-xs font-bold text-slate-900 tabular-nums">
-                        {formatCurrency(c.netAmount)}
-                      </p>
-                      {deduction > 0.1 && (
-                        <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
-                          خصم {deduction.toFixed(1)}%
-                        </p>
-                      )}
-                    </td>
-
-                    {/* Status */}
+                    {/* Status (is it approved?) */}
                     <td className="py-3 px-4">
                       <BrokerCommissionStatusBadge status={c.status} />
+                    </td>
+
+                    {/* Net amount (primary number) + gross + deduction below */}
+                    <td className="py-3 px-4">
+                      <p className="text-sm font-bold text-slate-900 tabular-nums">
+                        {formatCurrency(c.netAmount)}
+                      </p>
+                      <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
+                        من {formatCurrency(c.grossAmount)}
+                        {deduction > 0.1 && ` · خصم ${deduction.toFixed(1)}%`}
+                      </p>
+                    </td>
+
+                    {/* Reference: commission# + contract# below */}
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center gap-1 text-2xs text-brand-700">
+                        <BadgePercent className="h-3 w-3 shrink-0" />
+                        <CodeText>{c.commissionNumber}</CodeText>
+                      </span>
+                      {c.contract?.contractNumber && (
+                        <p className="mt-0.5">
+                          <CodeText className="text-2xs text-slate-400">{c.contract.contractNumber}</CodeText>
+                        </p>
+                      )}
                     </td>
 
                     {/* Earned date */}

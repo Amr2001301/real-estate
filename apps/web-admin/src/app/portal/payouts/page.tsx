@@ -9,6 +9,7 @@ import {
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
+import { CodeText } from '@/components/ui/code-text';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalPayout } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
@@ -128,8 +129,8 @@ export default async function PortalPayoutsPage({
           defaultValue={sp.period ?? ''}
           className="w-44 shrink-0"
         />
-        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
-        <Input name="to"   inputSize="sm" type="date" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
+        <Input name="from" inputSize="sm" type="date" dir="ltr" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
+        <Input name="to"   inputSize="sm" type="date" dir="ltr" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {isFiltered && (
@@ -173,20 +174,18 @@ export default async function PortalPayoutsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">رقم الدفعة</th>
-                <th className="text-start font-semibold py-3 px-4">الفترة</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">الدفعة / الفترة</th>
                 <th className="text-start font-semibold py-3 px-4">الصافي</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
                 <th className="text-start font-semibold py-3 px-4">طريقة الصرف</th>
-                <th className="text-start font-semibold py-3 px-4">تاريخ الصرف</th>
                 <th className="text-start font-semibold py-3 px-4">المرجع</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
+                <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="p-0">
+                  <td colSpan={6} className="p-0">
                     <EmptyState
                       icon={<Wallet />}
                       title="لا توجد مدفوعات بعد"
@@ -212,27 +211,24 @@ export default async function PortalPayoutsPage({
                           : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Payout number */}
+                    {/* Payout number + period (merged) */}
                     <td className="py-3 ps-5 pe-4">
-                      <span
-                        className="inline-flex items-center gap-1.5 font-mono text-xs text-brand-700 font-semibold"
-                        dir="ltr"
-                      >
+                      <span className="inline-flex items-center gap-1.5 text-xs text-brand-700 font-semibold">
                         <Wallet className="h-3 w-3 text-brand-500 shrink-0" />
-                        {p.payoutNumber}
+                        <CodeText>{p.payoutNumber}</CodeText>
                       </span>
+                      {p.period && (
+                        <p className="mt-0.5">
+                          <CodeText className="text-2xs text-slate-400">{p.period}</CodeText>
+                        </p>
+                      )}
                     </td>
 
-                    {/* Period */}
-                    <td className="py-3 px-4 font-mono text-xs text-slate-600" dir="ltr">
-                      {p.period ?? '—'}
-                    </td>
-
-                    {/* Net amount */}
+                    {/* Net amount (primary number) */}
                     <td className="py-3 px-4">
                       <p
                         className={cn(
-                          'text-xs font-bold tabular-nums',
+                          'text-sm font-bold tabular-nums',
                           isCancelled
                             ? 'text-slate-400 line-through'
                             : isPaid
@@ -261,30 +257,34 @@ export default async function PortalPayoutsPage({
                       <BrokerPayoutStatusBadge status={p.status} />
                     </td>
 
-                    {/* Payment method */}
-                    <td className="py-3 px-4 text-xs text-slate-700">
-                      {p.paymentMethod ? (
-                        METHOD_LABEL[p.paymentMethod] ?? p.paymentMethod
-                      ) : (
-                        <span className="text-slate-400">—</span>
-                      )}
-                    </td>
-
-                    {/* Paid date */}
-                    <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
-                      {p.paidAt ? (
-                        formatDate(p.paidAt)
-                      ) : (
-                        <span className="text-slate-400 inline-flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          لم يُصرف بعد
-                        </span>
-                      )}
+                    {/* Payment method + paid date (merged) */}
+                    <td className="py-3 px-4">
+                      <p className="text-xs text-slate-700">
+                        {p.paymentMethod ? (
+                          METHOD_LABEL[p.paymentMethod] ?? p.paymentMethod
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </p>
+                      <p className="text-2xs text-slate-500 mt-0.5 whitespace-nowrap">
+                        {p.paidAt ? (
+                          formatDate(p.paidAt)
+                        ) : (
+                          <span className="text-slate-400 inline-flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            لم يُصرف بعد
+                          </span>
+                        )}
+                      </p>
                     </td>
 
                     {/* Reference */}
-                    <td className="py-3 px-4 font-mono text-2xs text-slate-500" dir="ltr">
-                      {p.paymentReference ?? <span className="text-slate-400">—</span>}
+                    <td className="py-3 px-4">
+                      {p.paymentReference ? (
+                        <CodeText className="text-2xs text-slate-500">{p.paymentReference}</CodeText>
+                      ) : (
+                        <span className="text-slate-400 text-2xs">—</span>
+                      )}
                     </td>
 
                     {/* Action */}

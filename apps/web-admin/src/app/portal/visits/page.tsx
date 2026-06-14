@@ -10,6 +10,7 @@ import {
   Building2,
   Home,
 } from 'lucide-react';
+import { CodeText } from '@/components/ui/code-text';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalVisitRequest } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
@@ -176,9 +177,9 @@ export default async function PortalVisitsPage({
               <tr>
                 <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
                 <th className="text-start font-semibold py-3 px-4">المشروع / الوحدة</th>
-                <th className="text-start font-semibold py-3 px-4">التاريخ المقترح</th>
-                <th className="text-start font-semibold py-3 px-4">حالة الطلب</th>
                 <th className="text-start font-semibold py-3 px-4">الموعد المجدول</th>
+                <th className="text-start font-semibold py-3 px-4">حالة الطلب</th>
+                <th className="text-start font-semibold py-3 px-4">التاريخ المقترح</th>
               </tr>
             </thead>
             <tbody>
@@ -261,33 +262,16 @@ export default async function PortalVisitsPage({
                             {v.project ? tx(v.project.name) : '—'}
                           </p>
                           {v.unit?.code && (
-                            <p
-                              className="text-2xs font-mono text-slate-500 mt-0.5 inline-flex items-center gap-1"
-                              dir="ltr"
-                            >
+                            <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1">
                               <Home className="h-2.5 w-2.5 text-slate-400 shrink-0" />
-                              {v.unit.code}
+                              <CodeText>{v.unit.code}</CodeText>
                             </p>
                           )}
                         </div>
                       </div>
                     </td>
 
-                    {/* Preferred date */}
-                    <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
-                      {formatDate(v.preferredDate)}
-                    </td>
-
-                    {/* Request status */}
-                    <td className="py-3 px-4">
-                      {v.requestStatus ? (
-                        <VisitRequestStatusBadge status={v.requestStatus} />
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-
-                    {/* Scheduled appointment */}
+                    {/* Scheduled appointment (high priority: is today's visit happening?) */}
                     <td className="py-3 px-4">
                       {appt ? (
                         <div className="space-y-1.5">
@@ -302,12 +286,9 @@ export default async function PortalVisitsPage({
                                 {urgency.label}
                               </span>
                             )}
-                            <p
-                              className="text-xs text-slate-800 font-semibold tabular-nums"
-                              dir="ltr"
-                            >
+                            <CodeText className="text-xs text-slate-800 font-semibold tabular-nums">
                               {formatDateTime(appt.scheduledAt)}
-                            </p>
+                            </CodeText>
                           </div>
                           <AppointmentStatusBadge status={appt.status} />
                         </div>
@@ -317,6 +298,20 @@ export default async function PortalVisitsPage({
                           بانتظار الجدولة
                         </span>
                       )}
+                    </td>
+
+                    {/* Request status */}
+                    <td className="py-3 px-4">
+                      {v.requestStatus ? (
+                        <VisitRequestStatusBadge status={v.requestStatus} />
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+
+                    {/* Preferred date (lower priority — admin already saw it) */}
+                    <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
+                      {formatDate(v.preferredDate)}
                     </td>
                   </tr>
                 );

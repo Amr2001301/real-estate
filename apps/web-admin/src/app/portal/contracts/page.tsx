@@ -7,6 +7,7 @@ import {
   FilePen,
   BadgePercent,
   AlertCircle,
+  Phone,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
@@ -14,6 +15,7 @@ import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { CodeText } from '@/components/ui/code-text';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
@@ -162,14 +164,14 @@ export default async function PortalContractsPage({
           <table className="w-full text-sm">
             <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">رقم العقد</th>
-                <th className="text-start font-semibold py-3 px-4">العميل</th>
+                <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
                 <th className="text-start font-semibold py-3 px-4">الوحدة / المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">القيمة الإجمالية</th>
                 <th className="text-start font-semibold py-3 px-4">الحالة</th>
                 <th className="text-start font-semibold py-3 px-4">العمولة المُقفلة</th>
+                <th className="text-start font-semibold py-3 px-4">القيمة الإجمالية</th>
+                <th className="text-start font-semibold py-3 px-4">رقم العقد</th>
                 <th className="text-start font-semibold py-3 px-4">التاريخ</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
+                <th className="py-3 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
             <tbody>
@@ -198,21 +200,10 @@ export default async function PortalContractsPage({
                         : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Contract number */}
+                    {/* Client + phone (entity first) */}
                     <td className="py-3 ps-5 pe-4">
-                      <span
-                        className="inline-flex items-center gap-1.5 font-mono text-xs text-brand-700 font-semibold"
-                        dir="ltr"
-                      >
-                        <FileText className="h-3 w-3 text-brand-500 shrink-0" />
-                        {c.contractNumber ?? '—'}
-                      </span>
-                    </td>
-
-                    {/* Client */}
-                    <td className="py-3 px-4">
                       {clientName ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-start gap-2">
                           <span
                             className={cn(
                               'h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
@@ -221,9 +212,21 @@ export default async function PortalContractsPage({
                           >
                             {initials(clientName)}
                           </span>
-                          <p className="font-semibold text-slate-900 text-xs truncate max-w-[140px]">
-                            {clientName}
-                          </p>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900 text-xs truncate max-w-[140px]">
+                              {clientName}
+                            </p>
+                            {(c.customer?.phone ?? c.reservation?.lead?.phone) && (
+                              <a
+                                href={`tel:${c.customer?.phone ?? c.reservation?.lead?.phone}`}
+                                className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
+                                dir="ltr"
+                              >
+                                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                                {c.customer?.phone ?? c.reservation?.lead?.phone}
+                              </a>
+                            )}
+                          </div>
                         </div>
                       ) : (
                         <span className="text-slate-400 text-xs">—</span>
@@ -232,20 +235,13 @@ export default async function PortalContractsPage({
 
                     {/* Unit / Project */}
                     <td className="py-3 px-4">
-                      <p className="font-mono text-xs font-semibold text-slate-800" dir="ltr">
-                        {c.unit?.code ?? '—'}
-                      </p>
+                      <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
                         {c.unit?.building ? tx(c.unit.building.phase.project.name) : '—'}
                       </p>
                     </td>
 
-                    {/* Total amount */}
-                    <td className="py-3 px-4 tabular-nums font-semibold text-slate-900 text-xs">
-                      {formatCurrency(c.totalAmount)}
-                    </td>
-
-                    {/* Status */}
+                    {/* Status (key question first) */}
                     <td className="py-3 px-4">
                       {isSigned ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">
@@ -260,7 +256,7 @@ export default async function PortalContractsPage({
                       )}
                     </td>
 
-                    {/* Locked commission */}
+                    {/* Locked commission (financial outcome) */}
                     <td className="py-3 px-4">
                       {c.reservation?.commissionLockedPct != null ? (
                         <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-amber-100">
@@ -275,6 +271,16 @@ export default async function PortalContractsPage({
                           {formatCurrency(c.reservation.commissionLockedAmount)}
                         </p>
                       )}
+                    </td>
+
+                    {/* Total contract value (deal size context) */}
+                    <td className="py-3 px-4 tabular-nums font-semibold text-slate-900 text-xs">
+                      {formatCurrency(c.totalAmount)}
+                    </td>
+
+                    {/* Contract number (reference, de-emphasised) */}
+                    <td className="py-3 px-4">
+                      <CodeText className="text-2xs text-slate-500">{c.contractNumber ?? '—'}</CodeText>
                     </td>
 
                     {/* Date */}

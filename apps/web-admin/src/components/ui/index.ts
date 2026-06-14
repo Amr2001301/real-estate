@@ -1,3 +1,4 @@
+export { CodeText } from './code-text';
 export { Button, type ButtonProps } from './button';
 export { IconButton, type IconButtonProps } from './icon-button';
 export { Input, type InputProps } from './input';
