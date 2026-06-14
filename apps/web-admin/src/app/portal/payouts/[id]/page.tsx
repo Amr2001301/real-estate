@@ -93,22 +93,22 @@ export default async function PortalPayoutDetailPage({
       )}
 
       <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
           <Banknote className="h-4 w-4 text-brand-600" />
           الإجماليات
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
           <div className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">الإجمالي</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalGross)}</p>
+            <p className="font-semibold mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalGross)}</p>
           </div>
           <div className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">الضريبة</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalTax)}</p>
+            <p className="font-semibold mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalTax)}</p>
           </div>
           <div className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">حجز ضريبي</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalWithholding)}</p>
+            <p className="font-semibold mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalWithholding)}</p>
           </div>
           <div className="rounded-xl border border-hairline px-3 py-3 bg-emerald-50/30">
             <p className="text-xs text-slate-500">الصافي</p>
@@ -122,7 +122,7 @@ export default async function PortalPayoutDetailPage({
         payout.paidAt ||
         payout.scheduledAt) && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-brand-600" />
             تفاصيل الصرف
           </h2>
@@ -150,8 +150,9 @@ export default async function PortalPayoutDetailPage({
 
       <Card className="overflow-hidden">
         <div className="px-5 pt-5 pb-3">
-          <h2 className="text-sm font-semibold text-slate-900">
-            العمولات المُدرجة ({commissions.length})
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            العمولات المُدرجة
+            <span className="text-2xs font-bold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{commissions.length}</span>
           </h2>
         </div>
         <div className="overflow-x-auto scrollbar-thin">

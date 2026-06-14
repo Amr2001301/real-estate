@@ -87,7 +87,7 @@ export default async function PortalCommissionDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">العقد والحجز</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">العقد والحجز</h2>
           <InfoRow
             icon={<FileText />}
             label="رقم العقد"
@@ -130,7 +130,7 @@ export default async function PortalCommissionDetailPage({
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">الوحدة والمشروع</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">الوحدة والمشروع</h2>
           <InfoRow
             icon={<Building2 />}
             label="المشروع"
@@ -157,7 +157,7 @@ export default async function PortalCommissionDetailPage({
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">الزمن</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">الزمن</h2>
           <InfoRow
             icon={<CalendarRange />}
             label="تاريخ الاستحقاق"
@@ -177,14 +177,14 @@ export default async function PortalCommissionDetailPage({
       </div>
 
       <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
           <Banknote className="h-4 w-4 text-brand-600" />
           تفاصيل الحساب
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 text-sm">
           <div className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">الأساس (Basis)</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
+            <p className="font-semibold mt-1 text-slate-900 tabular-nums">
               {formatCurrency(c.basisAmount)}
             </p>
           </div>
@@ -198,19 +198,19 @@ export default async function PortalCommissionDetailPage({
           </div>
           <div className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">الإجمالي (Gross)</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
+            <p className="font-semibold mt-1 text-slate-900 tabular-nums">
               {formatCurrency(c.grossAmount)}
             </p>
           </div>
           <div className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">الضريبة</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
+            <p className="font-semibold mt-1 text-slate-900 tabular-nums">
               {Number(c.taxPct).toFixed(2)}% • {formatCurrency(c.taxAmount)}
             </p>
           </div>
           <div className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">حجز ضريبي</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
+            <p className="font-semibold mt-1 text-slate-900 tabular-nums">
               {Number(c.withholdingPct).toFixed(2)}% •{' '}
               {formatCurrency(c.withholdingAmount)}
             </p>

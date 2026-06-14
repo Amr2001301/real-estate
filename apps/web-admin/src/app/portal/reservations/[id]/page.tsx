@@ -87,7 +87,7 @@ export default async function PortalReservationDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">العميل</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">العميل</h2>
           <InfoRow icon={<UserCircle />} label="الاسم" value={res.lead?.fullName ?? res.client?.fullName} />
           <InfoRow
             icon={<Phone />}
@@ -104,7 +104,7 @@ export default async function PortalReservationDetailPage({
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">الوحدة والمشروع</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">الوحدة والمشروع</h2>
           <InfoRow
             icon={<Building2 />}
             label="المشروع"
@@ -131,7 +131,7 @@ export default async function PortalReservationDetailPage({
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">المندوب وحالة الحجز</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">المندوب وحالة الحجز</h2>
           <InfoRow
             icon={<UserCircle />}
             label="المندوب الداخلي"
@@ -151,7 +151,7 @@ export default async function PortalReservationDetailPage({
       </div>
 
       <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
           <Banknote className="h-4 w-4 text-brand-600" />
           لقطة العمولة (Snapshot)
         </h2>
@@ -191,7 +191,7 @@ export default async function PortalReservationDetailPage({
 
       {res.notes && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">ملاحظات</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">ملاحظات</h2>
           <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
             {res.notes}
           </p>
@@ -200,12 +200,12 @@ export default async function PortalReservationDetailPage({
 
       {res.activities && res.activities.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">السجل</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">السجل</h2>
           <ul className="divide-y divide-hairline">
             {res.activities.map((a) => (
               <li key={a.id} className="py-2 text-xs flex items-center justify-between gap-3">
                 <span className="font-mono text-slate-700">{a.type}</span>
-                <span className="text-2xs text-slate-400">
+                <span className="text-2xs text-slate-500">
                   {formatDateTime(a.createdAt)}
                 </span>
               </li>

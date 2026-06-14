@@ -102,7 +102,7 @@ function StatusTimeline({
 
   return (
     <Card className="p-5">
-      <h2 className="text-sm font-semibold text-slate-900 mb-4">حالة الفرصة</h2>
+      <h2 className="text-sm font-bold text-slate-900 mb-4">حالة الفرصة</h2>
       <ol className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-0">
         {steps.map((s, i) => (
           <li key={i} className="flex sm:flex-col sm:flex-1 items-center gap-3 sm:gap-2 sm:text-center">
@@ -184,7 +184,7 @@ export default async function PortalLeadDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">معلومات العميل</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">معلومات العميل</h2>
           <InfoRow icon={<Mail />} label="البريد الإلكتروني" value={lead.email} dir="ltr" />
           <InfoRow icon={<Phone />} label="رقم الجوال" value={lead.phone} dir="ltr" />
           <InfoRow
@@ -202,7 +202,7 @@ export default async function PortalLeadDetailPage({
         </Card>
 
         <Card className="p-5 lg:col-span-2">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">الاهتمام</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">الاهتمام</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 divide-y sm:divide-y-0 divide-hairline">
             <InfoRow
               icon={<Building2 />}
@@ -228,7 +228,7 @@ export default async function PortalLeadDetailPage({
 
       {lead.appointments && lead.appointments.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-brand-600" />
             الزيارات المرتبطة
           </h2>
@@ -252,7 +252,7 @@ export default async function PortalLeadDetailPage({
 
       {lead.notes && lead.notes.length > 0 && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <StickyNote className="h-4 w-4 text-brand-600" />
             ملاحظات
           </h2>
@@ -262,7 +262,7 @@ export default async function PortalLeadDetailPage({
                 <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
                   {n.body}
                 </p>
-                <p className="text-2xs text-slate-400 mt-1">
+                <p className="text-2xs text-slate-500 mt-1">
                   {n.sales?.fullName ? `${n.sales.fullName} • ` : ''}
                   {formatDateTime(n.createdAt)}
                 </p>

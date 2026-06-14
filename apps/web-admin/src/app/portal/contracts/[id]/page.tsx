@@ -104,7 +104,7 @@ export default async function PortalContractDetailPage({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">العميل</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">العميل</h2>
           <InfoRow
             icon={<UserCircle />}
             label="الاسم"
@@ -125,7 +125,7 @@ export default async function PortalContractDetailPage({
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">الوحدة والمشروع</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">الوحدة والمشروع</h2>
           <InfoRow
             icon={<Building2 />}
             label="المشروع"
@@ -147,7 +147,7 @@ export default async function PortalContractDetailPage({
         </Card>
 
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">المالية</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">المالية</h2>
           <InfoRow
             icon={<Banknote />}
             label="قيمة العقد"
@@ -175,7 +175,7 @@ export default async function PortalContractDetailPage({
 
       {contract.reservation && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <Banknote className="h-4 w-4 text-brand-600" />
             لقطة العمولة (Snapshot)
           </h2>
@@ -185,7 +185,7 @@ export default async function PortalContractDetailPage({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">النسبة المُقفلة</p>
-              <p className="font-medium mt-1 text-slate-900">
+              <p className="font-semibold mt-1 text-slate-900">
                 {contract.reservation.commissionLockedPct !== null &&
                 contract.reservation.commissionLockedPct !== undefined
                   ? `${Number(contract.reservation.commissionLockedPct).toFixed(2)}%`
@@ -194,7 +194,7 @@ export default async function PortalContractDetailPage({
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">المبلغ المُقفل</p>
-              <p className="font-medium mt-1 text-slate-900">
+              <p className="font-semibold mt-1 text-slate-900">
                 {contract.reservation.commissionLockedAmount !== null &&
                 contract.reservation.commissionLockedAmount !== undefined
                   ? formatCurrency(contract.reservation.commissionLockedAmount)
@@ -203,13 +203,13 @@ export default async function PortalContractDetailPage({
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">المندوب الداخلي</p>
-              <p className="font-medium mt-1 text-slate-900">
+              <p className="font-semibold mt-1 text-slate-900">
                 {contract.reservation.sales?.fullName ?? '—'}
               </p>
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">الفرصة</p>
-              <p className="font-medium mt-1 text-slate-900">
+              <p className="font-semibold mt-1 text-slate-900">
                 {contract.reservation.lead?.fullName ?? '—'}
               </p>
             </div>
@@ -219,7 +219,7 @@ export default async function PortalContractDetailPage({
 
       {contract.pdfUrl && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4 text-brand-600" />
             ملف العقد
           </h2>
@@ -237,7 +237,7 @@ export default async function PortalContractDetailPage({
 
       {contract.installmentPlan && (
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">خطة التقسيط</h2>
+          <h2 className="text-sm font-bold text-slate-900 mb-3">خطة التقسيط</h2>
           <p className="text-xs text-slate-500">
             {contract.installmentPlan.totalMonths} شهر • قسط شهري{' '}
             {formatCurrency(contract.installmentPlan.monthlyAmount)} • تبدأ في{' '}

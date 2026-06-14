@@ -256,24 +256,24 @@ export default async function PortalActivityPage({
                             ? `/portal/leads/${item.lead.id}`
                             : '/portal/activity';
               return (
-                <li key={item.id} className="px-5 py-4">
+                <li key={item.id} className="px-5 py-3.5 hover:bg-slate-50 transition-colors">
                   <div className="flex items-start gap-3">
                     <span
-                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full shrink-0 ${TONE[item.type]}`}
+                      className={`inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 mt-0.5 ${TONE[item.type]}`}
                     >
                       <ActivityIcon type={item.type} />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-baseline gap-2">
+                      <div className="flex items-baseline justify-between gap-3">
                         <Link
                           href={linkHref as never}
-                          className="font-semibold text-slate-900 hover:text-brand-700"
+                          className="font-bold text-slate-900 hover:text-brand-700 text-sm"
                         >
                           {LABEL[item.type]}
                         </Link>
-                        <span className="text-2xs text-slate-400">
+                        <time className="text-2xs text-slate-500 tabular-nums whitespace-nowrap shrink-0" dir="ltr">
                           {formatDateTime(item.createdAt)}
-                        </span>
+                        </time>
                       </div>
                       {item.lead ? (
                         <>
@@ -303,7 +303,7 @@ export default async function PortalActivityPage({
                         </p>
                       )}
                       {payloadSummary(item) && (
-                        <p className="mt-1 text-xs text-slate-600 rounded-lg bg-surface-muted px-2.5 py-1.5">
+                        <p className="mt-1.5 text-xs text-slate-700 rounded-lg bg-surface-muted border border-hairline px-2.5 py-1.5">
                           {payloadSummary(item)}
                         </p>
                       )}
