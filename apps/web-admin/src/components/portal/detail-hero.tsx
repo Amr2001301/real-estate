@@ -63,7 +63,7 @@ export function DetailHeroCol({
   return (
     <div
       className={cn(
-        'p-6',
+        'p-5',
         position === 'middle' && 'border-y lg:border-y-0 lg:border-x border-hairline',
         tint,
         className,

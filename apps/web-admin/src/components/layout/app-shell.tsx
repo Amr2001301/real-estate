@@ -5,6 +5,7 @@ import { ToastProvider } from '@/components/ui/toast';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import { MobileNav } from './mobile-nav';
+import { ScrollReset } from './scroll-reset';
 
 interface Props {
   user: SessionUser;
@@ -24,7 +25,8 @@ export function AppShell({ user, navSections, children }: Props) {
             notificationsHref={user.role === 'BROKER' ? '/portal/notifications' : '/dashboard/notifications'}
             leading={<MobileNav user={user} sections={navSections} />}
           />
-          <main className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
+          <main id="main-scroll" className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
+            <ScrollReset containerId="main-scroll" />
             <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-[1440px] mx-auto w-full">
               {children}
             </div>

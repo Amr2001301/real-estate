@@ -12,9 +12,12 @@ import {
   Copy,
   StickyNote,
   Clock,
+  UserCog,
+  CalendarDays,
+  MapPin,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { PortalLead } from '@/lib/types';
+import type { PortalLead, AppointmentStatus } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
@@ -22,7 +25,6 @@ import { CodeText } from '@/components/ui/code-text';
 import {
   BrokerLeadStatusBadge,
   LeadStageBadge,
-  AppointmentStatusBadge,
 } from '@/components/badges';
 import {
   DetailHero,
@@ -37,6 +39,26 @@ import { DetailSection } from '@/components/portal/detail-section';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
+
+const APPOINTMENT_STATUS_LABEL: Record<AppointmentStatus, string> = {
+  SCHEDULED: 'مجدولة',
+  CONFIRMED: 'مؤكدة',
+  PENDING_RESCHEDULE: 'إعادة جدولة',
+  COMPLETED: 'مكتملة',
+  CANCELLED: 'ملغاة',
+  NO_SHOW: 'لم يحضر',
+  RESCHEDULED: 'أُعيد جدولتها',
+};
+
+const APPOINTMENT_STATUS_STYLE: Record<AppointmentStatus, string> = {
+  SCHEDULED: 'bg-amber-50 text-amber-700 border-amber-100',
+  CONFIRMED: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+  PENDING_RESCHEDULE: 'bg-amber-50 text-amber-700 border-amber-100',
+  COMPLETED: 'bg-slate-50 text-slate-600 border-slate-100',
+  CANCELLED: 'bg-red-50 text-red-600 border-red-100',
+  NO_SHOW: 'bg-red-50 text-red-600 border-red-100',
+  RESCHEDULED: 'bg-slate-50 text-slate-600 border-slate-100',
+};
 
 function StatusTimeline({
   status,
@@ -67,7 +89,7 @@ function StatusTimeline({
     { icon: finalStep.icon, label: finalStep.label, tone: finalStep.tone, at: finalStep.at, done: resolved },
   ];
 
-  const TONE: Record<'brand' | 'success' | 'danger' | 'warning' | 'muted', string> = {
+  const TONE: Record<string, string> = {
     brand: 'bg-brand-50 text-brand-600 ring-brand-100',
     success: 'bg-success-50 text-success-600 ring-success-100',
     danger: 'bg-danger-50 text-danger-600 ring-danger-100',
@@ -82,7 +104,7 @@ function StatusTimeline({
           <li key={i} className="flex sm:flex-col sm:flex-1 items-center gap-3 sm:gap-2 sm:text-center">
             <span
               className={`inline-flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-inset shrink-0 [&_svg]:h-4 [&_svg]:w-4 ${
-                s.done ? TONE[s.tone] : TONE.muted
+                s.done ? TONE[s.tone] : TONE['muted']
               }`}
             >
               {s.icon}
@@ -119,6 +141,12 @@ export default async function PortalLeadDetailPage({
     lead.brokerApprovalStatus === 'DUPLICATE' ? 'neutral' :
     'warning';
 
+  const appointments = lead.appointments ?? [];
+  const now = new Date();
+  const upcomingVisits = appointments.filter(
+    (a) => (a.status === 'SCHEDULED' || a.status === 'CONFIRMED') && new Date(a.scheduledAt) > now
+  );
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -138,7 +166,7 @@ export default async function PortalLeadDetailPage({
         }
       />
 
-      {/* ── Rejection reason ──────────────────────────────────────────── */}
+      {/* Rejection reason */}
       {isRejected && lead.brokerRejectionReason && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -149,7 +177,7 @@ export default async function PortalLeadDetailPage({
         </div>
       )}
 
-      {/* ── Hero summary card ──────────────────────────────────────────── */}
+      {/* Hero */}
       <DetailHero status={heroStatus}>
         {/* Client */}
         <DetailHeroCol position="first">
@@ -187,11 +215,17 @@ export default async function PortalLeadDetailPage({
                   <span className="truncate max-w-[200px]">{lead.email}</span>
                 </a>
               )}
+              {lead.assignedSales && (
+                <p className="mt-2 flex items-center gap-1.5 text-2xs text-slate-400">
+                  <UserCog className="h-3 w-3 shrink-0" />
+                  <span className="font-medium text-slate-500">{lead.assignedSales.fullName}</span>
+                </p>
+              )}
             </div>
           </div>
         </DetailHeroCol>
 
-        {/* Interest */}
+        {/* Interest + Stage */}
         <DetailHeroCol position="middle">
           <HeroColLabel>الاهتمام والمرحلة</HeroColLabel>
           {lead.projectInterest ? (
@@ -200,7 +234,7 @@ export default async function PortalLeadDetailPage({
                 {tx(lead.projectInterest.name)}
               </p>
               <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                <Building2 className="h-3 w-3 shrink-0" />
+                <MapPin className="h-3 w-3 shrink-0" />
                 {lead.projectInterest.city ?? ''}
               </p>
               <div className="mt-3">
@@ -219,20 +253,20 @@ export default async function PortalLeadDetailPage({
               </div>
             </>
           ) : (
-            <p className="text-sm text-slate-400">لم يُحدد مشروع بعد</p>
+            <p className="text-sm text-slate-400 mt-2">لم يُحدد مشروع بعد</p>
           )}
           <div className="mt-4 pt-3 border-t border-hairline flex items-center gap-2">
-            <span className="text-2xs text-slate-400 shrink-0">المرحلة</span>
+            <span className="text-2xs text-slate-400 shrink-0">المرحلة الحالية</span>
             <LeadStageBadge stage={lead.stage} />
           </div>
         </DetailHeroCol>
 
-        {/* Dates + context */}
+        {/* Dates + stats */}
         <DetailHeroCol position="last">
           <HeroColLabel>التواريخ والإحصاء</HeroColLabel>
           <div className="space-y-2.5">
             <HeroDateRow
-              label="تاريخ الإرسال"
+              label={<span className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3 text-slate-400" />تاريخ الإرسال</span>}
               value={lead.brokerSubmittedAt ? formatDate(lead.brokerSubmittedAt) : '—'}
             />
             {lead.brokerApprovedAt && (
@@ -250,18 +284,27 @@ export default async function PortalLeadDetailPage({
               />
             )}
           </div>
-          <div className="mt-4 pt-3 border-t border-hairline grid grid-cols-2 gap-3">
+          {/* Quick stats */}
+          <div className={cn(
+            'mt-4 pt-3 border-t border-hairline grid gap-3',
+            (lead.notes?.length ?? 0) > 0 ? 'grid-cols-2' : 'grid-cols-1',
+          )}>
             <div>
               <p className="text-2xs text-slate-400">الزيارات</p>
-              <p className="text-lg font-bold text-slate-800 mt-0.5 tabular-nums">
-                {lead.appointments?.length ?? 0}
+              <p className="text-xl font-bold text-slate-800 mt-0.5 tabular-nums">
+                {appointments.length}
               </p>
+              {upcomingVisits.length > 0 && (
+                <p className="text-2xs text-brand-600 font-medium mt-0.5">
+                  {upcomingVisits.length} قادمة
+                </p>
+              )}
             </div>
-            {lead.notes && lead.notes.length > 0 && (
+            {(lead.notes?.length ?? 0) > 0 && (
               <div>
                 <p className="text-2xs text-slate-400">الملاحظات</p>
-                <p className="text-lg font-bold text-slate-800 mt-0.5 tabular-nums">
-                  {lead.notes.length}
+                <p className="text-xl font-bold text-slate-800 mt-0.5 tabular-nums">
+                  {lead.notes!.length}
                 </p>
               </div>
             )}
@@ -269,7 +312,7 @@ export default async function PortalLeadDetailPage({
         </DetailHeroCol>
       </DetailHero>
 
-      {/* ── Approval timeline ──────────────────────────────────────────── */}
+      {/* Approval timeline */}
       <StatusTimeline
         status={lead.brokerApprovalStatus}
         submittedAt={lead.brokerSubmittedAt ?? ''}
@@ -277,40 +320,67 @@ export default async function PortalLeadDetailPage({
         rejectedAt={lead.brokerRejectedAt}
       />
 
-      {/* ── Linked visits ─────────────────────────────────────────────── */}
-      {lead.appointments && lead.appointments.length > 0 && (
-        <DetailSection
-          icon={<CalendarClock />}
-          title="الزيارات المرتبطة"
-          count={lead.appointments.length}
-        >
-          <ol className="relative border-s border-hairline ms-2 space-y-0">
-            {lead.appointments.map((a, i) => {
-              const isLast = i === lead.appointments!.length - 1;
+      {/* Linked visits — always rendered */}
+      <DetailSection
+        icon={<CalendarClock />}
+        title="الزيارات المرتبطة"
+        count={appointments.length}
+        noBodyPad={appointments.length > 0}
+      >
+        {appointments.length === 0 ? (
+          <div className="py-8 flex flex-col items-center gap-3 text-center">
+            <CalendarClock className="h-9 w-9 text-slate-200" />
+            <div>
+              <p className="text-sm font-medium text-slate-400">لا توجد زيارات مرتبطة</p>
+              <p className="text-2xs text-slate-300 mt-1">
+                سيظهر هنا جدول الزيارات فور تحديد موعد مع العميل.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <ul className="divide-y divide-hairline">
+            {appointments.map((a) => {
+              const isPast = new Date(a.scheduledAt) < now;
+              const isUpcoming = !isPast && (a.status === 'SCHEDULED' || a.status === 'CONFIRMED');
               return (
-                <li key={a.id} className={cn('ms-5', !isLast && 'pb-4')}>
-                  <span className="absolute -start-2 flex h-4 w-4 items-center justify-center rounded-full bg-brand-50 ring-2 ring-white">
-                    <Clock className="h-2.5 w-2.5 text-brand-500" />
-                  </span>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                <li
+                  key={a.id}
+                  className={cn(
+                    'flex items-center justify-between gap-4 px-6 py-3',
+                    isUpcoming && 'bg-brand-50/30',
+                  )}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {isUpcoming ? (
+                      <CalendarClock className="h-4 w-4 text-brand-500 shrink-0" />
+                    ) : (
+                      <Clock className="h-4 w-4 text-slate-300 shrink-0" />
+                    )}
+                    <div className="min-w-0">
                       <CodeText className="text-xs font-semibold text-slate-800">
                         {a.visitNumber}
                       </CodeText>
-                      <p className="text-2xs text-slate-500 mt-0.5">
-                        <CodeText>{formatDateTime(a.scheduledAt)}</CodeText>
+                      <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">
+                        {formatDateTime(a.scheduledAt)}
                       </p>
                     </div>
-                    <AppointmentStatusBadge status={a.status} />
                   </div>
+                  <span
+                    className={cn(
+                      'text-2xs font-medium border rounded-full px-2.5 py-0.5 shrink-0',
+                      APPOINTMENT_STATUS_STYLE[a.status],
+                    )}
+                  >
+                    {APPOINTMENT_STATUS_LABEL[a.status]}
+                  </span>
                 </li>
               );
             })}
-          </ol>
-        </DetailSection>
-      )}
+          </ul>
+        )}
+      </DetailSection>
 
-      {/* ── Notes ─────────────────────────────────────────────────────── */}
+      {/* Notes */}
       {lead.notes && lead.notes.length > 0 && (
         <DetailSection icon={<StickyNote />} title="ملاحظات فريق المبيعات">
           <ul className="divide-y divide-hairline">

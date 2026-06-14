@@ -9,10 +9,11 @@ import {
   CheckCircle2,
   CalendarRange,
   ExternalLink,
+  BadgePercent,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PortalContract } from '@/lib/types';
-import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
+import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { CodeText } from '@/components/ui/code-text';
 import {
@@ -186,7 +187,7 @@ export default async function PortalContractDetailPage({
             label="إجمالي العقد"
             value={formatCurrency(contract.totalAmount)}
             variant="accent"
-            size="md"
+            size="lg"
           />
           <MetricTile
             label="الدفعة المقدمة"
@@ -202,13 +203,17 @@ export default async function PortalContractDetailPage({
         </MetricGrid>
       </DetailSection>
 
-      {/* ── Commission snapshot ────────────────────────────────────────── */}
-      {contract.reservation && (
-        <DetailSection
-          icon={<Banknote />}
-          title="لقطة العمولة المُقفلة"
-          description="تم تثبيت هذه القيم عند إنشاء الحجز المصدر ولن تتغير بعد توقيع العقد."
-        >
+      {/* ── Commission snapshot (always — shows empty state if no reservation) */}
+      <DetailSection
+        icon={<BadgePercent />}
+        title="لقطة العمولة المُقفلة"
+        description={
+          contract.reservation
+            ? 'تم تثبيت هذه القيم عند إنشاء الحجز المصدر ولن تتغير بعد توقيع العقد.'
+            : undefined
+        }
+      >
+        {contract.reservation ? (
           <MetricGrid cols={4}>
             <MetricTile
               label="النسبة المُقفلة"
@@ -238,8 +243,18 @@ export default async function PortalContractDetailPage({
               value={contract.reservation.lead?.fullName ?? '—'}
             />
           </MetricGrid>
-        </DetailSection>
-      )}
+        ) : (
+          <div className="flex items-start gap-3 py-2 text-slate-400">
+            <BadgePercent className="h-5 w-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm text-slate-500 font-medium">لا يوجد حجز مصدر مرتبط</p>
+              <p className="text-2xs text-slate-400 mt-0.5 leading-relaxed">
+                ستُعرض قيم العمولة المُقفلة هنا تلقائياً بعد ربط الحجز بهذا العقد.
+              </p>
+            </div>
+          </div>
+        )}
+      </DetailSection>
 
       {/* ── Contract PDF ───────────────────────────────────────────────── */}
       {contract.pdfUrl && (
