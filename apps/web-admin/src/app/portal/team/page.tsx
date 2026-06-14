@@ -13,6 +13,7 @@ import {
   UserX,
   UserPlus,
   PauseCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { BrokerUser, BrokerUserStatus, Paged } from '@/lib/types';
@@ -132,12 +133,14 @@ export default async function PortalTeamPage({
       />
 
       {sp.err && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           {sp.err}
         </div>
       )}
       {res.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           تعذر تحميل الفريق: {res.error}
         </div>
       )}
@@ -192,7 +195,7 @@ export default async function PortalTeamPage({
           <>
             {meta && (
               <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-                <span className="font-semibold text-slate-700">{meta.total}</span>
+                <span className="font-bold text-slate-700">{meta.total}</span>
                 <span>عضو في الفريق</span>
               </div>
             )}
@@ -218,7 +221,7 @@ export default async function PortalTeamPage({
                       <td className="py-3 ps-5 pe-4">
                         <div className="flex items-center gap-2.5">
                           <div
-                            className={`h-9 w-9 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${avatarColor(m.user.fullName)}`}
+                            className={`h-9 w-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${avatarColor(m.user.fullName)}`}
                           >
                             {initials(m.user.fullName)}
                           </div>

@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   BookmarkCheck,
   Tag,
+  AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
@@ -90,7 +91,8 @@ export default async function PortalUnitsPage({
       />
 
       {unitsRes.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           تعذر تحميل الوحدات: {unitsRes.error}
         </div>
       )}
@@ -183,7 +185,7 @@ export default async function PortalUnitsPage({
       <Card className="overflow-hidden">
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-            <span className="font-semibold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
+            <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
             <span>وحدة مطابقة للتصفية</span>
           </div>
         )}
@@ -229,7 +231,7 @@ export default async function PortalUnitsPage({
 
                   {/* Project / Building */}
                   <td className="py-3 px-4">
-                    <p className="font-medium text-slate-800 text-xs">
+                    <p className="font-semibold text-slate-800 text-xs">
                       {tx(u.building.phase.project.name)}
                     </p>
                     <p className="text-2xs text-slate-400 mt-0.5">

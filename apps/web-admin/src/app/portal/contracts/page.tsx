@@ -4,13 +4,14 @@ import {
   Eye,
   CheckCircle2,
   Clock,
-  Banknote,
   FilePen,
   BadgePercent,
+  AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
@@ -31,14 +32,22 @@ interface Search {
 
 const PAGE_SIZE = 20;
 
+const AVATAR_COLORS = [
+  'bg-slate-100 text-slate-700',
+  'bg-blue-100 text-blue-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-violet-100 text-violet-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+];
+
+function avatarColor(name: string): string {
+  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
+  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
+}
+
 function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
 export default async function PortalContractsPage({
@@ -50,7 +59,7 @@ export default async function PortalContractsPage({
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-  if (sp.projectId)                          qs.set('projectId', sp.projectId);
+  if (sp.projectId) qs.set('projectId', sp.projectId);
   if (sp.signed === 'yes' || sp.signed === 'no') qs.set('signed', sp.signed);
 
   const [contractsRes, projectsRes, rAll, rSigned, rPending] = await Promise.all([
@@ -68,8 +77,10 @@ export default async function PortalContractsPage({
   const signedCount  = rSigned.data?.meta.total  ?? 0;
   const pendingCount = rPending.data?.meta.total  ?? 0;
 
-  // Total value of contracts on current page
-  const pageValue = rows.reduce((s, c) => s + Number(c.totalAmount || 0), 0);
+  const pageValue      = rows.reduce((s, c) => s + Number(c.totalAmount || 0), 0);
+  const withCommission = rows.filter((c) => c.reservation?.commissionLockedPct != null).length;
+
+  const isFiltered = !!(sp.projectId || sp.signed);
 
   return (
     <div className="space-y-5">
@@ -77,7 +88,7 @@ export default async function PortalContractsPage({
       {/* ── Page header ─────────────────────────────────────────────────────── */}
       <PageHeader
         title="عقودي"
-        description="العقود الموقّعة أو قيد التوقيع المنبثقة من حجوزات الوسيط."
+        description="العقود المنبثقة من حجوزاتك — موقّعة أو قيد التوقيع."
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },
           { label: 'العقود' },
@@ -85,23 +96,18 @@ export default async function PortalContractsPage({
       />
 
       {contractsRes.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           تعذر تحميل العقود: {contractsRes.error}
         </div>
       )}
 
       {/* ── KPI strip ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي العقود"  value={totalAll}     icon={<FileText />}      tone="brand"   />
-        <PageKpiCard label="موقّعة"         value={signedCount}  icon={<CheckCircle2 />}  tone="success" />
-        <PageKpiCard label="قيد التوقيع"    value={pendingCount} icon={<Clock />}         tone="warning" />
-        <PageKpiCard
-          label="قيمة هذه الصفحة"
-          value={formatCurrency(pageValue)}
-          icon={<Banknote />}
-          tone="teal"
-          compact
-        />
+        <PageKpiCard label="إجمالي العقود"   value={totalAll}        icon={<FileText />}     tone="brand"   />
+        <PageKpiCard label="موقّعة"          value={signedCount}     icon={<CheckCircle2 />} tone="success" />
+        <PageKpiCard label="قيد التوقيع"     value={pendingCount}    icon={<Clock />}        tone="warning" />
+        <PageKpiCard label="بعمولة مُقفلة"   value={withCommission}  icon={<BadgePercent />} tone="accent"  />
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
@@ -110,12 +116,7 @@ export default async function PortalContractsPage({
         action="/portal/contracts"
         className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
       >
-        <Select
-          name="projectId"
-          inputSize="sm"
-          defaultValue={sp.projectId ?? ''}
-          className="w-56 shrink-0"
-        >
+        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56 shrink-0">
           <option value="">كل المشاريع</option>
           {projects.map((p) => (
             <option key={p.project.id} value={p.project.id}>
@@ -123,19 +124,14 @@ export default async function PortalContractsPage({
             </option>
           ))}
         </Select>
-        <Select
-          name="signed"
-          inputSize="sm"
-          defaultValue={sp.signed ?? ''}
-          className="w-44 shrink-0"
-        >
+        <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-44 shrink-0">
           <option value="">كل العقود</option>
-          <option value="yes">موقّعة</option>
-          <option value="no">قيد التوقيع</option>
+          <option value="yes">موقّعة فقط</option>
+          <option value="no">قيد التوقيع فقط</option>
         </Select>
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.projectId || sp.signed) && (
+          {isFiltered && (
             <Link href="/portal/contracts">
               <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
@@ -148,16 +144,16 @@ export default async function PortalContractsPage({
         {rows.length > 0 && (
           <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-              <span>عقد مطابق</span>
+              <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
+              <span>عقد</span>
             </div>
             {pageValue > 0 && (
               <>
                 <div className="w-px h-4 bg-hairline" />
-                <div className="flex items-center gap-1.5">
-                  <span className="text-slate-400">قيمة الصفحة</span>
+                <span>
+                  قيمة الصفحة:{' '}
                   <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageValue)}</span>
-                </div>
+                </span>
               </>
             )}
           </div>
@@ -184,7 +180,7 @@ export default async function PortalContractsPage({
                     <EmptyState
                       icon={<FileText />}
                       title="لا توجد عقود بعد"
-                      description="ستظهر العقود هنا فور تحويل أحد الحجوزات إلى عقد."
+                      description="ستظهر هنا فور تحويل أحد الحجوزات إلى عقد."
                     />
                   </td>
                 </tr>
@@ -192,14 +188,24 @@ export default async function PortalContractsPage({
               {rows.map((c) => {
                 const clientName = c.customer?.fullName ?? c.reservation?.lead?.fullName;
                 const isSigned   = !!c.signedAt;
+
                 return (
                   <tr
                     key={c.id}
-                    className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
+                    className={cn(
+                      'border-t border-hairline transition-colors align-top',
+                      isSigned
+                        ? 'bg-emerald-50/25 hover:bg-emerald-50/50'
+                        : 'hover:bg-surface-muted/40',
+                    )}
                   >
                     {/* Contract number */}
                     <td className="py-3 ps-5 pe-4">
-                      <span className="font-mono text-xs text-brand-700 font-semibold" dir="ltr">
+                      <span
+                        className="inline-flex items-center gap-1.5 font-mono text-xs text-brand-700 font-semibold"
+                        dir="ltr"
+                      >
+                        <FileText className="h-3 w-3 text-brand-500 shrink-0" />
                         {c.contractNumber ?? '—'}
                       </span>
                     </td>
@@ -208,10 +214,15 @@ export default async function PortalContractsPage({
                     <td className="py-3 px-4">
                       {clientName ? (
                         <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-xs shrink-0">
+                          <span
+                            className={cn(
+                              'h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
+                              avatarColor(clientName),
+                            )}
+                          >
                             {initials(clientName)}
-                          </div>
-                          <p className="font-medium text-slate-900 text-xs truncate max-w-[140px]">
+                          </span>
+                          <p className="font-semibold text-slate-900 text-xs truncate max-w-[140px]">
                             {clientName}
                           </p>
                         </div>
@@ -222,7 +233,7 @@ export default async function PortalContractsPage({
 
                     {/* Unit / Project */}
                     <td className="py-3 px-4">
-                      <p className="font-mono text-xs text-slate-800 font-semibold" dir="ltr">
+                      <p className="font-mono text-xs font-semibold text-slate-800" dir="ltr">
                         {c.unit?.code ?? '—'}
                       </p>
                       <p className="text-2xs text-slate-500 mt-0.5">
@@ -238,12 +249,12 @@ export default async function PortalContractsPage({
                     {/* Status */}
                     <td className="py-3 px-4">
                       {isSigned ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">
                           <CheckCircle2 className="h-3 w-3" />
                           موقّع
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-medium">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-700 px-2 py-0.5 text-xs font-semibold">
                           <FilePen className="h-3 w-3" />
                           قيد التوقيع
                         </span>

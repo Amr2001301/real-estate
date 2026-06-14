@@ -8,10 +8,13 @@ import {
   XCircle,
   ArrowRightLeft,
   BadgePercent,
+  Phone,
+  AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
@@ -33,14 +36,22 @@ interface Search {
 
 const PAGE_SIZE = 20;
 
+const AVATAR_COLORS = [
+  'bg-slate-100 text-slate-700',
+  'bg-blue-100 text-blue-700',
+  'bg-emerald-100 text-emerald-700',
+  'bg-violet-100 text-violet-700',
+  'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700',
+];
+
+function avatarColor(name: string): string {
+  const code = name.charCodeAt(0) + (name.charCodeAt(1) || 0);
+  return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
+}
+
 function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
 export default async function PortalReservationsPage({
@@ -63,13 +74,14 @@ export default async function PortalReservationsPage({
     safe(api.get<Paged<PortalReservation>>('/portal/reservations?page=1&pageSize=1&status=CONVERTED')),
   ]);
 
-  const paged         = resRes.data;
-  const rows          = paged?.data ?? [];
-  const projects      = projectsRes.data ?? [];
-  const totalAll      = paged?.meta.total ?? 0;
-  const pendingCount  = rPending.data?.meta.total  ?? 0;
-  const approvedCount = rApproved.data?.meta.total ?? 0;
-  const convertedCount= rConverted.data?.meta.total ?? 0;
+  const paged          = resRes.data;
+  const rows           = paged?.data ?? [];
+  const projects       = projectsRes.data ?? [];
+  const pendingCount   = rPending.data?.meta.total   ?? 0;
+  const approvedCount  = rApproved.data?.meta.total  ?? 0;
+  const convertedCount = rConverted.data?.meta.total ?? 0;
+
+  const isFiltered = !!(sp.status || sp.projectId);
 
   return (
     <div className="space-y-5">
@@ -77,7 +89,7 @@ export default async function PortalReservationsPage({
       {/* ── Page header ─────────────────────────────────────────────────────── */}
       <PageHeader
         title="حجوزاتي"
-        description="الحجوزات التي قمت بإنشائها عبر البوابة — تابع الحالة والعمولة المُقفلة."
+        description="الحجوزات التي أنشأتها عبر البوابة — تابع الحالة والعمولة المُقفلة."
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },
           { label: 'الحجوزات' },
@@ -92,17 +104,18 @@ export default async function PortalReservationsPage({
       />
 
       {resRes.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           تعذر تحميل الحجوزات: {resRes.error}
         </div>
       )}
 
       {/* ── KPI strip ───────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي الحجوزات" value={totalAll}       icon={<BookmarkCheck />}  tone="brand"   />
-        <PageKpiCard label="قيد المراجعة"    value={pendingCount}  icon={<Clock />}          tone="warning" />
-        <PageKpiCard label="تمت الموافقة"    value={approvedCount} icon={<CheckCircle2 />}   tone="success" />
-        <PageKpiCard label="محوّل إلى عقد"   value={convertedCount} icon={<ArrowRightLeft />} tone="info"    />
+        <PageKpiCard label="إجمالي الحجوزات" value={paged?.meta.total ?? 0} icon={<BookmarkCheck />}  tone="brand"   />
+        <PageKpiCard label="قيد المراجعة"    value={pendingCount}            icon={<Clock />}          tone="warning" />
+        <PageKpiCard label="تمت الموافقة"    value={approvedCount}           icon={<CheckCircle2 />}   tone="success" />
+        <PageKpiCard label="محوّل إلى عقد"   value={convertedCount}          icon={<ArrowRightLeft />} tone="info"    />
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
@@ -111,12 +124,7 @@ export default async function PortalReservationsPage({
         action="/portal/reservations"
         className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
       >
-        <Select
-          name="status"
-          inputSize="sm"
-          defaultValue={sp.status ?? ''}
-          className="w-44 shrink-0"
-        >
+        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44 shrink-0">
           <option value="">كل الحالات</option>
           <option value="PENDING">قيد المراجعة</option>
           <option value="APPROVED">تمت الموافقة</option>
@@ -125,12 +133,7 @@ export default async function PortalReservationsPage({
           <option value="EXPIRED">منتهي</option>
           <option value="CONVERTED">محوّل إلى عقد</option>
         </Select>
-        <Select
-          name="projectId"
-          inputSize="sm"
-          defaultValue={sp.projectId ?? ''}
-          className="w-56 shrink-0"
-        >
+        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56 shrink-0">
           <option value="">كل المشاريع</option>
           {projects.map((p) => (
             <option key={p.project.id} value={p.project.id}>
@@ -140,7 +143,7 @@ export default async function PortalReservationsPage({
         </Select>
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.status || sp.projectId) && (
+          {isFiltered && (
             <Link href="/portal/reservations">
               <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
@@ -152,8 +155,8 @@ export default async function PortalReservationsPage({
       <Card className="overflow-hidden">
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
-            <span className="font-semibold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
-            <span>حجز مطابق للتصفية</span>
+            <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
+            <span>حجز</span>
           </div>
         )}
 
@@ -195,15 +198,30 @@ export default async function PortalReservationsPage({
                 </tr>
               )}
               {rows.map((r) => {
-                const clientName = r.lead?.fullName;
+                const clientName  = r.lead?.fullName;
+                const clientPhone = r.lead?.phone;
+                const isConverted = r.status === 'CONVERTED';
+                const isApproved  = r.status === 'APPROVED';
+
                 return (
                   <tr
                     key={r.id}
-                    className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
+                    className={cn(
+                      'border-t border-hairline transition-colors align-top',
+                      isConverted
+                        ? 'bg-emerald-50/25 hover:bg-emerald-50/50'
+                        : isApproved
+                          ? 'bg-blue-50/20 hover:bg-blue-50/40'
+                          : 'hover:bg-surface-muted/40',
+                    )}
                   >
                     {/* Reservation number */}
                     <td className="py-3 ps-5 pe-4">
-                      <span className="font-mono text-xs text-brand-700 font-semibold" dir="ltr">
+                      <span
+                        className="inline-flex items-center gap-1.5 font-mono text-xs text-brand-700 font-semibold"
+                        dir="ltr"
+                      >
+                        <BookmarkCheck className="h-3 w-3 text-brand-500 shrink-0" />
                         {r.reservationNumber ?? '—'}
                       </span>
                     </td>
@@ -211,14 +229,26 @@ export default async function PortalReservationsPage({
                     {/* Client */}
                     <td className="py-3 px-4">
                       {clientName ? (
-                        <div className="flex items-center gap-2">
-                          <div className="h-7 w-7 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-xs shrink-0">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={cn(
+                              'h-8 w-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0',
+                              avatarColor(clientName),
+                            )}
+                          >
                             {initials(clientName)}
-                          </div>
+                          </span>
                           <div>
-                            <p className="font-medium text-slate-900 text-xs">{clientName}</p>
-                            {r.lead?.phone && (
-                              <p className="text-2xs text-slate-400 mt-0.5" dir="ltr">{r.lead.phone}</p>
+                            <p className="font-semibold text-slate-900 text-xs">{clientName}</p>
+                            {clientPhone && (
+                              <a
+                                href={`tel:${clientPhone}`}
+                                className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-1 hover:text-brand-700 transition-colors"
+                                dir="ltr"
+                              >
+                                <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                                {clientPhone}
+                              </a>
                             )}
                           </div>
                         </div>
@@ -229,7 +259,7 @@ export default async function PortalReservationsPage({
 
                     {/* Unit / Project */}
                     <td className="py-3 px-4">
-                      <p className="font-mono text-xs text-slate-800 font-semibold" dir="ltr">
+                      <p className="font-mono text-xs font-semibold text-slate-800" dir="ltr">
                         {r.unit?.code ?? '—'}
                       </p>
                       <p className="text-2xs text-slate-500 mt-0.5">
@@ -261,7 +291,7 @@ export default async function PortalReservationsPage({
 
                     {/* Sales agent */}
                     <td className="py-3 px-4 text-xs text-slate-600">
-                      {r.sales?.fullName ?? '—'}
+                      {r.sales?.fullName ?? <span className="text-slate-400">—</span>}
                     </td>
 
                     {/* Date */}
