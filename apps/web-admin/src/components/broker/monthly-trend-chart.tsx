@@ -1,175 +1,286 @@
 'use client';
 
+import { useState } from 'react';
 import {
-  Bar,
+  AreaChart,
+  Area,
   BarChart,
+  Bar,
   CartesianGrid,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
+  Legend,
 } from 'recharts';
 import type { BrokerMonthlyTrendPoint } from '@/lib/types';
+import { cn } from '@/lib/cn';
 
-interface Props {
-  data: BrokerMonthlyTrendPoint[];
-}
+// ── Brand-aligned colors ──────────────────────────────────────────────────────
+const C = {
+  commissions: '#C8A24B',   // brand-500 gold
+  payouts:     '#10b981',   // emerald-500
+  reservations: '#818cf8',  // indigo-400
+  contracts:   '#34d399',   // emerald-400
+};
 
-// Compact Arabic money formatter
-function fmtMoney(v: number): string {
+// ── Formatters ────────────────────────────────────────────────────────────────
+function fmtAxisMoney(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}م`;
   if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}ك`;
   return String(v);
 }
 
-// Recharts custom tooltip
-function CustomTooltip({
+function fmtCurrency(v: number): string {
+  return new Intl.NumberFormat('ar-SA', {
+    style: 'currency',
+    currency: 'SAR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(v);
+}
+
+// ── Tooltip ───────────────────────────────────────────────────────────────────
+type TooltipPayloadItem = { name: string; value: number; color: string };
+
+function FinancialTooltip({
   active,
   payload,
   label,
 }: {
   active?: boolean;
-  payload?: Array<{ name: string; value: number; color: string }>;
+  payload?: TooltipPayloadItem[];
   label?: string;
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div
-      style={{
-        background: 'white',
-        border: '1px solid #e2e8f0',
-        borderRadius: 10,
-        padding: '10px 14px',
-        fontSize: 12,
-        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-        direction: 'rtl',
-      }}
-    >
-      <p style={{ fontWeight: 700, color: '#1e293b', marginBottom: 6 }}>{label}</p>
+    <div style={TT_STYLE}>
+      <p style={TT_LABEL}>{label}</p>
       {payload.map((item) => (
-        <div key={item.name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-          <span
-            style={{
-              display: 'inline-block',
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: item.color,
-              flexShrink: 0,
-            }}
-          />
-          <span style={{ color: '#64748b' }}>{item.name}:</span>
-          <span style={{ fontWeight: 600, color: '#0f172a', fontVariantNumeric: 'tabular-nums' }}>
-            {Number.isFinite(item.value)
-              ? item.value.toLocaleString('ar-EG')
-              : '—'}
-          </span>
+        <div key={item.name} style={TT_ROW}>
+          <span style={{ ...TT_DOT, background: item.color }} />
+          <span style={TT_NAME}>{item.name}</span>
+          <span style={TT_VALUE}>{fmtCurrency(item.value)}</span>
         </div>
       ))}
     </div>
   );
 }
 
-function numericPoint(p: BrokerMonthlyTrendPoint) {
+function ActivityTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={TT_STYLE}>
+      <p style={TT_LABEL}>{label}</p>
+      {payload.map((item) => (
+        <div key={item.name} style={TT_ROW}>
+          <span style={{ ...TT_DOT, background: item.color }} />
+          <span style={TT_NAME}>{item.name}</span>
+          <span style={TT_VALUE}>{item.value.toLocaleString('ar-EG')}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const TT_STYLE: React.CSSProperties = {
+  background: 'white',
+  border: '1px solid #e7dfd3',
+  borderRadius: 12,
+  padding: '10px 14px',
+  fontSize: 12,
+  boxShadow: '0 4px 16px rgba(0,0,0,0.09)',
+  direction: 'rtl',
+  minWidth: 180,
+};
+const TT_LABEL: React.CSSProperties = { fontWeight: 700, color: '#1e293b', marginBottom: 8, fontSize: 13 };
+const TT_ROW:   React.CSSProperties = { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 };
+const TT_DOT:   React.CSSProperties = { display: 'inline-block', width: 8, height: 8, borderRadius: '50%', flexShrink: 0 };
+const TT_NAME:  React.CSSProperties = { color: '#64748b', flex: 1 };
+const TT_VALUE: React.CSSProperties = { fontWeight: 600, color: '#0f172a', fontVariantNumeric: 'tabular-nums' };
+
+// ── Shared axis / grid config ─────────────────────────────────────────────────
+const TICK_STYLE = { fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' } as const;
+const LEGEND_STYLE = { fontSize: 11, paddingTop: 10, direction: 'rtl' } as const;
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+type Mode = 'financial' | 'activity';
+
+const TABS: { key: Mode; label: string }[] = [
+  { key: 'financial', label: 'المالية' },
+  { key: 'activity',  label: 'النشاط'  },
+];
+
+// ── Component ─────────────────────────────────────────────────────────────────
+interface Props {
+  data: BrokerMonthlyTrendPoint[];
+}
+
+function mapPoint(p: BrokerMonthlyTrendPoint) {
   return {
-    label:          p.label,
-    reservations:   p.reservations,
+    label:           p.label,
+    reservations:    p.reservations,
     contractsSigned: p.contractsSigned,
-    commissionsNet: Number(p.commissionsNet)  || 0,
-    payoutsNet:     Number(p.payoutsNet)      || 0,
+    commissionsNet:  Number(p.commissionsNet) || 0,
+    payoutsNet:      Number(p.payoutsNet) || 0,
   };
 }
 
 export function MonthlyTrendChart({ data }: Props) {
+  const [mode, setMode] = useState<Mode>('financial');
+
   if (data.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+      <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
         <p className="text-sm text-slate-500">لا توجد بيانات شهرية في هذا النطاق.</p>
         <p className="text-2xs text-slate-400">جرّب توسيع نطاق التاريخ.</p>
       </div>
     );
   }
 
-  const points = data.map(numericPoint);
+  const points = data.map(mapPoint);
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
-      <BarChart
-        data={points}
-        margin={{ top: 8, right: 12, left: 4, bottom: 0 }}
-        barCategoryGap="35%"
-      >
-        <CartesianGrid stroke="#f1f5f9" strokeDasharray="4 4" vertical={false} />
+    <div className="flex flex-col gap-3">
 
-        <XAxis
-          dataKey="label"
-          tick={{ fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' }}
-          axisLine={false}
-          tickLine={false}
-        />
+      {/* Tab toggle */}
+      <div className="flex items-center gap-1 self-start">
+        {TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setMode(key)}
+            className={cn(
+              'text-xs font-semibold px-3 py-1.5 rounded-lg transition-all',
+              mode === key
+                ? 'bg-brand-100 text-brand-800 shadow-xs'
+                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100',
+            )}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
-        {/* Left axis: counts */}
-        <YAxis
-          yAxisId="counts"
-          tick={{ fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' }}
-          axisLine={false}
-          tickLine={false}
-          width={28}
-        />
+      {/* ── Financial: area chart ──────────────────────────────────────── */}
+      {mode === 'financial' && (
+        <ResponsiveContainer width="100%" height={240}>
+          <AreaChart data={points} margin={{ top: 6, right: 8, left: 4, bottom: 0 }}>
+            <defs>
+              <linearGradient id="gradComm" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={C.commissions} stopOpacity={0.18} />
+                <stop offset="100%" stopColor={C.commissions} stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="gradPay" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={C.payouts} stopOpacity={0.15} />
+                <stop offset="100%" stopColor={C.payouts} stopOpacity={0} />
+              </linearGradient>
+            </defs>
 
-        {/* Right axis: money */}
-        <YAxis
-          yAxisId="money"
-          orientation="right"
-          tick={{ fontSize: 11, fill: '#94a3b8', fontFamily: 'inherit' }}
-          axisLine={false}
-          tickLine={false}
-          tickFormatter={fmtMoney}
-          width={36}
-        />
+            <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
 
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', radius: 4 }} />
+            <XAxis
+              dataKey="label"
+              tick={TICK_STYLE}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={TICK_STYLE}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={fmtAxisMoney}
+              width={40}
+            />
 
-        <Legend
-          wrapperStyle={{ fontSize: 11, paddingTop: 12, direction: 'rtl' }}
-          iconType="circle"
-          iconSize={8}
-        />
+            <Tooltip
+              content={<FinancialTooltip />}
+              cursor={{ stroke: '#e7dfd3', strokeWidth: 1.5, strokeDasharray: '3 3' }}
+            />
 
-        <Bar
-          yAxisId="counts"
-          dataKey="reservations"
-          name="حجوزات"
-          fill="#818cf8"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={28}
-        />
-        <Bar
-          yAxisId="counts"
-          dataKey="contractsSigned"
-          name="عقود موقّعة"
-          fill="#34d399"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={28}
-        />
-        <Bar
-          yAxisId="money"
-          dataKey="commissionsNet"
-          name="صافي العمولات"
-          fill="#f59e0b"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={28}
-        />
-        <Bar
-          yAxisId="money"
-          dataKey="payoutsNet"
-          name="صافي المدفوعات"
-          fill="#06b6d4"
-          radius={[4, 4, 0, 0]}
-          maxBarSize={28}
-        />
-      </BarChart>
-    </ResponsiveContainer>
+            <Legend wrapperStyle={LEGEND_STYLE} iconType="circle" iconSize={8} />
+
+            <Area
+              type="monotone"
+              dataKey="commissionsNet"
+              name="صافي العمولات"
+              stroke={C.commissions}
+              strokeWidth={2.5}
+              fill="url(#gradComm)"
+              dot={{ r: 4, fill: C.commissions, strokeWidth: 2, stroke: 'white' }}
+              activeDot={{ r: 5.5, fill: C.commissions, strokeWidth: 2, stroke: 'white' }}
+            />
+            <Area
+              type="monotone"
+              dataKey="payoutsNet"
+              name="صافي المدفوعات"
+              stroke={C.payouts}
+              strokeWidth={2.5}
+              fill="url(#gradPay)"
+              dot={{ r: 4, fill: C.payouts, strokeWidth: 2, stroke: 'white' }}
+              activeDot={{ r: 5.5, fill: C.payouts, strokeWidth: 2, stroke: 'white' }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
+
+      {/* ── Activity: grouped bars ─────────────────────────────────────── */}
+      {mode === 'activity' && (
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart
+            data={points}
+            margin={{ top: 6, right: 8, left: 4, bottom: 0 }}
+            barCategoryGap="32%"
+            barGap={3}
+          >
+            <CartesianGrid stroke="#f1f5f9" strokeDasharray="3 3" vertical={false} />
+
+            <XAxis
+              dataKey="label"
+              tick={TICK_STYLE}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={TICK_STYLE}
+              axisLine={false}
+              tickLine={false}
+              allowDecimals={false}
+              width={28}
+            />
+
+            <Tooltip
+              content={<ActivityTooltip />}
+              cursor={{ fill: '#f8fafc', radius: 4 } as React.SVGProps<SVGRectElement>}
+            />
+
+            <Legend wrapperStyle={LEGEND_STYLE} iconType="circle" iconSize={8} />
+
+            <Bar
+              dataKey="reservations"
+              name="حجوزات"
+              fill={C.reservations}
+              radius={[5, 5, 0, 0]}
+              maxBarSize={36}
+            />
+            <Bar
+              dataKey="contractsSigned"
+              name="عقود موقّعة"
+              fill={C.contracts}
+              radius={[5, 5, 0, 0]}
+              maxBarSize={36}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
   );
 }
