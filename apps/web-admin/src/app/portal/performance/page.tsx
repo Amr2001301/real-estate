@@ -235,7 +235,7 @@ export default async function PortalPerformancePage({
 
         <Card className="p-5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-brand-600" />
               الاتجاه الشهري
             </h2>
@@ -251,8 +251,8 @@ export default async function PortalPerformancePage({
       <Card className="overflow-hidden">
         <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-hairline">
           <Building2 className="h-4 w-4 text-brand-600" />
-          <h2 className="text-sm font-semibold text-slate-900">تفصيل المشاريع</h2>
-          <span className="text-2xs text-slate-400 ms-1">
+          <h2 className="text-sm font-bold text-slate-900">تفصيل المشاريع</h2>
+          <span className="text-2xs text-slate-500 ms-1">
             {perf.projectBreakdown.length} مشروع
           </span>
         </div>
@@ -277,7 +277,7 @@ export default async function PortalPerformancePage({
                   return (
                     <tr key={p.projectId} className="border-t border-hairline hover:bg-surface-muted/40 transition-colors">
                       <td className="py-3 ps-5 pe-4">
-                        <p className="font-medium text-slate-900">{p.projectName ? tx(p.projectName) : '—'}</p>
+                        <p className="font-semibold text-slate-900">{p.projectName ? tx(p.projectName) : '—'}</p>
                         {p.city && <p className="text-2xs text-slate-500 mt-0.5">{p.city}</p>}
                       </td>
                       <td className="py-3 px-4 tabular-nums text-xs">
@@ -286,7 +286,7 @@ export default async function PortalPerformancePage({
                         <p className="text-2xs text-slate-400 mt-0.5">موقّع / إجمالي</p>
                       </td>
                       <td className="py-3 px-4">
-                        <p className="tabular-nums text-xs font-medium text-slate-900">{formatCurrency(p.salesGross)}</p>
+                        <p className="tabular-nums text-xs font-semibold text-slate-900">{formatCurrency(p.salesGross)}</p>
                         <div className="mt-1.5 h-1.5 w-24 rounded-full bg-surface-muted overflow-hidden">
                           <div className="h-full bg-brand-400 rounded-full" style={{ width: `${barPct}%` }} />
                         </div>
@@ -311,8 +311,8 @@ export default async function PortalPerformancePage({
         <Card className="overflow-hidden">
           <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-hairline">
             <UsersIcon className="h-4 w-4 text-brand-600" />
-            <h2 className="text-sm font-semibold text-slate-900">أداء الوكلاء</h2>
-            <span className="text-2xs text-slate-400 ms-1">
+            <h2 className="text-sm font-bold text-slate-900">أداء الوكلاء</h2>
+            <span className="text-2xs text-slate-500 ms-1">
               {perf.agentBreakdown.length} وكيل
             </span>
             <span className="text-2xs text-slate-400 ms-auto">

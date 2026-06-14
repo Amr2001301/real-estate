@@ -16,15 +16,15 @@ interface Props {
 export function AppShell({ user, navSections, children }: Props) {
   return (
     <ToastProvider>
-      <div className="min-h-screen flex bg-canvas">
+      <div className="h-dvh flex overflow-hidden bg-canvas">
         <Sidebar user={user} sections={navSections} />
-        <div className="flex flex-col flex-1 min-w-0">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Topbar
             user={user}
             notificationsHref={user.role === 'BROKER' ? '/portal/notifications' : '/dashboard/notifications'}
             leading={<MobileNav user={user} sections={navSections} />}
           />
-          <main className="flex-1 min-w-0">
+          <main className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
             <div className="px-4 sm:px-6 lg:px-8 py-6 lg:py-8 max-w-[1440px] mx-auto w-full">
               {children}
             </div>

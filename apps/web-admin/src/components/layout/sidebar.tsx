@@ -111,7 +111,7 @@ export function Sidebar({ user, sections, className }: Omit<Props, 'onNavigate'>
         boxShadow: '-12px 0 32px -16px rgb(15 30 51 / 0.20)',
       }}
     >
-      <div className="sticky top-0 h-screen w-full">
+      <div className="h-full w-full">
         <SidebarContent user={user} sections={sections} />
       </div>
     </aside>

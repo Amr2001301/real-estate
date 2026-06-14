@@ -26,7 +26,7 @@ async function getUnreadCount(): Promise<number> {
 export async function Topbar({ user, notificationsHref, leading }: Props) {
   const unread = await getUnreadCount();
   return (
-    <header className="sticky top-0 z-30 h-[72px] bg-canvas/95 backdrop-blur-md border-b border-hairline shadow-soft">
+    <header className="shrink-0 z-30 h-[72px] bg-canvas/95 backdrop-blur-md border-b border-hairline shadow-soft">
       <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center gap-3">
         {leading && <div className="lg:hidden shrink-0">{leading}</div>}
 

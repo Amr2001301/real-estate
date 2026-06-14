@@ -78,7 +78,7 @@ export default async function PortalProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <UserCircle className="h-4 w-4 text-brand-600" />
             بياناتك
           </h2>
@@ -112,12 +112,12 @@ export default async function PortalProfilePage() {
         </Card>
 
         <Card className="p-5 lg:col-span-2">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-brand-600" />
             شركة الوساطة
           </h2>
           <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="font-semibold text-slate-900">{me.broker.companyName}</span>
+            <span className="font-bold text-slate-900">{me.broker.companyName}</span>
             <BrokerStatusBadge status={me.broker.status} />
             <span className="font-mono text-xs text-slate-500" dir="ltr">
               {me.broker.code}
@@ -172,23 +172,23 @@ export default async function PortalProfilePage() {
       </div>
 
       <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-3">صلاحياتك</h2>
+        <h2 className="text-sm font-bold text-slate-900 mb-3">صلاحياتك</h2>
         <ul className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <li className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">جهة اتصال رئيسية</p>
-            <p className="font-medium mt-1">
+            <p className="font-semibold mt-1">
               {me.permissions.isPrimaryContact ? 'نعم' : 'لا'}
             </p>
           </li>
           <li className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">إدارة الموظفين</p>
-            <p className="font-medium mt-1">
+            <p className="font-semibold mt-1">
               {me.permissions.canManageBrokerUsers ? 'مسموح' : 'غير مسموح'}
             </p>
           </li>
           <li className="rounded-xl border border-hairline px-3 py-3">
             <p className="text-xs text-slate-500">عرض العمولات</p>
-            <p className="font-medium mt-1">
+            <p className="font-semibold mt-1">
               {me.permissions.canViewCommissions ? 'مسموح' : 'غير مسموح'}
             </p>
           </li>

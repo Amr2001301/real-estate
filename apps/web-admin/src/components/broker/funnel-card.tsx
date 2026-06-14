@@ -40,8 +40,8 @@ export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) 
     <Card className="p-5 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
-        <span className="text-2xs text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
+        <h2 className="text-sm font-bold text-slate-900">{title}</h2>
+        <span className="text-2xs text-slate-500 bg-slate-100 rounded-full px-2 py-0.5 font-medium">
           {stages.length} مراحل
         </span>
       </div>
@@ -61,7 +61,7 @@ export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) 
                 <div className="flex items-center gap-2 ps-10 mb-1">
                   <div className="flex-1 h-px bg-slate-100" />
                   {convRate && (
-                    <span className="inline-flex items-center gap-0.5 text-2xs font-medium text-slate-400 shrink-0">
+                    <span className="inline-flex items-center gap-0.5 text-2xs font-semibold text-slate-500 shrink-0">
                       <ChevronLeft className="h-3 w-3 rotate-90" />
                       {convRate}
                     </span>
@@ -80,7 +80,7 @@ export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) 
                 {/* Bar + label */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-slate-600 font-medium">{s.label}</span>
+                    <span className="text-xs text-slate-700 font-semibold">{s.label}</span>
                     <span className="text-xs font-bold tabular-nums text-slate-900 ms-2">
                       {s.value.toLocaleString('ar-EG')}
                     </span>
@@ -99,7 +99,7 @@ export function FunnelCard({ summary, title = 'قمع التحويل' }: Props) 
       </div>
 
       {/* Footer note */}
-      <p className="text-2xs text-slate-400 mt-4 pt-3 border-t border-hairline">
+      <p className="text-2xs text-slate-500 mt-4 pt-3 border-t border-hairline">
         نسبة التحويل محسوبة بالنسبة للمرحلة السابقة مباشرة.
       </p>
     </Card>

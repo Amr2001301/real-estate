@@ -85,8 +85,8 @@ export function MonthlyTrendChart({ data }: Props) {
   if (data.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
-        <p className="text-sm text-slate-400">لا توجد بيانات شهرية في هذا النطاق.</p>
-        <p className="text-2xs text-slate-300">جرّب توسيع نطاق التاريخ.</p>
+        <p className="text-sm text-slate-500">لا توجد بيانات شهرية في هذا النطاق.</p>
+        <p className="text-2xs text-slate-400">جرّب توسيع نطاق التاريخ.</p>
       </div>
     );
   }
