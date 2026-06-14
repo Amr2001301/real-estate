@@ -22,6 +22,7 @@ import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CodeText } from '@/components/ui/code-text';
 import {
   BrokerLeadStatusBadge,
   LeadStageBadge,
@@ -214,9 +215,7 @@ export default async function PortalLeadDetailPage({
               label="الوحدة"
               value={
                 lead.unitInterest ? (
-                  <span className="font-mono" dir="ltr">
-                    {lead.unitInterest.code} • {lead.unitInterest.type}
-                  </span>
+                  <CodeText>{lead.unitInterest.code} • {lead.unitInterest.type}</CodeText>
                 ) : (
                   '—'
                 )
@@ -236,11 +235,9 @@ export default async function PortalLeadDetailPage({
             {lead.appointments.map((a) => (
               <li key={a.id} className="py-2 flex items-center justify-between gap-3">
                 <div>
-                  <p className="font-mono text-xs text-slate-700" dir="ltr">
-                    {a.visitNumber}
-                  </p>
+                  <CodeText className="text-xs text-slate-700">{a.visitNumber}</CodeText>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    {formatDateTime(a.scheduledAt)}
+                    <CodeText>{formatDateTime(a.scheduledAt)}</CodeText>
                   </p>
                 </div>
                 <AppointmentStatusBadge status={a.status} />

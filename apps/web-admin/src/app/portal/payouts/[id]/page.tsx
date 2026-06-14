@@ -15,6 +15,7 @@ import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CodeText } from '@/components/ui/code-text';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
@@ -180,20 +181,19 @@ export default async function PortalPayoutDetailPage({
                   <td className="py-3 ps-5 pe-4">
                     <Link
                       href={`/portal/commissions/${c.id}` as never}
-                      className="font-mono text-xs text-slate-900 hover:text-brand-700"
-                      dir="ltr"
+                      className="text-slate-900 hover:text-brand-700"
                     >
-                      {c.commissionNumber}
+                      <CodeText className="text-xs">{c.commissionNumber}</CodeText>
                     </Link>
                     <p className="text-2xs text-slate-500 mt-0.5">
                       {formatDate(c.earnedAt)}
                     </p>
                   </td>
-                  <td className="py-3 px-4 font-mono text-xs text-slate-700" dir="ltr">
-                    {c.contract.contractNumber ?? '—'}
+                  <td className="py-3 px-4">
+                    <CodeText className="text-xs text-slate-700">{c.contract.contractNumber ?? '—'}</CodeText>
                   </td>
                   <td className="py-3 px-4">
-                    <p className="font-mono text-xs text-slate-700" dir="ltr">{c.unit.code}</p>
+                    <CodeText className="text-xs text-slate-700">{c.unit.code}</CodeText>
                     <p className="text-2xs text-slate-500 mt-0.5">
                       {c.unit.building?.phase?.project ? tx(c.unit.building.phase.project.name) : '—'}
                     </p>
@@ -208,12 +208,18 @@ export default async function PortalPayoutDetailPage({
         </div>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-2xs text-slate-500">
-        <InfoRow icon={<CalendarRange />} label="تاريخ الإنشاء" value={formatDate(payout.createdAt)} />
-        <InfoRow icon={<CalendarRange />} label="تاريخ الاعتماد" value={formatDate(payout.approvedAt)} />
-        <InfoRow icon={<CalendarRange />} label="تاريخ بدء التنفيذ" value={formatDate(payout.processedAt)} />
-        <InfoRow icon={<CalendarRange />} label="آخر تحديث" value={formatDateTime(payout.updatedAt)} />
-      </div>
+      <Card className="p-5">
+        <h2 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+          <CalendarRange className="h-4 w-4 text-brand-600" />
+          الجدول الزمني
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 divide-y md:divide-y-0 divide-hairline">
+          <InfoRow icon={<CalendarRange />} label="تاريخ الإنشاء" value={formatDate(payout.createdAt)} />
+          <InfoRow icon={<CalendarRange />} label="تاريخ الاعتماد" value={formatDate(payout.approvedAt)} />
+          <InfoRow icon={<CalendarRange />} label="تاريخ بدء التنفيذ" value={formatDate(payout.processedAt)} />
+          <InfoRow icon={<CalendarRange />} label="آخر تحديث" value={formatDateTime(payout.updatedAt)} />
+        </div>
+      </Card>
     </div>
   );
 }

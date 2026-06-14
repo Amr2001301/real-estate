@@ -18,6 +18,7 @@ import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CodeText } from '@/components/ui/code-text';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -84,10 +85,9 @@ export default async function PortalContractDetailPage({
                 من الحجز:{' '}
                 <Link
                   href={`/portal/reservations/${contract.reservation.id}` as never}
-                  className="font-mono text-brand-700 hover:text-brand-800 underline"
-                  dir="ltr"
+                  className="text-brand-700 hover:text-brand-800 underline"
                 >
-                  {contract.reservation.reservationNumber}
+                  <CodeText>{contract.reservation.reservationNumber}</CodeText>
                 </Link>
               </span>
             )}
@@ -136,9 +136,7 @@ export default async function PortalContractDetailPage({
             label="الوحدة"
             value={
               contract.unit ? (
-                <span className="font-mono" dir="ltr">
-                  {contract.unit.code} • {contract.unit.type}
-                </span>
+                <CodeText>{contract.unit.code} • {contract.unit.type}</CodeText>
               ) : (
                 '—'
               )

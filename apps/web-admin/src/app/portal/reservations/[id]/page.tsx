@@ -16,6 +16,7 @@ import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CodeText } from '@/components/ui/code-text';
 import { ReservationStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
@@ -115,9 +116,7 @@ export default async function PortalReservationDetailPage({
             label="الوحدة"
             value={
               res.unit ? (
-                <span className="font-mono" dir="ltr">
-                  {res.unit.code} • {res.unit.type}
-                </span>
+                <CodeText>{res.unit.code} • {res.unit.type}</CodeText>
               ) : (
                 '—'
               )
@@ -204,10 +203,8 @@ export default async function PortalReservationDetailPage({
           <ul className="divide-y divide-hairline">
             {res.activities.map((a) => (
               <li key={a.id} className="py-2 text-xs flex items-center justify-between gap-3">
-                <span className="font-mono text-slate-700">{a.type}</span>
-                <span className="text-2xs text-slate-500">
-                  {formatDateTime(a.createdAt)}
-                </span>
+                <CodeText className="text-slate-700">{a.type}</CodeText>
+                <CodeText className="text-2xs text-slate-500">{formatDateTime(a.createdAt)}</CodeText>
               </li>
             ))}
           </ul>

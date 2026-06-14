@@ -16,6 +16,7 @@ import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { CodeText } from '@/components/ui/code-text';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
@@ -95,10 +96,9 @@ export default async function PortalCommissionDetailPage({
               c.contract ? (
                 <Link
                   href={`/portal/contracts/${c.contract.id}` as never}
-                  className="font-mono text-brand-700 hover:text-brand-800"
-                  dir="ltr"
+                  className="text-brand-700 hover:text-brand-800"
                 >
-                  {c.contract.contractNumber ?? '—'}
+                  <CodeText>{c.contract.contractNumber ?? '—'}</CodeText>
                 </Link>
               ) : (
                 '—'
@@ -112,10 +112,9 @@ export default async function PortalCommissionDetailPage({
               c.reservation ? (
                 <Link
                   href={`/portal/reservations/${c.reservation.id}` as never}
-                  className="font-mono text-brand-700 hover:text-brand-800"
-                  dir="ltr"
+                  className="text-brand-700 hover:text-brand-800"
                 >
-                  {c.reservation.reservationNumber ?? '—'}
+                  <CodeText>{c.reservation.reservationNumber ?? '—'}</CodeText>
                 </Link>
               ) : (
                 '—'
@@ -141,9 +140,7 @@ export default async function PortalCommissionDetailPage({
             label="الوحدة"
             value={
               c.unit ? (
-                <span className="font-mono" dir="ltr">
-                  {c.unit.code} • {c.unit.type}
-                </span>
+                <CodeText>{c.unit.code} • {c.unit.type}</CodeText>
               ) : (
                 '—'
               )
