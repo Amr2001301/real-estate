@@ -1,14 +1,12 @@
 import Link from 'next/link';
-import { IconButton } from '@/components/ui/icon-button';
 import {
   Home,
   ShieldCheck,
-  Layers,
+  BookmarkPlus,
   CheckCircle2,
   BookmarkCheck,
   Tag,
   AlertCircle,
-  Plus,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
@@ -21,6 +19,7 @@ import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import { CodeText } from '@/components/ui/code-text';
 import { UnitStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
@@ -185,6 +184,7 @@ export default async function PortalUnitsPage({
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
+
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
@@ -192,107 +192,152 @@ export default async function PortalUnitsPage({
           </div>
         )}
 
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">الوحدة</th>
-                <th className="text-start font-semibold py-3 px-4">المشروع / المبنى</th>
-                <th className="text-start font-semibold py-3 px-4">المواصفات</th>
-                <th className="text-start font-semibold py-3 px-4">السعر</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">نوع الصلاحية</th>
-                <th className="py-3 ps-4 pe-5 w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="p-0">
-                    <EmptyState
-                      icon={<Home />}
-                      title="لا توجد وحدات متاحة بعد"
-                      description="جرّب تعديل الفلاتر، أو تواصل مع الإدارة لتوسيع صلاحيتك."
-                    />
-                  </td>
-                </tr>
-              )}
+        {rows.length === 0 ? (
+          <EmptyState
+            icon={<Home />}
+            title="لا توجد وحدات متاحة بعد"
+            description="جرّب تعديل الفلاتر، أو تواصل مع الإدارة لتوسيع صلاحيتك."
+          />
+        ) : (
+          <>
+            {/* ── Mobile card list (< sm) ──────────────────────────────────── */}
+            <ul className="sm:hidden divide-y divide-hairline">
               {rows.map((u) => (
-                <tr
-                  key={u.id}
-                  className="border-t border-hairline hover:bg-surface-muted/40 transition-colors"
-                >
-                  {/* Unit code + type */}
-                  <td className="py-3 ps-5 pe-4">
-                    <p className="font-mono font-bold text-slate-900 text-sm" dir="ltr"
-                       style={{ unicodeBidi: 'isolate' }}>
-                      {u.code}
-                    </p>
-                    <p className="text-2xs text-slate-500 mt-0.5 uppercase tracking-wide" dir="ltr">
-                      {u.type}
-                    </p>
-                  </td>
-
-                  {/* Project / Building */}
-                  <td className="py-3 px-4">
-                    <p className="font-semibold text-slate-800 text-xs">
-                      {tx(u.building.phase.project.name)}
-                    </p>
-                    <p className="text-2xs text-slate-400 mt-0.5" dir="ltr">
-                      {u.building.phase.project.city}
-                    </p>
-                    <p className="text-2xs text-slate-500 mt-1 inline-flex items-center gap-1">
-                      <Layers className="h-3 w-3 text-slate-400 shrink-0" />
-                      <span dir="ltr" style={{ unicodeBidi: 'isolate' }}>
-                        {u.building.name}
-                      </span>
-                    </p>
-                  </td>
-
-                  {/* Specs */}
-                  <td className="py-3 px-4">
-                    <div className="text-xs text-slate-700 space-y-0.5">
-                      <p className="font-medium tabular-nums">{u.area} م²</p>
-                      <p className="text-slate-500">
-                        {u.bedrooms} غرف • {u.bathrooms} حمامات
+                <li key={u.id} className="px-4 py-4 space-y-2">
+                  {/* Unit code + type + status + action */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="font-bold text-slate-900 text-base shrink-0">
+                        <CodeText>{u.code}</CodeText>
                       </p>
-                      <p className="text-slate-400 text-2xs">دور {u.floor}</p>
+                      <p className="shrink-0">
+                        <CodeText className="text-xs text-slate-500 uppercase tracking-wide">{u.type}</CodeText>
+                      </p>
+                      <UnitStatusBadge status={u.status} />
                     </div>
-                  </td>
-
-                  {/* Price */}
-                  <td className="py-3 px-4 tabular-nums font-bold text-slate-900 text-xs">
-                    {formatCurrency(u.price)}
-                  </td>
-
-                  {/* Status */}
-                  <td className="py-3 px-4">
-                    <UnitStatusBadge status={u.status} />
-                  </td>
-
-                  {/* Access source */}
-                  <td className="py-3 px-4">
-                    <span className="inline-flex items-center gap-1 text-2xs text-slate-600">
-                      <ShieldCheck className="h-3 w-3 text-brand-500" />
-                      {ACCESS_LABEL[u.accessSource]}
-                    </span>
-                  </td>
-
-                  {/* Reserve action */}
-                  <td className="py-3 ps-4 pe-5">
                     {u.status === 'AVAILABLE' && (
-                      <Link href="/portal/reservations/new">
-                        <IconButton label="احجز" variant="ghost" size="sm">
-                          <Plus />
-                        </IconButton>
+                      <Link href="/portal/reservations/new" className="shrink-0">
+                        <Button variant="primary" size="sm" leftIcon={<BookmarkPlus className="h-3.5 w-3.5" />}>
+                          احجز
+                        </Button>
                       </Link>
                     )}
-                  </td>
-                </tr>
+                  </div>
+
+                  {/* Project name */}
+                  <p className="text-xs font-semibold text-slate-800">
+                    {tx(u.building.phase.project.name)}
+                  </p>
+
+                  {/* Location line */}
+                  <p className="text-2xs text-slate-400">
+                    {u.building.phase.project.city}
+                    {' · '}
+                    <CodeText>{u.building.name}</CodeText>
+                  </p>
+
+                  {/* Specs + price */}
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-2xs text-slate-500 tabular-nums">
+                      {u.area} م² · {u.bedrooms} غرف · {u.bathrooms} حمامات · دور {u.floor}
+                    </p>
+                    <p className="font-bold text-slate-900 tabular-nums text-sm shrink-0">
+                      {formatCurrency(u.price)}
+                    </p>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+
+            {/* ── Desktop table (≥ sm) ─────────────────────────────────────── */}
+            <div className="hidden sm:block overflow-x-auto scrollbar-thin">
+              <table className="w-full text-sm">
+                <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="text-start font-semibold py-3 ps-5 pe-4">الوحدة</th>
+                    <th className="text-start font-semibold py-3 px-4">الموقع والمشروع</th>
+                    <th className="text-start font-semibold py-3 px-4">المواصفات</th>
+                    <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">السعر</th>
+                    <th className="text-start font-semibold py-3 px-4">الحالة</th>
+                    <th className="py-3 ps-4 pe-5 w-px"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((u) => (
+                    <tr
+                      key={u.id}
+                      className="border-t border-hairline hover:bg-surface-muted/40 transition-colors align-top"
+                    >
+                      {/* 1 — Unit (primary identity) */}
+                      <td className="py-3 ps-5 pe-4">
+                        <p className="font-bold text-slate-900 text-sm">
+                          <CodeText>{u.code}</CodeText>
+                        </p>
+                        <p className="mt-0.5">
+                          <CodeText className="text-xs text-slate-500 uppercase tracking-wide">{u.type}</CodeText>
+                        </p>
+                      </td>
+
+                      {/* 2 — Project / Location */}
+                      <td className="py-3 px-4">
+                        <p className="font-semibold text-slate-800 text-xs">
+                          {tx(u.building.phase.project.name)}
+                        </p>
+                        <p className="text-2xs text-slate-500 mt-0.5">
+                          {u.building.phase.project.city}
+                        </p>
+                        <p className="mt-0.5">
+                          <CodeText className="text-2xs text-slate-400">{u.building.name}</CodeText>
+                        </p>
+                      </td>
+
+                      {/* 3 — Specs (compact two-line) */}
+                      <td className="py-3 px-4">
+                        <p className="text-xs font-semibold text-slate-700 tabular-nums">
+                          {u.area} م²
+                        </p>
+                        <p className="text-2xs text-slate-500 mt-0.5 whitespace-nowrap">
+                          {u.bedrooms} غرف · {u.bathrooms} حمامات · دور {u.floor}
+                        </p>
+                      </td>
+
+                      {/* 4 — Price */}
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <p className="font-bold text-slate-900 tabular-nums text-sm">
+                          {formatCurrency(u.price)}
+                        </p>
+                      </td>
+
+                      {/* 5 — Status + Eligibility (merged) */}
+                      <td className="py-3 px-4">
+                        <UnitStatusBadge status={u.status} />
+                        <p className="text-2xs text-slate-400 mt-1.5 flex items-center gap-1">
+                          <ShieldCheck className="h-3 w-3 text-brand-400 shrink-0" />
+                          {ACCESS_LABEL[u.accessSource]}
+                        </p>
+                      </td>
+
+                      {/* 6 — Action */}
+                      <td className="py-3 ps-4 pe-5">
+                        {u.status === 'AVAILABLE' && (
+                          <Link href="/portal/reservations/new">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              leftIcon={<BookmarkPlus className="h-3.5 w-3.5" />}
+                            >
+                              احجز
+                            </Button>
+                          </Link>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         {paged && paged.meta.total > PAGE_SIZE && (
           <Pagination
