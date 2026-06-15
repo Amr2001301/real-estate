@@ -13,8 +13,8 @@ interface Props {
   className?: string;
 }
 
-const SIZE = 152;
-const STROKE = 18;
+const SIZE = 124;
+const STROKE = 16;
 const RADIUS = (SIZE - STROKE) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
@@ -37,7 +37,7 @@ export function LeadSourceDonut({
   });
 
   return (
-    <div className={cn('flex flex-col items-center gap-3 py-1', className)}>
+    <div className={cn('flex flex-col items-center gap-2.5', className)}>
       <div className="relative" style={{ width: SIZE, height: SIZE }}>
         <svg
           width={SIZE}
@@ -91,7 +91,9 @@ export function LeadSourceDonut({
               style={{ backgroundColor: s.color }}
             />
             <span className="font-medium text-slate-700">{s.label}</span>
-            <span className="ms-auto text-slate-500 tabular-nums">{s.value}%</span>
+            <span className="ms-auto text-slate-500 tabular-nums">
+              {Math.round((s.value / total) * 100)}%
+            </span>
           </li>
         ))}
       </ul>

@@ -3,14 +3,13 @@ import {
   Home,
   Zap,
   CalendarCheck2,
-  Receipt,
-  Wrench,
-  AlertCircle,
   Clock,
   Plus,
   Users,
   UserCheck,
+  AlertCircle,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
@@ -22,8 +21,8 @@ import { ChartPanel } from '@/components/dashboard/chart-panel';
 import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-chart';
 import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
 import { ActivityTable } from '@/components/dashboard/activity-table';
-import { OperationalPanel } from '@/components/dashboard/operational-panel';
 import { GenerateReportButton } from '@/components/dashboard/generate-report-button';
+import { ActionQueue } from './_components/action-queue';
 import { SalesDashboard } from './_components/sales-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
 
@@ -73,12 +72,23 @@ function activityHref(type: string, id: string): string | undefined {
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins = Math.round(diffMs / 60000);
-  if (mins < 1) return 'الآن';
+  if (mins < 1)  return 'الآن';
   if (mins < 60) return `منذ ${mins} دقيقة`;
   const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `منذ ${hrs} ساعة`;
+  if (hrs < 24)  return `منذ ${hrs} ساعة`;
   const days = Math.round(hrs / 24);
   return `منذ ${days} يوم`;
+}
+
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+        {children}
+      </span>
+      <div className="flex-1 h-px bg-hairline" />
+    </div>
+  );
 }
 
 function EmptyBlock({ message }: { message: string }) {
@@ -104,42 +114,46 @@ export default async function DashboardHome() {
     safe(api.get<{ meta: { total: number } }>('/users?role=CUSTOMER&pageSize=1')),
     safe(api.get<{ meta: { total: number } }>('/users?role=ADMIN,SALES,SALES_MANAGER,MAINTENANCE_SUPERVISOR&pageSize=1')),
   ]);
-  const summary = r.data;
-  const error = r.error;
+
+  const summary        = r.data;
+  const error          = r.error;
   const totalCustomers = customersRes.data?.meta.total ?? 0;
-  const totalTeam = teamRes.data?.meta.total ?? 0;
+  const totalTeam      = teamRes.data?.meta.total ?? 0;
 
   const leadSlices = (summary?.leadSources ?? []).map((s, i) => ({
     label: s.source,
     value: s.count,
     color: DONUT_COLORS[i % DONUT_COLORS.length]!,
   }));
-  const leadTotal = leadSlices.reduce((sum, s) => sum + s.value, 0);
-  const topSource = summary?.leadSources?.[0];
+  const leadTotal   = leadSlices.reduce((sum, s) => sum + s.value, 0);
+  const topSource   = summary?.leadSources?.[0];
   const donutCenter =
-    topSource && leadTotal > 0 ? `${Math.round((topSource.count / leadTotal) * 100)}%` : undefined;
+    topSource && leadTotal > 0
+      ? `${Math.round((topSource.count / leadTotal) * 100)}%`
+      : undefined;
 
   const trendData = (summary?.reservationTrend ?? []).map((t) => ({
     month: t.label,
     value: t.value,
   }));
 
-  const a = summary?.alerts;
-
   const activityRows = (summary?.recentActivity ?? []).map((it) => ({
-    id: it.id,
-    user: it.title,
+    id:     it.id,
+    user:   it.title,
     action: it.action,
     entity: it.context ?? '—',
-    time: relativeTime(it.createdAt),
-    href: activityHref(it.type, it.id),
+    time:   relativeTime(it.createdAt),
+    href:   activityHref(it.type, it.id),
+    type:   it.type,
   }));
 
   return (
     <div className="space-y-5">
+
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
       <PageHeader
-        title="مرحبًا بك في ديفورا"
-        description="تابع أداء محفظتك العقارية وعمليات فريقك من لوحة واحدة."
+        title="لوحة التحكم"
+        description="نظرة عامة على أداء المنصة والإجراءات التشغيلية المعلقة."
         actions={
           <>
             <GenerateReportButton />
@@ -152,6 +166,7 @@ export default async function DashboardHome() {
         }
       />
 
+      {/* ── Error banner ────────────────────────────────────────────────────── */}
       {error && (
         <div className="rounded-2xl bg-warning-50 text-warning-700 p-4 text-sm flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -162,24 +177,60 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {/* KPI strip — 4-col desktop, 2-col mobile */}
+      {/* ── 1. Action Queue — operational items requiring attention ─────────── */}
+      <ActionQueue alerts={summary?.alerts} />
+
+      {/* ── 2. Business KPIs ────────────────────────────────────────────────── */}
       {summary && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Row 1 */}
-          <PageKpiCard label="إجمالي المشاريع"   value={summary.kpis.projects}       icon={<Building2 />}    tone="brand"   />
-          <PageKpiCard label="الوحدات المتاحة"   value={summary.kpis.availableUnits} sub={`من إجمالي ${summary.kpis.totalUnits}`} icon={<Home />} tone="info" />
-          <PageKpiCard label="الحجوزات النشطة"   value={summary.kpis.reservedUnits}  icon={<CalendarCheck2 />} tone="success" />
-          <PageKpiCard label="إجمالي العملاء"    value={totalCustomers}              icon={<UserCheck />}    tone="teal"    />
-          {/* Row 2 */}
-          <PageKpiCard label="الفرص الجديدة"     value={summary.kpis.newLeadsThisMonth} sub={summary.kpis.newLeadsThisMonth > 0 ? 'هذا الشهر' : undefined} icon={<Zap />} tone="accent" />
-          <PageKpiCard label="ودائع معلقة"       value={summary.kpis.pendingDeposits} icon={<Receipt />}     tone="warning" />
-          <PageKpiCard label="طلبات صيانة مفتوحة" value={summary.kpis.openMaintenance} icon={<Wrench />}    tone="danger"  />
-          <PageKpiCard label="أعضاء الفريق"      value={totalTeam}                   icon={<Users />}       tone="purple"  />
+        <div className="space-y-2.5">
+          <SectionLabel>نظرة الأعمال</SectionLabel>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <PageKpiCard
+              label="إجمالي المشاريع"
+              value={summary.kpis.projects}
+              icon={<Building2 />}
+              tone="brand"
+            />
+            <PageKpiCard
+              label="الوحدات المتاحة"
+              value={summary.kpis.availableUnits}
+              sub={`من إجمالي ${summary.kpis.totalUnits}`}
+              icon={<Home />}
+              tone="info"
+            />
+            <PageKpiCard
+              label="الحجوزات النشطة"
+              value={summary.kpis.reservedUnits}
+              icon={<CalendarCheck2 />}
+              tone="success"
+            />
+            <PageKpiCard
+              label="العملاء الحاليون"
+              value={totalCustomers}
+              icon={<UserCheck />}
+              tone="teal"
+            />
+            <PageKpiCard
+              label="الفرص الجديدة"
+              value={summary.kpis.newLeadsThisMonth}
+              sub="هذا الشهر"
+              icon={<Zap />}
+              tone="accent"
+            />
+            <PageKpiCard
+              label="أعضاء الفريق"
+              value={totalTeam}
+              icon={<Users />}
+              tone="purple"
+            />
+          </div>
         </div>
       )}
 
-      {/* Row 2: Sales chart (2-col) + Lead Source Donut (1-col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* ── 3. Charts row ───────────────────────────────────────────────────── */}
+      <div className="space-y-2.5">
+        <SectionLabel>تحليل الأداء</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <ChartPanel
           title="أداء المبيعات الشهري"
           description="الحجوزات المسجلة — آخر 6 أشهر"
@@ -198,42 +249,50 @@ export default async function DashboardHome() {
         </ChartPanel>
 
         <ChartPanel
-          title="توزيع العملاء المحتملين"
-          description="حسب مصدر القناة"
+          title="مصادر الفرص"
+          description="توزيع العملاء المحتملين حسب القناة"
         >
           {leadSlices.length > 0 ? (
-            <LeadSourceDonut slices={leadSlices} centerLabel={donutCenter} centerSub={topSource?.source} />
+            <LeadSourceDonut
+              slices={leadSlices}
+              centerLabel={donutCenter}
+              centerSub={topSource?.source}
+            />
           ) : (
             <EmptyBlock message="لا توجد بيانات كافية" />
           )}
         </ChartPanel>
+        </div>
       </div>
 
-      {/* Row 3: Activity (2-col) + Operational Panel side column (1-col) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-        {/* Latest Activity — primary wide card */}
-        <Card className="overflow-hidden lg:col-span-2">
-          <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
-            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">آخر النشاطات</h3>
-            <Link
-              href={'/dashboard/audit' as never}
-              className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-brand-700 hover:bg-brand-50 hover:text-brand-800 transition-colors"
-            >
-              عرض الكل
-            </Link>
-          </div>
-          <div className="p-4 sm:p-5">
-            {activityRows.length > 0 ? (
-              <ActivityTable rows={activityRows} />
-            ) : (
-              <EmptyBlock message="لا توجد بيانات كافية" />
+      {/* ── 4. Recent Activity — compact, full-width ─────────────────────────── */}
+      <Card className="overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3 border-b border-hairline">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-slate-800 tracking-tight">
+              آخر النشاطات
+            </h3>
+            {activityRows.length > 0 && (
+              <span className="inline-flex items-center h-5 px-1.5 rounded-full bg-slate-100 text-slate-500 text-2xs font-semibold">
+                {activityRows.length}
+              </span>
             )}
           </div>
-        </Card>
-
-        {/* Side column: Operational Panel (consolidates alerts — same data source) */}
-        <OperationalPanel alerts={a} />
-      </div>
+          <Link
+            href={'/dashboard/audit' as never}
+            className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold text-brand-700 hover:bg-brand-50 hover:text-brand-800 transition-colors"
+          >
+            عرض الكل
+          </Link>
+        </div>
+        <div className="px-5 py-1">
+          {activityRows.length > 0 ? (
+            <ActivityTable rows={activityRows} compact />
+          ) : (
+            <EmptyBlock message="لا توجد بيانات كافية" />
+          )}
+        </div>
+      </Card>
 
     </div>
   );
