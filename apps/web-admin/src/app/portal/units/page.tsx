@@ -14,13 +14,12 @@ import { tx, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { CodeText } from '@/components/ui/code-text';
 import { UnitStatusBadge } from '@/components/badges';
+import { UnitsFilterBar } from '@/components/broker/units-filter-bar';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -107,80 +106,7 @@ export default async function PortalUnitsPage({
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
-        method="get"
-        action="/portal/units"
-        className="rounded-xl border border-hairline bg-white p-3 shadow-xs grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2"
-      >
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
-          <option value="">كل المشاريع</option>
-          {projects.map((p) => (
-            <option key={p.project.id} value={p.project.id}>
-              {tx(p.project.name)}
-            </option>
-          ))}
-        </Select>
-
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
-          <option value="">كل الحالات</option>
-          <option value="AVAILABLE">متاحة</option>
-          <option value="RESERVED">محجوزة</option>
-          <option value="SOLD">مباعة</option>
-        </Select>
-
-        <Select name="type" inputSize="sm" defaultValue={sp.type ?? ''}>
-          <option value="">كل الأنواع</option>
-          {typeOptions.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </Select>
-
-        <Select name="bedrooms" inputSize="sm" defaultValue={sp.bedrooms ?? ''}>
-          <option value="">عدد الغرف</option>
-          {[1, 2, 3, 4, 5].map((n) => (
-            <option key={n} value={String(n)}>{n} غرف</option>
-          ))}
-        </Select>
-
-        <Input
-          inputSize="sm"
-          name="minPrice"
-          type="number"
-          min={0}
-          placeholder="سعر من"
-          defaultValue={sp.minPrice ?? ''}
-        />
-        <Input
-          inputSize="sm"
-          name="maxPrice"
-          type="number"
-          min={0}
-          placeholder="سعر إلى"
-          defaultValue={sp.maxPrice ?? ''}
-        />
-        <Input
-          inputSize="sm"
-          name="q"
-          placeholder="رمز الوحدة"
-          defaultValue={sp.q ?? ''}
-          className="md:col-span-2"
-        />
-        <Select name="bathrooms" inputSize="sm" defaultValue={sp.bathrooms ?? ''}>
-          <option value="">عدد الحمامات</option>
-          {[1, 2, 3, 4].map((n) => (
-            <option key={n} value={String(n)}>{n}</option>
-          ))}
-        </Select>
-
-        <div className="col-span-2 md:col-span-1 flex items-center gap-1.5 justify-end ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.projectId || sp.status || sp.type || sp.q || sp.minPrice || sp.maxPrice || sp.bedrooms || sp.bathrooms) && (
-            <Link href="/portal/units">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+      <UnitsFilterBar projects={projects} typeOptions={typeOptions} sp={sp} />
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
