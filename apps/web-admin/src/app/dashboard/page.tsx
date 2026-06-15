@@ -1,14 +1,9 @@
 import {
-  Building2,
-  Home,
-  Zap,
-  FileSignature,
   Clock,
   Plus,
-  Users,
-  UserCheck,
   AlertCircle,
   Activity,
+  Building2,
   ArrowUpRight,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -23,9 +18,7 @@ import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-
 import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
 import { ActivityTable } from '@/components/dashboard/activity-table';
 import { GenerateReportButton } from '@/components/dashboard/generate-report-button';
-import { FunnelBar } from '@/components/dashboard/funnel-bar';
-import { FinancialPanel } from '@/components/dashboard/financial-panel';
-import { KpiStrip } from '@/components/dashboard/kpi-strip';
+import { PlatformSummaryCard } from '@/components/dashboard/platform-summary';
 import { ProjectPerformanceTable } from '@/components/dashboard/project-performance-table';
 import { ActionQueue } from './_components/action-queue';
 import { SalesDashboard } from './_components/sales-home';
@@ -168,7 +161,7 @@ export default async function DashboardHome() {
     value: t.value,
   }));
 
-  // Activity feed — strip "type:" prefix from IDs before building route hrefs
+  // Activity feed — strip "type:" prefix from compound IDs
   const activityRows = (summary?.recentActivity ?? []).map((it) => {
     const rawId = it.id.includes(':') ? it.id.split(':').slice(1).join(':') : it.id;
     return {
@@ -182,23 +175,7 @@ export default async function DashboardHome() {
     };
   });
 
-  const fin        = summary?.financial;
-  const hasFin     = fin != null;
-  const funnel     = summary?.funnel;
-  const hasFunnel  = funnel != null && funnel.leads > 0;
   const topProjects = summary?.topProjects ?? [];
-
-  // Compact KPI strip items
-  const kpiItems = kpis
-    ? [
-        { label: 'المشاريع',         value: kpis.projects },
-        { label: 'وحدات متاحة',     value: kpis.availableUnits, sub: `محجوز ${kpis.reservedUnits} · مباع ${kpis.soldUnits ?? 0}` },
-        { label: 'عقود موقعة',      value: kpis.signedContracts ?? 0 },
-        { label: 'العملاء النشطون', value: kpis.totalCustomers ?? 0 },
-        { label: 'فرص جديدة',       value: kpis.newLeadsThisMonth, sub: 'هذا الشهر' },
-        { label: 'الفريق',          value: kpis.totalTeam ?? 0 },
-      ]
-    : [];
 
   return (
     <div className="space-y-5">
@@ -230,41 +207,25 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {/* ── 1. Executive Operations Panel ───────────────────────────────────── */}
-      {/* Action Required (primary, right) + Financial Snapshot (secondary, left) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-4">
-        <div className="lg:col-span-8">
-          <ActionQueue alerts={summary?.alerts} />
-        </div>
-        {hasFin && (
-          <div className="lg:col-span-4">
-            <FinancialPanel financial={fin!} />
-          </div>
-        )}
+      {/* ── 1. Action Required — 4 direct cards ─────────────────────────────── */}
+      <div className="space-y-2.5">
+        <SectionLabel>يتطلب اتخاذ إجراء</SectionLabel>
+        <ActionQueue alerts={summary?.alerts} />
       </div>
 
-      {/* ── 2. Business KPI Strip ───────────────────────────────────────────── */}
-      {kpiItems.length > 0 && (
+      {/* ── 2. Platform Summary — one unified card ───────────────────────────── */}
+      {kpis && (
         <div className="space-y-2.5">
-          <SectionLabel>نظرة الأعمال</SectionLabel>
-          <KpiStrip items={kpiItems} />
-        </div>
-      )}
-
-      {/* ── 3. Conversion Funnel ────────────────────────────────────────────── */}
-      {hasFunnel && (
-        <div className="space-y-2.5">
-          <SectionLabel>مسار التحويل</SectionLabel>
-          <FunnelBar
-            leads={funnel!.leads}
-            visits={funnel!.visits}
-            reservations={funnel!.reservations}
-            contracts={funnel!.contracts}
+          <SectionLabel>ملخص المنصة</SectionLabel>
+          <PlatformSummaryCard
+            kpis={kpis}
+            financial={summary?.financial}
+            funnel={summary?.funnel}
           />
         </div>
       )}
 
-      {/* ── 4. Analytics ────────────────────────────────────────────────────── */}
+      {/* ── 3. Analytics ─────────────────────────────────────────────────────── */}
       <div className="space-y-2.5">
         <SectionLabel>تحليل الأداء</SectionLabel>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -302,10 +263,10 @@ export default async function DashboardHome() {
         </div>
       </div>
 
-      {/* ── 5. Projects (right) + Activity Feed (left) ──────────────────────── */}
+      {/* ── 4. Project Performance + Recent Activity ─────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-4">
 
-        {/* Project Performance — primary column */}
+        {/* Projects — wider column */}
         <Card className="lg:col-span-7 p-0 overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-hairline bg-slate-50/60">
             <div className="flex items-center gap-2.5">
@@ -326,7 +287,7 @@ export default async function DashboardHome() {
           }
         </Card>
 
-        {/* Recent Activity — vertical feed */}
+        {/* Activity feed — narrower column */}
         <Card className="lg:col-span-5 p-0 overflow-hidden">
           <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-hairline bg-slate-50/60">
             <div className="flex items-center gap-2.5">
@@ -356,7 +317,6 @@ export default async function DashboardHome() {
         </Card>
 
       </div>
-
     </div>
   );
 }
