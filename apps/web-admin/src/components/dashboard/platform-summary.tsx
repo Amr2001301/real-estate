@@ -16,13 +16,13 @@ import { formatCompact } from '@/lib/format';
 import { Card } from '@/components/ui/card';
 
 interface Kpis {
-  projects:          number;
-  availableUnits:    number;
-  reservedUnits:     number;
-  soldUnits:         number;
-  signedContracts:   number;
-  totalCustomers:    number;
-  totalTeam:         number;
+  projects:        number;
+  availableUnits:  number;
+  reservedUnits:   number;
+  soldUnits:       number;
+  signedContracts: number;
+  totalCustomers:  number;
+  totalTeam:       number;
 }
 
 interface Financial {
@@ -46,7 +46,7 @@ interface Props {
   funnel?:    Funnel;
 }
 
-function pct(num: number, denom: number): string | null {
+function convPct(num: number, denom: number): string | null {
   if (denom <= 0) return null;
   return `${Math.round((num / denom) * 100)}%`;
 }
@@ -61,7 +61,18 @@ export function PlatformSummaryCard({ kpis, financial, funnel }: Props) {
     : null;
   const pendingLiabilities = hasFin ? financial.pendingBonus + financial.pendingBrokerPayouts : 0;
 
-  const finItems = hasFin ? [
+  // ── Business metrics strip ─────────────────────────────────────────────────
+  const businessMetrics: Array<{ label: string; value: number; sub?: string }> = [
+    { label: 'مشاريع',      value: kpis.projects       },
+    { label: 'وحدات متاحة', value: kpis.availableUnits, sub: `محجوز ${kpis.reservedUnits} · مباع ${kpis.soldUnits}` },
+    { label: 'عقود موقعة',  value: kpis.signedContracts },
+    { label: 'العملاء',     value: kpis.totalCustomers  },
+    { label: 'الفريق',      value: kpis.totalTeam       },
+  ];
+
+  // ── Financial items ────────────────────────────────────────────────────────
+  interface FinItem { label: string; value: string; sub?: string; icon: React.ReactNode; iconCn: string; valueCn: string; }
+  const finItems: FinItem[] = hasFin ? [
     {
       label:   'إجمالي قيمة العقود',
       value:   formatCompact(financial.totalContractValue),
@@ -94,75 +105,95 @@ export function PlatformSummaryCard({ kpis, financial, funnel }: Props) {
       iconCn:  pendingLiabilities > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400',
       valueCn: pendingLiabilities > 0 ? 'text-amber-700' : 'text-slate-400',
     },
-  ] as const : [];
+  ] : [];
 
-  // ── Funnel derived ─────────────────────────────────────────────────────────
-  const funnelStages = hasFunnel
-    ? [
-        { key: 'leads',        label: 'فرص المبيعات', value: funnel!.leads,        icon: <Users />,          iconBg: 'bg-purple-50 text-purple-600',   bar: 'bg-purple-400'   },
-        { key: 'visits',       label: 'الزيارات',      value: funnel!.visits,       icon: <CalendarCheck2 />, iconBg: 'bg-info-50 text-info-600',       bar: 'bg-info-400'     },
-        { key: 'reservations', label: 'الحجوزات',      value: funnel!.reservations, icon: <BookmarkCheck />,  iconBg: 'bg-brand-50 text-brand-600',     bar: 'bg-brand-400'    },
-        { key: 'contracts',    label: 'العقود الموقعة', value: funnel!.contracts,   icon: <FileText />,       iconBg: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-400'  },
-      ]
-    : [];
+  // ── Funnel stages ──────────────────────────────────────────────────────────
+  const funnelStages = hasFunnel ? [
+    { key: 'leads',        label: 'فرص المبيعات',  value: funnel!.leads,        icon: <Users />,          iconBg: 'bg-purple-50 text-purple-600',   bar: 'bg-purple-400'   },
+    { key: 'visits',       label: 'الزيارات',       value: funnel!.visits,       icon: <CalendarCheck2 />, iconBg: 'bg-info-50 text-info-600',       bar: 'bg-info-400'     },
+    { key: 'reservations', label: 'الحجوزات',       value: funnel!.reservations, icon: <BookmarkCheck />,  iconBg: 'bg-brand-50 text-brand-600',     bar: 'bg-brand-400'    },
+    { key: 'contracts',    label: 'العقود الموقعة', value: funnel!.contracts,    icon: <FileText />,       iconBg: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-400'  },
+  ] : [];
 
-  const funnelMax   = Math.max(...funnelStages.map((s) => s.value), 1);
-  const convRates   = hasFunnel
-    ? [
-        pct(funnel!.visits,       funnel!.leads),
-        pct(funnel!.reservations, funnel!.visits),
-        pct(funnel!.contracts,    funnel!.reservations),
-      ]
-    : [];
+  const funnelMax  = Math.max(...funnelStages.map((s) => s.value), 1);
+  const convRates  = hasFunnel ? [
+    convPct(funnel!.visits,       funnel!.leads),
+    convPct(funnel!.reservations, funnel!.visits),
+    convPct(funnel!.contracts,    funnel!.reservations),
+  ] : [];
 
   return (
     <Card className="p-0 overflow-hidden">
-      {/* ── Card header ───────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2.5 px-5 py-3 border-b border-hairline bg-slate-50/60">
-        <div className="h-7 w-7 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
-          <LayoutDashboard className="h-3.5 w-3.5 text-brand-600" />
+
+      {/* ── Card header ─────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline bg-slate-50/60">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+            <LayoutDashboard className="h-4 w-4 text-brand-600" />
+          </div>
+          <div>
+            <h2 className="text-sm font-bold text-slate-900 leading-none">ملخص المنصة</h2>
+            <p className="text-[10px] text-slate-400 mt-0.5 leading-none">
+              نظرة مركزة على حالة الأعمال، الماليات، ومسار التحويل
+            </p>
+          </div>
         </div>
-        <h2 className="text-sm font-bold text-slate-900">ملخص المنصة</h2>
+        <span className="inline-flex items-center gap-1.5 h-6 px-2.5 rounded-full bg-success-50 border border-success-100 text-success-700 text-[9px] font-semibold shrink-0">
+          <span className="h-1.5 w-1.5 rounded-full bg-success-400 animate-pulse shrink-0" />
+          بيانات حية
+        </span>
       </div>
 
-      {/* ── Zone A: Business metrics strip ────────────────────────────────── */}
-      <div className="grid grid-cols-5 gap-px bg-hairline border-b border-hairline">
-        {[
-          { label: 'مشاريع',       value: kpis.projects                                                         },
-          { label: 'وحدات متاحة',  value: kpis.availableUnits,  sub: `محجوز ${kpis.reservedUnits} · مباع ${kpis.soldUnits}` },
-          { label: 'عقود موقعة',   value: kpis.signedContracts                                                  },
-          { label: 'العملاء',      value: kpis.totalCustomers                                                   },
-          { label: 'الفريق',       value: kpis.totalTeam                                                        },
-        ].map((m) => (
-          <div key={m.label} className="bg-white px-3 py-3.5 text-center">
-            <p className="text-2xl font-extrabold text-slate-900 tabular-nums leading-none">{m.value}</p>
-            {'sub' in m && m.sub && (
-              <p className="text-[9px] text-slate-400 mt-0.5 leading-none truncate">{m.sub}</p>
+      {/* ── Zone A: Business metrics ─────────────────────────────────────────── */}
+      <div className="flex items-stretch border-b border-hairline">
+        {businessMetrics.map((m, i) => (
+          <div
+            key={m.label}
+            className={cn(
+              'flex-1 flex flex-col items-center justify-center px-4 py-5 text-center min-w-0 bg-white',
+              i > 0 && 'border-s border-hairline',
             )}
-            <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-1 leading-none truncate">
+          >
+            <p className="text-2xl font-extrabold text-slate-900 tabular-nums leading-none">
+              {m.value}
+            </p>
+            {m.sub && (
+              <p className="text-[9px] text-slate-400 mt-1 leading-none truncate max-w-full">
+                {m.sub}
+              </p>
+            )}
+            <p className="text-[10px] text-slate-400 font-semibold mt-1.5 leading-none">
               {m.label}
             </p>
           </div>
         ))}
       </div>
 
-      {/* ── Zone B: Financial snapshot ────────────────────────────────────── */}
+      {/* ── Zone B: Financial snapshot ───────────────────────────────────────── */}
       {hasFin && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline border-b border-hairline">
-          {finItems.map((f) => (
-            <div key={f.label} className="bg-white px-4 py-3">
-              <div className="flex items-center gap-1.5 mb-1.5">
+        <div className="flex items-stretch border-b border-hairline overflow-x-auto">
+          {finItems.map((f, i) => (
+            <div
+              key={f.label}
+              className={cn(
+                'flex-1 min-w-[130px] px-5 py-4 bg-white',
+                i > 0 && 'border-s border-hairline',
+              )}
+            >
+              <div className="flex items-center gap-1.5 mb-2">
                 <span
                   className={cn(
-                    'inline-flex h-5 w-5 items-center justify-center rounded-md [&_svg]:h-3 [&_svg]:w-3 shrink-0',
+                    'inline-flex h-6 w-6 items-center justify-center rounded-lg [&_svg]:h-3 [&_svg]:w-3 shrink-0',
                     f.iconCn,
                   )}
                 >
                   {f.icon}
                 </span>
-                <p className="text-[10px] text-slate-500 font-semibold leading-none truncate">{f.label}</p>
+                <p className="text-[10px] text-slate-500 font-semibold leading-none truncate">
+                  {f.label}
+                </p>
               </div>
-              <p className={cn('text-sm font-extrabold tabular-nums leading-none', f.valueCn)}>
+              <p className={cn('text-base font-extrabold tabular-nums leading-none', f.valueCn)}>
                 {f.value}
               </p>
               {f.sub && (
@@ -173,12 +204,11 @@ export function PlatformSummaryCard({ kpis, financial, funnel }: Props) {
         </div>
       )}
 
-      {/* ── Zone C: Conversion pipeline ──────────────────────────────────── */}
+      {/* ── Zone C: Conversion pipeline ──────────────────────────────────────── */}
       {hasFunnel && (
         <div className="flex items-center px-5 py-4">
           {funnelStages.map((stage, i) => (
             <Fragment key={stage.key}>
-              {/* Stage */}
               <div className="flex-1 flex flex-col items-center text-center">
                 <span
                   className={cn(
@@ -191,8 +221,9 @@ export function PlatformSummaryCard({ kpis, financial, funnel }: Props) {
                 <p className="text-xl font-extrabold text-slate-900 tabular-nums leading-none">
                   {stage.value.toLocaleString('ar-SA')}
                 </p>
-                <p className="text-[10px] font-semibold text-slate-500 mt-1 leading-none">{stage.label}</p>
-                {/* Proportional mini bar */}
+                <p className="text-[10px] font-semibold text-slate-500 mt-1 leading-none">
+                  {stage.label}
+                </p>
                 <div className="mt-2 h-1 w-full rounded-full bg-slate-100 overflow-hidden">
                   <div
                     className={cn('h-full rounded-full transition-all duration-500', stage.bar)}
@@ -201,7 +232,6 @@ export function PlatformSummaryCard({ kpis, financial, funnel }: Props) {
                 </div>
               </div>
 
-              {/* Connector between stages */}
               {i < funnelStages.length - 1 && (
                 <div className="flex flex-col items-center gap-0.5 px-2 shrink-0 mb-3">
                   {convRates[i] && (
@@ -216,6 +246,7 @@ export function PlatformSummaryCard({ kpis, financial, funnel }: Props) {
           ))}
         </div>
       )}
+
     </Card>
   );
 }

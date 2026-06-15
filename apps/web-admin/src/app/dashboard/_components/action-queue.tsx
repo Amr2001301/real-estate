@@ -24,6 +24,7 @@ const TONE: Record<Tone, {
   iconInactive: string;
   count:        string;
   bar:          string;
+  badge:        string;
   hover:        string;
 }> = {
   danger: {
@@ -31,6 +32,7 @@ const TONE: Record<Tone, {
     iconInactive: 'bg-slate-50 text-slate-300 ring-slate-100',
     count:        'text-danger-700',
     bar:          'bg-danger-400',
+    badge:        'bg-danger-50 text-danger-700',
     hover:        'group-hover:border-danger-200 group-hover:shadow-card',
   },
   warning: {
@@ -38,6 +40,7 @@ const TONE: Record<Tone, {
     iconInactive: 'bg-slate-50 text-slate-300 ring-slate-100',
     count:        'text-amber-700',
     bar:          'bg-amber-400',
+    badge:        'bg-amber-50 text-amber-700',
     hover:        'group-hover:border-amber-200 group-hover:shadow-card',
   },
   info: {
@@ -45,6 +48,7 @@ const TONE: Record<Tone, {
     iconInactive: 'bg-slate-50 text-slate-300 ring-slate-100',
     count:        'text-info-700',
     bar:          'bg-info-400',
+    badge:        'bg-info-50 text-info-700',
     hover:        'group-hover:border-info-200 group-hover:shadow-card',
   },
 };
@@ -102,12 +106,17 @@ function buildItems(a: AlertData | null | undefined): ActionItem[] {
 
 export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }) {
   const items = buildItems(alerts);
+  const total = items.reduce((s, i) => s + i.value, 0);
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {items.map((item) => {
-        const t       = TONE[item.tone];
-        const active  = item.value > 0;
+        const t      = TONE[item.tone];
+        const active = item.value > 0;
+        const pct    = total > 0 && active
+          ? Math.max(1, Math.round((item.value / total) * 100))
+          : 0;
+
         return (
           <Link key={item.key} href={item.href as never} className="block group">
             <div
@@ -116,7 +125,7 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
                 t.hover,
               )}
             >
-              {/* Icon */}
+              {/* Top row: icon + percentage badge */}
               <div className="flex items-start justify-between gap-2 mb-3">
                 <div
                   className={cn(
@@ -126,6 +135,16 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
                 >
                   {item.icon}
                 </div>
+                {active && (
+                  <span
+                    className={cn(
+                      'inline-flex items-center h-5 px-1.5 rounded-full text-[9px] font-bold whitespace-nowrap',
+                      t.badge,
+                    )}
+                  >
+                    {pct}% من الإجراءات
+                  </span>
+                )}
               </div>
 
               {/* Count */}
@@ -148,14 +167,14 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
                 {item.description}
               </p>
 
-              {/* Bottom bar */}
+              {/* Bottom bar — width = share of total pending actions */}
               <div className="mt-2.5 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
                   className={cn(
                     'h-full rounded-full transition-all duration-500',
                     active ? t.bar : 'bg-transparent',
                   )}
-                  style={{ width: active ? '100%' : '0%' }}
+                  style={{ width: `${pct}%` }}
                 />
               </div>
             </div>
