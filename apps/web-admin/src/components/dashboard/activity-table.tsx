@@ -1,23 +1,36 @@
 'use client';
 
+import Link from 'next/link';
+import {
+  UserPlus,
+  BookmarkCheck,
+  FileText,
+  CalendarCheck2,
+  Wrench,
+  Banknote,
+  MessageSquare,
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
+import { CodeText } from '@/components/ui/code-text';
 
 export interface ActivityRow {
-  id: string;
-  user: string;
-  action: string;
-  entity: string;
-  time: string;
-  href?: string;
-  type?: string;
+  id:      string;
+  user:    string;
+  action:  string;
+  entity:  string;
+  time:    string;
+  href?:   string;
+  type?:   string;
 }
 
 interface Props {
-  rows: ActivityRow[];
+  rows:       ActivityRow[];
   className?: string;
-  compact?: boolean;
+  compact?:   boolean;
 }
+
+// ── Design tokens ─────────────────────────────────────────────────────────────
 
 const PALETTE = [
   'bg-brand-50 text-brand-700',
@@ -28,13 +41,24 @@ const PALETTE = [
   'bg-warning-50 text-warning-700',
 ];
 
-const TYPE_BADGE: Record<string, string> = {
-  reservation: 'bg-emerald-50 text-emerald-700',
-  deposit:     'bg-amber-50 text-amber-700',
-  contract:    'bg-brand-50 text-brand-700',
-  lead:        'bg-purple-50 text-purple-700',
-  maintenance: 'bg-danger-50 text-danger-700',
+type TypeMeta = { icon: React.ReactNode; bg: string; badge: string };
+
+const TYPE_META: Record<string, TypeMeta> = {
+  lead:         { icon: <UserPlus />,       bg: 'bg-purple-50 text-purple-600',   badge: 'bg-purple-50 text-purple-700'  },
+  reservation:  { icon: <BookmarkCheck />,  bg: 'bg-emerald-50 text-emerald-600', badge: 'bg-emerald-50 text-emerald-700'},
+  contract:     { icon: <FileText />,       bg: 'bg-brand-50 text-brand-600',     badge: 'bg-brand-50 text-brand-700'   },
+  visit:        { icon: <CalendarCheck2 />, bg: 'bg-info-50 text-info-600',       badge: 'bg-info-50 text-info-700'     },
+  maintenance:  { icon: <Wrench />,         bg: 'bg-danger-50 text-danger-600',   badge: 'bg-danger-50 text-danger-700' },
+  deposit:      { icon: <Banknote />,       bg: 'bg-amber-50 text-amber-600',     badge: 'bg-amber-50 text-amber-700'   },
+  info_request: { icon: <MessageSquare />,  bg: 'bg-slate-100 text-slate-500',    badge: 'bg-slate-100 text-slate-600'  },
 };
+const FALLBACK_META: TypeMeta = {
+  icon:  <MessageSquare />,
+  bg:    'bg-slate-100 text-slate-500',
+  badge: 'bg-slate-100 text-slate-600',
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function firstLetter(name: string): string {
   return name.trim().charAt(0) || '·';
@@ -46,79 +70,98 @@ function paletteFor(name: string): string {
   return PALETTE[Math.abs(hash) % PALETTE.length]!;
 }
 
+function isCode(s: string): boolean {
+  return /^[A-Z0-9#\-\/]{3,}$/.test(s.trim());
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function ActivityTable({ rows, className, compact = false }: Props) {
   const router = useRouter();
 
-  /* ── Compact mode: feed list (no stretched table columns) ── */
+  /* ── Compact mode: vertical activity feed ── */
   if (compact) {
     return (
       <div className={cn('divide-y divide-hairline', className)}>
-        {rows.map((r) => (
-          <div
-            key={r.id}
-            className={cn(
-              'flex items-center gap-3 py-2 transition-colors duration-100 -mx-5 px-5',
-              r.href && 'cursor-pointer hover:bg-brand-50/40',
-            )}
-            onClick={r.href ? () => router.push(r.href!) : undefined}
-            role={r.href ? 'button' : undefined}
-            tabIndex={r.href ? 0 : undefined}
-            onKeyDown={r.href ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                router.push(r.href!);
-              }
-            } : undefined}
-          >
-            {/* Avatar */}
-            <span
-              className={cn(
-                'inline-flex h-6 w-6 items-center justify-center rounded-full font-bold text-[10px] shrink-0',
-                paletteFor(r.user),
-              )}
-            >
-              {firstLetter(r.user)}
-            </span>
+        {rows.map((r) => {
+          const meta      = TYPE_META[r.type ?? ''] ?? FALLBACK_META;
+          const hasEntity = r.entity !== '—';
+          const entityIsCode = hasEntity && isCode(r.entity);
 
-            {/* Name + badge + reference */}
-            <div className="flex flex-1 min-w-0 items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-slate-900 shrink-0 leading-none">
-                {r.user}
-              </span>
+          const rowBody = (
+            <>
+              {/* Type icon pill */}
               <span
                 className={cn(
-                  'inline-flex items-center h-[18px] px-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap shrink-0',
-                  TYPE_BADGE[r.type ?? ''] ?? 'bg-slate-100 text-slate-600',
+                  'inline-flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
+                  meta.bg,
                 )}
               >
-                {r.action}
+                {meta.icon}
               </span>
-              {r.entity !== '—' && (
-                <span className="text-[10px] text-slate-400 font-medium tabular-nums truncate">
-                  {r.entity}
-                </span>
-              )}
-            </div>
 
-            {/* Time */}
-            <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0 tabular-nums">
-              {r.time}
-            </span>
-          </div>
-        ))}
+              {/* Actor avatar */}
+              <span
+                className={cn(
+                  'inline-flex h-6 w-6 items-center justify-center rounded-full font-bold text-[10px] shrink-0',
+                  paletteFor(r.user),
+                )}
+              >
+                {firstLetter(r.user)}
+              </span>
+
+              {/* Sentence: actor + badge + entity */}
+              <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-bold text-slate-900 shrink-0 leading-none">{r.user}</span>
+                <span
+                  className={cn(
+                    'inline-flex items-center h-[17px] px-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap shrink-0',
+                    meta.badge,
+                  )}
+                >
+                  {r.action}
+                </span>
+                {hasEntity && (
+                  entityIsCode
+                    ? <CodeText className="text-[10px] text-slate-500 shrink-0">{r.entity}</CodeText>
+                    : <span className="text-2xs text-slate-500 truncate">{r.entity}</span>
+                )}
+              </div>
+
+              {/* Relative time */}
+              <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0 tabular-nums">
+                {r.time}
+              </span>
+            </>
+          );
+
+          if (r.href) {
+            return (
+              <Link
+                key={r.id}
+                href={r.href as never}
+                className="flex items-center gap-2.5 px-5 py-2.5 hover:bg-slate-50/80 transition-colors"
+              >
+                {rowBody}
+              </Link>
+            );
+          }
+          return (
+            <div key={r.id} className="flex items-center gap-2.5 px-5 py-2.5">
+              {rowBody}
+            </div>
+          );
+        })}
       </div>
     );
   }
 
   /* ── Default mode: full table ── */
-  const rowPy = 'py-3';
-  const avSize = 'h-8 w-8 text-xs';
-
   return (
     <div className={cn('w-full overflow-x-auto scrollbar-thin', className)}>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-2xs font-semibold uppercase tracking-wide text-slate-400">
+          <tr className="text-2xs font-semibold uppercase tracking-wide text-slate-400 border-b border-hairline">
             <th className="text-start font-semibold py-2 pe-4">المستخدم</th>
             <th className="text-start font-semibold py-2 pe-4">الإجراء</th>
             <th className="text-start font-semibold py-2 pe-4">المرجع</th>
@@ -126,50 +169,57 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <tr
-              key={r.id}
-              className={cn(
-                'border-t border-hairline transition-colors duration-100',
-                r.href && 'cursor-pointer hover:bg-brand-50/40',
-              )}
-              onClick={r.href ? () => router.push(r.href!) : undefined}
-              tabIndex={r.href ? 0 : undefined}
-              onKeyDown={r.href ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  router.push(r.href!);
-                }
-              } : undefined}
-            >
-              <td className={cn(rowPy, 'pe-4')}>
-                <div className="flex items-center gap-2">
+          {rows.map((r) => {
+            const meta = TYPE_META[r.type ?? ''] ?? FALLBACK_META;
+            return (
+              <tr
+                key={r.id}
+                className={cn(
+                  'border-t border-hairline transition-colors duration-100',
+                  r.href && 'cursor-pointer hover:bg-brand-50/40',
+                )}
+                onClick={r.href ? () => router.push(r.href!) : undefined}
+                tabIndex={r.href ? 0 : undefined}
+                onKeyDown={r.href ? (e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    router.push(r.href!);
+                  }
+                } : undefined}
+              >
+                <td className="py-3 pe-4">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={cn(
+                        'inline-flex h-8 w-8 items-center justify-center rounded-full font-bold text-xs shrink-0',
+                        paletteFor(r.user),
+                      )}
+                    >
+                      {firstLetter(r.user)}
+                    </span>
+                    <span className="font-medium text-slate-900 text-xs">{r.user}</span>
+                  </div>
+                </td>
+                <td className="py-3 pe-4">
                   <span
                     className={cn(
-                      'inline-flex items-center justify-center rounded-full font-bold shrink-0',
-                      avSize,
-                      paletteFor(r.user),
+                      'inline-flex items-center h-5 px-2 rounded-full text-2xs font-semibold whitespace-nowrap',
+                      meta.badge,
                     )}
                   >
-                    {firstLetter(r.user)}
+                    {r.action}
                   </span>
-                  <span className="font-medium text-slate-900 text-xs leading-snug">{r.user}</span>
-                </div>
-              </td>
-              <td className={cn(rowPy, 'pe-4')}>
-                <span
-                  className={cn(
-                    'inline-flex items-center h-5 px-2 rounded-full text-2xs font-semibold whitespace-nowrap',
-                    TYPE_BADGE[r.type ?? ''] ?? 'bg-slate-100 text-slate-600',
-                  )}
-                >
-                  {r.action}
-                </span>
-              </td>
-              <td className={cn(rowPy, 'pe-4 text-slate-500 text-xs font-medium tabular-nums')}>{r.entity}</td>
-              <td className={cn(rowPy, 'text-slate-400 text-2xs whitespace-nowrap')}>{r.time}</td>
-            </tr>
-          ))}
+                </td>
+                <td className="py-3 pe-4 text-slate-500 text-xs font-medium tabular-nums">
+                  {r.entity !== '—' && isCode(r.entity)
+                    ? <CodeText>{r.entity}</CodeText>
+                    : r.entity
+                  }
+                </td>
+                <td className="py-3 text-slate-400 text-2xs whitespace-nowrap">{r.time}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

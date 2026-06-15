@@ -7,9 +7,11 @@ import {
   CalendarCheck2,
   MessageSquare,
   CheckCircle2,
+  Bell,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { Card } from '@/components/ui/card';
 
 interface AlertData {
   contractsAwaitingSignature: number;
@@ -22,43 +24,33 @@ interface AlertData {
 
 type Tone = 'danger' | 'warning' | 'info';
 
-const TONE_LABEL: Record<Tone, string> = {
-  danger:  'عاجل',
-  warning: 'مراجعة',
-  info:    'للمتابعة',
-};
-
 const TONE: Record<Tone, {
-  border:  string;
-  iconBg:  string;
-  count:   string;
-  badge:   string;
-  bar:     string;
-  hover:   string;
+  iconBg: string;
+  count:  string;
+  bar:    string;
+  hover:  string;
+  border: string;
 }> = {
   danger: {
-    border: 'border-s-danger-400',
-    iconBg: 'bg-danger-50 text-danger-600',
+    iconBg: 'bg-danger-50 text-danger-600 ring-danger-100',
     count:  'text-danger-700',
-    badge:  'bg-danger-50 text-danger-600 ring-1 ring-inset ring-danger-100',
-    bar:    'bg-danger-300',
-    hover:  'hover:border-danger-200 hover:shadow-sm hover:bg-danger-50/20',
+    bar:    'bg-danger-400',
+    hover:  'hover:border-danger-200 hover:shadow-card',
+    border: 'border-hairline',
   },
   warning: {
-    border: 'border-s-amber-400',
-    iconBg: 'bg-amber-50 text-amber-600',
+    iconBg: 'bg-amber-50 text-amber-600 ring-amber-100',
     count:  'text-amber-700',
-    badge:  'bg-amber-50 text-amber-600 ring-1 ring-inset ring-amber-100',
-    bar:    'bg-amber-300',
-    hover:  'hover:border-amber-200 hover:shadow-sm hover:bg-amber-50/20',
+    bar:    'bg-amber-400',
+    hover:  'hover:border-amber-200 hover:shadow-card',
+    border: 'border-hairline',
   },
   info: {
-    border: 'border-s-info-400',
-    iconBg: 'bg-info-50 text-info-600',
+    iconBg: 'bg-info-50 text-info-600 ring-info-100',
     count:  'text-info-700',
-    badge:  'bg-info-50 text-info-600 ring-1 ring-inset ring-info-100',
-    bar:    'bg-info-300',
-    hover:  'hover:border-info-200 hover:shadow-sm hover:bg-info-50/20',
+    bar:    'bg-info-400',
+    hover:  'hover:border-info-200 hover:shadow-card',
+    border: 'border-hairline',
   },
 };
 
@@ -77,7 +69,7 @@ function buildItems(a: AlertData | null | undefined): ActionItem[] {
     {
       key:         'deposits',
       label:       'ودائع قيد المراجعة',
-      description: 'دفعات تحتاج تحققاً وقبولاً',
+      description: 'تحتاج تحققاً وقبولاً',
       value:       a?.depositsPendingReview ?? 0,
       href:        '/dashboard/deposits',
       tone:        'warning',
@@ -95,7 +87,7 @@ function buildItems(a: AlertData | null | undefined): ActionItem[] {
     {
       key:         'expiring',
       label:       'حجوزات تنتهي قريباً',
-      description: 'تنتهي خلال الأيام السبعة القادمة',
+      description: 'خلال الأيام السبعة القادمة',
       value:       a?.reservationsExpiringSoon ?? 0,
       href:        '/dashboard/reservations',
       tone:        'danger',
@@ -104,7 +96,7 @@ function buildItems(a: AlertData | null | undefined): ActionItem[] {
     {
       key:         'maintenance',
       label:       'طلبات صيانة مفتوحة',
-      description: 'طلبات لم تُعالج بعد',
+      description: 'لم تُعالج بعد',
       value:       a?.openMaintenance ?? 0,
       href:        '/dashboard/maintenance',
       tone:        'warning',
@@ -138,30 +130,29 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
   const hasActions  = activeItems.length > 0;
 
   return (
-    <section>
-      {/* Section header */}
-      <div className="flex items-center gap-2 mb-3">
-        <span
-          className={cn(
-            'h-2 w-2 rounded-full shrink-0',
-            hasActions
-              ? 'bg-amber-500 ring-4 ring-amber-500/20'
-              : 'bg-success-500 ring-4 ring-success-500/20',
-          )}
-        />
-        <h2 className="text-xs font-bold text-slate-700 uppercase tracking-widest">
-          يتطلب اتخاذ إجراء
-        </h2>
+    <Card className="h-full p-0 overflow-hidden">
+      {/* Panel header */}
+      <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline bg-slate-50/60">
+        <div className={cn(
+          'h-7 w-7 rounded-lg flex items-center justify-center shrink-0',
+          hasActions ? 'bg-amber-50' : 'bg-slate-100',
+        )}>
+          <Bell className={cn('h-3.5 w-3.5', hasActions ? 'text-amber-500' : 'text-slate-400')} />
+        </div>
+        <h2 className="text-sm font-bold text-slate-900">يتطلب اتخاذ إجراء</h2>
         {hasActions && (
           <span className="inline-flex items-center h-5 min-w-[22px] px-1.5 rounded-full bg-amber-100 text-amber-700 text-2xs font-bold tabular-nums">
             {totalCount}
           </span>
         )}
-        <div className="flex-1 h-px bg-hairline" />
+        {!hasActions && (
+          <span className="text-2xs text-slate-400 ms-auto">لا توجد مهام معلقة</span>
+        )}
       </div>
 
+      {/* Content */}
       {hasActions ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-4 grid grid-cols-2 gap-3">
           {activeItems.map((item) => {
             const t = TONE[item.tone];
             return (
@@ -169,74 +160,55 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
                 key={item.key}
                 href={item.href as never}
                 className={cn(
-                  'group flex flex-col rounded-xl border border-hairline border-s-[3px] bg-white',
-                  'overflow-hidden shadow-soft transition-all duration-150',
+                  'group block rounded-2xl bg-white border shadow-xs p-4 transition-all duration-150',
                   t.border,
                   t.hover,
                 )}
               >
-                {/* Card body */}
-                <div className="flex flex-col flex-1 px-4 pt-4 pb-4">
-
-                  {/* Row 1: icon (start) + tone badge (end) */}
-                  <div className="flex items-start justify-between mb-4">
-                    <span
-                      className={cn(
-                        'inline-flex h-9 w-9 items-center justify-center rounded-xl [&_svg]:h-[18px] [&_svg]:w-[18px] shrink-0',
-                        t.iconBg,
-                      )}
-                    >
-                      {item.icon}
-                    </span>
-                    <span
-                      className={cn(
-                        'inline-flex items-center h-5 px-2 rounded-full text-[9px] font-bold tracking-wide',
-                        t.badge,
-                      )}
-                    >
-                      {TONE_LABEL[item.tone]}
-                    </span>
-                  </div>
-
-                  {/* Count — primary hierarchy */}
-                  <span
+                {/* Icon */}
+                <div className="mb-3">
+                  <div
                     className={cn(
-                      'text-3xl font-bold tabular-nums leading-none mb-2',
-                      t.count,
+                      'h-9 w-9 rounded-xl flex items-center justify-center ring-1 [&_svg]:h-4 [&_svg]:w-4',
+                      t.iconBg,
                     )}
                   >
-                    {item.value}
-                  </span>
-
-                  {/* Label */}
-                  <p className="text-sm font-semibold text-slate-800 leading-tight">
-                    {item.label}
-                  </p>
-
-                  {/* Description */}
-                  <p className="text-xs text-slate-400 mt-1 leading-snug">
-                    {item.description}
-                  </p>
-
+                    {item.icon}
+                  </div>
                 </div>
 
-                {/* Accent bar — mirrors broker card bottom treatment */}
-                <div className={cn('h-[3px] w-full shrink-0', t.bar)} />
+                {/* Count */}
+                <p className={cn('text-3xl font-extrabold tabular-nums leading-none', t.count)}>
+                  {item.value.toLocaleString('ar-SA')}
+                </p>
+
+                {/* Label */}
+                <p className="text-xs font-semibold text-slate-700 mt-1.5 leading-tight">
+                  {item.label}
+                </p>
+
+                {/* Description */}
+                <p className="text-2xs text-slate-400 mt-0.5 leading-tight">
+                  {item.description}
+                </p>
+
+                {/* Accent bar */}
+                <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className={cn('h-full rounded-full w-full', t.bar)} />
+                </div>
               </Link>
             );
           })}
         </div>
       ) : (
-        <div className="flex items-center gap-3 rounded-xl border border-hairline bg-success-50/50 px-4 py-3.5">
+        <div className="flex items-center gap-3 m-4 rounded-2xl border border-hairline bg-success-50/50 px-4 py-4">
           <CheckCircle2 className="h-5 w-5 text-success-500 shrink-0" aria-hidden />
           <div>
             <p className="text-sm font-semibold text-slate-700">كل الأمور سليمة</p>
-            <p className="text-xs text-slate-400 mt-0.5">
-              لا إجراءات معلقة حالياً — المتابعة جارية
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">لا إجراءات معلقة حالياً — المتابعة جارية</p>
           </div>
         </div>
       )}
-    </section>
+    </Card>
   );
 }

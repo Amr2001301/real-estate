@@ -236,6 +236,7 @@ class ReportsService {
     const expiringHorizon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     const [
+      // ── original 11 operational counts ──
       projects,
       totalUnits,
       availableUnits,
@@ -247,7 +248,24 @@ class ReportsService {
       reservationsExpiringSoon,
       visitsAwaitingConfirmation,
       infoRequestsOpen,
+      // ── extended inventory / pipeline counts ──
+      soldUnits,
+      signedContracts,
+      totalCustomers,
+      totalTeam,
+      // ── funnel counts (all-time pipeline volumes) ──
+      funnelLeads,
+      funnelVisits,
+      funnelReservations,
+      funnelContracts,
+      // ── financial aggregates ──
+      totalContractValueAgg,
+      totalCollectedVerifiedAgg,
+      overdueAgg,
+      pendingBonusAgg,
+      pendingPayoutsAgg,
     ] = await this.prisma.$transaction([
+      // ── original 11 ──
       this.prisma.project.count({ where: { status: 'PUBLISHED' } }),
       this.prisma.unit.count(),
       this.prisma.unit.count({ where: { status: UnitStatus.AVAILABLE } }),
@@ -267,12 +285,49 @@ class ReportsService {
       }),
       this.prisma.visitAppointment.count({ where: { status: AppointmentStatus.SCHEDULED } }),
       this.prisma.infoRequest.count({ where: { status: 'OPEN' } }),
+      // ── extended inventory / pipeline ──
+      this.prisma.unit.count({ where: { status: UnitStatus.SOLD } }),
+      this.prisma.contract.count({ where: { signedAt: { not: null } } }),
+      this.prisma.user.count({ where: { role: UserRole.CUSTOMER } }),
+      this.prisma.user.count({
+        where: {
+          role: {
+            in: [
+              UserRole.ADMIN,
+              UserRole.SALES,
+              UserRole.SALES_MANAGER,
+              UserRole.MAINTENANCE_SUPERVISOR,
+            ],
+          },
+        },
+      }),
+      // ── funnel all-time volumes ──
+      this.prisma.lead.count(),
+      this.prisma.visitRequest.count(),
+      this.prisma.reservation.count(),
+      this.prisma.contract.count({ where: { signedAt: { not: null } } }),
+      // ── financial aggregates ──
+      this.prisma.contract.aggregate({ _sum: { totalAmount: true } }),
+      this.prisma.deposit.aggregate({ where: { verified: true }, _sum: { amount: true } }),
+      this.prisma.installment.aggregate({
+        where: { status: InstallmentStatus.OVERDUE },
+        _sum: { amount: true },
+      }),
+      this.prisma.bonusEntry.aggregate({
+        where: { status: BonusEntryStatus.PENDING },
+        _sum: { amount: true },
+      }),
+      this.prisma.brokerPayout.aggregate({
+        where: { status: { in: [BrokerPayoutStatus.DRAFT, BrokerPayoutStatus.APPROVED] } },
+        _sum: { totalNet: true },
+      }),
     ]);
 
-    const [reservationTrend, leadSources, recentActivity] = await Promise.all([
+    const [reservationTrend, leadSources, recentActivity, topProjects] = await Promise.all([
       this.reservationTrend(now),
       this.leadSourceDistribution(),
       this.recentActivity(),
+      this.topProjects(),
     ]);
 
     return {
@@ -281,13 +336,31 @@ class ReportsService {
         totalUnits,
         availableUnits,
         reservedUnits,
+        soldUnits,
         newLeadsThisMonth,
         pendingDeposits,
         openMaintenance,
+        signedContracts,
+        totalCustomers,
+        totalTeam,
+      },
+      funnel: {
+        leads:        funnelLeads,
+        visits:       funnelVisits,
+        reservations: funnelReservations,
+        contracts:    funnelContracts,
+      },
+      financial: {
+        totalContractValue:      Number(totalContractValueAgg._sum.totalAmount      ?? 0),
+        totalCollectedVerified:  Number(totalCollectedVerifiedAgg._sum.amount       ?? 0),
+        overdueTotal:            Number(overdueAgg._sum.amount                      ?? 0),
+        pendingBonus:            Number(pendingBonusAgg._sum.amount                 ?? 0),
+        pendingBrokerPayouts:    Number(pendingPayoutsAgg._sum.totalNet             ?? 0),
       },
       reservationTrend,
       leadSources,
       recentActivity,
+      topProjects,
       alerts: {
         contractsAwaitingSignature,
         depositsPendingReview: pendingDeposits,
@@ -488,6 +561,71 @@ class ReportsService {
     return items
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
       .slice(0, 8);
+  }
+
+  private async topProjects() {
+    const projectsRaw = await this.prisma.project.findMany({
+      where: { status: 'PUBLISHED' },
+      select: {
+        id: true,
+        name: true,
+        phases: {
+          select: {
+            buildings: {
+              select: {
+                units: {
+                  select: {
+                    status: true,
+                    contracts: {
+                      where: { signedAt: { not: null } },
+                      select: { totalAmount: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return projectsRaw
+      .map((p) => {
+        const units = p.phases.flatMap((ph) =>
+          ph.buildings.flatMap((b) => b.units),
+        );
+        const availableUnits = units.filter(
+          (u) => u.status === UnitStatus.AVAILABLE,
+        ).length;
+        const reservedUnits = units.filter(
+          (u) => u.status === UnitStatus.RESERVED,
+        ).length;
+        const soldUnits = units.filter(
+          (u) => u.status === UnitStatus.SOLD,
+        ).length;
+        const contracts = units.flatMap((u) => u.contracts);
+        const signedContracts = contracts.length;
+        const contractValue = contracts.reduce(
+          (s, c) => s + Number(c.totalAmount),
+          0,
+        );
+        return {
+          id: p.id,
+          name: translatableAr(p.name),
+          totalUnits: units.length,
+          availableUnits,
+          reservedUnits,
+          soldUnits,
+          signedContracts,
+          contractValue,
+        };
+      })
+      .sort(
+        (a, b) =>
+          b.signedContracts - a.signedContracts ||
+          b.reservedUnits - a.reservedUnits,
+      );
   }
 
   /**
