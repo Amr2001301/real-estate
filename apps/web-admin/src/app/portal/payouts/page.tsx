@@ -5,7 +5,6 @@ import {
   Clock,
   CircleDollarSign,
   Loader2,
-  Ban,
   AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
@@ -14,16 +13,14 @@ import { api, safe } from '@/lib/api';
 import type { Paged, PortalPayout } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
+import { PayoutsFilterBar } from '@/components/broker/payouts-filter-bar';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -37,6 +34,7 @@ const METHOD_LABEL: Record<string, string> = {
 
 interface Search {
   page?: string;
+  q?: string;
   status?: string;
   period?: string;
   from?: string;
@@ -54,7 +52,7 @@ export default async function PortalPayoutsPage({
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-  for (const key of ['status', 'period', 'from', 'to'] as const) {
+  for (const key of ['q', 'status', 'period', 'from', 'to'] as const) {
     const v = sp[key];
     if (v) qs.set(key, v);
   }
@@ -76,8 +74,6 @@ export default async function PortalPayoutsPage({
   const paidNet = rows
     .filter((p) => p.status === 'PAID')
     .reduce((s, p) => s + Number(p.totalNet || 0), 0);
-
-  const isFiltered = !!(sp.status || sp.period || sp.from || sp.to);
 
   return (
     <div className="space-y-5">
@@ -108,38 +104,7 @@ export default async function PortalPayoutsPage({
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
-        method="get"
-        action="/portal/payouts"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
-      >
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-48 shrink-0">
-          <option value="">كل الحالات</option>
-          <option value="DRAFT">مسودة</option>
-          <option value="APPROVED">موافق عليها</option>
-          <option value="PROCESSING">قيد التنفيذ</option>
-          <option value="PAID">مدفوعة</option>
-          <option value="CANCELLED">ملغاة</option>
-        </Select>
-        <Input
-          name="period"
-          inputSize="sm"
-          placeholder="الفترة (مثال: 2026-05)"
-          dir="ltr"
-          defaultValue={sp.period ?? ''}
-          className="w-44 shrink-0"
-        />
-        <Input name="from" inputSize="sm" type="date" dir="ltr" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
-        <Input name="to"   inputSize="sm" type="date" dir="ltr" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {isFiltered && (
-            <Link href="/portal/payouts">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+      <PayoutsFilterBar sp={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }} />
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
@@ -308,7 +273,7 @@ export default async function PortalPayoutsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/payouts"
-            params={{ status: sp.status, period: sp.period, from: sp.from, to: sp.to }}
+            params={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }}
           />
         )}
       </Card>

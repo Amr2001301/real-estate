@@ -5,30 +5,28 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Banknote,
   AlertCircle,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalCommission, PortalProject } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
-import { Input } from '@/components/ui/input';
-import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
+import { CommissionsFilterBar } from '@/components/broker/commissions-filter-bar';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 interface Search {
   page?: string;
+  q?: string;
   status?: string;
   projectId?: string;
   from?: string;
@@ -46,7 +44,7 @@ export default async function PortalCommissionsPage({
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
-  for (const key of ['status', 'projectId', 'from', 'to'] as const) {
+  for (const key of ['q', 'status', 'projectId', 'from', 'to'] as const) {
     const v = sp[key];
     if (v) qs.set(key, v);
   }
@@ -68,8 +66,6 @@ export default async function PortalCommissionsPage({
 
   const pageGross = rows.reduce((sum, r) => sum + Number(r.grossAmount || 0), 0);
   const pageNet   = rows.reduce((sum, r) => sum + Number(r.netAmount   || 0), 0);
-
-  const isFiltered = !!(sp.status || sp.projectId || sp.from || sp.to);
 
   return (
     <div className="space-y-5">
@@ -100,37 +96,7 @@ export default async function PortalCommissionsPage({
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
-        method="get"
-        action="/portal/commissions"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
-      >
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44 shrink-0">
-          <option value="">كل الحالات</option>
-          <option value="PENDING">قيد الاعتماد</option>
-          <option value="APPROVED">معتمدة</option>
-          <option value="REJECTED">مرفوضة</option>
-          <option value="CANCELLED">ملغاة</option>
-        </Select>
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56 shrink-0">
-          <option value="">كل المشاريع</option>
-          {projects.map((p) => (
-            <option key={p.project.id} value={p.project.id}>
-              {tx(p.project.name)}
-            </option>
-          ))}
-        </Select>
-        <Input name="from" inputSize="sm" type="date" dir="ltr" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
-        <Input name="to"   inputSize="sm" type="date" dir="ltr" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {isFiltered && (
-            <Link href="/portal/commissions">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+      <CommissionsFilterBar projects={projects} sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }} />
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
@@ -260,7 +226,7 @@ export default async function PortalCommissionsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/commissions"
-            params={{ status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
+            params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
           />
         )}
       </Card>

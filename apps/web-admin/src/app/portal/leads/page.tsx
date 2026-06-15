@@ -10,6 +10,7 @@ import {
   Clock,
   Copy,
   AlertCircle,
+  Search,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalLead } from '@/lib/types';
@@ -136,9 +137,10 @@ export default async function PortalLeadsPage({
         <Input
           name="q"
           inputSize="sm"
+          leftAddon={<Search />}
           placeholder="بحث: اسم / هاتف / بريد"
           defaultValue={sp.q ?? ''}
-          className="w-64 shrink-0"
+          className="flex-1 min-w-[160px]"
         />
         <Select
           name="brokerApprovalStatus"
@@ -170,7 +172,7 @@ export default async function PortalLeadsPage({
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {(sp.q || sp.brokerApprovalStatus || sp.stage) && (
             <Link href="/portal/leads">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
             </Link>
           )}
         </div>

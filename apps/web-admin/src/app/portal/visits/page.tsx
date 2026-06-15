@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Building2,
   Home,
+  Search,
 } from 'lucide-react';
 import { CodeText } from '@/components/ui/code-text';
 import { api, safe } from '@/lib/api';
@@ -18,6 +19,7 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -30,6 +32,7 @@ export const fetchCache = 'force-no-store';
 interface Search {
   page?: string;
   requestStatus?: string;
+  q?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -82,6 +85,7 @@ export default async function PortalVisitsPage({
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (sp.requestStatus) qs.set('requestStatus', sp.requestStatus);
+  if (sp.q) qs.set('q', sp.q);
 
   const [r, rNew, rUnderReview, rConverted, rRejected] = await Promise.all([
     safe(api.get<Paged<PortalVisitRequest>>(`/portal/visits?${qs.toString()}`)),
@@ -139,6 +143,14 @@ export default async function PortalVisitsPage({
         action="/portal/visits"
         className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
       >
+        <Input
+          inputSize="sm"
+          name="q"
+          leftAddon={<Search />}
+          placeholder="ابحث باسم العميل أو رقم الجوال…"
+          defaultValue={sp.q ?? ''}
+          className="flex-1 min-w-[180px]"
+        />
         <Select
           name="requestStatus"
           inputSize="sm"
@@ -154,9 +166,9 @@ export default async function PortalVisitsPage({
         </Select>
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {sp.requestStatus && (
+          {(sp.requestStatus || sp.q) && (
             <Link href="/portal/visits">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
             </Link>
           )}
         </div>
@@ -326,7 +338,7 @@ export default async function PortalVisitsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/visits"
-            params={{ requestStatus: sp.requestStatus }}
+            params={{ requestStatus: sp.requestStatus, q: sp.q }}
           />
         )}
       </Card>

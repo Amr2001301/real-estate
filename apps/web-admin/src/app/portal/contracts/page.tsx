@@ -8,6 +8,7 @@ import {
   BadgePercent,
   AlertCircle,
   Phone,
+  Search,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
@@ -18,6 +19,7 @@ import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
+import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -30,6 +32,7 @@ interface Search {
   page?: string;
   projectId?: string;
   signed?: string;
+  q?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -64,6 +67,7 @@ export default async function PortalContractsPage({
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
   if (sp.projectId) qs.set('projectId', sp.projectId);
   if (sp.signed === 'yes' || sp.signed === 'no') qs.set('signed', sp.signed);
+  if (sp.q) qs.set('q', sp.q);
 
   const [contractsRes, projectsRes, rAll, rSigned, rPending] = await Promise.all([
     safe(api.get<Paged<PortalContract>>(`/portal/contracts?${qs.toString()}`)),
@@ -82,7 +86,7 @@ export default async function PortalContractsPage({
 
   const pageValue = rows.reduce((s, c) => s + Number(c.totalAmount || 0), 0);
 
-  const isFiltered = !!(sp.projectId || sp.signed);
+  const isFiltered = !!(sp.projectId || sp.signed || sp.q);
 
   return (
     <div className="space-y-5">
@@ -117,6 +121,14 @@ export default async function PortalContractsPage({
         action="/portal/contracts"
         className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
       >
+        <Input
+          inputSize="sm"
+          name="q"
+          leftAddon={<Search />}
+          placeholder="ابحث برقم العقد أو اسم العميل…"
+          defaultValue={sp.q ?? ''}
+          className="flex-1 min-w-[180px]"
+        />
         <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56 shrink-0">
           <option value="">كل المشاريع</option>
           {projects.map((p) => (
@@ -134,7 +146,7 @@ export default async function PortalContractsPage({
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {isFiltered && (
             <Link href="/portal/contracts">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
             </Link>
           )}
         </div>
@@ -309,7 +321,7 @@ export default async function PortalContractsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/contracts"
-            params={{ projectId: sp.projectId, signed: sp.signed }}
+            params={{ projectId: sp.projectId, signed: sp.signed, q: sp.q }}
           />
         )}
       </Card>

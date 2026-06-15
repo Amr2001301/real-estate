@@ -20,10 +20,10 @@ import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
 import { Card } from '@/components/ui/card';
 import { PageHeader } from '@/components/ui/page-header';
-import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import { ReservationsFilterBar } from '@/components/broker/reservations-filter-bar';
 import { ReservationStatusBadge } from '@/components/badges';
 
 export const dynamic = 'force-dynamic';
@@ -31,8 +31,11 @@ export const fetchCache = 'force-no-store';
 
 interface Search {
   page?: string;
+  q?: string;
   status?: string;
   projectId?: string;
+  from?: string;
+  to?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -65,8 +68,11 @@ export default async function PortalReservationsPage({
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+  if (sp.q)         qs.set('q', sp.q);
   if (sp.status)    qs.set('status', sp.status);
   if (sp.projectId) qs.set('projectId', sp.projectId);
+  if (sp.from)      qs.set('from', sp.from);
+  if (sp.to)        qs.set('to', sp.to);
 
   const [resRes, projectsRes, rPending, rApproved, rConverted] = await Promise.all([
     safe(api.get<Paged<PortalReservation>>(`/portal/reservations?${qs.toString()}`)),
@@ -82,8 +88,6 @@ export default async function PortalReservationsPage({
   const pendingCount   = rPending.data?.meta.total   ?? 0;
   const approvedCount  = rApproved.data?.meta.total  ?? 0;
   const convertedCount = rConverted.data?.meta.total ?? 0;
-
-  const isFiltered = !!(sp.status || sp.projectId);
 
   return (
     <div className="space-y-5">
@@ -121,37 +125,10 @@ export default async function PortalReservationsPage({
       </div>
 
       {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
-        method="get"
-        action="/portal/reservations"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
-      >
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44 shrink-0">
-          <option value="">كل الحالات</option>
-          <option value="PENDING">قيد المراجعة</option>
-          <option value="APPROVED">تمت الموافقة</option>
-          <option value="REJECTED">مرفوض</option>
-          <option value="CANCELLED">ملغى</option>
-          <option value="EXPIRED">منتهي</option>
-          <option value="CONVERTED">محوّل إلى عقد</option>
-        </Select>
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56 shrink-0">
-          <option value="">كل المشاريع</option>
-          {projects.map((p) => (
-            <option key={p.project.id} value={p.project.id}>
-              {tx(p.project.name)}
-            </option>
-          ))}
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {isFiltered && (
-            <Link href="/portal/reservations">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+      <ReservationsFilterBar
+        projects={projects}
+        sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
+      />
 
       {/* ── Table ───────────────────────────────────────────────────────────── */}
       <Card className="overflow-hidden">
@@ -308,7 +285,7 @@ export default async function PortalReservationsPage({
             pageSize={paged.meta.pageSize}
             total={paged.meta.total}
             basePath="/portal/reservations"
-            params={{ status: sp.status, projectId: sp.projectId }}
+            params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
           />
         )}
       </Card>
