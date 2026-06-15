@@ -216,11 +216,12 @@ export default async function DashboardHome() {
       {/* ── 2. Platform Summary — one unified card ───────────────────────────── */}
       {kpis && (
         <div className="space-y-2.5">
-          <SectionLabel>ملخص المنصة</SectionLabel>
+          <SectionLabel>المؤشرات التنفيذية</SectionLabel>
           <PlatformSummaryCard
             kpis={kpis}
             financial={summary?.financial}
             funnel={summary?.funnel}
+            topProjects={summary?.topProjects}
           />
         </div>
       )}

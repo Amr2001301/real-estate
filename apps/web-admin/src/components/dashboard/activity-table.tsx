@@ -9,6 +9,7 @@ import {
   Wrench,
   Banknote,
   MessageSquare,
+  ChevronLeft,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
@@ -41,21 +42,22 @@ const PALETTE = [
   'bg-warning-50 text-warning-700',
 ];
 
-type TypeMeta = { icon: React.ReactNode; bg: string; badge: string };
+type TypeMeta = { icon: React.ReactNode; bg: string; badge: string; border: string };
 
 const TYPE_META: Record<string, TypeMeta> = {
-  lead:         { icon: <UserPlus />,       bg: 'bg-purple-50 text-purple-600',   badge: 'bg-purple-50 text-purple-700'  },
-  reservation:  { icon: <BookmarkCheck />,  bg: 'bg-emerald-50 text-emerald-600', badge: 'bg-emerald-50 text-emerald-700'},
-  contract:     { icon: <FileText />,       bg: 'bg-brand-50 text-brand-600',     badge: 'bg-brand-50 text-brand-700'   },
-  visit:        { icon: <CalendarCheck2 />, bg: 'bg-info-50 text-info-600',       badge: 'bg-info-50 text-info-700'     },
-  maintenance:  { icon: <Wrench />,         bg: 'bg-danger-50 text-danger-600',   badge: 'bg-danger-50 text-danger-700' },
-  deposit:      { icon: <Banknote />,       bg: 'bg-amber-50 text-amber-600',     badge: 'bg-amber-50 text-amber-700'   },
-  info_request: { icon: <MessageSquare />,  bg: 'bg-slate-100 text-slate-500',    badge: 'bg-slate-100 text-slate-600'  },
+  lead:         { icon: <UserPlus />,       bg: 'bg-purple-50 text-purple-600',   badge: 'bg-purple-50 text-purple-700',   border: 'border-purple-100'  },
+  reservation:  { icon: <BookmarkCheck />,  bg: 'bg-success-50 text-success-600', badge: 'bg-success-50 text-success-700', border: 'border-success-100' },
+  contract:     { icon: <FileText />,       bg: 'bg-brand-50 text-brand-600',     badge: 'bg-brand-50 text-brand-700',     border: 'border-brand-100'   },
+  visit:        { icon: <CalendarCheck2 />, bg: 'bg-info-50 text-info-600',       badge: 'bg-info-50 text-info-700',       border: 'border-info-100'    },
+  maintenance:  { icon: <Wrench />,         bg: 'bg-danger-50 text-danger-600',   badge: 'bg-danger-50 text-danger-700',   border: 'border-danger-100'  },
+  deposit:      { icon: <Banknote />,       bg: 'bg-amber-50 text-amber-600',     badge: 'bg-amber-50 text-amber-700',     border: 'border-amber-100'   },
+  info_request: { icon: <MessageSquare />,  bg: 'bg-slate-100 text-slate-500',    badge: 'bg-slate-100 text-slate-600',    border: 'border-slate-200'   },
 };
 const FALLBACK_META: TypeMeta = {
-  icon:  <MessageSquare />,
-  bg:    'bg-slate-100 text-slate-500',
-  badge: 'bg-slate-100 text-slate-600',
+  icon:   <MessageSquare />,
+  bg:     'bg-slate-100 text-slate-500',
+  badge:  'bg-slate-100 text-slate-600',
+  border: 'border-slate-200',
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -79,21 +81,21 @@ function isCode(s: string): boolean {
 export function ActivityTable({ rows, className, compact = false }: Props) {
   const router = useRouter();
 
-  /* ── Compact mode: vertical activity feed ── */
+  /* ── Compact mode: premium activity feed ── */
   if (compact) {
     return (
       <div className={cn('divide-y divide-hairline', className)}>
         {rows.map((r) => {
-          const meta      = TYPE_META[r.type ?? ''] ?? FALLBACK_META;
-          const hasEntity = r.entity !== '—';
+          const meta         = TYPE_META[r.type ?? ''] ?? FALLBACK_META;
+          const hasEntity    = r.entity !== '—';
           const entityIsCode = hasEntity && isCode(r.entity);
 
-          const rowBody = (
+          const rowContent = (
             <>
-              {/* Type icon pill */}
+              {/* Type icon — colored, h-8 w-8 */}
               <span
                 className={cn(
-                  'inline-flex h-7 w-7 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
+                  'inline-flex h-8 w-8 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
                   meta.bg,
                 )}
               >
@@ -110,9 +112,11 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
                 {firstLetter(r.user)}
               </span>
 
-              {/* Sentence: actor + badge + entity */}
+              {/* Sentence: actor + action badge + entity */}
               <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-bold text-slate-900 shrink-0 leading-none">{r.user}</span>
+                <span className="text-xs font-bold text-slate-900 shrink-0 leading-none">
+                  {r.user}
+                </span>
                 <span
                   className={cn(
                     'inline-flex items-center h-[17px] px-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap shrink-0',
@@ -135,20 +139,26 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
             </>
           );
 
+          const rowCn = cn(
+            'flex items-center gap-2.5 px-4 py-3 transition-colors border-s-2',
+            meta.border,
+          );
+
           if (r.href) {
             return (
               <Link
                 key={r.id}
                 href={r.href as never}
-                className="flex items-center gap-2.5 px-5 py-2.5 hover:bg-slate-50/80 transition-colors"
+                className={cn(rowCn, 'hover:bg-slate-50/80 group')}
               >
-                {rowBody}
+                {rowContent}
+                <ChevronLeft className="h-3 w-3 text-slate-200 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             );
           }
           return (
-            <div key={r.id} className="flex items-center gap-2.5 px-5 py-2.5">
-              {rowBody}
+            <div key={r.id} className={rowCn}>
+              {rowContent}
             </div>
           );
         })}
