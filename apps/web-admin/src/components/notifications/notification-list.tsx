@@ -240,9 +240,10 @@ function formatCompact(value: string): string {
 }
 
 export function NotificationList({ items, basePath }: Props) {
-  const unreadCount = items.filter((n) => !n.read).length;
+  const safeItems = Array.isArray(items) ? items : [];
+  const unreadCount = safeItems.filter((n) => !n.read).length;
 
-  if (items.length === 0) {
+  if (safeItems.length === 0) {
     return (
       <Card className="overflow-hidden">
         <EmptyState
@@ -273,7 +274,7 @@ export function NotificationList({ items, basePath }: Props) {
       )}
 
       <ul className="divide-y divide-hairline">
-        {items.map((n) => {
+        {safeItems.map((n) => {
           const related = relatedLink(n.payload, basePath, n.templateCode);
           const title = resolveTitle(n);
           const body = resolveBody(n);

@@ -6,9 +6,22 @@ import { NotificationList } from '@/components/notifications/notification-list';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+// The API returns a paginated envelope: { data: NotificationItem[], meta: {...} }.
+// This normalizer safely extracts the array regardless of future shape changes.
+function normalizeNotifications(input: unknown): NotificationItem[] {
+  if (Array.isArray(input)) return input as NotificationItem[];
+  if (input && typeof input === 'object') {
+    const obj = input as Record<string, unknown>;
+    if (Array.isArray(obj.data)) return obj.data as NotificationItem[];
+    if (Array.isArray(obj.items)) return obj.items as NotificationItem[];
+    if (Array.isArray(obj.notifications)) return obj.notifications as NotificationItem[];
+  }
+  return [];
+}
+
 export default async function PortalNotificationsPage() {
-  const res = await safe(api.get<NotificationItem[]>('/me/notifications'));
-  const items = res.data ?? [];
+  const res = await safe(api.get<{ data: NotificationItem[]; meta: Record<string, unknown> }>('/me/notifications'));
+  const items = normalizeNotifications(res.data);
 
   return (
     <div className="space-y-5">
