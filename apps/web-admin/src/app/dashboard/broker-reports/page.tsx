@@ -334,60 +334,52 @@ export default async function AdminBrokerReportsPage({
                   <div className="h-32 flex items-center justify-center text-sm text-slate-400">لا توجد بيانات</div>
                 ) : (
                   <>
-                    {/* Bar chart */}
-                    <div className="flex items-end gap-1.5 h-32 w-full mb-2">
+                    {/* Bar chart — rem heights so % works inside each bar */}
+                    <div className="flex items-end gap-2 w-full">
                       {trend.map((b) => {
-                        const commAmt    = Number(b.commissionsNet);
-                        const payoutAmt  = Number(b.payoutsNet);
-                        const barH       = maxCommission > 0 ? (commAmt / maxCommission) * 100 : 0;
-                        const paidH      = commAmt > 0 ? Math.min(payoutAmt / commAmt, 1) * 100 : 0;
+                        const MAX_REM   = 7;
+                        const commAmt   = Number(b.commissionsNet);
+                        const payoutAmt = Number(b.payoutsNet);
+                        const barRem    = maxCommission > 0
+                          ? Math.max((commAmt / maxCommission) * MAX_REM, commAmt > 0 ? 0.4 : 0)
+                          : 0;
+                        const paidPct   = commAmt > 0
+                          ? Math.min((payoutAmt / commAmt) * 100, 100)
+                          : 0;
                         return (
-                          <div key={b.label} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0">
+                          <div key={b.label} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
                             {b.contractsSigned > 0 && (
-                              <span className="text-[9px] font-bold tabular-nums text-slate-500 leading-none mb-0.5">
+                              <span className="text-[9px] font-bold tabular-nums text-slate-500 leading-none">
                                 {b.contractsSigned}
                               </span>
                             )}
-                            {/* Commission bar */}
+                            {/* Bar: amber bg = total commissions; emerald fill = paid portion */}
                             <div
                               className="w-full rounded-t-md overflow-hidden bg-amber-100 relative"
-                              style={{ height: `${Math.max(barH, barH > 0 ? 4 : 0)}%` }}
+                              style={{ height: `${barRem}rem` }}
                             >
-                              {/* Paid portion overlay */}
                               <div
-                                className="absolute bottom-0 inset-x-0 bg-amber-400"
-                                style={{ height: `${paidH}%` }}
-                              />
-                              <div
-                                className="absolute bottom-0 inset-x-0 bg-emerald-400 opacity-80"
-                                style={{ height: `${paidH}%` }}
+                                className="absolute bottom-0 inset-x-0 bg-emerald-400"
+                                style={{ height: `${paidPct}%` }}
                               />
                             </div>
+                            <span className="text-[9px] text-slate-400 mt-0.5">{shortMonth(b.label)}</span>
                           </div>
                         );
                       })}
                     </div>
-                    {/* X-axis labels */}
-                    <div className="flex gap-1.5">
-                      {trend.map((b) => (
-                        <div key={b.label} className="flex-1 text-center">
-                          <span className="text-[9px] text-slate-400">{shortMonth(b.label)}</span>
-                        </div>
-                      ))}
-                    </div>
                     {/* Legend */}
-                    <div className="flex items-center gap-4 mt-3">
+                    <div className="flex items-center gap-4 mt-4">
                       <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-4 rounded-sm bg-amber-100 inline-block" />
+                        <span className="h-2.5 w-4 rounded-sm bg-amber-100 border border-amber-200 inline-block" />
                         <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="h-2 w-4 rounded-sm bg-emerald-400 inline-block" />
-                        <span className="text-[10px] text-slate-400">المدفوع</span>
+                        <span className="h-2.5 w-4 rounded-sm bg-emerald-400 inline-block" />
+                        <span className="text-[10px] text-slate-400">المدفوع للوسطاء</span>
                       </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold text-slate-500">5</span>
-                        <span className="text-[10px] text-slate-400">عدد العقود</span>
+                      <div className="flex items-center gap-1.5 ms-auto">
+                        <span className="text-[9px] font-bold text-slate-500">الأرقام = عقود موقّعة</span>
                       </div>
                     </div>
                   </>
