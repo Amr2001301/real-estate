@@ -13,6 +13,16 @@ import { formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import Link from 'next/link';
 
+// Thin start-border per stage — matches the column dot colour
+const STAGE_BORDER: Record<LeadStage, string> = {
+  NEW:         'border-s-slate-400',
+  INTERESTED:  'border-s-sky-400',
+  VISIT:       'border-s-violet-400',
+  NEGOTIATION: 'border-s-amber-400',
+  WON:         'border-s-emerald-400',
+  LOST:        'border-s-rose-400',
+};
+
 // Avatar palette — identity colours, not stage colours
 const AVATAR_PALETTE = [
   'bg-violet-100 text-violet-700',
@@ -57,7 +67,8 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
     <div
       className={cn(
         'group relative rounded-xl bg-white overflow-hidden',
-        'border border-slate-200/80',
+        'border border-slate-200/80 border-s-2',
+        STAGE_BORDER[lead.stage],
         'shadow-[0_1px_4px_rgb(0_0_0/_0.08),0_0_0_1px_rgb(0_0_0/_0.02)]',
         'transition-all duration-150',
         dragging && 'shadow-xl scale-[1.02] rotate-[0.4deg]',
