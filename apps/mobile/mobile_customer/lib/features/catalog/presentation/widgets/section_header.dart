@@ -39,12 +39,10 @@ class SectionHeader extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: AppSpacing.xxs),
-                  Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Icons.chevron_left_rounded
-                        : Icons.chevron_right_rounded,
+                  const Icon(
+                    Icons.chevron_right_rounded,
                     size: 18,
-                    color: colors.brandGold,
+                    color: AppPalette.gold400,
                   ),
                 ],
               ),

@@ -25,7 +25,7 @@ import 'customer_home_dashboard.dart';
 import 'home_cubit.dart';
 
 /// Bottom clearance for the shell's floating assistant FAB.
-const double _fabClearance = 96;
+const double _fabClearance = 72;
 
 /// Navy depth gradient stops shared by the hero and CTA band.
 const Color _webNavyLight = Color(0xFF24426A);
@@ -76,29 +76,25 @@ class HomeScreen extends StatelessWidget {
           else ...[
             // Full-bleed immersive hero — contains the brand header + bell
             // overlay AND the headline + search content. Sets light status-bar
-            // icons; the category row below restores dark icons on scroll.
+            // icons; the section header below restores dark icons on scroll.
             BlocBuilder<HomeCubit, HomeState>(
               builder: (context, state) {
                 final heroUrl = state.data?.firstOrNull?.coverImage;
                 return _HeroSection(imageUrl: heroUrl);
               },
             ),
-            // Restores dark status-bar glyphs as the canvas enters the top.
+            const SizedBox(height: AppSpacing.lg),
+            // Restores dark status-bar glyphs as the canvas enters the viewport.
             AnnotatedRegion<SystemUiOverlayStyle>(
               value: SystemUiOverlayStyle.dark
                   .copyWith(statusBarColor: Colors.transparent),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-                child: _CategoryPillsRow(),
-              ),
-            ),
-            // Featured projects section header.
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: SectionHeader(
-                title: l10n.homeFeaturedProjects,
-                onViewAll: () => context.go('/projects'),
+              child: Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: SectionHeader(
+                  title: l10n.homeFeaturedProjects,
+                  onViewAll: () => context.go('/projects'),
+                ),
               ),
             ),
             const _FeaturedProjects(),
@@ -136,6 +132,7 @@ class _HeroSection extends StatefulWidget {
 
 class _HeroSectionState extends State<_HeroSection> {
   late final TextEditingController _search;
+  String? _filterType;
 
   @override
   void initState() {
@@ -158,7 +155,24 @@ class _HeroSectionState extends State<_HeroSection> {
     );
   }
 
-  void _openFilters() => context.go('/projects');
+  Future<void> _openFilters() async {
+    final result = await showModalBottomSheet<String?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _TypeFilterSheet(initial: _filterType),
+    );
+    if (!mounted || result == null) return;
+    final newFilter = result.isEmpty ? null : result;
+    setState(() => _filterType = newFilter);
+    if (mounted) {
+      context.go(
+        newFilter == null
+            ? '/projects'
+            : '/projects?type=${Uri.encodeQueryComponent(newFilter)}',
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -335,7 +349,10 @@ class _HeroSectionState extends State<_HeroSection> {
                             ),
                           ),
                           const SizedBox(width: AppSpacing.sm),
-                          _FilterPill(onTap: _openFilters),
+                          _FilterPill(
+                            onTap: _openFilters,
+                            hasFilter: _filterType != null,
+                          ),
                         ],
                       ),
                     ],
@@ -467,29 +484,59 @@ class _HeroSearchPill extends StatelessWidget {
 }
 
 /// Glass filter button — icon only, compact square.
+/// Shows a gold dot badge when [hasFilter] is true (a type is active).
 class _FilterPill extends StatelessWidget {
-  const _FilterPill({required this.onTap});
+  const _FilterPill({required this.onTap, this.hasFilter = false});
 
   final VoidCallback onTap;
+  final bool hasFilter;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Material(
-      color: Colors.white.withValues(alpha: 0.14),
+      color: hasFilter
+          ? AppPalette.gold400.withValues(alpha: 0.22)
+          : Colors.white.withValues(alpha: 0.14),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.md),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
+        side: BorderSide(
+          color: hasFilter
+              ? AppPalette.gold400.withValues(alpha: 0.65)
+              : Colors.white.withValues(alpha: 0.35),
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Tooltip(
           message: l10n.homeFilterAction,
-          child: const SizedBox(
+          child: SizedBox(
             width: 50,
             height: 50,
-            child: Icon(Icons.tune_rounded, size: 22, color: Colors.white),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                const Icon(Icons.tune_rounded, size: 22, color: Colors.white),
+                if (hasFilter)
+                  PositionedDirectional(
+                    top: 9,
+                    end: 9,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppPalette.gold400,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -497,87 +544,130 @@ class _FilterPill extends StatelessWidget {
   }
 }
 
-// ─── Category Pills ───────────────────────────────────────────────────────────
+// ─── Property Type Filter Sheet ───────────────────────────────────────────────
 
-class _CategoryPillsRow extends StatefulWidget {
-  const _CategoryPillsRow();
+class _TypeFilterSheet extends StatefulWidget {
+  const _TypeFilterSheet({this.initial});
+
+  final String? initial;
 
   @override
-  State<_CategoryPillsRow> createState() => _CategoryPillsRowState();
+  State<_TypeFilterSheet> createState() => _TypeFilterSheetState();
 }
 
-class _CategoryPillsRowState extends State<_CategoryPillsRow> {
-  int _selected = 0;
+class _TypeFilterSheetState extends State<_TypeFilterSheet> {
+  String? _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = widget.initial;
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final theme = Theme.of(context);
+    final colors = context.appColors;
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
-    final categories = <({IconData icon, String label, VoidCallback onTap})>[
-      (
-        icon: Icons.home_outlined,
-        label: l10n.homeTypeResidential,
-        onTap: () => GoRouter.of(context).go('/projects'),
-      ),
-      (
-        icon: Icons.store_outlined,
-        label: l10n.homeTypeCommercial,
-        onTap: () => GoRouter.of(context).go('/projects'),
-      ),
-      (
-        icon: Icons.business_center_outlined,
-        label: l10n.homeTypeOffice,
-        onTap: () => GoRouter.of(context).go('/projects'),
-      ),
-      (
-        icon: Icons.location_city_outlined,
-        label: l10n.navProjects,
-        onTap: () => GoRouter.of(context).go('/projects'),
-      ),
-      (
-        icon: Icons.grid_view_outlined,
-        label: l10n.navUnits,
-        onTap: () => GoRouter.of(context).go('/units'),
-      ),
+    final options = [
+      (key: 'residential', label: l10n.homeTypeResidential, icon: Icons.home_outlined),
+      (key: 'commercial', label: l10n.homeTypeCommercial, icon: Icons.store_outlined),
+      (key: 'office', label: l10n.homeTypeOffice, icon: Icons.business_center_outlined),
     ];
 
-    return ShaderMask(
-      shaderCallback: (bounds) => const LinearGradient(
-        colors: [
-          Colors.transparent,
-          Colors.white,
-          Colors.white,
-          Colors.transparent,
-        ],
-        stops: [0.0, 0.05, 0.94, 1.0],
-      ).createShader(bounds),
-      blendMode: BlendMode.dstIn,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        child: Row(
-          children: [
-            for (int i = 0; i < categories.length; i++) ...[
-              if (i > 0) const SizedBox(width: AppSpacing.sm),
-              _CategoryPill(
-                icon: categories[i].icon,
-                label: categories[i].label,
-                selected: _selected == i,
-                onTap: () {
-                  setState(() => _selected = i);
-                  categories[i].onTap();
-                },
-              ),
-            ],
-          ],
+    return Container(
+      margin: const EdgeInsets.only(top: 64),
+      padding: EdgeInsets.only(bottom: bottomInset),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(AppRadii.xxl),
+          topRight: Radius.circular(AppRadii.xxl),
         ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Drag handle.
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              decoration: BoxDecoration(
+                color: colors.hairline,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              0,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  l10n.homeFilterTypeLabel,
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: AppSpacing.xxs),
+                Text(
+                  l10n.homeFilterHelper,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: colors.inkMuted),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                for (final opt in options) ...[
+                  _TypeOption(
+                    icon: opt.icon,
+                    label: opt.label,
+                    selected: _selected == opt.key,
+                    onTap: () => setState(
+                      () => _selected =
+                          _selected == opt.key ? null : opt.key,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                ],
+                const SizedBox(height: AppSpacing.sm),
+                AppButton(
+                  label: l10n.homeFilterViewResults,
+                  variant: AppButtonVariant.gold,
+                  onPressed: () =>
+                      Navigator.pop(context, _selected ?? ''),
+                ),
+                if (_selected != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context, ''),
+                      child: Text(
+                        l10n.homeFilterClearSelection,
+                        style: theme.textTheme.labelMedium
+                            ?.copyWith(color: colors.inkMuted),
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _CategoryPill extends StatelessWidget {
-  const _CategoryPill({
+class _TypeOption extends StatelessWidget {
+  const _TypeOption({
     required this.icon,
     required this.label,
     required this.selected,
@@ -594,48 +684,70 @@ class _CategoryPill extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
 
-    final bg = selected ? AppPalette.navy : colors.surface;
-    final fg = selected ? Colors.white : colors.inkStrong;
-
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs,
+          vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
-          color: bg,
-          borderRadius: AppRadii.pillAll,
+          color: selected
+              ? AppPalette.navy.withValues(alpha: 0.06)
+              : colors.surfaceSoft,
+          borderRadius: BorderRadius.circular(AppRadii.md),
           border: Border.all(
             color: selected
-                ? AppPalette.gold400.withValues(alpha: 0.30)
+                ? AppPalette.gold400.withValues(alpha: 0.55)
                 : colors.hairline,
+            width: selected ? 1.5 : 1.0,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: AppPalette.gold400.withValues(alpha: 0.18),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : colors.shadowSoft,
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: fg),
-            const SizedBox(width: AppSpacing.xs),
-            Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: fg,
-                fontWeight:
-                    selected ? FontWeight.w700 : FontWeight.w500,
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: selected
+                    ? const LinearGradient(
+                        colors: [AppPalette.navy700, AppPalette.navy],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: selected ? null : colors.surfaceSoft,
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+                border: selected
+                    ? Border.all(
+                        color: AppPalette.gold400.withValues(alpha: 0.3),
+                      )
+                    : null,
+              ),
+              child: Icon(
+                icon,
+                size: 20,
+                color: selected ? AppPalette.gold300 : colors.inkMuted,
               ),
             ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Text(
+                label,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: selected ? AppPalette.navy : colors.inkStrong,
+                  fontWeight:
+                      selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(
+                Icons.check_circle_rounded,
+                color: AppPalette.gold400,
+                size: 20,
+              ),
           ],
         ),
       ),
