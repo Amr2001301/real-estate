@@ -14,13 +14,16 @@ import {
   Building2,
   AlertCircle,
   AlertTriangle,
+  Bell,
+  CheckCircle2,
+  ArrowUpRight,
+  Target,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,19 +41,19 @@ interface PerformanceRow {
   signedContractsCount: number;
 }
 
-// ── Date helpers ────────────────────────────────────────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
 function daysUntil(dateStr: string): number {
   return (new Date(dateStr).getTime() - Date.now()) / 86400000;
 }
 
 function isToday(dateStr: string): boolean {
-  const d = new Date(dateStr);
+  const d   = new Date(dateStr);
   const now = new Date();
   return (
     d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
+    d.getMonth()    === now.getMonth() &&
+    d.getDate()     === now.getDate()
   );
 }
 
@@ -65,7 +68,49 @@ function leadAgeDays(lead: Lead): number {
   return Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// ── Design helpers ────────────────────────────────────────────────────────────
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+        {children}
+      </span>
+      <div className="flex-1 h-px bg-hairline" />
+    </div>
+  );
+}
+
+// ── Command Strip ─────────────────────────────────────────────────────────────
+
+interface CommandTile {
+  label:    string;
+  value:    string | number;
+  sub?:     string;
+  valueCls: string;
+}
+
+function SalesCommandStrip({ tiles }: { tiles: CommandTile[] }) {
+  return (
+    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-hairline">
+        {tiles.map((tile) => (
+          <div key={tile.label} className="bg-surface px-5 py-5">
+            <p className="text-[11px] font-medium text-slate-400 mb-2 leading-none">{tile.label}</p>
+            <p className={cn('text-[22px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
+              {tile.value}
+            </p>
+            {tile.sub && (
+              <p className="text-[11px] text-slate-400 mt-2 leading-none">{tile.sub}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 
 export async function SalesDashboard({ userId }: { userId: string }) {
   const nowIso = new Date().toISOString();
@@ -88,25 +133,22 @@ export async function SalesDashboard({ userId }: { userId: string }) {
       ),
     ]);
 
-  const leads = leadsRes.data?.data ?? [];
+  const leads        = leadsRes.data?.data        ?? [];
   const reservations = reservationsRes.data?.data ?? [];
-  const visits = (visitsRes.data?.data ?? [])
+  const visits       = (visitsRes.data?.data ?? [])
     .slice()
-    .sort(
-      (a, b) =>
-        new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime(),
-    );
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
 
-  // ── KPI computations ────────────────────────────────────────────────────
-  const openLeads = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST');
+  // ── KPI computations ──────────────────────────────────────────────────────
+  const openLeads          = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST');
   const activeReservations = reservations.filter(
     (r) => r.status === 'PENDING' || r.status === 'APPROVED',
   );
-  const convertedDeals = reservations.filter((r) => r.status === 'CONVERTED').length;
-  const signedThisMonth = (perfRes.data ?? [])[0]?.signedContractsCount;
-  const closedDeals = signedThisMonth ?? convertedDeals;
-  const availableUnits = unitsRes.data?.meta.total ?? 0;
-  const pendingComp = (bonusRes.data ?? []).reduce(
+  const convertedDeals     = reservations.filter((r) => r.status === 'CONVERTED').length;
+  const signedThisMonth    = (perfRes.data ?? [])[0]?.signedContractsCount;
+  const closedDeals        = signedThisMonth ?? convertedDeals;
+  const availableUnits     = unitsRes.data?.meta.total ?? 0;
+  const pendingComp        = (bonusRes.data ?? []).reduce(
     (sum, b) => sum + Number(b.amount ?? 0),
     0,
   );
@@ -122,10 +164,6 @@ export async function SalesDashboard({ userId }: { userId: string }) {
     return d >= 0 && d <= 7;
   }).length;
 
-  // ── True today-priority items ────────────────────────────────────────────
-  // Only items that literally require action today or tomorrow.
-  // Old opportunities without visits are NOT today priorities.
-
   const todayVisits = visits.filter((v) => isToday(v.scheduledAt));
 
   const expiringUrgent = reservations.filter((r) => {
@@ -137,25 +175,65 @@ export async function SalesDashboard({ userId }: { userId: string }) {
 
   const hasTodayPriorities = todayVisits.length > 0 || expiringUrgent.length > 0;
 
-  // ── Section rows ─────────────────────────────────────────────────────────
+  // ── Section rows ──────────────────────────────────────────────────────────
   const recentLeads = leads
     .slice()
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
 
-  const upcomingVisitRows = visits.slice(0, 5);
+  const upcomingVisitRows    = visits.slice(0, 5);
   const activeReservationRows = activeReservations
     .slice()
     .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())
     .slice(0, 5);
 
-  // Hide empty visits/reservations cards entirely when both are empty
-  // and no today-priority panel — leads card always shows.
-  const showVisits = !visitsRes.error && upcomingVisitRows.length > 0;
-  const showReservations = !reservationsRes.error && activeReservationRows.length > 0;
+  const showVisits       = !visitsRes.error       && upcomingVisitRows.length    > 0;
+  const showReservations = !reservationsRes.error  && activeReservationRows.length > 0;
+
+  // ── Command Strip tiles ───────────────────────────────────────────────────
+  const commandTiles: CommandTile[] = [
+    {
+      label:    'فرصي المفتوحة',
+      value:    openLeads.length,
+      sub:      staleLeadsCount > 0 ? `${staleLeadsCount} تحتاج متابعة` : 'كلها في الوقت',
+      valueCls: 'text-brand-700',
+    },
+    {
+      label:    'متابعات مستحقة',
+      value:    staleLeadsCount,
+      sub:      staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة',
+      valueCls: staleLeadsCount > 0 ? 'text-amber-700' : 'text-success-700',
+    },
+    {
+      label:    'زياراتي القادمة',
+      value:    visits.length,
+      sub:      todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم',
+      valueCls: 'text-blue-700',
+    },
+    {
+      label:    'حجوزاتي النشطة',
+      value:    activeReservations.length,
+      sub:      expiringWithin7Count > 0
+                  ? `${expiringWithin7Count} تنتهي قريباً`
+                  : 'لا حجوزات تنتهي قريباً',
+      valueCls: expiringWithin7Count > 0 ? 'text-amber-700' : 'text-emerald-700',
+    },
+    {
+      label:    'عقود هذا الشهر',
+      value:    closedDeals,
+      sub:      signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود',
+      valueCls: 'text-violet-700',
+    },
+    {
+      label:    'الوحدات المتاحة',
+      value:    availableUnits,
+      sub:      'جاهزة للعرض',
+      valueCls: 'text-teal-700',
+    },
+  ];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <PageHeader
         title="لوحة المبيعات"
@@ -181,218 +259,177 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         }
       />
 
-      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-        <PageKpiCard
-          label="فرصي المفتوحة"
-          value={openLeads.length}
-          icon={<Users />}
-          tone="brand"
-        />
-        <PageKpiCard
-          label="متابعات مستحقة"
-          value={staleLeadsCount}
-          sub={staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : undefined}
-          icon={<AlertCircle />}
-          tone={staleLeadsCount > 0 ? 'warning' : 'neutral'}
-        />
-        <PageKpiCard
-          label="زياراتي القادمة"
-          value={visits.length}
-          sub={todayVisits.length > 0 ? `اليوم: ${todayVisits.length}` : undefined}
-          icon={<CalendarClock />}
-          tone="neutral"
-        />
-        <PageKpiCard
-          label="حجوزاتي قيد المتابعة"
-          value={activeReservations.length}
-          sub={expiringWithin7Count > 0 ? `${expiringWithin7Count} تنتهي قريباً` : undefined}
-          icon={<BookmarkCheck />}
-          tone={expiringWithin7Count > 0 ? 'warning' : 'success'}
-        />
-        <PageKpiCard
-          label="عقود متوقعة هذا الشهر"
-          value={closedDeals}
-          sub={signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود'}
-          icon={<FileText />}
-          tone="info"
-        />
-        <PageKpiCard
-          label="الوحدات المتاحة"
-          value={availableUnits}
-          icon={<Home />}
-          tone="accent"
+      {/* ── Command Strip ─────────────────────────────────────────────────── */}
+      <SalesCommandStrip tiles={commandTiles} />
+
+      {/* ── Quick Access ──────────────────────────────────────────────────── */}
+      <div className="space-y-2.5">
+        <SectionLabel>وصول سريع</SectionLabel>
+        <QuickAccessStrip
+          links={[
+            { href: '/dashboard/units',           label: 'تصفّح الوحدات',    icon: <Boxes className="h-3.5 w-3.5" />      },
+            { href: '/dashboard/projects',        label: 'تصفّح المشاريع',   icon: <Building2 className="h-3.5 w-3.5" />   },
+            { href: '/dashboard/contracts',       label: 'عرض العقود',       icon: <FileText className="h-3.5 w-3.5" />    },
+            { href: '/dashboard/installments',    label: 'خطط التقسيط',     icon: <CreditCard className="h-3.5 w-3.5" />  },
+            { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', icon: <Wallet className="h-3.5 w-3.5" />      },
+          ]}
+          trailingSlot={
+            !bonusRes.error && pendingComp > 0 ? (
+              <Link
+                href="/dashboard/my-compensation"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 transition-colors"
+              >
+                <Wallet className="h-3.5 w-3.5" />
+                {formatCurrency(pendingComp)} معلّق
+              </Link>
+            ) : undefined
+          }
         />
       </div>
 
-      {/* ── Quick access strip ───────────────────────────────────────────── */}
-      <QuickAccessStrip
-        links={[
-          { href: '/dashboard/units',           label: 'تصفّح الوحدات',    icon: <Boxes className="h-3.5 w-3.5" />     },
-          { href: '/dashboard/projects',        label: 'تصفّح المشاريع',   icon: <Building2 className="h-3.5 w-3.5" /> },
-          { href: '/dashboard/contracts',       label: 'عرض العقود',       icon: <FileText className="h-3.5 w-3.5" />  },
-          { href: '/dashboard/installments',    label: 'خطط التقسيط',     icon: <CreditCard className="h-3.5 w-3.5" />},
-          { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', icon: <Wallet className="h-3.5 w-3.5" />    },
-        ]}
-        trailingSlot={
-          !bonusRes.error && pendingComp > 0 ? (
-            <Link
-              href="/dashboard/my-compensation"
-              className="ms-auto inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
-            >
-              <Wallet className="h-3.5 w-3.5" />
-              {formatCurrency(pendingComp)} معلّق
-            </Link>
-          ) : undefined
-        }
-      />
-
-      {/* ── أولويات اليوم (conditional — only when real items exist) ────── */}
+      {/* ── أولويات اليوم ─────────────────────────────────────────────────── */}
       {hasTodayPriorities && (
-        <TodayPriorityPanel
-          todayVisits={todayVisits}
-          expiringUrgent={expiringUrgent}
-        />
+        <div className="space-y-2.5">
+          <SectionLabel>أولويات اليوم</SectionLabel>
+          <TodayPriorityPanel
+            todayVisits={todayVisits}
+            expiringUrgent={expiringUrgent}
+          />
+        </div>
       )}
 
-      {/*
-       * ── Content grid (asymmetric) ──────────────────────────────────────
-       * When both side cards exist:
-       *   [أحدث الفرص — 2/3] [زياراتي + حجوزاتي stacked — 1/3]
-       * When one side card exists:
-       *   [أحدث الفرص — 1/2] [the one card — 1/2]
-       * When neither side card exists:
-       *   [أحدث الفرص — constrained width]
-       */}
-      {showVisits && showReservations ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:items-start">
-          <SectionCard
-            title="أحدث الفرص"
-            href="/dashboard/leads"
-            hrefLabel="فتح الفرص"
-            emptyIcon={<Zap />}
-            error={leadsRes.error}
-            empty={recentLeads.length === 0}
-            emptyText="لا توجد فرص حديثة."
-            className="lg:col-span-2"
-          >
-            {recentLeads.map((l) => (
-              <LeadRow key={l.id} lead={l} staleAfterDays={3} />
-            ))}
-          </SectionCard>
+      {/* ── Content grid ──────────────────────────────────────────────────── */}
+      <div className="space-y-2.5">
+        <SectionLabel>نشاطي الحالي</SectionLabel>
+        {showVisits && showReservations ? (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:items-start">
+            <SectionCard
+              title="أحدث الفرص"
+              icon={<Zap className="h-3.5 w-3.5 text-brand-600" />}
+              iconBg="bg-brand-50"
+              href="/dashboard/leads"
+              hrefLabel="فتح الفرص"
+              error={leadsRes.error}
+              empty={recentLeads.length === 0}
+              emptyText="لا توجد فرص حديثة."
+              className="lg:col-span-2"
+            >
+              {recentLeads.map((l) => (
+                <LeadRow key={l.id} lead={l} staleAfterDays={3} />
+              ))}
+            </SectionCard>
 
-          {/* Side stack: visits on top, reservations below */}
-          <div className="space-y-4">
-            <SectionCard
-              title="زياراتي القادمة"
-              href="/dashboard/visits"
-              hrefLabel="فتح الزيارات"
-              emptyIcon={<CalendarClock />}
-              error={visitsRes.error}
-              empty={upcomingVisitRows.length === 0}
-              emptyText="لا توجد زيارات قادمة."
-            >
-              {upcomingVisitRows.map((v) => (
-                <VisitRow key={v.id} visit={v} />
-              ))}
-            </SectionCard>
-            <SectionCard
-              title="حجوزاتي النشطة"
-              href="/dashboard/reservations"
-              hrefLabel="فتح الحجوزات"
-              emptyIcon={<BookmarkCheck />}
-              error={reservationsRes.error}
-              empty={activeReservationRows.length === 0}
-              emptyText="لا توجد حجوزات نشطة."
-            >
-              {activeReservationRows.map((r) => (
-                <ReservationRow key={r.id} reservation={r} />
-              ))}
-            </SectionCard>
+            <div className="space-y-4">
+              <SectionCard
+                title="زياراتي القادمة"
+                icon={<CalendarClock className="h-3.5 w-3.5 text-blue-600" />}
+                iconBg="bg-blue-50"
+                href="/dashboard/visits"
+                hrefLabel="فتح الزيارات"
+                error={visitsRes.error}
+                empty={upcomingVisitRows.length === 0}
+                emptyText="لا توجد زيارات قادمة."
+              >
+                {upcomingVisitRows.map((v) => (
+                  <VisitRow key={v.id} visit={v} />
+                ))}
+              </SectionCard>
+              <SectionCard
+                title="حجوزاتي النشطة"
+                icon={<BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />}
+                iconBg="bg-emerald-50"
+                href="/dashboard/reservations"
+                hrefLabel="فتح الحجوزات"
+                error={reservationsRes.error}
+                empty={activeReservationRows.length === 0}
+                emptyText="لا توجد حجوزات نشطة."
+              >
+                {activeReservationRows.map((r) => (
+                  <ReservationRow key={r.id} reservation={r} />
+                ))}
+              </SectionCard>
+            </div>
           </div>
-        </div>
-      ) : showVisits || showReservations ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
+        ) : showVisits || showReservations ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
+            <SectionCard
+              title="أحدث الفرص"
+              icon={<Zap className="h-3.5 w-3.5 text-brand-600" />}
+              iconBg="bg-brand-50"
+              href="/dashboard/leads"
+              hrefLabel="فتح الفرص"
+              error={leadsRes.error}
+              empty={recentLeads.length === 0}
+              emptyText="لا توجد فرص حديثة."
+            >
+              {recentLeads.map((l) => (
+                <LeadRow key={l.id} lead={l} staleAfterDays={3} />
+              ))}
+            </SectionCard>
+            {showVisits && (
+              <SectionCard
+                title="زياراتي القادمة"
+                icon={<CalendarClock className="h-3.5 w-3.5 text-blue-600" />}
+                iconBg="bg-blue-50"
+                href="/dashboard/visits"
+                hrefLabel="فتح الزيارات"
+                error={visitsRes.error}
+                empty={upcomingVisitRows.length === 0}
+                emptyText="لا توجد زيارات قادمة."
+              >
+                {upcomingVisitRows.map((v) => (
+                  <VisitRow key={v.id} visit={v} />
+                ))}
+              </SectionCard>
+            )}
+            {showReservations && (
+              <SectionCard
+                title="حجوزاتي النشطة"
+                icon={<BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />}
+                iconBg="bg-emerald-50"
+                href="/dashboard/reservations"
+                hrefLabel="فتح الحجوزات"
+                error={reservationsRes.error}
+                empty={activeReservationRows.length === 0}
+                emptyText="لا توجد حجوزات نشطة."
+              >
+                {activeReservationRows.map((r) => (
+                  <ReservationRow key={r.id} reservation={r} />
+                ))}
+              </SectionCard>
+            )}
+          </div>
+        ) : (
           <SectionCard
             title="أحدث الفرص"
+            icon={<Zap className="h-3.5 w-3.5 text-brand-600" />}
+            iconBg="bg-brand-50"
             href="/dashboard/leads"
             hrefLabel="فتح الفرص"
-            emptyIcon={<Zap />}
             error={leadsRes.error}
             empty={recentLeads.length === 0}
             emptyText="لا توجد فرص حديثة."
+            className="max-w-2xl"
           >
             {recentLeads.map((l) => (
               <LeadRow key={l.id} lead={l} staleAfterDays={3} />
             ))}
           </SectionCard>
-          {showVisits && (
-            <SectionCard
-              title="زياراتي القادمة"
-              href="/dashboard/visits"
-              hrefLabel="فتح الزيارات"
-              emptyIcon={<CalendarClock />}
-              error={visitsRes.error}
-              empty={upcomingVisitRows.length === 0}
-              emptyText="لا توجد زيارات قادمة."
-            >
-              {upcomingVisitRows.map((v) => (
-                <VisitRow key={v.id} visit={v} />
-              ))}
-            </SectionCard>
-          )}
-          {showReservations && (
-            <SectionCard
-              title="حجوزاتي النشطة"
-              href="/dashboard/reservations"
-              hrefLabel="فتح الحجوزات"
-              emptyIcon={<BookmarkCheck />}
-              error={reservationsRes.error}
-              empty={activeReservationRows.length === 0}
-              emptyText="لا توجد حجوزات نشطة."
-            >
-              {activeReservationRows.map((r) => (
-                <ReservationRow key={r.id} reservation={r} />
-              ))}
-            </SectionCard>
-          )}
-        </div>
-      ) : (
-        /* Only leads — no side cards at all */
-        <SectionCard
-          title="أحدث الفرص"
-          href="/dashboard/leads"
-          hrefLabel="فتح الفرص"
-          emptyIcon={<Zap />}
-          error={leadsRes.error}
-          empty={recentLeads.length === 0}
-          emptyText="لا توجد فرص حديثة."
-          className="max-w-2xl"
-        >
-          {recentLeads.map((l) => (
-            <LeadRow key={l.id} lead={l} staleAfterDays={3} />
-          ))}
-        </SectionCard>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-// ── Row sub-components ────────────────────────────────────────────────────
+// ── Row sub-components ────────────────────────────────────────────────────────
 
-function LeadRow({
-  lead: l,
-  staleAfterDays = 3,
-}: {
-  lead: Lead;
-  staleAfterDays?: number;
-}) {
-  const age = leadAgeDays(l);
+function LeadRow({ lead: l, staleAfterDays = 3 }: { lead: Lead; staleAfterDays?: number }) {
+  const age     = leadAgeDays(l);
   const isStale = !l.upcomingVisit && age >= staleAfterDays;
   return (
     <Link
       href={`/dashboard/leads/${l.id}` as never}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-muted/40 transition-colors"
+      className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas/60 transition-colors"
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -421,7 +458,7 @@ function VisitRow({ visit: v }: { visit: VisitAppointment }) {
   return (
     <Link
       href={`/dashboard/visits/appointments/${v.id}` as never}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-muted/40 transition-colors"
+      className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas/60 transition-colors"
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -448,24 +485,22 @@ function VisitRow({ visit: v }: { visit: VisitAppointment }) {
 
 function ReservationRow({ reservation: r }: { reservation: Reservation }) {
   const remaining = Math.ceil(daysUntil(r.expiresAt));
-  const isUrgent = remaining <= 1;
+  const isUrgent  = remaining <= 1;
   const isWarning = remaining <= 7 && remaining > 1;
   return (
     <Link
       href={`/dashboard/reservations/${r.id}` as never}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-muted/40 transition-colors"
+      className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas/60 transition-colors"
     >
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-slate-900 truncate leading-tight">
           {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
           {r.unit?.code ? ` · ${r.unit.code}` : ''}
         </p>
-        <p
-          className={cn(
-            'text-2xs mt-0.5 leading-tight tabular-nums',
-            isUrgent ? 'font-semibold text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-400',
-          )}
-        >
+        <p className={cn(
+          'text-2xs mt-0.5 leading-tight tabular-nums',
+          isUrgent ? 'font-semibold text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-400',
+        )}>
           {expiryLabel(r.expiresAt)}
         </p>
       </div>
@@ -474,7 +509,7 @@ function ReservationRow({ reservation: r }: { reservation: Reservation }) {
   );
 }
 
-// ── Quick access strip (exported — shared with Sales Manager) ─────────────
+// ── Quick Access Strip (exported — shared with Sales Manager) ─────────────────
 
 export function QuickAccessStrip({
   links,
@@ -484,61 +519,76 @@ export function QuickAccessStrip({
   trailingSlot?: React.ReactNode;
 }) {
   return (
-    <Card className="px-4 py-2.5">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="shrink-0 text-2xs font-semibold uppercase tracking-wide text-slate-400 pe-2 border-e border-hairline me-0.5">
-          وصول سريع
-        </span>
+    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+      <div className="flex flex-wrap gap-px bg-hairline">
         {links.map((l) => (
           <Link
             key={l.href}
             href={l.href as never}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-surface-muted/60 ring-1 ring-inset ring-hairline px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-surface-muted hover:text-brand-700 transition-colors"
+            className="bg-surface flex-1 min-w-[80px] flex flex-col items-center gap-2 px-3 py-3.5 hover:bg-canvas/60 transition-colors group"
           >
-            <span className="text-slate-400">{l.icon}</span>
-            {l.label}
+            <span className={cn(
+              'h-8 w-8 rounded-xl flex items-center justify-center',
+              'bg-canvas/80 border border-hairline',
+              '[&_svg]:h-3.5 [&_svg]:w-3.5 text-slate-400',
+              'group-hover:bg-brand-50 group-hover:border-brand-100 group-hover:text-brand-600',
+              'transition-colors',
+            )}>
+              {l.icon}
+            </span>
+            <span className="text-[10px] font-semibold text-slate-500 group-hover:text-brand-700 transition-colors text-center leading-tight">
+              {l.label}
+            </span>
           </Link>
         ))}
-        {trailingSlot}
+        {trailingSlot && (
+          <div className="bg-surface flex items-center justify-center px-5 py-3.5 border-s border-hairline">
+            {trailingSlot}
+          </div>
+        )}
       </div>
-    </Card>
+    </div>
   );
 }
 
-// ── Today priority panel ──────────────────────────────────────────────────
+// ── Today priority panel ──────────────────────────────────────────────────────
 
 function TodayPriorityPanel({
   todayVisits,
   expiringUrgent,
 }: {
-  todayVisits: VisitAppointment[];
-  expiringUrgent: Reservation[];
+  todayVisits:     VisitAppointment[];
+  expiringUrgent:  Reservation[];
 }) {
   const total = todayVisits.length + expiringUrgent.length;
+
   return (
-    <Card className="overflow-hidden">
-      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-hairline">
-        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-        <h3 className="text-sm font-semibold text-slate-900 flex-1">أولويات اليوم</h3>
-        <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-amber-50 text-amber-700 text-2xs font-bold px-1.5">
+    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+      <div className="flex items-center gap-2.5 px-5 py-3 border-b border-hairline bg-amber-50/40">
+        <div className="relative shrink-0">
+          <Bell className="h-4 w-4 text-amber-600" />
+          <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
+        </div>
+        <h3 className="text-sm font-bold text-slate-900 flex-1">أولويات اليوم</h3>
+        <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-amber-100 text-amber-800 text-2xs font-black px-1.5 tabular-nums">
           {total}
         </span>
       </div>
 
       {todayVisits.length > 0 && (
         <>
-          <PrioritySectionHeader
-            icon={<CalendarClock className="h-3.5 w-3.5" />}
-            title="زياراتي اليوم"
-            count={todayVisits.length}
-          />
+          <div className="flex items-center gap-2 px-5 py-1.5 bg-canvas/50 border-t border-hairline">
+            <CalendarClock className="h-3.5 w-3.5 text-brand-500" />
+            <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">زياراتي اليوم</span>
+            <span className="text-2xs font-black text-slate-400 tabular-nums">{todayVisits.length}</span>
+          </div>
           {todayVisits.map((v) => (
             <Link
               key={v.id}
               href={`/dashboard/visits/appointments/${v.id}` as never}
-              className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-muted/40 transition-colors border-t border-hairline"
+              className="flex items-center gap-3 px-5 py-3 hover:bg-canvas/60 transition-colors border-t border-hairline"
             >
-              <div className="shrink-0 h-7 w-7 rounded-lg bg-brand-50 flex items-center justify-center">
+              <div className="shrink-0 h-7 w-7 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center">
                 <CalendarClock className="h-3.5 w-3.5 text-brand-600" />
               </div>
               <div className="min-w-0 flex-1">
@@ -546,9 +596,7 @@ function TodayPriorityPanel({
                   {v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber}
                 </p>
                 <p className="text-2xs text-slate-500 mt-0.5">
-                  <span className="font-semibold text-brand-700 tabular-nums">
-                    {formatDateTime(v.scheduledAt)}
-                  </span>
+                  <span className="font-bold text-brand-700 tabular-nums">{formatDateTime(v.scheduledAt)}</span>
                   {v.project ? ` · ${tx(v.project.name)}` : ''}
                   {v.unit ? ` · وحدة ${v.unit.code}` : ''}
                 </p>
@@ -561,19 +609,19 @@ function TodayPriorityPanel({
 
       {expiringUrgent.length > 0 && (
         <>
-          <PrioritySectionHeader
-            icon={<AlertCircle className="h-3.5 w-3.5" />}
-            title="حجوزات تنتهي اليوم أو غداً"
-            count={expiringUrgent.length}
-          />
+          <div className="flex items-center gap-2 px-5 py-1.5 bg-canvas/50 border-t border-hairline">
+            <AlertCircle className="h-3.5 w-3.5 text-red-500" />
+            <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">حجوزات تنتهي اليوم أو غداً</span>
+            <span className="text-2xs font-black text-red-500 tabular-nums">{expiringUrgent.length}</span>
+          </div>
           {expiringUrgent.map((r) => (
             <Link
               key={r.id}
               href={`/dashboard/reservations/${r.id}` as never}
-              className="flex items-center gap-3 px-4 py-2.5 hover:bg-surface-muted/40 transition-colors border-t border-hairline"
+              className="flex items-center gap-3 px-5 py-3 hover:bg-canvas/60 transition-colors border-t border-hairline"
             >
-              <div className="shrink-0 h-7 w-7 rounded-lg bg-amber-50 flex items-center justify-center">
-                <BookmarkCheck className="h-3.5 w-3.5 text-amber-600" />
+              <div className="shrink-0 h-7 w-7 rounded-xl bg-red-50 ring-1 ring-red-100 flex items-center justify-center">
+                <BookmarkCheck className="h-3.5 w-3.5 text-red-500" />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
@@ -583,7 +631,7 @@ function TodayPriorityPanel({
                 <p className="text-2xs text-slate-500 mt-0.5">
                   {r.lead?.fullName ?? r.client?.fullName ?? '—'}
                   {' · '}
-                  <span className="font-semibold text-red-600">{expiryLabel(r.expiresAt)}</span>
+                  <span className="font-bold text-red-600">{expiryLabel(r.expiresAt)}</span>
                 </p>
               </div>
               <ReservationStatusBadge status={r.status} />
@@ -591,74 +639,61 @@ function TodayPriorityPanel({
           ))}
         </>
       )}
-    </Card>
-  );
-}
-
-function PrioritySectionHeader({
-  icon,
-  title,
-  count,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  count: number;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-1.5 bg-slate-50/70 border-t border-hairline">
-      <span className="text-slate-400">{icon}</span>
-      <span className="text-2xs font-semibold uppercase tracking-wide text-slate-500 flex-1">
-        {title}
-      </span>
-      <span className="text-2xs font-bold tabular-nums text-slate-400">{count}</span>
     </div>
   );
 }
 
-// ── Section card ──────────────────────────────────────────────────────────
+// ── Section card ──────────────────────────────────────────────────────────────
 
 function SectionCard({
   title,
+  icon,
+  iconBg,
   href,
   hrefLabel = 'عرض الكل',
   error,
   empty,
   emptyText,
-  emptyIcon,
   className,
   children,
 }: {
-  title: string;
-  href: string;
+  title:      string;
+  icon:       React.ReactNode;
+  iconBg:     string;
+  href:       string;
   hrefLabel?: string;
-  error?: string | null;
-  empty: boolean;
-  emptyText: string;
-  emptyIcon?: React.ReactNode;
+  error?:     string | null;
+  empty:      boolean;
+  emptyText:  string;
   className?: string;
-  children: React.ReactNode;
+  children:   React.ReactNode;
 }) {
   return (
     <Card className={cn('overflow-hidden', className)}>
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-hairline">
-        <h3 className="text-sm font-semibold text-slate-900 tracking-tight">{title}</h3>
-        {/* No arrow — text-only CTA */}
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-hairline bg-canvas/40">
+        <div className="flex items-center gap-2">
+          <div className={cn('h-7 w-7 rounded-lg flex items-center justify-center shrink-0', iconBg)}>
+            {icon}
+          </div>
+          <h3 className="text-sm font-bold text-slate-900 tracking-tight">{title}</h3>
+        </div>
         <Link
           href={href as never}
-          className="text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+          className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
         >
           {hrefLabel}
+          <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       </div>
       {error ? (
-        <div className="flex items-start gap-2 text-warning-700 text-xs px-4 py-3">
+        <div className="flex items-start gap-2 text-amber-700 text-xs px-4 py-3">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <p>تعذّر تحميل هذا القسم.</p>
         </div>
       ) : empty ? (
-        <div className="flex items-center gap-2 px-4 py-3 text-slate-400">
-          <span className="h-3.5 w-3.5 shrink-0">{emptyIcon ?? <Users />}</span>
-          <p className="text-xs">{emptyText}</p>
+        <div className="flex items-center gap-2.5 px-5 py-4">
+          <CheckCircle2 className="h-4 w-4 text-success-500 shrink-0" />
+          <p className="text-xs text-slate-500">{emptyText}</p>
         </div>
       ) : (
         <div className="divide-y divide-hairline">{children}</div>
