@@ -136,6 +136,28 @@ export default async function SalesPerformancePage({
     ? rowsWithTarget.reduce((s, r) => s + (r.targetAmountPercent ?? 0), 0) / rowsWithTarget.length
     : null;
 
+  // Pipeline flow — monotonically non-increasing widths (% of first stage)
+  const pipelineFlow = (() => {
+    const stages = [
+      { label: 'فرص مفتوحة',    value: totalOpenLeads,  bar: 'bg-sky-400',     text: 'text-sky-700',     dot: 'bg-sky-400' },
+      { label: 'زيارات قادمة',  value: totalUpcoming,   bar: 'bg-violet-400',  text: 'text-violet-700',  dot: 'bg-violet-400' },
+      { label: 'حجوزات نشطة',   value: totalActiveRes,  bar: 'bg-amber-400',   text: 'text-amber-700',   dot: 'bg-amber-400' },
+      { label: 'حجوزات محوّلة', value: totalConvRes,    bar: 'bg-emerald-400', text: 'text-emerald-700', dot: 'bg-emerald-400' },
+    ];
+    const first = stages[0]?.value ?? 1;
+    let prevW = 100;
+    return stages.map((s, i) => {
+      const nat    = first > 0 ? (s.value / first) * 100 : 0;
+      const capped = Math.min(nat, prevW);
+      prevW = capped;
+      const w    = Math.max(capped, s.value > 0 ? 5 : 0);
+      const prev = stages[i - 1]?.value ?? 0;
+      const conv = i > 0 && prev > 0 ? s.value / prev : null;
+      return { ...s, pct: w, conv };
+    });
+  })();
+  const pipelineOverallConv = totalOpenLeads > 0 ? totalConvRes / totalOpenLeads : null;
+
   const sorted = [...rows].sort((a, b) => {
     const aHas = a.targetAmount !== null, bHas = b.targetAmount !== null;
     if (aHas !== bHas) return aHas ? -1 : 1;
@@ -144,9 +166,10 @@ export default async function SalesPerformancePage({
   });
 
   const teamTheme  = theme(avgAttainment);
-  const gaugeR     = 44;
-  const gaugeCirc  = 2 * Math.PI * gaugeR;
-  const gaugeFill  = gaugeCirc * (1 - Math.min(avgAttainment ?? 0, 100) / 100);
+  const heroTint   = avgAttainment === null ? 'bg-slate-50/60'
+    : avgAttainment >= 80 ? 'bg-emerald-50/50'
+    : avgAttainment >= 50 ? 'bg-amber-50/40'
+    : 'bg-red-50/30';
   const hasFilter  = !!(sp.period || sp.salesId);
 
   return (
@@ -164,10 +187,10 @@ export default async function SalesPerformancePage({
         ]}
         actions={
           <Link href="/dashboard/targets">
-            <Button variant="ghost" size="sm">
-              <Settings2 className="h-3.5 w-3.5 me-1.5" />
+            <span className="inline-flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-[12px] font-bold text-amber-700 shadow-xs hover:bg-amber-100 transition-colors cursor-pointer select-none">
+              <Settings2 className="h-3.5 w-3.5" />
               إدارة الأهداف
-            </Button>
+            </span>
           </Link>
         }
       />
@@ -199,108 +222,111 @@ export default async function SalesPerformancePage({
       </form>
 
       {/* ═══════════════════════════════════════════════════════════════════
-          HERO — Team attainment gauge + 4 KPIs
+          HERO — compact attainment strip
       ════════════════════════════════════════════════════════════════════ */}
       <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-        {/* Top accent stripe */}
         <div className={cn('h-[3px]', teamTheme.bar)} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr_1fr] divide-y lg:divide-y-0 divide-x-0 lg:divide-x lg:divide-x-reverse divide-hairline">
 
-          {/* Gauge hero */}
-          <div className="flex items-center gap-8 px-8 py-6">
-            {/* SVG gauge */}
+          {/* ── Attainment panel ────────────────────────────────────── */}
+          <div className={cn('flex items-center gap-5 px-6 py-5', heroTint)}>
+            {/* 80px ring gauge */}
             <div className="relative shrink-0">
-              <svg width="112" height="112" viewBox="0 0 112 112" className="-rotate-90">
-                <circle cx="56" cy="56" r={gaugeR} fill="none" stroke="#f1f5f9" strokeWidth="10" />
+              <svg width="80" height="80" viewBox="0 0 80 80" className="-rotate-90">
+                <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(0,0,0,0.06)" strokeWidth="8" />
                 <circle
-                  cx="56" cy="56" r={gaugeR} fill="none"
-                  stroke={teamTheme.accent}
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={gaugeCirc}
-                  strokeDashoffset={gaugeFill}
+                  cx="40" cy="40" r="32" fill="none"
+                  stroke={teamTheme.accent} strokeWidth="8" strokeLinecap="round"
+                  strokeDasharray={2 * Math.PI * 32}
+                  strokeDashoffset={2 * Math.PI * 32 * (1 - Math.min(avgAttainment ?? 0, 100) / 100)}
                 />
               </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className={cn('text-[18px] font-black tabular-nums leading-none', teamTheme.text)}>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className={cn('text-[15px] font-black tabular-nums leading-none', teamTheme.text)}>
                   {avgAttainment !== null ? `${Math.round(avgAttainment)}%` : '—'}
                 </span>
               </div>
             </div>
 
-            {/* Text */}
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+            {/* Info beside gauge */}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold text-slate-400 mb-1.5">
                 متوسط إنجاز الفريق
               </p>
-              <p className={cn('text-[44px] font-black tabular-nums leading-none tracking-tight', teamTheme.text)}>
+              <p className={cn('text-[30px] font-black tabular-nums leading-none tracking-tight', teamTheme.text)}>
                 {avgAttainment !== null ? `${avgAttainment.toFixed(1)}%` : '—'}
               </p>
-              <div className="flex items-center gap-2 mt-3 flex-wrap">
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
                 {avgAttainment !== null && (
-                  <span className={cn('text-[10px] font-bold px-2.5 py-1 rounded-full', teamTheme.badge)}>
+                  <span className={cn('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold', teamTheme.badge)}>
                     {teamTheme.label}
                   </span>
                 )}
-                <span className="text-[11px] text-slate-400">
+                <span className="text-xs text-slate-500">
                   {rowsWithTarget.length > 0
-                    ? `${rowsWithTarget.length} من ${rows.length} لديهم هدف`
-                    : 'لا توجد أهداف محددة'}
+                    ? `${rowsWithTarget.length} من ${rows.length} مندوب لديهم هدف`
+                    : 'لا توجد أهداف محددة بعد'}
                 </span>
               </div>
               {totalTarget > 0 && (
-                <div className="mt-4 max-w-[200px]">
-                  <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                <div className="mt-3 max-w-[200px]">
+                  <div className="w-full h-1.5 rounded-full bg-black/5 overflow-hidden">
                     <div
                       className={cn('h-full rounded-full', teamTheme.bar)}
                       style={{ width: `${Math.min((totalAchieved / totalTarget) * 100, 100)}%` }}
                     />
                   </div>
-                  <div className="flex justify-between text-[10px] text-slate-400 mt-1" dir="ltr">
-                    <span>{formatCurrency(totalAchieved)}</span>
-                    <span>{formatCurrency(totalTarget)}</span>
+                  <div className="flex justify-between text-[11px] text-slate-400 mt-1" dir="ltr">
+                    <span className="font-semibold">{formatCurrency(totalAchieved)}</span>
+                    <span>/ {formatCurrency(totalTarget)}</span>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* KPI: Total revenue */}
-          <HeroKpi
-            icon={<Wallet className="h-4 w-4" />}
-            iconClass="bg-emerald-50 text-emerald-600"
-            label="إجمالي المبيعات"
-          >
-            <span dir="ltr" className="text-[22px] font-black tabular-nums text-emerald-700 leading-tight whitespace-nowrap">
+          {/* ── KPI: Revenue ────────────────────────────────────────── */}
+          <div className="flex flex-col justify-center gap-2 px-6 py-5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                <Wallet className="h-4 w-4" />
+              </span>
+              <p className="text-xs font-semibold text-slate-500">إجمالي المبيعات</p>
+            </div>
+            <p dir="ltr" className="text-[20px] font-black tabular-nums text-emerald-700 leading-tight whitespace-nowrap">
               {formatCurrency(totalAchieved)}
-            </span>
-            <p className="text-[10px] text-slate-400 mt-1">{rows.length} مندوب نشط</p>
-          </HeroKpi>
+            </p>
+            <p className="text-xs text-slate-400">{rows.length} مندوب نشط هذه الفترة</p>
+          </div>
 
-          {/* KPI: Contracts */}
-          <HeroKpi
-            icon={<FileText className="h-4 w-4" />}
-            iconClass="bg-violet-50 text-violet-600"
-            label="عقود موقّعة"
-          >
-            <span className="text-[40px] font-black tabular-nums text-slate-900 leading-tight">
+          {/* ── KPI: Contracts ──────────────────────────────────────── */}
+          <div className="flex flex-col justify-center gap-2 px-6 py-5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                <FileText className="h-4 w-4" />
+              </span>
+              <p className="text-xs font-semibold text-slate-500">عقود موقّعة</p>
+            </div>
+            <p className="text-[32px] font-black tabular-nums text-slate-900 leading-tight">
               {totalContracts.toLocaleString('ar-EG')}
-            </span>
-            <p className="text-[10px] text-slate-400 mt-1">{totalLeads} فرصة إجمالية</p>
-          </HeroKpi>
+            </p>
+            <p className="text-xs text-slate-400">{totalLeads} فرصة في الأنبوب</p>
+          </div>
 
-          {/* KPI: Bonus */}
-          <HeroKpi
-            icon={<BadgePercent className="h-4 w-4" />}
-            iconClass="bg-amber-50 text-amber-600"
-            label="مكافآت الفترة"
-          >
-            <span dir="ltr" className="text-[22px] font-black tabular-nums text-amber-700 leading-tight whitespace-nowrap">
+          {/* ── KPI: Bonus ──────────────────────────────────────────── */}
+          <div className="flex flex-col justify-center gap-2 px-6 py-5">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+                <BadgePercent className="h-4 w-4" />
+              </span>
+              <p className="text-xs font-semibold text-slate-500">مكافآت الفترة</p>
+            </div>
+            <p dir="ltr" className="text-[20px] font-black tabular-nums text-amber-700 leading-tight whitespace-nowrap">
               {formatCurrency(totalBonusAmt)}
-            </span>
-            <p className="text-[10px] text-slate-400 mt-1">{bonus.length} إدخال</p>
-          </HeroKpi>
+            </p>
+            <p className="text-xs text-slate-400">{bonus.length} إدخال مكافأة</p>
+          </div>
 
         </div>
       </div>
@@ -484,23 +510,63 @@ export default async function SalesPerformancePage({
                 <p className="text-[11px] text-slate-400 mt-0.5">مجموع نشاط الفريق</p>
               </div>
             </div>
-            <div className="grid grid-cols-2 divide-x divide-x-reverse divide-hairline">
-              {([
-                { label: 'فرص مفتوحة',    value: totalOpenLeads,  icon: <UserPlus className="h-3.5 w-3.5" />,      iconBg: 'bg-sky-50 text-sky-500',     color: 'text-sky-700' },
-                { label: 'زيارات قادمة',  value: totalUpcoming,   icon: <CalendarDays className="h-3.5 w-3.5" />,  iconBg: 'bg-violet-50 text-violet-500', color: 'text-violet-700' },
-                { label: 'حجوزات نشطة',   value: totalActiveRes,  icon: <BookmarkCheck className="h-3.5 w-3.5" />, iconBg: 'bg-amber-50 text-amber-500',  color: 'text-amber-700' },
-                { label: 'حجوزات محوّلة', value: totalConvRes,    icon: <FileText className="h-3.5 w-3.5" />,      iconBg: 'bg-emerald-50 text-emerald-500', color: 'text-emerald-700' },
-              ] as const).map((stat) => (
-                <div key={stat.label} className="px-5 py-4">
-                  <div className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg mb-2.5', stat.iconBg)}>
-                    {stat.icon}
+            <div className="px-5 py-5 space-y-0">
+              {pipelineFlow.map((stage, i) => (
+                <div key={stage.label}>
+
+                  {/* Conversion connector between stages */}
+                  {i > 0 && (
+                    <div className="flex items-center gap-3 py-2 ps-1">
+                      <div className="flex flex-col items-center self-stretch">
+                        <div className="w-px flex-1 bg-slate-200" />
+                      </div>
+                      {stage.conv !== null && (
+                        <span className={cn(
+                          'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+                          stage.conv > 1   ? 'text-amber-700 bg-amber-50 ring-1 ring-amber-200' :
+                          stage.conv >= 0.4 ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200' :
+                                             'text-slate-500 bg-slate-100',
+                        )}>
+                          {stage.conv > 1 ? '↑' : '↓'} {(stage.conv * 100).toFixed(0)}%
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Stage row */}
+                  <div className="flex items-center gap-3">
+                    {/* Dot */}
+                    <div className={cn('h-3 w-3 rounded-full shrink-0', stage.dot)} />
+
+                    {/* Label */}
+                    <span className="text-[11px] font-semibold text-slate-600 w-24 shrink-0">{stage.label}</span>
+
+                    {/* Proportional bar */}
+                    <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className={cn('h-full rounded-full transition-all duration-500', stage.bar)}
+                        style={{ width: `${stage.pct}%` }}
+                      />
+                    </div>
+
+                    {/* Count */}
+                    <span className={cn('text-[18px] font-black tabular-nums leading-none w-8 text-end shrink-0', stage.text)}>
+                      {stage.value.toLocaleString('ar-EG')}
+                    </span>
                   </div>
-                  <p className={cn('text-[28px] font-black tabular-nums leading-none', stat.color)}>
-                    {stat.value.toLocaleString('ar-EG')}
-                  </p>
-                  <p className="text-[10px] text-slate-400 mt-1.5">{stat.label}</p>
+
                 </div>
               ))}
+
+              {/* Overall conversion footer */}
+              {pipelineOverallConv !== null && (
+                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-slate-400">معدل التحويل الإجمالي</span>
+                  <span className="text-[11px] font-black tabular-nums text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
+                    {(pipelineOverallConv * 100).toFixed(1)}%
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -580,20 +646,6 @@ export default async function SalesPerformancePage({
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
-
-function HeroKpi({ icon, iconClass, label, children }: {
-  icon: ReactNode; iconClass: string; label: string; children: ReactNode;
-}) {
-  return (
-    <div className="flex flex-col justify-center gap-3 px-8 py-6">
-      <div className="flex items-center justify-between gap-2">
-        <span className={cn('inline-flex h-8 w-8 items-center justify-center rounded-xl', iconClass)}>{icon}</span>
-        <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400 text-end leading-tight">{label}</p>
-      </div>
-      <div className="flex flex-col gap-0.5">{children}</div>
-    </div>
-  );
-}
 
 function RankChip({ rank }: { rank: number }) {
   const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
