@@ -25,7 +25,12 @@ class _Branch {
 /// Branches whose screens carry their OWN Scaffold + AppBar (catalog browsing
 /// screens reused as full-screen pushes too). The shell omits its app bar for
 /// these so there is never a double app bar.
-const _selfChromeBranches = {_Branch.projects, _Branch.units, _Branch.compare};
+const _selfChromeBranches = {
+  _Branch.projects,
+  _Branch.units,
+  _Branch.compare,
+  _Branch.more,
+};
 
 /// Bottom-nav branch indices per auth state. Guests get the public browsing
 /// set (home, projects, units, compare, more) and NEVER the account branches;

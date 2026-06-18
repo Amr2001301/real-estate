@@ -135,6 +135,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       AppButton(
                         label: l10n.authSendCode,
                         icon: Icons.sms_outlined,
+                        variant: AppButtonVariant.gold,
                         expand: true,
                         isLoading: state.isSubmitting,
                         onPressed: () {
@@ -151,6 +152,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       AppButton(
                         label: l10n.authVerifyCode,
                         icon: Icons.verified_outlined,
+                        variant: AppButtonVariant.gold,
                         expand: true,
                         isLoading: state.isSubmitting,
                         onPressed: () {

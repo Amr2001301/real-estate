@@ -148,6 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     AppButton(
                       label: l10n.actionRegister,
                       icon: Icons.person_add_alt_1_rounded,
+                      variant: AppButtonVariant.gold,
                       expand: true,
                       isLoading: state.isSubmitting,
                       onPressed: _submit,

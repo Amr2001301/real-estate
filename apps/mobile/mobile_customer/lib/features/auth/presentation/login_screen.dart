@@ -108,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     AppButton(
                       label: l10n.actionLogin,
                       icon: Icons.login_rounded,
+                      variant: AppButtonVariant.gold,
                       expand: true,
                       isLoading: state.isSubmitting,
                       onPressed: _submit,
