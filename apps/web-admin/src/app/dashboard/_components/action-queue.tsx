@@ -8,7 +8,6 @@ import {
   Clock,
   Bell,
   CheckCircle2,
-  ArrowLeft,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
@@ -24,10 +23,10 @@ interface AlertData {
 
 type Tone = 'danger' | 'warning' | 'info';
 
-const TONE: Record<Tone, { icon: string; count: string; dot: string; cta: string }> = {
-  danger:  { icon: 'bg-danger-50 text-danger-600',  count: 'text-danger-700',  dot: 'bg-danger-500',  cta: 'text-danger-600 group-hover:text-danger-700'  },
-  warning: { icon: 'bg-amber-50 text-amber-600',    count: 'text-amber-700',   dot: 'bg-amber-500',   cta: 'text-amber-600 group-hover:text-amber-700'    },
-  info:    { icon: 'bg-info-50 text-info-600',      count: 'text-info-700',    dot: 'bg-info-500',    cta: 'text-info-600 group-hover:text-info-700'      },
+const TONE: Record<Tone, { icon: string; count: string; dot: string }> = {
+  danger:  { icon: 'bg-danger-50 text-danger-600',  count: 'text-danger-700',  dot: 'bg-danger-500'  },
+  warning: { icon: 'bg-amber-50 text-amber-600',    count: 'text-amber-700',   dot: 'bg-amber-500'   },
+  info:    { icon: 'bg-info-50 text-info-600',      count: 'text-info-700',    dot: 'bg-info-500'    },
 };
 
 interface ActionItem {
@@ -75,7 +74,6 @@ function buildItems(a: AlertData | null | undefined): ActionItem[] {
     },
   ];
 
-  // Active items first, then by severity priority
   return list.sort((a, b) => {
     if (a.value > 0 && b.value === 0) return -1;
     if (a.value === 0 && b.value > 0) return 1;
@@ -117,7 +115,7 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
         <p className="text-[11px] text-slate-400 hidden sm:block">انقر على أي بند للانتقال مباشرةً</p>
       </div>
 
-      {/* 6-slot grid — gap-px creates hairline dividers between cells */}
+      {/* 6-slot grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-hairline">
         {items.map((item) => {
           const t      = TONE[item.tone];
@@ -130,12 +128,12 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
               className={cn('group block', !active && 'pointer-events-none')}
             >
               <div className={cn(
-                'bg-surface h-full px-4 py-4 flex flex-col gap-2.5 transition-colors duration-150',
+                'bg-surface h-full px-4 py-5 flex flex-col justify-between gap-4 transition-colors duration-150',
                 active && 'hover:bg-slate-50/80',
               )}>
 
-                {/* Icon + live dot */}
-                <div className="flex items-start justify-between">
+                {/* Top: icon + live dot */}
+                <div className="flex items-center justify-between">
                   <div className={cn(
                     'h-8 w-8 rounded-xl flex items-center justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
                     active ? t.icon : 'bg-slate-50 text-slate-300',
@@ -143,34 +141,31 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
                     {item.icon}
                   </div>
                   {active && (
-                    <span className={cn('h-1.5 w-1.5 rounded-full shrink-0 mt-1', t.dot)} />
+                    <span className={cn('h-2 w-2 rounded-full animate-pulse shrink-0', t.dot)} />
                   )}
                 </div>
 
-                {/* Count */}
-                <p className={cn(
-                  'text-[28px] font-black tabular-nums leading-none tracking-tight',
-                  active ? t.count : 'text-slate-200',
-                )}>
-                  {item.value}
-                </p>
-
-                {/* Label + description */}
-                <div className="flex-1">
-                  <p className="text-[11px] font-semibold text-slate-700 leading-snug">{item.label}</p>
-                  <p className="text-[10px] text-slate-400 leading-tight mt-0.5">{item.description}</p>
+                {/* Bottom: count + label + description */}
+                <div className="flex flex-col gap-1.5">
+                  <p className={cn(
+                    'text-[30px] font-black tabular-nums leading-none tracking-tight',
+                    active ? t.count : 'text-slate-200',
+                  )}>
+                    {item.value}
+                  </p>
+                  <p className={cn(
+                    'text-[11px] font-bold leading-snug',
+                    active ? 'text-slate-800' : 'text-slate-300',
+                  )}>
+                    {item.label}
+                  </p>
+                  {active && (
+                    <p className="text-[10px] text-slate-400 leading-tight">
+                      {item.description}
+                    </p>
+                  )}
                 </div>
 
-                {/* CTA */}
-                {active && (
-                  <div className={cn(
-                    'flex items-center gap-1 text-[10px] font-bold transition-colors',
-                    t.cta,
-                  )}>
-                    مراجعة
-                    <ArrowLeft className="h-3 w-3" />
-                  </div>
-                )}
               </div>
             </Link>
           );
