@@ -11,8 +11,12 @@ import {
   FileText,
   Wallet,
   Wrench,
-  ArrowLeft,
   Sparkles,
+  CreditCard,
+  Bell,
+  ArrowLeft,
+  Activity,
+  Zap,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -46,114 +50,19 @@ import { RecentPanel } from '@/components/account/RecentPanel';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { notificationTitle } from '@/components/account/NotificationCard';
 
-// Tinted icon chips for the hero metrics — theme tokens, dark-mode safe.
-const CHIP_SUCCESS = 'bg-success/10 text-success ring-1 ring-success/20';
-const CHIP_GOLD = 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70';
-const CHIP_AMBER = 'bg-warning/10 text-warning ring-1 ring-warning/20';
-const CHIP_ROSE = 'bg-error/10 text-error ring-1 ring-error/20';
-
-interface Metric {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  hint: string;
-  href: string;
-  chip: string;
-}
-
-/** Premium executive metric card: tinted icon chip + label / value / hint stack
- *  with a gold ring + chevron affordance on hover. */
-function HeroMetric({ icon: Icon, label, value, hint, href, chip }: Metric) {
-  return (
-    <Link
-      href={href as Route}
-      className="group flex w-full items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface px-5 py-4 shadow-soft ring-1 ring-transparent transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:shadow-card hover:ring-gold-200/70"
-    >
-      <div className="min-w-0">
-        <div className="text-[11px] font-semibold text-ink-muted">{label}</div>
-        <div
-          className="mt-1 truncate font-display text-xl font-black leading-none text-ink-strong"
-          dir="auto"
-        >
-          {value}
-        </div>
-        <div className="mt-1.5 flex items-center gap-1 text-[10px] font-medium text-ink-muted">
-          {hint}
-          <ArrowLeft
-            className="h-3 w-3 -translate-x-1 text-gold-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
-            aria-hidden
-          />
-        </div>
-      </div>
-      <span
-        className={cn(
-          'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl',
-          chip,
-        )}
-      >
-        <Icon className="h-5 w-5" aria-hidden />
-      </span>
-    </Link>
-  );
-}
-
-/** Left activity panel with a vertical timeline rail (RTL start edge). */
-function TimelinePanel({
-  title,
-  href,
-  children,
-}: {
-  title: string;
-  href: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <PremiumCard className="p-5">
-      <div className="mb-4 flex h-8 items-center justify-between gap-3">
-        <h2 className="truncate text-base font-bold text-ink-strong">{title}</h2>
-        <Link
-          href={href as Route}
-          className="inline-flex shrink-0 items-center rounded-lg border border-hairline/70 bg-surface-soft px-3 py-1 text-[10px] font-extrabold text-ink-strong shadow-sm transition-all duration-200 hover:bg-hairline/40"
-        >
-          عرض الكل
-        </Link>
-      </div>
-      <div className="space-y-4 border-s-2 border-hairline/70 ps-4">{children}</div>
-    </PremiumCard>
-  );
-}
-
-function TimelineItem({
-  title,
-  subtitle,
-  trailing,
-}: {
-  title: string;
-  subtitle?: string;
-  trailing?: React.ReactNode;
-}) {
-  return (
-    <div className="relative">
-      <span
-        className="absolute -start-[1.32rem] top-1.5 h-2 w-2 rounded-full bg-gold-400 ring-2 ring-surface"
-        aria-hidden
-      />
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="line-clamp-1 text-sm font-semibold text-ink-strong">{title}</p>
-          {subtitle && <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted">{subtitle}</p>}
-        </div>
-        {trailing && <div className="shrink-0">{trailing}</div>}
-      </div>
-    </div>
-  );
-}
-
 export const metadata = buildMetadata({
   title: 'لوحة الحساب',
   description: 'منطقة العميل في ديفورا.',
   robots: { index: false, follow: false },
 });
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+const GLOW = {
+  background: 'radial-gradient(circle at 80% 10%, rgba(200,162,75,0.12), transparent 55%)',
+} as const;
+
+// ── Format helpers ────────────────────────────────────────────────────────────
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
@@ -183,14 +92,191 @@ function contractTitle(c: MeContract): string {
   return `عقد رقم ${c.contractNumber ?? '—'}`;
 }
 
+// ── KPI Metric Tile ───────────────────────────────────────────────────────────
+
+interface MetricTile {
+  icon:     LucideIcon;
+  label:    string;
+  value:    string;
+  hint:     string;
+  href:     string;
+  chipCls:  string;
+  glowCls:  string;
+}
+
+function HeroMetric({ icon: Icon, label, value, hint, href, chipCls, glowCls }: MetricTile) {
+  return (
+    <Link
+      href={href as Route}
+      className="group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-hairline bg-surface px-4 py-8 text-center shadow-[0_8px_30px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:border-gold-300/80 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.14),0_24px_48px_-12px_rgba(15,30,51,0.22)]"
+    >
+      {/* corner glow */}
+      <span
+        className={cn(
+          'pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100',
+          glowCls,
+        )}
+        aria-hidden
+      />
+      <span className="pointer-events-none absolute inset-0 rounded-2xl" style={GLOW} aria-hidden />
+
+      {/* Icon chip */}
+      <span
+        className={cn(
+          'relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 transition-transform duration-300 group-hover:scale-105',
+          chipCls,
+        )}
+      >
+        <Icon className="h-6 w-6" aria-hidden />
+      </span>
+
+      {/* Value + label */}
+      <div className="relative min-w-0 w-full">
+        <div
+          className="font-display text-[2rem] font-black leading-none tracking-tight text-ink-strong"
+          dir="auto"
+        >
+          {value}
+        </div>
+        <div className="mt-2 text-sm font-semibold text-ink-muted">{label}</div>
+        <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-medium text-ink-muted/60">
+          {hint}
+          <ArrowLeft
+            className="h-3 w-3 -translate-x-1 text-gold-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+            aria-hidden
+          />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// ── Section divider ───────────────────────────────────────────────────────────
+
+function DashSection({
+  icon: Icon,
+  title,
+  action,
+  children,
+}: {
+  icon?:     LucideIcon;
+  title:     string;
+  action?:   React.ReactNode;
+  children:  React.ReactNode;
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-3">
+        {Icon && (
+          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold-600 ring-1 ring-gold-200/60">
+            <Icon className="h-3.5 w-3.5" aria-hidden />
+          </span>
+        )}
+        <span className="text-[10px] font-black uppercase tracking-widest text-ink-muted">
+          {title}
+        </span>
+        <div className="flex-1 h-px bg-hairline/70" />
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// ── Quick Action Tile ─────────────────────────────────────────────────────────
+
+function QuickActionTile({
+  href,
+  icon: Icon,
+  label,
+  description,
+}: {
+  href:        string;
+  icon:        LucideIcon;
+  label:       string;
+  description: string;
+}) {
+  return (
+    <Link
+      href={href as Route}
+      className="group flex items-center gap-4 rounded-2xl border border-hairline bg-surface p-4 shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-gold-300/60 hover:shadow-card hover:ring-1 hover:ring-gold-200/50"
+    >
+      <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/60 transition-all duration-300 group-hover:from-gold-300 group-hover:to-gold-500 group-hover:text-navy group-hover:ring-gold-400">
+        <Icon className="h-5 w-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-bold text-ink-strong leading-tight">{label}</p>
+        <p className="mt-0.5 text-[11px] text-ink-muted leading-tight">{description}</p>
+      </div>
+      <ArrowLeft
+        className="h-4 w-4 shrink-0 -translate-x-1 text-gold-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
+        aria-hidden
+      />
+    </Link>
+  );
+}
+
+// ── Timeline (notification / visit feed) ──────────────────────────────────────
+
+function TimelinePanel({
+  title,
+  href,
+  children,
+}: {
+  title:    string;
+  href:     string;
+  children: React.ReactNode;
+}) {
+  return (
+    <PremiumCard className="p-5">
+      <div className="mb-4 flex h-8 items-center justify-between gap-3">
+        <h2 className="truncate text-base font-bold text-ink-strong">{title}</h2>
+        <Link
+          href={href as Route}
+          className="inline-flex shrink-0 items-center rounded-lg border border-hairline/70 bg-surface-soft px-3 py-1 text-[10px] font-extrabold text-ink-strong shadow-sm transition-all duration-200 hover:bg-hairline/40"
+        >
+          عرض الكل
+        </Link>
+      </div>
+      <div className="space-y-4 border-s-2 border-gold-200/60 ps-4">{children}</div>
+    </PremiumCard>
+  );
+}
+
+function TimelineItem({
+  title,
+  subtitle,
+  trailing,
+}: {
+  title:     string;
+  subtitle?: string;
+  trailing?: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      <span
+        className="absolute -start-[1.32rem] top-1.5 h-2 w-2 rounded-full bg-gold-400 ring-2 ring-surface"
+        aria-hidden
+      />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="line-clamp-1 text-sm font-semibold text-ink-strong">{title}</p>
+          {subtitle && <p className="mt-0.5 line-clamp-1 text-xs text-ink-muted">{subtitle}</p>}
+        </div>
+        {trailing && <div className="shrink-0">{trailing}</div>}
+      </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default async function AccountPage() {
   const session = await getSession();
   if (!session) redirect('/login');
   const isCustomer = session.role === 'CUSTOMER';
 
-  // ── Client sources (every portal user — CLIENT and CUSTOMER) ───────────
-  // P7 — reservations live here (not in the customer-only section) because
-  // CLIENT users can hold reservations without yet being promoted to CUSTOMER.
+  // ── Data fetching — unchanged ─────────────────────────────────────────────
   const [favsR, visitsR, reqsR, resvR] = await Promise.allSettled([
     authFetch<FavoriteItem[]>('/me/favorites'),
     authFetch<Paginated<MeVisitRequest>>('/me/visit-requests?page=1&pageSize=3'),
@@ -205,29 +291,27 @@ export default async function AccountPage() {
     redirect('/login');
   }
 
-  const favorites = favsR.status === 'fulfilled' ? favsR.value : null;
-  const visits = visitsR.status === 'fulfilled' ? visitsR.value : null;
-  const requests = reqsR.status === 'fulfilled' ? reqsR.value : null;
-  const reservations = resvR.status === 'fulfilled' ? resvR.value : null;
+  const favorites   = favsR.status  === 'fulfilled' ? favsR.value   : null;
+  const visits      = visitsR.status === 'fulfilled' ? visitsR.value  : null;
+  const requests    = reqsR.status   === 'fulfilled' ? reqsR.value    : null;
+  const reservations = resvR.status  === 'fulfilled' ? resvR.value   : null;
 
-  const favoritesCount = favorites ? favorites.length : null;
-  const visitsCount = visits ? visits.meta.total : null;
-  const requestsCount = requests ? requests.meta.total : null;
-  const reservationsCount = reservations ? reservations.meta.total : null;
+  const favoritesCount    = favorites    ? favorites.length            : null;
+  const visitsCount       = visits       ? visits.meta.total           : null;
+  const requestsCount     = requests     ? requests.meta.total         : null;
+  const reservationsCount = reservations ? reservations.meta.total     : null;
 
-  const recentVisits = visits?.data ?? [];
+  const recentVisits       = visits?.data       ?? [];
   const recentReservations = reservations?.data ?? [];
 
-  // ── Customer sources (CUSTOMER only — CLIENT never calls these) ──────────
-  let contractsCount: number | null = null;
-  let depositsTotalText: string | null = null;
-  let maintenanceCount: number | null = null;
-  let recentContracts: MeContract[] = [];
+  // ── Customer-only data ────────────────────────────────────────────────────
+  let contractsCount:     number | null = null;
+  let depositsTotalText:  string | null = null;
+  let maintenanceCount:   number | null = null;
+  let recentContracts:    MeContract[]     = [];
   let recentNotifications: MeNotification[] = [];
-  // Owner-first focus band: the customer's primary owned unit (derived from
-  // their first contract) + the single most urgent upcoming installment.
-  let primaryContract: MeContract | null = null;
-  let nextInstallment: MeInstallment | null = null;
+  let primaryContract:    MeContract | null = null;
+  let nextInstallment:    MeInstallment | null = null;
   let unpaidCount = 0;
 
   if (isCustomer) {
@@ -235,13 +319,7 @@ export default async function AccountPage() {
       authFetch<Paginated<MeContract>>('/contracts/me/contracts?page=1&pageSize=3'),
       authFetch<MeDepositsResponse>('/me/deposits'),
       authFetch<Paginated<MeMaintenanceRequest>>('/me/maintenance-requests?page=1&pageSize=3'),
-      // P10 — accept either the historical flat-array shape OR the current
-      // `Paginated<MeNotification>` shape; the helper normalises both into a
-      // plain array. Calling .filter() directly on the wrapped response is
-      // what crashed the dashboard at src/app/account/page.tsx:150.
       authFetch<Paginated<MeNotification> | MeNotification[]>('/me/notifications'),
-      // Installment schedule — used only to surface the next due payment in the
-      // focus band. Failure is non-fatal (band hides the payment side).
       authFetch<Paginated<MeInstallment>>('/me/installments?page=1&pageSize=200'),
     ]);
     if (
@@ -252,31 +330,28 @@ export default async function AccountPage() {
       redirect('/login');
     }
 
-    const contracts = contractsR.status === 'fulfilled' ? contractsR.value : null;
-    const deposits = depositsR.status === 'fulfilled' ? depositsR.value : null;
-    const maintenance = maintR.status === 'fulfilled' ? maintR.value : null;
-    const installments = instR.status === 'fulfilled' ? instR.value.data : [];
+    const contracts    = contractsR.status === 'fulfilled' ? contractsR.value : null;
+    const deposits     = depositsR.status  === 'fulfilled' ? depositsR.value  : null;
+    const maintenance  = maintR.status     === 'fulfilled' ? maintR.value     : null;
+    const installments = instR.status      === 'fulfilled' ? instR.value.data : [];
 
-    // Next due = earliest-dated unpaid installment (an overdue one naturally
-    // sorts first), so the band always shows the most urgent obligation.
     const unpaid = installments.filter((i) => i.status !== 'PAID');
-    unpaidCount = unpaid.length;
+    unpaidCount  = unpaid.length;
     nextInstallment =
       unpaid.length > 0
         ? unpaid.reduce((earliest, i) => (i.dueDate < earliest.dueDate ? i : earliest))
         : null;
-    // Defence-in-depth: anything other than an array OR `{data: T[]}` falls
-    // through to `[]`, so the dashboard renders zeros instead of throwing.
+
     const notificationsRaw = notifsR.status === 'fulfilled' ? notifsR.value : null;
-    const notifications = extractPaginatedData<MeNotification>(notificationsRaw);
+    const notifications    = extractPaginatedData<MeNotification>(notificationsRaw);
 
-    contractsCount = contracts ? contracts.meta.total : null;
-    depositsTotalText = deposits ? formatPrice(deposits.totals.totalAmount) : null;
-    maintenanceCount = maintenance ? maintenance.meta.total : null;
+    contractsCount    = contracts   ? contracts.meta.total                   : null;
+    depositsTotalText = deposits    ? formatPrice(deposits.totals.totalAmount) : null;
+    maintenanceCount  = maintenance ? maintenance.meta.total                  : null;
 
-    recentContracts = contracts?.data ?? [];
-    recentNotifications = notifications.slice(0, 3);
-    primaryContract = recentContracts[0] ?? null;
+    recentContracts      = contracts?.data ?? [];
+    recentNotifications  = notifications.slice(0, 3);
+    primaryContract      = recentContracts[0] ?? null;
   }
 
   const fmt = (n: number | null) => (n != null ? formatNumber(n) : '—');
@@ -285,79 +360,86 @@ export default async function AccountPage() {
     return present.length ? formatNumber(present.reduce((a, b) => a + b, 0)) : '—';
   };
 
-  // ── Block 1: role-aware hero metrics ──
-  const metrics: Metric[] = isCustomer
+  // ── KPI Tiles ─────────────────────────────────────────────────────────────
+  const tiles: MetricTile[] = isCustomer
     ? [
         {
-          icon: Wallet,
-          label: 'إجمالي المدفوعات',
-          value: depositsTotalText ?? '—',
-          hint: 'إجمالي محصّل',
-          href: routes.accountDeposits,
-          chip: CHIP_SUCCESS,
+          icon:    Wallet,
+          label:   'إجمالي المدفوعات',
+          value:   depositsTotalText ?? '—',
+          hint:    'إجمالي محصّل',
+          href:    routes.accountDeposits,
+          chipCls: 'bg-emerald-50 text-emerald-600 ring-emerald-200/60 group-hover:bg-emerald-100',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(16,185,129,0.08),transparent_55%)]',
         },
         {
-          icon: FileText,
-          label: 'العقود النشطة',
-          value: fmt(contractsCount),
-          hint: 'عقود موثّقة',
-          href: routes.accountContracts,
-          chip: CHIP_GOLD,
+          icon:    FileText,
+          label:   'العقود النشطة',
+          value:   fmt(contractsCount),
+          hint:    'عقود موثّقة',
+          href:    routes.accountContracts,
+          chipCls: 'bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-gold-200/70 group-hover:from-gold-200 group-hover:to-gold-400',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(200,162,75,0.10),transparent_55%)]',
         },
         {
-          icon: Wrench,
-          label: 'الصيانة والزيارات',
-          value: sum(maintenanceCount, visitsCount),
-          hint: 'قيد المتابعة',
-          href: routes.accountMaintenance,
-          chip: CHIP_AMBER,
+          icon:    Wrench,
+          label:   'الصيانة والزيارات',
+          value:   sum(maintenanceCount, visitsCount),
+          hint:    'قيد المتابعة',
+          href:    routes.accountMaintenance,
+          chipCls: 'bg-amber-50 text-amber-600 ring-amber-200/60 group-hover:bg-amber-100',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(245,158,11,0.08),transparent_55%)]',
         },
         {
-          icon: Heart,
-          label: 'المفضلة',
-          value: fmt(favoritesCount),
-          hint: 'عناصر محفوظة',
-          href: routes.accountFavorites,
-          chip: CHIP_ROSE,
+          icon:    Heart,
+          label:   'المفضلة',
+          value:   fmt(favoritesCount),
+          hint:    'عناصر محفوظة',
+          href:    routes.accountFavorites,
+          chipCls: 'bg-rose-50 text-rose-500 ring-rose-200/60 group-hover:bg-rose-100',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(244,63,94,0.07),transparent_55%)]',
         },
       ]
     : [
         {
-          icon: Heart,
-          label: 'المفضلة',
-          value: fmt(favoritesCount),
-          hint: 'عناصر محفوظة',
-          href: routes.accountFavorites,
-          chip: CHIP_ROSE,
+          icon:    Heart,
+          label:   'المفضلة',
+          value:   fmt(favoritesCount),
+          hint:    'عناصر محفوظة',
+          href:    routes.accountFavorites,
+          chipCls: 'bg-rose-50 text-rose-500 ring-rose-200/60 group-hover:bg-rose-100',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(244,63,94,0.07),transparent_55%)]',
         },
         {
-          icon: CalendarClock,
-          label: 'طلبات الزيارة',
-          value: fmt(visitsCount),
-          hint: 'مجدولة',
-          href: routes.accountVisits,
-          chip: CHIP_GOLD,
+          icon:    CalendarClock,
+          label:   'طلبات الزيارة',
+          value:   fmt(visitsCount),
+          hint:    'مجدولة',
+          href:    routes.accountVisits,
+          chipCls: 'bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-gold-200/70 group-hover:from-gold-200 group-hover:to-gold-400',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(200,162,75,0.10),transparent_55%)]',
         },
         {
-          icon: MessageSquareText,
-          label: 'الاستفسارات',
-          value: fmt(requestsCount),
-          hint: 'قيد المعالجة',
-          href: routes.accountRequests,
-          chip: CHIP_AMBER,
+          icon:    MessageSquareText,
+          label:   'الاستفسارات',
+          value:   fmt(requestsCount),
+          hint:    'قيد المعالجة',
+          href:    routes.accountRequests,
+          chipCls: 'bg-amber-50 text-amber-600 ring-amber-200/60 group-hover:bg-amber-100',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(245,158,11,0.08),transparent_55%)]',
         },
         {
-          icon: BookmarkCheck,
-          label: 'الحجوزات',
-          value: fmt(reservationsCount),
-          hint: 'نشطة',
-          href: routes.accountReservations,
-          chip: CHIP_SUCCESS,
+          icon:    BookmarkCheck,
+          label:   'الحجوزات',
+          value:   fmt(reservationsCount),
+          hint:    'نشطة',
+          href:    routes.accountReservations,
+          chipCls: 'bg-emerald-50 text-emerald-600 ring-emerald-200/60 group-hover:bg-emerald-100',
+          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(16,185,129,0.08),transparent_55%)]',
         },
       ];
 
-  // ── Block 3: activity center ──
-  // Right — bookings + contracts (latest 2).
+  // ── Activity rows ─────────────────────────────────────────────────────────
   const rightRows = [
     ...recentContracts.map((c) => (
       <RecentRow
@@ -383,9 +465,8 @@ export default async function AccountPage() {
         trailing={<StatusBadge status={r.status} />}
       />
     )),
-  ].slice(0, 2);
+  ].slice(0, 3);
 
-  // Left — notifications + visits (latest 3), shown on a timeline rail.
   const leftItems = [
     ...recentNotifications.map((n) => (
       <TimelineItem
@@ -406,97 +487,148 @@ export default async function AccountPage() {
   ].slice(0, 3);
 
   const rightTitle = isCustomer ? 'أحدث الحجوزات والعقود' : 'أحدث الحجوزات';
-  const rightIcon = isCustomer ? FileText : BookmarkCheck;
-  const rightHref = isCustomer ? routes.accountContracts : routes.accountReservations;
-  const leftTitle = isCustomer ? 'الإشعارات والزيارات' : 'أحدث الزيارات';
-  const leftHref = isCustomer ? routes.accountNotifications : routes.accountVisits;
+  const rightIcon  = isCustomer ? FileText : BookmarkCheck;
+  const rightHref  = isCustomer ? routes.accountContracts : routes.accountReservations;
+  const leftTitle  = isCustomer ? 'الإشعارات والزيارات' : 'أحدث الزيارات';
+  const leftHref   = isCustomer ? routes.accountNotifications : routes.accountVisits;
   const hasActivity = rightRows.length > 0 || leftItems.length > 0;
 
   return (
-    <div className="space-y-6">
-      {/* ── Block 1: unified hero metrics ── */}
+    <div className="space-y-8">
+
+      {/* ── KPI Tiles ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {metrics.map((m) => (
-          <HeroMetric key={m.label} {...m} />
+        {tiles.map((t) => (
+          <HeroMetric key={t.label} {...t} />
         ))}
       </div>
 
-      {/* ── Block 2: after-sales banner (customer + owned unit) ── */}
+      {/* ── Customer: Quick Actions ────────────────────────────────────────── */}
+      {isCustomer && (
+        <DashSection icon={Zap} title="إجراءات سريعة">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <QuickActionTile
+              href={routes.accountProperty}
+              icon={Building2}
+              label="عقاراتي"
+              description="تفاصيل وحدتك وعقدك"
+            />
+            <QuickActionTile
+              href={routes.accountInstallments}
+              icon={CreditCard}
+              label="جدول الأقساط"
+              description={unpaidCount > 0 ? `${formatNumber(unpaidCount)} قسط متبقٍ` : 'عرض خطة التقسيط'}
+            />
+            <QuickActionTile
+              href={routes.accountMaintenanceNew}
+              icon={Wrench}
+              label="طلب صيانة"
+              description="أبلغ عن مشكلة أو طلب خدمة"
+            />
+            <QuickActionTile
+              href={routes.accountContracts}
+              icon={FileText}
+              label="عقودي"
+              description="عرض وتحميل العقود"
+            />
+            <QuickActionTile
+              href={routes.accountDeposits}
+              icon={Wallet}
+              label="سجل الدفعات"
+              description={depositsTotalText ? `مجموع: ${depositsTotalText}` : 'عرض المدفوعات'}
+            />
+            <QuickActionTile
+              href={routes.accountNotifications}
+              icon={Bell}
+              label="الإشعارات"
+              description="تحديثات حول عقودك وطلباتك"
+            />
+          </div>
+        </DashSection>
+      )}
+
+      {/* ── Customer: After-Sales (PropertyFocus) ─────────────────────────── */}
       {isCustomer && primaryContract && (
-        <section className="space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="min-w-0">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold tracking-wide text-gold-600">
-                <Sparkles className="h-3.5 w-3.5" aria-hidden />
-                منطقة الملكية
-              </span>
-              <h2 className="mt-1 text-lg font-bold text-ink-strong">خدمات ما بعد الشراء</h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                وحدتك، عقدك، وأقساطك القادمة في مكان واحد.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
+        <DashSection
+          icon={Sparkles}
+          title="منطقة الملكية"
+          action={
+            <div className="flex items-center gap-2">
               <ButtonLink
                 href={routes.accountProperty}
                 variant="primary"
                 size="sm"
-                className="h-auto rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+                className="h-auto rounded-xl px-4 py-1.5 text-xs font-bold shadow-sm"
               >
-                <Building2 className="h-4 w-4" aria-hidden />
+                <Building2 className="h-3.5 w-3.5" aria-hidden />
                 عقاراتي
               </ButtonLink>
               <ButtonLink
                 href={routes.accountMaintenanceNew}
                 variant="gold"
                 size="sm"
-                className="h-auto rounded-xl px-4 py-2 text-xs font-bold shadow-sm"
+                className="h-auto rounded-xl px-4 py-1.5 text-xs font-bold shadow-sm"
               >
-                <Wrench className="h-4 w-4" aria-hidden />
-                طلب صيانة جديد
+                <Wrench className="h-3.5 w-3.5" aria-hidden />
+                صيانة
               </ButtonLink>
             </div>
-          </div>
+          }
+        >
           <PropertyFocus
             contract={primaryContract}
             nextInstallment={nextInstallment}
             unpaidCount={unpaidCount}
           />
-        </section>
+        </DashSection>
       )}
 
-      {/* ── Block 3: micro recent-activity center ── */}
+      {/* ── Activity center ────────────────────────────────────────────────── */}
       {hasActivity ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {rightRows.length > 0 && (
-            <RecentPanel icon={rightIcon} title={rightTitle} href={rightHref}>
-              {rightRows}
-            </RecentPanel>
-          )}
-          {leftItems.length > 0 && (
-            <TimelinePanel title={leftTitle} href={leftHref}>
-              {leftItems}
-            </TimelinePanel>
-          )}
-        </div>
+        <DashSection icon={Activity} title="آخر النشاط">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            {rightRows.length > 0 && (
+              <RecentPanel icon={rightIcon} title={rightTitle} href={rightHref}>
+                {rightRows}
+              </RecentPanel>
+            )}
+            {leftItems.length > 0 && (
+              <TimelinePanel title={leftTitle} href={leftHref}>
+                {leftItems}
+              </TimelinePanel>
+            )}
+          </div>
+        </DashSection>
       ) : (
         !isCustomer && (
-          <EmptyState
-            title="ابدأ رحلتك العقارية"
-            message="تصفّح المشاريع والوحدات، واحفظ ما يهمّك أو اطلب زيارة، وستظهر متابعتك هنا."
-            icon={<UserCircle2 className="h-6 w-6" aria-hidden />}
-            action={
-              <div className="flex flex-wrap items-center justify-center gap-3">
-                <ButtonLink href={routes.projects} variant="primary" size="md">
-                  تصفّح المشاريع
-                </ButtonLink>
-                <ButtonLink href={routes.units} variant="outline" size="md">
-                  استكشف الوحدات
-                </ButtonLink>
+          <DashSection icon={UserCircle2} title="ابدأ رحلتك">
+            <PremiumCard className="px-8 py-12 text-center">
+              {/* Decorative glow */}
+              <span className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-gold-50/60 to-transparent" aria-hidden />
+              <div className="relative flex flex-col items-center gap-5">
+                <span className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-1 ring-gold-200/70 shadow-sm">
+                  <UserCircle2 className="h-8 w-8" aria-hidden />
+                </span>
+                <div>
+                  <h3 className="text-xl font-black text-ink-strong">ابدأ رحلتك العقارية</h3>
+                  <p className="mt-2 text-sm text-ink-muted max-w-sm mx-auto leading-relaxed">
+                    تصفّح المشاريع والوحدات، واحفظ ما يهمّك أو اطلب زيارة، وستظهر متابعتك هنا.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+                  <ButtonLink href={routes.projects} variant="primary" size="md">
+                    تصفّح المشاريع
+                  </ButtonLink>
+                  <ButtonLink href={routes.units} variant="outline" size="md">
+                    استكشف الوحدات
+                  </ButtonLink>
+                </div>
               </div>
-            }
-          />
+            </PremiumCard>
+          </DashSection>
         )
       )}
+
     </div>
   );
 }
