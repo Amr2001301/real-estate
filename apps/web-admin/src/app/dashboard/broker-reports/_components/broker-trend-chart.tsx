@@ -62,7 +62,7 @@ export function BrokerTrendChart({
   height = '100%',
 }: {
   data: BrokerTrendBucket[];
-  height?: number | string;
+  height?: number | `${number}%`;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);

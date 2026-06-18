@@ -25,6 +25,7 @@ import {
   Gauge,
   Files,
   MessageSquareText,
+  Target,
   type LucideIcon,
 } from 'lucide-react';
 import type { SessionRole } from './session';
@@ -63,6 +64,7 @@ export const NAV_ICONS = {
   Gauge,
   Files,
   MessageSquareText,
+  Target,
 } satisfies Record<string, LucideIcon>;
 
 export type IconKey = keyof typeof NAV_ICONS;
@@ -125,7 +127,8 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/dashboard/deposits', label: 'الدفعات', iconKey: 'Receipt', admin: true },
       { href: '/dashboard/maintenance', label: 'الصيانة', iconKey: 'Wrench', admin: true },
       { href: '/dashboard/bonus', label: 'العمولات', iconKey: 'BadgePercent', admin: true },
-      { href: '/dashboard/targets', label: 'أهداف وأداء المبيعات', iconKey: 'Gauge', admin: true, manager: true },
+      { href: '/dashboard/sales/performance', label: 'أداء فريق المبيعات', iconKey: 'Target', admin: true, manager: true },
+      { href: '/dashboard/targets', label: 'إدارة أهداف المبيعات', iconKey: 'Gauge', admin: true, manager: true },
       { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', iconKey: 'Wallet', salesActorOnly: true },
     ],
   },
