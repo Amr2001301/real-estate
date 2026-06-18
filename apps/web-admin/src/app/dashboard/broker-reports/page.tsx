@@ -12,8 +12,9 @@ import {
   UserPlus,
   Users,
   Wallet,
-  ChevronDown,
 } from 'lucide-react';
+import { BrokerTrendChart } from './_components/broker-trend-chart';
+import { BrokerFunnelChart, type FunnelStage } from './_components/broker-funnel-chart';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import type {
@@ -122,20 +123,32 @@ export default async function AdminBrokerReportsPage({
   const realizationRate = commissionsNet > 0 ? Math.min(payoutsPaidNet / commissionsNet, 1) : 0;
 
   // ── Monthly trend derived ─────────────────────────────────────────────────
-  const maxCommission  = trend.reduce((m, b) => Math.max(m, Number(b.commissionsNet)), 0);
   const maxContracts   = trend.reduce((m, b) => Math.max(m, b.contractsSigned), 0);
   const totalTrendContracts = trend.reduce((s, b) => s + b.contractsSigned, 0);
 
-  // ── Funnel ────────────────────────────────────────────────────────────────
-  const funnelStages = s ? [
-    { label: 'فرص مُرسلة',   value: s.leadsSubmitted,      color: 'bg-brand-500',   text: 'text-brand-700' },
-    { label: 'فرص معتمدة',   value: s.leadsApproved,       color: 'bg-blue-500',    text: 'text-blue-700' },
-    { label: 'حجوزات',       value: s.reservationsCreated, color: 'bg-violet-500',  text: 'text-violet-700' },
-    { label: 'عقود',         value: s.contractsCreated,    color: 'bg-amber-500',   text: 'text-amber-700' },
-    { label: 'عقود موقّعة',  value: s.contractsSigned,     color: 'bg-emerald-500', text: 'text-emerald-700' },
-    { label: 'دفعات مُنجزة', value: s.payoutsPaid,         color: 'bg-teal-500',    text: 'text-teal-700' },
-  ] : [];
-  const funnelMax = funnelStages.reduce((m, st) => Math.max(m, st.value), 0);
+  // ── Funnel stages ─────────────────────────────────────────────────────────
+  const funnelStages: FunnelStage[] = s ? (() => {
+    const raw = [
+      { label: 'فرص مُرسلة',   value: s.leadsSubmitted,      color: 'bg-brand-500',   bg: 'bg-brand-100',   text: 'text-brand-700',   dot: 'bg-brand-500' },
+      { label: 'فرص معتمدة',   value: s.leadsApproved,       color: 'bg-sky-500',     bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
+      { label: 'حجوزات',       value: s.reservationsCreated, color: 'bg-violet-500',  bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500' },
+      { label: 'عقود',         value: s.contractsCreated,    color: 'bg-amber-500',   bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500' },
+      { label: 'عقود موقّعة',  value: s.contractsSigned,     color: 'bg-emerald-500', bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+      { label: 'دفعات مُنجزة', value: s.payoutsPaid,         color: 'bg-teal-500',    bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500' },
+    ];
+    const first = raw[0]?.value ?? 1;
+    return raw.map((r, i) => ({
+      ...r,
+      pctOfFirst: first > 0 ? Math.min((r.value / first) * 100, 100) : 0,
+      convFromPrev: i > 0 && (raw[i - 1]?.value ?? 0) > 0
+        ? r.value / (raw[i - 1]!.value)
+        : null,
+    }));
+  })() : [];
+
+  const overallConv = s && s.leadsSubmitted > 0
+    ? s.payoutsPaid / s.leadsSubmitted
+    : null;
 
   // ── Top broker for strip ──────────────────────────────────────────────────
   const topBroker = top?.data?.[0];
@@ -308,158 +321,82 @@ export default async function AdminBrokerReportsPage({
           ════════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-            {/* Monthly commissions trend — inline CSS bars */}
-            <div className="lg:col-span-3 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-              <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-hairline">
+            {/* Monthly commissions trend — Recharts grouped bars */}
+            <div className="lg:col-span-3 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+              <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-hairline shrink-0">
                 <div className="flex items-center gap-2.5">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 [&_svg]:h-4 [&_svg]:w-4">
                     <BarChart3 />
                   </span>
                   <div>
-                    <p className="text-[13px] font-bold text-slate-800">الاتجاه الشهري</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">عقود موقّعة وعمولات آخر 6 أشهر</p>
+                    <p className="text-[13px] font-bold text-slate-800">الاتجاه الشهري للعمولات</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">العمولات المعتمدة مقابل المدفوع آخر 6 أشهر</p>
                   </div>
                 </div>
                 <div className="text-end shrink-0">
-                  <p className="text-base font-black tabular-nums text-slate-900 leading-none">
+                  <p className="text-sm font-black tabular-nums text-slate-900 leading-none">
                     {totalTrendContracts.toLocaleString('ar-EG')} عقد
                   </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap" dir="ltr">
-                    {formatCurrency(trend.reduce((s, b) => s + Number(b.commissionsNet), 0))}
+                  <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
+                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0))}
                   </p>
                 </div>
               </div>
-              <div className="px-5 pt-5 pb-4">
-                {trend.length === 0 ? (
-                  <div className="h-32 flex items-center justify-center text-sm text-slate-400">لا توجد بيانات</div>
-                ) : (
-                  <>
-                    {/* Bar chart — rem heights so % works inside each bar */}
-                    <div className="flex items-end gap-2 w-full">
-                      {trend.map((b) => {
-                        const MAX_REM   = 7;
-                        const commAmt   = Number(b.commissionsNet);
-                        const payoutAmt = Number(b.payoutsNet);
-                        const barRem    = maxCommission > 0
-                          ? Math.max((commAmt / maxCommission) * MAX_REM, commAmt > 0 ? 0.4 : 0)
-                          : 0;
-                        const paidPct   = commAmt > 0
-                          ? Math.min((payoutAmt / commAmt) * 100, 100)
-                          : 0;
-                        return (
-                          <div key={b.label} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
-                            {b.contractsSigned > 0 && (
-                              <span className="text-[9px] font-bold tabular-nums text-slate-500 leading-none">
-                                {b.contractsSigned}
-                              </span>
-                            )}
-                            {/* Bar: amber bg = total commissions; emerald fill = paid portion */}
-                            <div
-                              className="w-full rounded-t-md overflow-hidden bg-amber-100 relative"
-                              style={{ height: `${barRem}rem` }}
-                            >
-                              <div
-                                className="absolute bottom-0 inset-x-0 bg-emerald-400"
-                                style={{ height: `${paidPct}%` }}
-                              />
-                            </div>
-                            <span className="text-[9px] text-slate-400 mt-0.5">{shortMonth(b.label)}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {/* Legend */}
-                    <div className="flex items-center gap-4 mt-4">
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2.5 w-4 rounded-sm bg-amber-100 border border-amber-200 inline-block" />
-                        <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="h-2.5 w-4 rounded-sm bg-emerald-400 inline-block" />
-                        <span className="text-[10px] text-slate-400">المدفوع للوسطاء</span>
-                      </div>
-                      <div className="flex items-center gap-1.5 ms-auto">
-                        <span className="text-[9px] font-bold text-slate-500">الأرقام = عقود موقّعة</span>
-                      </div>
-                    </div>
-                  </>
-                )}
+              <div className="flex-1 flex flex-col min-h-0 px-4 pt-3 pb-3">
+                <div className="flex-1 min-h-0">
+                  <BrokerTrendChart
+                    data={trend.map((b) => ({
+                      label: shortMonth(b.label),
+                      commissionsNet: Number(b.commissionsNet),
+                      payoutsNet: Number(b.payoutsNet),
+                      contractsSigned: b.contractsSigned,
+                    }))}
+                    height="100%"
+                  />
+                </div>
+                {/* Legend */}
+                <div className="flex items-center gap-5 mt-2 px-1 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-5 rounded-sm bg-amber-300 inline-block" />
+                    <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="h-2.5 w-5 rounded-sm bg-emerald-400 inline-block" />
+                    <span className="text-[10px] text-slate-400">المدفوع للوسطاء</span>
+                  </div>
+                  <span className="text-[10px] text-slate-300 ms-auto">الأرقام = عقود موقّعة</span>
+                </div>
               </div>
             </div>
 
-            {/* Conversion Funnel — vertical proportional bars */}
+            {/* Conversion Funnel — client component */}
             <div className="lg:col-span-2 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
               <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
                 <div className="flex items-center gap-2.5">
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
                     <TrendingUp />
                   </span>
-                  <p className="text-[13px] font-bold text-slate-800">قمع التحويل</p>
+                  <div>
+                    <p className="text-[13px] font-bold text-slate-800">قمع التحويل</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">من الفرصة إلى الدفعة المُنجزة</p>
+                  </div>
                 </div>
-                {s.leadsSubmitted > 0 && s.contractsSigned > 0 && (
-                  <span className="inline-flex items-center h-6 px-2.5 rounded-full text-[11px] font-black border border-emerald-200 bg-emerald-50 text-emerald-700 shrink-0">
-                    {pct(rateOf(s.contractsSigned, s.leadsSubmitted))} إجمالي
-                  </span>
-                )}
               </div>
-
-              {funnelStages.length === 0 ? (
-                <EmptyState icon={<TrendingUp />} title="لا توجد بيانات" description="" />
-              ) : (
-                <div className="px-5 py-4 space-y-0 flex-1">
-                  {funnelStages.map((stage, i) => {
-                    const prev       = i > 0 ? funnelStages[i - 1]!.value : null;
-                    const stageConv  = prev !== null && prev > 0 ? rateOf(stage.value, prev) : null;
-                    const barW       = funnelMax > 0 ? Math.min((stage.value / funnelMax) * 100, 100) : 0;
-                    return (
-                      <div key={stage.label}>
-                        {i > 0 && (
-                          <div className="flex items-center gap-1.5 py-1 ps-14">
-                            <ChevronDown className="h-3 w-3 text-slate-300 shrink-0" />
-                            {stageConv !== null && (
-                              <span className={cn('text-[10px] font-bold', stage.text)}>
-                                {pct(stageConv)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 shrink-0 text-end">
-                            <span className={cn('text-base font-black tabular-nums leading-none', stage.text)}>
-                              {stage.value.toLocaleString('ar-EG')}
-                            </span>
-                          </div>
-                          <div className="flex-1 h-6 rounded-lg bg-slate-100 overflow-hidden relative">
-                            <div
-                              className={cn('absolute inset-y-0 start-0 rounded-lg transition-all', stage.color)}
-                              style={{ width: `${Math.max(barW, barW > 0 ? 6 : 0)}%` }}
-                            />
-                            <span className={cn(
-                              'absolute inset-y-0 start-2 flex items-center text-[11px] font-semibold z-10',
-                              barW > 35 ? 'text-white' : 'text-slate-600',
-                            )}>
-                              {stage.label}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
+              <div className="px-5 py-4 flex-1">
+                <BrokerFunnelChart stages={funnelStages} overallConv={overallConv} />
+              </div>
               {/* Key rates footer */}
-              <div className="border-t border-hairline bg-canvas/40 px-5 py-3 mt-auto">
-                <div className="grid grid-cols-2 gap-2">
+              <div className="border-t border-hairline bg-canvas/40 px-5 py-3">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
                   {[
-                    { label: 'فرص → حجوزات', v: pct(s.leadToReservationRate) },
-                    { label: 'حجز → عقد',     v: pct(s.reservationToContractRate) },
-                    { label: 'توقيع العقود',   v: pct(s.signedContractRate) },
+                    { label: 'فرص → حجوزات',  v: pct(s.leadToReservationRate) },
+                    { label: 'حجز → عقد',      v: pct(s.reservationToContractRate) },
+                    { label: 'توقيع العقود',    v: pct(s.signedContractRate) },
                     { label: 'عقود → مدفوعات', v: pct(s.contractToPaidPayoutRate) },
                   ].map((r) => (
-                    <div key={r.label} className="space-y-0.5">
+                    <div key={r.label}>
                       <p className="text-[13px] font-black tabular-nums text-slate-800">{r.v}</p>
-                      <p className="text-[9px] text-slate-400 leading-tight">{r.label}</p>
+                      <p className="text-[9px] text-slate-400 mt-0.5">{r.label}</p>
                     </div>
                   ))}
                 </div>
