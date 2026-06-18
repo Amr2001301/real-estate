@@ -20,6 +20,10 @@ import '../widgets/unit_card.dart';
 import '../widgets/unit_status_chip.dart';
 import 'unit_details_cubit.dart';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Root
+// ─────────────────────────────────────────────────────────────────────────────
+
 class UnitDetailsScreen extends StatelessWidget {
   const UnitDetailsScreen({super.key});
 
@@ -44,228 +48,330 @@ class UnitDetailsScreen extends StatelessWidget {
               ),
             );
           case DataStatus.success:
-            return _Content(unit: state.data!);
+            return _DetailPage(unit: state.data!);
         }
       },
     );
   }
 }
 
-class _Content extends StatefulWidget {
-  const _Content({required this.unit});
+// ─────────────────────────────────────────────────────────────────────────────
+// Floating-sheet detail page
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DetailPage extends StatefulWidget {
+  const _DetailPage({required this.unit});
   final Unit unit;
 
+  static const double _heroH = 400.0;
+  static const double _peekH = 48.0;
+
   @override
-  State<_Content> createState() => _ContentState();
+  State<_DetailPage> createState() => _DetailPageState();
 }
 
-class _ContentState extends State<_Content> {
-  static const double _heroHeight = 320;
+class _DetailPageState extends State<_DetailPage> {
+  late final ScrollController _scroll;
+  double _px = 0;
 
-  // True once the hero has scrolled away and the pinned bar shows the page
-  // surface — drives the status-bar icon brightness.
-  bool _collapsed = false;
-
-  bool _onScroll(ScrollNotification n) {
-    final collapsed = n.metrics.pixels > (_heroHeight - 96);
-    if (collapsed != _collapsed) setState(() => _collapsed = collapsed);
-    return false;
+  @override
+  void initState() {
+    super.initState();
+    _scroll = ScrollController()
+      ..addListener(() {
+        if (mounted) {
+          setState(() => _px = _scroll.offset.clamp(0.0, double.infinity));
+        }
+      });
   }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  bool get _overSheet =>
+      _px > (_DetailPage._heroH - _DetailPage._peekH - 56);
 
   @override
   Widget build(BuildContext context) {
     final unit = widget.unit;
     final l10n = context.l10n;
-    final theme = Theme.of(context);
     final colors = context.appColors;
-    final isDark = theme.brightness == Brightness.dark;
+    final lang = Localizations.localeOf(context).languageCode;
+    final topInset = MediaQuery.paddingOf(context).top;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    const overImage = SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
-    );
-    final overBar = isDark
-        ? overImage
-        : const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light,
-          );
-
-    return Scaffold(
-      body: Stack(
-        children: [
-          NotificationListener<ScrollNotification>(
-            onNotification: _onScroll,
-            child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              expandedHeight: _heroHeight,
-              automaticallyImplyLeading: false,
-              backgroundColor: colors.canvas,
-              surfaceTintColor: Colors.transparent,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              systemOverlayStyle: _collapsed ? overBar : overImage,
-              toolbarHeight: 68,
-              centerTitle: true,
-              title: AnimatedOpacity(
-                opacity: _collapsed ? 1 : 0,
-                duration: const Duration(milliseconds: 200),
-                child: Text(
-                  unit.type,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.inkStrong,
-                  ),
-                ),
-              ),
-              leadingWidth: 72,
-              leading: Padding(
-                padding: const EdgeInsetsDirectional.only(start: AppSpacing.lg),
-                child: _Chrome(child: BackButton(color: colors.inkStrong)),
-              ),
-              actions: [
-                _Chrome(
-                    child: FavoriteToggleButton(isProject: false, id: unit.id)),
-                const SizedBox(width: AppSpacing.sm),
-                _Chrome(child: _CompareButton(unit: unit)),
-                const SizedBox(width: AppSpacing.lg),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                collapseMode: CollapseMode.parallax,
-                background: _Hero(unit: unit),
-              ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: colors.canvas,
+        body: Stack(
+          children: [
+            // ── 1. Pinned hero ──────────────────────────────────────────────
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: _DetailPage._heroH + topInset,
+              child: _HeroPanel(unit: unit, lang: lang),
             ),
 
-            // Main info + content sections (uniform horizontal padding).
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  AppSpacing.lg,
-                  0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Identity + price anchor ────────────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            unit.type,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: colors.inkStrong,
-                              height: 1.1,
-                            ),
-                          ),
+            // ── 2. Scrollable cream sheet ───────────────────────────────────
+            SingleChildScrollView(
+              controller: _scroll,
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: topInset + _DetailPage._heroH - _DetailPage._peekH,
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colors.canvas,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(AppRadii.xxl + 10),
+                        topRight: Radius.circular(AppRadii.xxl + 10),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.20),
+                          blurRadius: 36,
+                          offset: const Offset(0, -8),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        UnitStatusChip(unit.status),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      l10n.unitCode(unit.code),
-                      style: theme.textTheme.bodyMedium
-                          ?.copyWith(color: colors.inkMuted),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    Divider(height: 1, color: colors.hairline.withValues(alpha: 0.8)),
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Expanded(
+                        _SheetHandle(colors: colors),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            AppSpacing.xs,
+                            AppSpacing.lg,
+                            0,
+                          ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              _IdentityRow(unit: unit),
+                              const SizedBox(height: AppSpacing.sm),
                               Text(
-                                l10n.labelPrice,
-                                style: theme.textTheme.labelMedium?.copyWith(
-                                  color: colors.inkMuted,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                unit.type,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      color: colors.inkStrong,
+                                      height: 1.1,
+                                    ),
                               ),
-                              const SizedBox(height: 4),
-                              PriceText(
-                                unit.price,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                              const SizedBox(height: AppSpacing.lg),
+                              _PriceBlock(unit: unit),
+                              const SizedBox(height: AppSpacing.xl),
+                              _SectionTitle(l10n.unitOverview),
+                              const SizedBox(height: AppSpacing.md),
+                              _SpecsRow(unit: unit),
+                              const SizedBox(height: AppSpacing.xl),
+                              _SectionTitle(l10n.unitAbout),
+                              const SizedBox(height: AppSpacing.md),
+                              _AboutCard(text: l10n.unitAboutGeneric),
+                              if (unit.project != null) ...[
+                                const SizedBox(height: AppSpacing.xl),
+                                _SectionTitle(l10n.unitWithinProject),
+                                const SizedBox(height: AppSpacing.md),
+                                _WithinProject(project: unit.project!),
+                              ],
+                              const SizedBox(height: AppSpacing.xl),
+                              _SectionTitle(l10n.unitPlanTitle),
+                              const SizedBox(height: AppSpacing.md),
+                              _UnitPlan(
+                                unit: unit,
+                                onRequest: () =>
+                                    showUnitContactSheet(context, unit),
                               ),
                             ],
                           ),
                         ),
+                        if (unit.project != null)
+                          _SimilarUnits(
+                            projectId: unit.project!.id,
+                            currentUnitId: unit.id,
+                          ),
+                        SizedBox(height: 104 + bottomInset),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.xl),
+                  ),
+                ],
+              ),
+            ),
 
-                    // ── Specs ──────────────────────────────────────────────
-                    _SectionTitle(l10n.unitOverview),
-                    const SizedBox(height: AppSpacing.md),
-                    _SpecsBar(unit: unit),
-
-                    // ── About (generic brand copy — no per-unit description
-                    //    field exists in the API) ────────────────────────────
-                    const SizedBox(height: AppSpacing.xl),
-                    _SectionTitle(l10n.unitAbout),
-                    const SizedBox(height: AppSpacing.md),
-                    _AboutCard(text: l10n.unitAboutGeneric),
-
-                    // ── Within the project ─────────────────────────────────
-                    if (unit.project != null) ...[
-                      const SizedBox(height: AppSpacing.xl),
-                      _SectionTitle(l10n.unitWithinProject),
-                      const SizedBox(height: AppSpacing.md),
-                      _WithinProject(project: unit.project!),
-                    ],
-
-                    // ── Unit plan ──────────────────────────────────────────
-                    const SizedBox(height: AppSpacing.xl),
-                    _SectionTitle(l10n.unitPlanTitle),
-                    const SizedBox(height: AppSpacing.md),
-                    _UnitPlan(
-                      unit: unit,
-                      onRequest: () => showUnitContactSheet(context, unit),
+            // ── 3. Floating nav (back + favorite + compare) ─────────────────
+            Positioned(
+              top: topInset,
+              left: 0,
+              right: 0,
+              height: 68,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _NavBtn(
+                      overSheet: _overSheet,
+                      child: BackButton(
+                        color: _overSheet ? colors.inkStrong : Colors.white,
+                        onPressed: () => context.canPop()
+                            ? context.pop()
+                            : context.go('/home'),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        _NavBtn(
+                          overSheet: _overSheet,
+                          child: FavoriteToggleButton(
+                            isProject: false,
+                            id: unit.id,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        _NavBtn(
+                          overSheet: _overSheet,
+                          child: _CompareButton(unit: unit),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
 
-            // Other units in this project (full-bleed carousel; self-hides).
-            if (unit.project != null)
-              SliverToBoxAdapter(
-                child: _SimilarUnits(
-                  projectId: unit.project!.id,
-                  currentUnitId: unit.id,
-                ),
-              ),
-
-            SliverToBoxAdapter(
-              child:
-                  SizedBox(height: 104 + MediaQuery.paddingOf(context).bottom),
+            // ── 4. Sticky dock ──────────────────────────────────────────────
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _StickyActionBar(unit: unit),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HeroPanel extends StatelessWidget {
+  const _HeroPanel({required this.unit, required this.lang});
+  final Unit unit;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final project = unit.project;
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ImageGallery(images: unit.galleryImages),
+        // Top scrim — status bar legibility
+        const Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 180,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xCC000000), Color(0x00000000)],
+                ),
+              ),
             ),
           ),
-          // Floating navy action dock — overlays the scrolling content.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _StickyActionBar(unit: unit),
+        ),
+        // Bottom scrim — location pill readability
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 100,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Color(0x88000000), Color(0x00000000)],
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (project != null)
+          PositionedDirectional(
+            bottom: AppSpacing.xl + 4,
+            start: AppSpacing.lg,
+            end: AppSpacing.lg,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+                ),
+                child: _LocationPill(
+                  label: '${project.name.resolve(lang)} · ${project.city}',
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _LocationPill extends StatelessWidget {
+  const _LocationPill({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppPalette.navy.withValues(alpha: 0.85),
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.location_on_rounded, size: 14, color: Colors.white),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -273,7 +379,171 @@ class _ContentState extends State<_Content> {
   }
 }
 
-/// A consistent premium section header: a gold accent bar + bold title.
+// ─────────────────────────────────────────────────────────────────────────────
+// Sheet chrome
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle({required this.colors});
+  final AppColorsExt colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
+      child: Center(
+        child: Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+            color: colors.hairline,
+            borderRadius: AppRadii.pillAll,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating action button — glass (over hero) or solid surface circle (over sheet).
+class _NavBtn extends StatelessWidget {
+  const _NavBtn({required this.overSheet, required this.child});
+  final bool overSheet;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: overSheet
+            ? colors.surface
+            : Colors.white.withValues(alpha: 0.18),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: overSheet
+              ? colors.hairline
+              : Colors.white.withValues(alpha: 0.30),
+        ),
+        boxShadow: overSheet ? colors.shadowSoft : null,
+      ),
+      child: ClipOval(
+        child: IconButtonTheme(
+          data: IconButtonThemeData(
+            style: IconButton.styleFrom(
+              minimumSize: const Size(42, 42),
+              maximumSize: const Size(42, 42),
+              padding: EdgeInsets.zero,
+              iconSize: 20,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity + pricing
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _IdentityRow extends StatelessWidget {
+  const _IdentityRow({required this.unit});
+  final Unit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        UnitStatusChip(unit.status),
+        Text(
+          context.l10n.unitCode(unit.code),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colors.inkMuted,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PriceBlock extends StatelessWidget {
+  const _PriceBlock({required this.unit});
+  final Unit unit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(
+          color: AppPalette.gold400.withValues(alpha: 0.25),
+        ),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 3,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppPalette.gold300, AppPalette.gold500],
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.labelPrice,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colors.inkMuted,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  PriceText(
+                    unit.price,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section heading
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.title);
   final String title;
@@ -308,184 +578,52 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-/// A solid surface circle that hosts a header action (back/favorite/compare).
-class _Chrome extends StatelessWidget {
-  const _Chrome({required this.child});
-  final Widget child;
+// ─────────────────────────────────────────────────────────────────────────────
+// Spec chips
+// ─────────────────────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          shape: BoxShape.circle,
-          border: Border.all(color: colors.hairline),
-          boxShadow: colors.shadowSoft,
-        ),
-        child: IconButtonTheme(
-          data: IconButtonThemeData(
-            style: IconButton.styleFrom(
-              minimumSize: const Size(40, 40),
-              maximumSize: const Size(40, 40),
-              padding: EdgeInsets.zero,
-              iconSize: 20,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-          ),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-/// Edge-to-edge hero gallery with a top scrim and a solid location pill.
-class _Hero extends StatelessWidget {
-  const _Hero({required this.unit});
-  final Unit unit;
-
-  @override
-  Widget build(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
-    final project = unit.project;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ImageGallery(images: unit.galleryImages),
-        const Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 150,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xA6000000),
-                    Color(0x29000000),
-                    Color(0x00000000),
-                  ],
-                  stops: [0.0, 0.42, 1.0],
-                ),
-              ),
-            ),
-          ),
-        ),
-        if (project != null)
-          PositionedDirectional(
-            bottom: AppSpacing.xl,
-            start: AppSpacing.lg,
-            end: AppSpacing.lg,
-            child: Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.sizeOf(context).width * 0.68,
-                ),
-                child: _LocationPill(
-                  label: '${project.name.resolve(lang)} · ${project.city}',
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _LocationPill extends StatelessWidget {
-  const _LocationPill({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        color: AppPalette.navy.withValues(alpha: 0.82),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.location_on_rounded, size: 14, color: Colors.white),
-          const SizedBox(width: AppSpacing.xs),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Compact premium specs bar: a single card with icon/value/label columns
-/// separated by hairline dividers — denser and more elegant than separate
-/// tiles. Adapts to 3 or 4 stats (floor optional).
-class _SpecsBar extends StatelessWidget {
-  const _SpecsBar({required this.unit});
+class _SpecsRow extends StatelessWidget {
+  const _SpecsRow({required this.unit});
   final Unit unit;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colors = context.appColors;
     final stats = <(IconData, String, String)>[
       (Icons.bed_outlined, '${unit.bedrooms}', l10n.labelBedrooms),
       (Icons.bathtub_outlined, '${unit.bathrooms}', l10n.labelBathrooms),
-      (Icons.square_foot_outlined, l10n.areaValue('${unit.area}'), l10n.labelArea),
+      (
+        Icons.square_foot_outlined,
+        l10n.areaValue('${unit.area}'),
+        l10n.labelArea,
+      ),
       if (unit.floor != null)
-        (Icons.stairs_outlined, '${unit.floor}', l10n.labelFloor),
+        (Icons.layers_outlined, '${unit.floor}', l10n.labelFloor),
     ];
 
-    final cells = <Widget>[];
-    for (var i = 0; i < stats.length; i++) {
-      if (i > 0) {
-        cells.add(VerticalDivider(
-          width: 1,
-          thickness: 1,
-          indent: AppSpacing.sm,
-          endIndent: AppSpacing.sm,
-          color: colors.hairline,
-        ));
-      }
-      final s = stats[i];
-      cells.add(Expanded(child: _Stat(icon: s.$1, value: s.$2, label: s.$3)));
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.8)),
-        boxShadow: colors.shadowSoft,
-      ),
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: IntrinsicHeight(child: Row(children: cells)),
+    return Row(
+      children: [
+        for (int i = 0; i < stats.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _StatChip(
+              icon: stats[i].$1,
+              value: stats[i].$2,
+              label: stats[i].$3,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.icon, required this.value, required this.label});
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
   final IconData icon;
   final String value;
   final String label;
@@ -494,10 +632,19 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.md,
+        horizontal: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.7)),
+        boxShadow: colors.shadowSoft,
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 22, color: colors.brandGold),
           const SizedBox(height: 6),
@@ -505,7 +652,7 @@ class _Stat extends StatelessWidget {
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(
+            style: theme.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w800,
               color: colors.inkStrong,
             ),
@@ -516,7 +663,8 @@ class _Stat extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+            style:
+                theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
           ),
         ],
       ),
@@ -524,8 +672,10 @@ class _Stat extends StatelessWidget {
   }
 }
 
-/// "About this unit" — a soft card with the brand's generic copy (the API has
-/// no per-unit description; the website shows the same generic helper).
+// ─────────────────────────────────────────────────────────────────────────────
+// Content sections
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _AboutCard extends StatelessWidget {
   const _AboutCard({required this.text});
   final String text;
@@ -573,7 +723,6 @@ class _AboutCard extends StatelessWidget {
   }
 }
 
-/// Rich "within the project" card: identity + city + two real actions.
 class _WithinProject extends StatelessWidget {
   const _WithinProject({required this.project});
   final UnitProjectRef project;
@@ -668,8 +817,6 @@ class _WithinProject extends StatelessWidget {
   }
 }
 
-/// "Unit plan": a real FLOORPLAN media image when one exists, otherwise the
-/// honest "available on request" card (mirrors the website — no fake plan).
 class _UnitPlan extends StatelessWidget {
   const _UnitPlan({required this.unit, required this.onRequest});
   final Unit unit;
@@ -678,10 +825,8 @@ class _UnitPlan extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
-    final plans = unit.media
-        .where((m) => m.type.toUpperCase() == 'FLOORPLAN')
-        .toList();
+    final plans =
+        unit.media.where((m) => m.type.toUpperCase() == 'FLOORPLAN').toList();
 
     if (plans.isNotEmpty) {
       return LuxeCard(
@@ -691,7 +836,6 @@ class _UnitPlan extends StatelessWidget {
         ),
       );
     }
-
     return _BlueprintCard(
       text: l10n.unitPlanOnRequest,
       ctaLabel: l10n.unitPlanRequest,
@@ -700,16 +844,12 @@ class _UnitPlan extends StatelessWidget {
   }
 }
 
-/// Premium navy "blueprint" placeholder for units with no plan media: a navy
-/// panel with a subtle grid pattern, a gold-framed drafting icon, the
-/// on-request copy, and a white-outline CTA. Compact (~190px).
 class _BlueprintCard extends StatelessWidget {
   const _BlueprintCard({
     required this.text,
     required this.ctaLabel,
     required this.onRequest,
   });
-
   final String text;
   final String ctaLabel;
   final VoidCallback onRequest;
@@ -788,7 +928,6 @@ class _BlueprintCard extends StatelessWidget {
   }
 }
 
-/// A white-outline pill CTA designed to sit on the navy blueprint panel.
 class _OutlineOnNavyButton extends StatelessWidget {
   const _OutlineOnNavyButton({required this.label, required this.onTap});
   final String label;
@@ -827,7 +966,6 @@ class _OutlineOnNavyButton extends StatelessWidget {
   }
 }
 
-/// Faint graph-paper grid for the blueprint panel.
 class _BlueprintGrid extends CustomPainter {
   const _BlueprintGrid();
 
@@ -856,11 +994,15 @@ class _BlueprintGrid extends CustomPainter {
   bool shouldRepaint(_BlueprintGrid oldDelegate) => false;
 }
 
-/// Other units in the same project (excluding the current one). Honest data via
-/// the existing project-scoped units API; self-hides on empty/error and never
-/// blocks the page.
+// ─────────────────────────────────────────────────────────────────────────────
+// Similar units carousel
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _SimilarUnits extends StatefulWidget {
-  const _SimilarUnits({required this.projectId, required this.currentUnitId});
+  const _SimilarUnits({
+    required this.projectId,
+    required this.currentUnitId,
+  });
   final String projectId;
   final String currentUnitId;
 
@@ -894,7 +1036,8 @@ class _SimilarUnitsState extends State<_SimilarUnits> {
       future: _future,
       builder: (context, snapshot) {
         final units = snapshot.data ?? const <Unit>[];
-        if (snapshot.connectionState != ConnectionState.done || units.isEmpty) {
+        if (snapshot.connectionState != ConnectionState.done ||
+            units.isEmpty) {
           return const SizedBox.shrink();
         }
         return Column(
@@ -902,7 +1045,8 @@ class _SimilarUnitsState extends State<_SimilarUnits> {
           children: [
             const SizedBox(height: AppSpacing.xl),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: SectionHeader(
                 title: l10n.unitOtherInProject,
                 onViewAll: () =>
@@ -911,12 +1055,14 @@ class _SimilarUnitsState extends State<_SimilarUnits> {
             ),
             const SizedBox(height: AppSpacing.md),
             SizedBox(
-              height: 320,
+              height: 370,
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 itemCount: units.length,
-                separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.md),
                 itemBuilder: (context, i) {
                   final unit = units[i];
                   return UnitCard(
@@ -934,8 +1080,10 @@ class _SimilarUnitsState extends State<_SimilarUnits> {
   }
 }
 
-/// Premium sticky action panel: actions only (no duplicated price). Primary
-/// "request a visit" + a compact "request info" (contact) when configured.
+// ─────────────────────────────────────────────────────────────────────────────
+// Sticky action dock
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _StickyActionBar extends StatelessWidget {
   const _StickyActionBar({required this.unit});
   final Unit unit;
@@ -954,65 +1102,63 @@ class _StickyActionBar extends StatelessWidget {
           AppSpacing.lg,
           AppSpacing.sm,
         ),
-        // Premium floating navy action dock with a gold CTA.
         child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(AppRadii.xl),
-              boxShadow: colors.shadowLift,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadii.xl),
-              child: Stack(
-                children: [
-                  const Positioned.fill(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [AppPalette.navy700, AppPalette.navy],
-                        ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            boxShadow: colors.shadowLift,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [AppPalette.navy700, AppPalette.navy],
                       ),
                     ),
                   ),
-                  const Positioned(
-                    top: 0,
-                    left: AppSpacing.xl,
-                    right: AppSpacing.xl,
-                    child: GoldHairline(),
+                ),
+                const Positioned(
+                  top: 0,
+                  left: AppSpacing.xl,
+                  right: AppSpacing.xl,
+                  child: GoldHairline(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.md,
-                      vertical: AppSpacing.sm,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            label: l10n.requestVisit,
-                            icon: Icons.event_available_outlined,
-                            variant: AppButtonVariant.gold,
-                            size: AppButtonSize.medium,
-                            expand: true,
-                            onPressed: () => _onRequestVisit(context),
-                          ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: AppButton(
+                          label: l10n.requestVisit,
+                          icon: Icons.event_available_outlined,
+                          variant: AppButtonVariant.gold,
+                          size: AppButtonSize.medium,
+                          expand: true,
+                          onPressed: () => _onRequestVisit(context),
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        // AI assistant — compact, secondary to the visit CTA.
-                        _GlassAction(
-                          tooltip: l10n.homeAskAssistant,
-                          icon: Icons.auto_awesome_rounded,
-                          onTap: () => context.push('/chat'),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _GlassAction(
+                        tooltip: l10n.homeAskAssistant,
+                        icon: Icons.auto_awesome_rounded,
+                        onTap: () => context.push('/chat'),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
+      ),
     );
   }
 
@@ -1065,15 +1211,12 @@ class _StickyActionBar extends StatelessWidget {
   }
 }
 
-/// A compact translucent-glass circular action on the navy dock — secondary to
-/// the primary CTA (e.g. the AI assistant).
 class _GlassAction extends StatelessWidget {
   const _GlassAction({
     required this.icon,
     required this.onTap,
     required this.tooltip,
   });
-
   final IconData icon;
   final VoidCallback onTap;
   final String tooltip;
@@ -1106,38 +1249,10 @@ class _GlassAction extends StatelessWidget {
   }
 }
 
-/// Contact ("request info") bottom sheet: call + WhatsApp, prefilled with the
-/// unit reference. Preserves the existing [ContactButtons] behavior.
-void showUnitContactSheet(BuildContext context, Unit unit) {
-  final l10n = context.l10n;
-  showModalBottomSheet<void>(
-    context: context,
-    showDragHandle: true,
-    builder: (sheetContext) => Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(l10n.requestInfo,
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            '${unit.type} · ${l10n.unitCode(unit.code)}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: context.appColors.inkMuted,
-                ),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          ContactButtons(whatsappMessage: '${unit.type} · ${unit.code}'),
-        ],
-      ),
-    ),
-  );
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Compare toggle
+// ─────────────────────────────────────────────────────────────────────────────
 
-/// Compare toggle (icon only — hosted in a [_Chrome] circle over the hero).
 class _CompareButton extends StatelessWidget {
   const _CompareButton({required this.unit});
   final Unit unit;
@@ -1148,8 +1263,9 @@ class _CompareButton extends StatelessWidget {
       builder: (context, selected) {
         final inCompare = selected.any((u) => u.id == unit.id);
         return IconButton(
-          tooltip:
-              inCompare ? context.l10n.compareRemove : context.l10n.compareAdd,
+          tooltip: inCompare
+              ? context.l10n.compareRemove
+              : context.l10n.compareAdd,
           color: context.appColors.inkStrong,
           icon: Icon(inCompare
               ? Icons.compare_arrows_rounded
@@ -1179,4 +1295,37 @@ class _CompareButton extends StatelessWidget {
           : null,
     ));
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Contact sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
+void showUnitContactSheet(BuildContext context, Unit unit) {
+  final l10n = context.l10n;
+  showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    builder: (sheetContext) => Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(l10n.requestInfo,
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            '${unit.type} · ${l10n.unitCode(unit.code)}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: context.appColors.inkMuted,
+                ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          ContactButtons(whatsappMessage: '${unit.type} · ${unit.code}'),
+        ],
+      ),
+    ),
+  );
 }
