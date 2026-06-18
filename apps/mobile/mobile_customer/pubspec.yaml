@@ -22,6 +22,7 @@ dependencies:
   image_picker: ^1.1.2 # maintenance photo attachments (presentation platform service)
   file_picker: ^8.1.2 # P11.5 — PDF/image selection for payment-proof submission
   mime: ^1.0.5 # P11.5 — derive Content-Type from picked file extension
+  video_player: ^2.9.2 # video splash screen
 
   cupertino_icons: ^1.0.8
 
@@ -34,8 +35,28 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   bloc_test: ^9.1.7
+  flutter_native_splash: ^2.4.5
 
 flutter:
   uses-material-design: true
   assets:
     - assets/brand/devora-logo.png
+    - assets/brand/flutter_native_splash.png
+    - assets/brand/real_estate_video_splash.mp4
+
+flutter_native_splash:
+  color: "#0B1726"
+  image: assets/brand/flutter_native_splash.png
+  color_dark: "#0B1726"
+  image_dark: assets/brand/flutter_native_splash.png
+  android_12:
+    color: "#0B1726"
+    image: assets/brand/flutter_native_splash.png
+    icon_background_color: "#0B1726"
+    color_dark: "#0B1726"
+    image_dark: assets/brand/flutter_native_splash.png
+    icon_background_color_dark: "#0B1726"
+  fullscreen: true
+  android: true
+  ios: true
+  web: false

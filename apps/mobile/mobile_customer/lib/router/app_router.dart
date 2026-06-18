@@ -107,12 +107,18 @@ const _authRoutes = {'/login', '/register', '/login/otp'};
 GoRouter createCustomerRouter(SessionCubit sessionCubit) {
   return GoRouter(
     initialLocation: '/splash',
-    refreshListenable: _CubitRefresh(sessionCubit.stream),
+    refreshListenable: Listenable.merge([
+      _CubitRefresh(sessionCubit.stream),
+      SplashScreen.splashDone,
+    ]),
     debugLogDiagnostics: kDebugMode,
     redirect: (context, state) {
       final session = sessionCubit.state;
       final loc = state.matchedLocation;
-      if (!session.isResolved) return loc == '/splash' ? null : '/splash';
+      // Hold on splash until both session resolves AND video splash completes.
+      if (!session.isResolved || !SplashScreen.splashDone.value) {
+        return loc == '/splash' ? null : '/splash';
+      }
 
       final authed = session.isAuthenticated;
       final isCustomer = authed && session.role.isCustomerSide;
@@ -121,8 +127,9 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
       if (_authRoutes.contains(loc)) return authed ? '/account' : null;
       if (loc.startsWith('/account')) {
         if (!authed) return '/login';
-        if (!isCustomer)
+        if (!isCustomer) {
           return '/home'; // staff roles can't enter customer account
+        }
         return null;
       }
       if (loc == '/visit-request') return authed ? null : '/login';
