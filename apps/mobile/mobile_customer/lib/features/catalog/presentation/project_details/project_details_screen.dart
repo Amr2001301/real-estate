@@ -15,6 +15,14 @@ import '../widgets/section_header.dart';
 import '../widgets/unit_card.dart';
 import 'project_details_cubit.dart';
 
+// Navy palette.
+const _navyDeep = Color(0xFF0B1726);
+const _navyMid = Color(0xFF14273F);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Entry point
+// ─────────────────────────────────────────────────────────────────────────────
+
 class ProjectDetailsScreen extends StatelessWidget {
   const ProjectDetailsScreen({super.key});
 
@@ -36,43 +44,76 @@ class ProjectDetailsScreen extends StatelessWidget {
               ),
             );
           case DataStatus.success:
-            return _Content(state: state);
+            return _DetailPage(state: state);
         }
       },
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Loading
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _LoadingScaffold extends StatelessWidget {
   const _LoadingScaffold();
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: const Center(child: CircularProgressIndicator()),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: _navyDeep,
+        body: const Center(
+          child: CircularProgressIndicator(
+            color: AppPalette.gold400,
+            strokeWidth: 2,
+          ),
+        ),
+      ),
     );
   }
 }
 
-class _Content extends StatefulWidget {
-  const _Content({required this.state});
+// ─────────────────────────────────────────────────────────────────────────────
+// Main page — Stack: pinned hero + scrollable sheet + floating nav + dock
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DetailPage extends StatefulWidget {
+  const _DetailPage({required this.state});
   final ProjectDetailsState state;
 
+  // Hero fills the top of the screen.
+  static const double _heroH = 390.0;
+  // Sheet starts this many px above the hero's bottom edge (overlap).
+  static const double _sheetPeek = 40.0;
+
   @override
-  State<_Content> createState() => _ContentState();
+  State<_DetailPage> createState() => _DetailPageState();
 }
 
-class _ContentState extends State<_Content> {
-  static const double _heroHeight = 320;
+class _DetailPageState extends State<_DetailPage> {
+  late final ScrollController _scroll;
+  double _px = 0;
 
-  // True once the hero has scrolled away and the pinned bar shows the page
-  // surface — drives the status-bar icon brightness.
-  bool _collapsed = false;
+  @override
+  void initState() {
+    super.initState();
+    _scroll = ScrollController()..addListener(() {
+      if (mounted) setState(() => _px = _scroll.offset);
+    });
+  }
 
-  bool _onScroll(ScrollNotification n) {
-    final collapsed = n.metrics.pixels > (_heroHeight - 96);
-    if (collapsed != _collapsed) setState(() => _collapsed = collapsed);
-    return false;
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  // Nav buttons are over the sheet once the sheet has scrolled up past them.
+  bool get _overSheet {
+    final topInset = MediaQuery.paddingOf(context).top;
+    return _px > (_DetailPage._heroH - _DetailPage._sheetPeek - topInset - 56);
   }
 
   @override
@@ -81,302 +122,546 @@ class _ContentState extends State<_Content> {
     final project = state.project!;
     final l10n = context.l10n;
     final lang = Localizations.localeOf(context).languageCode;
-    final theme = Theme.of(context);
     final colors = context.appColors;
-    final isDark = theme.brightness == Brightness.dark;
+    final topInset = MediaQuery.paddingOf(context).top;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    final hasUnits = state.previewUnits.isNotEmpty;
-    final hasDescription = !project.description.isEmpty;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: colors.canvas,
+        body: Stack(
+          children: [
+            // ── 1. Hero image — fixed, never scrolls ──────────────────────
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: _DetailPage._heroH + topInset,
+              child: _HeroPanel(project: project, l10n: l10n),
+            ),
 
-    const overImage = SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
-      statusBarBrightness: Brightness.dark,
-    );
-    final overBar = isDark
-        ? overImage
-        : const SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
-            statusBarIconBrightness: Brightness.dark,
-            statusBarBrightness: Brightness.light,
-          );
+            // ── 2. Scrollable content sheet ────────────────────────────────
+            SingleChildScrollView(
+              controller: _scroll,
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                children: [
+                  // Transparent spacer beneath the hero (sheet peeks into it).
+                  SizedBox(
+                    height: topInset +
+                        _DetailPage._heroH -
+                        _DetailPage._sheetPeek,
+                  ),
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          NotificationListener<ScrollNotification>(
-            onNotification: _onScroll,
-            child: CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  pinned: true,
-                  expandedHeight: _heroHeight,
-                  automaticallyImplyLeading: false,
-                  backgroundColor: colors.canvas,
-                  surfaceTintColor: Colors.transparent,
-                  elevation: 0,
-                  scrolledUnderElevation: 0,
-                  systemOverlayStyle: _collapsed ? overBar : overImage,
-                  toolbarHeight: 68,
-                  centerTitle: true,
-                  title: AnimatedOpacity(
-                    opacity: _collapsed ? 1 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Text(
-                      project.name.resolve(lang),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: colors.inkStrong,
+                  // The floating sheet
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colors.canvas,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(AppRadii.xxl + 10),
+                        topRight: Radius.circular(AppRadii.xxl + 10),
                       ),
-                    ),
-                  ),
-                  leadingWidth: 72,
-                  leading: Padding(
-                    padding:
-                        const EdgeInsetsDirectional.only(start: AppSpacing.lg),
-                    child: _Chrome(child: BackButton(color: colors.inkStrong)),
-                  ),
-                  actions: [
-                    _Chrome(
-                      child: FavoriteToggleButton(
-                          isProject: true, id: project.id),
-                    ),
-                    const SizedBox(width: AppSpacing.lg),
-                  ],
-                  flexibleSpace: FlexibleSpaceBar(
-                    collapseMode: CollapseMode.parallax,
-                    background: _Hero(project: project),
-                  ),
-                ),
-
-                // Identity + content sections (uniform horizontal padding).
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                      AppSpacing.lg,
-                      0,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.22),
+                          blurRadius: 32,
+                          spreadRadius: 2,
+                          offset: const Offset(0, -10),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // ── Identity ───────────────────────────────────────
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                project.name.resolve(lang),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: theme.textTheme.headlineMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  color: colors.inkStrong,
-                                  height: 1.1,
-                                ),
-                              ),
-                            ),
-                            if (project.featured) ...[
-                              const SizedBox(width: AppSpacing.sm),
-                              StatusBadge(
-                                label: l10n.featuredBadge,
-                                tone: BadgeTone.gold,
-                              ),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Row(
-                          children: [
-                            Icon(Icons.location_on_rounded,
-                                size: 16, color: colors.brandGold),
-                            const SizedBox(width: AppSpacing.xxs),
-                            Text(
-                              project.city,
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(color: colors.inkMuted),
-                            ),
-                          ],
+                        // Drag handle
+                        _SheetHandle(colors: colors),
+
+                        // Identity
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.xl,
+                              AppSpacing.md,
+                              AppSpacing.xl,
+                              0),
+                          child: _IdentityBlock(
+                              project: project, lang: lang, l10n: l10n),
                         ),
 
-                        // ── Overview ───────────────────────────────────────
-                        const SizedBox(height: AppSpacing.xl),
-                        _SectionTitle(l10n.projectOverview),
-                        const SizedBox(height: AppSpacing.md),
-                        _OverviewBar(project: project),
+                        // Stat tiles
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.xl,
+                              AppSpacing.xl,
+                              AppSpacing.xl,
+                              0),
+                          child: _StatTiles(project: project, l10n: l10n),
+                        ),
 
-                        // ── About the project (real description only) ──────
-                        if (hasDescription) ...[
-                          const SizedBox(height: AppSpacing.xl),
-                          _SectionTitle(l10n.projectAbout),
-                          const SizedBox(height: AppSpacing.md),
-                          _AboutCard(text: project.description.resolve(lang)),
+                        // About
+                        if (!project.description.isEmpty) ...[
+                          const SizedBox(height: AppSpacing.xxl),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xl),
+                            child: _Section(
+                              title: l10n.projectAbout,
+                              child: _AboutBlock(
+                                  text: project.description.resolve(lang)),
+                            ),
+                          ),
                         ],
 
-                        // ── Amenities ──────────────────────────────────────
+                        // Amenities
                         if (project.services.isNotEmpty) ...[
-                          const SizedBox(height: AppSpacing.xl),
-                          _SectionTitle(l10n.projectAmenities),
-                          const SizedBox(height: AppSpacing.md),
-                          AmenityChips(services: project.services),
+                          const SizedBox(height: AppSpacing.xxl),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xl),
+                            child: _Section(
+                              title: l10n.projectAmenities,
+                              child: AmenityChips(
+                                  services: project.services),
+                            ),
+                          ),
                         ],
 
-                        // ── Location (only when coordinates exist) ─────────
+                        // Location
                         if (project.hasLocation) ...[
-                          const SizedBox(height: AppSpacing.xl),
-                          _SectionTitle(l10n.projectLocation),
-                          const SizedBox(height: AppSpacing.md),
-                          _LocationCard(project: project),
+                          const SizedBox(height: AppSpacing.xxl),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.xl),
+                            child: _Section(
+                              title: l10n.projectLocation,
+                              child: _LocationTile(
+                                  project: project, lang: lang, l10n: l10n),
+                            ),
+                          ),
                         ],
+
+                        // Units carousel (full-bleed)
+                        if (state.previewUnits.isNotEmpty) ...[
+                          const SizedBox(height: AppSpacing.xxl),
+                          _UnitsPreview(state: state),
+                        ],
+
+                        // Dock clearance
+                        SizedBox(height: 104 + bottomInset),
                       ],
                     ),
                   ),
-                ),
-
-                // ── Project units (full-bleed carousel; self-hides) ────────
-                if (hasUnits)
-                  SliverToBoxAdapter(child: _UnitsPreview(state: state)),
-
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                      height: 104 + MediaQuery.paddingOf(context).bottom),
-                ),
-              ],
-            ),
-          ),
-
-          // Floating navy action dock — overlays the scrolling content.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: _StickyActionBar(project: project),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A consistent premium section header: a gold accent bar + bold title.
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 18,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppPalette.gold300, AppPalette.gold500],
-            ),
-            borderRadius: BorderRadius.circular(999),
-          ),
-        ),
-        const SizedBox(width: AppSpacing.sm),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.inkStrong,
+                ],
               ),
-        ),
-      ],
-    );
-  }
-}
-
-/// A solid surface circle that hosts a header action (back/favorite).
-class _Chrome extends StatelessWidget {
-  const _Chrome({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Center(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          shape: BoxShape.circle,
-          border: Border.all(color: colors.hairline),
-          boxShadow: colors.shadowSoft,
-        ),
-        child: IconButtonTheme(
-          data: IconButtonThemeData(
-            style: IconButton.styleFrom(
-              minimumSize: const Size(40, 40),
-              maximumSize: const Size(40, 40),
-              padding: EdgeInsets.zero,
-              iconSize: 20,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-          ),
-          child: child,
+
+            // ── 3. Floating nav buttons (always on top) ────────────────────
+            Positioned(
+              top: topInset,
+              left: 0,
+              right: 0,
+              height: 68,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _NavBtn(
+                      overSheet: _overSheet,
+                      child: BackButton(
+                        color: _overSheet
+                            ? colors.inkStrong
+                            : Colors.white,
+                      ),
+                    ),
+                    _NavBtn(
+                      overSheet: _overSheet,
+                      child: FavoriteToggleButton(
+                          isProject: true, id: project.id),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── 4. Sticky action dock ──────────────────────────────────────
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _StickyDock(project: project),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// Edge-to-edge hero gallery with a top scrim and bottom city/featured pills.
-class _Hero extends StatelessWidget {
-  const _Hero({required this.project});
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero panel
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _HeroPanel extends StatelessWidget {
+  const _HeroPanel({required this.project, required this.l10n});
   final ProjectDetail project;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     return Stack(
       fit: StackFit.expand,
       children: [
+        // Gallery
         ImageGallery(images: project.galleryImages),
+
+        // Top scrim — protects nav buttons
         const Positioned(
           top: 0,
           left: 0,
           right: 0,
-          height: 150,
+          height: 140,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xA6000000),
-                    Color(0x29000000),
-                    Color(0x00000000),
-                  ],
-                  stops: [0.0, 0.42, 1.0],
+                  colors: [Color(0xB0000000), Color(0x00000000)],
                 ),
               ),
             ),
           ),
         ),
+
+        // Bottom scrim — hero fades into the sheet's rounded corners
+        const Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 120,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Color(0x88000000), Color(0x00000000)],
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Pills — bottom of hero
         PositionedDirectional(
-          bottom: AppSpacing.xl,
-          start: AppSpacing.lg,
-          end: AppSpacing.lg,
+          bottom: 52, // above the sheet peek zone
+          start: AppSpacing.xl,
+          end: AppSpacing.xl,
           child: Row(
             children: [
-              Flexible(
-                child: _LocationPill(label: project.city),
-              ),
               if (project.featured) ...[
-                const SizedBox(width: AppSpacing.sm),
-                _FeaturedPill(label: l10n.featuredBadge),
+                _HeroPill.gold(label: l10n.featuredBadge),
+                const SizedBox(width: AppSpacing.xs),
               ],
+              _HeroPill.glass(
+                icon: Icons.location_on_rounded,
+                label: project.city,
+              ),
             ],
+          ),
+        ),
+
+        // Page indicator dots
+        PositionedDirectional(
+          bottom: 28,
+          start: 0,
+          end: 0,
+          child: _HeroDots(count: project.galleryImages.length),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroPill extends StatelessWidget {
+  const _HeroPill._({
+    required this.label,
+    required this.isGold,
+    this.icon,
+  });
+
+  factory _HeroPill.gold({required String label}) =>
+      _HeroPill._(label: label, isGold: true);
+
+  factory _HeroPill.glass({required String label, required IconData icon}) =>
+      _HeroPill._(label: label, isGold: false, icon: icon);
+
+  final String label;
+  final bool isGold;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    if (isGold) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppPalette.gold300, AppPalette.gold500],
+          ),
+          borderRadius: AppRadii.pillAll,
+          boxShadow: [
+            BoxShadow(
+              color: AppPalette.gold400.withValues(alpha: 0.40),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.star_rounded, size: 13, color: AppPalette.navy),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppPalette.navy,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.38),
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.28),
+          width: 0.8,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 13, color: Colors.white),
+            const SizedBox(width: 5),
+          ],
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Minimal gold dash page indicator.
+class _HeroDots extends StatelessWidget {
+  const _HeroDots({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    if (count <= 1) return const SizedBox.shrink();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (var i = 0; i < count.clamp(0, 5); i++)
+          Container(
+            width: i == 0 ? 20 : 6,
+            height: 3,
+            margin: const EdgeInsets.symmetric(horizontal: 2),
+            decoration: BoxDecoration(
+              color: i == 0
+                  ? AppPalette.gold400
+                  : Colors.white.withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(999),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sheet handle
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle({required this.colors});
+  final AppColorsExt colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        width: 44,
+        height: 4,
+        margin: const EdgeInsets.only(top: AppSpacing.sm + 2),
+        decoration: BoxDecoration(
+          color: colors.hairline,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nav button — transitions between glass (over hero) and surface (over sheet)
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NavBtn extends StatelessWidget {
+  const _NavBtn({required this.overSheet, required this.child});
+  final bool overSheet;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: overSheet
+            ? colors.surface
+            : Colors.white.withValues(alpha: 0.18),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: overSheet
+              ? colors.hairline
+              : Colors.white.withValues(alpha: 0.32),
+          width: 0.8,
+        ),
+        boxShadow: overSheet ? colors.shadowSoft : null,
+      ),
+      child: IconButtonTheme(
+        data: IconButtonThemeData(
+          style: IconButton.styleFrom(
+            minimumSize: const Size(42, 42),
+            maximumSize: const Size(42, 42),
+            padding: EdgeInsets.zero,
+            iconSize: 20,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity block
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _IdentityBlock extends StatelessWidget {
+  const _IdentityBlock({
+    required this.project,
+    required this.lang,
+    required this.l10n,
+  });
+
+  final ProjectDetail project;
+  final String lang;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Featured badge
+        if (project.featured) ...[
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppPalette.gold300, AppPalette.gold500],
+              ),
+              borderRadius: AppRadii.pillAll,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.star_rounded,
+                    size: 11, color: AppPalette.navy),
+                const SizedBox(width: 4),
+                Text(
+                  l10n.featuredBadge,
+                  style: const TextStyle(
+                    color: AppPalette.navy,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
+
+        // Name — headline anchor
+        Text(
+          project.name.resolve(lang),
+          style: theme.textTheme.headlineLarge?.copyWith(
+            fontWeight: FontWeight.w900,
+            color: colors.inkStrong,
+            height: 1.05,
+            letterSpacing: -0.6,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs + 2),
+
+        // City
+        Row(
+          children: [
+            const Icon(Icons.location_on_rounded,
+                size: 15, color: AppPalette.gold400),
+            const SizedBox(width: 4),
+            Text(
+              project.city,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.inkMuted,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+
+        // Gold separator line
+        Container(
+          width: 48,
+          height: 2,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                AppPalette.gold400,
+                Color(0x00B8941F),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
       ],
@@ -384,142 +669,56 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _LocationPill extends StatelessWidget {
-  const _LocationPill({required this.label});
-  final String label;
+// ─────────────────────────────────────────────────────────────────────────────
+// Stat tiles — 3 individual surface cards, each with a gold top border
+// ─────────────────────────────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        color: AppPalette.navy.withValues(alpha: 0.82),
-        borderRadius: AppRadii.pillAll,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.location_on_rounded, size: 14, color: Colors.white),
-          const SizedBox(width: AppSpacing.xs),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A warm gold "featured" pill for the hero overlay.
-class _FeaturedPill extends StatelessWidget {
-  const _FeaturedPill({required this.label});
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppPalette.gold300, AppPalette.gold500],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: AppRadii.pillAll,
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.star_rounded, size: 14, color: AppPalette.navy),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: AppPalette.navy,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Compact premium overview bar: a single card with icon/value/label columns
-/// separated by hairline dividers. Renders only the real facts a project has:
-/// available units, city, and amenities count (when present).
-class _OverviewBar extends StatelessWidget {
-  const _OverviewBar({required this.project});
+class _StatTiles extends StatelessWidget {
+  const _StatTiles({required this.project, required this.l10n});
   final ProjectDetail project;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
     final stats = <(IconData, String, String)>[
       (
         Icons.meeting_room_outlined,
         '${project.availableUnitsCount}',
-        l10n.labelAvailableUnits
+        l10n.labelAvailableUnits,
       ),
       (Icons.location_city_outlined, project.city, l10n.labelCity),
       if (project.services.isNotEmpty)
         (
           Icons.spa_outlined,
           '${project.services.length}',
-          l10n.labelAmenities
+          l10n.labelAmenities,
         ),
     ];
 
-    final cells = <Widget>[];
-    for (var i = 0; i < stats.length; i++) {
-      if (i > 0) {
-        cells.add(VerticalDivider(
-          width: 1,
-          thickness: 1,
-          indent: AppSpacing.sm,
-          endIndent: AppSpacing.sm,
-          color: colors.hairline,
-        ));
-      }
-      final s = stats[i];
-      cells.add(Expanded(child: _Stat(icon: s.$1, value: s.$2, label: s.$3)));
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.8)),
-        boxShadow: colors.shadowSoft,
-      ),
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: IntrinsicHeight(child: Row(children: cells)),
+    return Row(
+      children: [
+        for (var i = 0; i < stats.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _StatCard(
+              icon: stats[i].$1,
+              value: stats[i].$2,
+              label: stats[i].$3,
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
 
-class _Stat extends StatelessWidget {
-  const _Stat({required this.icon, required this.value, required this.label});
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
   final IconData icon;
   final String value;
   final String label;
@@ -528,29 +727,68 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+
+    // Flutter requires uniform border colors when borderRadius is set.
+    // Instead, we render the gold top accent as the first child of the card.
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 22, color: colors.brandGold),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: colors.inkStrong,
+          // Gold top accent bar — clipped to match the card's corner radius.
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(AppRadii.lg - 1),
+              topRight: Radius.circular(AppRadii.lg - 1),
+            ),
+            child: Container(
+              height: 2.5,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppPalette.gold300, AppPalette.gold500],
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.xs, AppSpacing.md, AppSpacing.xs, AppSpacing.md),
+            child: Column(
+              children: [
+                Icon(icon, size: 22, color: colors.brandGold),
+                const SizedBox(height: 8),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colors.inkStrong,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: colors.inkMuted),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -558,18 +796,68 @@ class _Stat extends StatelessWidget {
   }
 }
 
-/// "About the project" — a soft warm card with the real project description and
-/// a gold vertical accent line (mirrors Unit Details' About card).
-class _AboutCard extends StatelessWidget {
-  const _AboutCard({required this.text});
+// ─────────────────────────────────────────────────────────────────────────────
+// Section wrapper — gold-bar label + content
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.child});
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 20,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppPalette.gold300, AppPalette.gold500],
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: colors.inkStrong,
+                    letterSpacing: -0.2,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md + 2),
+        child,
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// About block — editorial text, no card shell
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _AboutBlock extends StatelessWidget {
+  const _AboutBlock({required this.text});
   final String text;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
+
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: colors.surfaceSoft,
         borderRadius: BorderRadius.circular(AppRadii.lg),
@@ -579,6 +867,7 @@ class _AboutCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Directional gold bar — first in row = start side (right in RTL)
             Container(
               width: 3,
               decoration: BoxDecoration(
@@ -591,12 +880,12 @@ class _AboutCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.md),
-            Expanded(
+            Flexible(
               child: Text(
                 text,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.inkStrong.withValues(alpha: 0.86),
-                  height: 1.6,
+                  color: colors.inkStrong.withValues(alpha: 0.85),
+                  height: 1.75,
                 ),
               ),
             ),
@@ -607,80 +896,139 @@ class _AboutCard extends StatelessWidget {
   }
 }
 
-/// Compact premium location card: opens the project coordinates in Maps.
-class _LocationCard extends StatelessWidget {
-  const _LocationCard({required this.project});
+// ─────────────────────────────────────────────────────────────────────────────
+// Location tile
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LocationTile extends StatelessWidget {
+  const _LocationTile({
+    required this.project,
+    required this.lang,
+    required this.l10n,
+  });
+
   final ProjectDetail project;
+  final String lang;
+  final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
-    final colors = context.appColors;
     final theme = Theme.of(context);
-    return PremiumCard(
-      glow: true,
-      onTap: () => ContactActions.openMap(
-        lat: project.lat!,
-        lng: project.lng!,
-        label: project.name.resolve(lang),
-      ),
-      child: Row(
-        children: [
-          const IconChip(icon: Icons.map_outlined),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  project.city,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.inkStrong,
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => ContactActions.openMap(
+          lat: project.lat!,
+          lng: project.lng!,
+          label: project.name.resolve(lang),
+        ),
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        child: Ink(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment(0, -1),
+              end: Alignment(0.8, 1),
+              colors: [_navyMid, _navyDeep],
+            ),
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            boxShadow: [
+              BoxShadow(
+                color: _navyDeep.withValues(alpha: 0.40),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Icon container
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(AppRadii.md),
+                  border: Border.all(
+                    color: AppPalette.gold400.withValues(alpha: 0.40),
+                    width: 0.8,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  l10n.openInMaps,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: colors.brandGold),
+                child: const Icon(Icons.location_on_outlined,
+                    size: 22, color: AppPalette.gold300),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      project.city,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.1,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      l10n.openInMaps,
+                      style: const TextStyle(
+                        color: AppPalette.gold300,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              Icon(
+                AppIcons.chevronForward,
+                size: 18,
+                color: Colors.white.withValues(alpha: 0.40),
+              ),
+            ],
           ),
-          Icon(Icons.open_in_new_rounded, size: 20, color: colors.inkMuted),
-        ],
+        ),
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Units preview
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _UnitsPreview extends StatelessWidget {
   const _UnitsPreview({required this.state});
   final ProjectDetailsState state;
+
+  // 210 image + hairline + ~148 content = 370 fits the UnitCard without overflow.
+  static const double _cardH = 370.0;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final project = state.project!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(height: AppSpacing.xl),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: SectionHeader(
             title: l10n.projectUnits,
-            onViewAll: () => context.push('/projects/${project.id}/units'),
+            onViewAll: () =>
+                context.push('/projects/${project.id}/units'),
           ),
         ),
-        const SizedBox(height: AppSpacing.xs),
+        const SizedBox(height: AppSpacing.md),
         SizedBox(
-          height: 320,
+          height: _cardH,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
             itemCount: state.previewUnits.length,
             separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
             itemBuilder: (context, i) {
@@ -698,11 +1046,12 @@ class _UnitsPreview extends StatelessWidget {
   }
 }
 
-/// Premium sticky action dock: a slim navy bar with the primary "request a
-/// visit" gold CTA (the project's main conversion action) plus a compact,
-/// secondary AI-assistant glass action.
-class _StickyActionBar extends StatelessWidget {
-  const _StickyActionBar({required this.project});
+// ─────────────────────────────────────────────────────────────────────────────
+// Sticky action dock
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StickyDock extends StatelessWidget {
+  const _StickyDock({required this.project});
   final ProjectDetail project;
 
   @override
@@ -714,11 +1063,7 @@ class _StickyActionBar extends StatelessWidget {
       top: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          AppSpacing.xs,
-          AppSpacing.lg,
-          AppSpacing.sm,
-        ),
+            AppSpacing.lg, AppSpacing.xs, AppSpacing.lg, AppSpacing.sm),
         child: DecoratedBox(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadii.xl),
@@ -763,9 +1108,9 @@ class _StickyActionBar extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: AppSpacing.sm),
-                      _GlassAction(
-                        tooltip: l10n.homeAskAssistant,
+                      _GlassBtn(
                         icon: Icons.auto_awesome_rounded,
+                        tooltip: l10n.homeAskAssistant,
                         onTap: () => context.push('/chat'),
                       ),
                     ],
@@ -779,8 +1124,6 @@ class _StickyActionBar extends StatelessWidget {
     );
   }
 
-  /// Auth-aware project visit request — reuses the existing `/visit-request`
-  /// flow (no new route/API). Guests get the login + contact prompt sheet.
   void _onRequestVisit(BuildContext context) {
     final authed = context.read<SessionCubit>().state.isAuthenticated;
     if (authed) {
@@ -791,15 +1134,48 @@ class _StickyActionBar extends StatelessWidget {
   }
 }
 
-/// Guest visit prompt: sign in to request a visit, or contact us directly —
-/// mirrors the Unit Details behavior, prefilled with the project name.
+class _GlassBtn extends StatelessWidget {
+  const _GlassBtn(
+      {required this.icon, required this.onTap, required this.tooltip});
+  final IconData icon;
+  final VoidCallback onTap;
+  final String tooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.white.withValues(alpha: 0.14),
+        shape: CircleBorder(
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.40)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const CircleBorder(),
+          child: SizedBox(
+            width: 46,
+            height: 46,
+            child: Icon(icon, color: Colors.white, size: 22),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Guest visit prompt sheet
+// ─────────────────────────────────────────────────────────────────────────────
+
 void _showVisitPrompt(BuildContext context, ProjectDetail project) {
   final l10n = context.l10n;
   final lang = Localizations.localeOf(context).languageCode;
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
-    builder: (sheetContext) => Padding(
+    builder: (sheetCtx) => Padding(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.xl),
       child: Column(
@@ -817,7 +1193,7 @@ void _showVisitPrompt(BuildContext context, ProjectDetail project) {
             icon: Icons.login_rounded,
             expand: true,
             onPressed: () {
-              Navigator.of(sheetContext).pop();
+              Navigator.of(sheetCtx).pop();
               context.pushLoginWithRedirect();
             },
           ),
@@ -827,45 +1203,4 @@ void _showVisitPrompt(BuildContext context, ProjectDetail project) {
       ),
     ),
   );
-}
-
-/// A compact translucent-glass circular action on the navy dock — secondary to
-/// the primary CTA (e.g. the AI assistant).
-class _GlassAction extends StatelessWidget {
-  const _GlassAction({
-    required this.icon,
-    required this.onTap,
-    required this.tooltip,
-  });
-
-  final IconData icon;
-  final VoidCallback onTap;
-  final String tooltip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: Semantics(
-        button: true,
-        label: tooltip,
-        child: Material(
-          color: Colors.white.withValues(alpha: 0.14),
-          shape: CircleBorder(
-            side: BorderSide(color: Colors.white.withValues(alpha: 0.40)),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            customBorder: const CircleBorder(),
-            child: SizedBox(
-              width: 46,
-              height: 46,
-              child: Icon(icon, color: Colors.white, size: 22),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
