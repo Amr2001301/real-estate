@@ -28,7 +28,11 @@ class GlassPill extends StatelessWidget {
             border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
           ),
           child: DefaultTextStyle.merge(
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
             child: IconTheme.merge(
               data: const IconThemeData(color: Colors.white, size: 14),
               child: child,
@@ -83,7 +87,12 @@ class GlassCircle extends StatelessWidget {
 /// container. Distinct from the bordered [AppCard] — floats more, reads more
 /// luxe. Clips its child so image corners round with the card.
 class LuxeCard extends StatelessWidget {
-  const LuxeCard({super.key, required this.child, this.onTap, this.radius = 22});
+  const LuxeCard({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.radius = 22,
+  });
 
   final Widget child;
   final VoidCallback? onTap;
@@ -112,20 +121,20 @@ class ImageScrim extends StatelessWidget {
   const ImageScrim({super.key});
   @override
   Widget build(BuildContext context) => const DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0x1F000000),
-              Color(0x00000000),
-              Color(0x59000000),
-              Color(0xCC000000),
-            ],
-            stops: [0.0, 0.45, 0.78, 1.0],
-          ),
-        ),
-      );
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0x1F000000),
+          Color(0x00000000),
+          Color(0x59000000),
+          Color(0xCC000000),
+        ],
+        stops: [0.0, 0.45, 0.78, 1.0],
+      ),
+    ),
+  );
 }
 
 /// A very subtle, edge-fading gold hairline — a restrained premium accent
@@ -134,16 +143,16 @@ class GoldHairline extends StatelessWidget {
   const GoldHairline({super.key});
   @override
   Widget build(BuildContext context) => const SizedBox(
-        height: 2,
-        width: double.infinity,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0x00C8A24B), Color(0x5CC8A24B), Color(0x00C8A24B)],
-            ),
-          ),
+    height: 2,
+    width: double.infinity,
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0x00C8A24B), Color(0x5CC8A24B), Color(0x00C8A24B)],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 /// The small round "open details" affordance used as the card's CTA anchor.
@@ -161,9 +170,12 @@ class CardOpenArrow extends StatelessWidget {
       width: 32,
       height: 32,
       alignment: Alignment.center,
-      decoration: BoxDecoration(color: colors.surfaceSoft, shape: BoxShape.circle),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        shape: BoxShape.circle,
+      ),
       child: Icon(
-        rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+        !rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
         size: 20,
         color: colors.inkStrong,
       ),

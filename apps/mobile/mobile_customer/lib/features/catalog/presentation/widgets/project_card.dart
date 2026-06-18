@@ -10,12 +10,7 @@ import 'glass.dart';
 /// and a small favorite) — then a tight content block of a 2-line description
 /// and a footer (soft-gold units chip + refined CTA). Minimal white area.
 class ProjectCard extends StatelessWidget {
-  const ProjectCard({
-    super.key,
-    required this.project,
-    this.onTap,
-    this.width,
-  });
+  const ProjectCard({super.key, required this.project, this.onTap, this.width});
 
   final ProjectListItem project;
   final VoidCallback? onTap;
@@ -77,7 +72,10 @@ class ProjectCard extends StatelessWidget {
                   end: AppSpacing.sm,
                   child: GlassCircle(
                     child: FavoriteToggleButton(
-                        isProject: true, id: project.id, dense: true),
+                      isProject: true,
+                      id: project.id,
+                      dense: true,
+                    ),
                   ),
                 ),
                 PositionedDirectional(
@@ -91,8 +89,11 @@ class ProjectCard extends StatelessWidget {
                       if (city.isNotEmpty)
                         Row(
                           children: [
-                            const Icon(Icons.location_on_rounded,
-                                size: 14, color: AppPalette.gold300),
+                            const Icon(
+                              Icons.location_on_rounded,
+                              size: 14,
+                              color: AppPalette.gold300,
+                            ),
                             const SizedBox(width: AppSpacing.xxs),
                             Expanded(
                               child: Text(
@@ -138,8 +139,10 @@ class ProjectCard extends StatelessWidget {
                 if (description.isNotEmpty) ...[
                   Text(
                     description,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: colors.inkMuted, height: 1.5),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colors.inkMuted,
+                      height: 1.5,
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -189,7 +192,9 @@ class _UnitsChip extends StatelessWidget {
     final fg = has ? colors.brandGold : colors.inkMuted;
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
       decoration: BoxDecoration(
         color: has
             ? colors.brandGold.withValues(alpha: 0.12)
@@ -206,10 +211,10 @@ class _UnitsChip extends StatelessWidget {
               context.l10n.availableUnitsCount(count),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(color: fg, fontWeight: FontWeight.w700),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                color: fg,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

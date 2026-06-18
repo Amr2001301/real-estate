@@ -49,10 +49,12 @@ class HomeScreen extends StatelessWidget {
       onRefresh: () async {
         final home = context.read<HomeCubit>();
         final property = isCustomer ? context.read<MyPropertyCubit>() : null;
-        final installments =
-            isCustomer ? context.read<InstallmentsCubit>() : null;
-        final maintenance =
-            isCustomer ? context.read<MaintenanceRequestsCubit>() : null;
+        final installments = isCustomer
+            ? context.read<InstallmentsCubit>()
+            : null;
+        final maintenance = isCustomer
+            ? context.read<MaintenanceRequestsCubit>()
+            : null;
         await home.load();
         property?.load();
         installments?.load();
@@ -60,7 +62,8 @@ class HomeScreen extends StatelessWidget {
       },
       child: ListView(
         padding: EdgeInsets.only(
-          bottom: (context.isApplePlatform
+          bottom:
+              (context.isApplePlatform
                   ? MediaQuery.of(context).padding.bottom + 32
                   : AppSpacing.lg) +
               (comparing
@@ -70,7 +73,8 @@ class HomeScreen extends StatelessWidget {
         children: [
           if (isCustomer)
             CustomerHomeDashboard(
-              name: session.sessionOrNull?.displayName ??
+              name:
+                  session.sessionOrNull?.displayName ??
                   session.sessionOrNull?.email,
             )
           else ...[
@@ -86,11 +90,11 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(height: AppSpacing.lg),
             // Restores dark status-bar glyphs as the canvas enters the viewport.
             AnnotatedRegion<SystemUiOverlayStyle>(
-              value: SystemUiOverlayStyle.dark
-                  .copyWith(statusBarColor: Colors.transparent),
+              value: SystemUiOverlayStyle.dark.copyWith(
+                statusBarColor: Colors.transparent,
+              ),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: SectionHeader(
                   title: l10n.homeFeaturedProjects,
                   onViewAll: () => context.go('/projects'),
@@ -159,6 +163,7 @@ class _HeroSectionState extends State<_HeroSection> {
     final result = await showModalBottomSheet<String?>(
       context: context,
       isScrollControlled: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _TypeFilterSheet(initial: _filterType),
     );
@@ -181,8 +186,9 @@ class _HeroSectionState extends State<_HeroSection> {
     final topInset = MediaQuery.paddingOf(context).top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light
-          .copyWith(statusBarColor: Colors.transparent),
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: ClipRRect(
         borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(AppRadii.xxl),
@@ -242,9 +248,7 @@ class _HeroSectionState extends State<_HeroSection> {
                 ),
               ),
               // Subtle dot texture (depth cue on solid-gradient fallback).
-              const Positioned.fill(
-                child: IgnorePointer(child: _DotTexture()),
-              ),
+              const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
               // ── Brand + bell row ─────────────────────────────────────────
               PositionedDirectional(
                 top: topInset + AppSpacing.xs,
@@ -320,10 +324,7 @@ class _HeroSectionState extends State<_HeroSection> {
                           height: 1.1,
                           letterSpacing: -0.5,
                           shadows: const [
-                            Shadow(
-                              color: Color(0x44000000),
-                              blurRadius: 16,
-                            ),
+                            Shadow(color: Color(0x44000000), blurRadius: 16),
                           ],
                         ),
                       ),
@@ -469,14 +470,17 @@ class _HeroSearchPill extends StatelessWidget {
         style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkStrong),
         decoration: InputDecoration(
           isDense: true,
-          contentPadding:
-              const EdgeInsetsDirectional.only(end: AppSpacing.md),
+          contentPadding: const EdgeInsetsDirectional.only(end: AppSpacing.md),
           border: InputBorder.none,
           hintText: l10n.homeSearchHint,
-          hintStyle:
-              theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
-          prefixIcon:
-              Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+          hintStyle: theme.textTheme.bodyMedium?.copyWith(
+            color: colors.inkMuted,
+          ),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: colors.inkMuted,
+          ),
         ),
       ),
     );
@@ -572,9 +576,21 @@ class _TypeFilterSheetState extends State<_TypeFilterSheet> {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     final options = [
-      (key: 'residential', label: l10n.homeTypeResidential, icon: Icons.home_outlined),
-      (key: 'commercial', label: l10n.homeTypeCommercial, icon: Icons.store_outlined),
-      (key: 'office', label: l10n.homeTypeOffice, icon: Icons.business_center_outlined),
+      (
+        key: 'residential',
+        label: l10n.homeTypeResidential,
+        icon: Icons.home_outlined,
+      ),
+      (
+        key: 'commercial',
+        label: l10n.homeTypeCommercial,
+        icon: Icons.store_outlined,
+      ),
+      (
+        key: 'office',
+        label: l10n.homeTypeOffice,
+        icon: Icons.business_center_outlined,
+      ),
     ];
 
     return Container(
@@ -587,80 +603,84 @@ class _TypeFilterSheetState extends State<_TypeFilterSheet> {
           topRight: Radius.circular(AppRadii.xxl),
         ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Drag handle.
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              decoration: BoxDecoration(
-                color: colors.hairline,
-                borderRadius: BorderRadius.circular(999),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Drag handle.
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                decoration: BoxDecoration(
+                  color: colors.hairline,
+                  borderRadius: BorderRadius.circular(999),
+                ),
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              0,
-              AppSpacing.lg,
-              AppSpacing.lg,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  l10n.homeFilterTypeLabel,
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  l10n.homeFilterHelper,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: colors.inkMuted),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                for (final opt in options) ...[
-                  _TypeOption(
-                    icon: opt.icon,
-                    label: opt.label,
-                    selected: _selected == opt.key,
-                    onTap: () => setState(
-                      () => _selected =
-                          _selected == opt.key ? null : opt.key,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.homeFilterTypeLabel,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
-                const SizedBox(height: AppSpacing.sm),
-                AppButton(
-                  label: l10n.homeFilterViewResults,
-                  variant: AppButtonVariant.gold,
-                  onPressed: () =>
-                      Navigator.pop(context, _selected ?? ''),
-                ),
-                if (_selected != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  Center(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context, ''),
-                      child: Text(
-                        l10n.homeFilterClearSelection,
-                        style: theme.textTheme.labelMedium
-                            ?.copyWith(color: colors.inkMuted),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    l10n.homeFilterHelper,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.inkMuted,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  for (final opt in options) ...[
+                    _TypeOption(
+                      icon: opt.icon,
+                      label: opt.label,
+                      selected: _selected == opt.key,
+                      onTap: () => setState(
+                        () => _selected = _selected == opt.key ? null : opt.key,
                       ),
                     ),
+                    const SizedBox(height: AppSpacing.xs),
+                  ],
+                  const SizedBox(height: AppSpacing.sm),
+                  AppButton(
+                    label: l10n.homeFilterViewResults,
+                    variant: AppButtonVariant.gold,
+                    onPressed: () => Navigator.pop(context, _selected ?? ''),
                   ),
+                  if (_selected != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context, ''),
+                        child: Text(
+                          l10n.homeFilterClearSelection,
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: colors.inkMuted,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -737,8 +757,7 @@ class _TypeOption extends StatelessWidget {
                 label,
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: selected ? AppPalette.navy : colors.inkStrong,
-                  fontWeight:
-                      selected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),
@@ -803,11 +822,9 @@ class _FeaturedProjectsSkeleton extends StatelessWidget {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const NeverScrollableScrollPhysics(),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               itemCount: 3,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(width: AppSpacing.md),
+              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
               itemBuilder: (_, _) => Container(
                 width: cardWidth,
                 decoration: BoxDecoration(
@@ -851,8 +868,7 @@ class _FeaturedProjectsCarousel extends StatefulWidget {
       _FeaturedProjectsCarouselState();
 }
 
-class _FeaturedProjectsCarouselState
-    extends State<_FeaturedProjectsCarousel> {
+class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
   late final PageController _controller;
   Timer? _timer;
   int _page = 0;
@@ -910,12 +926,10 @@ class _FeaturedProjectsCarouselState
               itemCount: projects.length,
               onPageChanged: (i) => setState(() => _page = i),
               itemBuilder: (context, i) => Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xs),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
                 child: _HomeProjectCard(
                   project: projects[i],
-                  onTap: () =>
-                      context.push('/projects/${projects[i].id}'),
+                  onTap: () => context.push('/projects/${projects[i].id}'),
                 ),
               ),
             ),
@@ -933,9 +947,7 @@ class _FeaturedProjectsCarouselState
                   width: i == _page ? 18 : 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: i == _page
-                        ? colors.brandGold
-                        : colors.hairline,
+                    color: i == _page ? colors.brandGold : colors.hairline,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -993,40 +1005,40 @@ class _HomeUnitsGridState extends State<_HomeUnitsGrid> {
               ),
             ),
             Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: Column(
                 children: [
-                  for (int row = 0;
-                      row < (display.length / 2).ceil();
-                      row++) ...[
+                  for (
+                    int row = 0;
+                    row < (display.length / 2).ceil();
+                    row++
+                  ) ...[
                     if (row > 0) const SizedBox(height: AppSpacing.sm),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         for (int col = 0; col < 2; col++) ...[
-                          if (col > 0)
-                            const SizedBox(width: AppSpacing.sm),
+                          if (col > 0) const SizedBox(width: AppSpacing.sm),
                           Expanded(
                             child: row * 2 + col < display.length
                                 ? _HomeUnitCard(
-                                    unit: display[row * 2 + col],
-                                    onTap: () => context.push(
-                                      '/units/${display[row * 2 + col].id}',
-                                    ),
-                                  )
-                                    .animate(
-                                      delay: Duration(
-                                          milliseconds:
-                                              80 * (row * 2 + col)),
-                                    )
-                                    .fadeIn(duration: 360.ms)
-                                    .slideY(
-                                      begin: 0.07,
-                                      end: 0,
-                                      duration: 360.ms,
-                                      curve: Curves.easeOut,
-                                    )
+                                        unit: display[row * 2 + col],
+                                        onTap: () => context.push(
+                                          '/units/${display[row * 2 + col].id}',
+                                        ),
+                                      )
+                                      .animate(
+                                        delay: Duration(
+                                          milliseconds: 80 * (row * 2 + col),
+                                        ),
+                                      )
+                                      .fadeIn(duration: 360.ms)
+                                      .slideY(
+                                        begin: 0.07,
+                                        end: 0,
+                                        duration: 360.ms,
+                                        curve: Curves.easeOut,
+                                      )
                                 : const SizedBox.shrink(),
                           ),
                         ],
@@ -1055,11 +1067,11 @@ class _HomeUnitCard extends StatelessWidget {
   static const double _imageHeight = 125;
 
   Color _statusColor(AppColorsExt c, UnitStatus s) => switch (s) {
-        UnitStatus.available => c.success,
-        UnitStatus.reserved => c.warning,
-        UnitStatus.sold => c.inkMuted,
-        UnitStatus.unknown => c.inkMuted,
-      };
+    UnitStatus.available => c.success,
+    UnitStatus.reserved => c.warning,
+    UnitStatus.sold => c.inkMuted,
+    UnitStatus.unknown => c.inkMuted,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -1068,8 +1080,7 @@ class _HomeUnitCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
 
-    final projectName =
-        unit.project?.name.resolve(lang).trim() ?? '';
+    final projectName = unit.project?.name.resolve(lang).trim() ?? '';
     final city = unit.project?.city.trim() ?? '';
 
     return LuxeCard(
@@ -1100,8 +1111,7 @@ class _HomeUnitCard extends StatelessWidget {
                             width: 6,
                             height: 6,
                             decoration: BoxDecoration(
-                              color:
-                                  _statusColor(colors, unit.status),
+                              color: _statusColor(colors, unit.status),
                               shape: BoxShape.circle,
                             ),
                           ),
@@ -1142,8 +1152,7 @@ class _HomeUnitCard extends StatelessWidget {
                             projectName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style:
-                                theme.textTheme.labelSmall?.copyWith(
+                            style: theme.textTheme.labelSmall?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1187,8 +1196,7 @@ class _HomeUnitCard extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 unit.type,
-                                style: theme.textTheme.titleMedium
-                                    ?.copyWith(
+                                style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: FontWeight.w800,
                                   color: colors.inkStrong,
                                 ),
@@ -1198,8 +1206,9 @@ class _HomeUnitCard extends StatelessWidget {
                             ),
                             PriceText(
                               unit.price,
-                              style: theme.textTheme.labelLarge
-                                  ?.copyWith(fontWeight: FontWeight.w800),
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
                             ),
                           ],
                         ),
@@ -1207,14 +1216,18 @@ class _HomeUnitCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Row(
                             children: [
-                              Icon(Icons.location_on_rounded,
-                                  size: 11, color: colors.brandGold),
+                              Icon(
+                                Icons.location_on_rounded,
+                                size: 11,
+                                color: colors.brandGold,
+                              ),
                               const SizedBox(width: 2),
                               Expanded(
                                 child: Text(
                                   city,
-                                  style: theme.textTheme.bodySmall
-                                      ?.copyWith(color: colors.inkMuted),
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: colors.inkMuted,
+                                  ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1229,16 +1242,19 @@ class _HomeUnitCard extends StatelessWidget {
                           children: [
                             if (unit.bedrooms > 0)
                               _MiniSpec(
-                                  icon: Icons.bed_rounded,
-                                  value: '${unit.bedrooms}'),
+                                icon: Icons.bed_rounded,
+                                value: '${unit.bedrooms}',
+                              ),
                             if (unit.bathrooms > 0)
                               _MiniSpec(
-                                  icon: Icons.bathtub_rounded,
-                                  value: '${unit.bathrooms}'),
+                                icon: Icons.bathtub_rounded,
+                                value: '${unit.bathrooms}',
+                              ),
                             if (unit.area > 0)
                               _MiniSpec(
-                                  icon: Icons.square_foot_rounded,
-                                  value: l10n.areaValue('${unit.area}')),
+                                icon: Icons.square_foot_rounded,
+                                value: l10n.areaValue('${unit.area}'),
+                              ),
                           ],
                         ),
                       ],
@@ -1278,10 +1294,10 @@ class _MiniSpec extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: colors.inkStrong,
-                  fontSize: 11,
-                ),
+              fontWeight: FontWeight.w600,
+              color: colors.inkStrong,
+              fontSize: 11,
+            ),
           ),
         ],
       ),
@@ -1300,8 +1316,7 @@ class _HomeCtaBand extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.xl),
         child: DecoratedBox(
@@ -1323,8 +1338,7 @@ class _HomeCtaBand extends StatelessWidget {
                   ),
                 ),
               ),
-              const Positioned.fill(
-                  child: IgnorePointer(child: _DotTexture())),
+              const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
               // Gold hairline accent at the top.
               Positioned(
                 top: 0,
@@ -1354,14 +1368,12 @@ class _HomeCtaBand extends StatelessWidget {
                     // START (right in RTL): text content.
                     Expanded(
                       child: Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             l10n.homeCtaTitle,
-                            style:
-                                theme.textTheme.titleMedium?.copyWith(
+                            style: theme.textTheme.titleMedium?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
                               height: 1.2,
@@ -1371,10 +1383,8 @@ class _HomeCtaBand extends StatelessWidget {
                           const SizedBox(height: AppSpacing.xxs),
                           Text(
                             l10n.homeCtaSubtitle,
-                            style:
-                                theme.textTheme.bodySmall?.copyWith(
-                              color: Colors.white
-                                  .withValues(alpha: 0.72),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.72),
                               height: 1.4,
                             ),
                             maxLines: 2,
@@ -1386,12 +1396,10 @@ class _HomeCtaBand extends StatelessWidget {
                     // END (left in RTL): gold action button with glow.
                     DecoratedBox(
                       decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(AppRadii.lg),
+                        borderRadius: BorderRadius.circular(AppRadii.lg),
                         boxShadow: [
                           BoxShadow(
-                            color: AppPalette.gold400
-                                .withValues(alpha: 0.45),
+                            color: AppPalette.gold400.withValues(alpha: 0.45),
                             blurRadius: 20,
                             spreadRadius: 0,
                           ),
@@ -1431,8 +1439,7 @@ class _DotPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.05);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.05);
     const step = 22.0;
     for (var y = 6.0; y < size.height; y += step) {
       for (var x = 6.0; x < size.width; x += step) {
@@ -1542,10 +1549,8 @@ class _HomeProjectCard extends StatelessWidget {
                               city,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium
-                                  ?.copyWith(
-                                color: Colors.white
-                                    .withValues(alpha: 0.9),
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: Colors.white.withValues(alpha: 0.9),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1592,7 +1597,7 @@ class _HomeProjectCard extends StatelessWidget {
                             width: 34,
                             height: 34,
                             child: Icon(
-                              rtl
+                              !rtl
                                   ? Icons.chevron_left_rounded
                                   : Icons.chevron_right_rounded,
                               color: Colors.white,
