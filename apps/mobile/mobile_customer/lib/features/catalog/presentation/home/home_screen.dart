@@ -74,21 +74,24 @@ class HomeScreen extends StatelessWidget {
                   session.sessionOrNull?.email,
             )
           else ...[
-            // In-body header — the shell AppBar is suppressed for Home.
-            const _GuestHomeHeader(),
-            const SizedBox(height: AppSpacing.sm),
-            // Image hero with search bar (uses first featured project cover
-            // as background once it loads; falls back to navy gradient).
+            // Full-bleed immersive hero — contains the brand header + bell
+            // overlay AND the headline + search content. Sets light status-bar
+            // icons; the category row below restores dark icons on scroll.
             BlocBuilder<HomeCubit, HomeState>(
               builder: (context, state) {
                 final heroUrl = state.data?.firstOrNull?.coverImage;
-                return _HeroImageBanner(imageUrl: heroUrl);
+                return _HeroSection(imageUrl: heroUrl);
               },
             ),
-            const SizedBox(height: AppSpacing.sm),
-            // Property-type filter pills.
-            const _CategoryPillsRow(),
-            const SizedBox(height: AppSpacing.xl),
+            // Restores dark status-bar glyphs as the canvas enters the top.
+            AnnotatedRegion<SystemUiOverlayStyle>(
+              value: SystemUiOverlayStyle.dark
+                  .copyWith(statusBarColor: Colors.transparent),
+              child: const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                child: _CategoryPillsRow(),
+              ),
+            ),
             // Featured projects section header.
             Padding(
               padding:
@@ -111,148 +114,27 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ─── Guest Home Header ────────────────────────────────────────────────────────
+// ─── Hero Section (full-bleed, embedded header) ──────────────────────────────
 
-/// Custom in-body header for the guest Home tab: bell button (end/left in RTL),
-/// logo + brand name (centre), greeting + subtitle (start/right in RTL).
-class _GuestHomeHeader extends StatelessWidget {
-  const _GuestHomeHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-
-    // Set status-bar icon contrast: dark glyphs on the light canvas.
-    final isDark = theme.brightness == Brightness.dark;
-    final overlay =
-        (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
-            .copyWith(statusBarColor: Colors.transparent);
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlay,
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.lg,
-          topInset + AppSpacing.sm,
-          AppSpacing.lg,
-          0,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // START (right in RTL): greeting column.
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        size: 12,
-                        color: colors.brandGold,
-                      ),
-                      const SizedBox(width: AppSpacing.xxs),
-                      Text(
-                        l10n.homeGuestGreeting,
-                        style: theme.textTheme.labelMedium?.copyWith(
-                          color: colors.brandGold,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Text(
-                    l10n.homeGuestSubtitle,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: colors.inkMuted),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            // CENTRE: brand logo + app name.
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const BrandMark(size: 30),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  l10n.customerAppTitle,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
-            ),
-            // END (left in RTL): notification bell.
-            Expanded(
-              child: Align(
-                alignment: AlignmentDirectional.centerEnd,
-                child: _GuestBellButton(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GuestBellButton extends StatelessWidget {
-  const _GuestBellButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: colors.surface,
-        shape: BoxShape.circle,
-        border: Border.all(color: colors.hairline),
-        boxShadow: colors.shadowSoft,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () => GoRouter.of(context).push('/login'),
-          child: Icon(
-            AppIcons.notification,
-            size: 20,
-            color: colors.inkStrong,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Hero Image Banner ────────────────────────────────────────────────────────
-
-/// Full-width rounded hero: a real-estate cover image (from the first featured
-/// project) with a bottom gradient for text legibility, the hero title + gold
-/// subtitle + decorative line, and a compact search + filter row at the bottom.
-class _HeroImageBanner extends StatefulWidget {
-  const _HeroImageBanner({this.imageUrl});
+/// Immersive full-bleed hero. The property cover image extends flush to the
+/// screen edges — no horizontal padding, no rounded top corners. Sharp top
+/// corners (flush to the device frame) + rounded bottom corners (AppRadii.xxl)
+/// create the premium "cinematic frame" look.
+///
+/// The brand header (logo + bell) is composited on top of the image with a
+/// white/glass treatment. The greeting + headline + search sit in the lower
+/// content zone over the bottom gradient. An [AnnotatedRegion] inside sets
+/// white status-bar icons; the category row below restores dark icons on scroll.
+class _HeroSection extends StatefulWidget {
+  const _HeroSection({this.imageUrl});
 
   final String? imageUrl;
 
   @override
-  State<_HeroImageBanner> createState() => _HeroImageBannerState();
+  State<_HeroSection> createState() => _HeroSectionState();
 }
 
-class _HeroImageBannerState extends State<_HeroImageBanner> {
+class _HeroSectionState extends State<_HeroSection> {
   late final TextEditingController _search;
 
   @override
@@ -282,17 +164,22 @@ class _HeroImageBannerState extends State<_HeroImageBanner> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final theme = Theme.of(context);
+    final topInset = MediaQuery.paddingOf(context).top;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light
+          .copyWith(statusBarColor: Colors.transparent),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadii.xl),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(AppRadii.xxl),
+          bottomRight: Radius.circular(AppRadii.xxl),
+        ),
         child: SizedBox(
-          height: 252,
+          height: topInset + 360,
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Background: property image or navy gradient fallback.
+              // ── Background ──────────────────────────────────────────────
               if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty)
                 AppNetworkImage(url: widget.imageUrl)
               else
@@ -306,7 +193,23 @@ class _HeroImageBannerState extends State<_HeroImageBanner> {
                     ),
                   ),
                 ),
-              // Gradient overlay — heavy at the bottom for text.
+              // Top vignette: keeps the brand/bell readable over bright sky.
+              const Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 160,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xA0000000), Color(0x00000000)],
+                    ),
+                  ),
+                ),
+              ),
+              // Bottom gradient: deep for title/search legibility.
               const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -314,45 +217,103 @@ class _HeroImageBannerState extends State<_HeroImageBanner> {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
+                        Color(0x1A000000),
                         Color(0x00000000),
-                        Color(0x33000000),
-                        Color(0xBF000000),
-                        Color(0xE5000000),
+                        Color(0xCC000000),
+                        Color(0xF2000000),
                       ],
-                      stops: [0.0, 0.30, 0.65, 1.0],
+                      stops: [0.0, 0.30, 0.64, 1.0],
                     ),
                   ),
                 ),
               ),
-              // Faint dot texture (matches the CTA band aesthetic).
-              const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-              // Content: pinned to the bottom of the card.
-              Positioned(
-                left: 0,
-                right: 0,
+              // Subtle dot texture (depth cue on solid-gradient fallback).
+              const Positioned.fill(
+                child: IgnorePointer(child: _DotTexture()),
+              ),
+              // ── Brand + bell row ─────────────────────────────────────────
+              PositionedDirectional(
+                top: topInset + AppSpacing.xs,
+                start: AppSpacing.lg,
+                end: AppSpacing.lg,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // START (right in RTL): logo mark + brand name.
+                    const BrandMark(size: 30),
+                    const SizedBox(width: AppSpacing.xs),
+                    Text(
+                      l10n.customerAppTitle,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                        shadows: const [
+                          Shadow(color: Color(0x66000000), blurRadius: 10),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // END (left in RTL): frosted glass bell.
+                    const _HeroBellButton(),
+                  ],
+                ),
+              ),
+              // ── Greeting + headline + search ─────────────────────────────
+              PositionedDirectional(
                 bottom: 0,
+                start: 0,
+                end: 0,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
                     0,
                     AppSpacing.lg,
-                    AppSpacing.lg,
+                    AppSpacing.xl,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Personal greeting (warm intro before the main CTA).
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.star_rounded,
+                            size: 12,
+                            color: AppPalette.gold300,
+                          ),
+                          const SizedBox(width: AppSpacing.xxs),
+                          Text(
+                            l10n.homeGuestGreeting,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: AppPalette.gold300,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      // Hero headline — displaySmall for maximum impact.
                       Text(
                         l10n.homeHeroTitle,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.headlineMedium?.copyWith(
+                        style: theme.textTheme.displaySmall?.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15,
+                          fontWeight: FontWeight.w900,
+                          height: 1.1,
+                          letterSpacing: -0.5,
+                          shadows: const [
+                            Shadow(
+                              color: Color(0x44000000),
+                              blurRadius: 16,
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: AppSpacing.xxs),
+                      const SizedBox(height: AppSpacing.xs),
                       Text(
                         l10n.homeHeroSubtitle,
                         maxLines: 1,
@@ -363,10 +324,8 @@ class _HeroImageBannerState extends State<_HeroImageBanner> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      // Decorative gold accent line.
                       const _HeroGoldDivider(),
                       const SizedBox(height: AppSpacing.sm),
-                      // Search pill (expanded) + filter button.
                       Row(
                         children: [
                           Expanded(
@@ -387,7 +346,38 @@ class _HeroImageBannerState extends State<_HeroImageBanner> {
           ),
         ),
       ),
-    ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.03, end: 0);
+    ).animate().fadeIn(duration: 600.ms);
+  }
+}
+
+/// Frosted glass bell button composited on the dark hero image.
+/// Reuses [GlassCircle]'s backdrop-blur treatment — the same surface that
+/// powers favourite/compare overlays on project cards.
+class _HeroBellButton extends StatelessWidget {
+  const _HeroBellButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GlassCircle(
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => GoRouter.of(context).push('/login'),
+          child: SizedBox(
+            width: 42,
+            height: 42,
+            child: Icon(
+              AppIcons.notification,
+              size: 20,
+              color: colors.inkStrong,
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -551,24 +541,36 @@ class _CategoryPillsRowState extends State<_CategoryPillsRow> {
       ),
     ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Row(
-        children: [
-          for (int i = 0; i < categories.length; i++) ...[
-            if (i > 0) const SizedBox(width: AppSpacing.sm),
-            _CategoryPill(
-              icon: categories[i].icon,
-              label: categories[i].label,
-              selected: _selected == i,
-              onTap: () {
-                setState(() => _selected = i);
-                categories[i].onTap();
-              },
-            ),
-          ],
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [
+          Colors.transparent,
+          Colors.white,
+          Colors.white,
+          Colors.transparent,
         ],
+        stops: [0.0, 0.05, 0.94, 1.0],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Row(
+          children: [
+            for (int i = 0; i < categories.length; i++) ...[
+              if (i > 0) const SizedBox(width: AppSpacing.sm),
+              _CategoryPill(
+                icon: categories[i].icon,
+                label: categories[i].label,
+                selected: _selected == i,
+                onTap: () {
+                  setState(() => _selected = i);
+                  categories[i].onTap();
+                },
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -901,6 +903,18 @@ class _HomeUnitsGridState extends State<_HomeUnitsGrid> {
                                       '/units/${display[row * 2 + col].id}',
                                     ),
                                   )
+                                    .animate(
+                                      delay: Duration(
+                                          milliseconds:
+                                              80 * (row * 2 + col)),
+                                    )
+                                    .fadeIn(duration: 360.ms)
+                                    .slideY(
+                                      begin: 0.07,
+                                      end: 0,
+                                      duration: 360.ms,
+                                      curve: Curves.easeOut,
+                                    )
                                 : const SizedBox.shrink(),
                           ),
                         ],
@@ -1030,80 +1044,94 @@ class _HomeUnitCard extends StatelessWidget {
             ),
           ),
           // ── Content ──────────────────────────────────────────────────────
-          Container(
-            width: double.infinity,
-            color: Color.lerp(
-                colors.surface, colors.surfaceSoft, 0.5),
-            padding: const EdgeInsets.all(AppSpacing.sm),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        unit.type,
-                        style:
-                            theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: colors.inkStrong,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                // Gold start-edge accent (right in RTL).
+                Container(
+                  width: 3,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppPalette.gold400,
+                        AppPalette.gold400.withValues(alpha: 0.30),
+                      ],
                     ),
-                    PriceText(
-                      unit.price,
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-                if (city.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_rounded,
-                        size: 11,
-                        color: colors.brandGold,
-                      ),
-                      const SizedBox(width: 2),
-                      Expanded(
-                        child: Text(
-                          city,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: colors.inkMuted),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
                   ),
-                ],
-                const SizedBox(height: AppSpacing.xs),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: 2,
-                  children: [
-                    if (unit.bedrooms > 0)
-                      _MiniSpec(
-                        icon: Icons.bed_rounded,
-                        value: '${unit.bedrooms}',
-                      ),
-                    if (unit.bathrooms > 0)
-                      _MiniSpec(
-                        icon: Icons.bathtub_rounded,
-                        value: '${unit.bathrooms}',
-                      ),
-                    if (unit.area > 0)
-                      _MiniSpec(
-                        icon: Icons.square_foot_rounded,
-                        value: l10n.areaValue('${unit.area}'),
-                      ),
-                  ],
+                ),
+                Expanded(
+                  child: Container(
+                    color: colors.surface,
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                unit.type,
+                                style: theme.textTheme.titleMedium
+                                    ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: colors.inkStrong,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            PriceText(
+                              unit.price,
+                              style: theme.textTheme.labelLarge
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ],
+                        ),
+                        if (city.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.location_on_rounded,
+                                  size: 11, color: colors.brandGold),
+                              const SizedBox(width: 2),
+                              Expanded(
+                                child: Text(
+                                  city,
+                                  style: theme.textTheme.bodySmall
+                                      ?.copyWith(color: colors.inkMuted),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.xs),
+                        Wrap(
+                          spacing: AppSpacing.xs,
+                          runSpacing: AppSpacing.xxs,
+                          children: [
+                            if (unit.bedrooms > 0)
+                              _MiniSpec(
+                                  icon: Icons.bed_rounded,
+                                  value: '${unit.bedrooms}'),
+                            if (unit.bathrooms > 0)
+                              _MiniSpec(
+                                  icon: Icons.bathtub_rounded,
+                                  value: '${unit.bathrooms}'),
+                            if (unit.area > 0)
+                              _MiniSpec(
+                                  icon: Icons.square_foot_rounded,
+                                  value: l10n.areaValue('${unit.area}')),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1123,20 +1151,28 @@ class _MiniSpec extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 12, color: colors.brandGold),
-        const SizedBox(width: 2),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: colors.inkStrong,
-                fontSize: 11,
-              ),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadii.xs),
+        border: Border.all(color: colors.hairline, width: 0.5),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: colors.brandGold),
+          const SizedBox(width: 3),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: colors.inkStrong,
+                  fontSize: 11,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1235,13 +1271,27 @@ class _HomeCtaBand extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md),
-                    // END (left in RTL): gold action button.
-                    AppButton(
-                      label: l10n.homeCtaAction,
-                      icon: Icons.headset_mic_rounded,
-                      variant: AppButtonVariant.gold,
-                      size: AppButtonSize.small,
-                      onPressed: () => context.push('/chat'),
+                    // END (left in RTL): gold action button with glow.
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(AppRadii.lg),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppPalette.gold400
+                                .withValues(alpha: 0.45),
+                            blurRadius: 20,
+                            spreadRadius: 0,
+                          ),
+                        ],
+                      ),
+                      child: AppButton(
+                        label: l10n.homeCtaAction,
+                        icon: Icons.headset_mic_rounded,
+                        variant: AppButtonVariant.gold,
+                        size: AppButtonSize.small,
+                        onPressed: () => context.push('/chat'),
+                      ),
                     ),
                   ],
                 ),
@@ -1412,6 +1462,7 @@ class _HomeProjectCard extends StatelessWidget {
                               const Icon(
                                 Icons.apartment_rounded,
                                 color: AppPalette.gold300,
+                                size: 13,
                               ),
                               const SizedBox(width: AppSpacing.xs),
                               Text(
