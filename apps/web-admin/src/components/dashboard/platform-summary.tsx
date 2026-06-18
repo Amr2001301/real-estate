@@ -64,42 +64,69 @@ function convPct(num: number, denom: number): string | null {
 // ── FinancialStackedBar ───────────────────────────────────────────────────────
 
 function FinancialStackedBar({ financial }: { financial: Financial }) {
-  const total     = financial.totalContractValue;
-  const collected = financial.totalCollectedVerified;
-  const overdue   = financial.overdueTotal;
-  const pending   = Math.max(0, total - collected - overdue);
+  const total        = financial.totalContractValue;
+  const collected    = financial.totalCollectedVerified;
+  const overdue      = financial.overdueTotal;
+  const pending      = Math.max(0, total - collected - overdue);
+  const liabilities  = financial.pendingBonus + financial.pendingBrokerPayouts;
 
   const collectedPct = total > 0 ? (collected / total) * 100 : 0;
   const overduePct   = total > 0 ? (overdue   / total) * 100 : 0;
   const pendingPct   = Math.max(0, 100 - collectedPct - overduePct);
+  const collectionRate = total > 0 ? Math.round(collectedPct) : null;
 
   const chips = [
     {
-      label:   'محصّل',
-      value:   formatCompact(collected),
-      pct:     Math.round(collectedPct),
-      dotCls:  'bg-navy',
-      pctCls:  'text-navy',
+      label:    'محصّل',
+      value:    formatCompact(collected),
+      pct:      Math.round(collectedPct),
+      dotCls:   'bg-navy',
+      pctCls:   'text-navy',
+      valueCls: 'text-slate-900',
     },
     {
-      label:   'مستحق',
-      value:   formatCompact(pending),
-      pct:     Math.round(pendingPct),
-      dotCls:  'bg-brand-400',
-      pctCls:  'text-brand-600',
+      label:    'مستحق',
+      value:    formatCompact(pending),
+      pct:      Math.round(pendingPct),
+      dotCls:   'bg-brand-400',
+      pctCls:   'text-brand-600',
+      valueCls: 'text-slate-900',
     },
     {
-      label:   'متأخر',
-      value:   formatCompact(overdue),
-      pct:     Math.round(overduePct),
-      dotCls:  overdue > 0 ? 'bg-danger-700' : 'bg-slate-200',
-      pctCls:  overdue > 0 ? 'text-danger-700' : 'text-slate-300',
+      label:    'متأخر',
+      value:    formatCompact(overdue),
+      pct:      Math.round(overduePct),
+      dotCls:   overdue > 0 ? 'bg-danger-700' : 'bg-slate-200',
+      pctCls:   overdue > 0 ? 'text-danger-700' : 'text-slate-300',
       valueCls: overdue > 0 ? 'text-danger-700' : 'text-slate-300',
     },
   ];
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 flex-1">
+
+      {/* Hero metrics row */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-canvas/70 border border-hairline rounded-[14px] p-3.5">
+          <p className="text-[11px] text-slate-400 mb-2">إجمالي التعاقدات</p>
+          <p className="text-[22px] font-black text-slate-900 tabular-nums leading-none tracking-tight">
+            {formatCompact(total)}
+          </p>
+        </div>
+        <div className="bg-canvas/70 border border-hairline rounded-[14px] p-3.5">
+          <p className="text-[11px] text-slate-400 mb-2">معدل التحصيل</p>
+          <p className={cn(
+            'text-[22px] font-black tabular-nums leading-none tracking-tight',
+            collectionRate === null       ? 'text-slate-400'  :
+            collectionRate >= 70          ? 'text-success-600' :
+            collectionRate >= 40          ? 'text-brand-600'   :
+                                            'text-danger-700',
+          )}>
+            {collectionRate !== null ? `${collectionRate}%` : '—'}
+          </p>
+        </div>
+      </div>
+
       {/* Stacked bar */}
       <div className="h-3.5 w-full rounded-full overflow-hidden bg-surface-muted flex">
         {collectedPct > 0 && (
@@ -127,21 +154,35 @@ function FinancialStackedBar({ financial }: { financial: Financial }) {
         {chips.map((chip) => (
           <div
             key={chip.label}
-            className="border border-hairline rounded-[14px] p-3 bg-canvas/60 flex flex-col gap-1"
+            className="border border-hairline rounded-[14px] p-3.5 bg-canvas/60 flex flex-col gap-1.5"
           >
             <div className="flex items-center gap-1.5">
               <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', chip.dotCls)} />
               <span className="text-[11px] text-slate-500 leading-none">{chip.label}</span>
             </div>
-            <p className={cn('text-[13px] font-bold tabular-nums leading-none', chip.valueCls ?? 'text-slate-900')}>
+            <p className={cn('text-[14px] font-bold tabular-nums leading-none', chip.valueCls)}>
               {chip.value}
             </p>
-            <p className={cn('text-[11px] font-semibold leading-none', chip.pctCls)}>
+            <p className={cn('text-[12px] font-semibold leading-none', chip.pctCls)}>
               {chip.pct}%
             </p>
           </div>
         ))}
       </div>
+
+      {/* Liabilities footer — only rendered when non-zero, pushes to bottom */}
+      {liabilities > 0 && (
+        <div className="mt-auto pt-3.5 border-t border-hairline flex items-center justify-between gap-2">
+          <p className="text-[12px] text-slate-400">التزامات معلقة</p>
+          <div className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+            <p className="text-[13px] font-bold text-amber-700 tabular-nums">
+              {formatCompact(liabilities)}
+            </p>
+            <p className="text-[11px] text-slate-400">عمولات + مكافآت</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -396,7 +437,7 @@ export function PlatformSummaryCard({ kpis, financial, funnel, topProjects }: Pr
           {/* Financial Health */}
           {hasFin && (
             <div className={cn(
-              'border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4',
+              'border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4 h-full',
               hasFunnel && 'lg:col-span-3',
             )}>
               <div>
@@ -410,7 +451,7 @@ export function PlatformSummaryCard({ kpis, financial, funnel, topProjects }: Pr
           {/* Sales Funnel */}
           {hasFunnel && (
             <div className={cn(
-              'border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4',
+              'border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4 h-full',
               hasFin && 'lg:col-span-2',
             )}>
               <div>
