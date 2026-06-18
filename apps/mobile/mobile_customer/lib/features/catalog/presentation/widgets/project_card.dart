@@ -103,17 +103,19 @@ class ProjectCard extends StatelessWidget {
                   ),
                 ),
 
-                // Top-end: featured seal stacked above heart
+                // Top-end: featured seal + heart side by side
                 PositionedDirectional(
                   top: AppSpacing.sm,
                   end: AppSpacing.sm,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  start: AppSpacing.sm,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       if (project.featured) ...[
                         _GoldSeal(label: l10n.featuredBadge),
-                        const SizedBox(height: AppSpacing.xs),
+                        const SizedBox(width: AppSpacing.xs),
                       ],
                       GlassCircle(
                         child: FavoriteToggleButton(
@@ -147,8 +149,9 @@ class ProjectCard extends StatelessWidget {
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color:
-                                        AppPalette.gold400.withValues(alpha: 0.6),
+                                    color: AppPalette.gold400.withValues(
+                                      alpha: 0.6,
+                                    ),
                                     blurRadius: 6,
                                   ),
                                 ],
@@ -201,9 +204,7 @@ class ProjectCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
               ),
-              Expanded(
-                child: Container(height: 0.5, color: colors.hairline),
-              ),
+              Expanded(child: Container(height: 0.5, color: colors.hairline)),
             ],
           ),
 
@@ -333,9 +334,9 @@ class _UnitsChip extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: fg,
-                    fontWeight: FontWeight.w700,
-                  ),
+                color: fg,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],
