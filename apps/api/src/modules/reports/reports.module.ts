@@ -233,7 +233,11 @@ class ReportsService {
   async adminSummary() {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const expiringHorizon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const expiringHorizon = new Date(now.getTime() +  7 * 24 * 60 * 60 * 1000);
+    const prevMonthStart  = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const in30            = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const in60            = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const in90            = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000);
 
     const [
       // ── original 11 operational counts ──
@@ -264,6 +268,16 @@ class ReportsService {
       overdueAgg,
       pendingBonusAgg,
       pendingPayoutsAgg,
+      // ── MTD vs prior-month ──
+      prevMonthCollectedAgg,
+      collectedThisMonthAgg,
+      prevMonthSignedContracts,
+      signedContractsThisMonth,
+      prevMonthNewLeads,
+      // ── Cash flow forecast ──
+      next30Agg,
+      next3160Agg,
+      next6190Agg,
     ] = await this.prisma.$transaction([
       // ── original 11 ──
       this.prisma.project.count({ where: { status: 'PUBLISHED' } }),
@@ -321,6 +335,31 @@ class ReportsService {
         where: { status: { in: [BrokerPayoutStatus.DRAFT, BrokerPayoutStatus.APPROVED] } },
         _sum: { totalNet: true },
       }),
+      // ── MTD vs prior-month ──
+      this.prisma.deposit.aggregate({
+        where: { verified: true, paidAt: { gte: prevMonthStart, lt: startOfMonth } },
+        _sum: { amount: true },
+      }),
+      this.prisma.deposit.aggregate({
+        where: { verified: true, paidAt: { gte: startOfMonth } },
+        _sum: { amount: true },
+      }),
+      this.prisma.contract.count({ where: { signedAt: { gte: prevMonthStart, lt: startOfMonth } } }),
+      this.prisma.contract.count({ where: { signedAt: { gte: startOfMonth } } }),
+      this.prisma.lead.count({ where: { createdAt: { gte: prevMonthStart, lt: startOfMonth } } }),
+      // ── Cash flow forecast (next 30 / 31-60 / 61-90 days) ──
+      this.prisma.installment.aggregate({
+        where: { status: InstallmentStatus.PENDING, dueDate: { gte: now, lte: in30 } },
+        _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in30, lte: in60 } },
+        _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: { status: InstallmentStatus.PENDING, dueDate: { gt: in60, lte: in90 } },
+        _sum: { amount: true },
+      }),
     ]);
 
     const [reservationTrend, leadSources, recentActivity, topProjects] = await Promise.all([
@@ -351,11 +390,21 @@ class ReportsService {
         contracts:    funnelContracts,
       },
       financial: {
-        totalContractValue:      Number(totalContractValueAgg._sum.totalAmount      ?? 0),
-        totalCollectedVerified:  Number(totalCollectedVerifiedAgg._sum.amount       ?? 0),
-        overdueTotal:            Number(overdueAgg._sum.amount                      ?? 0),
-        pendingBonus:            Number(pendingBonusAgg._sum.amount                 ?? 0),
-        pendingBrokerPayouts:    Number(pendingPayoutsAgg._sum.totalNet             ?? 0),
+        totalContractValue:       Number(totalContractValueAgg._sum.totalAmount     ?? 0),
+        totalCollectedVerified:   Number(totalCollectedVerifiedAgg._sum.amount      ?? 0),
+        overdueTotal:             Number(overdueAgg._sum.amount                     ?? 0),
+        pendingBonus:             Number(pendingBonusAgg._sum.amount                ?? 0),
+        pendingBrokerPayouts:     Number(pendingPayoutsAgg._sum.totalNet            ?? 0),
+        collectedThisMonth:       Number(collectedThisMonthAgg._sum.amount          ?? 0),
+        prevMonthCollected:       Number(prevMonthCollectedAgg._sum.amount          ?? 0),
+        signedContractsThisMonth,
+        prevMonthSignedContracts,
+        prevMonthNewLeads,
+      },
+      cashflowForecast: {
+        next30:   Number(next30Agg._sum.amount   ?? 0),
+        next3160: Number(next3160Agg._sum.amount ?? 0),
+        next6190: Number(next6190Agg._sum.amount ?? 0),
       },
       reservationTrend,
       leadSources,
