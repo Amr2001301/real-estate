@@ -55,6 +55,12 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
+    // splashDone is a static ValueNotifier that survives hot-restarts.
+    // Reset it so the router always waits for this instance, even if a
+    // previous run already set it to true (which causes an immediate unmount
+    // race that crashes the VideoPlayerController mid-initialize).
+    SplashScreen.splashDone.value = false;
+
     _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
@@ -78,16 +84,31 @@ class _SplashScreenState extends State<SplashScreen>
 
       // If the state was disposed while we were awaiting, clean up here
       // (dispose() skipped the controller because _initCompleted was false).
+      // Delay by one frame so any pending platform-channel callbacks
+      // (seekTo → _updatePosition) can drain before dispose() runs,
+      // preventing the "VideoPlayerController used after being disposed" crash.
       if (_stateDisposed || !mounted) {
-        controller.dispose();
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => controller.dispose(),
+        );
         return;
       }
 
       await controller.setVolume(0); // muted splash
-      if (_stateDisposed || !mounted) { controller.dispose(); return; }
+      if (_stateDisposed || !mounted) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => controller.dispose(),
+        );
+        return;
+      }
 
       await controller.setLooping(false);
-      if (_stateDisposed || !mounted) { controller.dispose(); return; }
+      if (_stateDisposed || !mounted) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => controller.dispose(),
+        );
+        return;
+      }
 
       controller.addListener(_onVideoTick);
       setState(() => _videoReady = true);
@@ -195,59 +216,14 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/brand/flutter_native_splash.png',
-            width: 110,
-            height: 110,
-            filterQuality: FilterQuality.high,
-          ),
-          const SizedBox(height: AppSpacing.xxl),
-          const _GoldDots(),
-        ],
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Gold animated dots — three pulsing circles
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _GoldDots extends StatelessWidget {
-  const _GoldDots();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 52,
-      height: 12,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          for (var i = 0; i < 3; i++)
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: AppPalette.gold400.withValues(alpha: 0.9),
-                shape: BoxShape.circle,
-              ),
-            )
-                .animate(onPlay: (c) => c.repeat(reverse: true))
-                .scaleXY(
-                  begin: 0.5,
-                  end: 1.0,
-                  delay: (i * 200).ms,
-                  duration: 420.ms,
-                  curve: Curves.easeInOut,
-                )
-                .fadeIn(begin: 0.25, delay: (i * 200).ms, duration: 420.ms),
-        ],
-      ),
+    // Fill the screen with the same image used by the native splash so the
+    // handoff from OS splash → Flutter loading → video is seamless.
+    return Image.asset(
+      'assets/brand/flutter_native_splash.png',
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      filterQuality: FilterQuality.high,
     );
   }
 }
@@ -263,30 +239,28 @@ class _BottomOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        // Gradient fade: transparent → navy
-        IgnorePointer(
-          child: Container(
-            height: 220,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0x00000000), Color(0xE6000000)],
-                stops: [0.0, 1.0],
-              ),
-            ),
+    // Single container: transparent at top → solid navy at bottom.
+    // This eliminates the hard rectangular seam that appeared when a separate
+    // solid-colour Container was stacked beneath a gradient Container.
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.only(top: 130, bottom: bottomPad + 36),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0x00000000),   // fully transparent
+              Color(0xCC0B1726),   // ~80 % navy
+              Color(0xFF0B1726),   // fully opaque navy
+            ],
+            stops: [0.0, 0.5, 1.0],
           ),
         ),
-        // Brand wordmark
-        Container(
-          color: const Color(0xFF0B1726),
-          padding: EdgeInsets.only(bottom: bottomPad + 36, top: 4),
-          child: const _Wordmark(),
-        ),
-      ],
+        child: const _Wordmark(),
+      ),
     );
   }
 }

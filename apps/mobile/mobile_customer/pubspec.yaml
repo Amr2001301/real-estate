@@ -45,11 +45,12 @@ flutter:
     - assets/brand/real_estate_video_splash.mp4
 
 flutter_native_splash:
-  color: "#0B1726"
-  image: assets/brand/flutter_native_splash.png
-  color_dark: "#0B1726"
-  image_dark: assets/brand/flutter_native_splash.png
+  # background_image fills the entire screen on iOS and pre-Android-12.
+  # Using `image` (the old key) only centres the asset as a small icon.
+  background_image: assets/brand/flutter_native_splash.png
+  background_image_dark: assets/brand/flutter_native_splash.png
   android_12:
+    # Android 12+ has its own adaptive-icon splash API — centred icon only.
     color: "#0B1726"
     image: assets/brand/flutter_native_splash.png
     icon_background_color: "#0B1726"
