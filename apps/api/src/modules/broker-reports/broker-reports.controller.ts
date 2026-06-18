@@ -45,6 +45,16 @@ export class BrokerReportsController {
     return this.svc.agents(query);
   }
 
+  @Get('monthly-trend')
+  monthlyTrend(@Query() query: BrokerReportsSummaryQueryDto) {
+    return this.svc.monthlyTrend({
+      from: query.from,
+      to: query.to,
+      brokerId: query.brokerId,
+      projectId: query.projectId,
+    });
+  }
+
   @Get('projects')
   projects(@Query() query: ProjectsReportQueryDto) {
     return this.svc.projects(query);

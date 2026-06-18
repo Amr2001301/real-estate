@@ -1230,6 +1230,7 @@ export interface BrokerReportsSummary {
   commissionsCancelled: number;
   commissionsGross: string;
   commissionsNet: string;
+  commissionsPendingNet: string;
   payoutsDraft: number;
   payoutsApproved: number;
   payoutsProcessing: number;

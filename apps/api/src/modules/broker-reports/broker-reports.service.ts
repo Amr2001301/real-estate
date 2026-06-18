@@ -109,6 +109,7 @@ export class BrokerReportsService {
       ...commissionStats,
       commissionsGross: commissionTotals.gross.toString(),
       commissionsNet: commissionTotals.net.toString(),
+      commissionsPendingNet: commissionTotals.pendingNet.toString(),
       ...payoutStats,
       payoutsTotalNet: payoutPaidTotal.toString(),
     };
@@ -1066,13 +1067,20 @@ export class BrokerReportsService {
         };
       },
       commissionTotals: async () => {
-        const agg = await this.prisma.brokerCommission.aggregate({
-          _sum: { grossAmount: true, netAmount: true },
-          where: commW,
-        });
+        const [allAgg, pendingAgg] = await Promise.all([
+          this.prisma.brokerCommission.aggregate({
+            _sum: { grossAmount: true, netAmount: true },
+            where: commW,
+          }),
+          this.prisma.brokerCommission.aggregate({
+            _sum: { netAmount: true },
+            where: { ...commW, status: BrokerCommissionStatus.PENDING },
+          }),
+        ]);
         return {
-          gross: agg._sum.grossAmount ?? new Prisma.Decimal(0),
-          net: agg._sum.netAmount ?? new Prisma.Decimal(0),
+          gross: allAgg._sum.grossAmount ?? new Prisma.Decimal(0),
+          net: allAgg._sum.netAmount ?? new Prisma.Decimal(0),
+          pendingNet: pendingAgg._sum.netAmount ?? new Prisma.Decimal(0),
         };
       },
       payoutStats: async () => {

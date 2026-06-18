@@ -1,16 +1,20 @@
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
-  TrendingUp,
-  FileText,
-  BookmarkCheck,
   BadgePercent,
-  Wallet,
-  UserPlus,
-  Briefcase,
   BarChart3,
-  ArrowRightLeft,
+  BookmarkCheck,
+  Briefcase,
   CircleDollarSign,
+  FileText,
+  Trophy,
+  TrendingUp,
+  UserPlus,
+  Users,
+  Wallet,
+  ChevronDown,
 } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import type {
   Broker,
@@ -23,15 +27,15 @@ import type {
 import { tx, formatCurrency } from '@/lib/format';
 import { PageHeader } from '@/components/ui/page-header';
 import { ExportMenu } from '@/components/export-menu';
-import { Card } from '@/components/ui/card';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { EmptyState } from '@/components/ui/empty-state';
 
-export const dynamic = 'force-dynamic';
+export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
+// ── Types ─────────────────────────────────────────────────────────────────────
 interface Search {
   brokerId?: string;
   projectId?: string;
@@ -40,80 +44,39 @@ interface Search {
   metric?: string;
 }
 
+interface MonthlyTrendBucket {
+  label: string;
+  reservations: number;
+  contractsSigned: number;
+  commissionsNet: string;
+  payoutsNet: string;
+}
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 const METRIC_LABEL: Record<string, string> = {
-  leads: 'فرص',
-  reservations: 'حجوزات',
-  contracts: 'عقود',
-  salesGross: 'إجمالي المبيعات',
+  leads:         'فرص',
+  reservations:  'حجوزات',
+  contracts:     'عقود',
+  salesGross:    'إجمالي المبيعات',
   commissionNet: 'صافي العمولات',
-  payoutNet: 'صافي المدفوعات',
+  payoutNet:     'صافي المدفوعات',
 };
+
+const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function shortMonth(label: string): string {
+  const mm = parseInt(label.split('-')[1] ?? '1', 10) - 1;
+  return (AR_MONTHS[mm] ?? label).slice(0, 3);
+}
 
 function pct(v: number): string {
   return `${(v * 100).toFixed(1)}%`;
 }
-
-// ── Vertical conversion stepper ───────────────────────────────────────────────
-function ConversionStepper({ summary }: { summary: BrokerReportsSummary }) {
-  const stages: Array<{ label: string; value: number; prev: number | null }> = [
-    { label: 'فرص مُرسلة',   value: summary.leadsSubmitted,      prev: null },
-    { label: 'فرص معتمدة',   value: summary.leadsApproved,       prev: summary.leadsSubmitted },
-    { label: 'حجوزات',       value: summary.reservationsCreated, prev: summary.leadsApproved },
-    { label: 'عقود',         value: summary.contractsCreated,    prev: summary.reservationsCreated },
-    { label: 'عقود موقّعة',  value: summary.contractsSigned,     prev: summary.contractsCreated },
-    { label: 'دفعات مدفوعة', value: summary.payoutsPaid,         prev: summary.contractsSigned },
-  ];
-
-  return (
-    <ul>
-      {stages.map((s, idx) => {
-        const isLast = idx === stages.length - 1;
-        const rawPct = s.prev !== null && s.prev > 0
-          ? (s.value / s.prev) * 100
-          : null;
-        const barPct = rawPct !== null ? Math.min(Math.max(rawPct, 2), 100) : null;
-
-        return (
-          <li key={idx} className="flex gap-3">
-            {/* Step indicator + connector */}
-            <div className="flex flex-col items-center shrink-0 pt-0.5">
-              <div className="h-6 w-6 rounded-full border-2 border-hairline bg-surface flex items-center justify-center shrink-0">
-                <span className="text-[10px] font-bold text-slate-500 leading-none">{idx + 1}</span>
-              </div>
-              {!isLast && (
-                <div className="w-px flex-1 bg-hairline mt-1 min-h-[16px]" />
-              )}
-            </div>
-
-            {/* Stage content */}
-            <div className={`flex-1 min-w-0 ${isLast ? 'pb-0' : 'pb-3'}`}>
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="text-sm font-medium text-slate-800">{s.label}</p>
-                <p className="text-lg font-bold tabular-nums text-slate-900 shrink-0 leading-none">
-                  {s.value.toLocaleString()}
-                </p>
-              </div>
-              {s.prev !== null && (
-                <div className="mt-1.5 flex items-center gap-2">
-                  <div className="flex-1 h-1.5 rounded-full bg-surface-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-brand-400 transition-all"
-                      style={{ width: barPct !== null ? `${barPct}%` : '0%' }}
-                    />
-                  </div>
-                  <span className="text-xs font-semibold tabular-nums text-slate-600 whitespace-nowrap w-12 text-end">
-                    {rawPct !== null ? `${rawPct.toFixed(1)}%` : '—'}
-                  </span>
-                </div>
-              )}
-            </div>
-          </li>
-        );
-      })}
-    </ul>
-  );
+function rateOf(a: number, b: number): number {
+  return b > 0 ? a / b : 0;
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
 export default async function AdminBrokerReportsPage({
   searchParams,
 }: {
@@ -121,50 +84,71 @@ export default async function AdminBrokerReportsPage({
 }) {
   const sp = await searchParams;
 
-  // ── Query strings (unchanged) ─────────────────────────────────────────────
   const summaryQs = new URLSearchParams();
-  if (sp.brokerId) summaryQs.set('brokerId', sp.brokerId);
+  if (sp.brokerId)  summaryQs.set('brokerId',  sp.brokerId);
   if (sp.projectId) summaryQs.set('projectId', sp.projectId);
-  if (sp.from) summaryQs.set('from', sp.from);
-  if (sp.to) summaryQs.set('to', sp.to);
+  if (sp.from)      summaryQs.set('from', sp.from);
+  if (sp.to)        summaryQs.set('to',   sp.to);
 
-  const topQs = new URLSearchParams();
-  if (sp.projectId) topQs.set('projectId', sp.projectId);
-  if (sp.from) topQs.set('from', sp.from);
-  if (sp.to) topQs.set('to', sp.to);
+  const topQs = new URLSearchParams(summaryQs);
   if (sp.metric) topQs.set('metric', sp.metric);
   topQs.set('limit', '10');
 
-  const projectsQs = new URLSearchParams();
-  if (sp.brokerId) projectsQs.set('brokerId', sp.brokerId);
-  if (sp.from) projectsQs.set('from', sp.from);
-  if (sp.to) projectsQs.set('to', sp.to);
+  const projQs = new URLSearchParams();
+  if (sp.brokerId)  projQs.set('brokerId',  sp.brokerId);
+  if (sp.from)      projQs.set('from', sp.from);
+  if (sp.to)        projQs.set('to',   sp.to);
 
-  const [summaryRes, topRes, projRes, brokersRes, projectListRes] = await Promise.all([
-    safe(api.get<BrokerReportsSummary>(`/broker-reports/summary?${summaryQs.toString()}`)),
-    safe(api.get<TopBrokersResponse>(`/broker-reports/top-brokers?${topQs.toString()}`)),
-    safe(api.get<{ data: BrokerReportProjectRow[] }>(`/broker-reports/projects?${projectsQs.toString()}`)),
+  const [summaryRes, topRes, projRes, trendRes, brokersRes, projectListRes] = await Promise.all([
+    safe(api.get<BrokerReportsSummary>(`/broker-reports/summary?${summaryQs}`)),
+    safe(api.get<TopBrokersResponse>(`/broker-reports/top-brokers?${topQs}`)),
+    safe(api.get<{ data: BrokerReportProjectRow[] }>(`/broker-reports/projects?${projQs}`)),
+    safe(api.get<MonthlyTrendBucket[]>(`/broker-reports/monthly-trend?${summaryQs}`)),
     safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
   ]);
 
-  const summary = summaryRes.data;
-  const top = topRes.data;
-  const projects = projRes.data?.data ?? [];
-  const brokers = brokersRes.data?.data ?? [];
-  const projectList = projectListRes.data?.data ?? [];
+  const s         = summaryRes.data;
+  const top       = topRes.data;
+  const projects  = projRes.data?.data ?? [];
+  const trend     = trendRes.data ?? [];
+  const brokers   = brokersRes.data?.data ?? [];
+  const projList  = projectListRes.data?.data ?? [];
 
-  // Financial realization — derived, no new API calls
-  const commissionsNetNum = Number(summary?.commissionsNet ?? 0);
-  const payoutsTotalNetNum = Number(summary?.payoutsTotalNet ?? 0);
-  const unrealizedNet = Math.max(0, commissionsNetNum - payoutsTotalNetNum);
-  const realizationRate = commissionsNetNum > 0 ? payoutsTotalNetNum / commissionsNetNum : 0;
+  // ── Derived financials ────────────────────────────────────────────────────
+  const commissionsNet  = Number(s?.commissionsNet ?? 0);
+  const payoutsPaidNet  = Number(s?.payoutsTotalNet ?? 0);
+  const pendingPayout   = Math.max(0, commissionsNet - payoutsPaidNet);
+  const realizationRate = commissionsNet > 0 ? Math.min(payoutsPaidNet / commissionsNet, 1) : 0;
+
+  // ── Monthly trend derived ─────────────────────────────────────────────────
+  const maxCommission  = trend.reduce((m, b) => Math.max(m, Number(b.commissionsNet)), 0);
+  const maxContracts   = trend.reduce((m, b) => Math.max(m, b.contractsSigned), 0);
+  const totalTrendContracts = trend.reduce((s, b) => s + b.contractsSigned, 0);
+
+  // ── Funnel ────────────────────────────────────────────────────────────────
+  const funnelStages = s ? [
+    { label: 'فرص مُرسلة',   value: s.leadsSubmitted,      color: 'bg-brand-500',   text: 'text-brand-700' },
+    { label: 'فرص معتمدة',   value: s.leadsApproved,       color: 'bg-blue-500',    text: 'text-blue-700' },
+    { label: 'حجوزات',       value: s.reservationsCreated, color: 'bg-violet-500',  text: 'text-violet-700' },
+    { label: 'عقود',         value: s.contractsCreated,    color: 'bg-amber-500',   text: 'text-amber-700' },
+    { label: 'عقود موقّعة',  value: s.contractsSigned,     color: 'bg-emerald-500', text: 'text-emerald-700' },
+    { label: 'دفعات مُنجزة', value: s.payoutsPaid,         color: 'bg-teal-500',    text: 'text-teal-700' },
+  ] : [];
+  const funnelMax = funnelStages.reduce((m, st) => Math.max(m, st.value), 0);
+
+  // ── Top broker for strip ──────────────────────────────────────────────────
+  const topBroker = top?.data?.[0];
+
+  const anyError = summaryRes.error || topRes.error || projRes.error;
+  const hasFilter = Object.values(sp).some(Boolean);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
 
-      {/* ── 1. Header ─────────────────────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────────────────────── */}
       <PageHeader
+        className="mb-0"
         title="تقارير الوسطاء"
         description="أداء الوسطاء، التحويلات، تحليل المبيعات والعمولات، وترتيب المشاريع."
         breadcrumbs={[
@@ -173,7 +157,7 @@ export default async function AdminBrokerReportsPage({
           { label: 'تقارير الوسطاء' },
         ]}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-xl border border-hairline bg-surface shadow-xs px-1.5 py-1.5">
             <ExportMenu
               label="تصدير الملخص"
               xlsxPath="/broker-reports/export/summary.xlsx"
@@ -192,18 +176,17 @@ export default async function AdminBrokerReportsPage({
         }
       />
 
-      {/* ── Error banner ──────────────────────────────────────────────────── */}
-      {(summaryRes.error || topRes.error || projRes.error) && (
+      {anyError && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل بعض البيانات: {summaryRes.error ?? topRes.error ?? projRes.error}
+          تعذر تحميل بعض البيانات: {anyError}
         </div>
       )}
 
-      {/* ── 2. Report control bar ─────────────────────────────────────────── */}
+      {/* ── Filter bar ──────────────────────────────────────────────────── */}
       <form
         method="get"
         action="/dashboard/broker-reports"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs"
+        className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs"
       >
         <Select name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
           <option value="">كل الوسطاء</option>
@@ -213,20 +196,21 @@ export default async function AdminBrokerReportsPage({
         </Select>
         <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
           <option value="">كل المشاريع</option>
-          {projectList.map((p) => (
+          {projList.map((p) => (
             <option key={p.id} value={p.id}>{tx(p.name)}</option>
           ))}
         </Select>
         <Select name="metric" inputSize="sm" defaultValue={sp.metric ?? 'salesGross'} className="w-52 shrink-0">
           {Object.entries(METRIC_LABEL).map(([v, l]) => (
-            <option key={v} value={v}>أعلى الوسطاء: {l}</option>
+            <option key={v} value={v}>ترتيب حسب: {l}</option>
           ))}
         </Select>
+        <div className="h-5 w-px bg-hairline shrink-0 hidden sm:block" />
         <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-36 shrink-0" />
         <Input name="to"   inputSize="sm" type="date" defaultValue={sp.to   ?? ''} className="w-36 shrink-0" />
         <div className="flex items-center gap-1.5 ms-auto">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {Object.values(sp).some(Boolean) && (
+          {hasFilter && (
             <Link href="/dashboard/broker-reports">
               <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
@@ -234,418 +218,474 @@ export default async function AdminBrokerReportsPage({
         </div>
       </form>
 
-      {summary && (
+      {s && (
         <>
-          {/* ── 3. Executive Financial Overview ──────────────────────────── */}
+          {/* ═══════════════════════════════════════════════════════════════
+              METRIC STRIP — 5 inline metrics, one unified card
+          ════════════════════════════════════════════════════════════════ */}
+          <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-x-reverse divide-hairline">
 
-          {/* A. Hero sales card — full-width, compact, no empty vertical space */}
-          <div className="relative overflow-hidden bg-surface border border-hairline rounded-2xl shadow-xs">
-            <div className="absolute inset-x-0 top-0 h-0.5 bg-brand-400" aria-hidden />
-            <div className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-x-8 gap-y-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-400">
-                  إجمالي المبيعات
+              <BrokerMetric
+                label="إجمالي المبيعات"
+                icon={<Wallet className="h-4 w-4" />}
+                iconClass="bg-amber-50 text-amber-600"
+                accent="bg-amber-400"
+                primary
+              >
+                <span dir="ltr" className="text-[20px] lg:text-[24px] font-black tabular-nums leading-none tracking-tight text-slate-900 whitespace-nowrap">
+                  {formatCurrency(s.salesGross)}
+                </span>
+                <p className="text-[10px] text-slate-400 mt-0.5">{s.contractsSigned} عقد موقّع</p>
+              </BrokerMetric>
+
+              <BrokerMetric
+                label="صافي العمولات"
+                icon={<BadgePercent className="h-4 w-4" />}
+                iconClass="bg-emerald-50 text-emerald-600"
+                accent="bg-emerald-400"
+              >
+                <span dir="ltr" className="text-[20px] font-black tabular-nums leading-none tracking-tight text-emerald-700 whitespace-nowrap">
+                  {formatCurrency(s.commissionsNet)}
+                </span>
+                <p className="text-[10px] text-slate-400 mt-0.5">{s.commissionsApproved} عمولة معتمدة</p>
+              </BrokerMetric>
+
+              <BrokerMetric
+                label="المدفوع للوسطاء"
+                icon={<CircleDollarSign className="h-4 w-4" />}
+                iconClass="bg-violet-50 text-violet-600"
+                accent="bg-violet-400"
+              >
+                <span dir="ltr" className="text-[20px] font-black tabular-nums leading-none tracking-tight text-violet-700 whitespace-nowrap">
+                  {formatCurrency(s.payoutsTotalNet)}
+                </span>
+                <p className="text-[10px] text-slate-400 mt-0.5">{s.payoutsPaid} دفعة مكتملة</p>
+              </BrokerMetric>
+
+              <BrokerMetric
+                label="قيد الصرف"
+                icon={<TrendingUp className="h-4 w-4" />}
+                iconClass="bg-slate-100 text-slate-600"
+                accent="bg-slate-300"
+              >
+                <span dir="ltr" className={cn(
+                  'text-[20px] font-black tabular-nums leading-none tracking-tight whitespace-nowrap',
+                  pendingPayout > 0 ? 'text-amber-700' : 'text-slate-400',
+                )}>
+                  {formatCurrency(pendingPayout)}
+                </span>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex-1 max-w-[56px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                    <div className="h-full rounded-full bg-emerald-400" style={{ width: `${realizationRate * 100}%` }} />
+                  </div>
+                  <p className="text-[10px] text-slate-400">{(realizationRate * 100).toFixed(0)}% محصّل</p>
+                </div>
+              </BrokerMetric>
+
+              <BrokerMetric
+                label="أعلى وسيط"
+                icon={<Trophy className="h-4 w-4" />}
+                iconClass="bg-amber-50 text-amber-600"
+                accent="bg-amber-300"
+                className="hidden lg:flex"
+              >
+                <p className="text-sm font-bold text-slate-900 leading-snug truncate max-w-[140px]">
+                  {topBroker?.companyName ?? '—'}
                 </p>
-                <p
-                  className="mt-1.5 text-4xl lg:text-5xl font-bold tracking-tight tabular-nums text-slate-900 whitespace-nowrap leading-none"
-                  dir="ltr"
-                >
-                  {formatCurrency(summary.salesGross)}
-                </p>
-                <p className="mt-1.5 text-xs text-slate-400">
-                  إجمالي عائد المبيعات عبر قناة الوساطة في النطاق المختار
-                </p>
+                {topBroker && (
+                  <p className="text-[10px] text-slate-400 mt-0.5 whitespace-nowrap" dir="ltr">
+                    {formatCurrency(topBroker.salesGross)}
+                  </p>
+                )}
+              </BrokerMetric>
+
+            </div>
+          </div>
+
+          {/* ═══════════════════════════════════════════════════════════════
+              ROW 2 — Monthly Trend (3/5) | Conversion Funnel (2/5)
+          ════════════════════════════════════════════════════════════════ */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+            {/* Monthly commissions trend — inline CSS bars */}
+            <div className="lg:col-span-3 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
+              <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-hairline">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
+                    <BarChart3 />
+                  </span>
+                  <div>
+                    <p className="text-[13px] font-bold text-slate-800">الاتجاه الشهري</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">عقود موقّعة وعمولات آخر 6 أشهر</p>
+                  </div>
+                </div>
+                <div className="text-end shrink-0">
+                  <p className="text-base font-black tabular-nums text-slate-900 leading-none">
+                    {totalTrendContracts.toLocaleString('ar-EG')} عقد
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap" dir="ltr">
+                    {formatCurrency(trend.reduce((s, b) => s + Number(b.commissionsNet), 0))}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-4 shrink-0">
-                <div className="text-center">
-                  <p className="text-xl font-bold tabular-nums text-slate-900 leading-none">{summary.contractsSigned}</p>
-                  <p className="text-2xs text-slate-400 mt-0.5">عقد موقّع</p>
-                </div>
-                <div className="w-px h-7 bg-hairline shrink-0" />
-                <div className="text-center">
-                  <p className="text-xl font-bold tabular-nums text-slate-900 leading-none">{summary.activeBrokers}</p>
-                  <p className="text-2xs text-slate-400 mt-0.5">وسيط نشط</p>
-                </div>
-                <div className="w-px h-7 bg-hairline shrink-0" />
-                <div className="text-center">
-                  <p className="text-xl font-bold tabular-nums text-slate-900 leading-none">{summary.totalBrokers}</p>
-                  <p className="text-2xs text-slate-400 mt-0.5">إجمالي الوسطاء</p>
-                </div>
-                {summary.totalBrokerAgents > 0 && (
+              <div className="px-5 pt-5 pb-4">
+                {trend.length === 0 ? (
+                  <div className="h-32 flex items-center justify-center text-sm text-slate-400">لا توجد بيانات</div>
+                ) : (
                   <>
-                    <div className="w-px h-7 bg-hairline shrink-0" />
-                    <div className="text-center">
-                      <p className="text-xl font-bold tabular-nums text-slate-900 leading-none">{summary.totalBrokerAgents}</p>
-                      <p className="text-2xs text-slate-400 mt-0.5">مندوب وسيط</p>
+                    {/* Bar chart */}
+                    <div className="flex items-end gap-1.5 h-32 w-full mb-2">
+                      {trend.map((b) => {
+                        const commAmt    = Number(b.commissionsNet);
+                        const payoutAmt  = Number(b.payoutsNet);
+                        const barH       = maxCommission > 0 ? (commAmt / maxCommission) * 100 : 0;
+                        const paidH      = commAmt > 0 ? Math.min(payoutAmt / commAmt, 1) * 100 : 0;
+                        return (
+                          <div key={b.label} className="flex-1 flex flex-col items-center justify-end gap-0.5 min-w-0">
+                            {b.contractsSigned > 0 && (
+                              <span className="text-[9px] font-bold tabular-nums text-slate-500 leading-none mb-0.5">
+                                {b.contractsSigned}
+                              </span>
+                            )}
+                            {/* Commission bar */}
+                            <div
+                              className="w-full rounded-t-md overflow-hidden bg-amber-100 relative"
+                              style={{ height: `${Math.max(barH, barH > 0 ? 4 : 0)}%` }}
+                            >
+                              {/* Paid portion overlay */}
+                              <div
+                                className="absolute bottom-0 inset-x-0 bg-amber-400"
+                                style={{ height: `${paidH}%` }}
+                              />
+                              <div
+                                className="absolute bottom-0 inset-x-0 bg-emerald-400 opacity-80"
+                                style={{ height: `${paidH}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {/* X-axis labels */}
+                    <div className="flex gap-1.5">
+                      {trend.map((b) => (
+                        <div key={b.label} className="flex-1 text-center">
+                          <span className="text-[9px] text-slate-400">{shortMonth(b.label)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Legend */}
+                    <div className="flex items-center gap-4 mt-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-4 rounded-sm bg-amber-100 inline-block" />
+                        <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-4 rounded-sm bg-emerald-400 inline-block" />
+                        <span className="text-[10px] text-slate-400">المدفوع</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold text-slate-500">5</span>
+                        <span className="text-[10px] text-slate-400">عدد العقود</span>
+                      </div>
                     </div>
                   </>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* B. Secondary financial cards — 3-column row */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {[
-              {
-                label: 'صافي العمولات',
-                value: formatCurrency(summary.commissionsNet),
-                note: `${summary.commissionsApproved} عمولة معتمدة`,
-                icon: <BadgePercent className="h-4 w-4 text-slate-500" />,
-              },
-              {
-                label: 'مدفوع للوسطاء',
-                value: formatCurrency(summary.payoutsTotalNet),
-                note: `${summary.payoutsPaid} دفعة مكتملة`,
-                icon: <Wallet className="h-4 w-4 text-slate-500" />,
-              },
-              {
-                label: 'المتبقي للصرف',
-                value: formatCurrency(unrealizedNet),
-                note: unrealizedNet > 0 ? `${summary.payoutsApproved + summary.payoutsProcessing} دفعة قيد التنفيذ` : 'تم سداد جميع العمولات',
-                icon: <CircleDollarSign className="h-4 w-4 text-slate-400" />,
-              },
-            ].map((card, i) => (
-              <div
-                key={i}
-                className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4 flex items-center justify-between gap-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{card.label}</p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-slate-900 whitespace-nowrap leading-tight" dir="ltr">
-                    {card.value}
-                  </p>
-                  <p className="text-2xs text-slate-400 mt-0.5">{card.note}</p>
+            {/* Conversion Funnel — vertical proportional bars */}
+            <div className="lg:col-span-2 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
+                    <TrendingUp />
+                  </span>
+                  <p className="text-[13px] font-bold text-slate-800">قمع التحويل</p>
                 </div>
-                <div className="h-9 w-9 rounded-xl bg-surface-muted flex items-center justify-center shrink-0">
-                  {card.icon}
-                </div>
+                {s.leadsSubmitted > 0 && s.contractsSigned > 0 && (
+                  <span className="inline-flex items-center h-6 px-2.5 rounded-full text-[11px] font-black border border-emerald-200 bg-emerald-50 text-emerald-700 shrink-0">
+                    {pct(rateOf(s.contractsSigned, s.leadsSubmitted))} إجمالي
+                  </span>
+                )}
               </div>
-            ))}
-          </div>
 
-          {/* C. Pipeline summary row — volume KPIs (leads / reservations / signed) */}
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { label: 'فرص مُرسلة',  value: summary.leadsSubmitted,      icon: <UserPlus    className="h-4 w-4 text-slate-400" /> },
-              { label: 'حجوزات',      value: summary.reservationsCreated, icon: <BookmarkCheck className="h-4 w-4 text-slate-400" /> },
-              { label: 'عقود موقّعة', value: summary.contractsSigned,     icon: <FileText    className="h-4 w-4 text-slate-400" /> },
-            ].map((tile, i) => (
-              <div
-                key={i}
-                className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-3.5 flex items-center gap-3.5"
-              >
-                <div className="h-9 w-9 rounded-xl bg-surface-muted flex items-center justify-center shrink-0">
-                  {tile.icon}
-                </div>
-                <div>
-                  <p className="text-2xl font-bold tabular-nums text-slate-900 leading-none">{tile.value}</p>
-                  <p className="text-2xs text-slate-400 mt-1">{tile.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* ── 4. Conversion Journey ─────────────────────────────────────── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <ArrowRightLeft className="h-3.5 w-3.5 text-slate-500 shrink-0" />
-              <h2 className="text-xs font-semibold text-slate-600 whitespace-nowrap">رحلة التحويل</h2>
-              <div className="flex-1 h-px bg-hairline" />
-            </div>
-
-            <Card className="overflow-hidden">
-              <div className="flex flex-col lg:flex-row">
-
-                {/* Stepper pane — flexible width */}
-                <div className="flex-1 px-6 py-5">
-                  <p className="text-xs font-semibold text-slate-600 mb-3">
-                    مراحل قمع التحويل
-                  </p>
-                  <ConversionStepper summary={summary} />
-                  <p className="text-2xs text-slate-400 mt-2">
-                    النسب محسوبة مقارنة بالمرحلة السابقة.
-                  </p>
-                </div>
-
-                {/* Hairline divider — horizontal on mobile, vertical on desktop */}
-                <div className="h-px bg-hairline lg:h-auto lg:w-px shrink-0" aria-hidden />
-
-                {/* Ratios pane — fixed width on desktop, natural height (no stretching) */}
-                <div className="lg:w-72 shrink-0 px-6 py-5">
-                  <p className="text-xs font-semibold text-slate-600 mb-3">
-                    معدلات التحويل الرئيسية
-                  </p>
-                  <div className="divide-y divide-hairline">
-                    {[
-                      {
-                        label: 'فرص → حجوزات',
-                        rate: pct(summary.leadToReservationRate),
-                        detail: `${summary.reservationsCreated} حجز من ${summary.leadsApproved} فرصة معتمدة`,
-                      },
-                      {
-                        label: 'حجوزات → عقود',
-                        rate: pct(summary.reservationToContractRate),
-                        detail: `${summary.contractsCreated} عقد من ${summary.reservationsCreated} حجز`,
-                      },
-                      {
-                        label: 'توقيع العقود',
-                        rate: pct(summary.signedContractRate),
-                        detail: `${summary.contractsSigned} موقّع من ${summary.contractsCreated} عقد`,
-                      },
-                      {
-                        label: 'عقود → مدفوعات',
-                        rate: pct(summary.contractToPaidPayoutRate),
-                        detail: `${summary.payoutsPaid} دفعة من ${summary.contractsSigned} عقد موقّع`,
-                      },
-                    ].map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="text-xs font-medium text-slate-700">{item.label}</p>
-                          <p className="text-2xs text-slate-400 mt-0.5 truncate">{item.detail}</p>
+              {funnelStages.length === 0 ? (
+                <EmptyState icon={<TrendingUp />} title="لا توجد بيانات" description="" />
+              ) : (
+                <div className="px-5 py-4 space-y-0 flex-1">
+                  {funnelStages.map((stage, i) => {
+                    const prev       = i > 0 ? funnelStages[i - 1]!.value : null;
+                    const stageConv  = prev !== null && prev > 0 ? rateOf(stage.value, prev) : null;
+                    const barW       = funnelMax > 0 ? Math.min((stage.value / funnelMax) * 100, 100) : 0;
+                    return (
+                      <div key={stage.label}>
+                        {i > 0 && (
+                          <div className="flex items-center gap-1.5 py-1 ps-14">
+                            <ChevronDown className="h-3 w-3 text-slate-300 shrink-0" />
+                            {stageConv !== null && (
+                              <span className={cn('text-[10px] font-bold', stage.text)}>
+                                {pct(stageConv)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 shrink-0 text-end">
+                            <span className={cn('text-base font-black tabular-nums leading-none', stage.text)}>
+                              {stage.value.toLocaleString('ar-EG')}
+                            </span>
+                          </div>
+                          <div className="flex-1 h-6 rounded-lg bg-slate-100 overflow-hidden relative">
+                            <div
+                              className={cn('absolute inset-y-0 start-0 rounded-lg transition-all', stage.color)}
+                              style={{ width: `${Math.max(barW, barW > 0 ? 6 : 0)}%` }}
+                            />
+                            <span className={cn(
+                              'absolute inset-y-0 start-2 flex items-center text-[11px] font-semibold z-10',
+                              barW > 35 ? 'text-white' : 'text-slate-600',
+                            )}>
+                              {stage.label}
+                            </span>
+                          </div>
                         </div>
-                        <p className="text-2xl font-bold tabular-nums text-slate-900 shrink-0 leading-none">
-                          {item.rate}
-                        </p>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
                 </div>
+              )}
 
+              {/* Key rates footer */}
+              <div className="border-t border-hairline bg-canvas/40 px-5 py-3 mt-auto">
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { label: 'فرص → حجوزات', v: pct(s.leadToReservationRate) },
+                    { label: 'حجز → عقد',     v: pct(s.reservationToContractRate) },
+                    { label: 'توقيع العقود',   v: pct(s.signedContractRate) },
+                    { label: 'عقود → مدفوعات', v: pct(s.contractToPaidPayoutRate) },
+                  ].map((r) => (
+                    <div key={r.label} className="space-y-0.5">
+                      <p className="text-[13px] font-black tabular-nums text-slate-800">{r.v}</p>
+                      <p className="text-[9px] text-slate-400 leading-tight">{r.label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </Card>
+            </div>
+
           </div>
 
-          {/* ── 5. Financial Realization ──────────────────────────────────── */}
-          <Card className="overflow-hidden">
-            <div className="px-5 pt-4 pb-3 border-b border-hairline flex items-center gap-2">
-              <BadgePercent className="h-4 w-4 text-brand-600 shrink-0" />
-              <h2 className="text-sm font-semibold text-slate-900">التحصيل والصرف</h2>
-            </div>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
-              {[
-                {
-                  label: 'إجمالي العمولات المعتمدة',
-                  value: formatCurrency(summary.commissionsNet),
-                  note: `${summary.commissionsApproved} عمولة`,
-                  isMonetary: true,
-                },
-                {
-                  label: 'المدفوع فعلياً',
-                  value: formatCurrency(summary.payoutsTotalNet),
-                  note: `${summary.payoutsPaid} دفعة مكتملة`,
-                  isMonetary: true,
-                },
-                {
-                  label: 'المتبقي للصرف',
-                  value: formatCurrency(unrealizedNet),
-                  note: `${summary.payoutsApproved + summary.payoutsProcessing} دفعة قيد التنفيذ`,
-                  isMonetary: true,
-                },
-                {
-                  label: 'نسبة التحصيل',
-                  value: `${Math.min(realizationRate * 100, 100).toFixed(1)}%`,
-                  note: 'نسبة ما تم صرفه من إجمالي العمولات',
-                  isMonetary: false,
-                },
-              ].map((tile, i) => (
-                <div key={i} className="bg-surface px-5 py-5">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 leading-tight">
-                    {tile.label}
-                  </p>
-                  <p
-                    className="mt-2 text-xl font-bold tabular-nums text-slate-900 whitespace-nowrap leading-none"
-                    dir={tile.isMonetary ? 'ltr' : undefined}
-                  >
-                    {tile.value}
-                  </p>
-                  <p className="text-2xs text-slate-400 mt-1.5 leading-tight">{tile.note}</p>
-                </div>
-              ))}
-            </div>
-          </Card>
+          {/* ═══════════════════════════════════════════════════════════════
+              ROW 3 — Pipeline Volume + Commission Health (side by side)
+          ════════════════════════════════════════════════════════════════ */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {[
+              { label: 'فرص مُرسلة',   value: s.leadsSubmitted,       icon: <UserPlus className="h-4 w-4" />,      iconBg: 'bg-brand-50 text-brand-600' },
+              { label: 'فرص معتمدة',   value: s.leadsApproved,        icon: <BookmarkCheck className="h-4 w-4" />, iconBg: 'bg-blue-50 text-blue-600' },
+              { label: 'حجوزات',       value: s.reservationsCreated,  icon: <BookmarkCheck className="h-4 w-4" />, iconBg: 'bg-violet-50 text-violet-600' },
+              { label: 'عقود موقّعة',  value: s.contractsSigned,      icon: <FileText className="h-4 w-4" />,      iconBg: 'bg-emerald-50 text-emerald-600' },
+              { label: 'وسطاء نشطون',  value: s.activeBrokers,        icon: <Users className="h-4 w-4" />,         iconBg: 'bg-amber-50 text-amber-600' },
+              { label: 'مندوبو الوسطاء', value: s.totalBrokerAgents,  icon: <Users className="h-4 w-4" />,         iconBg: 'bg-slate-100 text-slate-600' },
+            ].map((tile) => (
+              <div key={tile.label} className="bg-surface rounded-2xl border border-hairline shadow-xs px-4 py-3.5">
+                <span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg mb-2', tile.iconBg)}>
+                  {tile.icon}
+                </span>
+                <p className="text-[22px] font-black tabular-nums text-slate-900 leading-none">
+                  {tile.value.toLocaleString('ar-EG')}
+                </p>
+                <p className="text-[10px] text-slate-400 mt-1">{tile.label}</p>
+              </div>
+            ))}
+          </div>
         </>
       )}
 
-      {/* ── 6. Top Brokers Ranking ────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
-        <div className="px-5 pt-4 pb-3 border-b border-hairline flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-brand-600 shrink-0" />
-            <h2 className="text-sm font-semibold text-slate-900">
-              أعلى الوسطاء أداءً
-            </h2>
-            {top?.metric && (
-              <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-500">
-                {METRIC_LABEL[top.metric]}
+      {/* ═══════════════════════════════════════════════════════════════════
+          ROW 4 — Top Brokers + Project Performance (side by side)
+      ════════════════════════════════════════════════════════════════════ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        {/* Top Brokers */}
+        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 [&_svg]:h-4 [&_svg]:w-4">
+                <TrendingUp />
+              </span>
+              <div>
+                <p className="text-[13px] font-bold text-slate-800">أعلى الوسطاء أداءً</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  مرتبون حسب: {METRIC_LABEL[sp.metric ?? 'salesGross']}
+                </p>
+              </div>
+            </div>
+            {(top?.data.length ?? 0) > 0 && (
+              <span className="text-xs text-slate-400 tabular-nums shrink-0">
+                {top?.data.length} وسيط
               </span>
             )}
           </div>
+
+          {(top?.data ?? []).length === 0 ? (
+            <EmptyState icon={<Briefcase />} title="لا توجد بيانات" description="لا توجد عمولات في النطاق المختار." />
+          ) : (
+            <div className="divide-y divide-hairline flex-1">
+              {(top?.data ?? []).map((r, idx) => {
+                const maxSales = Number(top?.data?.[0]?.salesGross ?? 1);
+                const barW     = maxSales > 0 ? (Number(r.salesGross) / maxSales) * 100 : 0;
+                return (
+                  <div key={r.brokerId} className={cn('flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors', idx === 0 && 'bg-amber-50/30')}>
+                    <RankBadge rank={idx + 1} />
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/dashboard/brokers/${r.brokerId}/performance` as never}
+                        className="text-sm font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                      >
+                        {r.companyName}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className={cn('h-full rounded-full', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                            style={{ width: `${barW}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-400">{r.contractsSigned} عقد</span>
+                        <span className="text-[10px] font-bold font-mono text-slate-400 bg-slate-100 px-1 rounded" dir="ltr">
+                          {r.code}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-end shrink-0">
+                      <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
+                        {formatCurrency(r.salesGross)}
+                      </p>
+                      <p className="text-[10px] text-slate-400 whitespace-nowrap" dir="ltr">
+                        عمولة: {formatCurrency(r.commissionNet)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 border-b border-hairline text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-2 w-8">#</th>
-                <th className="text-start font-semibold py-3 ps-2 pe-4">الوسيط</th>
-                <th className="text-start font-semibold py-3 px-4">فرص</th>
-                <th className="text-start font-semibold py-3 px-4">حجوزات</th>
-                <th className="text-start font-semibold py-3 px-4">عقود موقّعة</th>
-                <th className="text-start font-semibold py-3 px-4">إجمالي المبيعات</th>
-                <th className="text-start font-semibold py-3 px-4">صافي العمولات</th>
-                <th className="text-start font-semibold py-3 px-4">مدفوع</th>
-                <th className="text-start font-semibold py-3 px-4">معدّل التحويل</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {(top?.data ?? []).length === 0 && (
-                <tr>
-                  <td colSpan={9} className="p-0">
-                    <EmptyState
-                      icon={<Briefcase />}
-                      title="لا توجد بيانات"
-                      description="لا توجد عمولات أو عقود من الوسطاء في النطاق المختار."
-                    />
-                  </td>
-                </tr>
-              )}
-              {(top?.data ?? []).map((r, idx) => (
-                <tr
-                  key={r.brokerId}
-                  className={`align-middle transition-colors${idx === 0 ? ' bg-brand-50/30 hover:bg-brand-50/50' : ' hover:bg-surface-muted/40'}`}
-                >
-                  {/* Rank — #1 gets gold badge, rest get muted number */}
-                  <td className="py-3 ps-5 pe-2 w-8">
-                    {idx === 0 ? (
-                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-brand-100 text-[10px] font-bold text-brand-700 leading-none">
-                        1
-                      </span>
-                    ) : (
-                      <span className="text-xs font-semibold tabular-nums text-slate-400">{idx + 1}</span>
-                    )}
-                  </td>
 
-                  {/* Broker name + code chip */}
-                  <td className="py-3 ps-2 pe-4">
-                    <Link
-                      href={`/dashboard/brokers/${r.brokerId}/performance` as never}
-                      className="font-medium text-slate-900 hover:text-brand-700 transition-colors"
-                    >
-                      {r.companyName}
-                    </Link>
-                    <span
-                      className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-500 leading-none mt-0.5 block w-fit"
-                      dir="ltr"
-                    >
-                      {r.code}
-                    </span>
-                  </td>
+        {/* Project Performance */}
+        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline">
+            <div className="flex items-center gap-2.5">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
+                <BarChart3 />
+              </span>
+              <div>
+                <p className="text-[13px] font-bold text-slate-800">أداء المشاريع</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">مرتبة حسب إجمالي المبيعات</p>
+              </div>
+            </div>
+            {projects.length > 0 && (
+              <span className="text-xs text-slate-400 tabular-nums shrink-0">
+                {projects.length} مشروع
+              </span>
+            )}
+          </div>
 
-                  <td className="py-3 px-4 tabular-nums text-slate-700">{r.leads}</td>
-                  <td className="py-3 px-4 tabular-nums text-slate-700">{r.reservations}</td>
-                  <td className="py-3 px-4 tabular-nums text-slate-700">{r.contractsSigned}</td>
-
-                  <td className="py-3 px-4">
-                    <span className="tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-                      {formatCurrency(r.salesGross)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="tabular-nums font-medium text-slate-800 whitespace-nowrap" dir="ltr">
-                      {formatCurrency(r.commissionNet)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="tabular-nums font-semibold text-slate-900 whitespace-nowrap" dir="ltr">
-                      {formatCurrency(r.payoutNet)}
-                    </span>
-                  </td>
-
-                  <td className="py-3 px-4">
-                    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium tabular-nums text-slate-600">
-                      {pct(r.conversionRate)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {projects.length === 0 ? (
+            <EmptyState icon={<BarChart3 />} title="لا توجد بيانات" description="ستظهر هنا عند وجود عمولات على أي مشروع." />
+          ) : (
+            <div className="divide-y divide-hairline flex-1">
+              {projects.map((p, idx) => {
+                const maxProjSales = Number(projects[0]?.salesGross ?? 1);
+                const barW         = maxProjSales > 0 ? (Number(p.salesGross) / maxProjSales) * 100 : 0;
+                const projName     = p.projectName ? tx(p.projectName) : '—';
+                return (
+                  <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors', idx === 0 && 'bg-amber-50/30')}>
+                    <RankBadge rank={idx + 1} />
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/dashboard/projects/${p.projectId}` as never}
+                        className="text-sm font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                      >
+                        {projName}
+                      </Link>
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className={cn('h-full rounded-full', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                            style={{ width: `${barW}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-400">{p.contractsSigned}/{p.contracts} عقد</span>
+                        {p.city && <span className="text-[10px] text-slate-400">{p.city}</span>}
+                      </div>
+                    </div>
+                    <div className="text-end shrink-0">
+                      <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
+                        {formatCurrency(p.salesGross)}
+                      </p>
+                      <p className="text-[10px] text-slate-400 whitespace-nowrap" dir="ltr">
+                        عمولة: {formatCurrency(p.commissionNet)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </Card>
 
-      {/* ── 7. Project Performance ────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
-        <div className="px-5 pt-4 pb-3 border-b border-hairline flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-brand-600 shrink-0" />
-          <h2 className="text-sm font-semibold text-slate-900">أداء المشاريع</h2>
-        </div>
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 border-b border-hairline text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">المدينة</th>
-                <th className="text-start font-semibold py-3 px-4">وسطاء</th>
-                <th className="text-start font-semibold py-3 px-4">عقود</th>
-                <th className="text-start font-semibold py-3 px-4">عقود موقّعة</th>
-                <th className="text-start font-semibold py-3 px-4">المبيعات</th>
-                <th className="text-start font-semibold py-3 px-4">صافي العمولات</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5">مدفوع</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {projects.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="p-0">
-                    <EmptyState
-                      icon={<BarChart3 />}
-                      title="لا توجد بيانات لمشاريع الوسطاء"
-                      description="ستظهر هنا عند وجود عمولات وسطاء على أي مشروع."
-                    />
-                  </td>
-                </tr>
-              )}
-              {projects.map((p) => (
-                <tr key={p.projectId} className="align-middle hover:bg-surface-muted/40 transition-colors">
-                  <td className="py-3 ps-5 pe-4">
-                    <Link
-                      href={`/dashboard/projects/${p.projectId}` as never}
-                      className="font-medium text-slate-900 hover:text-brand-700 transition-colors"
-                    >
-                      {p.projectName ? tx(p.projectName) : '—'}
-                    </Link>
-                  </td>
-                  <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
-                    {p.city ?? '—'}
-                  </td>
-                  <td className="py-3 px-4 tabular-nums text-slate-700">{p.brokerCount}</td>
-                  <td className="py-3 px-4 tabular-nums text-slate-700">{p.contracts}</td>
-                  <td className="py-3 px-4 tabular-nums text-slate-700">{p.contractsSigned}</td>
-                  <td className="py-3 px-4">
-                    <span className="tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-                      {formatCurrency(p.salesGross)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="tabular-nums font-medium text-slate-800 whitespace-nowrap" dir="ltr">
-                      {formatCurrency(p.commissionNet)}
-                    </span>
-                  </td>
-                  <td className="py-3 ps-4 pe-5">
-                    <span className="tabular-nums font-semibold text-slate-900 whitespace-nowrap" dir="ltr">
-                      {formatCurrency(p.payoutNet)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      </div>
 
+    </div>
+  );
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function BrokerMetric({
+  label, icon, iconClass, accent, children, primary, className,
+}: {
+  label: string;
+  icon: ReactNode;
+  iconClass: string;
+  accent: string;
+  children: ReactNode;
+  primary?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={cn('relative flex flex-col gap-3 px-5 py-4 bg-surface', className)}>
+      <div className={cn('absolute top-0 start-0 end-0 h-[3px]', accent)} />
+      <div className="flex items-center justify-between gap-2">
+        <span className={cn('inline-flex h-8 w-8 items-center justify-center rounded-xl', iconClass)}>
+          {icon}
+        </span>
+        <p className={cn(
+          'text-[9px] font-bold uppercase tracking-[0.13em] leading-none text-end',
+          primary ? 'text-slate-500' : 'text-slate-400',
+        )}>
+          {label}
+        </p>
+      </div>
+      <div className="flex flex-col gap-0.5">{children}</div>
+    </div>
+  );
+}
+
+function RankBadge({ rank }: { rank: number }) {
+  const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  const medal = medals[rank];
+  return (
+    <div className={cn(
+      'h-7 w-7 rounded-full flex items-center justify-center shrink-0',
+      rank === 1 ? 'bg-amber-100' : rank <= 3 ? 'bg-slate-100' : 'bg-slate-50',
+    )}>
+      {medal
+        ? <span className="text-base leading-none">{medal}</span>
+        : <span className="text-[11px] font-black text-slate-400">{rank}</span>
+      }
     </div>
   );
 }
