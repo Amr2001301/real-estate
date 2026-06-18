@@ -85,6 +85,8 @@
   "homeFilterClearSelection": "Clear selection",
   "homeFeaturedProjects": "Featured projects",
   "homeExploreProjects": "Explore projects",
+  "homeGuestGreeting": "Welcome",
+  "homeGuestSubtitle": "Discover the best projects and units",
   "homeGreeting": "Hi, {name}",
   "@homeGreeting": { "placeholders": { "name": { "type": "String" } } },
   "homeOwnerRole": "Customer · Unit owner",

@@ -155,13 +155,12 @@ class CustomerShellScaffold extends StatelessWidget {
     final session_ = session.sessionOrNull;
     final displayName = session_?.displayName ?? session_?.email;
 
-    // The authenticated CUSTOMER Home renders its own premium in-body header
-    // (CustomerHomeHeader) with identity + notification + profile, so the
-    // generic shell AppBar is suppressed there. Guests keep the shell AppBar on
-    // Home (their hero/search layout relies on it).
+    // Both the guest home and the authenticated customer home render their own
+    // in-body headers (_GuestHomeHeader / CustomerHomeHeader), so the shell
+    // AppBar is suppressed for ALL users on the Home branch.
     final showShellAppBar =
         !_selfChromeBranches.contains(current) &&
-        !(isCustomer && current == _Branch.home);
+        !(current == _Branch.home);
 
     return Scaffold(
       // iOS: let body content scroll behind the floating glass tab bar (real

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,20 +18,23 @@ import '../../domain/usecases/get_units.dart';
 import '../../../../common/brand_mark.dart';
 import '../compare/compare_cubit.dart';
 import '../widgets/glass.dart';
+import '../widgets/price_text.dart';
 import '../widgets/section_header.dart';
-import '../widgets/unit_card.dart';
+import '../widgets/unit_status_chip.dart';
 import 'customer_home_dashboard.dart';
 import 'home_cubit.dart';
 
-/// Bottom clearance reserved on the Home tab for the shell's floating assistant
-/// FAB (46px + lift), so the last card never ends up hidden behind the FAB or
-/// the bottom nav. Applied only when the compare dock isn't taking over.
+/// Bottom clearance for the shell's floating assistant FAB.
 const double _fabClearance = 96;
 
-/// The الرئيسية tab. For a signed-in customer it is an ownership-first dashboard
-/// (greeting + owned property + next installment + live counts + quick actions
-/// + recent activity) above the featured projects/units; for guests it stays
-/// the marketing hero + featured + CTAs.
+/// Navy depth gradient stops shared by the hero and CTA band.
+const Color _webNavyLight = Color(0xFF24426A);
+const Color _webNavyMid = Color(0xFF14273F);
+const Color _webNavyDeep = Color(0xFF0B1726);
+
+/// الرئيسية tab. Guest → marketing home (header + image hero + category pills
+/// + featured projects + units grid + CTA). Authenticated customer → ownership
+/// dashboard (CustomerHomeDashboard, which supplies its own header).
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -39,46 +43,24 @@ class HomeScreen extends StatelessWidget {
     final l10n = context.l10n;
     final session = context.watch<SessionCubit>().state;
     final isCustomer = session.isAuthenticated && session.role.isCustomerSide;
-    // Reserve extra space when the shell's sticky compare dock is showing, so
-    // the last card/CTA is never hidden behind it.
     final comparing = context.watch<CompareCubit>().state.isNotEmpty;
 
-    // Body-only: the persistent CustomerShellScaffold supplies the app bar
-    // (title, notification bell, language/theme toggles, avatar) + bottom nav.
     return RefreshIndicator(
       onRefresh: () async {
-        // Capture cubits before the await so no BuildContext is used across the
-        // async gap. Pull-to-refresh also refreshes the owner dashboard cubits
-        // that the /home route provides for a signed-in customer.
         final home = context.read<HomeCubit>();
         final property = isCustomer ? context.read<MyPropertyCubit>() : null;
-        final installments = isCustomer
-            ? context.read<InstallmentsCubit>()
-            : null;
-        final maintenance = isCustomer
-            ? context.read<MaintenanceRequestsCubit>()
-            : null;
+        final installments =
+            isCustomer ? context.read<InstallmentsCubit>() : null;
+        final maintenance =
+            isCustomer ? context.read<MaintenanceRequestsCubit>() : null;
         await home.load();
         property?.load();
         installments?.load();
         maintenance?.load();
       },
       child: ListView(
-        // Single source of bottom clearance (no extra trailing spacer below).
-        // iOS: the floating dock overlays the body (extendBody) and floats
-        // ~40px above the safe-area inset; clear it plus a small premium gap so
-        // the CTA sits just above the dock (~16–24px breathing room) — never a
-        // large blank, never hidden behind the dock. Android: the in-slot bar
-        // handles its own safe area, so just a small comfortable gap above it.
-        //
-        // When NOT comparing, the shell floats the assistant FAB over the Home
-        // tab's bottom-start corner; reserve [_fabClearance] so the last
-        // discovery card + carousel dots always settle ABOVE the FAB rather than
-        // hidden behind it. While comparing, the sticky compare dock replaces
-        // the FAB, so its larger offset applies instead.
         padding: EdgeInsets.only(
-          bottom:
-              (context.isApplePlatform
+          bottom: (context.isApplePlatform
                   ? MediaQuery.of(context).padding.bottom + 32
                   : AppSpacing.lg) +
               (comparing
@@ -87,21 +69,30 @@ class HomeScreen extends StatelessWidget {
         ),
         children: [
           if (isCustomer)
-            // Ownership Command Center: the dashboard owns its premium in-body
-            // header (the shell AppBar is suppressed for this branch) and all
-            // its section padding. No catalog/discovery sections for customers.
             CustomerHomeDashboard(
-              name:
-                  session.sessionOrNull?.displayName ??
+              name: session.sessionOrNull?.displayName ??
                   session.sessionOrNull?.email,
             )
           else ...[
-            // Guest Home — unchanged: integrated hero+search, featured
-            // projects/units discovery, and the marketing CTA band.
-            const _HeroSearchDock(),
+            // In-body header — the shell AppBar is suppressed for Home.
+            const _GuestHomeHeader(),
+            const SizedBox(height: AppSpacing.sm),
+            // Image hero with search bar (uses first featured project cover
+            // as background once it loads; falls back to navy gradient).
+            BlocBuilder<HomeCubit, HomeState>(
+              builder: (context, state) {
+                final heroUrl = state.data?.firstOrNull?.coverImage;
+                return _HeroImageBanner(imageUrl: heroUrl);
+              },
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // Property-type filter pills.
+            const _CategoryPillsRow(),
             const SizedBox(height: AppSpacing.xl),
+            // Featured projects section header.
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               child: SectionHeader(
                 title: l10n.homeFeaturedProjects,
                 onViewAll: () => context.go('/projects'),
@@ -109,9 +100,8 @@ class HomeScreen extends StatelessWidget {
             ),
             const _FeaturedProjects(),
             const SizedBox(height: AppSpacing.xl),
-            // Units preview (self-managing: renders its own header, hides if no
-            // data).
-            const _FeaturedUnits(),
+            // Featured units 2-column grid.
+            const _HomeUnitsGrid(),
             const SizedBox(height: AppSpacing.lg),
             const _HomeCtaBand(),
           ],
@@ -121,27 +111,148 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ── Website-matched navy depth gradient stops (Hero + CTA) ──────────────────
-// Mirrors the web `radial-gradient(... #24426A → #14273F → #0B1726)` so the
-// mobile hero/CTA read as the same brand surface as the marketing site.
-const Color _webNavyLight = Color(0xFF24426A);
-const Color _webNavyMid = Color(0xFF14273F);
-const Color _webNavyDeep = Color(0xFF0B1726);
+// ─── Guest Home Header ────────────────────────────────────────────────────────
 
-/// Compact luxury guest hero — a short navy intro card (website depth gradient +
-/// gold glow) with a one-row search dock: a search pill (gold circular submit)
-/// plus a compact "التصفية" pill that opens the [_HomeFilterSheet]. Property-type
-/// selection lives in that sheet, NOT as a heavy chip row — so the hero stays
-/// short and the projects section appears sooner. Search → /projects?q=… (the
-/// only text-searchable catalog route on mobile).
-class _HeroSearchDock extends StatefulWidget {
-  const _HeroSearchDock();
+/// Custom in-body header for the guest Home tab: bell button (end/left in RTL),
+/// logo + brand name (centre), greeting + subtitle (start/right in RTL).
+class _GuestHomeHeader extends StatelessWidget {
+  const _GuestHomeHeader();
 
   @override
-  State<_HeroSearchDock> createState() => _HeroSearchDockState();
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final topInset = MediaQuery.paddingOf(context).top;
+
+    // Set status-bar icon contrast: dark glyphs on the light canvas.
+    final isDark = theme.brightness == Brightness.dark;
+    final overlay =
+        (isDark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark)
+            .copyWith(statusBarColor: Colors.transparent);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlay,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          topInset + AppSpacing.sm,
+          AppSpacing.lg,
+          0,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // START (right in RTL): greeting column.
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.star_rounded,
+                        size: 12,
+                        color: colors.brandGold,
+                      ),
+                      const SizedBox(width: AppSpacing.xxs),
+                      Text(
+                        l10n.homeGuestGreeting,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: colors.brandGold,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    l10n.homeGuestSubtitle,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: colors.inkMuted),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            // CENTRE: brand logo + app name.
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const BrandMark(size: 30),
+                const SizedBox(width: AppSpacing.xs),
+                Text(
+                  l10n.customerAppTitle,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+            // END (left in RTL): notification bell.
+            Expanded(
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: _GuestBellButton(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _HeroSearchDockState extends State<_HeroSearchDock> {
+class _GuestBellButton extends StatelessWidget {
+  const _GuestBellButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        shape: BoxShape.circle,
+        border: Border.all(color: colors.hairline),
+        boxShadow: colors.shadowSoft,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => GoRouter.of(context).push('/login'),
+          child: Icon(
+            AppIcons.notification,
+            size: 20,
+            color: colors.inkStrong,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Hero Image Banner ────────────────────────────────────────────────────────
+
+/// Full-width rounded hero: a real-estate cover image (from the first featured
+/// project) with a bottom gradient for text legibility, the hero title + gold
+/// subtitle + decorative line, and a compact search + filter row at the bottom.
+class _HeroImageBanner extends StatefulWidget {
+  const _HeroImageBanner({this.imageUrl});
+
+  final String? imageUrl;
+
+  @override
+  State<_HeroImageBanner> createState() => _HeroImageBannerState();
+}
+
+class _HeroImageBannerState extends State<_HeroImageBanner> {
   late final TextEditingController _search;
 
   @override
@@ -156,10 +267,6 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
     super.dispose();
   }
 
-  /// Free-text search targets the المشاريع tab (the only catalog route that
-  /// reads a `?q=` query param). Uses `context.go` so the Projects tab becomes
-  /// active (single app bar, no back arrow) instead of pushing it inside the
-  /// Home stack.
   void _runSearch(String raw) {
     final query = raw.trim();
     context.go(
@@ -169,9 +276,6 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
     );
   }
 
-  /// The hero filter shortcut switches to the المشاريع tab, where the real
-  /// (backend-supported) city / featured / sort filters live. There is no
-  /// backend property-type filter, so Home does not fake one with a text query.
   void _openFilters() => context.go('/projects');
 
   @override
@@ -180,194 +284,199 @@ class _HeroSearchDockState extends State<_HeroSearchDock> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm,
-        AppSpacing.lg,
-        0,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppRadii.xl),
-        child: Stack(
-          children: [
-            // Base navy depth gradient — same direction/depth as the lower
-            // CtaBand so the two navy surfaces read as one design system.
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: Alignment(0.64, -1.0),
-                    radius: 1.5,
-                    colors: [_webNavyLight, _webNavyMid, _webNavyDeep],
-                    stops: [0.0, 0.58, 1.0],
-                  ),
-                ),
-              ),
-            ),
-            // Faint dotted texture — the same subtle pattern as the CtaBand, so
-            // the navy never reads as a flat block.
-            const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-            // Gold ambient glow behind the start-side content (RTL-aware).
-            const Positioned.fill(
-              child: IgnorePointer(
-                child: DecoratedBox(
+        child: SizedBox(
+          height: 252,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Background: property image or navy gradient fallback.
+              if (widget.imageUrl != null && widget.imageUrl!.isNotEmpty)
+                AppNetworkImage(url: widget.imageUrl)
+              else
+                const DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      center: AlignmentDirectional(-0.9, 0.9),
-                      radius: 0.9,
-                      colors: [Color(0x1FC8A24B), Color(0x00C8A24B)],
-                      stops: [0.0, 0.7],
+                      center: Alignment(0.64, -1.0),
+                      radius: 1.5,
+                      colors: [_webNavyLight, _webNavyMid, _webNavyDeep],
+                      stops: [0.0, 0.58, 1.0],
+                    ),
+                  ),
+                ),
+              // Gradient overlay — heavy at the bottom for text.
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x00000000),
+                        Color(0x33000000),
+                        Color(0xBF000000),
+                        Color(0xE5000000),
+                      ],
+                      stops: [0.0, 0.30, 0.65, 1.0],
                     ),
                   ),
                 ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+              // Faint dot texture (matches the CTA band aesthetic).
+              const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
+              // Content: pinned to the bottom of the card.
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    0,
+                    AppSpacing.lg,
+                    AppSpacing.lg,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const BrandMark(size: 26),
-                      const SizedBox(width: AppSpacing.xs),
                       Text(
-                        l10n.homeHeroEyebrow,
-                        style: theme.textTheme.labelMedium?.copyWith(
+                        l10n.homeHeroTitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xxs),
+                      Text(
+                        l10n.homeHeroSubtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppPalette.gold300,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
+                          fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      // Decorative gold accent line.
+                      const _HeroGoldDivider(),
+                      const SizedBox(height: AppSpacing.sm),
+                      // Search pill (expanded) + filter button.
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _HeroSearchPill(
+                              controller: _search,
+                              onSearch: _runSearch,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.sm),
+                          _FilterPill(onTap: _openFilters),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.homeHeroTitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.homeHeroSubtitle,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.78),
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  // Compact one-row search dock.
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _HeroSearchBar(
-                          controller: _search,
-                          onSearch: _runSearch,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      _FilterPill(onTap: _openFilters),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: -0.03, end: 0);
   }
 }
 
-/// A compact white search pill with a trailing gold circular submit button,
-/// designed to float on the navy hero. Submitting (keyboard or gold button)
-/// runs the search.
-class _HeroSearchBar extends StatelessWidget {
-  const _HeroSearchBar({required this.controller, required this.onSearch});
+class _HeroGoldDivider extends StatelessWidget {
+  const _HeroGoldDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 2,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppPalette.gold400.withValues(alpha: 0.0),
+                AppPalette.gold400,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xs),
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: AppPalette.gold400,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.xxs),
+        Container(
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(
+            color: AppPalette.gold400.withValues(alpha: 0.5),
+            shape: BoxShape.circle,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// White pill search field with a leading search icon (appears at START = right
+/// in RTL, matching the reference design).
+class _HeroSearchPill extends StatelessWidget {
+  const _HeroSearchPill({required this.controller, required this.onSearch});
 
   final TextEditingController controller;
   final ValueChanged<String> onSearch;
-
-  static const double _height = 50;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final theme = Theme.of(context);
+
     return Container(
-      height: _height,
+      height: 50,
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: AppRadii.pillAll,
         boxShadow: colors.shadowSoft,
       ),
-      padding: const EdgeInsetsDirectional.only(
-        start: AppSpacing.md,
-        end: AppSpacing.xxs,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: controller,
-              textInputAction: TextInputAction.search,
-              onSubmitted: onSearch,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.inkStrong,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: l10n.homeSearchHint,
-                hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.inkMuted,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xxs),
-          // Gold circular submit.
-          Material(
-            color: colors.brandGold,
-            shape: const CircleBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () => onSearch(controller.text),
-              child: SizedBox(
-                width: 38,
-                height: 38,
-                child: Icon(
-                  Icons.search_rounded,
-                  size: 20,
-                  color: colors.brandNavy,
-                ),
-              ),
-            ),
-          ),
-        ],
+      child: TextField(
+        controller: controller,
+        textInputAction: TextInputAction.search,
+        onSubmitted: onSearch,
+        style: theme.textTheme.bodyMedium?.copyWith(color: colors.inkStrong),
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding:
+              const EdgeInsetsDirectional.only(end: AppSpacing.md),
+          border: InputBorder.none,
+          hintText: l10n.homeSearchHint,
+          hintStyle:
+              theme.textTheme.bodyMedium?.copyWith(color: colors.inkMuted),
+          prefixIcon:
+              Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+        ),
       ),
     );
   }
 }
 
-/// A compact glass filter button (icon-only, white-translucent on navy) that
-/// opens the Home filter sheet. Deliberately small so the search pill keeps
-/// most of the row width.
+/// Glass filter button — icon only, compact square.
 class _FilterPill extends StatelessWidget {
   const _FilterPill({required this.onTap});
 
@@ -377,7 +486,7 @@ class _FilterPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Material(
-      color: Colors.white.withValues(alpha: 0.12),
+      color: Colors.white.withValues(alpha: 0.14),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.md),
         side: BorderSide(color: Colors.white.withValues(alpha: 0.35)),
@@ -398,183 +507,141 @@ class _FilterPill extends StatelessWidget {
   }
 }
 
-/// Lower CTA band — matches the website `CtaBand`: a contained navy card with
-/// the website depth gradient (120% 150% at 82% 0%), a faint dotted texture so
-/// it never reads as a flat block, gold ambient glow + top gold hairline, an
-/// eyebrow chip, and two real buttons (gold primary + white-outline secondary).
-class _HomeCtaBand extends StatelessWidget {
-  const _HomeCtaBand();
+// ─── Category Pills ───────────────────────────────────────────────────────────
+
+class _CategoryPillsRow extends StatefulWidget {
+  const _CategoryPillsRow();
+
+  @override
+  State<_CategoryPillsRow> createState() => _CategoryPillsRowState();
+}
+
+class _CategoryPillsRowState extends State<_CategoryPillsRow> {
+  int _selected = 0;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+
+    final categories = <({IconData icon, String label, VoidCallback onTap})>[
+      (
+        icon: Icons.home_outlined,
+        label: l10n.homeTypeResidential,
+        onTap: () => GoRouter.of(context).go('/projects'),
+      ),
+      (
+        icon: Icons.store_outlined,
+        label: l10n.homeTypeCommercial,
+        onTap: () => GoRouter.of(context).go('/projects'),
+      ),
+      (
+        icon: Icons.business_center_outlined,
+        label: l10n.homeTypeOffice,
+        onTap: () => GoRouter.of(context).go('/projects'),
+      ),
+      (
+        icon: Icons.location_city_outlined,
+        label: l10n.navProjects,
+        onTap: () => GoRouter.of(context).go('/projects'),
+      ),
+      (
+        icon: Icons.grid_view_outlined,
+        label: l10n.navUnits,
+        onTap: () => GoRouter.of(context).go('/units'),
+      ),
+    ];
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Row(
+        children: [
+          for (int i = 0; i < categories.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpacing.sm),
+            _CategoryPill(
+              icon: categories[i].icon,
+              label: categories[i].label,
+              selected: _selected == i,
+              onTap: () {
+                setState(() => _selected = i);
+                categories[i].onTap();
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryPill extends StatelessWidget {
+  const _CategoryPill({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppRadii.xl),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.xl),
-            boxShadow: colors.shadowLift,
+
+    final bg = selected ? AppPalette.navy : colors.surface;
+    final fg = selected ? Colors.white : colors.inkStrong;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: AppRadii.pillAll,
+          border: Border.all(
+            color: selected
+                ? AppPalette.gold400.withValues(alpha: 0.30)
+                : colors.hairline,
           ),
-          child: Stack(
-            children: [
-              // Website CtaBand depth gradient.
-              const Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment(0.64, -1.0),
-                      radius: 1.5,
-                      colors: [_webNavyLight, _webNavyMid, _webNavyDeep],
-                      stops: [0.0, 0.58, 1.0],
-                    ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: AppPalette.gold400.withValues(alpha: 0.18),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                ),
+                ]
+              : colors.shadowSoft,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: fg),
+            const SizedBox(width: AppSpacing.xs),
+            Text(
+              label,
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: fg,
+                fontWeight:
+                    selected ? FontWeight.w700 : FontWeight.w500,
               ),
-              // Faint dotted texture (so the navy never reads as a flat block).
-              const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
-              // Gold ambient glow in the end-corner.
-              const Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: AlignmentDirectional(-0.9, 0.9),
-                        radius: 0.9,
-                        colors: [Color(0x1FC8A24B), Color(0x00C8A24B)],
-                        stops: [0.0, 0.7],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              // Top gold hairline accent.
-              Positioned(
-                top: 0,
-                left: AppSpacing.xxl,
-                right: AppSpacing.xxl,
-                child: Container(
-                  height: 1,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppPalette.gold400.withValues(alpha: 0.0),
-                        AppPalette.gold400.withValues(alpha: 0.55),
-                        AppPalette.gold400.withValues(alpha: 0.0),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm,
-                        vertical: AppSpacing.xxs,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppPalette.gold400.withValues(alpha: 0.15),
-                        borderRadius: AppRadii.pillAll,
-                        border: Border.all(
-                          color: AppPalette.gold400.withValues(alpha: 0.25),
-                        ),
-                      ),
-                      child: Text(
-                        l10n.homeCtaEyebrow,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: AppPalette.gold200,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      l10n.homeCtaTitle,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      l10n.homeCtaSubtitle,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.75),
-                        height: 1.5,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.lg),
-                    // Centered hug-content buttons (mirrors the website mobile
-                    // CtaBand): a gold primary above a clearly-bordered ghost
-                    // secondary. Hugging content keeps the gold pill from
-                    // reading as a bulky full-width block, and full labels never
-                    // truncate. RTL-safe.
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppButton(
-                            label: l10n.homeCtaAction,
-                            icon: Icons.headset_mic_rounded,
-                            variant: AppButtonVariant.gold,
-                            size: AppButtonSize.medium,
-                            onPressed: () => context.push('/chat'),
-                          ),
-                        ),
-                        // const SizedBox(width: AppSpacing.sm),
-                        // Expanded(
-                        //   child: _GhostButton(
-                        //     label: l10n.homeCtaSecondary,
-                        //     // icon: Icons.arrow_back_rounded,
-                        //     onPressed: () => context.push('/units'),
-                        //   ),
-                        // ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-/// A faint dotted overlay echoing the website CtaBand texture.
-class _DotTexture extends StatelessWidget {
-  const _DotTexture();
-
-  @override
-  Widget build(BuildContext context) =>
-      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
-}
-
-class _DotPainter extends CustomPainter {
-  const _DotPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.05);
-    const step = 22.0;
-    for (var y = 6.0; y < size.height; y += step) {
-      for (var x = 6.0; x < size.width; x += step) {
-        canvas.drawCircle(Offset(x, y), 1, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_DotPainter oldDelegate) => false;
-}
+// ─── Featured Projects ────────────────────────────────────────────────────────
 
 class _FeaturedProjects extends StatelessWidget {
   const _FeaturedProjects();
@@ -605,10 +672,6 @@ class _FeaturedProjects extends StatelessWidget {
   }
 }
 
-/// Home-only loading skeleton for the featured-projects slider. Mirrors the
-/// live carousel exactly: image-only rounded cards (NO white content body), the
-/// same 260px height and side-peek feel, plus a dots placeholder — so the
-/// loading state reads as the real Home slider, not the /projects list card.
 class _FeaturedProjectsSkeleton extends StatelessWidget {
   const _FeaturedProjectsSkeleton();
 
@@ -616,19 +679,21 @@ class _FeaturedProjectsSkeleton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final radius = BorderRadius.circular(AppRadii.xl);
-    final cardWidth = MediaQuery.sizeOf(context).width * 0.8;
+    final cardWidth = MediaQuery.sizeOf(context).width * 0.88;
     return Column(
       children: [
         SizedBox(
-          height: 260,
+          height: 256,
           child: AppSkeletonizer(
             enabled: true,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
               itemCount: 3,
-              separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.md),
+              separatorBuilder: (_, _) =>
+                  const SizedBox(width: AppSpacing.md),
               itemBuilder: (_, _) => Container(
                 width: cardWidth,
                 decoration: BoxDecoration(
@@ -662,9 +727,6 @@ class _FeaturedProjectsSkeleton extends StatelessWidget {
   }
 }
 
-/// Premium mobile projects carousel: a snapping [PageView] with the active card
-/// prominent and adjacent cards peeking at the sides, plus a page-dot indicator.
-/// RTL-aware (PageView follows the ambient text direction, like a ListView).
 class _FeaturedProjectsCarousel extends StatefulWidget {
   const _FeaturedProjectsCarousel({required this.projects});
 
@@ -675,7 +737,8 @@ class _FeaturedProjectsCarousel extends StatefulWidget {
       _FeaturedProjectsCarouselState();
 }
 
-class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
+class _FeaturedProjectsCarouselState
+    extends State<_FeaturedProjectsCarousel> {
   late final PageController _controller;
   Timer? _timer;
   int _page = 0;
@@ -685,7 +748,9 @@ class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
   @override
   void initState() {
     super.initState();
-    _controller = PageController(viewportFraction: 0.86);
+    // 0.93 viewport fraction — active card is prominent, adjacent cards
+    // peek at the sides just enough to signal swipeability.
+    _controller = PageController(viewportFraction: 0.93);
     _startAutoPlay();
   }
 
@@ -721,8 +786,7 @@ class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 225,
-          // Pause auto-advance while the user is touching, resume after.
+          height: 256,
           child: Listener(
             onPointerDown: (_) => _pauseAutoPlay(),
             onPointerUp: (_) => _startAutoPlay(),
@@ -732,10 +796,12 @@ class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
               itemCount: projects.length,
               onPageChanged: (i) => setState(() => _page = i),
               itemBuilder: (context, i) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs),
                 child: _HomeProjectCard(
                   project: projects[i],
-                  onTap: () => context.push('/projects/${projects[i].id}'),
+                  onTap: () =>
+                      context.push('/projects/${projects[i].id}'),
                 ),
               ),
             ),
@@ -753,7 +819,9 @@ class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
                   width: i == _page ? 18 : 6,
                   height: 6,
                   decoration: BoxDecoration(
-                    color: i == _page ? colors.brandGold : colors.hairline,
+                    color: i == _page
+                        ? colors.brandGold
+                        : colors.hairline,
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -765,25 +833,23 @@ class _FeaturedProjectsCarouselState extends State<_FeaturedProjectsCarousel> {
   }
 }
 
-/// "وحدات مختارة" — a small units preview carousel below projects. Fetches a
-/// short page of available units via the existing [GetUnits] use case +
-/// app-wide [CatalogRepository] (no new API). Renders its own header and hides
-/// itself entirely when there's nothing to show.
-class _FeaturedUnits extends StatefulWidget {
-  const _FeaturedUnits();
+// ─── Featured Units — 2-column grid ──────────────────────────────────────────
+
+class _HomeUnitsGrid extends StatefulWidget {
+  const _HomeUnitsGrid();
 
   @override
-  State<_FeaturedUnits> createState() => _FeaturedUnitsState();
+  State<_HomeUnitsGrid> createState() => _HomeUnitsGridState();
 }
 
-class _FeaturedUnitsState extends State<_FeaturedUnits> {
+class _HomeUnitsGridState extends State<_HomeUnitsGrid> {
   late final Future<Result<Paginated<Unit>>> _future;
 
   @override
   void initState() {
     super.initState();
     _future = GetUnits(context.read<CatalogRepository>())(
-      const GetUnitsParams(status: UnitStatus.available, page: 1, pageSize: 6),
+      const GetUnitsParams(status: UnitStatus.available, page: 1, pageSize: 4),
     );
   }
 
@@ -799,6 +865,9 @@ class _FeaturedUnitsState extends State<_FeaturedUnits> {
           err: (_) => const <Unit>[],
         );
         if (units.isEmpty) return const SizedBox.shrink();
+
+        final display = units.take(4).toList();
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -809,19 +878,36 @@ class _FeaturedUnitsState extends State<_FeaturedUnits> {
                 onViewAll: () => context.go('/units'),
               ),
             ),
-            SizedBox(
-              height: 320,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                itemCount: units.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(width: AppSpacing.md),
-                itemBuilder: (context, i) => UnitCard(
-                  unit: units[i],
-                  width: 290,
-                  onTap: () => context.push('/units/${units[i].id}'),
-                ),
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Column(
+                children: [
+                  for (int row = 0;
+                      row < (display.length / 2).ceil();
+                      row++) ...[
+                    if (row > 0) const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        for (int col = 0; col < 2; col++) ...[
+                          if (col > 0)
+                            const SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: row * 2 + col < display.length
+                                ? _HomeUnitCard(
+                                    unit: display[row * 2 + col],
+                                    onTap: () => context.push(
+                                      '/units/${display[row * 2 + col].id}',
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
           ],
@@ -831,10 +917,377 @@ class _FeaturedUnitsState extends State<_FeaturedUnits> {
   }
 }
 
-/// Home-only project showcase card: an IMAGE-ONLY overlay card (no white body)
-/// — full cover image with a bottom scrim and the featured/city/title/units
-/// composed on top, like the website's selected-project slider. Distinct from
-/// the /projects list [ProjectCard]; that one is unchanged.
+/// Compact card for the 2-column home grid: 125px image, tight content block
+/// (type + price, location, specs). Only the favourite toggle is shown on-image
+/// (no compare button — keeps the grid clean).
+class _HomeUnitCard extends StatelessWidget {
+  const _HomeUnitCard({required this.unit, this.onTap});
+
+  final Unit unit;
+  final VoidCallback? onTap;
+
+  static const double _imageHeight = 125;
+
+  Color _statusColor(AppColorsExt c, UnitStatus s) => switch (s) {
+        UnitStatus.available => c.success,
+        UnitStatus.reserved => c.warning,
+        UnitStatus.sold => c.inkMuted,
+        UnitStatus.unknown => c.inkMuted,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = Localizations.localeOf(context).languageCode;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final l10n = context.l10n;
+
+    final projectName =
+        unit.project?.name.resolve(lang).trim() ?? '';
+    final city = unit.project?.city.trim() ?? '';
+
+    return LuxeCard(
+      onTap: onTap,
+      radius: AppRadii.lg,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Image ────────────────────────────────────────────────────────
+          SizedBox(
+            height: _imageHeight,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                AppNetworkImage(url: unit.coverImage),
+                const ImageScrim(),
+                // Availability badge — start (right in RTL).
+                if (unit.status != UnitStatus.unknown)
+                  PositionedDirectional(
+                    top: AppSpacing.xs,
+                    start: AppSpacing.xs,
+                    child: GlassPill(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color:
+                                  _statusColor(colors, unit.status),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xxs),
+                          Text(unit.status.label(l10n)),
+                        ],
+                      ),
+                    ),
+                  ),
+                // Heart — end (left in RTL).
+                PositionedDirectional(
+                  top: AppSpacing.xs,
+                  end: AppSpacing.xs,
+                  child: GlassCircle(
+                    child: FavoriteToggleButton(
+                      isProject: false,
+                      id: unit.id,
+                      dense: true,
+                    ),
+                  ),
+                ),
+                // Project name overlay.
+                if (projectName.isNotEmpty)
+                  PositionedDirectional(
+                    bottom: AppSpacing.xs,
+                    start: AppSpacing.xs,
+                    end: AppSpacing.xs,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.apartment_rounded,
+                          size: 11,
+                          color: AppPalette.gold300,
+                        ),
+                        const SizedBox(width: 2),
+                        Expanded(
+                          child: Text(
+                            projectName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style:
+                                theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          // ── Content ──────────────────────────────────────────────────────
+          Container(
+            width: double.infinity,
+            color: Color.lerp(
+                colors.surface, colors.surfaceSoft, 0.5),
+            padding: const EdgeInsets.all(AppSpacing.sm),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        unit.type,
+                        style:
+                            theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: colors.inkStrong,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    PriceText(
+                      unit.price,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                if (city.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 11,
+                        color: colors.brandGold,
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          city,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: colors.inkMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: AppSpacing.xs),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: 2,
+                  children: [
+                    if (unit.bedrooms > 0)
+                      _MiniSpec(
+                        icon: Icons.bed_rounded,
+                        value: '${unit.bedrooms}',
+                      ),
+                    if (unit.bathrooms > 0)
+                      _MiniSpec(
+                        icon: Icons.bathtub_rounded,
+                        value: '${unit.bathrooms}',
+                      ),
+                    if (unit.area > 0)
+                      _MiniSpec(
+                        icon: Icons.square_foot_rounded,
+                        value: l10n.areaValue('${unit.area}'),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniSpec extends StatelessWidget {
+  const _MiniSpec({required this.icon, required this.value});
+
+  final IconData icon;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: colors.brandGold),
+        const SizedBox(width: 2),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: colors.inkStrong,
+                fontSize: 11,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── CTA Band (horizontal, compact) ──────────────────────────────────────────
+
+class _HomeCtaBand extends StatelessWidget {
+  const _HomeCtaBand();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Padding(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppRadii.xl),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            boxShadow: colors.shadowLift,
+          ),
+          child: Stack(
+            children: [
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: Alignment(0.64, -1.0),
+                      radius: 1.5,
+                      colors: [_webNavyLight, _webNavyMid, _webNavyDeep],
+                      stops: [0.0, 0.58, 1.0],
+                    ),
+                  ),
+                ),
+              ),
+              const Positioned.fill(
+                  child: IgnorePointer(child: _DotTexture())),
+              // Gold hairline accent at the top.
+              Positioned(
+                top: 0,
+                left: AppSpacing.xxl,
+                right: AppSpacing.xxl,
+                child: Container(
+                  height: 1,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppPalette.gold400.withValues(alpha: 0.0),
+                        AppPalette.gold400.withValues(alpha: 0.55),
+                        AppPalette.gold400.withValues(alpha: 0.0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.lg,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // START (right in RTL): text content.
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.homeCtaTitle,
+                            style:
+                                theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: AppSpacing.xxs),
+                          Text(
+                            l10n.homeCtaSubtitle,
+                            style:
+                                theme.textTheme.bodySmall?.copyWith(
+                              color: Colors.white
+                                  .withValues(alpha: 0.72),
+                              height: 1.4,
+                            ),
+                            maxLines: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.md),
+                    // END (left in RTL): gold action button.
+                    AppButton(
+                      label: l10n.homeCtaAction,
+                      icon: Icons.headset_mic_rounded,
+                      variant: AppButtonVariant.gold,
+                      size: AppButtonSize.small,
+                      onPressed: () => context.push('/chat'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Dot texture ─────────────────────────────────────────────────────────────
+
+class _DotTexture extends StatelessWidget {
+  const _DotTexture();
+
+  @override
+  Widget build(BuildContext context) =>
+      const CustomPaint(painter: _DotPainter(), child: SizedBox.expand());
+}
+
+class _DotPainter extends CustomPainter {
+  const _DotPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.05);
+    const step = 22.0;
+    for (var y = 6.0; y < size.height; y += step) {
+      for (var x = 6.0; x < size.width; x += step) {
+        canvas.drawCircle(Offset(x, y), 1, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DotPainter oldDelegate) => false;
+}
+
+// ─── Home project card ────────────────────────────────────────────────────────
+
+/// Full-image overlay card for the featured-projects carousel. Distinct from
+/// the /projects list ProjectCard — image-only with badge + location + title +
+/// units pill composed on top.
 class _HomeProjectCard extends StatelessWidget {
   const _HomeProjectCard({required this.project, this.onTap});
 
@@ -872,6 +1325,7 @@ class _HomeProjectCard extends StatelessWidget {
             children: [
               AppNetworkImage(url: project.coverImage),
               const ImageScrim(),
+              // "مميز" badge — start (right in RTL).
               if (project.featured)
                 PositionedDirectional(
                   top: AppSpacing.sm,
@@ -880,20 +1334,18 @@ class _HomeProjectCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            color: AppPalette.gold400,
-                            shape: BoxShape.circle,
-                          ),
+                        const Icon(
+                          Icons.star_rounded,
+                          color: AppPalette.gold300,
+                          size: 13,
                         ),
-                        const SizedBox(width: AppSpacing.xs),
+                        const SizedBox(width: AppSpacing.xxs),
                         Text(l10n.featuredBadge),
                       ],
                     ),
                   ),
                 ),
+              // Heart — end (left in RTL).
               PositionedDirectional(
                 top: AppSpacing.xs,
                 end: AppSpacing.xs,
@@ -905,6 +1357,7 @@ class _HomeProjectCard extends StatelessWidget {
                   ),
                 ),
               ),
+              // Location + title + units row — bottom overlay.
               PositionedDirectional(
                 bottom: AppSpacing.lg,
                 start: AppSpacing.lg,
@@ -927,8 +1380,10 @@ class _HomeProjectCard extends StatelessWidget {
                               city,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: Colors.white.withValues(alpha: 0.9),
+                              style: theme.textTheme.labelMedium
+                                  ?.copyWith(
+                                color: Colors.white
+                                    .withValues(alpha: 0.9),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -949,6 +1404,7 @@ class _HomeProjectCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.sm),
                     Row(
                       children: [
+                        // Units pill — start (right in RTL).
                         GlassPill(
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -967,12 +1423,19 @@ class _HomeProjectCard extends StatelessWidget {
                           ),
                         ),
                         const Spacer(),
-                        Icon(
-                          rtl
-                              ? Icons.chevron_left_rounded
-                              : Icons.chevron_right_rounded,
-                          color: Colors.white,
-                          size: 22,
+                        // Navigation arrow — end (left in RTL).
+                        GlassCircle(
+                          child: SizedBox(
+                            width: 34,
+                            height: 34,
+                            child: Icon(
+                              rtl
+                                  ? Icons.chevron_left_rounded
+                                  : Icons.chevron_right_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
                         ),
                       ],
                     ),

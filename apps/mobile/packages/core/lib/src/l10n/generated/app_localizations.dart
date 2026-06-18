@@ -542,6 +542,18 @@ abstract class AppLocalizations {
   /// **'Explore projects'**
   String get homeExploreProjects;
 
+  /// No description provided for @homeGuestGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get homeGuestGreeting;
+
+  /// No description provided for @homeGuestSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discover the best projects and units'**
+  String get homeGuestSubtitle;
+
   /// No description provided for @homeGreeting.
   ///
   /// In en, this message translates to:

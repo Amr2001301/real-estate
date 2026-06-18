@@ -82,6 +82,8 @@
   "homeFilterClearSelection": "مسح الاختيار",
   "homeFeaturedProjects": "مشاريع مميّزة",
   "homeExploreProjects": "استكشف المشاريع",
+  "homeGuestGreeting": "مرحبًا بك",
+  "homeGuestSubtitle": "اكتشف أفضل المشاريع والوحدات",
   "homeGreeting": "مرحبًا، {name}",
   "@homeGreeting": { "placeholders": { "name": { "type": "String" } } },
   "homeOwnerRole": "عميل · مالك وحدة",

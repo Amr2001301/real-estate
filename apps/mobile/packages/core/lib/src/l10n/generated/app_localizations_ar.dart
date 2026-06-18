@@ -235,6 +235,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get homeExploreProjects => 'استكشف المشاريع';
 
   @override
+  String get homeGuestGreeting => 'مرحبًا بك';
+
+  @override
+  String get homeGuestSubtitle => 'اكتشف أفضل المشاريع والوحدات';
+
+  @override
   String homeGreeting(String name) {
     return 'مرحبًا، $name';
   }

@@ -10,17 +10,44 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.sm),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
-            child: Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            child: Text(
+              title,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
           if (onViewAll != null)
-            TextButton(
-              onPressed: onViewAll,
-              child: Text(context.l10n.viewAll),
+            GestureDetector(
+              onTap: onViewAll,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.viewAll,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colors.brandGold,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.xxs),
+                  Icon(
+                    Directionality.of(context) == TextDirection.rtl
+                        ? Icons.chevron_left_rounded
+                        : Icons.chevron_right_rounded,
+                    size: 18,
+                    color: colors.brandGold,
+                  ),
+                ],
+              ),
             ),
         ],
       ),

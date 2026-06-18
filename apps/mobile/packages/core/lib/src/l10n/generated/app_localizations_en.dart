@@ -238,6 +238,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get homeExploreProjects => 'Explore projects';
 
   @override
+  String get homeGuestGreeting => 'Welcome';
+
+  @override
+  String get homeGuestSubtitle => 'Discover the best projects and units';
+
+  @override
   String homeGreeting(String name) {
     return 'Hi, $name';
   }
