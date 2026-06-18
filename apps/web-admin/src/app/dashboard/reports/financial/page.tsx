@@ -4,6 +4,7 @@ import {
   FileText, DollarSign, Clock, AlertTriangle,
   CalendarDays, CreditCard, Wallet, ReceiptText,
   CheckCircle2, XCircle, BadgeCheck, Activity, Bookmark, Coins, FileWarning,
+  TrendingUp, CalendarRange,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
@@ -69,26 +70,21 @@ function decimal(v: string | number | null | undefined): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
-
 function daysOverdue(dueDate: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(dueDate).getTime()) / 86_400_000));
 }
-
 function formatDaysLabel(days: number): string {
   if (days === 0) return 'اليوم';
   if (days === 1) return 'يوم';
   if (days <= 10) return `${days} أيام`;
   return `${days} يوم`;
 }
-
 function getDepositCustomer(d: FinancialDepositRow): string {
   return d.contract?.customer?.fullName ?? d.reservation?.client?.fullName ?? d.reservation?.lead?.fullName ?? '—';
 }
-
 function getDepositUnit(d: FinancialDepositRow): string {
   return d.contract?.unit?.code ?? d.reservation?.unit?.code ?? '—';
 }
-
 function buildApiUrl(p: { dateFrom?: string; dateTo?: string; projectId?: string; q?: string; type?: string }): string {
   const params = new URLSearchParams();
   if (p.projectId) params.set('projectId', p.projectId);
@@ -104,9 +100,11 @@ function buildApiUrl(p: { dateFrom?: string; dateTo?: string; projectId?: string
 
 function SectionDivider({ icon, label }: { icon: ReactNode; label: string }) {
   return (
-    <div className="flex items-center gap-2 pt-1">
-      <span className="[&_svg]:h-3.5 [&_svg]:w-3.5 text-slate-400 shrink-0">{icon}</span>
-      <span className="text-xs font-semibold text-slate-500 whitespace-nowrap">{label}</span>
+    <div className="flex items-center gap-2.5 pt-1">
+      <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-brand-50 text-brand-600 shrink-0 [&_svg]:h-3 [&_svg]:w-3">
+        {icon}
+      </span>
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 whitespace-nowrap">{label}</span>
       <div className="flex-1 h-px bg-hairline" />
     </div>
   );
@@ -200,7 +198,7 @@ function OverdueTable({ rows }: { rows: FinancialInstallmentRow[] }) {
         </thead>
         <tbody className="divide-y divide-hairline">
           {rows.map((row) => {
-            const c = row.plan.contract;
+            const c    = row.plan.contract;
             const days = daysOverdue(row.dueDate);
             return (
               <tr key={row.id} className="hover:bg-surface-muted/40 transition-colors align-middle">
@@ -290,7 +288,7 @@ export default async function FinancialReportsPage({
   const projects = projectsRes.data?.data ?? [];
   const cmpS     = cmpDashRes.data?.summary;
 
-  // Primary financial values (unchanged calculations)
+  // Primary financial values
   const collectedVerified    = decimal(s?.totalCollectedVerified ?? s?.totalCollected);
   const collectedAll         = decimal(s?.totalCollectedAll ?? s?.totalCollected);
   const collectedUnverified  = decimal(s?.totalCollectedUnverified ?? String(collectedAll - collectedVerified));
@@ -299,6 +297,10 @@ export default async function FinancialReportsPage({
   const overdueCountComputed = s?.overdueInstallmentCountComputed ?? s?.overdueInstallmentCount ?? 0;
   const dueSoon              = decimal(s?.dueSoonAmount);
   const contractVal          = decimal(s?.totalContractValue);
+
+  // Collection rate
+  const collectionRate     = contractVal > 0 ? Math.round((collectedVerified / contractVal) * 100) : 0;
+  const overdueRate        = contractVal > 0 ? ((overdueComputed / contractVal) * 100).toFixed(1) : '0';
 
   // Comparison deltas
   const contractDelta  = cmpS ? computeDelta(contractVal,       decimal(cmpS.totalContractValue)) : undefined;
@@ -311,9 +313,13 @@ export default async function FinancialReportsPage({
   const booking          = dash?.booking;
   const liabilities      = dash?.liabilities;
   const docsHealth       = dash?.documentsHealth;
+  const forecast         = dash?.cashflowForecast;
   const hasAdvancedFilters = !!(sp.q || sp.type || sp.projectId);
   const showFilters        = hasAdvancedFilters || sp.showFilters === '1';
   const projectOptions     = projects.map((p) => ({ id: p.id, name: tx(p.name) }));
+
+  // Aging max for relative bar widths
+  const agingMax = Math.max(1, ...aging.map((b) => decimal(b.amount)));
 
   return (
     <div className="space-y-5">
@@ -340,10 +346,7 @@ export default async function FinancialReportsPage({
         }
       />
 
-      {/* ── Tabs ─────────────────────────────────────────────────────────── */}
       <ReportsTabs active="financial" />
-
-      {/* ── Unified period + advanced filters ─────────────────────────────── */}
       <FinancialFilterBar
         defaultMode={mode as PeriodMode}
         defaultMonth={month}
@@ -359,7 +362,6 @@ export default async function FinancialReportsPage({
         projects={projectOptions}
       />
 
-      {/* ── Error ────────────────────────────────────────────────────────── */}
       {dashRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           {dashRes.error}
@@ -367,8 +369,69 @@ export default async function FinancialReportsPage({
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
-          1 — Primary KPI cards
+          1 — Primary KPI command strip
       ════════════════════════════════════════════════════════════════════ */}
+
+      {/* Collection efficiency hero bar */}
+      {contractVal > 0 && (
+        <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-inset ring-emerald-200/40">
+                <TrendingUp className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">كفاءة التحصيل</p>
+                <div className="flex items-baseline gap-2 mt-0.5">
+                  <span className={cn(
+                    'text-3xl font-black tabular-nums leading-none tracking-tight',
+                    collectionRate >= 75 ? 'text-emerald-700' : collectionRate >= 50 ? 'text-amber-700' : 'text-danger-700',
+                  )}>
+                    {collectionRate}%
+                  </span>
+                  <span className="text-xs text-slate-400">من قيمة العقود محصّلة</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="flex-1 min-w-0">
+              <div className="h-3 rounded-full bg-slate-100 overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full rounded-full transition-all',
+                    collectionRate >= 75 ? 'bg-emerald-500' : collectionRate >= 50 ? 'bg-amber-400' : 'bg-danger-500',
+                  )}
+                  style={{ width: `${Math.min(100, collectionRate)}%` }}
+                />
+              </div>
+              <div className="flex justify-between mt-1">
+                <span className="text-[10px] text-slate-400">0%</span>
+                <span className="text-[10px] text-slate-400">100%</span>
+              </div>
+            </div>
+
+            {/* Risk indicator */}
+            <div className="flex items-center gap-4 shrink-0">
+              <div className="text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">نسبة المتأخر</p>
+                <p className={cn('text-lg font-black tabular-nums', overdueComputed > 0 ? 'text-danger-700' : 'text-success-700')}>
+                  {overdueRate}%
+                </p>
+              </div>
+              <div className="w-px h-8 bg-hairline" />
+              <div className="text-center">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">المتبقي</p>
+                <p className="text-lg font-black tabular-nums text-slate-700">
+                  {contractVal > 0 ? (100 - collectionRate) : 0}%
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Primary KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <PrimaryKpiCard
           tone="brand" label="إجمالي قيمة العقود" icon={<FileText />}
@@ -395,20 +458,22 @@ export default async function FinancialReportsPage({
         />
       </div>
 
-      {/* Secondary stats strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {[
-          { label: 'المحصّل هذا الشهر',       value: formatCurrency(s?.collectedThisMonth ?? 0), cls: 'text-success-700', ltr: true },
-          { label: 'المستحق هذا الشهر',       value: formatCurrency(s?.dueThisMonth ?? 0),       cls: 'text-amber-600',  ltr: true },
-          { label: 'عدد العقود',              value: (s?.contractCount ?? 0).toLocaleString('ar-EG'),              cls: 'text-slate-900', ltr: false },
-          { label: 'عدد الدفعات',             value: (s?.depositCount ?? 0).toLocaleString('ar-EG'),               cls: 'text-slate-900', ltr: false },
-          { label: 'أقساط متأخرة (محسوبة)', value: overdueCountComputed.toLocaleString('ar-EG'),                   cls: 'text-danger-700', ltr: false },
-        ].map((item) => (
-          <div key={item.label} className="bg-surface rounded-xl border border-hairline shadow-xs px-4 py-3.5">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 leading-tight">{item.label}</p>
-            <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)} dir={item.ltr ? 'ltr' : undefined}>{item.value}</p>
-          </div>
-        ))}
+      {/* Secondary stats command strip */}
+      <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
+          {[
+            { label: 'المحصّل هذا الشهر',       value: formatCurrency(s?.collectedThisMonth ?? 0), cls: 'text-success-700', ltr: true },
+            { label: 'المستحق هذا الشهر',       value: formatCurrency(s?.dueThisMonth ?? 0),       cls: 'text-amber-600',  ltr: true },
+            { label: 'عدد العقود',              value: (s?.contractCount ?? 0).toLocaleString('ar-EG'),              cls: 'text-slate-900', ltr: false },
+            { label: 'عدد الدفعات',             value: (s?.depositCount ?? 0).toLocaleString('ar-EG'),               cls: 'text-slate-900', ltr: false },
+            { label: 'أقساط متأخرة (محسوبة)', value: overdueCountComputed.toLocaleString('ar-EG'),                   cls: 'text-danger-700', ltr: false },
+          ].map((item) => (
+            <div key={item.label} className="bg-surface px-4 py-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1 leading-tight">{item.label}</p>
+              <p className={cn('text-lg font-bold tabular-nums leading-tight', item.cls)} dir={item.ltr ? 'ltr' : undefined}>{item.value}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -490,11 +555,54 @@ export default async function FinancialReportsPage({
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
+          2B — Cashflow Forecast (30 / 60 / 90 days)
+      ════════════════════════════════════════════════════════════════════ */}
+      {forecast && (forecast.next30 > 0 || forecast.next3160 > 0 || forecast.next6190 > 0) && (
+        <>
+          <SectionDivider icon={<CalendarRange />} label="توقعات التحصيل (30 · 60 · 90 يومًا)" />
+
+          <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+            <div className="flex items-center gap-2.5 px-5 py-3 border-b border-hairline bg-canvas/40">
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                <CalendarRange className="h-3.5 w-3.5" />
+              </span>
+              <div>
+                <p className="text-[13px] font-bold text-slate-800">الأقساط القادمة</p>
+                <p className="text-[11px] text-slate-400">مجموع الأقساط PENDING المستحقة في الفترة المحددة</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-hairline">
+              {[
+                { label: 'خلال 30 يومًا', amount: forecast.next30,   cls: 'text-brand-700',  bg: 'bg-brand-400',   bucketColor: 'from-brand-50 to-brand-100/60' },
+                { label: '31 – 60 يومًا', amount: forecast.next3160, cls: 'text-amber-700',  bg: 'bg-amber-400',   bucketColor: 'from-amber-50 to-amber-100/60' },
+                { label: '61 – 90 يومًا', amount: forecast.next6190, cls: 'text-violet-700', bg: 'bg-violet-400',  bucketColor: 'from-violet-50 to-violet-100/60' },
+              ].map((b) => {
+                const total = forecast.next30 + forecast.next3160 + forecast.next6190;
+                const pct   = total > 0 ? (b.amount / total) * 100 : 0;
+                return (
+                  <div key={b.label} className={cn('bg-gradient-to-br px-5 py-5', b.bucketColor)}>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">{b.label}</p>
+                    <p className={cn('text-[22px] font-black tabular-nums leading-none tracking-tight whitespace-nowrap', b.cls)} dir="ltr">
+                      {formatCurrency(b.amount)}
+                    </p>
+                    <div className="mt-3 h-1.5 rounded-full bg-white/70 overflow-hidden">
+                      <div className={cn('h-full rounded-full', b.bg)} style={{ width: `${pct}%` }} />
+                    </div>
+                    <p className="text-[10px] text-slate-400 mt-1">{pct.toFixed(0)}% من إجمالي التوقعات</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════
           3 — Receivables & Overdue Risk
       ════════════════════════════════════════════════════════════════════ */}
       <SectionDivider icon={<AlertTriangle />} label="الذمم المدينة والمتأخرات" />
 
-      {/* Receivables summary tile row */}
+      {/* Receivables summary */}
       <div className="bg-surface border border-hairline rounded-2xl shadow-xs px-5 py-4">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
@@ -514,7 +622,7 @@ export default async function FinancialReportsPage({
         </p>
       </div>
 
-      {/* Aging buckets */}
+      {/* Aging buckets — enhanced with relative bars */}
       <Card className="overflow-hidden">
         <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-hairline">
           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-50 text-danger-600">
@@ -524,6 +632,11 @@ export default async function FinancialReportsPage({
             <CardTitle className="text-sm font-semibold text-slate-800">أعمار المتأخرات</CardTitle>
             <p className="text-xs text-slate-400 mt-0.5">توزيع المبالغ المتأخرة حسب عمر الدين</p>
           </div>
+          {aging.some((b) => b.count > 0) && (
+            <span className="text-xs text-slate-400 shrink-0 tabular-nums">
+              {formatCurrency(aging.reduce((s, b) => s + decimal(b.amount), 0))} إجمالي
+            </span>
+          )}
         </CardHeader>
         <CardBody>
           {aging.length === 0 || aging.every((b) => b.count === 0) ? (
@@ -532,29 +645,33 @@ export default async function FinancialReportsPage({
               <p className="text-sm text-slate-400">لا توجد متأخرات</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="space-y-3">
               {aging.map((b) => {
-                const isHigh = b.label === '90+' || b.label === '61-90';
+                const isHigh  = b.label === '90+' || b.label === '61-90';
+                const active  = b.count > 0;
+                const barPct  = (decimal(b.amount) / agingMax) * 100;
+                const barCls  = !active ? 'bg-slate-100' : isHigh ? 'bg-danger-400' : 'bg-amber-300';
+                const valCls  = !active ? 'text-slate-300' : isHigh ? 'text-danger-700' : 'text-amber-700';
+                const borderCls = !active ? 'border-hairline opacity-50'
+                  : isHigh ? 'border-danger-200 bg-danger-50/30'
+                  : 'border-amber-200 bg-amber-50/20';
                 return (
-                  <div key={b.label} className={cn(
-                    'rounded-xl border px-4 py-3',
-                    b.count > 0 && isHigh  ? 'border-danger-200 bg-danger-50/40'
-                      : b.count > 0        ? 'border-amber-200 bg-amber-50/30'
-                      : 'border-hairline opacity-50',
-                  )}>
-                    <p className={cn(
-                      'text-[10px] font-semibold uppercase tracking-wide mb-1 leading-tight',
-                      b.count > 0 ? 'text-slate-500' : 'text-slate-400',
-                    )}>
-                      {AGING_LABELS[b.label] ?? b.label}
-                    </p>
-                    <p className={cn(
-                      'text-lg font-bold tabular-nums leading-tight whitespace-nowrap',
-                      b.count > 0 && isHigh ? 'text-danger-700' : b.count > 0 ? 'text-amber-700' : 'text-slate-400',
-                    )} dir="ltr">
-                      {formatCurrency(b.amount)}
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">{b.count.toLocaleString('ar-EG')} قسط</p>
+                  <div key={b.label} className={cn('rounded-xl border px-4 py-3', borderCls)}>
+                    <div className="flex items-center justify-between gap-4 mb-2">
+                      <p className={cn('text-[10px] font-bold uppercase tracking-widest', active ? 'text-slate-500' : 'text-slate-400')}>
+                        {AGING_LABELS[b.label] ?? b.label}
+                      </p>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-[11px] text-slate-400 tabular-nums">{b.count.toLocaleString('ar-EG')} قسط</span>
+                        <span className={cn('text-sm font-bold tabular-nums whitespace-nowrap', valCls)} dir="ltr">
+                          {formatCurrency(b.amount)}
+                        </span>
+                      </div>
+                    </div>
+                    {/* Relative progress bar */}
+                    <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all', barCls)} style={{ width: `${barPct}%` }} />
+                    </div>
                   </div>
                 );
               })}
@@ -563,7 +680,7 @@ export default async function FinancialReportsPage({
         </CardBody>
       </Card>
 
-      {/* Overdue installments — all rows with scroll */}
+      {/* Overdue installments table */}
       <Card className="overflow-hidden">
         <CardHeader className="flex items-center gap-2.5 px-5 py-3.5 border-b border-danger-100 bg-danger-50/30">
           <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-danger-100 text-danger-600">
@@ -759,7 +876,6 @@ export default async function FinancialReportsPage({
                 </div>
               ))}
             </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
               {[
                 {

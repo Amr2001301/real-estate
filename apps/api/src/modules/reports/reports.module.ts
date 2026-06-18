@@ -193,6 +193,47 @@ class ReportsService {
     );
   }
 
+  async salesFunnel(dateFrom?: string, dateTo?: string) {
+    const dateCond = {
+      ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+      ...(dateTo ? { lte: new Date(dateTo) } : {}),
+    };
+    const hasDate = !!(dateFrom || dateTo);
+    const dateWhere = hasDate ? { where: { createdAt: dateCond } } : undefined;
+    const [leads, visits, reservations, contracts] = await this.prisma.$transaction([
+      this.prisma.lead.count(dateWhere),
+      this.prisma.visitRequest.count(dateWhere),
+      this.prisma.reservation.count(dateWhere),
+      this.prisma.contract.count(dateWhere),
+    ]);
+    return { leads, visits, reservations, contracts };
+  }
+
+  async brokerLeaderboard(dateFrom?: string, dateTo?: string) {
+    const conditions: string[] = ["bc.status IN ('APPROVED', 'PAID')"];
+    if (dateFrom) conditions.push(`bc."earnedAt" >= '${dateFrom.replace(/[^0-9T:Z.-]/g, '')}'`);
+    if (dateTo)   conditions.push(`bc."earnedAt" <= '${dateTo.replace(/[^0-9T:Z.-]/g, '')}T23:59:59.999Z'`);
+    const where = `WHERE ${conditions.join(' AND ')}`;
+    return this.prisma.$queryRawUnsafe<Array<{
+      brokerId: string;
+      brokerName: string;
+      commissionAmount: number;
+      count: number;
+    }>>(`
+      SELECT
+        u.id                                           AS "brokerId",
+        u."fullName"                                   AS "brokerName",
+        COALESCE(SUM(bc."netAmount"), 0)::float        AS "commissionAmount",
+        COUNT(bc.id)::int                              AS count
+      FROM "BrokerCommission" bc
+      JOIN "User" u ON u.id = bc."brokerId"
+      ${where}
+      GROUP BY u.id, u."fullName"
+      ORDER BY "commissionAmount" DESC
+      LIMIT 10
+    `);
+  }
+
   async salesTrend(year: number, projectId?: string) {
     const safeYear = Math.floor(year);
     const safeProjectId = projectId?.replace(/[^a-zA-Z0-9-]/g, '');
@@ -857,6 +898,9 @@ class ReportsService {
     const weekEnd = new Date(
       todayUTC.getTime() + 7 * 24 * 60 * 60 * 1000,
     );
+    const in30 = new Date(todayUTC.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const in60 = new Date(todayUTC.getTime() + 60 * 24 * 60 * 60 * 1000);
+    const in90 = new Date(todayUTC.getTime() + 90 * 24 * 60 * 60 * 1000);
 
     // ── Installment filter blocks ──────────────────────────────────────────
     const instAnd: Prisma.InstallmentWhereInput[] = [];
@@ -1028,6 +1072,9 @@ class ReportsService {
       upcomingWeekRows,
       upcomingMonthRows,
       recentDeposits,
+      forecast30Agg,
+      forecast3160Agg,
+      forecast6190Agg,
     ] = await Promise.all([
       // ── KPI aggregates ──
       this.prisma.contract.aggregate({
@@ -1122,6 +1169,19 @@ class ReportsService {
             },
           },
         },
+      }),
+      // ── 30/60/90-day cashflow forecast ──
+      this.prisma.installment.aggregate({
+        where: instWhere({ status: InstallmentStatus.PENDING, dueDate: { gte: todayUTC, lte: in30 } }),
+        _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: instWhere({ status: InstallmentStatus.PENDING, dueDate: { gt: in30, lte: in60 } }),
+        _sum: { amount: true },
+      }),
+      this.prisma.installment.aggregate({
+        where: instWhere({ status: InstallmentStatus.PENDING, dueDate: { gt: in60, lte: in90 } }),
+        _sum: { amount: true },
       }),
     ]);
 
@@ -1584,6 +1644,11 @@ class ReportsService {
       upcomingThisMonth: upcomingMonthRows,
       recentDeposits,
       cashflowTrend,
+      cashflowForecast: {
+        next30:   Number(forecast30Agg._sum.amount   ?? 0),
+        next3160: Number(forecast3160Agg._sum.amount ?? 0),
+        next6190: Number(forecast6190Agg._sum.amount ?? 0),
+      },
     };
   }
 
@@ -2227,6 +2292,26 @@ class ReportsController {
   ) {
     const y = year ? parseInt(year, 10) : new Date().getFullYear();
     return this.svc.salesTrend(y, projectId);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:sales:read')
+  @Get('sales-funnel')
+  salesFunnel(
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.svc.salesFunnel(dateFrom, dateTo);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reports:sales:read')
+  @Get('broker-leaderboard')
+  brokerLeaderboard(
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    return this.svc.brokerLeaderboard(dateFrom, dateTo);
   }
 
   @Roles(UserRole.ADMIN)

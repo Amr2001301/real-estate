@@ -1720,6 +1720,7 @@ export interface FinancialDashboard {
   upcomingThisMonth: FinancialInstallmentRow[];
   recentDeposits: FinancialDepositRow[];
   cashflowTrend: CashflowTrendPoint[];
+  cashflowForecast?: { next30: number; next3160: number; next6190: number };
 }
 
 export type DocumentOwnerType =
