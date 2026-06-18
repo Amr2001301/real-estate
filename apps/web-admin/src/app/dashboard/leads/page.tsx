@@ -62,9 +62,9 @@ export default async function LeadsPage({
         </div>
       )}
 
-      <LeadPipeline leads={leads} counts={counts} />
+      <PipelineStatsBar totalLeads={totalLeads} wonCount={wonCount} counts={counts} />
 
-      <PipelineStatsBar totalLeads={totalLeads} wonCount={wonCount} />
+      <LeadPipeline leads={leads} counts={counts} />
     </div>
   );
 }

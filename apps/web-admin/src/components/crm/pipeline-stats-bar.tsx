@@ -2,12 +2,25 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { RefreshCw, TrendingUp, Users } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import type { LeadStage } from '@/lib/types';
+
+const STAGE_LABELS: Record<LeadStage, string> = {
+  NEW:         'جدد',
+  INTERESTED:  'مهتمون',
+  VISIT:       'زيارة',
+  NEGOTIATION: 'تفاوض',
+  WON:         'فوز',
+  LOST:        'خسارة',
+};
+
+const STAGE_ORDER: LeadStage[] = ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION', 'WON', 'LOST'];
 
 interface Props {
   totalLeads: number;
   wonCount: number;
+  counts: Partial<Record<LeadStage, number>>;
   className?: string;
 }
 
@@ -21,102 +34,68 @@ function relativeTime(date: Date): string {
   return `قبل ${Math.floor(hours / 24)} يوم`;
 }
 
-export function PipelineStatsBar({ totalLeads, wonCount, className }: Props) {
+export function PipelineStatsBar({ totalLeads, wonCount, counts, className }: Props) {
   const router = useRouter();
   const [loadedAt] = useState(() => new Date());
   const [, setTick] = useState(0);
 
-  // Re-render every minute so the relative time stays fresh.
   useEffect(() => {
     const t = window.setInterval(() => setTick((x) => x + 1), 60_000);
     return () => window.clearInterval(t);
   }, []);
 
-  const conversion =
-    totalLeads > 0 ? ((wonCount / totalLeads) * 100).toFixed(1) : '0.0';
+  const conversion = totalLeads > 0 ? ((wonCount / totalLeads) * 100).toFixed(1) : '0.0';
 
   return (
-    <div
-      className={cn(
-        'rounded-2xl border border-hairline bg-white shadow-soft px-5 py-3.5',
-        className,
-      )}
-    >
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => router.refresh()}
-            aria-label="تحديث البيانات"
-            title="تحديث البيانات"
-            className={cn(
-              'inline-flex h-9 w-9 items-center justify-center rounded-xl',
-              'bg-surface text-slate-600 ring-1 ring-inset ring-hairline shadow-xs',
-              'hover:text-brand-600 hover:bg-brand-50 hover:ring-brand-200',
-              'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40',
-            )}
-          >
-            <RefreshCw className="h-4 w-4" />
-          </button>
-          <span className="text-xs text-slate-500">
-            آخر تحديث: <span className="font-semibold text-slate-700">{relativeTime(loadedAt)}</span>
-          </span>
-        </div>
+    <div className={cn(
+      'flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-slate-200/80 bg-white px-5 py-3 shadow-xs',
+      className,
+    )}>
 
-        <div className="flex flex-wrap items-center gap-x-8 gap-y-2 text-sm">
-          <Stat
-            icon={<Users className="h-4 w-4" />}
-            label="إجمالي العملاء"
-            value={totalLeads.toLocaleString('ar-EG')}
-            tone="brand"
-          />
-          <span aria-hidden className="hidden sm:inline-block w-px h-6 bg-hairline" />
-          <Stat
-            icon={<TrendingUp className="h-4 w-4" />}
-            label="معدل التحويل"
-            value={`${conversion}%`}
-            tone="success"
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Stat({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  tone: 'brand' | 'success';
-}) {
-  return (
-    <div className="inline-flex items-center gap-2.5">
-      <span
-        className={cn(
-          'inline-flex h-8 w-8 items-center justify-center rounded-lg',
-          tone === 'brand'
-            ? 'bg-brand-50 text-brand-600'
-            : 'bg-success-50 text-success-600',
-        )}
-      >
-        {icon}
-      </span>
-      <div className="leading-tight">
-        <p className="text-2xs text-slate-500">{label}</p>
-        <p
-          className={cn(
-            'text-base font-bold tabular-nums tracking-tight',
-            tone === 'brand' ? 'text-slate-900' : 'text-success-700',
-          )}
+      {/* Refresh + time */}
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={() => router.refresh()}
+          aria-label="تحديث البيانات"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 ring-1 ring-inset ring-slate-200 hover:text-slate-700 hover:bg-slate-50 transition-colors focus-visible:outline-none"
         >
-          {value}
-        </p>
+          <RefreshCw className="h-3.5 w-3.5" />
+        </button>
+        <span className="text-xs text-slate-400">
+          آخر تحديث: <span className="font-semibold text-slate-600">{relativeTime(loadedAt)}</span>
+        </span>
       </div>
+
+      <span aria-hidden className="hidden sm:block w-px h-4 bg-slate-200" />
+
+      {/* Stage counts — all neutral, separator-delimited */}
+      <div className="flex items-center gap-0 text-xs text-slate-500 flex-wrap">
+        {STAGE_ORDER.map((key, i) => (
+          <span key={key} className="flex items-center">
+            {i > 0 && <span className="mx-2 text-slate-200 select-none">·</span>}
+            <span className="text-slate-400">{STAGE_LABELS[key]}</span>
+            <span className="font-bold text-slate-700 tabular-nums ms-1">{counts[key] ?? 0}</span>
+          </span>
+        ))}
+      </div>
+
+      <span aria-hidden className="hidden sm:block w-px h-4 bg-slate-200" />
+
+      {/* Totals */}
+      <div className="flex items-center gap-4 ms-auto shrink-0 text-xs">
+        <span className="text-slate-500">
+          إجمالي:{' '}
+          <span className="font-black text-slate-800 tabular-nums">
+            {totalLeads.toLocaleString('ar-EG')}
+          </span>
+        </span>
+        <span className="text-slate-500">
+          تحويل:{' '}
+          <span className="font-black text-slate-800 tabular-nums">{conversion}%</span>
+        </span>
+      </div>
+
     </div>
   );
 }
