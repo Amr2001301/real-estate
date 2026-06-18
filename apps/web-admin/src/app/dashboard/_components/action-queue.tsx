@@ -29,6 +29,16 @@ const TONE: Record<Tone, { icon: string; count: string; dot: string }> = {
   info:    { icon: 'bg-info-50 text-info-600',      count: 'text-info-700',    dot: 'bg-info-500'    },
 };
 
+// Maps active-item count → Tailwind grid-cols class so all cards sit in one row on lg
+const COL_CLS: Record<number, string> = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-2',
+  3: 'grid-cols-3',
+  4: 'grid-cols-2 lg:grid-cols-4',
+  5: 'grid-cols-3 lg:grid-cols-5',
+  6: 'grid-cols-3 lg:grid-cols-6',
+};
+
 interface ActionItem {
   key:         string;
   label:       string;
@@ -82,8 +92,10 @@ function buildItems(a: AlertData | null | undefined): ActionItem[] {
 }
 
 export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }) {
-  const items = buildItems(alerts);
-  const total = items.reduce((s, i) => s + i.value, 0);
+  const items       = buildItems(alerts);
+  const total       = items.reduce((s, i) => s + i.value, 0);
+  const activeItems = items.filter((i) => i.value > 0);
+  const clearedItems = items.filter((i) => i.value === 0);
 
   if (total === 0) {
     return (
@@ -96,6 +108,8 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
       </div>
     );
   }
+
+  const colCls = COL_CLS[activeItems.length] ?? 'grid-cols-3 lg:grid-cols-6';
 
   return (
     <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
@@ -115,62 +129,60 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
         <p className="text-[11px] text-slate-400 hidden sm:block">انقر على أي بند للانتقال مباشرةً</p>
       </div>
 
-      {/* 6-slot grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-hairline">
-        {items.map((item) => {
-          const t      = TONE[item.tone];
-          const active = item.value > 0;
-
+      {/* Active items — one row of equal cards */}
+      <div className={cn('grid gap-px bg-hairline', colCls)}>
+        {activeItems.map((item) => {
+          const t = TONE[item.tone];
           return (
-            <Link
-              key={item.key}
-              href={item.href as never}
-              className={cn('group block', !active && 'pointer-events-none')}
-            >
-              <div className={cn(
-                'bg-surface h-full px-4 py-5 flex flex-col justify-between gap-4 transition-colors duration-150',
-                active && 'hover:bg-slate-50/80',
-              )}>
+            <Link key={item.key} href={item.href as never} className="group block">
+              <div className="bg-surface h-full px-4 py-4 flex flex-col gap-2 hover:bg-slate-50/60 transition-colors duration-150">
 
-                {/* Top: icon + live dot */}
-                <div className="flex items-center justify-between">
+                {/* Icon (reading-start / right in RTL) + pulsing dot (end) */}
+                <div className="flex items-start justify-between gap-2">
                   <div className={cn(
                     'h-8 w-8 rounded-xl flex items-center justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
-                    active ? t.icon : 'bg-slate-50 text-slate-300',
+                    'transition-transform duration-150 group-hover:scale-110',
+                    t.icon,
                   )}>
                     {item.icon}
                   </div>
-                  {active && (
-                    <span className={cn('h-2 w-2 rounded-full animate-pulse shrink-0', t.dot)} />
-                  )}
+                  <span className={cn('h-2 w-2 rounded-full animate-pulse mt-1.5 shrink-0', t.dot)} />
                 </div>
 
-                {/* Bottom: count + label + description */}
-                <div className="flex flex-col gap-1.5">
-                  <p className={cn(
-                    'text-[30px] font-black tabular-nums leading-none tracking-tight',
-                    active ? t.count : 'text-slate-200',
-                  )}>
-                    {item.value}
-                  </p>
-                  <p className={cn(
-                    'text-[11px] font-bold leading-snug',
-                    active ? 'text-slate-800' : 'text-slate-300',
-                  )}>
-                    {item.label}
-                  </p>
-                  {active && (
-                    <p className="text-[10px] text-slate-400 leading-tight">
-                      {item.description}
-                    </p>
-                  )}
-                </div>
+                {/* Count */}
+                <p className={cn('text-[28px] font-black tabular-nums leading-none mt-1', t.count)}>
+                  {item.value}
+                </p>
+
+                {/* Label */}
+                <p className="text-[12px] font-bold text-slate-800 leading-snug">
+                  {item.label}
+                </p>
+
+                {/* Description */}
+                <p className="text-[11px] text-slate-400 leading-none mt-auto">
+                  {item.description}
+                </p>
 
               </div>
             </Link>
           );
         })}
       </div>
+
+      {/* Cleared items — compact footer */}
+      {clearedItems.length > 0 && (
+        <div className="px-5 py-2.5 border-t border-hairline bg-slate-50/40 flex items-center gap-x-4 gap-y-1 flex-wrap">
+          <span className="text-[11px] font-medium text-slate-400 shrink-0">مكتمل:</span>
+          {clearedItems.map((item) => (
+            <span key={item.key} className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
+              <CheckCircle2 className="h-3 w-3 text-success-500 shrink-0" />
+              {item.label}
+            </span>
+          ))}
+        </div>
+      )}
+
     </div>
   );
 }

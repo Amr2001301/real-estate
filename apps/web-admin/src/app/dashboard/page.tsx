@@ -151,6 +151,8 @@ interface CommandTile {
   valueCls: string;
   delta?:   string;
   deltaCls?: string;
+  icon:     ReactNode;
+  iconCls:  string;
 }
 
 function pctDelta(current: number, prev: number): number | null {
@@ -187,12 +189,19 @@ function RevenueCommandStrip({
     ? kpis.availableUnits + kpis.reservedUnits + kpis.soldUnits
     : null;
 
+  const rateIconCls = rate === null  ? 'bg-slate-100 text-slate-400'   :
+                      rate >= 70     ? 'bg-success-50 text-success-600' :
+                      rate >= 40     ? 'bg-amber-50 text-amber-600'     :
+                                        'bg-danger-50 text-danger-500';
+
   const tiles: CommandTile[] = [
     {
       label:    'إجمالي التعاقدات',
       value:    hasFin ? formatCompact(total) : '—',
       sub:      'القيمة الكلية للعقود',
       valueCls: 'text-slate-900',
+      icon:     <Building2 className="h-4 w-4" />,
+      iconCls:  'bg-slate-100 text-slate-600',
     },
     {
       label:    'محصّل',
@@ -205,6 +214,8 @@ function RevenueCommandStrip({
       deltaCls: collectionDeltaPct !== null && collectionDeltaPct >= 0
                   ? 'text-success-600'
                   : 'text-danger-600',
+      icon:     <TrendingUp className="h-4 w-4" />,
+      iconCls:  'bg-success-50 text-success-600',
     },
     {
       label:    'معدل التحصيل',
@@ -217,12 +228,16 @@ function RevenueCommandStrip({
                 rate >= 70     ? 'text-success-700' :
                 rate >= 40     ? 'text-brand-600'   :
                                   'text-danger-700',
+      icon:     <Activity className="h-4 w-4" />,
+      iconCls:  rateIconCls,
     },
     {
       label:    'متأخر',
       value:    hasFin ? formatCompact(overdue) : '—',
       sub:      hasFin && overdue > 0 ? 'تجاوزت الاستحقاق' : 'لا متأخرات',
       valueCls: hasFin && overdue > 0 ? 'text-danger-700' : 'text-slate-400',
+      icon:     <AlertCircle className="h-4 w-4" />,
+      iconCls:  hasFin && overdue > 0 ? 'bg-danger-50 text-danger-500' : 'bg-slate-100 text-slate-400',
     },
     {
       label:    'عقود الشهر',
@@ -235,6 +250,8 @@ function RevenueCommandStrip({
       deltaCls: contractsDelta !== null && contractsDelta >= 0
                   ? 'text-success-600'
                   : 'text-danger-600',
+      icon:     <CalendarDays className="h-4 w-4" />,
+      iconCls:  'bg-brand-50 text-brand-600',
     },
   ];
 
@@ -242,20 +259,27 @@ function RevenueCommandStrip({
     <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
         {tiles.map((tile) => (
-          <div key={tile.label} className="bg-surface px-5 py-5">
-            <p className="text-[11px] font-medium text-slate-400 mb-2 leading-none">{tile.label}</p>
-            <p className={cn(
-              'text-[22px] font-black tabular-nums leading-none tracking-tight',
-              tile.valueCls,
-            )}>
-              {tile.value}
-            </p>
-            <p className="text-[11px] text-slate-400 mt-2 leading-none">{tile.sub}</p>
-            {tile.delta && (
-              <p className={cn('text-[10px] font-semibold mt-1 leading-none', tile.deltaCls)}>
-                {tile.delta}
+          <div key={tile.label} className="bg-surface px-5 py-5 flex flex-col gap-3.5">
+            <div className="flex items-start justify-between gap-2">
+              <span className={cn(
+                'inline-flex h-8 w-8 items-center justify-center rounded-xl shrink-0 [&_svg]:h-4 [&_svg]:w-4',
+                tile.iconCls,
+              )}>
+                {tile.icon}
+              </span>
+              <p className="text-[11px] font-medium text-slate-400 text-end leading-snug">{tile.label}</p>
+            </div>
+            <div>
+              <p className={cn('text-[22px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
+                {tile.value}
               </p>
-            )}
+              <p className="text-[11px] text-slate-400 mt-2 leading-none">{tile.sub}</p>
+              {tile.delta && (
+                <p className={cn('text-[10px] font-semibold mt-1 leading-none', tile.deltaCls)}>
+                  {tile.delta}
+                </p>
+              )}
+            </div>
           </div>
         ))}
       </div>
