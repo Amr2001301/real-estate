@@ -24,6 +24,8 @@ class InstallmentsScreen extends StatefulWidget {
 }
 
 class _InstallmentsScreenState extends State<InstallmentsScreen> {
+  InstallmentStatus? _filter; // null = all
+
   @override
   void initState() {
     super.initState();
@@ -42,6 +44,40 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
       body: Column(
         children: [
           _InstallmentsHeader(displayName: displayName, l10n: l10n),
+
+          // ── Filter chips ────────────────────────────────────────────────
+          BlocBuilder<InstallmentsCubit, InstallmentsState>(
+            builder: (context, state) {
+              if (state.status != DataStatus.success) {
+                return const SizedBox.shrink();
+              }
+              return _FilterRow(
+                selected: _filter?.name,
+                items: [
+                  _FilterItem(key: null, label: l10n.filterAny),
+                  _FilterItem(
+                    key: InstallmentStatus.overdue.name,
+                    label: l10n.installmentStatusOverdue,
+                  ),
+                  _FilterItem(
+                    key: InstallmentStatus.pending.name,
+                    label: l10n.installmentStatusPending,
+                  ),
+                  _FilterItem(
+                    key: InstallmentStatus.paid.name,
+                    label: l10n.installmentStatusPaid,
+                  ),
+                ],
+                onSelect: (k) => setState(() {
+                  _filter = k == null
+                      ? null
+                      : InstallmentStatus.values.firstWhere((s) => s.name == k);
+                }),
+              );
+            },
+          ),
+
+          // ── List ────────────────────────────────────────────────────────
           Expanded(
             child: BlocBuilder<InstallmentsCubit, InstallmentsState>(
               builder: (context, state) {
@@ -61,21 +97,31 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
                       message: l10n.installmentsEmptyMessage,
                     );
                   case DataStatus.success:
-                    final rows = state.data!;
+                    final all = state.data!;
+                    final visible = _filter == null
+                        ? all
+                        : all.where((i) => i.status == _filter).toList();
                     return RefreshIndicator(
                       onRefresh: () => context.read<InstallmentsCubit>().load(),
                       child: ListView.separated(
                         padding: EdgeInsets.fromLTRB(
                           AppSpacing.lg,
-                          AppSpacing.lg,
+                          AppSpacing.md,
                           AppSpacing.lg,
                           AppSpacing.xl + MediaQuery.of(context).padding.bottom,
                         ),
-                        itemCount: rows.length,
+                        itemCount: visible.length + 1,
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.md),
-                        itemBuilder: (context, i) =>
-                            _InstallmentCard(installment: rows[i]),
+                        itemBuilder: (context, i) {
+                          if (i == 0) {
+                            return _InstallmentsSummary(
+                              installments: all,
+                              l10n: l10n,
+                            );
+                          }
+                          return _InstallmentCard(installment: visible[i - 1]);
+                        },
                       ),
                     );
                 }
@@ -176,23 +222,7 @@ class _InstallmentsHeader extends StatelessWidget {
                 children: [
                   _HeaderBackButton(),
                   const SizedBox(width: AppSpacing.md),
-                  // Container(
-                  //   width: 44,
-                  //   height: 44,
-                  //   decoration: BoxDecoration(
-                  //     color: Colors.white.withValues(alpha: 0.1),
-                  //     borderRadius: BorderRadius.circular(13),
-                  //     border: Border.all(
-                  //       color: AppPalette.gold400.withValues(alpha: 0.35),
-                  //     ),
-                  //   ),
-                  //   child: const Icon(
-                  //     AppIcons.installments,
-                  //     color: AppPalette.gold300,
-                  //     size: 22,
-                  //   ),
-                  // ),
-                  // const SizedBox(width: AppSpacing.md),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -249,6 +279,208 @@ class _HeaderBackButton extends StatelessWidget {
           size: 16,
         ),
       ),
+    );
+  }
+}
+
+// ── Summary card ──────────────────────────────────────────────────────────────
+
+class _InstallmentsSummary extends StatelessWidget {
+  const _InstallmentsSummary({required this.installments, required this.l10n});
+  final List<Installment> installments;
+  final AppLocalizations l10n;
+
+  static double _sum(Iterable<Installment> items) =>
+      items.fold(0.0, (acc, i) => acc + (double.tryParse(i.amount) ?? 0.0));
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+
+    final paid = installments
+        .where((i) => i.status == InstallmentStatus.paid)
+        .toList();
+    final overdue = installments
+        .where((i) => i.status == InstallmentStatus.overdue)
+        .length;
+    final pending = installments.length - paid.length - overdue;
+    final paidTotal = _sum(paid);
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_navyLight, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: _navyDeep.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.08),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Paid total
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.installmentStatusPaid,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            PriceFormatter.formatString(
+                              paidTotal.toStringAsFixed(0),
+                              languageCode: lang,
+                            ),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: AppPalette.gold300,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Text(
+                        '${installments.length} ${l10n.installmentsTitle}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Status breakdown
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SummaryCell(
+                        value: '${paid.length}',
+                        label: l10n.installmentStatusPaid,
+                        accent: const Color(0xFF4ADE80),
+                        theme: theme,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
+                    Expanded(
+                      child: _SummaryCell(
+                        value: '$overdue',
+                        label: l10n.installmentStatusOverdue,
+                        accent: const Color(0xFFF87171),
+                        theme: theme,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
+                    Expanded(
+                      child: _SummaryCell(
+                        value: '$pending',
+                        label: l10n.installmentStatusPending,
+                        accent: AppPalette.gold300,
+                        theme: theme,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryCell extends StatelessWidget {
+  const _SummaryCell({
+    required this.value,
+    required this.label,
+    required this.accent,
+    required this.theme,
+  });
+  final String value;
+  final String label;
+  final Color accent;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            color: accent,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.65),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -375,7 +607,7 @@ class _InstallmentCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Gradient strip: amount + contract + status
+          // ── Gradient strip
           SizedBox(
             height: 100,
             child: Stack(
@@ -404,7 +636,6 @@ class _InstallmentCard extends StatelessWidget {
                   padding: const EdgeInsets.all(AppSpacing.md),
                   child: Row(
                     children: [
-                      // Status icon tile
                       Container(
                         width: 52,
                         height: 52,
@@ -427,7 +658,6 @@ class _InstallmentCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // Amount
                             Text(
                               PriceFormatter.formatString(
                                 installment.amount,
@@ -442,7 +672,6 @@ class _InstallmentCard extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            // Contract number
                             if (installment.contractNumber != null)
                               Text(
                                 installment.contractNumber!,
@@ -456,7 +685,6 @@ class _InstallmentCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // Status pill
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
@@ -491,7 +719,7 @@ class _InstallmentCard extends StatelessWidget {
               AppSpacing.lg,
               AppSpacing.md,
               AppSpacing.lg,
-              AppSpacing.lg,
+              AppSpacing.md,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -584,7 +812,7 @@ class _InstallmentCard extends StatelessWidget {
                   ],
                 ),
 
-                // Payment method (if proof submitted)
+                // Payment method
                 if (installment.latestProof?.paymentMethod != null &&
                     installment.latestProof!.paymentMethod !=
                         PaymentMethod.unknown) ...[
@@ -773,6 +1001,83 @@ class _DateCell extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Filter row ────────────────────────────────────────────────────────────────
+
+class _FilterItem {
+  const _FilterItem({required this.key, required this.label});
+  final String? key;
+  final String label;
+}
+
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.items,
+    required this.selected,
+    required this.onSelect,
+  });
+  final List<_FilterItem> items;
+  final String? selected;
+  final void Function(String?) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, i) {
+          final item = items[i];
+          final active = item.key == selected;
+          return GestureDetector(
+            onTap: () => onSelect(item.key),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              decoration: BoxDecoration(
+                gradient: active
+                    ? const LinearGradient(
+                        colors: [_navyLight, _navyDeep],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: active ? null : colors.surface,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: active
+                      ? Colors.transparent
+                      : colors.hairline.withValues(alpha: 0.6),
+                ),
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: _navyDeep.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                item.label,
+                style: TextStyle(
+                  color: active ? Colors.white : colors.inkStrong,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

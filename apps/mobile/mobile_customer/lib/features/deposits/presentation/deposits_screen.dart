@@ -25,6 +25,8 @@ class DepositsScreen extends StatefulWidget {
 }
 
 class _DepositsScreenState extends State<DepositsScreen> {
+  DepositType? _filter; // null = all
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +45,44 @@ class _DepositsScreenState extends State<DepositsScreen> {
       body: Column(
         children: [
           _DepositsHeader(displayName: displayName, l10n: l10n),
+
+          // ── Filter chips ────────────────────────────────────────────────
+          BlocBuilder<DepositsCubit, DepositsState>(
+            builder: (context, state) {
+              if (state.status != DataStatus.success) {
+                return const SizedBox.shrink();
+              }
+              return _FilterRow(
+                selected: _filter?.name,
+                items: [
+                  _FilterItem(key: null, label: l10n.filterAny),
+                  _FilterItem(
+                    key: DepositType.bookingAmount.name,
+                    label: l10n.depositTypeBooking,
+                  ),
+                  _FilterItem(
+                    key: DepositType.downPayment.name,
+                    label: l10n.depositTypeDownPayment,
+                  ),
+                  _FilterItem(
+                    key: DepositType.installment.name,
+                    label: l10n.depositTypeInstallment,
+                  ),
+                  _FilterItem(
+                    key: DepositType.finalPayment.name,
+                    label: l10n.depositTypeFinal,
+                  ),
+                ],
+                onSelect: (k) => setState(() {
+                  _filter = k == null
+                      ? null
+                      : DepositType.values.firstWhere((t) => t.name == k);
+                }),
+              );
+            },
+          ),
+
+          // ── List ────────────────────────────────────────────────────────
           Expanded(
             child: BlocBuilder<DepositsCubit, DepositsState>(
               builder: (context, state) {
@@ -62,21 +102,31 @@ class _DepositsScreenState extends State<DepositsScreen> {
                       message: l10n.depositsEmptyMessage,
                     );
                   case DataStatus.success:
-                    final deposits = state.data!;
+                    final all = state.data!;
+                    final visible = _filter == null
+                        ? all
+                        : all.where((d) => d.type == _filter).toList();
                     return RefreshIndicator(
                       onRefresh: () => context.read<DepositsCubit>().load(),
                       child: ListView.separated(
                         padding: EdgeInsets.fromLTRB(
                           AppSpacing.lg,
-                          AppSpacing.lg,
+                          AppSpacing.md,
                           AppSpacing.lg,
                           AppSpacing.xl + MediaQuery.of(context).padding.bottom,
                         ),
-                        itemCount: deposits.length,
+                        itemCount: visible.length + 1,
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.md),
-                        itemBuilder: (context, i) =>
-                            _DepositCard(deposit: deposits[i]),
+                        itemBuilder: (context, i) {
+                          if (i == 0) {
+                            return _DepositsSummary(deposits: all, l10n: l10n);
+                          }
+                          return _DepositCard(
+                            deposit: visible[i - 1],
+                            l10n: l10n,
+                          );
+                        },
                       ),
                     );
                 }
@@ -131,14 +181,14 @@ class _DepositsHeader extends StatelessWidget {
           children: [
             const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
             PositionedDirectional(
-              start: 0,
+              end: 0,
               top: 0,
               child: Container(
                 width: 160,
                 height: 130,
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
-                    center: Alignment.topLeft,
+                    center: Alignment.topRight,
                     radius: 1.0,
                     colors: [
                       AppPalette.gold400.withValues(alpha: 0.09),
@@ -177,23 +227,7 @@ class _DepositsHeader extends StatelessWidget {
                 children: [
                   _HeaderBackButton(),
                   const SizedBox(width: AppSpacing.md),
-                  // Container(
-                  //   width: 44,
-                  //   height: 44,
-                  //   decoration: BoxDecoration(
-                  //     color: Colors.white.withValues(alpha: 0.1),
-                  //     borderRadius: BorderRadius.circular(13),
-                  //     border: Border.all(
-                  //       color: AppPalette.gold400.withValues(alpha: 0.35),
-                  //     ),
-                  //   ),
-                  //   child: const Icon(
-                  //     AppIcons.deposit,
-                  //     color: AppPalette.gold300,
-                  //     size: 22,
-                  //   ),
-                  // ),
-                  // const SizedBox(width: AppSpacing.md),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -254,13 +288,197 @@ class _HeaderBackButton extends StatelessWidget {
   }
 }
 
+// ── Summary card ──────────────────────────────────────────────────────────────
+
+class _DepositsSummary extends StatelessWidget {
+  const _DepositsSummary({required this.deposits, required this.l10n});
+  final List<Deposit> deposits;
+  final AppLocalizations l10n;
+
+  static double _sum(Iterable<Deposit> items) =>
+      items.fold(0.0, (acc, d) => acc + (double.tryParse(d.amount) ?? 0.0));
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final lang = Localizations.localeOf(context).languageCode;
+
+    final total = _sum(deposits);
+    final verified = deposits.where((d) => d.verified).length;
+    final pending = deposits.length - verified;
+
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [_navyLight, _navyDeep],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: _navyDeep.withValues(alpha: 0.25),
+            blurRadius: 18,
+            offset: const Offset(0, 6),
+          ),
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.08),
+            blurRadius: 24,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Total paid amount
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.depositPaidOn,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            PriceFormatter.formatString(
+                              total.toStringAsFixed(0),
+                              languageCode: lang,
+                            ),
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              color: AppPalette.gold300,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Text(
+                        '${deposits.length} ${l10n.accountDeposits}',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // Verified / Pending split
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SummaryCell(
+                        value: '$verified',
+                        label: l10n.depositVerified,
+                        accent: const Color(0xFF4ADE80),
+                        theme: theme,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: Colors.white.withValues(alpha: 0.15),
+                    ),
+                    Expanded(
+                      child: _SummaryCell(
+                        value: '$pending',
+                        label: l10n.depositPending,
+                        accent: const Color(0xFFFBBF24),
+                        theme: theme,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SummaryCell extends StatelessWidget {
+  const _SummaryCell({
+    required this.value,
+    required this.label,
+    required this.accent,
+    required this.theme,
+  });
+  final String value;
+  final String label;
+  final Color accent;
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            color: accent,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.65),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 // ── Deposit Card ──────────────────────────────────────────────────────────────
 
 class _DepositCard extends StatelessWidget {
-  const _DepositCard({required this.deposit});
+  const _DepositCard({required this.deposit, required this.l10n});
   final Deposit deposit;
+  final AppLocalizations l10n;
 
-  // Unique strip gradient per deposit type
   static List<Color> _stripColors(DepositType type) => switch (type) {
     DepositType.bookingAmount => [
       const Color(0xFF1B5E3F),
@@ -288,7 +506,6 @@ class _DepositCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final colors = context.appColors;
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
@@ -314,7 +531,7 @@ class _DepositCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Gradient strip: amount + type
+          // ── Gradient strip
           SizedBox(
             height: 92,
             child: Stack(
@@ -344,7 +561,6 @@ class _DepositCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Icon tile
                       Container(
                         width: 52,
                         height: 52,
@@ -392,7 +608,6 @@ class _DepositCard extends StatelessWidget {
                           ],
                         ),
                       ),
-                      // Verified / Pending badge
                       _VerifiedBadge(verified: deposit.verified, l10n: l10n),
                     ],
                   ),
@@ -407,12 +622,11 @@ class _DepositCard extends StatelessWidget {
               AppSpacing.lg,
               AppSpacing.md,
               AppSpacing.lg,
-              AppSpacing.lg,
+              AppSpacing.md,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Contract + unit row
                 if (deposit.contractNumber != null ||
                     deposit.unitCode != null) ...[
                   Row(
@@ -464,7 +678,6 @@ class _DepositCard extends StatelessWidget {
                   Divider(height: 1, color: colors.hairline),
                   const SizedBox(height: AppSpacing.sm),
                 ],
-                // Paid date
                 if (deposit.paidAt != null)
                   _InfoRow(
                     icon: AppIcons.calendar,
@@ -480,6 +693,15 @@ class _DepositCard extends StatelessWidget {
                     label: l10n.depositPaidOn,
                     value: '—',
                   ),
+                const SizedBox(height: AppSpacing.md),
+                // Receipts button
+                _ReceiptsButton(
+                  label: l10n.depositReceiptsTitle,
+                  onTap: () => context.push(
+                    '/account/deposits/${deposit.id}',
+                    extra: deposit,
+                  ),
+                ),
               ],
             ),
           ),
@@ -488,6 +710,8 @@ class _DepositCard extends StatelessWidget {
     );
   }
 }
+
+// ── Verified badge ────────────────────────────────────────────────────────────
 
 class _VerifiedBadge extends StatelessWidget {
   const _VerifiedBadge({required this.verified, required this.l10n});
@@ -533,6 +757,60 @@ class _VerifiedBadge extends StatelessWidget {
   }
 }
 
+// ── Receipts button ───────────────────────────────────────────────────────────
+
+class _ReceiptsButton extends StatelessWidget {
+  const _ReceiptsButton({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 42,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [_navyLight, _navyDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: _navyDeep.withValues(alpha: 0.25),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.receipt_long_rounded,
+              color: AppPalette.gold300,
+              size: 17,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Info row ──────────────────────────────────────────────────────────────────
+
 class _InfoRow extends StatelessWidget {
   const _InfoRow({
     required this.icon,
@@ -565,6 +843,83 @@ class _InfoRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+// ── Filter row ────────────────────────────────────────────────────────────────
+
+class _FilterItem {
+  const _FilterItem({required this.key, required this.label});
+  final String? key;
+  final String label;
+}
+
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.items,
+    required this.selected,
+    required this.onSelect,
+  });
+  final List<_FilterItem> items;
+  final String? selected;
+  final void Function(String?) onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return SizedBox(
+      height: 44,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, i) {
+          final item = items[i];
+          final active = item.key == selected;
+          return GestureDetector(
+            onTap: () => onSelect(item.key),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+              decoration: BoxDecoration(
+                gradient: active
+                    ? const LinearGradient(
+                        colors: [_navyLight, _navyDeep],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: active ? null : colors.surface,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: active
+                      ? Colors.transparent
+                      : colors.hairline.withValues(alpha: 0.6),
+                ),
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: _navyDeep.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Text(
+                item.label,
+                style: TextStyle(
+                  color: active ? Colors.white : colors.inkStrong,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }
