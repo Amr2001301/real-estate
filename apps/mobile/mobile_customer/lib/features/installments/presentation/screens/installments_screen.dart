@@ -64,12 +64,15 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
                 return const SizedBox.shrink();
               }
               final all = state.data!;
-              final overdueCount =
-                  all.where((i) => i.status == InstallmentStatus.overdue).length;
-              final pendingCount =
-                  all.where((i) => i.status == InstallmentStatus.pending).length;
-              final paidCount =
-                  all.where((i) => i.status == InstallmentStatus.paid).length;
+              final overdueCount = all
+                  .where((i) => i.status == InstallmentStatus.overdue)
+                  .length;
+              final pendingCount = all
+                  .where((i) => i.status == InstallmentStatus.pending)
+                  .length;
+              final paidCount = all
+                  .where((i) => i.status == InstallmentStatus.paid)
+                  .length;
               return _FilterRow(
                 selected: _filter?.name,
                 items: [
@@ -256,23 +259,7 @@ class _InstallmentsHeader extends StatelessWidget {
                 children: [
                   _HeaderBackButton(),
                   const SizedBox(width: AppSpacing.md),
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(13),
-                      border: Border.all(
-                        color: AppPalette.gold400.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: const Icon(
-                      AppIcons.installments,
-                      color: AppPalette.gold300,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
+
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1087,10 +1074,7 @@ class _ViewProofCard extends StatelessWidget {
 // ── Submit proof button ───────────────────────────────────────────────────────
 
 class _SubmitProofButton extends StatelessWidget {
-  const _SubmitProofButton({
-    required this.onTap,
-    required this.isResubmit,
-  });
+  const _SubmitProofButton({required this.onTap, required this.isResubmit});
   final VoidCallback onTap;
   final bool isResubmit;
 
@@ -1104,12 +1088,8 @@ class _SubmitProofButton extends StatelessWidget {
 
     final accent = isResubmit ? _resubmitAccent : AppPalette.gold300;
     final iconBgGradient = isResubmit ? _resubmitGradient : _pendingGradient;
-    final icon = isResubmit
-        ? Icons.refresh_rounded
-        : Icons.upload_file_rounded;
-    final title = isResubmit
-        ? 'إعادة إرسال إثبات الدفع'
-        : 'إرسال إثبات الدفع';
+    final icon = isResubmit ? Icons.refresh_rounded : Icons.upload_file_rounded;
+    final title = isResubmit ? 'إعادة إرسال إثبات الدفع' : 'إرسال إثبات الدفع';
     final subtitle = isResubmit
         ? 'تم رفض إثباتك السابق — أرفق مستندًا جديدًا'
         : 'أرفق صورة أو ملف PDF كإثبات للدفع';
@@ -1120,10 +1100,7 @@ class _SubmitProofButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: accent.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: accent.withValues(alpha: 0.35),
-            width: 1.5,
-          ),
+          border: Border.all(color: accent.withValues(alpha: 0.35), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: accent.withValues(alpha: 0.10),
