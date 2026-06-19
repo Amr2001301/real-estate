@@ -12,6 +12,18 @@ const _navyDeep = Color(0xFF0B1726);
 const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
+// ── Status colors ─────────────────────────────────────────────────────────────
+
+const _paidGradient = [Color(0xFF1B5E3F), Color(0xFF0D3826)];
+const _paidAccent = Color(0xFF4ADE80);
+const _overdueGradient = [
+  Color(0xFF9B2020),
+  Color(0xFF620D0D),
+]; // warmer crimson
+const _overdueAccent = Color(0xFFF87171);
+const _pendingGradient = [_navyLight, _navyDeep];
+const _pendingAccent = AppPalette.gold300;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Installments Screen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -54,18 +66,29 @@ class _InstallmentsScreenState extends State<InstallmentsScreen> {
               return _FilterRow(
                 selected: _filter?.name,
                 items: [
-                  _FilterItem(key: null, label: l10n.filterAny),
+                  _FilterItem(
+                    key: null,
+                    label: l10n.filterAny,
+                    dotColor: null,
+                    activeGradient: _pendingGradient,
+                  ),
                   _FilterItem(
                     key: InstallmentStatus.overdue.name,
                     label: l10n.installmentStatusOverdue,
+                    dotColor: _overdueAccent,
+                    activeGradient: _overdueGradient,
                   ),
                   _FilterItem(
                     key: InstallmentStatus.pending.name,
                     label: l10n.installmentStatusPending,
+                    dotColor: _pendingAccent,
+                    activeGradient: _pendingGradient,
                   ),
                   _FilterItem(
                     key: InstallmentStatus.paid.name,
                     label: l10n.installmentStatusPaid,
+                    dotColor: _paidAccent,
+                    activeGradient: _paidGradient,
                   ),
                 ],
                 onSelect: (k) => setState(() {
@@ -222,7 +245,23 @@ class _InstallmentsHeader extends StatelessWidget {
                 children: [
                   _HeaderBackButton(),
                   const SizedBox(width: AppSpacing.md),
-
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(
+                        color: AppPalette.gold400.withValues(alpha: 0.35),
+                      ),
+                    ),
+                    child: const Icon(
+                      AppIcons.installments,
+                      color: AppPalette.gold300,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,7 +376,6 @@ class _InstallmentsSummary extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Paid total
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -398,14 +436,13 @@ class _InstallmentsSummary extends StatelessWidget {
                   color: Colors.white.withValues(alpha: 0.12),
                 ),
                 const SizedBox(height: AppSpacing.md),
-                // Status breakdown
                 Row(
                   children: [
                     Expanded(
                       child: _SummaryCell(
                         value: '${paid.length}',
                         label: l10n.installmentStatusPaid,
-                        accent: const Color(0xFF4ADE80),
+                        accent: _paidAccent,
                         theme: theme,
                       ),
                     ),
@@ -418,7 +455,7 @@ class _InstallmentsSummary extends StatelessWidget {
                       child: _SummaryCell(
                         value: '$overdue',
                         label: l10n.installmentStatusOverdue,
-                        accent: const Color(0xFFF87171),
+                        accent: _overdueAccent,
                         theme: theme,
                       ),
                     ),
@@ -431,7 +468,7 @@ class _InstallmentsSummary extends StatelessWidget {
                       child: _SummaryCell(
                         value: '$pending',
                         label: l10n.installmentStatusPending,
-                        accent: AppPalette.gold300,
+                        accent: _pendingAccent,
                         theme: theme,
                       ),
                     ),
@@ -496,21 +533,21 @@ class _InstallmentCard extends StatelessWidget {
     if (proof != null) {
       switch (proof.reviewStatus) {
         case PaymentProofStatus.pendingReview:
-          return _StripStyle(
-            colors: [const Color(0xFF7A5C1E), const Color(0xFF4A3610)],
-            accentColor: const Color(0xFFFBBF24),
+          return const _StripStyle(
+            colors: [Color(0xFF7A5C1E), Color(0xFF4A3610)],
+            accentColor: Color(0xFFFBBF24),
             icon: Icons.hourglass_top_rounded,
           );
         case PaymentProofStatus.approved:
-          return _StripStyle(
-            colors: [const Color(0xFF1B5E3F), const Color(0xFF0D3826)],
-            accentColor: const Color(0xFF4ADE80),
+          return const _StripStyle(
+            colors: _paidGradient,
+            accentColor: _paidAccent,
             icon: Icons.check_circle_rounded,
           );
         case PaymentProofStatus.rejected:
-          return _StripStyle(
-            colors: [const Color(0xFF7A1B1B), const Color(0xFF4A0D0D)],
-            accentColor: const Color(0xFFF87171),
+          return const _StripStyle(
+            colors: _overdueGradient,
+            accentColor: _overdueAccent,
             icon: Icons.cancel_rounded,
           );
         case PaymentProofStatus.noProof:
@@ -519,19 +556,19 @@ class _InstallmentCard extends StatelessWidget {
       }
     }
     return switch (inst.status) {
-      InstallmentStatus.paid => _StripStyle(
-        colors: [const Color(0xFF1B5E3F), const Color(0xFF0D3826)],
-        accentColor: const Color(0xFF4ADE80),
+      InstallmentStatus.paid => const _StripStyle(
+        colors: _paidGradient,
+        accentColor: _paidAccent,
         icon: Icons.check_circle_rounded,
       ),
-      InstallmentStatus.overdue => _StripStyle(
-        colors: [const Color(0xFF7A1B1B), const Color(0xFF4A0D0D)],
-        accentColor: const Color(0xFFF87171),
+      InstallmentStatus.overdue => const _StripStyle(
+        colors: _overdueGradient,
+        accentColor: _overdueAccent,
         icon: Icons.warning_rounded,
       ),
-      _ => _StripStyle(
-        colors: [_navyLight, _navyDeep],
-        accentColor: AppPalette.gold300,
+      _ => const _StripStyle(
+        colors: _pendingGradient,
+        accentColor: _pendingAccent,
         icon: AppIcons.installments,
       ),
     };
@@ -573,6 +610,9 @@ class _InstallmentCard extends StatelessWidget {
         _ => l10n.paymentProofMethodOther,
       };
 
+  bool get _isApprovedProof =>
+      installment.latestProof?.reviewStatus == PaymentProofStatus.approved;
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
@@ -590,6 +630,11 @@ class _InstallmentCard extends StatelessWidget {
       if (installment.unitCode?.isNotEmpty ?? false) installment.unitCode,
     ].join(' · ');
 
+    final proof = installment.latestProof;
+    final hasMethod =
+        proof?.paymentMethod != null &&
+        proof!.paymentMethod != PaymentMethod.unknown;
+
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -601,6 +646,12 @@ class _InstallmentCard extends StatelessWidget {
             blurRadius: 20,
             offset: const Offset(0, 5),
           ),
+          if (_isApprovedProof)
+            BoxShadow(
+              color: _paidAccent.withValues(alpha: 0.06),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
@@ -805,17 +856,15 @@ class _InstallmentCard extends StatelessWidget {
                             installment.paidAt!,
                             languageCode: lang,
                           ),
-                          accent: const Color(0xFF4ADE80),
+                          accent: _paidAccent,
                         ),
                       ),
                     ],
                   ],
                 ),
 
-                // Payment method
-                if (installment.latestProof?.paymentMethod != null &&
-                    installment.latestProof!.paymentMethod !=
-                        PaymentMethod.unknown) ...[
+                // Payment method row (clean)
+                if (hasMethod) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Divider(height: 1, color: colors.hairline),
                   const SizedBox(height: AppSpacing.sm),
@@ -823,7 +872,7 @@ class _InstallmentCard extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.account_balance_rounded,
-                        size: 13,
+                        size: 14,
                         color: colors.inkMuted,
                       ),
                       const SizedBox(width: 6),
@@ -833,14 +882,13 @@ class _InstallmentCard extends StatelessWidget {
                           color: colors.inkMuted,
                         ),
                       ),
-                      Text(
-                        _paymentMethodLabel(
-                          l10n,
-                          installment.latestProof!.paymentMethod!,
-                        ),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colors.inkStrong,
-                          fontWeight: FontWeight.w700,
+                      Expanded(
+                        child: Text(
+                          _paymentMethodLabel(l10n, proof.paymentMethod!),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.inkStrong,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
@@ -848,9 +896,8 @@ class _InstallmentCard extends StatelessWidget {
                 ],
 
                 // Rejection reason banner
-                if (installment.latestProof?.reviewStatus ==
-                        PaymentProofStatus.rejected &&
-                    installment.latestProof?.rejectionReason != null) ...[
+                if (proof?.reviewStatus == PaymentProofStatus.rejected &&
+                    proof?.rejectionReason != null) ...[
                   const SizedBox(height: AppSpacing.sm),
                   Container(
                     width: double.infinity,
@@ -874,7 +921,7 @@ class _InstallmentCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             l10n.paymentProofRejectionReason(
-                              installment.latestProof!.rejectionReason!,
+                              proof!.rejectionReason!,
                             ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: colors.error,
@@ -886,52 +933,27 @@ class _InstallmentCard extends StatelessWidget {
                   ),
                 ],
 
-                // Submit / Resubmit proof button
+                // ── View proof action card (approved proofs)
+                if (_isApprovedProof) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  _ViewProofCard(
+                    onTap: () => context.push(
+                      '/account/installments/${installment.id}/proof',
+                      extra: installment,
+                    ),
+                  ),
+                ],
+
+                // Submit / Resubmit proof button (pending or rejected)
                 if (installment.canSubmitProof) ...[
                   const SizedBox(height: AppSpacing.md),
-                  GestureDetector(
+                  _SubmitProofButton(
+                    label: installment.isResubmit
+                        ? l10n.paymentProofResubmit
+                        : l10n.paymentProofSubmit,
                     onTap: () => context.push(
                       '/account/installments/${installment.id}/submit-proof',
                       extra: installment,
-                    ),
-                    child: Container(
-                      height: 46,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_navyLight, _navyDeep],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(13),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _navyDeep.withValues(alpha: 0.3),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.receipt_long_outlined,
-                            color: AppPalette.gold300,
-                            size: 18,
-                          ),
-                          const SizedBox(width: AppSpacing.sm),
-                          Text(
-                            installment.isResubmit
-                                ? l10n.paymentProofResubmit
-                                : l10n.paymentProofSubmit,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                   ),
                 ],
@@ -939,6 +961,167 @@ class _InstallmentCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── View proof action card ────────────────────────────────────────────────────
+
+class _ViewProofCard extends StatelessWidget {
+  const _ViewProofCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: _paidAccent.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _paidAccent.withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: _paidAccent.withValues(alpha: 0.10),
+              blurRadius: 14,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 12,
+          ),
+          child: Row(
+            children: [
+              // Icon tile
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: _paidGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(13),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _paidAccent.withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.task_alt_rounded,
+                  color: _paidAccent,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // Text content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'عرض إثبات الدفع المعتمد',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'اضغط لعرض أو تحميل الملف المرفق',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // Arrow
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: _paidAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: _paidAccent,
+                  size: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Submit proof button ───────────────────────────────────────────────────────
+
+class _SubmitProofButton extends StatelessWidget {
+  const _SubmitProofButton({required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 46,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: _pendingGradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(13),
+          boxShadow: [
+            BoxShadow(
+              color: _navyDeep.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.receipt_long_outlined,
+              color: AppPalette.gold300,
+              size: 18,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1008,9 +1191,16 @@ class _DateCell extends StatelessWidget {
 // ── Filter row ────────────────────────────────────────────────────────────────
 
 class _FilterItem {
-  const _FilterItem({required this.key, required this.label});
+  const _FilterItem({
+    required this.key,
+    required this.label,
+    required this.dotColor,
+    required this.activeGradient,
+  });
   final String? key;
   final String label;
+  final Color? dotColor;
+  final List<Color> activeGradient;
 }
 
 class _FilterRow extends StatelessWidget {
@@ -1027,56 +1217,107 @@ class _FilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, i) {
-          final item = items[i];
-          final active = item.key == selected;
-          return GestureDetector(
-            onTap: () => onSelect(item.key),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-              decoration: BoxDecoration(
-                gradient: active
-                    ? const LinearGradient(
-                        colors: [_navyLight, _navyDeep],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-                color: active ? null : colors.surface,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: active
-                      ? Colors.transparent
-                      : colors.hairline.withValues(alpha: 0.6),
+      height: 62,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 9.0),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: 8,
+          ),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+          itemBuilder: (context, i) {
+            final item = items[i];
+            final active = item.key == selected;
+            return GestureDetector(
+              onTap: () => onSelect(item.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
                 ),
-                boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: _navyDeep.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                decoration: BoxDecoration(
+                  gradient: active
+                      ? LinearGradient(
+                          colors: item.activeGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: active ? null : colors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: active
+                        ? Colors.transparent
+                        : item.dotColor != null
+                        ? item.dotColor!.withValues(alpha: 0.3)
+                        : colors.hairline.withValues(alpha: 0.6),
+                    width: 1.5,
+                  ),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: item.activeGradient.last.withValues(
+                              alpha: 0.3,
+                            ),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (item.dotColor != null) ...[
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? item.dotColor!.withValues(alpha: 0.9)
+                              : item.dotColor!.withValues(alpha: 0.7),
+                          shape: BoxShape.circle,
+                          boxShadow: active
+                              ? [
+                                  BoxShadow(
+                                    color: item.dotColor!.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
                         ),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                item.label,
-                style: TextStyle(
-                  color: active ? Colors.white : colors.inkStrong,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: active ? Colors.white : colors.inkStrong,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

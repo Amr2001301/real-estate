@@ -54,6 +54,7 @@ import '../features/installments/domain/usecases/submit_payment_proof.dart';
 import '../features/installments/presentation/cubit/installments_cubit.dart';
 import '../features/installments/presentation/cubit/submit_proof_cubit.dart';
 import '../features/installments/presentation/screens/installments_screen.dart';
+import '../features/installments/presentation/screens/proof_view_screen.dart';
 import '../features/installments/presentation/screens/submit_proof_screen.dart';
 import '../features/documents/domain/entities/customer_document.dart';
 import '../features/documents/domain/repositories/documents_repository.dart';
@@ -411,6 +412,17 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
               installment: installment,
             ),
             child: const SubmitProofScreen(),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/account/installments/:id/proof',
+        builder: (context, state) {
+          final installment = state.extra! as Installment;
+          return _documentsProviders(
+            ownerType: DocumentOwnerType.deposit,
+            ownerId: installment.latestProof!.depositId,
+            child: ProofViewScreen(installment: installment),
           );
         },
       ),
