@@ -72,8 +72,9 @@ class _ProofHeader extends StatelessWidget {
     final accentColor = isApproved ? _paidAccent : _pendingAccent;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light
-          .copyWith(statusBarColor: Colors.transparent),
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: Container(
         width: double.infinity,
         clipBehavior: Clip.antiAlias,
@@ -96,8 +97,9 @@ class _ProofHeader extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: (isApproved ? _paidAccent : _navyDeep)
-                  .withValues(alpha: 0.22),
+              color: (isApproved ? _paidAccent : _navyDeep).withValues(
+                alpha: 0.22,
+              ),
               blurRadius: 22,
               offset: const Offset(0, 8),
             ),
@@ -152,25 +154,6 @@ class _ProofHeader extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   _BackButton(),
-                  const SizedBox(width: AppSpacing.md),
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: accentColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(13),
-                      border: Border.all(
-                        color: accentColor.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Icon(
-                      isApproved
-                          ? Icons.verified_rounded
-                          : Icons.receipt_long_rounded,
-                      color: accentColor,
-                      size: 22,
-                    ),
-                  ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
@@ -549,9 +532,7 @@ class _ProofFilesSection extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         // Documents list (uses ambient DocumentsListCubit + DocumentDownloadCubit)
-        DocumentsListView(
-          emptyMessage: l10n.depositNoReceipts,
-        ),
+        DocumentsListView(emptyMessage: l10n.depositNoReceipts),
       ],
     );
   }
