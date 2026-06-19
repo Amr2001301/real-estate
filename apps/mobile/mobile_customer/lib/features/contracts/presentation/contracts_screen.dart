@@ -51,17 +51,36 @@ class _ContractsScreenState extends State<ContractsScreen> {
               if (state.status != DataStatus.success) {
                 return const SizedBox.shrink();
               }
+              final all = state.data!;
+              final signedCount =
+                  all.where((c) => c.status == ContractStatus.signed).length;
+              final draftCount = all.length - signedCount;
               return _FilterRow(
                 selected: _filter?.name,
                 items: [
-                  _FilterItem(key: null, label: l10n.filterAny),
+                  _FilterItem(
+                    key: null,
+                    label: l10n.filterAny,
+                    dotColor: null,
+                    activeGradient: const [_navyLight, _navyDeep],
+                    count: all.length,
+                  ),
                   _FilterItem(
                     key: ContractStatus.signed.name,
                     label: l10n.contractStatusSigned,
+                    dotColor: const Color(0xFF4ADE80),
+                    activeGradient: const [
+                      Color(0xFF1B5E3F),
+                      Color(0xFF0D3826),
+                    ],
+                    count: signedCount,
                   ),
                   _FilterItem(
                     key: ContractStatus.draft.name,
                     label: l10n.contractStatusDraft,
+                    dotColor: const Color(0xFFCBD5E1),
+                    activeGradient: const [_navyLight, _navyDeep],
+                    count: draftCount,
                   ),
                 ],
                 onSelect: (k) => setState(() {
@@ -408,7 +427,7 @@ class _ContractCard extends StatelessWidget {
         children: [
           // ── Navy gradient strip
           SizedBox(
-            height: 90,
+            height: 100,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -559,25 +578,28 @@ class _ContractCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                // Signed date chip
-                if (contract.signedAt != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _InfoChip(
+                // Signed date row
+                const SizedBox(height: AppSpacing.sm),
+                Divider(height: 1, color: colors.hairline),
+                const SizedBox(height: AppSpacing.sm),
+                if (contract.signedAt != null)
+                  _InfoRow(
                     icon: AppIcons.calendar,
-                    label:
-                        '${l10n.myPropertySignedDate}:  '
-                        '${DateFormatter.mediumDate(contract.signedAt!, languageCode: lang)}',
-                  ),
-                ] else if (contract.createdAt != null) ...[
-                  const SizedBox(height: AppSpacing.sm),
-                  _InfoChip(
+                    label: l10n.myPropertySignedDate,
+                    value: DateFormatter.mediumDate(
+                      contract.signedAt!,
+                      languageCode: lang,
+                    ),
+                  )
+                else if (contract.createdAt != null)
+                  _InfoRow(
                     icon: AppIcons.calendar,
-                    label: DateFormatter.mediumDate(
+                    label: 'تاريخ الإنشاء',
+                    value: DateFormatter.mediumDate(
                       contract.createdAt!,
                       languageCode: lang,
                     ),
                   ),
-                ],
                 const SizedBox(height: AppSpacing.md),
                 // Documents button
                 _DocumentsButton(
@@ -688,82 +710,139 @@ class _DocumentsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    const accent = AppPalette.gold300;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 42,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [_navyLight, _navyDeep],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          color: accent.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: accent.withValues(alpha: 0.35),
+            width: 1.5,
           ),
-          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: _navyDeep.withValues(alpha: 0.25),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              color: accent.withValues(alpha: 0.10),
+              blurRadius: 14,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.folder_open_rounded,
-              color: AppPalette.gold300,
-              size: 17,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 12,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_navyLight, _navyDeep],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(13),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.folder_open_rounded,
+                  color: accent,
+                  size: 22,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'اضغط لعرض أو تنزيل المستندات المرفقة',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: accent,
+                  size: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── Info chip ─────────────────────────────────────────────────────────────────
+// ── Info row ──────────────────────────────────────────────────────────────────
 
-class _InfoChip extends StatelessWidget {
-  const _InfoChip({required this.icon, required this.label});
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
   final IconData icon;
   final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: _navyDeep.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _navyDeep.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 13, color: _navyDeep.withValues(alpha: 0.65)),
-          const SizedBox(width: 6),
-          Flexible(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: _navyDeep.withValues(alpha: 0.85),
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: colors.inkMuted),
+        const SizedBox(width: AppSpacing.xs),
+        Text(
+          '$label: ',
+          style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.inkStrong,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -771,9 +850,18 @@ class _InfoChip extends StatelessWidget {
 // ── Filter row ────────────────────────────────────────────────────────────────
 
 class _FilterItem {
-  const _FilterItem({required this.key, required this.label});
+  const _FilterItem({
+    required this.key,
+    required this.label,
+    required this.dotColor,
+    required this.activeGradient,
+    required this.count,
+  });
   final String? key;
   final String label;
+  final Color? dotColor;
+  final List<Color> activeGradient;
+  final int count;
 }
 
 class _FilterRow extends StatelessWidget {
@@ -790,56 +878,123 @@ class _FilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, i) {
-          final item = items[i];
-          final active = item.key == selected;
-          return GestureDetector(
-            onTap: () => onSelect(item.key),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-              decoration: BoxDecoration(
-                gradient: active
-                    ? const LinearGradient(
-                        colors: [_navyLight, _navyDeep],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-                color: active ? null : colors.surface,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: active
-                      ? Colors.transparent
-                      : colors.hairline.withValues(alpha: 0.6),
+      height: 62,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 9.0),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: 8,
+          ),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+          itemBuilder: (context, i) {
+            final item = items[i];
+            final active = item.key == selected;
+            return GestureDetector(
+              onTap: () => onSelect(item.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: active
+                      ? LinearGradient(
+                          colors: item.activeGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: active ? null : colors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: active
+                        ? Colors.transparent
+                        : item.dotColor != null
+                        ? item.dotColor!.withValues(alpha: 0.3)
+                        : colors.hairline.withValues(alpha: 0.6),
+                    width: 1.5,
+                  ),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: item.activeGradient.last.withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
                 ),
-                boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: _navyDeep.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (item.dotColor != null) ...[
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? item.dotColor!.withValues(alpha: 0.9)
+                              : item.dotColor!.withValues(alpha: 0.7),
+                          shape: BoxShape.circle,
+                          boxShadow: active
+                              ? [
+                                  BoxShadow(
+                                    color: item.dotColor!.withValues(alpha: 0.5),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
                         ),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                item.label,
-                style: TextStyle(
-                  color: active ? Colors.white : colors.inkStrong,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: active ? Colors.white : colors.inkStrong,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : item.dotColor != null
+                            ? item.dotColor!.withValues(alpha: 0.14)
+                            : colors.hairline.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${item.count}',
+                        style: TextStyle(
+                          color: active
+                              ? Colors.white
+                              : item.dotColor ?? colors.inkMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

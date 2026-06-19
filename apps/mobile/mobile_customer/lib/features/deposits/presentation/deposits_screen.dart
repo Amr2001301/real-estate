@@ -52,25 +52,55 @@ class _DepositsScreenState extends State<DepositsScreen> {
               if (state.status != DataStatus.success) {
                 return const SizedBox.shrink();
               }
+              final all = state.data!;
+              int countOf(DepositType t) =>
+                  all.where((d) => d.type == t).length;
               return _FilterRow(
                 selected: _filter?.name,
                 items: [
-                  _FilterItem(key: null, label: l10n.filterAny),
+                  _FilterItem(
+                    key: null,
+                    label: l10n.filterAny,
+                    dotColor: null,
+                    activeGradient: const [_navyLight, _navyDeep],
+                    count: all.length,
+                  ),
                   _FilterItem(
                     key: DepositType.bookingAmount.name,
                     label: l10n.depositTypeBooking,
+                    dotColor: const Color(0xFF4ADE80),
+                    activeGradient: const [
+                      Color(0xFF1B5E3F),
+                      Color(0xFF0D3826),
+                    ],
+                    count: countOf(DepositType.bookingAmount),
                   ),
                   _FilterItem(
                     key: DepositType.downPayment.name,
                     label: l10n.depositTypeDownPayment,
+                    dotColor: AppPalette.gold300,
+                    activeGradient: const [_navyLight, _navyDeep],
+                    count: countOf(DepositType.downPayment),
                   ),
                   _FilterItem(
                     key: DepositType.installment.name,
                     label: l10n.depositTypeInstallment,
+                    dotColor: const Color(0xFF93C5FD),
+                    activeGradient: const [
+                      Color(0xFF1E3A6E),
+                      Color(0xFF0B1F42),
+                    ],
+                    count: countOf(DepositType.installment),
                   ),
                   _FilterItem(
                     key: DepositType.finalPayment.name,
                     label: l10n.depositTypeFinal,
+                    dotColor: const Color(0xFFFBD27A),
+                    activeGradient: const [
+                      Color(0xFF7A5C1E),
+                      Color(0xFF4A3610),
+                    ],
+                    count: countOf(DepositType.finalPayment),
                   ),
                 ],
                 onSelect: (k) => setState(() {
@@ -766,43 +796,99 @@ class _ReceiptsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    const accent = AppPalette.gold300;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 42,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [_navyLight, _navyDeep],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          color: accent.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: accent.withValues(alpha: 0.35),
+            width: 1.5,
           ),
-          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: _navyDeep.withValues(alpha: 0.25),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              color: accent.withValues(alpha: 0.10),
+              blurRadius: 14,
+              spreadRadius: 1,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.receipt_long_rounded,
-              color: AppPalette.gold300,
-              size: 17,
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 12,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [_navyLight, _navyDeep],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(13),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.receipt_long_rounded,
+                  color: accent,
+                  size: 22,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'اضغط لعرض أو تنزيل الإيصالات',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: accent,
+                  size: 14,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -850,9 +936,18 @@ class _InfoRow extends StatelessWidget {
 // ── Filter row ────────────────────────────────────────────────────────────────
 
 class _FilterItem {
-  const _FilterItem({required this.key, required this.label});
+  const _FilterItem({
+    required this.key,
+    required this.label,
+    required this.dotColor,
+    required this.activeGradient,
+    required this.count,
+  });
   final String? key;
   final String label;
+  final Color? dotColor;
+  final List<Color> activeGradient;
+  final int count;
 }
 
 class _FilterRow extends StatelessWidget {
@@ -869,56 +964,130 @@ class _FilterRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-        itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
-        itemBuilder: (context, i) {
-          final item = items[i];
-          final active = item.key == selected;
-          return GestureDetector(
-            onTap: () => onSelect(item.key),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-              decoration: BoxDecoration(
-                gradient: active
-                    ? const LinearGradient(
-                        colors: [_navyLight, _navyDeep],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
-                    : null,
-                color: active ? null : colors.surface,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(
-                  color: active
-                      ? Colors.transparent
-                      : colors.hairline.withValues(alpha: 0.6),
+      height: 62,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 9.0),
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: 8,
+          ),
+          itemCount: items.length,
+          separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+          itemBuilder: (context, i) {
+            final item = items[i];
+            final active = item.key == selected;
+            return GestureDetector(
+              onTap: () => onSelect(item.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 6,
                 ),
-                boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: _navyDeep.withValues(alpha: 0.2),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
+                decoration: BoxDecoration(
+                  gradient: active
+                      ? LinearGradient(
+                          colors: item.activeGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        )
+                      : null,
+                  color: active ? null : colors.surface,
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: active
+                        ? Colors.transparent
+                        : item.dotColor != null
+                        ? item.dotColor!.withValues(alpha: 0.3)
+                        : colors.hairline.withValues(alpha: 0.6),
+                    width: 1.5,
+                  ),
+                  boxShadow: active
+                      ? [
+                          BoxShadow(
+                            color: item.activeGradient.last
+                                .withValues(alpha: 0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 3),
+                          ),
+                        ]
+                      : [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.04),
+                            blurRadius: 4,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (item.dotColor != null) ...[
+                      Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? item.dotColor!.withValues(alpha: 0.9)
+                              : item.dotColor!.withValues(alpha: 0.7),
+                          shape: BoxShape.circle,
+                          boxShadow: active
+                              ? [
+                                  BoxShadow(
+                                    color: item.dotColor!.withValues(alpha: 0.5),
+                                    blurRadius: 4,
+                                    spreadRadius: 1,
+                                  ),
+                                ]
+                              : null,
                         ),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                item.label,
-                style: TextStyle(
-                  color: active ? Colors.white : colors.inkStrong,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: active ? Colors.white : colors.inkStrong,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: active
+                            ? Colors.white.withValues(alpha: 0.18)
+                            : item.dotColor != null
+                            ? item.dotColor!.withValues(alpha: 0.14)
+                            : colors.hairline.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${item.count}',
+                        style: TextStyle(
+                          color: active
+                              ? Colors.white
+                              : item.dotColor ?? colors.inkMuted,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
