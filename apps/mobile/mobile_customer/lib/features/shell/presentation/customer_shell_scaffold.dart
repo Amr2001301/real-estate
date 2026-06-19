@@ -165,7 +165,8 @@ class CustomerShellScaffold extends StatelessWidget {
     // AppBar is suppressed for ALL users on the Home branch.
     final showShellAppBar =
         !_selfChromeBranches.contains(current) &&
-        !(current == _Branch.home);
+        current != _Branch.home &&
+        current != _Branch.property;
 
     return Scaffold(
       // iOS: let body content scroll behind the floating glass tab bar (real
