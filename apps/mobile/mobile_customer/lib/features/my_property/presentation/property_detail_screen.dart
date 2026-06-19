@@ -720,7 +720,6 @@ class _InstallmentTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -729,20 +728,22 @@ class _InstallmentTable extends StatelessWidget {
         border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // ── Header row ───────────────────────────────────────────
+          // ── Header ────────────────────────────────────────────────
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm + 2,
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              12,
+              AppSpacing.md,
+              12,
             ),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -751,63 +752,103 @@ class _InstallmentTable extends StatelessWidget {
                 end: Alignment.bottomRight,
               ),
             ),
-            child: Row(
+            child: Stack(
               children: [
-                // Amount column (right in RTL — first child)
-                SizedBox(
-                  width: 120,
-                  child: Text(
-                    'المبلغ',
-                    style: TextStyle(
-                      color: AppPalette.gold300.withValues(alpha: 0.90),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
+                const Positioned.fill(
+                  child: IgnorePointer(child: _DotTexture()),
                 ),
-                // Date column (center)
-                Expanded(
-                  child: Text(
-                    'الاستحقاق',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.60),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    // Amount (rightmost in RTL)
+                    SizedBox(
+                      width: 116,
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.payments_rounded,
+                            size: 12,
+                            color: AppPalette.gold300.withValues(alpha: 0.80),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'المبلغ',
+                            style: TextStyle(
+                              color: AppPalette.gold300.withValues(alpha: 0.95),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-                // Status column (left in RTL — last child)
-                SizedBox(
-                  width: 90,
-                  child: Text(
-                    'الحالة',
-                    textAlign: TextAlign.end,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.60),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                    // Date (center)
+                    Expanded(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.event_rounded,
+                            size: 11,
+                            color: Colors.white.withValues(alpha: 0.50),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'الاستحقاق',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.60),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+                    // Status (leftmost in RTL)
+                    SizedBox(
+                      width: 92,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Icon(
+                            Icons.radio_button_checked_rounded,
+                            size: 11,
+                            color: Colors.white.withValues(alpha: 0.50),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            'الحالة',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.60),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
-          // ── Data rows ────────────────────────────────────────────
+          // ── Data rows ─────────────────────────────────────────────
           ...installments.asMap().entries.map((e) {
-            final i = e.key;
+            final rowIndex = e.key;
             final inst = e.value;
             return Column(
               children: [
-                if (i > 0)
-                  Divider(height: 1, color: colors.hairline),
+                if (rowIndex > 0)
+                  Container(
+                    height: 1,
+                    color: colors.hairline.withValues(alpha: 0.7),
+                  ),
                 _TableRow(
                   installment: inst,
+                  rowIndex: rowIndex,
                   lang: lang,
                   l10n: l10n,
                   colors: colors,
-                  theme: theme,
                 ),
               ],
             );
@@ -821,47 +862,46 @@ class _InstallmentTable extends StatelessWidget {
 class _TableRow extends StatelessWidget {
   const _TableRow({
     required this.installment,
+    required this.rowIndex,
     required this.lang,
     required this.l10n,
     required this.colors,
-    required this.theme,
   });
   final Installment installment;
+  final int rowIndex;
   final String lang;
   final AppLocalizations l10n;
   final AppColorsExt colors;
-  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final status = installment.status;
 
     final (statusColor, statusLabel) = switch (status) {
       InstallmentStatus.paid => (
-          Colors.greenAccent,
+          const Color(0xFF34C77B),
           l10n.installmentStatusPaid,
         ),
       InstallmentStatus.overdue => (
-          const Color(0xFFFF6B6B),
+          const Color(0xFFEF4444),
           l10n.installmentStatusOverdue,
         ),
-      _ => (Colors.amber, l10n.installmentStatusPending),
+      _ => (const Color(0xFFF59E0B), l10n.installmentStatusPending),
     };
 
-    // Subtle row tint based on status
-    final rowTint = switch (status) {
-      InstallmentStatus.paid =>
-        Colors.green.withValues(alpha: 0.025),
-      InstallmentStatus.overdue =>
-        const Color(0xFFFF6B6B).withValues(alpha: 0.035),
-      _ => Colors.transparent,
-    };
+    // Alternating row stripe
+    final stripe = rowIndex.isOdd
+        ? colors.surfaceSoft.withValues(alpha: 0.55)
+        : Colors.transparent;
 
     final typeLabel = switch (installment.type) {
-      InstallmentPaymentType.downPayment => 'مقدمة',
-      InstallmentPaymentType.finalPayment => 'أخيرة',
+      InstallmentPaymentType.downPayment => 'دفعة مقدمة',
+      InstallmentPaymentType.finalPayment => 'دفعة أخيرة',
       _ => null,
     };
+
+    final rowNum = (rowIndex + 1).toString().padLeft(2, '0');
 
     return InkWell(
       onTap: installment.canSubmitProof
@@ -870,22 +910,46 @@ class _TableRow extends StatelessWidget {
                 extra: installment,
               )
           : null,
-      splashColor: AppPalette.gold400.withValues(alpha: 0.06),
-      highlightColor: AppPalette.gold400.withValues(alpha: 0.04),
+      splashColor: AppPalette.gold400.withValues(alpha: 0.05),
+      highlightColor: AppPalette.gold400.withValues(alpha: 0.03),
       child: Container(
-        color: rowTint,
+        decoration: BoxDecoration(
+          color: stripe,
+          // Status indicator bar on visual-left side
+          border: Border(
+            left: BorderSide(
+              color: statusColor.withValues(alpha: 0.55),
+              width: 3,
+            ),
+          ),
+        ),
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 3,
+          vertical: 13,
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // ── Amount column (rightmost in RTL) ─────────────────
+            // ── Amount column (rightmost in RTL) ──────────────────
             SizedBox(
-              width: 120,
+              width: 116,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // Row number
+                  Text(
+                    '#$rowNum',
+                    style: TextStyle(
+                      color: colors.inkMuted.withValues(alpha: 0.55),
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  // Amount
                   Text(
                     PriceFormatter.formatString(
                       installment.amount,
@@ -893,72 +957,157 @@ class _TableRow extends StatelessWidget {
                     ),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colors.inkStrong,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w900,
                       fontSize: 13.5,
-                      letterSpacing: -0.2,
+                      letterSpacing: -0.3,
+                      height: 1.1,
                     ),
                   ),
-                  if (typeLabel != null)
-                    Text(
-                      typeLabel,
-                      style: const TextStyle(
-                        color: AppPalette.gold500,
-                        fontSize: 9.5,
-                        fontWeight: FontWeight.w700,
+                  if (typeLabel != null) ...[
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppPalette.gold400.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: AppPalette.gold400.withValues(alpha: 0.30),
+                        ),
+                      ),
+                      child: Text(
+                        typeLabel,
+                        style: const TextStyle(
+                          color: AppPalette.gold500,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.1,
+                        ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
-            // ── Date column (center) ──────────────────────────────
+            // ── Date column (center) ───────────────────────────────
             Expanded(
-              child: Text(
-                DateFormatter.mediumDate(
-                  installment.dueDate,
-                  languageCode: lang,
-                ),
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colors.inkMuted,
-                  fontSize: 11.5,
-                ),
-              ),
-            ),
-            // ── Status column (leftmost in RTL) ──────────────────
-            SizedBox(
-              width: 90,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (installment.canSubmitProof) ...[
-                    const Icon(
-                      Icons.upload_rounded,
-                      size: 11,
-                      color: AppPalette.gold400,
+                  Icon(
+                    Icons.event_rounded,
+                    size: 13,
+                    color: colors.inkMuted.withValues(alpha: 0.65),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    DateFormatter.mediumDate(
+                      installment.dueDate,
+                      languageCode: lang,
                     ),
-                    const SizedBox(width: 3),
-                  ],
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: statusColor.withValues(alpha: 0.35),
-                      ),
-                    ),
-                    child: Text(
-                      statusLabel,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: colors.inkMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      height: 1.1,
                     ),
                   ),
+                ],
+              ),
+            ),
+            // ── Status column (leftmost in RTL) ───────────────────
+            SizedBox(
+              width: 92,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Status badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.30),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: BoxDecoration(
+                            color: statusColor,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          statusLabel,
+                          style: TextStyle(
+                            color: statusColor,
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Submit action (when payable)
+                  if (installment.canSubmitProof) ...[
+                    const SizedBox(height: 5),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [
+                            Color(0xFFD4A843),
+                            AppPalette.gold500,
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppPalette.gold400.withValues(alpha: 0.28),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.upload_rounded,
+                            size: 10,
+                            color: _navy,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            installment.isResubmit ? 'إعادة إرسال' : 'إرسال',
+                            style: const TextStyle(
+                              color: _navy,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
