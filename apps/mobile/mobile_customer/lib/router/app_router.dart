@@ -34,16 +34,12 @@ import '../features/chat/domain/usecases/start_chat_session.dart';
 import '../features/chat/presentation/chat_bloc.dart';
 import '../features/chat/presentation/chat_event.dart';
 import '../features/chat/presentation/chat_screen.dart';
-import '../features/contracts/domain/entities/contract.dart';
 import '../features/contracts/domain/repositories/contracts_repository.dart';
 import '../features/contracts/domain/usecases/get_my_contracts.dart';
-import '../features/contracts/presentation/contract_detail_screen.dart';
 import '../features/contracts/presentation/contracts_cubit.dart';
 import '../features/contracts/presentation/contracts_screen.dart';
-import '../features/deposits/domain/entities/deposit.dart';
 import '../features/deposits/domain/repositories/deposits_repository.dart';
 import '../features/deposits/domain/usecases/get_my_deposits.dart';
-import '../features/deposits/presentation/deposit_detail_screen.dart';
 import '../features/deposits/presentation/deposits_cubit.dart';
 import '../features/deposits/presentation/deposits_screen.dart';
 import '../features/finance/presentation/finance_hub_screen.dart';
@@ -355,17 +351,6 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
           child: const ContractsScreen(),
         ),
       ),
-      GoRoute(
-        path: '/account/contracts/:id',
-        builder: (context, state) {
-          final contract = state.extra! as Contract;
-          return _documentsProviders(
-            ownerType: DocumentOwnerType.contract,
-            ownerId: contract.id,
-            child: ContractDetailScreen(contract: contract),
-          );
-        },
-      ),
 
       // ── Deposits / payments (list + receipt detail) ──────────────────────
       GoRoute(
@@ -375,17 +360,6 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
               DepositsCubit(GetMyDeposits(ctx.read<DepositsRepository>())),
           child: const DepositsScreen(),
         ),
-      ),
-      GoRoute(
-        path: '/account/deposits/:id',
-        builder: (context, state) {
-          final deposit = state.extra! as Deposit;
-          return _documentsProviders(
-            ownerType: DocumentOwnerType.deposit,
-            ownerId: deposit.id,
-            child: DepositDetailScreen(deposit: deposit),
-          );
-        },
       ),
 
       // ── Installments + payment-proof submission (P11.5) ─────────────────
