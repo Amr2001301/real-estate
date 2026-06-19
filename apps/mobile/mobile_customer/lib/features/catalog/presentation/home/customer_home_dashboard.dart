@@ -14,8 +14,9 @@ import '../../../my_property/domain/entities/property.dart';
 import '../../../my_property/presentation/my_property_cubit.dart';
 import 'customer_home_header.dart';
 
-const _navyDeep = Color(0xFF0B1726);
-const _navyCard = Color(0xFF1A3352);
+const _navy = Color(0xFF0B1726);
+const _navyCard = Color(0xFF152236);
+const _navyAccent = Color(0xFF1E3451);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Customer Home Dashboard
@@ -53,12 +54,14 @@ class CustomerHomeDashboard extends StatelessWidget {
                 CustomerHomeHeader(name: name, hasProperty: primary != null),
                 const SizedBox(height: AppSpacing.xl),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // 1 · Next payment
-                      _PaymentCard(
+                      // 1 · Next installment
+                      _InstallmentCard(
                         next: next,
                         unpaidCount: unpaid.length,
                         totalCount: totalCount,
@@ -67,24 +70,26 @@ class CustomerHomeDashboard extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.xl),
 
-                      // 2 · Owned unit
+                      // 2 · Property
                       if (primary != null) ...[
-                        _SectionRow(
+                        _SectionHeader(
+                          icon: Icons.home_work_rounded,
                           title: l10n.homeOwnershipSummary,
                           onViewAll: properties.length > 1
                               ? () => context.push('/account/property')
                               : null,
+                          viewAllLabel: l10n.viewAll,
                         ),
                         const SizedBox(height: AppSpacing.sm),
-                        _PropertyShowcase(property: primary),
+                        _PropertyCard(property: primary),
                         const SizedBox(height: AppSpacing.xl),
                       ] else ...[
                         _EmptyPropertyCard(),
                         const SizedBox(height: AppSpacing.xl),
                       ],
 
-                      // 3 · Recent service activity
-                      const _ActivityTimeline(),
+                      // 3 · Recent activity
+                      const _ActivityFeed(),
                     ],
                   ),
                 ),
@@ -102,31 +107,40 @@ class CustomerHomeDashboard extends StatelessWidget {
   }
 }
 
-// ── Section row heading ───────────────────────────────────────────────────────
+// ── Premium section header ────────────────────────────────────────────────────
 
-class _SectionRow extends StatelessWidget {
-  const _SectionRow({required this.title, this.onViewAll});
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({
+    required this.icon,
+    required this.title,
+    this.onViewAll,
+    this.viewAllLabel,
+  });
 
+  final IconData icon;
   final String title;
   final VoidCallback? onViewAll;
+  final String? viewAllLabel;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
     final theme = Theme.of(context);
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Container(
-          width: 4,
-          height: 20,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppPalette.gold300, AppPalette.gold500],
+              colors: [_navyAccent, _navy],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(10),
           ),
+          child: Icon(icon, size: 17, color: AppPalette.gold300),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -143,7 +157,7 @@ class _SectionRow extends StatelessWidget {
             onTap: onViewAll,
             behavior: HitTestBehavior.opaque,
             child: Text(
-              context.l10n.viewAll,
+              viewAllLabel ?? '',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: colors.brandGold,
                 fontWeight: FontWeight.w700,
@@ -155,10 +169,10 @@ class _SectionRow extends StatelessWidget {
   }
 }
 
-// ── 1 · Payment card ─────────────────────────────────────────────────────────
+// ── 1 · Installment card ──────────────────────────────────────────────────────
 
-class _PaymentCard extends StatelessWidget {
-  const _PaymentCard({
+class _InstallmentCard extends StatelessWidget {
+  const _InstallmentCard({
     required this.next,
     required this.unpaidCount,
     required this.totalCount,
@@ -179,6 +193,7 @@ class _PaymentCard extends StatelessWidget {
     final l10n = context.l10n;
     final theme = Theme.of(context);
     final lang = Localizations.localeOf(context).languageCode;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
     final hasDue = next != null;
     final overdue = next?.status == InstallmentStatus.overdue;
@@ -203,15 +218,22 @@ class _PaymentCard extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [_navyCard, _navyDeep],
+            colors: [_navyAccent, _navyCard, _navy],
+            stops: [0.0, 0.5, 1.0],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: _navyDeep.withValues(alpha: 0.45),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: _navy.withValues(alpha: 0.50),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
             ),
+            if (overdue)
+              BoxShadow(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.22),
+                blurRadius: 32,
+                spreadRadius: 2,
+              ),
           ],
         ),
         clipBehavior: Clip.antiAlias,
@@ -220,7 +242,26 @@ class _PaymentCard extends StatelessWidget {
             const Positioned.fill(
               child: IgnorePointer(child: _CardTexture()),
             ),
-            // Start-edge colour rail
+            // Status-tinted radial glow
+            PositionedDirectional(
+              end: 0,
+              top: 0,
+              child: Container(
+                width: 180,
+                height: 160,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topRight,
+                    radius: 1.0,
+                    colors: [
+                      accentColor.withValues(alpha: 0.14),
+                      accentColor.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Accent rail at card start edge
             PositionedDirectional(
               start: 0,
               top: 0,
@@ -233,26 +274,31 @@ class _PaymentCard extends StatelessWidget {
                     end: Alignment.bottomCenter,
                     colors: [
                       accentColor,
-                      accentColor.withValues(alpha: 0.25),
+                      accentColor.withValues(alpha: 0.2),
                     ],
                   ),
                 ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   if (hasDue) ...[
-                    // Label + status badge
+                    // Top row: label + status pill
                     Row(
                       children: [
                         Text(
                           l10n.homeNextInstallment,
                           style: theme.textTheme.labelMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.55),
-                            letterSpacing: 0.3,
+                            color: Colors.white.withValues(alpha: 0.50),
+                            letterSpacing: 0.4,
                           ),
                         ),
                         const Spacer(),
@@ -266,26 +312,62 @@ class _PaymentCard extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.sm),
-                    // Amount row + arc
+                    const SizedBox(height: AppSpacing.md),
+                    // Amount + donut ring
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Expanded(
-                          child: Text(
-                            PriceFormatter.formatString(
-                              next!.amount,
-                              languageCode: lang,
-                            ),
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              height: 1.0,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                PriceFormatter.formatString(
+                                  next!.amount,
+                                  languageCode: lang,
+                                ),
+                                style: theme.textTheme.headlineLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  height: 1.0,
+                                  letterSpacing: -1.0,
+                                  shadows: [
+                                    Shadow(
+                                      color:
+                                          accentColor.withValues(alpha: 0.4),
+                                      blurRadius: 16,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    AppIcons.calendar,
+                                    size: 12,
+                                    color: Colors.white.withValues(alpha: 0.42),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      _subline(l10n, lang),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: Colors.white
+                                                .withValues(alpha: 0.48),
+                                          ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
+                        const SizedBox(width: AppSpacing.md),
                         if (totalCount > 0)
-                          _InstallmentArc(
+                          _DonutRing(
                             paidCount: paidCount,
                             totalCount: totalCount,
                             progress: progress,
@@ -293,26 +375,29 @@ class _PaymentCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      _subline(l10n, lang),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.50),
-                      ),
-                    ),
                   ] else ...[
-                    // All clear
+                    // All clear state
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.all(10),
+                          width: 52,
+                          height: 52,
                           decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.14),
+                            gradient: LinearGradient(
+                              colors: [
+                                const Color(0xFF10B981).withValues(alpha: 0.26),
+                                const Color(0xFF10B981).withValues(alpha: 0.10),
+                              ],
+                            ),
                             shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
+                                  const Color(0xFF34D399).withValues(alpha: 0.45),
+                            ),
                           ),
                           child: const Icon(
                             Icons.verified_rounded,
-                            color: Colors.greenAccent,
+                            color: Color(0xFF34D399),
                             size: 24,
                           ),
                         ),
@@ -328,11 +413,11 @@ class _PaymentCard extends StatelessWidget {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 3),
                               Text(
                                 l10n.homeNoDuePaymentsHint,
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.5),
+                                  color: Colors.white.withValues(alpha: 0.50),
                                 ),
                               ),
                             ],
@@ -344,12 +429,21 @@ class _PaymentCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.md),
                   Container(
                     height: 1,
-                    color: Colors.white.withValues(alpha: 0.09),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.white.withValues(alpha: 0.0),
+                          Colors.white.withValues(alpha: 0.10),
+                          Colors.white.withValues(alpha: 0.0),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
-                  _GoldCta(
+                  _GoldAction(
                     label: l10n.homeViewInstallments,
                     icon: AppIcons.installments,
+                    isRtl: isRtl,
                     onTap: () => context.push('/account/installments'),
                   ),
                 ],
@@ -380,11 +474,11 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.45)),
+        border: Border.all(color: color.withValues(alpha: 0.50)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -409,14 +503,16 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-class _GoldCta extends StatelessWidget {
-  const _GoldCta({
+class _GoldAction extends StatelessWidget {
+  const _GoldAction({
     required this.label,
     required this.icon,
+    required this.isRtl,
     required this.onTap,
   });
   final String label;
   final IconData icon;
+  final bool isRtl;
   final VoidCallback onTap;
 
   @override
@@ -424,34 +520,48 @@ class _GoldCta extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 46,
+        height: 48,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [AppPalette.gold300, AppPalette.gold500],
+            colors: [
+              Color(0xFFD4A843),
+              AppPalette.gold300,
+              AppPalette.gold500,
+              Color(0xFFB8892C),
+            ],
+            stops: [0.0, 0.35, 0.65, 1.0],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(AppRadii.lg),
           boxShadow: [
             BoxShadow(
-              color: AppPalette.gold400.withValues(alpha: 0.35),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: AppPalette.gold400.withValues(alpha: 0.40),
+              blurRadius: 16,
+              offset: const Offset(0, 5),
             ),
           ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 18, color: _navyDeep),
+            Icon(icon, size: 18, color: _navy),
             const SizedBox(width: AppSpacing.xs),
             Text(
               label,
               style: const TextStyle(
-                color: _navyDeep,
+                color: _navy,
                 fontWeight: FontWeight.w800,
                 fontSize: 14,
               ),
+            ),
+            const SizedBox(width: 4),
+            Icon(
+              isRtl
+                  ? Icons.chevron_left_rounded
+                  : Icons.chevron_right_rounded,
+              size: 16,
+              color: _navy.withValues(alpha: 0.55),
             ),
           ],
         ),
@@ -460,9 +570,9 @@ class _GoldCta extends StatelessWidget {
   }
 }
 
-// Circular arc progress — paid / total installments.
-class _InstallmentArc extends StatelessWidget {
-  const _InstallmentArc({
+// Full-circle donut ring
+class _DonutRing extends StatelessWidget {
+  const _DonutRing({
     required this.paidCount,
     required this.totalCount,
     required this.progress,
@@ -478,32 +588,32 @@ class _InstallmentArc extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return SizedBox(
-      width: 82,
-      height: 82,
+      width: 86,
+      height: 86,
       child: CustomPaint(
-        painter: _ArcPainter(progress: progress, color: color),
+        painter: _DonutPainter(progress: progress, color: color),
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 '$paidCount',
-                style: theme.textTheme.titleMedium?.copyWith(
+                style: theme.textTheme.titleLarge?.copyWith(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   height: 1.0,
                 ),
               ),
               Container(
-                width: 18,
+                width: 20,
                 height: 1,
-                color: Colors.white.withValues(alpha: 0.3),
+                color: Colors.white.withValues(alpha: 0.28),
                 margin: const EdgeInsets.symmetric(vertical: 2),
               ),
               Text(
                 '$totalCount',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.45),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: Colors.white.withValues(alpha: 0.40),
                   height: 1.0,
                 ),
               ),
@@ -515,8 +625,8 @@ class _InstallmentArc extends StatelessWidget {
   }
 }
 
-class _ArcPainter extends CustomPainter {
-  const _ArcPainter({required this.progress, required this.color});
+class _DonutPainter extends CustomPainter {
+  const _DonutPainter({required this.progress, required this.color});
 
   final double progress;
   final Color color;
@@ -524,38 +634,52 @@ class _ArcPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 5;
-    const startAngle = math.pi * 0.75;
-    const sweepAngle = math.pi * 1.5;
+    final radius = math.min(size.width, size.height) / 2 - 6;
+    const startAngle = -math.pi / 2; // Start at top
 
-    // Track
+    // Track (full circle)
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       startAngle,
-      sweepAngle,
+      math.pi * 2,
       false,
       Paint()
-        ..color = Colors.white.withValues(alpha: 0.13)
-        ..strokeWidth = 5
+        ..color = Colors.white.withValues(alpha: 0.10)
+        ..strokeWidth = 6
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,
     );
 
-    // Progress fill
     if (progress > 0.01) {
       final rect = Rect.fromCircle(center: center, radius: radius);
+
+      // Glow halo
       canvas.drawArc(
         rect,
         startAngle,
-        sweepAngle * progress,
+        math.pi * 2 * progress,
+        false,
+        Paint()
+          ..color = color.withValues(alpha: 0.28)
+          ..strokeWidth = 12
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5),
+      );
+
+      // Solid fill
+      canvas.drawArc(
+        rect,
+        startAngle,
+        math.pi * 2 * progress,
         false,
         Paint()
           ..shader = LinearGradient(
-            colors: [color.withValues(alpha: 0.75), color],
+            colors: [color.withValues(alpha: 0.80), color],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ).createShader(rect)
-          ..strokeWidth = 5
+          ..strokeWidth = 6
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round,
       );
@@ -563,11 +687,12 @@ class _ArcPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_ArcPainter old) =>
+  bool shouldRepaint(_DonutPainter old) =>
       old.progress != progress || old.color != color;
 }
 
-// Dot texture for dark cards.
+// ── Dot texture ───────────────────────────────────────────────────────────────
+
 class _CardTexture extends StatelessWidget {
   const _CardTexture();
   @override
@@ -592,10 +717,10 @@ class _CardDotPainter extends CustomPainter {
   bool shouldRepaint(_CardDotPainter _) => false;
 }
 
-// ── 2 · Property showcase ─────────────────────────────────────────────────────
+// ── 2 · Property card ─────────────────────────────────────────────────────────
 
-class _PropertyShowcase extends StatelessWidget {
-  const _PropertyShowcase({required this.property});
+class _PropertyCard extends StatelessWidget {
+  const _PropertyCard({required this.property});
   final Property property;
 
   @override
@@ -605,18 +730,27 @@ class _PropertyShowcase extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final owned = property.status == PropertyStatus.owned;
 
-    final stats = <_Stat>[
+    final stats = <({IconData icon, String label, String value})>[
       if (property.contractNumber != null)
-        _Stat(l10n.myPropertyContractNumber, property.contractNumber!),
+        (
+          icon: AppIcons.contract,
+          label: l10n.myPropertyContractNumber,
+          value: property.contractNumber!,
+        ),
       if (property.signedAt != null)
-        _Stat(
-          l10n.myPropertySignedDate,
-          DateFormatter.mediumDate(property.signedAt!, languageCode: lang),
+        (
+          icon: AppIcons.calendar,
+          label: l10n.myPropertySignedDate,
+          value: DateFormatter.mediumDate(
+            property.signedAt!,
+            languageCode: lang,
+          ),
         ),
       if (property.hasInstallmentPlan)
-        _Stat(
-          l10n.homeMonthlyInstallment,
-          PriceFormatter.formatString(
+        (
+          icon: AppIcons.installments,
+          label: l10n.homeMonthlyInstallment,
+          value: PriceFormatter.formatString(
             property.monthlyAmount,
             languageCode: lang,
           ),
@@ -626,13 +760,13 @@ class _PropertyShowcase extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            blurRadius: 20,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -640,7 +774,7 @@ class _PropertyShowcase extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Navy banner header
+          // Premium banner
           GestureDetector(
             onTap: () => context.push('/account/property'),
             child: _PropertyBanner(
@@ -651,7 +785,7 @@ class _PropertyShowcase extends StatelessWidget {
               l10n: l10n,
             ),
           ),
-          // Contract stats
+          // Stats with icons
           if (stats.isNotEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(
@@ -662,64 +796,18 @@ class _PropertyShowcase extends StatelessWidget {
                 children: [
                   for (var i = 0; i < stats.length; i++) ...[
                     if (i > 0) Divider(height: 1, color: colors.hairline),
-                    _StatLine(stat: stats[i]),
+                    _StatRow(
+                      icon: stats[i].icon,
+                      label: stats[i].label,
+                      value: stats[i].value,
+                    ),
                   ],
                 ],
               ),
             ),
           Divider(height: 1, color: colors.hairline),
-          // Action tiles 2×2
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ActionTile(
-                        icon: AppIcons.installments,
-                        label: l10n.homeViewInstallments,
-                        onTap: () =>
-                            context.push('/account/installments'),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _ActionTile(
-                        icon: AppIcons.deposit,
-                        label: l10n.accountDeposits,
-                        onTap: () => context.push('/account/deposits'),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _ActionTile(
-                        icon: AppIcons.contract,
-                        label: l10n.homeViewContractPdf,
-                        onTap: () =>
-                            context.push('/account/contracts'),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: _ActionTile(
-                        icon: AppIcons.maintenance,
-                        label: l10n.myPropertyRequestMaintenance,
-                        onTap: () => context.push(
-                          '/account/maintenance/new',
-                          extra: {'unitId': property.unitId},
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          // Horizontal action strip
+          _ActionStrip(unitId: property.unitId),
         ],
       ),
     );
@@ -745,93 +833,141 @@ class _PropertyBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [_navyCard, _navyDeep],
+          colors: [_navyAccent, _navy],
         ),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          // Gold-tinted home icon tile
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: AppPalette.gold400.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: AppPalette.gold400.withValues(alpha: 0.32),
+          const Positioned.fill(
+            child: IgnorePointer(child: _CardTexture()),
+          ),
+          PositionedDirectional(
+            end: 0,
+            top: 0,
+            child: Container(
+              width: 120,
+              height: 100,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.topRight,
+                  radius: 1.0,
+                  colors: [
+                    AppPalette.gold400.withValues(alpha: 0.14),
+                    AppPalette.gold400.withValues(alpha: 0.0),
+                  ],
+                ),
               ),
             ),
-            child: const Icon(
-              Icons.home_rounded,
-              color: AppPalette.gold400,
-              size: 26,
-            ),
           ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  projectName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$unitType · $unitCode',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.55),
-                    letterSpacing: 0.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          // Owned / reserved badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: owned
-                  ? Colors.green.withValues(alpha: 0.14)
-                  : Colors.amber.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: owned
-                    ? Colors.greenAccent.withValues(alpha: 0.45)
-                    : Colors.amber.withValues(alpha: 0.45),
-              ),
-            ),
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
               children: [
+                // Large icon tile
                 Container(
-                  width: 6,
-                  height: 6,
+                  width: 58,
+                  height: 58,
                   decoration: BoxDecoration(
-                    color: owned ? Colors.greenAccent : Colors.amber,
-                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        AppPalette.gold400.withValues(alpha: 0.22),
+                        AppPalette.gold400.withValues(alpha: 0.08),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppPalette.gold400.withValues(alpha: 0.40),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppPalette.gold400.withValues(alpha: 0.15),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.home_rounded,
+                    color: AppPalette.gold300,
+                    size: 28,
                   ),
                 ),
-                const SizedBox(width: 5),
-                Text(
-                  owned
-                      ? l10n.myPropertyStatusOwned
-                      : l10n.myPropertyStatusReserved,
-                  style: TextStyle(
-                    color: owned ? Colors.greenAccent : Colors.amber,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        projectName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$unitType · $unitCode',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.52),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                // Status badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: owned
+                        ? const Color(0xFF10B981).withValues(alpha: 0.16)
+                        : Colors.amber.withValues(alpha: 0.16),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: owned
+                          ? const Color(0xFF34D399).withValues(alpha: 0.50)
+                          : Colors.amber.withValues(alpha: 0.50),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: owned
+                              ? const Color(0xFF34D399)
+                              : Colors.amber,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        owned
+                            ? l10n.myPropertyStatusOwned
+                            : l10n.myPropertyStatusReserved,
+                        style: TextStyle(
+                          color: owned
+                              ? const Color(0xFF34D399)
+                              : Colors.amber,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -843,15 +979,15 @@ class _PropertyBanner extends StatelessWidget {
   }
 }
 
-class _Stat {
-  const _Stat(this.label, this.value);
+class _StatRow extends StatelessWidget {
+  const _StatRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  final IconData icon;
   final String label;
   final String value;
-}
-
-class _StatLine extends StatelessWidget {
-  const _StatLine({required this.stat});
-  final _Stat stat;
 
   @override
   Widget build(BuildContext context) {
@@ -861,15 +997,15 @@ class _StatLine extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         children: [
+          Icon(icon, size: 15, color: colors.inkMuted),
+          const SizedBox(width: AppSpacing.sm),
           Text(
-            stat.label,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.inkMuted,
-            ),
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
           ),
           const Spacer(),
           Text(
-            stat.value,
+            value,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: colors.inkStrong,
               fontWeight: FontWeight.w800,
@@ -881,8 +1017,63 @@ class _StatLine extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
+// Horizontal scrollable action strip
+class _ActionStrip extends StatelessWidget {
+  const _ActionStrip({required this.unitId});
+  final String unitId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    final actions = <({IconData icon, String label, VoidCallback onTap})>[
+      (
+        icon: AppIcons.installments,
+        label: l10n.homeViewInstallments,
+        onTap: () => context.push('/account/installments'),
+      ),
+      (
+        icon: AppIcons.deposit,
+        label: l10n.accountDeposits,
+        onTap: () => context.push('/account/deposits'),
+      ),
+      (
+        icon: AppIcons.contract,
+        label: l10n.homeViewContractPdf,
+        onTap: () => context.push('/account/contracts'),
+      ),
+      (
+        icon: AppIcons.maintenance,
+        label: l10n.myPropertyRequestMaintenance,
+        onTap: () => context.push(
+          '/account/maintenance/new',
+          extra: {'unitId': unitId},
+        ),
+      ),
+    ];
+
+    return SizedBox(
+      height: 90,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+        itemCount: actions.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.xs),
+        itemBuilder: (context, i) => _ActionChip(
+          icon: actions[i].icon,
+          label: actions[i].label,
+          onTap: actions[i].onTap,
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionChip extends StatelessWidget {
+  const _ActionChip({
     required this.icon,
     required this.label,
     required this.onTap,
@@ -897,42 +1088,46 @@ class _ActionTile extends StatelessWidget {
     final colors = context.appColors;
     final theme = Theme.of(context);
     return Material(
-      color: colors.surfaceSoft,
-      borderRadius: BorderRadius.circular(AppRadii.md),
-      clipBehavior: Clip.antiAlias,
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.sm + 2,
-          ),
+          width: 84,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadii.md),
-            border: Border.all(color: colors.hairline, width: 0.75),
+            color: colors.surfaceSoft,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: colors.hairline.withValues(alpha: 0.6),
+              width: 0.75,
+            ),
           ),
-          child: Row(
+          child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
-                  color: AppPalette.gold400.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 16, color: AppPalette.gold500),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Flexible(
-                child: Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: colors.inkStrong,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
+                  gradient: const LinearGradient(
+                    colors: [_navyAccent, _navy],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 16, color: AppPalette.gold300),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: colors.inkStrong,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 9.5,
                 ),
               ),
             ],
@@ -943,7 +1138,7 @@ class _ActionTile extends StatelessWidget {
   }
 }
 
-// ── Empty property prompt ────────────────────────────────────────────────────
+// ── Empty property prompt ─────────────────────────────────────────────────────
 
 class _EmptyPropertyCard extends StatelessWidget {
   const _EmptyPropertyCard();
@@ -976,9 +1171,7 @@ class _EmptyPropertyCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xxs),
           Text(
             l10n.homeOwnerEmptyMessage,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.inkMuted,
-            ),
+            style: theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
           ),
           const SizedBox(height: AppSpacing.md),
           SizedBox(
@@ -997,10 +1190,10 @@ class _EmptyPropertyCard extends StatelessWidget {
   }
 }
 
-// ── 3 · Activity timeline ────────────────────────────────────────────────────
+// ── 3 · Activity feed ─────────────────────────────────────────────────────────
 
-class _ActivityTimeline extends StatelessWidget {
-  const _ActivityTimeline();
+class _ActivityFeed extends StatelessWidget {
+  const _ActivityFeed();
 
   @override
   Widget build(BuildContext context) {
@@ -1016,23 +1209,25 @@ class _ActivityTimeline extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _SectionRow(
+            _SectionHeader(
+              icon: AppIcons.maintenance,
               title: l10n.homeRecentActivity,
               onViewAll: () => context.push('/account/maintenance'),
+              viewAllLabel: l10n.viewAll,
             ),
             const SizedBox(height: AppSpacing.md),
             Container(
               decoration: BoxDecoration(
                 color: colors.surface,
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: colors.hairline.withValues(alpha: 0.6),
+                  color: colors.hairline.withValues(alpha: 0.5),
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 3),
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
@@ -1040,7 +1235,7 @@ class _ActivityTimeline extends StatelessWidget {
               child: Column(
                 children: [
                   for (var i = 0; i < recent.length; i++)
-                    _TimelineItem(
+                    _FeedItem(
                       request: recent[i],
                       isLast: i == recent.length - 1,
                     ),
@@ -1054,8 +1249,8 @@ class _ActivityTimeline extends StatelessWidget {
   }
 }
 
-class _TimelineItem extends StatelessWidget {
-  const _TimelineItem({required this.request, required this.isLast});
+class _FeedItem extends StatelessWidget {
+  const _FeedItem({required this.request, required this.isLast});
 
   final MaintenanceRequest request;
   final bool isLast;
@@ -1082,7 +1277,7 @@ class _TimelineItem extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Timeline column
+              // Timeline column with gradient icon box
               SizedBox(
                 width: 36,
                 child: Column(
@@ -1091,17 +1286,17 @@ class _TimelineItem extends StatelessWidget {
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(
-                        color: AppPalette.navy.withValues(alpha: 0.07),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: colors.hairline.withValues(alpha: 0.8),
-                          width: 0.75,
+                        gradient: const LinearGradient(
+                          colors: [_navyAccent, _navy],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(
+                      child: const Icon(
                         AppIcons.maintenance,
                         size: 17,
-                        color: AppPalette.navy.withValues(alpha: 0.55),
+                        color: AppPalette.gold300,
                       ),
                     ),
                     if (!isLast)
@@ -1114,7 +1309,7 @@ class _TimelineItem extends StatelessWidget {
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                               colors: [
-                                AppPalette.gold400.withValues(alpha: 0.35),
+                                AppPalette.gold400.withValues(alpha: 0.40),
                                 AppPalette.gold400.withValues(alpha: 0.0),
                               ],
                             ),
