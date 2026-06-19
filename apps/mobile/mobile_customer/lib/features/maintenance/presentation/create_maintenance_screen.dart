@@ -55,9 +55,9 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
           if (state.pickIssue != null) {
             ScaffoldMessenger.of(context)
               ..hideCurrentSnackBar()
-              ..showSnackBar(SnackBar(
-                content: Text(_pickMsg(l10n, state.pickIssue!)),
-              ));
+              ..showSnackBar(
+                SnackBar(content: Text(_pickMsg(l10n, state.pickIssue!))),
+              );
             context.read<CreateMaintenanceCubit>().clearPickIssue();
           }
         },
@@ -72,8 +72,7 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
                     AppSpacing.lg,
                     AppSpacing.lg,
                     AppSpacing.lg,
-                    AppSpacing.xl +
-                        MediaQuery.of(context).padding.bottom,
+                    AppSpacing.xl + MediaQuery.of(context).padding.bottom,
                   ),
                   children: [
                     // ── Unit picker ──────────────────────────────────────
@@ -128,15 +127,14 @@ class _CreateMaintenanceScreenState extends State<CreateMaintenanceScreen> {
   }
 
   String _pickMsg(AppLocalizations l, PhotoPickIssue issue) => switch (issue) {
-        PhotoPickIssue.permissionDenied =>
-          l.maintenancePhotoPermissionDenied,
-        PhotoPickIssue.tooMany => l.maintenancePhotoTooMany(kMaxPhotos),
-        PhotoPickIssue.tooLarge => l.maintenancePhotoTooLarge(
-            kMaxPhotoBytes ~/ (1024 * 1024),
-          ),
-        PhotoPickIssue.unsupportedType => l.maintenancePhotoUnsupported,
-        PhotoPickIssue.unknown => l.maintenancePhotoPickFailed,
-      };
+    PhotoPickIssue.permissionDenied => l.maintenancePhotoPermissionDenied,
+    PhotoPickIssue.tooMany => l.maintenancePhotoTooMany(kMaxPhotos),
+    PhotoPickIssue.tooLarge => l.maintenancePhotoTooLarge(
+      kMaxPhotoBytes ~/ (1024 * 1024),
+    ),
+    PhotoPickIssue.unsupportedType => l.maintenancePhotoUnsupported,
+    PhotoPickIssue.unknown => l.maintenancePhotoPickFailed,
+  };
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -178,9 +176,7 @@ class _Header extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            const Positioned.fill(
-              child: IgnorePointer(child: _DotTexture()),
-            ),
+            const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
             PositionedDirectional(
               end: 0,
               top: 0,
@@ -373,13 +369,7 @@ class _DescriptionField extends StatelessWidget {
         ),
         if (errorText != null) ...[
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            errorText!,
-            style: TextStyle(
-              color: colors.error,
-              fontSize: 12,
-            ),
-          ),
+          Text(errorText!, style: TextStyle(color: colors.error, fontSize: 12)),
         ],
       ],
     );
@@ -408,15 +398,11 @@ class _SubmitArea extends StatelessWidget {
             decoration: BoxDecoration(
               color: colors.error.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: colors.error.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: colors.error.withValues(alpha: 0.2)),
             ),
             child: Text(
               l10n.maintenanceUploadPartial(state.failedPhotoCount),
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colors.error,
-              ),
+              style: theme.textTheme.bodyMedium?.copyWith(color: colors.error),
               textAlign: TextAlign.center,
             ),
           ),
@@ -425,9 +411,7 @@ class _SubmitArea extends StatelessWidget {
             children: [
               Expanded(
                 child: AppButton(
-                  label: l10n.maintenanceRetryFailed(
-                    state.failedPhotoCount,
-                  ),
+                  label: l10n.maintenanceRetryFailed(state.failedPhotoCount),
                   icon: Icons.refresh_rounded,
                   variant: AppButtonVariant.outline,
                   onPressed: cubit.retryFailedUploads,
@@ -492,9 +476,9 @@ class _PhotosSection extends StatelessWidget {
             Text(
               l10n.maintenancePhotosLabel,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: colors.inkStrong,
-                  ),
+                fontWeight: FontWeight.w800,
+                color: colors.inkStrong,
+              ),
             ),
           ],
         ),
@@ -503,10 +487,7 @@ class _PhotosSection extends StatelessWidget {
           padding: const EdgeInsetsDirectional.only(start: 11),
           child: Text(
             l10n.maintenancePhotosHint(kMaxPhotos, maxMb),
-            style: TextStyle(
-              color: colors.inkMuted,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: colors.inkMuted, fontSize: 12),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
@@ -514,17 +495,13 @@ class _PhotosSection extends StatelessWidget {
           Wrap(
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.sm,
-            children: [
-              for (final p in state.photos) _PhotoThumb(photo: p),
-            ],
+            children: [for (final p in state.photos) _PhotoThumb(photo: p)],
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
         if (state.canAddMorePhotos && state.requestId == null)
           GestureDetector(
-            onTap: state.busy
-                ? null
-                : () => _openSourceSheet(context, cubit),
+            onTap: state.busy ? null : () => _openSourceSheet(context, cubit),
             child: Container(
               height: 48,
               decoration: BoxDecoration(
@@ -586,61 +563,245 @@ class _PhotosSection extends StatelessWidget {
     final l10n = context.l10n;
     await showModalBottomSheet<void>(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _PhotoSourceSheet(l10n: l10n, cubit: cubit),
+    );
+  }
+}
+
+// ── Photo source sheet ────────────────────────────────────────────────────────
+
+class _PhotoSourceSheet extends StatelessWidget {
+  const _PhotoSourceSheet({required this.l10n, required this.cubit});
+  final AppLocalizations l10n;
+  final CreateMaintenanceCubit cubit;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFFF8F6F1),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Drag handle ────────────────────────────────────────────────────
+          Container(
+            width: 44,
+            height: 4,
+            margin: const EdgeInsets.only(top: 12, bottom: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // ── Title row ──────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+            child: Row(
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      l10n.maintenancePhotosLabel,
+                      style: TextStyle(
+                        color: colors.inkStrong,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close_rounded,
+                      size: 18,
+                      color: colors.inkStrong,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Gold divider ───────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            child: Container(
+              height: 1,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    AppPalette.gold400,
+                    AppPalette.gold300,
+                    Color(0x00D4AF37),
+                  ],
+                  begin: AlignmentDirectional.centerEnd,
+                  end: AlignmentDirectional.centerStart,
+                ),
+              ),
+            ),
+          ),
+
+          // ── Cards ──────────────────────────────────────────────────────────
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomInset),
+            child: Column(
+              children: [
+                _SourceCard(
+                  icon: Icons.photo_camera_rounded,
+                  iconGradient: const LinearGradient(
+                    colors: [_navyLight, _navyDeep],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  iconColor: AppPalette.gold300,
+                  title: l10n.maintenanceFromCamera,
+                  subtitle: 'التقط صورة الآن مباشرةً',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    cubit.addFromCamera();
+                  },
+                ),
+                const SizedBox(height: 12),
+                _SourceCard(
+                  icon: Icons.photo_library_rounded,
+                  iconGradient: const LinearGradient(
+                    colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  iconColor: AppPalette.gold300,
+                  title: l10n.maintenanceFromGallery,
+                  subtitle: 'اختر من معرض الصور',
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    cubit.addFromGallery();
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceCard extends StatelessWidget {
+  const _SourceCard({
+    required this.icon,
+    required this.iconGradient,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Gradient iconGradient;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.black.withValues(alpha: 0.06)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
           children: [
+            // Icon tile
             Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 52,
+              height: 52,
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(2),
+                gradient: iconGradient,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(width: 16),
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: colors.inkStrong,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: colors.inkMuted,
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               ),
             ),
-            ListTile(
-              leading: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _navyDeep.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.photo_camera_outlined,
-                  color: _navyDeep,
-                ),
+            const SizedBox(width: 8),
+            // Chevron
+            Container(
+              width: 30,
+              height: 30,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(8),
               ),
-              title: Text(l10n.maintenanceFromCamera),
-              onTap: () {
-                Navigator.of(sheetCtx).pop();
-                cubit.addFromCamera();
-              },
-            ),
-            ListTile(
-              leading: Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: _navyDeep.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.photo_library_outlined,
-                  color: _navyDeep,
-                ),
+              child: Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 13,
+                color: colors.inkMuted,
               ),
-              title: Text(l10n.maintenanceFromGallery),
-              onTap: () {
-                Navigator.of(sheetCtx).pop();
-                cubit.addFromGallery();
-              },
             ),
-            const SizedBox(height: AppSpacing.sm),
           ],
         ),
       ),
@@ -721,10 +882,7 @@ class _PhotoThumb extends StatelessWidget {
           semanticLabel: context.l10n.maintenancePhotoUploaded,
         );
       case PhotoStatus.failed:
-        return const Icon(
-          Icons.error_outline_rounded,
-          color: Colors.white,
-        );
+        return const Icon(Icons.error_outline_rounded, color: Colors.white);
       case PhotoStatus.pending:
         return const SizedBox.shrink();
     }
@@ -910,14 +1068,13 @@ class _Categories extends StatelessWidget {
                     vertical: 9,
                   ),
                   decoration: BoxDecoration(
-                    gradient:
-                        state.selectedCategoryIds.contains(cat.id)
-                            ? const LinearGradient(
-                                colors: [_navyLight, _navyDeep],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
+                    gradient: state.selectedCategoryIds.contains(cat.id)
+                        ? const LinearGradient(
+                            colors: [_navyLight, _navyDeep],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
                     color: state.selectedCategoryIds.contains(cat.id)
                         ? null
                         : colors.surface,
@@ -928,23 +1085,21 @@ class _Categories extends StatelessWidget {
                           : colors.hairline.withValues(alpha: 0.6),
                       width: 1.5,
                     ),
-                    boxShadow:
-                        state.selectedCategoryIds.contains(cat.id)
-                            ? [
-                                BoxShadow(
-                                  color: _navyDeep.withValues(alpha: 0.3),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ]
-                            : [
-                                BoxShadow(
-                                  color:
-                                      Colors.black.withValues(alpha: 0.04),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
+                    boxShadow: state.selectedCategoryIds.contains(cat.id)
+                        ? [
+                            BoxShadow(
+                              color: _navyDeep.withValues(alpha: 0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ]
+                        : [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -960,10 +1115,9 @@ class _Categories extends StatelessWidget {
                       Text(
                         cat.name.resolve(lang),
                         style: TextStyle(
-                          color:
-                              state.selectedCategoryIds.contains(cat.id)
-                                  ? Colors.white
-                                  : colors.inkStrong,
+                          color: state.selectedCategoryIds.contains(cat.id)
+                              ? Colors.white
+                              : colors.inkStrong,
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
                         ),
@@ -997,10 +1151,7 @@ class _ValidationText extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: TextStyle(
-            color: context.appColors.error,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: context.appColors.error, fontSize: 12),
         ),
       ],
     );
@@ -1045,8 +1196,7 @@ class _DotPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.04);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.04);
     const step = 20.0;
     for (var y = 6.0; y < size.height; y += step) {
       for (var x = 6.0; x < size.width; x += step) {
