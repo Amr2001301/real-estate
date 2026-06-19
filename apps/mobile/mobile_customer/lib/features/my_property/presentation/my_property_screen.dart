@@ -79,8 +79,13 @@ class _MyPropertyScreenState extends State<MyPropertyScreen> {
                         padding: EdgeInsets.only(
                           bottom: i < properties.length - 1 ? AppSpacing.lg : 0,
                         ),
-                        child: _PropertyCard(property: properties[i], index: i)
-                            .animate(delay: Duration(milliseconds: 70 * i))
+                        child: GestureDetector(
+                          onTap: () => context.push(
+                            '/account/property/detail',
+                            extra: properties[i],
+                          ),
+                          child: _PropertyCard(property: properties[i], index: i),
+                        ).animate(delay: Duration(milliseconds: 70 * i))
                             .fadeIn(duration: 360.ms)
                             .slideY(
                               begin: 0.06,

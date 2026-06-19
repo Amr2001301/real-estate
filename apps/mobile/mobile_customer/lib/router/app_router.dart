@@ -72,10 +72,12 @@ import '../features/maintenance/presentation/maintenance_detail_cubit.dart';
 import '../features/maintenance/presentation/maintenance_request_detail_screen.dart';
 import '../features/maintenance/presentation/maintenance_requests_cubit.dart';
 import '../features/maintenance/presentation/maintenance_requests_screen.dart';
+import '../features/my_property/domain/entities/property.dart';
 import '../features/my_property/domain/repositories/my_property_repository.dart';
 import '../features/my_property/domain/usecases/get_my_properties.dart';
 import '../features/my_property/presentation/my_property_cubit.dart';
 import '../features/my_property/presentation/my_property_screen.dart';
+import '../features/my_property/presentation/property_detail_screen.dart';
 import '../features/favorites/presentation/favorites_screen.dart';
 import '../features/notifications/domain/repositories/notifications_repository.dart';
 import '../features/notifications/domain/usecases/notification_use_cases.dart';
@@ -423,6 +425,20 @@ GoRouter createCustomerRouter(SessionCubit sessionCubit) {
             ownerType: DocumentOwnerType.deposit,
             ownerId: installment.latestProof!.depositId,
             child: ProofViewScreen(installment: installment),
+          );
+        },
+      ),
+
+      // ── Property detail ───────────────────────────────────────────────────
+      GoRoute(
+        path: '/account/property/detail',
+        builder: (context, state) {
+          final property = state.extra! as Property;
+          return BlocProvider(
+            create: (ctx) => InstallmentsCubit(
+              GetMyInstallments(ctx.read<InstallmentsRepository>()),
+            ),
+            child: PropertyDetailScreen(property: property),
           );
         },
       ),
