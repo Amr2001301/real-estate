@@ -166,7 +166,10 @@ class CustomerShellScaffold extends StatelessWidget {
     final showShellAppBar =
         !_selfChromeBranches.contains(current) &&
         current != _Branch.home &&
-        current != _Branch.property;
+        current != _Branch.property &&
+        current != _Branch.finance &&
+        current != _Branch.account &&
+        current != _Branch.maintenance;
 
     return Scaffold(
       // iOS: let body content scroll behind the floating glass tab bar (real
