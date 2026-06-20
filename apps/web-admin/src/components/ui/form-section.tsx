@@ -20,17 +20,17 @@ export function FormSection({ title, description, children, aside, className }: 
       )}
     >
       <div className="lg:col-span-1">
-        <h2 className="text-base font-semibold text-slate-900 tracking-tight">
+        <h2 className="text-[15px] font-bold text-navy tracking-tight border-s-[3px] border-s-brand-400 ps-3">
           {title}
         </h2>
         {description && (
-          <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">
+          <p className="mt-2 text-sm text-slate-500 leading-relaxed ps-3">
             {description}
           </p>
         )}
-        {aside && <div className="mt-3">{aside}</div>}
+        {aside && <div className="mt-3 ps-3">{aside}</div>}
       </div>
-      <Card className="lg:col-span-2 p-5 sm:p-6">
+      <Card className="lg:col-span-2 p-6 sm:p-7">
         <div className="flex flex-col gap-5">{children}</div>
       </Card>
     </section>

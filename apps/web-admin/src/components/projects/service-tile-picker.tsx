@@ -95,19 +95,19 @@ export function ServiceTilePicker({
               onClick={() => toggle(tile)}
               aria-pressed={active}
               className={cn(
-                'group relative flex items-center gap-2.5 rounded-2xl border px-3 py-3 text-start transition-colors',
+                'group relative flex items-center gap-2.5 rounded-2xl border px-3 py-3 text-start transition-all duration-150 ease-smooth',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40',
                 active
-                  ? 'border-brand-500 bg-brand-50/70 text-brand-800'
-                  : 'border-hairline bg-surface hover:border-slate-300 text-slate-700',
+                  ? 'border-brand-400 bg-brand-50 text-brand-800 shadow-[0_0_0_3px_rgb(200_162_75_/_0.10)]'
+                  : 'border-hairline bg-surface hover:border-brand-200 hover:bg-brand-50/40 hover:shadow-soft text-slate-700',
               )}
             >
               <span
                 className={cn(
-                  'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0',
+                  'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 transition-colors duration-150',
                   active
-                    ? 'bg-brand-500 text-white'
-                    : 'bg-info-50 text-slate-500',
+                    ? 'bg-gradient-to-br from-brand-400 to-brand-600 text-white shadow-soft'
+                    : 'bg-surface-muted text-slate-500 group-hover:bg-brand-100 group-hover:text-brand-700',
                 )}
               >
                 <Icon className="h-[18px] w-[18px]" strokeWidth={1.75} />
@@ -117,10 +117,10 @@ export function ServiceTilePicker({
               </span>
               <span
                 className={cn(
-                  'inline-flex h-5 w-5 items-center justify-center rounded-md ring-1 shrink-0',
+                  'inline-flex h-5 w-5 items-center justify-center rounded-md ring-1 shrink-0 transition-colors duration-150',
                   active
-                    ? 'bg-brand-600 ring-brand-600 text-white'
-                    : 'bg-surface ring-hairline text-transparent',
+                    ? 'bg-brand-500 ring-brand-500 text-white'
+                    : 'bg-surface ring-hairline text-transparent group-hover:ring-brand-200',
                 )}
                 aria-hidden
               >
@@ -142,7 +142,7 @@ export function ServiceTilePicker({
                       removeCustom(tile);
                     }
                   }}
-                  className="absolute -top-1.5 -end-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm cursor-pointer"
+                  className="absolute -top-1.5 -end-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-navy text-white shadow-md cursor-pointer hover:bg-navy-700 transition-colors"
                   aria-label="حذف"
                 >
                   <X className="h-3 w-3" strokeWidth={3} />
@@ -153,11 +153,11 @@ export function ServiceTilePicker({
         })}
       </div>
 
-      <div className="border-t border-hairline pt-4">
-        <p className="text-xs font-medium text-slate-500 mb-2">
+      <div className="border-t border-hairline pt-5">
+        <p className="text-xs font-semibold text-slate-600 mb-3 tracking-wide">
           إضافة خدمة مخصصة
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2.5">
           <Input
             inputSize="sm"
             placeholder="بالعربية"
