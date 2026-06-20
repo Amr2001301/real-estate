@@ -4,14 +4,18 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pagination } from '@/components/ui/pagination';
 import { DataTable } from '@/components/table';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 
@@ -79,10 +83,12 @@ export default async function ContractsPage({
   const isAdmin = session?.role === 'ADMIN';
 
   return (
-    <div className="space-y-5">
-      <PageHeader
+    <div className="flex flex-col gap-5 lg:gap-6">
+
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <PremiumPageHero
         title="العقود"
-        description="عرض وإدارة عقود البيع المرتبطة بالوحدات والعملاء."
+        description="إدارة عقود البيع ومتابعة حالاتها المالية والتشغيلية."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'العقود' },
@@ -98,50 +104,66 @@ export default async function ContractsPage({
         }
       />
 
-      {/* KPI row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <PageKpiCard
-          label="إجمالي العقود"
-          value={totalContracts}
-          icon={<FileText />}
-          tone="brand"
-        />
-        <PageKpiCard
-          label="عقود موقّعة (الصفحة الحالية)"
-          value={signedCount}
-          icon={<CheckCircle2 />}
-          tone="success"
-          sub={`من ${contracts.length} عقد في هذه الصفحة`}
-        />
-        <PageKpiCard
-          label="محوّلة من حجز (الصفحة الحالية)"
-          value={withReservationCount}
-          icon={<Link2 />}
-          tone="info"
-          sub={`من ${contracts.length} عقد في هذه الصفحة`}
-        />
-      </div>
+      {/* ── KPI strip ────────────────────────────────────────────────────────── */}
+      <PremiumMetricStrip
+        cols={3}
+        metrics={[
+          {
+            label: 'إجمالي العقود',
+            value: totalContracts,
+            icon: <FileText />,
+            tone: 'brand',
+            primary: true,
+          },
+          {
+            label: 'عقود موقّعة (الصفحة الحالية)',
+            value: signedCount,
+            icon: <CheckCircle2 />,
+            tone: 'success',
+            sub: `من ${contracts.length} عقد في هذه الصفحة`,
+          },
+          {
+            label: 'محوّلة من حجز (الصفحة الحالية)',
+            value: withReservationCount,
+            icon: <Link2 />,
+            tone: 'info',
+            sub: `من ${contracts.length} عقد في هذه الصفحة`,
+          },
+        ]}
+      />
 
-      {/* Filter strip */}
-      <form method="get" action="/dashboard/contracts" className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft">
-        <Input
-          name="q"
-          inputSize="sm"
-          placeholder="رقم العقد، العميل، الوحدة…"
-          defaultValue={sp.q ?? ''}
-          className="flex-1 min-w-[160px]"
-        />
-        <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-36 shrink-0">
-          <option value="">كل التوقيع</option>
-          <option value="yes">موقّع</option>
-          <option value="no">غير موقّع</option>
-        </Select>
-        <Select name="hasReservation" inputSize="sm" defaultValue={sp.hasReservation ?? ''} className="w-36 shrink-0">
-          <option value="">كل المصادر</option>
-          <option value="yes">من حجز</option>
-          <option value="no">يدوي</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
+      {/* ── Filter bar ───────────────────────────────────────────────────────── */}
+      <PremiumFilterBar method="get" action="/dashboard/contracts">
+        {/* Search */}
+        <div className="flex-1 min-w-[160px]">
+          <label htmlFor="con-q" className="sr-only">بحث</label>
+          <Input
+            id="con-q"
+            name="q"
+            inputSize="sm"
+            placeholder="رقم العقد، العميل، الوحدة…"
+            defaultValue={sp.q ?? ''}
+            className="w-full"
+          />
+        </div>
+
+        <PremiumFilterField label="التوقيع" htmlFor="con-signed">
+          <Select id="con-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-36 shrink-0">
+            <option value="">كل التوقيع</option>
+            <option value="yes">موقّع</option>
+            <option value="no">غير موقّع</option>
+          </Select>
+        </PremiumFilterField>
+
+        <PremiumFilterField label="المصدر" htmlFor="con-hasReservation">
+          <Select id="con-hasReservation" name="hasReservation" inputSize="sm" defaultValue={sp.hasReservation ?? ''} className="w-36 shrink-0">
+            <option value="">كل المصادر</option>
+            <option value="yes">من حجز</option>
+            <option value="no">يدوي</option>
+          </Select>
+        </PremiumFilterField>
+
+        <div className="flex items-center gap-2 ms-auto shrink-0">
           <Button type="submit" variant="primary" size="sm">تصفية</Button>
           {(sp.q || sp.signed || sp.hasReservation) && (
             <Link href="/dashboard/contracts">
@@ -149,14 +171,16 @@ export default async function ContractsPage({
             </Link>
           )}
         </div>
-      </form>
+      </PremiumFilterBar>
 
+      {/* ── Error ────────────────────────────────────────────────────────────── */}
       {contractsRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           {contractsRes.error}
         </div>
       )}
 
+      {/* ── Table ────────────────────────────────────────────────────────────── */}
       <DataTable
         rowKey={(c) => c.id}
         rows={contracts}
@@ -272,6 +296,7 @@ export default async function ContractsPage({
         ]}
       />
 
+      {/* ── Pagination ───────────────────────────────────────────────────────── */}
       {meta && (
         <Pagination
           page={meta.page}

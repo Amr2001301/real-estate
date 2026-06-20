@@ -3,13 +3,16 @@ import { Eye, ScrollText, Clock, Activity } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, Paged, UserRole } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
-import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 import { AuditFilterBar } from './_components/audit-filter-bar';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumSectionCard,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -59,54 +62,54 @@ function eventLabel(action: string, entityType: string): string {
   if (c('auth'))          return is(['POST']) ? 'محاولة دخول' : 'إجراء مصادقة';
   if (c('permission'))    return is(['POST', 'PATCH', 'PUT']) ? 'تعديل صلاحيات' : 'إجراء صلاحية';
   if (c('user')) {
-    if (is(['POST']))        return 'إنشاء مستخدم';
+    if (is(['POST']))         return 'إنشاء مستخدم';
     if (is(['PATCH', 'PUT'])) return 'تعديل مستخدم';
-    if (is(['DELETE']))      return 'حذف مستخدم';
+    if (is(['DELETE']))       return 'حذف مستخدم';
   }
   if (c('reservation')) {
-    if (is(['POST']))        return 'إنشاء حجز';
+    if (is(['POST']))         return 'إنشاء حجز';
     if (is(['PATCH', 'PUT'])) return 'تعديل حجز';
-    if (is(['DELETE']))      return 'إلغاء حجز';
+    if (is(['DELETE']))       return 'إلغاء حجز';
   }
   if (c('contract')) {
-    if (is(['POST']))        return 'إنشاء عقد';
+    if (is(['POST']))         return 'إنشاء عقد';
     if (is(['PATCH', 'PUT'])) return 'تعديل عقد';
-    if (is(['DELETE']))      return 'حذف عقد';
+    if (is(['DELETE']))       return 'حذف عقد';
   }
   if (c('payout')) {
-    if (is(['POST']))        return 'تسجيل مدفوعات';
+    if (is(['POST']))         return 'تسجيل مدفوعات';
     if (is(['PATCH', 'PUT'])) return 'تعديل مدفوعات';
   }
   if (c('commission')) {
-    if (is(['POST']))        return 'تسجيل عمولة';
+    if (is(['POST']))         return 'تسجيل عمولة';
     if (is(['PATCH', 'PUT'])) return 'تعديل عمولة';
   }
   if (c('broker')) {
-    if (is(['POST']))        return 'إضافة وسيط';
+    if (is(['POST']))         return 'إضافة وسيط';
     if (is(['PATCH', 'PUT'])) return 'تعديل وسيط';
-    if (is(['DELETE']))      return 'حذف وسيط';
+    if (is(['DELETE']))       return 'حذف وسيط';
   }
   if (c('payment')) {
-    if (is(['POST']))        return 'تسجيل دفعة';
+    if (is(['POST']))         return 'تسجيل دفعة';
     if (is(['PATCH', 'PUT'])) return 'تعديل دفعة';
   }
   if (c('lead')) {
-    if (is(['POST']))        return 'إنشاء فرصة مبيعات';
+    if (is(['POST']))         return 'إنشاء فرصة مبيعات';
     if (is(['PATCH', 'PUT'])) return 'تعديل فرصة مبيعات';
-    if (is(['DELETE']))      return 'حذف فرصة مبيعات';
+    if (is(['DELETE']))       return 'حذف فرصة مبيعات';
   }
   if (c('project')) {
-    if (is(['POST']))        return 'إنشاء مشروع';
+    if (is(['POST']))         return 'إنشاء مشروع';
     if (is(['PATCH', 'PUT'])) return 'تعديل مشروع';
-    if (is(['DELETE']))      return 'حذف مشروع';
+    if (is(['DELETE']))       return 'حذف مشروع';
   }
   if (c('unit')) {
-    if (is(['POST']))        return 'إنشاء وحدة';
+    if (is(['POST']))         return 'إنشاء وحدة';
     if (is(['PATCH', 'PUT'])) return 'تعديل وحدة';
-    if (is(['DELETE']))      return 'حذف وحدة';
+    if (is(['DELETE']))       return 'حذف وحدة';
   }
   if (c('maintenance')) {
-    if (is(['POST']))        return 'طلب صيانة';
+    if (is(['POST']))         return 'طلب صيانة';
     if (is(['PATCH', 'PUT'])) return 'تعديل طلب صيانة';
   }
   if (c('document')) {
@@ -114,43 +117,42 @@ function eventLabel(action: string, entityType: string): string {
     if (is(['DELETE'])) return 'حذف مستند';
   }
   if (c('visit')) {
-    if (is(['POST']))        return 'إنشاء زيارة';
+    if (is(['POST']))         return 'إنشاء زيارة';
     if (is(['PATCH', 'PUT'])) return 'تعديل زيارة';
   }
   if (c('notification')) return 'إرسال إشعار';
 
-  if (is(['POST']))        return 'إنشاء سجل';
+  if (is(['POST']))         return 'إنشاء سجل';
   if (is(['PATCH', 'PUT'])) return 'تعديل سجل';
-  if (is(['DELETE']))      return 'حذف سجل';
+  if (is(['DELETE']))       return 'حذف سجل';
   return 'إجراء نظام';
 }
 
 function areaLabel(entityType: string): string {
   const et = entityType.toLowerCase();
-  if (et.includes('auth'))              return 'المصادقة';
-  if (et.includes('permission'))        return 'الصلاحيات';
-  if (et.includes('broker-lead'))       return 'عملاء الوسطاء';
+  if (et.includes('auth'))               return 'المصادقة';
+  if (et.includes('permission'))         return 'الصلاحيات';
+  if (et.includes('broker-lead'))        return 'عملاء الوسطاء';
   if (et.includes('broker-reservation')) return 'حجوزات الوسطاء';
-  if (et.includes('broker-contract'))   return 'عقود الوسطاء';
-  if (et.includes('broker-commission')) return 'عمولات الوسطاء';
-  if (et.includes('broker-payout'))     return 'مدفوعات الوسطاء';
-  if (et.includes('broker'))            return 'الوسطاء';
-  if (et.includes('user'))              return 'المستخدمون';
-  if (et.includes('reservation'))       return 'الحجوزات';
-  if (et.includes('contract'))          return 'العقود';
-  if (et.includes('payment'))           return 'الدفعات';
-  if (et.includes('lead'))              return 'فرص المبيعات';
-  if (et.includes('project'))           return 'المشاريع';
-  if (et.includes('unit'))              return 'الوحدات';
-  if (et.includes('maintenance'))       return 'الصيانة';
-  if (et.includes('document'))          return 'المستندات';
-  if (et.includes('visit'))             return 'الزيارات';
-  if (et.includes('notification'))      return 'الإشعارات';
+  if (et.includes('broker-contract'))    return 'عقود الوسطاء';
+  if (et.includes('broker-commission'))  return 'عمولات الوسطاء';
+  if (et.includes('broker-payout'))      return 'مدفوعات الوسطاء';
+  if (et.includes('broker'))             return 'الوسطاء';
+  if (et.includes('user'))               return 'المستخدمون';
+  if (et.includes('reservation'))        return 'الحجوزات';
+  if (et.includes('contract'))           return 'العقود';
+  if (et.includes('payment'))            return 'الدفعات';
+  if (et.includes('lead'))               return 'فرص المبيعات';
+  if (et.includes('project'))            return 'المشاريع';
+  if (et.includes('unit'))               return 'الوحدات';
+  if (et.includes('maintenance'))        return 'الصيانة';
+  if (et.includes('document'))           return 'المستندات';
+  if (et.includes('visit'))              return 'الزيارات';
+  if (et.includes('notification'))       return 'الإشعارات';
   if (et.includes('audit'))             return 'سجلات التدقيق';
   return entityType;
 }
 
-// ::1 / 127.0.0.1 → readable local label; real IPs pass through unchanged.
 function formatIpLabel(ip: string | null): { label: string; isLocal: boolean } {
   if (!ip) return { label: '—', isLocal: false };
   if (ip === '::1' || ip === '127.0.0.1' || ip.toLowerCase() === 'localhost') {
@@ -190,7 +192,6 @@ export default async function AuditLogsPage({
 
   const hasFilter = !!(sp.q || sp.action || sp.entityType || sp.actorId || sp.from || sp.to);
 
-  // Compute summary metrics from current-page rows only.
   const actionCounts = new Map<string, number>();
   for (const r of rows) {
     actionCounts.set(r.action, (actionCounts.get(r.action) ?? 0) + 1);
@@ -202,67 +203,53 @@ export default async function AuditLogsPage({
 
   return (
     <div className="space-y-5">
-
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <PageHeader
-        title="سجلات التدقيق"
-        description="تتبع عمليات المستخدمين والتغييرات المهمة داخل النظام لأغراض الأمان والمراجعة."
+      <PremiumPageHero
+        title="سجل التدقيق"
+        description="مراجعة الأنشطة والإجراءات الإدارية داخل المنصة."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'سجلات التدقيق' },
         ]}
-        meta={<ScrollText className="h-4 w-4 text-brand-600" />}
       />
 
-      {/* ── Error ───────────────────────────────────────────────────────── */}
       {res.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           تعذر تحميل السجلات: {res.error}
         </div>
       )}
 
-      {/* ── Summary strip ───────────────────────────────────────────────── */}
       {(meta || rows.length > 0) && (
-        <div className="flex flex-wrap items-center gap-x-1 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-          {[
-            meta ? {
-              icon: <ScrollText className="h-3.5 w-3.5" />,
+        <PremiumMetricStrip
+          metrics={[
+            {
               label: 'إجمالي السجلات',
-              value: meta.total.toLocaleString('ar-SA'),
-              cls: 'bg-brand-50 text-brand-600',
-            } : null,
-            rows[0] ? {
-              icon: <Clock className="h-3.5 w-3.5" />,
+              value: meta ? meta.total.toLocaleString('ar-SA') : rows.length,
+              icon: <ScrollText className="h-4 w-4" />,
+              primary: true,
+              tone: 'brand',
+            },
+            {
               label: 'آخر نشاط',
-              value: formatDateTime(rows[0].createdAt),
-              cls: 'bg-slate-100 text-slate-500',
-            } : null,
-            topAction ? {
-              icon: <Activity className="h-3.5 w-3.5" />,
-              label: 'أكثر إجراء (في الصفحة)',
-              value: topActionLabel[topAction] ?? topAction,
-              cls: methodBadgeCls(topAction).split(' ').slice(0, 2).join(' '),
-            } : null,
-          ].filter(Boolean).map((kpi, i, arr) => (
-            kpi && (
-              <div key={i} className="flex items-center shrink-0">
-                <div className="flex items-center gap-2.5 px-4 first:ps-0 last:pe-0">
-                  <span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0', kpi.cls)}>
-                    {kpi.icon}
-                  </span>
-                  <div>
-                    <p className="text-2xs text-slate-500 font-medium leading-tight">{kpi.label}</p>
-                    <p className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{kpi.value}</p>
-                  </div>
-                </div>
-                {i < arr.length - 1 && <div className="hidden sm:block h-8 w-px bg-hairline shrink-0" />}
-              </div>
-            )
-          ))}
-        </div>
+              value: rows[0] ? formatDateTime(rows[0].createdAt) : '—',
+              icon: <Clock className="h-4 w-4" />,
+              tone: 'neutral',
+              valueSize: 'compact',
+            },
+            ...(topAction
+              ? [
+                  {
+                    label: 'أكثر إجراء (في الصفحة)',
+                    value: topActionLabel[topAction] ?? topAction,
+                    icon: <Activity className="h-4 w-4" />,
+                    tone: 'neutral' as const,
+                  },
+                ]
+              : []),
+          ]}
+          cols={topAction ? 3 : 2}
+        />
       )}
 
-      {/* ── Filter bar (client component with advanced toggle) ──────────── */}
       <AuditFilterBar
         defaultQ={sp.q ?? ''}
         defaultAction={sp.action ?? ''}
@@ -272,13 +259,26 @@ export default async function AuditLogsPage({
         defaultTo={sp.to ?? ''}
       />
 
-      {/* ── Audit table ─────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        title="سجلات التدقيق"
+        trailing={
+          meta ? (
+            <span className="text-xs text-slate-400 tabular-nums">
+              {meta.total.toLocaleString('ar-EG')} سجل
+            </span>
+          ) : undefined
+        }
+        padded={false}
+      >
         {rows.length === 0 ? (
-          <EmptyState
+          <PremiumEmptyState
             icon={<ScrollText />}
             title={hasFilter ? 'لا توجد سجلات مطابقة' : 'لا توجد سجلات تدقيق'}
-            description={hasFilter ? 'جرّب تعديل الفلاتر أو مسحها للعرض الكامل.' : 'ستظهر هنا العمليات التي تُنفَّذ على النظام تلقائيًا.'}
+            description={
+              hasFilter
+                ? 'جرّب تعديل الفلاتر أو مسحها للعرض الكامل.'
+                : 'ستظهر هنا العمليات التي تُنفَّذ على النظام تلقائيًا.'
+            }
             action={
               hasFilter ? (
                 <Link href="/dashboard/audit-logs">
@@ -290,29 +290,29 @@ export default async function AuditLogsPage({
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm">
-              <thead className="bg-surface-muted/60 text-2xs font-semibold tracking-wide text-slate-500 border-b border-hairline">
+              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start font-semibold py-3 ps-5 pe-4 whitespace-nowrap">الوقت</th>
-                  <th className="text-start font-semibold py-3 px-4">المستخدم</th>
-                  <th className="text-start font-semibold py-3 px-4">الحدث</th>
-                  <th className="text-start font-semibold py-3 px-4">المساحة</th>
-                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">المعرّف</th>
-                  <th className="text-start font-semibold py-3 px-4">IP</th>
-                  <th className="text-end font-semibold py-3 ps-4 pe-5"></th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">الوقت</th>
+                  <th className="text-start py-3 px-4">المستخدم</th>
+                  <th className="text-start py-3 px-4">الحدث</th>
+                  <th className="text-start py-3 px-4">المساحة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">المعرّف</th>
+                  <th className="text-start py-3 px-4">IP</th>
+                  <th className="text-end py-3 ps-4 pe-5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
                 {rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="align-middle hover:bg-surface-muted/30 transition-colors"
+                    className="hover:bg-canvas/40 transition-colors duration-100 align-middle"
                   >
-                    {/* Time */}
                     <td className="py-3 ps-5 pe-4 whitespace-nowrap">
-                      <span className="text-xs text-slate-700 font-medium">{formatDateTime(row.createdAt)}</span>
+                      <span className="text-xs text-slate-700 font-medium">
+                        {formatDateTime(row.createdAt)}
+                      </span>
                     </td>
 
-                    {/* Actor */}
                     <td className="py-3 px-4 max-w-[160px]">
                       {row.actor ? (
                         <div className="min-w-0">
@@ -333,7 +333,6 @@ export default async function AuditLogsPage({
                       )}
                     </td>
 
-                    {/* Event (human-readable) */}
                     <td className="py-3 px-4">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-900 leading-tight whitespace-nowrap">
@@ -351,7 +350,6 @@ export default async function AuditLogsPage({
                       </div>
                     </td>
 
-                    {/* Area — Arabic label only; technical route in title tooltip */}
                     <td className="py-3 px-4">
                       <span
                         className="text-sm text-slate-700 leading-tight whitespace-nowrap cursor-default"
@@ -361,13 +359,9 @@ export default async function AuditLogsPage({
                       </span>
                     </td>
 
-                    {/* Entity ID — full UUID, no truncation */}
                     <td className="py-3 px-4 whitespace-nowrap">
                       {row.entityId ? (
-                        <span
-                          className="font-mono text-[11px] text-slate-500"
-                          dir="ltr"
-                        >
+                        <span className="font-mono text-[11px] text-slate-500" dir="ltr">
                           {row.entityId}
                         </span>
                       ) : (
@@ -375,7 +369,6 @@ export default async function AuditLogsPage({
                       )}
                     </td>
 
-                    {/* IP — local IPs shown as readable label */}
                     <td className="py-3 px-4 whitespace-nowrap">
                       {(() => {
                         const { label, isLocal } = formatIpLabel(row.ip);
@@ -387,15 +380,16 @@ export default async function AuditLogsPage({
                             {label}
                           </span>
                         ) : (
-                          <span className="font-mono text-2xs text-slate-400" dir="ltr">{label}</span>
+                          <span className="font-mono text-2xs text-slate-400" dir="ltr">
+                            {label}
+                          </span>
                         );
                       })()}
                     </td>
 
-                    {/* Details */}
                     <td className="py-3 ps-4 pe-5 text-end">
                       <Link href={`/dashboard/audit-logs/${row.id}`} aria-label="عرض تفاصيل الحدث">
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-hairline bg-surface text-slate-500 shadow-xs hover:bg-surface-muted hover:text-slate-700 transition-colors">
+                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-hairline bg-surface text-slate-500 shadow-xs hover:bg-canvas hover:text-slate-700 transition-colors">
                           <Eye className="h-3.5 w-3.5" />
                         </span>
                       </Link>
@@ -406,9 +400,8 @@ export default async function AuditLogsPage({
             </table>
           </div>
         )}
-      </Card>
+      </PremiumSectionCard>
 
-      {/* ── Pagination ──────────────────────────────────────────────────── */}
       {meta && meta.total > meta.pageSize && (
         <Pagination
           basePath="/dashboard/audit-logs"
@@ -425,7 +418,6 @@ export default async function AuditLogsPage({
           }}
         />
       )}
-
     </div>
   );
 }

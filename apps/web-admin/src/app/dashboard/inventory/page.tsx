@@ -11,19 +11,26 @@ import {
   Download,
   SlidersHorizontal,
   ArrowUpRight,
+  BarChart3,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged, Unit, Project, UnitStatus } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -33,7 +40,7 @@ const SNAPSHOT_SIZE = 1000;
 
 type StatusFilter = 'all' | UnitStatus;
 
-interface Search {
+interface Filters {
   q?: string;
   status?: string;
   projectId?: string;
@@ -55,7 +62,7 @@ interface ProjectBucket {
 export default async function InventoryPage({
   searchParams,
 }: {
-  searchParams: Promise<Search>;
+  searchParams: Promise<Filters>;
 }) {
   const sp         = await searchParams;
   const session    = await getSession();
@@ -149,10 +156,10 @@ export default async function InventoryPage({
   const resetHref  = `/dashboard/inventory${status !== 'all' ? `?status=${status}` : ''}`;
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 lg:gap-6">
 
-      {/* ── 1. Header ──────────────────────────────────────────────────────── */}
-      <PageHeader
+      {/* ── 1. Hero ─────────────────────────────────────────────────────────── */}
+      <PremiumPageHero
         title="لوحة المخزون"
         description="نظرة شاملة على توفر الوحدات وقيمة المخزون عبر المشاريع والمراحل."
         breadcrumbs={[
@@ -164,7 +171,7 @@ export default async function InventoryPage({
             <IconButton label="تصدير البيانات" variant="outline" size="md" type="button">
               <Download />
             </IconButton>
-            <Link href={unitsHref({})}>
+            <Link href={unitsHref({}) as never}>
               <Button variant="primary" size="md" leftIcon={<SlidersHorizontal className="h-4 w-4" />}>
                 {isAdmin ? 'إدارة الوحدات' : 'عرض الوحدات'}
               </Button>
@@ -173,15 +180,44 @@ export default async function InventoryPage({
         }
       />
 
-      {/* ── 2. Summary panel — full redesign ───────────────────────────────── */}
-      <InventorySummaryPanel
-        inventoryValue={inventoryValue}
-        avgPrice={avgPrice}
+      {/* ── 2. KPI strip ────────────────────────────────────────────────────── */}
+      <PremiumMetricStrip
+        cols={4}
+        metrics={[
+          {
+            label: 'قيمة المخزون الإجمالية',
+            value: formatCurrency(inventoryValue),
+            icon: <CircleDollarSign />,
+            tone: 'brand',
+            primary: true,
+          },
+          {
+            label: 'إجمالي الوحدات',
+            value: total,
+            icon: <Boxes />,
+            tone: 'neutral',
+          },
+          {
+            label: 'المشاريع النشطة',
+            value: projectBuckets.length,
+            icon: <Building2 />,
+            tone: 'info',
+          },
+          {
+            label: 'متوسط سعر الوحدة',
+            value: avgPrice > 0 ? formatCurrency(avgPrice) : '—',
+            icon: <Calculator />,
+            tone: 'success',
+          },
+        ]}
+      />
+
+      {/* ── 3. Availability distribution ────────────────────────────────────── */}
+      <InventoryAvailCard
         total={total}
         available={available}
         reserved={reserved}
         sold={sold}
-        projectCount={projectBuckets.length}
       />
 
       {/* ── Error banners ─────────────────────────────────────────────────── */}
@@ -198,99 +234,92 @@ export default async function InventoryPage({
         </div>
       )}
 
-      {/* ── 3. Unified filter bar ──────────────────────────────────────────── */}
-      <div className="bg-surface border border-hairline rounded-2xl shadow-soft overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3">
+      {/* ── 4. Filter bar ───────────────────────────────────────────────────── */}
+      <PremiumFilterBar method="get" action="/dashboard/inventory">
+        {/* Preserve active status filter when submitting search/project form */}
+        {status !== 'all' && <input type="hidden" name="status" value={status} />}
 
-          {/* Form: only search + project — uses id so the button can live outside */}
-          <form
-            id="inv-filter"
-            method="get"
-            action="/dashboard/inventory"
-            className="contents"
-          >
-            {status !== 'all' && <input type="hidden" name="status" value={status} />}
-
-            {/* Search */}
-            <div className="flex-1 min-w-[180px]">
-              <Input
-                name="q"
-                inputSize="sm"
-                defaultValue={q}
-                placeholder="ابحث باسم المشروع، المبنى، أو كود الوحدة…"
-                leftAddon={<Search />}
-              />
-            </div>
-
-            {/* Project dropdown */}
-            <Select
-              name="projectId"
-              inputSize="sm"
-              defaultValue={projectId}
-              className="w-40 shrink-0"
-            >
-              <option value="">كل المشاريع</option>
-              {projects.map((p) => (
-                <option key={p.id} value={p.id}>{tx(p.name)}</option>
-              ))}
-            </Select>
-          </form>
-
-          {/* Visual divider */}
-          <div className="h-7 w-px bg-hairline shrink-0" />
-
-          {/* Status filter chips — inline with the rest */}
-          <div className="flex items-center gap-1 flex-wrap">
-            <StatusChip
-              href={`/dashboard/inventory${qs({ status: undefined })}`}
-              active={status === 'all'}
-              label="الكل"
-              count={total}
-            />
-            <StatusChip
-              href={`/dashboard/inventory${qs({ status: 'AVAILABLE' })}`}
-              active={status === 'AVAILABLE'}
-              label="متاحة"
-              count={available}
-              tone="success"
-            />
-            <StatusChip
-              href={`/dashboard/inventory${qs({ status: 'RESERVED' })}`}
-              active={status === 'RESERVED'}
-              label="محجوزة"
-              count={reserved}
-              tone="brand"
-            />
-            <StatusChip
-              href={`/dashboard/inventory${qs({ status: 'SOLD' })}`}
-              active={status === 'SOLD'}
-              label="مباعة"
-              count={sold}
-              tone="slate"
-            />
-          </div>
-
-          {/* Apply + Reset — submit button linked to the form by id */}
-          <div className="flex items-center gap-2 ms-auto shrink-0">
-            {hasFilters && (
-              <Link
-                href={resetHref as never}
-                className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                مسح
-              </Link>
-            )}
-            <Button type="submit" form="inv-filter" variant="primary" size="sm">
-              تطبيق
-            </Button>
-          </div>
+        {/* Search — grows to fill available space */}
+        <div className="flex-1 min-w-[180px]">
+          <label htmlFor="inv-q" className="sr-only">بحث</label>
+          <Input
+            id="inv-q"
+            name="q"
+            inputSize="sm"
+            defaultValue={q}
+            placeholder="ابحث باسم المشروع، المبنى، أو كود الوحدة…"
+            leftAddon={<Search />}
+            className="w-full"
+          />
         </div>
-      </div>
 
-      {/* ── 4. Inventory matrix ────────────────────────────────────────────── */}
+        {/* Project filter */}
+        <PremiumFilterField label="المشروع" htmlFor="projectId">
+          <Select
+            id="projectId"
+            name="projectId"
+            inputSize="sm"
+            defaultValue={projectId}
+            className="w-40 shrink-0"
+          >
+            <option value="">كل المشاريع</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{tx(p.name)}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+
+        <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
+
+        {/* Status chips — links, not form inputs; change URL directly */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: undefined })}`}
+            active={status === 'all'}
+            label="الكل"
+            count={total}
+          />
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: 'AVAILABLE' })}`}
+            active={status === 'AVAILABLE'}
+            label="متاحة"
+            count={available}
+            tone="success"
+          />
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: 'RESERVED' })}`}
+            active={status === 'RESERVED'}
+            label="محجوزة"
+            count={reserved}
+            tone="brand"
+          />
+          <StatusChip
+            href={`/dashboard/inventory${qs({ status: 'SOLD' })}`}
+            active={status === 'SOLD'}
+            label="مباعة"
+            count={sold}
+            tone="slate"
+          />
+        </div>
+
+        {/* Apply + Reset */}
+        <div className="flex items-center gap-2 ms-auto shrink-0">
+          {hasFilters && (
+            <Link
+              href={resetHref as never}
+              className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              مسح
+            </Link>
+          )}
+          <Button type="submit" variant="primary" size="sm">تطبيق</Button>
+        </div>
+      </PremiumFilterBar>
+
+      {/* ── 5. Inventory matrix ─────────────────────────────────────────────── */}
       {projectBuckets.length === 0 ? (
-        <div className="bg-surface border border-hairline rounded-2xl shadow-soft">
-          <EmptyState
+        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft">
+          <PremiumEmptyState
             icon={<Boxes />}
             title={q || projectId || status !== 'all' ? 'لا توجد نتائج لمعايير البحث' : 'لا توجد وحدات بعد'}
             description={
@@ -331,123 +360,75 @@ export default async function InventoryPage({
 //  DESIGN PALETTE
 //  متاحة  → success green   (#10B981 / success-500)
 //  محجوزة → brand gold      (#CFAE57 / brand-400)
-//  مباعة  → slate neutral   (#94A3B8 / slate-400) — NOT black, NOT blue
+//  مباعة  → slate neutral   (#94A3B8 / slate-400)
 // ═══════════════════════════════════════════════════════════════════════════
 
-// ── InventorySummaryPanel ────────────────────────────────────────────────────
+// ── InventoryAvailCard ───────────────────────────────────────────────────────
 
-function InventorySummaryPanel({
-  inventoryValue, avgPrice, total, available, reserved, sold, projectCount,
-}: {
-  inventoryValue: number; avgPrice: number;
-  total: number; available: number; reserved: number; sold: number;
-  projectCount: number;
-}) {
+function InventoryAvailCard({
+  total, available, reserved, sold,
+}: { total: number; available: number; reserved: number; sold: number }) {
   const avPct = total > 0 ? Math.round((available / total) * 100) : 0;
   const rsPct = total > 0 ? Math.round((reserved  / total) * 100) : 0;
   const slPct = total > 0 ? Math.round((sold      / total) * 100) : 0;
 
   return (
-    <div className="bg-surface border border-hairline rounded-3xl overflow-hidden shadow-soft">
-      {/* Thin gold gradient accent */}
-      <div className="h-[2px] bg-gradient-to-l from-transparent via-brand-400/70 to-transparent" />
+    <PremiumSectionCard
+      icon={<BarChart3 />}
+      title="توزيع الوحدات"
+      description="نسب التوفر عبر إجمالي المخزون"
+    >
+      <div className="flex flex-col gap-5">
+        <AvailBar
+          label="متاحة"
+          count={available}
+          pct={avPct}
+          barClass="bg-success-500"
+          dotClass="bg-success-500"
+          countClass="text-success-700"
+        />
+        <AvailBar
+          label="محجوزة"
+          count={reserved}
+          pct={rsPct}
+          barClass="bg-brand-400"
+          dotClass="bg-brand-400"
+          countClass="text-brand-700"
+        />
+        <AvailBar
+          label="مباعة"
+          count={sold}
+          pct={slPct}
+          barClass="bg-slate-400"
+          dotClass="bg-slate-400"
+          countClass="text-slate-500"
+        />
+      </div>
+    </PremiumSectionCard>
+  );
+}
 
-      <div className="grid grid-cols-1 lg:grid-cols-5">
-
-        {/* ── Right panel (RTL col-1): financial hero ── col-span-3 */}
-        <div className="lg:col-span-3 px-7 py-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-e border-hairline">
-
-          {/* Primary metric */}
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <CircleDollarSign className="h-3.5 w-3.5 text-brand-400 shrink-0" />
-              <p className="text-[12px] font-medium text-slate-400">قيمة المخزون الإجمالية</p>
-            </div>
-            <p dir="rtl" className="text-[2.2rem] font-black text-navy tabular-nums leading-none break-words">
-              {formatCurrency(inventoryValue)}
-            </p>
-          </div>
-
-          {/* Secondary metrics row */}
-          <div className="flex flex-wrap items-center gap-5 mt-6 pt-5 border-t border-hairline">
-            <div>
-              <p className="text-[11px] text-slate-400 mb-1.5">متوسط سعر الوحدة</p>
-              <p dir="rtl" className="text-[15px] font-bold text-slate-700 tabular-nums leading-none">
-                {formatCurrency(avgPrice)}
-              </p>
-            </div>
-            <div className="h-8 w-px bg-hairline shrink-0" />
-            <div>
-              <p className="text-[11px] text-slate-400 mb-1.5">إجمالي الوحدات</p>
-              <p className="text-[15px] font-bold text-slate-700 leading-none">{total} وحدة</p>
-            </div>
-            {projectCount > 0 && (
-              <>
-                <div className="h-8 w-px bg-hairline shrink-0" />
-                <div>
-                  <p className="text-[11px] text-slate-400 mb-1.5">المشاريع النشطة</p>
-                  <p className="text-[15px] font-bold text-slate-700 leading-none">{projectCount} مشروع</p>
-                </div>
-              </>
-            )}
-          </div>
+function AvailBar({ label, count, pct, barClass, dotClass, countClass }: {
+  label: string; count: number; pct: number;
+  barClass: string; dotClass: string; countClass: string;
+}) {
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2">
+          <span className={cn('h-2 w-2 rounded-full shrink-0', dotClass)} />
+          <span className="text-[13px] font-medium text-slate-700">{label}</span>
         </div>
-
-        {/* ── Left panel (RTL col-2): per-status breakdown ── col-span-2 */}
-        <div className="lg:col-span-2 px-6 py-6 flex flex-col justify-center gap-4">
-
-          {/* متاحة */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5 gap-2">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-success-500 shrink-0" />
-                <span className="text-[12px] font-medium text-slate-600">متاحة</span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[14px] font-bold text-slate-900 tabular-nums">{available}</span>
-                <span className="text-[11px] text-slate-400 tabular-nums">({avPct}%)</span>
-              </div>
-            </div>
-            <div className="h-2 w-full rounded-full bg-surface-muted overflow-hidden">
-              <div className="h-full bg-success-500 rounded-full transition-all duration-700" style={{ width: `${avPct}%` }} />
-            </div>
-          </div>
-
-          {/* محجوزة */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5 gap-2">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-brand-400 shrink-0" />
-                <span className="text-[12px] font-medium text-slate-600">محجوزة</span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[14px] font-bold text-slate-900 tabular-nums">{reserved}</span>
-                <span className="text-[11px] text-slate-400 tabular-nums">({rsPct}%)</span>
-              </div>
-            </div>
-            <div className="h-2 w-full rounded-full bg-surface-muted overflow-hidden">
-              <div className="h-full bg-brand-400 rounded-full transition-all duration-700" style={{ width: `${rsPct}%` }} />
-            </div>
-          </div>
-
-          {/* مباعة */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5 gap-2">
-              <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full bg-slate-400 shrink-0" />
-                <span className="text-[12px] font-medium text-slate-600">مباعة</span>
-              </div>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[14px] font-bold text-slate-900 tabular-nums">{sold}</span>
-                <span className="text-[11px] text-slate-400 tabular-nums">({slPct}%)</span>
-              </div>
-            </div>
-            <div className="h-2 w-full rounded-full bg-surface-muted overflow-hidden">
-              <div className="h-full bg-slate-400 rounded-full transition-all duration-700" style={{ width: `${slPct}%` }} />
-            </div>
-          </div>
-
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-[14px] font-bold text-slate-900 tabular-nums">{count}</span>
+          <span className={cn('text-[11px] font-semibold tabular-nums', countClass)}>({pct}%)</span>
         </div>
+      </div>
+      <div className="h-2.5 w-full rounded-full bg-canvas overflow-hidden border border-hairline">
+        <div
+          className={cn('h-full rounded-full transition-all duration-700', barClass)}
+          style={{ width: `${pct}%` }}
+        />
       </div>
     </div>
   );
@@ -468,10 +449,12 @@ function ProjectMatrixCard({
   const sl = proj.total > 0 ? (proj.sold      / proj.total) * 100 : 0;
 
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-soft overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      {/* Subtle gold accent line */}
+      <div className="h-[2px] bg-gradient-to-r from-transparent via-brand-300/60 to-transparent" />
 
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-hairline bg-canvas/30">
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-hairline bg-canvas/30">
         <div className="flex items-center gap-3 min-w-0">
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100/80 shrink-0">
             <Building2 className="h-4 w-4" />
@@ -479,7 +462,7 @@ function ProjectMatrixCard({
           <div className="min-w-0">
             <Link
               href={`/dashboard/projects/${proj.id}` as never}
-              className="font-bold text-[16px] text-slate-900 hover:text-brand-700 transition-colors leading-snug block truncate"
+              className="font-bold text-[16px] text-navy hover:text-brand-700 transition-colors leading-snug block truncate"
             >
               {proj.name}
             </Link>
@@ -498,21 +481,21 @@ function ProjectMatrixCard({
               <span className="font-semibold text-slate-600">{proj.total}</span> وحدة
             </span>
             <Link
-              href={unitsHref({ projectId: proj.id })}
-              className="inline-flex items-center gap-0.5 text-[12px] font-medium text-brand-600 hover:text-brand-700 transition-colors"
+              href={unitsHref({ projectId: proj.id }) as never}
+              className="inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand-600 hover:text-brand-700 transition-colors"
             >
               عرض التفاصيل
-              <ArrowUpRight className="h-3 w-3" />
+              <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* ── Stacked bar ────────────────────────────────────────────────────── */}
+      {/* ── Stacked availability bar ─────────────────────────────────────────── */}
       {proj.total > 0 && (
-        <div className="px-5 py-3.5 border-b border-hairline space-y-2">
+        <div className="px-6 py-4 border-b border-hairline space-y-2">
           <div
-            className="h-3 w-full rounded-full overflow-hidden flex bg-surface-muted"
+            className="h-3 w-full rounded-full overflow-hidden flex bg-canvas"
             role="img"
             aria-label={`متاحة ${proj.available} • محجوزة ${proj.reserved} • مباعة ${proj.sold}`}
           >
@@ -543,18 +526,18 @@ function ProjectMatrixCard({
         </div>
       )}
 
-      {/* ── Table ──────────────────────────────────────────────────────────── */}
+      {/* ── Phase / building table ───────────────────────────────────────────── */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-hairline bg-canvas/50">
-              <th className="text-start text-[11px] font-semibold text-slate-400 py-2.5 ps-5 pe-4">المرحلة / المبنى</th>
-              <th className="text-center text-[11px] font-semibold text-slate-400 py-2.5 px-3">إجمالي</th>
-              <th className="text-center text-[11px] font-semibold text-slate-400 py-2.5 px-3">متاحة</th>
-              <th className="text-center text-[11px] font-semibold text-slate-400 py-2.5 px-3">محجوزة</th>
-              <th className="text-center text-[11px] font-semibold text-slate-400 py-2.5 px-3">مباعة</th>
-              <th className="text-start text-[11px] font-semibold text-slate-400 py-2.5 px-3">القيمة</th>
-              <th className="text-start text-[11px] font-semibold text-slate-400 py-2.5 ps-3 pe-5">التوفر</th>
+          <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+            <tr>
+              <th className="text-start py-3 ps-6 pe-4">المرحلة / المبنى</th>
+              <th className="text-center py-3 px-3">إجمالي</th>
+              <th className="text-center py-3 px-3">متاحة</th>
+              <th className="text-center py-3 px-3">محجوزة</th>
+              <th className="text-center py-3 px-3">مباعة</th>
+              <th className="text-start py-3 px-3">القيمة</th>
+              <th className="text-start py-3 ps-3 pe-6">التوفر</th>
             </tr>
           </thead>
           <tbody>
@@ -575,35 +558,35 @@ function PhaseRows({ ph, buildings }: { ph: PhaseBucket; buildings: BuildingBuck
   return (
     <>
       <tr className="border-t border-hairline bg-canvas/60">
-        <td className="py-2.5 ps-5 pe-4">
+        <td className="py-3 ps-6 pe-4">
           <div className="inline-flex items-center gap-2">
             <Layers className="h-3.5 w-3.5 text-brand-500 shrink-0" />
             <span className="text-[13px] font-bold text-slate-800">{ph.name}</span>
-            <span className="inline-flex items-center h-4 px-1.5 rounded-full bg-brand-50 border border-brand-100/80 text-[9px] font-bold text-brand-700">
+            <span className="inline-flex items-center h-[18px] px-1.5 rounded-full bg-brand-50 border border-brand-100 text-[9px] font-bold text-brand-700 uppercase tracking-wide">
               مرحلة
             </span>
           </div>
         </td>
-        <td className="py-2.5 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-700">{ph.total}</td>
-        <td className="py-2.5 px-3 text-center tabular-nums text-[13px] font-semibold text-success-700">
+        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-700">{ph.total}</td>
+        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-success-700">
           {ph.available > 0 ? ph.available : <span className="text-slate-300 font-normal">—</span>}
         </td>
-        <td className="py-2.5 px-3 text-center tabular-nums text-[13px] font-semibold text-brand-700">
+        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-brand-700">
           {ph.reserved > 0 ? ph.reserved : <span className="text-slate-300 font-normal">—</span>}
         </td>
-        <td className="py-2.5 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-500">
+        <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-500">
           {ph.sold > 0 ? ph.sold : <span className="text-slate-300 font-normal">—</span>}
         </td>
-        <td className="py-2.5 px-3 tabular-nums text-[12px] text-slate-600 whitespace-nowrap">{formatCurrency(ph.totalValue)}</td>
-        <td className="py-2.5 ps-3 pe-5">
+        <td className="py-3 px-3 tabular-nums text-[12px] text-slate-600 whitespace-nowrap">{formatCurrency(ph.totalValue)}</td>
+        <td className="py-3 ps-3 pe-6">
           <RowAvailBar available={ph.available} reserved={ph.reserved} sold={ph.sold} total={ph.total} />
         </td>
       </tr>
 
       {buildings.map((b) => (
-        <tr key={b.id} className="border-t border-hairline hover:bg-surface-muted/30 transition-colors duration-100">
-          <td className="py-2.5 ps-5 pe-4">
-            <div className="inline-flex items-center gap-2 ps-6">
+        <tr key={b.id} className="border-t border-hairline hover:bg-canvas/40 transition-colors duration-100">
+          <td className="py-2.5 ps-6 pe-4">
+            <div className="inline-flex items-center gap-2 ps-5">
               <Home className="h-3 w-3 text-slate-300 shrink-0" />
               <span className="text-[12px] text-slate-600">{b.name}</span>
             </div>
@@ -629,7 +612,7 @@ function PhaseRows({ ph, buildings }: { ph: PhaseBucket; buildings: BuildingBuck
               : <span className="text-slate-300 text-[12px]">—</span>}
           </td>
           <td className="py-2.5 px-3 tabular-nums text-[11px] text-slate-400 whitespace-nowrap">{formatCurrency(b.totalValue)}</td>
-          <td className="py-2.5 ps-3 pe-5 min-w-[140px]">
+          <td className="py-2.5 ps-3 pe-6 min-w-[140px]">
             <RowAvailBar available={b.available} reserved={b.reserved} sold={b.sold} total={b.total} />
           </td>
         </tr>
@@ -650,7 +633,7 @@ function RowAvailBar({ available, reserved, sold, total }: {
   return (
     <div className="flex items-center gap-2">
       <div
-        className="h-2 flex-1 max-w-[100px] rounded-full overflow-hidden flex bg-surface-muted"
+        className="h-2 flex-1 max-w-[100px] rounded-full overflow-hidden flex bg-canvas"
         role="img"
         aria-label={`متاحة ${available} • محجوزة ${reserved} • مباعة ${sold}`}
       >

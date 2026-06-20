@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { FileText, Eye, Briefcase, CheckCircle2, ArrowRightLeft, Phone } from 'lucide-react';
+import { FileText, Eye, Briefcase, CheckCircle2, ArrowRightLeft, Phone, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
   AdminBrokerContract,
@@ -11,12 +11,17 @@ import type {
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
-import { EmptyState } from '@/components/ui/empty-state';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -29,6 +34,7 @@ interface Search {
   signed?: string;
   dateFrom?: string;
   dateTo?: string;
+  showFilters?: string;
 }
 
 const PAGE_SIZE = 20;
@@ -78,18 +84,46 @@ export default async function AdminBrokerContractsPage({
 
   const totalContracts = paged?.meta.total ?? 0;
 
+  // Advanced filter state — URL-based toggle, auto-opens when advanced filters are active
+  const hasAdvancedFilters = !!(sp.projectId || sp.salesId || sp.signed || sp.dateFrom || sp.dateTo);
+  const showFilters = hasAdvancedFilters || sp.showFilters === '1';
+  const hasAnyFilter = !!(sp.brokerId || hasAdvancedFilters);
+
+  function pageUrl(overrides: Record<string, string | undefined>): string {
+    const base: Record<string, string | undefined> = {
+      brokerId: sp.brokerId,
+      projectId: sp.projectId,
+      salesId: sp.salesId,
+      signed: sp.signed,
+      dateFrom: sp.dateFrom,
+      dateTo: sp.dateTo,
+      showFilters: sp.showFilters,
+    };
+    const merged = { ...base, ...overrides };
+    const p = new URLSearchParams();
+    for (const [k, v] of Object.entries(merged)) { if (v) p.set(k, v); }
+    const q = p.toString();
+    return `/dashboard/broker-contracts${q ? `?${q}` : ''}`;
+  }
+
+  const toggleFiltersUrl = showFilters
+    ? pageUrl({ showFilters: undefined })
+    : pageUrl({ showFilters: '1' });
+
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="عقود من الوسطاء"
-        description="عقود بيع العملاء الناتجة عن حجوزات أرسلها الوسطاء."
+    <div className="flex flex-col gap-5 lg:gap-6">
+
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <PremiumPageHero
+        title="عقود الوسطاء"
+        description="إدارة العقود المرتبطة بالوسطاء ومتابعة حالاتها."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'عقود من الوسطاء' },
+          { label: 'عقود الوسطاء' },
         ]}
         actions={
-          <Link href="/dashboard/broker-reservations?status=APPROVED">
+          <Link href={'/dashboard/broker-reservations?status=APPROVED' as never}>
             <Button
               variant="primary"
               size="md"
@@ -101,369 +135,359 @@ export default async function AdminBrokerContractsPage({
         }
       />
 
-      {/* Contract summary strip — page-scoped counts and totals */}
-      {paged && rows.length > 0 && (
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-          {/* Total — filter-wide prominent count */}
-          <div className="flex items-baseline gap-1.5 shrink-0">
-            <span className="text-xl font-bold text-slate-900 tabular-nums leading-none">
-              {totalContracts}
-            </span>
-            <span className="text-2xs font-medium text-slate-400">عقد</span>
-          </div>
+      {/* ── KPI strip ────────────────────────────────────────────────────────── */}
+      <PremiumMetricStrip
+        cols={4}
+        metrics={[
+          {
+            label: 'إجمالي العقود',
+            value: totalContracts,
+            icon: <FileText />,
+            tone: 'brand',
+            primary: true,
+          },
+          {
+            label: 'موقّعة',
+            value: counts.signed,
+            icon: <CheckCircle2 />,
+            tone: 'success',
+            sub: 'في هذه الصفحة',
+          },
+          {
+            label: 'قيد التوقيع',
+            value: counts.pending,
+            icon: <FileText />,
+            tone: 'warning',
+            sub: 'في هذه الصفحة',
+          },
+          {
+            label: 'إجمالي قيمة العقود',
+            value: totalValue > 0 ? formatCurrency(totalValue) : '—',
+            icon: <FileText />,
+            tone: 'neutral',
+            sub: 'في هذه الصفحة',
+          },
+        ]}
+      />
 
-          <div className="w-px h-5 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-
-          {/* Signed / pending breakdown */}
-          <div className="flex flex-wrap items-center gap-1.5">
-            <ReviewChip label="موقّع" count={counts.signed} className="bg-success-50 text-success-700" />
-            <ReviewChip label="قيد التوقيع" count={counts.pending} className="bg-warning-50 text-warning-700" />
-          </div>
-
-          {/* Total contract value */}
-          {totalValue > 0 && (
-            <>
-              <div className="w-px h-5 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-2xs text-slate-400 whitespace-nowrap">إجمالي قيمة العقود</span>
-                <span className="text-sm font-semibold text-slate-800 tabular-nums whitespace-nowrap" dir="ltr">
-                  {formatCurrency(totalValue)}
-                </span>
-              </div>
-            </>
-          )}
-
-          {/* Locked commission total */}
-          {totalCommission > 0 && (
-            <>
-              <div className="w-px h-5 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-2xs text-slate-400 whitespace-nowrap">إجمالي العمولة المقفلة</span>
-                <span className="text-sm font-semibold text-slate-800 tabular-nums whitespace-nowrap" dir="ltr">
-                  {formatCurrency(totalCommission)}
-                </span>
-              </div>
-            </>
-          )}
-
-          <span className="ms-auto text-2xs text-slate-400 hidden sm:inline">في هذه الصفحة</span>
-        </div>
-      )}
-
+      {/* ── Error ────────────────────────────────────────────────────────────── */}
       {contractsRes.error && (
-        <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل العقود: {contractsRes.error}
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <p className="font-medium">تعذر تحميل العقود: {contractsRes.error}</p>
         </div>
       )}
 
-      {/* Filter bar */}
-      <form
-        method="get"
-        action="/dashboard/broker-contracts"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-3 py-2.5 shadow-xs"
-      >
-        <Select
-          name="brokerId"
-          inputSize="sm"
-          defaultValue={sp.brokerId ?? ''}
-          className="w-44 shrink-0"
-        >
-          <option value="">كل الوسطاء</option>
-          {brokers.map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.companyName}
-            </option>
-          ))}
-        </Select>
-        <Select
-          name="projectId"
-          inputSize="sm"
-          defaultValue={sp.projectId ?? ''}
-          className="w-40 shrink-0"
-        >
-          <option value="">كل المشاريع</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {tx(p.name)}
-            </option>
-          ))}
-        </Select>
-        <Select
-          name="salesId"
-          inputSize="sm"
-          defaultValue={sp.salesId ?? ''}
-          className="w-44 shrink-0"
-        >
-          <option value="">كل المندوبين</option>
-          {salesUsers.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.fullName}
-            </option>
-          ))}
-        </Select>
-        <Select
-          name="signed"
-          inputSize="sm"
-          defaultValue={sp.signed ?? ''}
-          className="w-36 shrink-0"
-        >
-          <option value="">كل العقود</option>
-          <option value="yes">موقّعة</option>
-          <option value="no">قيد التوقيع</option>
-        </Select>
-        <Input
-          name="dateFrom"
-          inputSize="sm"
-          type="date"
-          defaultValue={sp.dateFrom ?? ''}
-          className="w-36 shrink-0"
-        />
-        <Input
-          name="dateTo"
-          inputSize="sm"
-          type="date"
-          defaultValue={sp.dateTo ?? ''}
-          className="w-36 shrink-0"
-        />
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">
-            تصفية
-          </Button>
-          {Object.values(sp).some(Boolean) && (
-            <Link href="/dashboard/broker-contracts">
-              <Button type="button" variant="ghost" size="sm">
-                مسح
-              </Button>
+      {/* ── Filter bar ───────────────────────────────────────────────────────── */}
+      <PremiumFilterBar method="get" action="/dashboard/broker-contracts">
+        {/* Hidden inputs preserve advanced values when the panel is collapsed */}
+        {!showFilters && sp.projectId && <input type="hidden" name="projectId" value={sp.projectId} />}
+        {!showFilters && sp.salesId   && <input type="hidden" name="salesId"   value={sp.salesId} />}
+        {!showFilters && sp.signed    && <input type="hidden" name="signed"    value={sp.signed} />}
+        {!showFilters && sp.dateFrom  && <input type="hidden" name="dateFrom"  value={sp.dateFrom} />}
+        {!showFilters && sp.dateTo    && <input type="hidden" name="dateTo"    value={sp.dateTo} />}
+
+        {/* ── Row 1: main filter + actions (always visible) ─────────────────── */}
+        <PremiumFilterField label="الوسيط" htmlFor="bc-broker">
+          <Select id="bc-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
+            <option value="">كل الوسطاء</option>
+            {brokers.map((b) => (
+              <option key={b.id} value={b.id}>{b.companyName}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+
+        {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
+        <div className="flex items-center gap-2 ms-auto shrink-0">
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          {hasAnyFilter && (
+            <Link href={'/dashboard/broker-contracts' as never}>
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
             </Link>
           )}
+          <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
+          <Link
+            href={toggleFiltersUrl as never}
+            className={`hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors ${
+              showFilters
+                ? 'bg-brand-50 border-brand-200 text-brand-700'
+                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700'
+            }`}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {hasAdvancedFilters && !showFilters && (
+              <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
+                !
+              </span>
+            )}
+          </Link>
         </div>
-      </form>
 
-      {/* Contract registry table */}
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 border-b border-hairline text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">رقم العقد</th>
-                <th className="text-start font-semibold py-3 px-4">الوسيط</th>
-                <th className="text-start font-semibold py-3 px-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">الوحدة</th>
-                <th className="text-start font-semibold py-3 px-4">القيمة</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">المندوب</th>
-                <th className="text-start font-semibold py-3 px-4">العمولة المُقفلة</th>
-                <th className="text-start font-semibold py-3 px-4">التاريخ</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={10} className="p-0">
-                    <EmptyState
-                      icon={<FileText />}
-                      title="لا توجد عقود من الوسطاء"
-                      description="ستظهر هنا عقود البيع التي تم إنشاؤها من حجوزات ناتجة عن الوسطاء."
-                      action={
-                        <Link href="/dashboard/broker-reservations?status=APPROVED">
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-                          >
-                            تحويل حجز وسيط إلى عقد
-                          </Button>
-                        </Link>
-                      }
-                    />
-                  </td>
-                </tr>
-              )}
-              {rows.map((c) => (
-                <tr
-                  key={c.id}
-                  className="align-middle hover:bg-surface-muted/40 transition-colors"
-                >
-                  {/* Contract number — mono chip */}
-                  <td className="py-3.5 ps-5 pe-4">
-                    {c.contractNumber ? (
-                      <span
-                        className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600 leading-none"
-                        dir="ltr"
-                      >
-                        {c.contractNumber}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">—</span>
-                    )}
-                  </td>
-
-                  {/* Broker — company primary + agent secondary */}
-                  <td className="py-3.5 px-4">
-                    {c.broker ? (
-                      <Link
-                        href={`/dashboard/brokers/${c.broker.id}` as never}
-                        className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors"
-                      >
-                        <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate max-w-[160px]">{c.broker.companyName}</span>
-                      </Link>
-                    ) : (
-                      <span className="text-slate-400 text-xs">—</span>
-                    )}
-                    {c.brokerAgent && (
-                      <p className="text-2xs text-slate-400 mt-0.5 truncate max-w-[180px] ps-5">
-                        {c.brokerAgent.fullName}
-                      </p>
-                    )}
-                  </td>
-
-                  {/* Client — name primary + phone secondary */}
-                  <td className="py-3.5 px-4">
-                    <p className="font-semibold text-slate-900 truncate max-w-[180px]">
-                      {c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—'}
-                    </p>
-                    {(c.customer?.phone ?? c.reservation?.lead?.phone) && (
-                      <span
-                        className="mt-0.5 inline-flex items-center gap-1 text-2xs text-slate-400"
-                        dir="ltr"
-                      >
-                        <Phone className="h-3 w-3 shrink-0" />
-                        {c.customer?.phone ?? c.reservation?.lead?.phone}
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Unit — code chip + project secondary */}
-                  <td className="py-3.5 px-4">
-                    {c.unit?.code ? (
-                      <span
-                        className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none"
-                        dir="ltr"
-                      >
-                        {c.unit.code}
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 text-xs">—</span>
-                    )}
-                    {c.unit?.building && (
-                      <p className="text-2xs text-slate-400 mt-1 truncate max-w-[160px]">
-                        {tx(c.unit.building.phase.project.name)}
-                      </p>
-                    )}
-                  </td>
-
-                  {/* Contract value — strongest financial value in the row */}
-                  <td className="py-3.5 px-4">
-                    <p className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                      {formatCurrency(c.totalAmount)}
-                    </p>
-                  </td>
-
-                  {/* Status badge */}
-                  <td className="py-3.5 px-4">
-                    {c.signedAt ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-success-50 text-success-700 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap">
-                        <CheckCircle2 className="h-3 w-3 shrink-0" />
-                        موقّع
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap">
-                        قيد التوقيع
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Sales admin */}
-                  <td className="py-3.5 px-4">
-                    {c.reservation?.sales ? (
-                      <span className="block text-xs text-slate-600 truncate max-w-[140px]">
-                        {c.reservation.sales.fullName}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                        غير معيّن
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Locked commission — % bold, amount muted */}
-                  <td className="py-3.5 px-4">
-                    {c.reservation?.commissionLockedPct != null ? (
-                      <>
-                        <p className="text-xs font-semibold text-slate-800 tabular-nums">
-                          {Number(c.reservation.commissionLockedPct).toFixed(2)}%
-                        </p>
-                        {c.reservation.commissionLockedAmount != null && (
-                          <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
-                            {formatCurrency(c.reservation.commissionLockedAmount)}
-                          </p>
-                        )}
-                      </>
-                    ) : (
-                      <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                        غير مقفلة
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Date */}
-                  <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
-                    {formatDate(c.createdAt)}
-                  </td>
-
-                  {/* Action */}
-                  <td className="py-3.5 ps-4 pe-5">
-                    <Link href={`/dashboard/contracts/${c.id}` as never}>
-                      <IconButton label="عرض" variant="ghost" size="sm">
-                        <Eye />
-                      </IconButton>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {paged && paged.meta.total > PAGE_SIZE && (
-          <Pagination
-            page={paged.meta.page}
-            pageSize={paged.meta.pageSize}
-            total={paged.meta.total}
-            basePath="/dashboard/broker-contracts"
-            params={{
-              brokerId: sp.brokerId,
-              projectId: sp.projectId,
-              salesId: sp.salesId,
-              signed: sp.signed,
-              dateFrom: sp.dateFrom,
-              dateTo: sp.dateTo,
-            }}
-          />
+        {/* ── Row 2: advanced panel (basis-full forces a new flex row) ─────── */}
+        {showFilters && (
+          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="bc-project" className="text-[11px] font-medium text-slate-400">المشروع</label>
+                <Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
+                  <option value="">كل المشاريع</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{tx(p.name)}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="bc-sales" className="text-[11px] font-medium text-slate-400">المندوب</label>
+                <Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
+                  <option value="">كل المندوبين</option>
+                  {salesUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.fullName}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="bc-signed" className="text-[11px] font-medium text-slate-400">الحالة</label>
+                <Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
+                  <option value="">كل العقود</option>
+                  <option value="yes">موقّعة</option>
+                  <option value="no">قيد التوقيع</option>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="bc-datefrom" className="text-[11px] font-medium text-slate-400">التاريخ من</label>
+                <Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="bc-dateto" className="text-[11px] font-medium text-slate-400">التاريخ إلى</label>
+                <Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
+              </div>
+            </div>
+          </div>
         )}
-      </Card>
+      </PremiumFilterBar>
+
+      {/* ── Contracts table ──────────────────────────────────────────────────── */}
+      <PremiumSectionCard
+        icon={<FileText />}
+        title="سجل العقود"
+        description="عقود بيع العملاء الناتجة عن حجوزات أرسلها الوسطاء."
+        padded={false}
+        trailing={
+          totalCommission > 0 ? (
+            <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
+              عمولة مقفلة: {formatCurrency(totalCommission)}
+            </span>
+          ) : (
+            <span className="text-xs text-slate-400 tabular-nums">
+              {totalContracts.toLocaleString('ar-EG')} عقد
+            </span>
+          )
+        }
+      >
+        {rows.length === 0 && !contractsRes.error ? (
+          <PremiumEmptyState
+            icon={<FileText />}
+            title="لا توجد عقود من الوسطاء"
+            description="ستظهر هنا عقود البيع التي تم إنشاؤها من حجوزات ناتجة عن الوسطاء."
+            action={
+              <Link href={'/dashboard/broker-reservations?status=APPROVED' as never}>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                >
+                  تحويل حجز وسيط إلى عقد
+                </Button>
+              </Link>
+            }
+            className="py-12"
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                <tr>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">رقم العقد</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الوسيط</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">العميل</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">القيمة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">المندوب</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">العمولة المُقفلة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">التاريخ</th>
+                  <th className="text-start py-3 ps-4 pe-5 w-px" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {rows.map((c) => (
+                  <tr
+                    key={c.id}
+                    className="align-middle hover:bg-canvas/40 transition-colors duration-100"
+                  >
+                    {/* Contract number — mono chip */}
+                    <td className="py-3.5 ps-5 pe-4">
+                      {c.contractNumber ? (
+                        <span
+                          className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600 leading-none"
+                          dir="ltr"
+                        >
+                          {c.contractNumber}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
+                    </td>
+
+                    {/* Broker — company primary + agent secondary */}
+                    <td className="py-3.5 px-4">
+                      {c.broker ? (
+                        <Link
+                          href={`/dashboard/brokers/${c.broker.id}` as never}
+                          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-brand-700 transition-colors"
+                        >
+                          <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[160px]">{c.broker.companyName}</span>
+                        </Link>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
+                      {c.brokerAgent && (
+                        <p className="text-2xs text-slate-400 mt-0.5 truncate max-w-[180px] ps-5">
+                          {c.brokerAgent.fullName}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Client — name primary + phone secondary */}
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-slate-900 truncate max-w-[180px]">
+                        {c.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—'}
+                      </p>
+                      {(c.customer?.phone ?? c.reservation?.lead?.phone) && (
+                        <span
+                          className="mt-0.5 inline-flex items-center gap-1 text-2xs text-slate-400"
+                          dir="ltr"
+                        >
+                          <Phone className="h-3 w-3 shrink-0" />
+                          {c.customer?.phone ?? c.reservation?.lead?.phone}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Unit — code chip + project secondary */}
+                    <td className="py-3.5 px-4">
+                      {c.unit?.code ? (
+                        <span
+                          className="inline-flex items-center rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-600 leading-none"
+                          dir="ltr"
+                        >
+                          {c.unit.code}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-xs">—</span>
+                      )}
+                      {c.unit?.building && (
+                        <p className="text-2xs text-slate-400 mt-1 truncate max-w-[160px]">
+                          {tx(c.unit.building.phase.project.name)}
+                        </p>
+                      )}
+                    </td>
+
+                    {/* Contract value */}
+                    <td className="py-3.5 px-4">
+                      <p className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
+                        {formatCurrency(c.totalAmount)}
+                      </p>
+                    </td>
+
+                    {/* Status badge */}
+                    <td className="py-3.5 px-4">
+                      {c.signedAt ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-success-50 text-success-700 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap">
+                          <CheckCircle2 className="h-3 w-3 shrink-0" />
+                          موقّع
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap">
+                          قيد التوقيع
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Sales admin */}
+                    <td className="py-3.5 px-4">
+                      {c.reservation?.sales ? (
+                        <span className="block text-xs text-slate-600 truncate max-w-[140px]">
+                          {c.reservation.sales.fullName}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
+                          غير معيّن
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Locked commission — % bold, amount muted */}
+                    <td className="py-3.5 px-4">
+                      {c.reservation?.commissionLockedPct != null ? (
+                        <>
+                          <p className="text-xs font-semibold text-slate-800 tabular-nums">
+                            {Number(c.reservation.commissionLockedPct).toFixed(2)}%
+                          </p>
+                          {c.reservation.commissionLockedAmount != null && (
+                            <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
+                              {formatCurrency(c.reservation.commissionLockedAmount)}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
+                          غير مقفلة
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Date */}
+                    <td className="py-3.5 px-4 text-2xs text-slate-400 whitespace-nowrap">
+                      {formatDate(c.createdAt)}
+                    </td>
+
+                    {/* Action */}
+                    <td className="py-3.5 ps-4 pe-5">
+                      <Link href={`/dashboard/contracts/${c.id}` as never}>
+                        <IconButton label="عرض" variant="ghost" size="sm">
+                          <Eye />
+                        </IconButton>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PremiumSectionCard>
+
+      {/* ── Pagination ───────────────────────────────────────────────────────── */}
+      {paged && paged.meta.total > PAGE_SIZE && (
+        <Pagination
+          page={paged.meta.page}
+          pageSize={paged.meta.pageSize}
+          total={paged.meta.total}
+          basePath="/dashboard/broker-contracts"
+          params={{
+            brokerId: sp.brokerId,
+            projectId: sp.projectId,
+            salesId: sp.salesId,
+            signed: sp.signed,
+            dateFrom: sp.dateFrom,
+            dateTo: sp.dateTo,
+            showFilters: sp.showFilters,
+          }}
+        />
+      )}
     </div>
-  );
-}
-
-// ── Internal helpers ─────────────────────────────────────────────────────────
-
-function ReviewChip({
-  label,
-  count,
-  className,
-}: {
-  label: string;
-  count: number;
-  className: string;
-}) {
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${className}`}
-    >
-      {label}
-      <span className="font-bold tabular-nums">{count}</span>
-    </span>
   );
 }

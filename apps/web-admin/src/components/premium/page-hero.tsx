@@ -36,12 +36,14 @@ export function PremiumPageHero({
   return (
     <div
       className={cn(
-        'relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden',
+        'relative bg-surface border border-hairline rounded-[20px] shadow-soft',
+        // No overflow-hidden here — it would clip popovers rendered in the actions slot.
+        // The stripe clips itself via rounded-t-[19px] (card radius 20px − 1px border).
         className,
       )}
     >
-      {/* Gold accent stripe */}
-      <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
+      {/* Gold accent stripe — self-clipped to match card corner radius */}
+      <div className="absolute inset-x-0 top-0 h-[3px] rounded-t-[19px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200 pointer-events-none" />
 
       <div className="px-7 sm:px-9 pt-8 pb-7">
         {/* Breadcrumbs */}

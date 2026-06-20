@@ -9,13 +9,19 @@ import { getSession } from '@/lib/session';
 import type { PagedDeposits, Deposit, DepositType, Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
 import { VerifyToggle } from './verify-toggle';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 
@@ -84,53 +90,6 @@ function buildApiUrl(sp: Record<string, string | undefined>, page: number, pageS
   return `/deposits?${params.toString()}`;
 }
 
-// ── SummaryCard ───────────────────────────────────────────────────────────────
-
-type SummaryTone = 'brand' | 'success' | 'info' | 'neutral';
-
-const SUMMARY_BAR:  Record<SummaryTone, string> = {
-  brand:   'bg-brand-500',
-  success: 'bg-success-500',
-  info:    'bg-info-500',
-  neutral: 'bg-slate-300',
-};
-const SUMMARY_ICON: Record<SummaryTone, string> = {
-  brand:   'bg-brand-50 text-brand-600',
-  success: 'bg-success-50 text-success-600',
-  info:    'bg-info-50 text-info-600',
-  neutral: 'bg-slate-100 text-slate-600',
-};
-
-function SummaryCard({
-  label, value, sub, icon, tone = 'brand',
-}: {
-  label: string; value: React.ReactNode; sub?: string;
-  icon?: React.ReactNode; tone?: SummaryTone;
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-hairline shadow-soft overflow-hidden">
-      <div className={cn('h-0.5', SUMMARY_BAR[tone])} />
-      <div className="px-4 py-4 flex items-start gap-3">
-        {icon && (
-          <div className={cn(
-            'mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg ring-1 ring-inset ring-black/5 shrink-0 [&_svg]:h-4 [&_svg]:w-4',
-            SUMMARY_ICON[tone],
-          )}>
-            {icon}
-          </div>
-        )}
-        <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-medium text-slate-400 leading-tight">{label}</p>
-          <p className="mt-0.5 text-xl leading-tight font-bold tracking-tight tabular-nums text-slate-900 truncate">
-            {value}
-          </p>
-          {sub && <p className="mt-0.5 text-[11px] text-slate-400">{sub}</p>}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DepositsPage({
@@ -180,11 +139,12 @@ export default async function DepositsPage({
   const projects: ProjectOption[] = projectsRes.data?.data ?? [];
 
   return (
-    <div className="space-y-5">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <PageHeader
+    <div className="flex flex-col gap-5 lg:gap-6">
+
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <PremiumPageHero
         title="الدفعات"
-        description="سجل جميع الدفعات المالية على الحجوزات والعقود."
+        description="متابعة الدفعات والتحصيلات المرتبطة بالعقود والعملاء."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الدفعات' },
@@ -200,38 +160,42 @@ export default async function DepositsPage({
         }
       />
 
-      {/* ── 4 primary KPI cards ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard
-          tone="brand"
-          label="إجمالي المحصّل"
-          icon={<DollarSign />}
-          value={totals ? formatCurrency(totals.totalAmount) : '—'}
-          sub={totals ? `${totals.count} دفعة` : undefined}
-        />
-        <SummaryCard
-          tone="info"
-          label="مبالغ الحجز"
-          icon={<Landmark />}
-          value={totals ? formatCurrency(totals.bookingAmount) : '—'}
-        />
-        <SummaryCard
-          tone="neutral"
-          label="الأقساط الشهرية"
-          icon={<CreditCard />}
-          value={totals ? formatCurrency(totals.installment) : '—'}
-        />
-        <SummaryCard
-          tone="success"
-          label="عدد الدفعات"
-          icon={<Hash />}
-          value={totals ? totals.count.toLocaleString('ar-EG') : '—'}
-          sub="إجمالي الدفعات المسجلة"
-        />
-      </div>
+      {/* ── KPI strip ────────────────────────────────────────────────────────── */}
+      <PremiumMetricStrip
+        cols={4}
+        metrics={[
+          {
+            label: 'إجمالي المحصّل',
+            value: totals ? formatCurrency(totals.totalAmount) : '—',
+            icon: <DollarSign />,
+            tone: 'brand',
+            primary: true,
+            sub: totals ? `${totals.count} دفعة` : undefined,
+          },
+          {
+            label: 'مبالغ الحجز',
+            value: totals ? formatCurrency(totals.bookingAmount) : '—',
+            icon: <Landmark />,
+            tone: 'info',
+          },
+          {
+            label: 'الأقساط الشهرية',
+            value: totals ? formatCurrency(totals.installment) : '—',
+            icon: <CreditCard />,
+            tone: 'neutral',
+          },
+          {
+            label: 'عدد الدفعات',
+            value: totals?.count ?? 0,
+            icon: <Hash />,
+            tone: 'success',
+            sub: 'إجمالي الدفعات المسجلة',
+          },
+        ]}
+      />
 
-      {/* ── Quick filter strip ──────────────────────────────────────────────── */}
-      <form method="get" action="/dashboard/deposits">
+      {/* ── Filter bar ───────────────────────────────────────────────────────── */}
+      <PremiumFilterBar method="get" action="/dashboard/deposits">
         {/* Hidden inputs: preserve active advanced filter values when only quick filters are submitted */}
         {!showFilters && sp.ref        && <input type="hidden" name="ref"        value={sp.ref} />}
         {!showFilters && sp.paidAtFrom && <input type="hidden" name="paidAtFrom" value={sp.paidAtFrom} />}
@@ -240,63 +204,66 @@ export default async function DepositsPage({
         {!showFilters && sp.dueDateTo  && <input type="hidden" name="dueDateTo"  value={sp.dueDateTo} />}
         {!showFilters && sp.verified   && <input type="hidden" name="verified"   value={sp.verified} />}
 
-        <div className="flex flex-wrap items-center gap-2 bg-white rounded-2xl border border-hairline shadow-soft px-3 py-2.5">
-
-          {/* Type */}
-          <Select name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-36 shrink-0">
+        {/* Type */}
+        <PremiumFilterField label="نوع الدفعة" htmlFor="dep-type">
+          <Select id="dep-type" name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-36 shrink-0">
             <option value="">كل الأنواع</option>
             <option value="BOOKING_AMOUNT">مبلغ الحجز</option>
             <option value="DOWN_PAYMENT">دفعة أولى</option>
             <option value="INSTALLMENT">قسط شهري</option>
             <option value="FINAL_PAYMENT">دفعة أخيرة</option>
           </Select>
+        </PremiumFilterField>
 
-          {/* Review status — surfaces the payment-proof review queue
-              (PENDING_REVIEW) including customer-submitted booking proofs. */}
-          <Select name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40 shrink-0">
+        {/* Review status */}
+        <PremiumFilterField label="حالة المراجعة" htmlFor="dep-reviewStatus">
+          <Select id="dep-reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40 shrink-0">
             <option value="">كل حالات المراجعة</option>
             <option value="PENDING_REVIEW">قيد المراجعة</option>
             <option value="APPROVED">معتمد</option>
             <option value="REJECTED">مرفوض</option>
             <option value="NO_PROOF">بدون إثبات</option>
           </Select>
+        </PremiumFilterField>
 
-          {/* Project */}
-          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
+        {/* Project */}
+        <PremiumFilterField label="المشروع" htmlFor="dep-projectId">
+          <Select id="dep-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
             <option value="">كل المشاريع</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
+        </PremiumFilterField>
 
-          {/* Unified search */}
-          <div className="flex-1 min-w-[180px]">
-            <Input
-              name="q"
-              inputSize="sm"
-              placeholder="ابحث باسم العميل أو رقم العقد أو الحجز"
-              defaultValue={sp.q ?? ''}
-              leftAddon={<Search />}
-            />
-          </div>
+        {/* Search — grows to fill available space */}
+        <div className="flex-1 min-w-[180px]">
+          <label htmlFor="dep-q" className="sr-only">بحث</label>
+          <Input
+            id="dep-q"
+            name="q"
+            inputSize="sm"
+            placeholder="ابحث باسم العميل أو رقم العقد أو الحجز"
+            defaultValue={sp.q ?? ''}
+            leftAddon={<Search />}
+            className="w-full"
+          />
+        </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
-            <Link href="/dashboard/deposits">
-              <Button type="button" variant="secondary" size="sm">إعادة تعيين</Button>
-            </Link>
-          </div>
-
-          {/* Divider + advanced toggle */}
+        {/* Action buttons — before advanced panel so they stay in row 1 */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Link href="/dashboard/deposits">
+            <Button type="button" variant="secondary" size="sm">إعادة تعيين</Button>
+          </Link>
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
           <Link
             href={toggleFiltersUrl as never}
             className={cn(
-              'hidden sm:inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border text-xs font-semibold shrink-0 transition-colors',
+              'hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold shrink-0 rounded-lg px-2.5 py-1.5 border transition-colors',
               showFilters
-                ? 'bg-brand-50 border-brand-200 text-brand-700 hover:bg-brand-100'
-                : 'bg-white border-hairline text-slate-600 hover:border-brand-200 hover:text-brand-700',
+                ? 'bg-brand-50 border-brand-200 text-brand-700'
+                : 'bg-transparent border-transparent text-slate-500 hover:bg-slate-50 hover:border-hairline hover:text-slate-700',
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
@@ -309,9 +276,9 @@ export default async function DepositsPage({
           </Link>
         </div>
 
-        {/* ── Advanced filters (collapsed by default) ──────────────────────── */}
+        {/* Advanced filters — basis-full forces row 2 */}
         {showFilters && (
-          <div className="mt-2 rounded-2xl border border-hairline bg-white shadow-soft px-4 py-3.5">
+          <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
               <div className="flex flex-col gap-1">
@@ -351,8 +318,9 @@ export default async function DepositsPage({
             </div>
           </div>
         )}
-      </form>
+      </PremiumFilterBar>
 
+      {/* ── Error ────────────────────────────────────────────────────────────── */}
       {depositsRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -361,156 +329,157 @@ export default async function DepositsPage({
       )}
 
       {/* ── Deposits table ───────────────────────────────────────────────────── */}
-      <Card>
-        <CardHeader className="px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <ReceiptText className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle className="text-sm">سجل الدفعات</CardTitle>
-          </div>
-          {deposits && (
+      <PremiumSectionCard
+        icon={<ReceiptText />}
+        title="سجل الدفعات"
+        padded={false}
+        trailing={
+          deposits ? (
             <span className="text-xs text-slate-400 tabular-nums">
               {deposits.meta.total.toLocaleString('ar-EG')} دفعة
             </span>
-          )}
-        </CardHeader>
-        <CardBody className="p-0">
-          {!deposits || deposits.data.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12 text-center">
-              <CreditCard className="h-8 w-8 text-slate-200" />
-              <p className="text-sm text-slate-400">لا توجد دفعات تطابق الفلاتر المختارة</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[800px]">
-                <thead className="bg-surface-muted/60 text-xs font-medium text-slate-500 border-b border-hairline">
-                  <tr>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">نوع الدفعة</th>
-                    <th className="px-4 py-3 text-start font-semibold">العميل</th>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">الوحدة</th>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">المرجع</th>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">تاريخ الاستحقاق</th>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">المبلغ</th>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">تاريخ الدفع</th>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">الإيصال</th>
-                    <th className="px-4 py-3 text-start font-semibold whitespace-nowrap">التحقق</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-hairline">
-                  {deposits.data.map((d) => {
-                    const dueDate = getDueDate(d);
-                    return (
-                      <tr key={d.id} className="hover:bg-brand-50/20 transition-colors">
+          ) : undefined
+        }
+      >
+        {!deposits || deposits.data.length === 0 ? (
+          <PremiumEmptyState
+            icon={<CreditCard />}
+            title="لا توجد دفعات"
+            description="لا توجد دفعات تطابق الفلاتر المختارة"
+            className="py-12"
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[800px]">
+              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                <tr>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">نوع الدفعة</th>
+                  <th className="text-start py-3 px-4">العميل</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">المرجع</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الاستحقاق</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">المبلغ</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الدفع</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الإيصال</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">التحقق</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {deposits.data.map((d) => {
+                  const dueDate = getDueDate(d);
+                  return (
+                    <tr key={d.id} className="hover:bg-canvas/40 transition-colors duration-100">
 
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          {isAdmin ? (
-                            <Link
-                              href={`/dashboard/deposits/${d.id}`}
-                              className={cn(
-                                'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight hover:opacity-80 transition-opacity',
-                                DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
-                              )}
-                              title="تفاصيل الدفعة"
-                            >
-                              {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
-                            </Link>
-                          ) : (
-                            <span className={cn(
-                              'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {isAdmin ? (
+                          <Link
+                            href={`/dashboard/deposits/${d.id}`}
+                            className={cn(
+                              'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight hover:opacity-80 transition-opacity',
                               DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
-                            )}>
-                              {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
-                            </span>
-                          )}
-                        </td>
+                            )}
+                            title="تفاصيل الدفعة"
+                          >
+                            {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
+                          </Link>
+                        ) : (
+                          <span className={cn(
+                            'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
+                            DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
+                          )}>
+                            {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
+                          </span>
+                        )}
+                      </td>
 
-                        <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">
-                          {getCustomerName(d)}
-                        </td>
+                      <td className="px-4 py-2.5 font-medium text-slate-800 max-w-[160px] truncate">
+                        {getCustomerName(d)}
+                      </td>
 
-                        <td className="px-4 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">
-                          {getUnitCode(d)}
-                        </td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-slate-500 whitespace-nowrap">
+                        {getUnitCode(d)}
+                      </td>
 
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          {d.contractId && d.contract ? (
-                            <Link
-                              href={`/dashboard/contracts/${d.contractId}`}
-                              className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                            >
-                              {d.contract.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
-                            </Link>
-                          ) : d.reservationId && d.reservation ? (
-                            <Link
-                              href={`/dashboard/reservations/${d.reservationId}`}
-                              className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
-                            >
-                              {d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
-                            </Link>
-                          ) : (
-                            <span className="text-slate-300 text-xs">—</span>
-                          )}
-                        </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {d.contractId && d.contract ? (
+                          <Link
+                            href={`/dashboard/contracts/${d.contractId}`}
+                            className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
+                          >
+                            {d.contract.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
+                          </Link>
+                        ) : d.reservationId && d.reservation ? (
+                          <Link
+                            href={`/dashboard/reservations/${d.reservationId}`}
+                            className="font-mono text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
+                          >
+                            {d.reservation.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
+                          </Link>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
 
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          {dueDate ? (
-                            <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d)}>
-                              {formatDate(dueDate)}
-                            </span>
-                          ) : (
-                            <span className="text-slate-300 text-xs">—</span>
-                          )}
-                        </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {dueDate ? (
+                          <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d)}>
+                            {formatDate(dueDate)}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
 
-                        <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
-                          {formatCurrency(d.amount)}
-                        </td>
+                      <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
+                        {formatCurrency(d.amount)}
+                      </td>
 
-                        <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
-                          {formatDate(d.paidAt)}
-                        </td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap tabular-nums">
+                        {formatDate(d.paidAt)}
+                      </td>
 
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          {d.receiptUrl ? (
-                            <a
-                              href={d.receiptUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
-                            >
-                              <ExternalLink className="h-3 w-3 shrink-0" />
-                              عرض
-                            </a>
-                          ) : (
-                            <span className="text-slate-300 text-xs">—</span>
-                          )}
-                        </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {d.receiptUrl ? (
+                          <a
+                            href={d.receiptUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
+                          >
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                            عرض
+                          </a>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
 
-                        <td className="px-4 py-2.5 whitespace-nowrap">
-                          {isAdmin ? (
-                            <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
-                          ) : (
-                            <span
-                              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                d.verified
-                                  ? 'bg-success-100 text-success-700'
-                                  : 'bg-amber-100 text-amber-700'
-                              }`}
-                            >
-                              {d.verified ? 'متحقق' : 'غير متحقق'}
-                            </span>
-                          )}
-                        </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap">
+                        {isAdmin ? (
+                          <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
+                        ) : (
+                          <span
+                            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                              d.verified
+                                ? 'bg-success-100 text-success-700'
+                                : 'bg-amber-100 text-amber-700'
+                            }`}
+                          >
+                            {d.verified ? 'متحقق' : 'غير متحقق'}
+                          </span>
+                        )}
+                      </td>
 
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardBody>
-      </Card>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PremiumSectionCard>
 
+      {/* ── Pagination ───────────────────────────────────────────────────────── */}
       {deposits && deposits.meta.total > pageSize && (
         <Pagination
           basePath="/dashboard/deposits"

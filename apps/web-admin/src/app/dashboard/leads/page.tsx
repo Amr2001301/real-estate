@@ -3,10 +3,10 @@ import { Plus, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, LeadStage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
 import { LeadPipeline } from '@/components/crm/lead-pipeline';
 import { PipelineStatsBar } from '@/components/crm/pipeline-stats-bar';
 import { LeadsFilterPopover } from '@/components/crm/leads-filter-popover';
+import { PremiumPageHero } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -35,23 +35,23 @@ export default async function LeadsPage({
   const wonCount = counts.WON ?? 0;
 
   return (
-    <div className="space-y-5 pb-2">
-      <PageHeader
+    <div className="flex flex-col gap-5 lg:gap-6 pb-2">
+      <PremiumPageHero
         title="مسار مبيعات العقارات"
-        description="نظرة كاملة على فرص المبيعات عبر مراحل البيع. اسحب البطاقات بين المراحل لتحديث الحالة فوراً."
+        description="نظرة كاملة على فرص المبيعات عبر مراحل البيع. اسحب البطاقات بين المراحل لتحديث الحالة فورًا."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'فرص المبيعات' },
         ]}
         actions={
-          <>
+          <div className="flex items-center gap-2">
             <LeadsFilterPopover defaultStage={sp.stage} defaultQ={sp.q} />
             <Link href={'/dashboard/leads/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 إضافة فرصة جديدة
               </Button>
             </Link>
-          </>
+          </div>
         }
       />
 

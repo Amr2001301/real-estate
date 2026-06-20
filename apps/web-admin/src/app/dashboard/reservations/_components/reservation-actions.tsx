@@ -34,7 +34,8 @@ export function ReservationActions({ reservation }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-1.5 flex-wrap">
+    <div className="flex items-center gap-1">
+      {/* View */}
       <Link href={`/dashboard/reservations/${reservation.id}`}>
         <IconButton label="عرض تفاصيل الحجز" variant="outline" size="sm">
           <Eye />
@@ -43,42 +44,43 @@ export function ReservationActions({ reservation }: Props) {
 
       {canCancel && (
         <>
-          <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
+          <span className="w-px h-4 bg-hairline shrink-0 mx-0.5" aria-hidden />
 
+          {/* Approve + Reject as icon-only buttons to keep PENDING rows compact */}
           {isPending && (
             <>
-              <Button
-                variant="subtle"
-                size="sm"
-                leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}
-                loading={approvePending}
-                onClick={handleApprove}
-                className="text-success-700 hover:bg-success-50"
-              >
-                موافقة
-              </Button>
-
-              <Button
+              <IconButton
+                label="موافقة على الحجز"
                 variant="ghost"
                 size="sm"
-                leftIcon={<X className="h-3.5 w-3.5" />}
-                onClick={() => setRejectOpen(true)}
-                className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
+                disabled={approvePending}
+                onClick={handleApprove}
+                className="text-success-600 hover:bg-success-50 disabled:opacity-40"
               >
-                رفض
-              </Button>
+                <CheckCircle2 />
+              </IconButton>
+              <IconButton
+                label="رفض الحجز"
+                variant="ghost"
+                size="sm"
+                onClick={() => setRejectOpen(true)}
+                className="text-danger-500 hover:bg-danger-50"
+              >
+                <X />
+              </IconButton>
+              <span className="w-px h-4 bg-hairline shrink-0 mx-0.5" aria-hidden />
             </>
           )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<Ban className="h-3.5 w-3.5" />}
+          {/* Cancel — subtle danger text button, always stays on same row */}
+          <button
+            type="button"
             onClick={() => setCancelOpen(true)}
-            className="text-slate-500 hover:text-slate-700"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors duration-100 whitespace-nowrap shrink-0"
           >
+            <Ban className="h-3 w-3 shrink-0" />
             إلغاء
-          </Button>
+          </button>
         </>
       )}
 

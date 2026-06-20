@@ -15,16 +15,21 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
 import { formatDate } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { Input } from '@/components/ui/input';
-import { EmptyState } from '@/components/ui/empty-state';
+import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -64,7 +69,7 @@ function paletteFor(s: string): string {
 
 const PAGE_SIZE = 20;
 
-interface Search {
+interface Filters {
   role?: string;
   q?: string;
   page?: string;
@@ -73,7 +78,7 @@ interface Search {
 export default async function ClientsPage({
   searchParams,
 }: {
-  searchParams: Promise<Search>;
+  searchParams: Promise<Filters>;
 }) {
   const sp = await searchParams;
   const role: 'CLIENT' | 'CUSTOMER' = sp.role === 'CUSTOMER' ? 'CUSTOMER' : 'CLIENT';
@@ -112,16 +117,18 @@ export default async function ClientsPage({
   const labels = ROLE_LABEL[role];
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title={labels.title}
-        description={labels.description}
+    <div className="flex flex-col gap-5 lg:gap-6">
+
+      {/* ── Hero ─────────────────────────────────────────────────────────────── */}
+      <PremiumPageHero
+        title="العملاء"
+        description="إدارة بيانات العملاء ومتابعة ارتباطهم بالفرص والحجوزات والعقود."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'العملاء' },
         ]}
         actions={
-          <>
+          <div className="flex items-center gap-2">
             <IconButton label="تصدير" variant="outline" size="md">
               <Download />
             </IconButton>
@@ -130,58 +137,76 @@ export default async function ClientsPage({
                 إضافة عميل جديد
               </Button>
             </Link>
-          </>
+          </div>
         }
       />
 
-      {/* Role tabs */}
-      <div className="inline-flex items-center gap-1 rounded-2xl bg-surface-muted p-1 ring-1 ring-inset ring-hairline">
-        <RoleTab
-          href={`/dashboard/clients?role=CLIENT${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-          active={role === 'CLIENT'}
-          icon={<Users className="h-4 w-4" />}
-          label="متصفّحون"
-          count={clientTotal}
-        />
-        <RoleTab
-          href={`/dashboard/clients?role=CUSTOMER${q ? `&q=${encodeURIComponent(q)}` : ''}`}
-          active={role === 'CUSTOMER'}
-          icon={<UserCheck className="h-4 w-4" />}
-          label="مالكون"
-          count={customerTotal}
-        />
-      </div>
+      {/* ── KPI strip ────────────────────────────────────────────────────────── */}
+      <PremiumMetricStrip
+        cols={4}
+        metrics={[
+          {
+            label: 'إجمالي العملاء',
+            value: clientTotal + customerTotal,
+            icon: <Users />,
+            tone: 'brand',
+            primary: true,
+            sub: 'بكل أنواعهم',
+          },
+          {
+            label: 'متصفّحون',
+            value: clientTotal,
+            icon: <Users />,
+            tone: 'info',
+          },
+          {
+            label: 'مالكون',
+            value: customerTotal,
+            icon: <UserCheck />,
+            tone: 'success',
+          },
+          {
+            label: 'موقوفون (في هذه الصفحة)',
+            value: inactiveOnPage,
+            icon: <ShieldAlert />,
+            tone: 'warning',
+            sub: `من ${rows.length} ظاهر`,
+          },
+        ]}
+      />
 
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <PageKpiCard
-          label="إجمالي العملاء"
-          value={clientTotal + customerTotal}
-          sub="بكل أنواعهم"
-          icon={<Users />}
-          tone="brand"
-        />
-        <PageKpiCard
-          label="عملاء متصفّحون"
-          value={clientTotal}
-          icon={<Users />}
-          tone="info"
-        />
-        <PageKpiCard
-          label="مالكون"
-          value={customerTotal}
-          icon={<UserCheck />}
-          tone="success"
-        />
-        <PageKpiCard
-          label="موقوفون (في هذه الصفحة)"
-          value={inactiveOnPage}
-          sub={`من ${rows.length} ظاهر`}
-          icon={<ShieldAlert />}
-          tone="warning"
-        />
-      </div>
+      {/* ── Filter bar ───────────────────────────────────────────────────────── */}
+      <PremiumFilterBar method="get" action="/dashboard/clients">
+        <PremiumFilterField label="النوع" htmlFor="cli-role">
+          <Select id="cli-role" name="role" inputSize="sm" defaultValue={role} className="w-36 shrink-0">
+            <option value="CLIENT">متصفّحون</option>
+            <option value="CUSTOMER">مالكون</option>
+          </Select>
+        </PremiumFilterField>
 
+        <div className="flex-1 min-w-[180px]">
+          <label htmlFor="cli-q" className="sr-only">بحث</label>
+          <Input
+            id="cli-q"
+            name="q"
+            inputSize="sm"
+            defaultValue={q}
+            placeholder="ابحث بالاسم، البريد، أو الهاتف…"
+            leftAddon={<Search />}
+            className="w-full"
+          />
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button type="submit" variant="primary" size="sm">بحث</Button>
+          {(q || role !== 'CLIENT') && (
+            <Link href={'/dashboard/clients' as never}>
+              <Button type="button" variant="ghost" size="sm">مسح</Button>
+            </Link>
+          )}
+        </div>
+      </PremiumFilterBar>
+
+      {/* ── Error ────────────────────────────────────────────────────────────── */}
       {currentRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
@@ -189,196 +214,171 @@ export default async function ClientsPage({
         </div>
       )}
 
-      {/* Search bar */}
-      <form
-        method="get"
-        action="/dashboard/clients"
-        className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-white px-3 py-2.5 shadow-soft"
+      {/* ── Clients table ────────────────────────────────────────────────────── */}
+      <PremiumSectionCard
+        icon={role === 'CUSTOMER' ? <UserCheck /> : <Users />}
+        title={labels.title}
+        description={labels.description}
+        padded={false}
+        trailing={
+          <span className="text-xs text-slate-400 tabular-nums">
+            {total.toLocaleString('ar-EG')} عميل
+          </span>
+        }
       >
-        <input type="hidden" name="role" value={role} />
-        <div className="flex-1 min-w-[180px]">
-          <Input
-            name="q"
-            inputSize="sm"
-            defaultValue={q}
-            placeholder="ابحث بالاسم، البريد، أو الهاتف…"
-            leftAddon={<Search />}
+        {rows.length === 0 ? (
+          <PremiumEmptyState
+            icon={role === 'CUSTOMER' ? <UserCheck /> : <Users />}
+            title={
+              q
+                ? 'لا توجد نتائج'
+                : role === 'CUSTOMER'
+                  ? 'لا يوجد مالكون بعد'
+                  : 'لا يوجد عملاء متصفّحون بعد'
+            }
+            description={
+              q
+                ? 'جرّب تعديل كلمات البحث أو تغيير التبويب.'
+                : role === 'CUSTOMER'
+                  ? 'يتم ترقية العميل إلى مالك تلقائياً عند توقيع عقد.'
+                  : 'يظهر هنا كل من يسجّل في المنصة من المتصفحين.'
+            }
+            action={
+              !q ? (
+                <Link href={`/dashboard/clients/new?role=${role}` as never}>
+                  <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
+                    إضافة عميل
+                  </Button>
+                </Link>
+              ) : undefined
+            }
+            className="py-12"
           />
-        </div>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">بحث</Button>
-          {q && (
-            <Link href={`/dashboard/clients?role=${role}` as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
-
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-xs font-medium text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">العميل</th>
-                <th className="text-start font-semibold py-3 px-4">بيانات الاتصال</th>
-                <th className="text-start font-semibold py-3 px-4">النوع</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">تاريخ التسجيل</th>
-                <th className="text-start font-semibold py-3 px-4">آخر دخول</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && (
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <td colSpan={7} className="p-0">
-                    <EmptyState
-                      icon={role === 'CUSTOMER' ? <UserCheck /> : <Users />}
-                      title={
-                        q
-                          ? 'لا توجد نتائج'
-                          : role === 'CUSTOMER'
-                            ? 'لا يوجد مالكون بعد'
-                            : 'لا يوجد عملاء متصفّحون بعد'
-                      }
-                      description={
-                        q
-                          ? 'جرّب تعديل كلمات البحث أو تغيير التبويب.'
-                          : role === 'CUSTOMER'
-                            ? 'يتم ترقية العميل إلى مالك تلقائياً عند توقيع عقد.'
-                            : 'يظهر هنا كل من يسجّل في المنصة من المتصفحين.'
-                      }
-                      action={
-                        !q ? (
-                          <Link
-                            href={`/dashboard/clients/new?role=${role}` as never}
-                          >
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              leftIcon={<Plus className="h-4 w-4" />}
-                            >
-                              إضافة عميل
-                            </Button>
-                          </Link>
-                        ) : undefined
-                      }
-                    />
-                  </td>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">العميل</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">بيانات الاتصال</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">النوع</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ التسجيل</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">آخر دخول</th>
+                  <th className="text-start py-3 ps-4 pe-5 w-px"></th>
                 </tr>
-              )}
-              {rows.map((u) => (
-                <tr
-                  key={u.id}
-                  className="group border-t border-hairline hover:bg-brand-50/20 transition-colors"
-                >
-                  <td className="py-3 ps-5 pe-4">
-                    <div className="flex items-center gap-3">
-                      <span
-                        className={cn(
-                          'inline-flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold uppercase shrink-0 ring-1 ring-inset ring-white shadow-sm',
-                          paletteFor(u.fullName ?? u.email ?? u.id),
-                        )}
-                        aria-hidden
-                      >
-                        {initials(u.fullName ?? u.email ?? '·')}
-                      </span>
-                      <div className="min-w-0">
-                        <Link
-                          href={`/dashboard/clients/${u.id}` as never}
-                          className="font-semibold text-[13px] text-slate-900 hover:text-brand-700 group-hover:underline underline-offset-2 decoration-brand-300/50 transition-colors truncate block"
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {rows.map((u) => (
+                  <tr key={u.id} className="group hover:bg-canvas/40 transition-colors duration-100">
+                    <td className="py-3 ps-5 pe-4">
+                      <div className="flex items-center gap-3">
+                        <span
+                          className={cn(
+                            'inline-flex h-10 w-10 items-center justify-center rounded-xl text-xs font-bold uppercase shrink-0 ring-1 ring-inset ring-white shadow-sm',
+                            paletteFor(u.fullName ?? u.email ?? u.id),
+                          )}
+                          aria-hidden
                         >
-                          {u.fullName ?? '—'}
-                        </Link>
-                        <p className="text-2xs text-slate-400 mt-0.5 font-mono">
-                          ID: #{u.id.slice(0, 8).toUpperCase()}
-                        </p>
+                          {initials(u.fullName ?? u.email ?? '·')}
+                        </span>
+                        <div className="min-w-0">
+                          <Link
+                            href={`/dashboard/clients/${u.id}` as never}
+                            className="font-semibold text-[13px] text-slate-900 hover:text-brand-700 group-hover:underline underline-offset-2 decoration-brand-300/50 transition-colors truncate block"
+                          >
+                            {u.fullName ?? '—'}
+                          </Link>
+                          <p className="text-2xs text-slate-400 mt-0.5 font-mono">
+                            ID: #{u.id.slice(0, 8).toUpperCase()}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 min-w-[190px]">
-                    <div className="flex flex-col gap-1.5">
-                      {u.phone ? (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <a
-                            href={`tel:${u.phone}`}
-                            className="font-mono text-xs text-slate-700 hover:text-brand-700 transition-colors"
-                            dir="ltr"
-                          >
-                            {u.phone}
-                          </a>
-                        </div>
-                      ) : null}
-                      {u.email ? (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <a
-                            href={`mailto:${u.email}`}
-                            className="text-xs text-slate-600 hover:text-brand-700 transition-colors truncate max-w-[200px]"
-                            dir="ltr"
-                          >
-                            {u.email}
-                          </a>
-                        </div>
-                      ) : null}
-                      {!u.phone && !u.email && (
-                        <span className="text-slate-400 text-xs">—</span>
+                    </td>
+                    <td className="py-3 px-4 min-w-[190px]">
+                      <div className="flex flex-col gap-1.5">
+                        {u.phone ? (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <a
+                              href={`tel:${u.phone}`}
+                              className="font-mono text-xs text-slate-700 hover:text-brand-700 transition-colors"
+                              dir="ltr"
+                            >
+                              {u.phone}
+                            </a>
+                          </div>
+                        ) : null}
+                        {u.email ? (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                            <a
+                              href={`mailto:${u.email}`}
+                              className="text-xs text-slate-600 hover:text-brand-700 transition-colors truncate max-w-[200px]"
+                              dir="ltr"
+                            >
+                              {u.email}
+                            </a>
+                          </div>
+                        ) : null}
+                        {!u.phone && !u.email && (
+                          <span className="text-slate-400 text-xs">—</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge
+                        tone={role === 'CUSTOMER' ? 'success' : 'info'}
+                        variant="soft"
+                        size="sm"
+                      >
+                        {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      {u.active ? (
+                        <Badge tone="success" variant="soft" size="sm" dot>
+                          نشط
+                        </Badge>
+                      ) : (
+                        <Badge tone="gray" variant="soft" size="sm" dot>
+                          موقوف
+                        </Badge>
                       )}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <Badge
-                      tone={role === 'CUSTOMER' ? 'success' : 'info'}
-                      variant="soft"
-                      size="sm"
-                    >
-                      {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-4">
-                    {u.active ? (
-                      <Badge tone="success" variant="soft" size="sm" dot>
-                        نشط
-                      </Badge>
-                    ) : (
-                      <Badge tone="gray" variant="soft" size="sm" dot>
-                        موقوف
-                      </Badge>
-                    )}
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
-                    {formatDate(u.createdAt)}
-                  </td>
-                  <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
-                    {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
-                  </td>
-                  <td className="py-3 ps-4 pe-5">
-                    <Link href={`/dashboard/clients/${u.id}` as never}>
-                      <IconButton label="عرض تفاصيل العميل" variant="outline" size="sm">
-                        <Eye />
-                      </IconButton>
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {currentRes.data && total > PAGE_SIZE && !q && (
-          <Pagination
-            page={currentRes.data.meta.page}
-            pageSize={currentRes.data.meta.pageSize}
-            total={total}
-            basePath="/dashboard/clients"
-            params={{ role }}
-          />
+                    </td>
+                    <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
+                      {formatDate(u.createdAt)}
+                    </td>
+                    <td className="py-3 px-4 text-slate-500 text-xs whitespace-nowrap">
+                      {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                    </td>
+                    <td className="py-3 ps-4 pe-5">
+                      <Link href={`/dashboard/clients/${u.id}` as never}>
+                        <IconButton label="عرض تفاصيل العميل" variant="outline" size="sm">
+                          <Eye />
+                        </IconButton>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </Card>
+      </PremiumSectionCard>
 
-      {/* Footer hint about activity */}
+      {/* ── Pagination ───────────────────────────────────────────────────────── */}
+      {currentRes.data && total > PAGE_SIZE && !q && (
+        <Pagination
+          page={currentRes.data.meta.page}
+          pageSize={currentRes.data.meta.pageSize}
+          total={total}
+          basePath="/dashboard/clients"
+          params={{ role }}
+        />
+      )}
+
+      {/* ── Footer audit hint ────────────────────────────────────────────────── */}
       <p className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
         <ShieldCheck className="h-3 w-3" />
         تتبع جميع التغييرات على ملفات العملاء عبر سجل التدقيق المركزي.
@@ -387,41 +387,3 @@ export default async function ClientsPage({
   );
 }
 
-function RoleTab({
-  href,
-  active,
-  icon,
-  label,
-  count,
-}: {
-  href: string;
-  active: boolean;
-  icon: React.ReactNode;
-  label: string;
-  count: number;
-}) {
-  return (
-    <Link
-      href={href as never}
-      prefetch={false}
-      aria-current={active ? 'page' : undefined}
-      className={cn(
-        'inline-flex items-center gap-2 h-9 px-3.5 rounded-xl text-xs font-semibold transition-colors',
-        active
-          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-inset ring-brand-200/50'
-          : 'text-slate-600 hover:text-slate-900 hover:bg-white/60',
-      )}
-    >
-      <span className={cn(active ? 'text-brand-600' : 'text-slate-400')}>{icon}</span>
-      {label}
-      <span
-        className={cn(
-          'inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-md text-2xs font-bold',
-          active ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-600',
-        )}
-      >
-        {count}
-      </span>
-    </Link>
-  );
-}

@@ -4,19 +4,29 @@ import { redirect } from 'next/navigation';
 import { Wrench, Plus, AlertCircle, Eye, Settings2, Clock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
-import type { Paged, MaintenanceRequest, MaintenanceCategory, MaintenanceStatus, MaintenanceReviewStatus, User } from '@/lib/types';
+import type {
+  Paged,
+  MaintenanceRequest,
+  MaintenanceCategory,
+  MaintenanceStatus,
+  MaintenanceReviewStatus,
+  User,
+} from '@/lib/types';
 import { formatDate, tx, maintenanceSlaLabel, warrantyMonthsLabel } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconButton } from '@/components/ui/icon-button';
-import { EmptyState } from '@/components/ui/empty-state';
-import { FilterBar, FilterField } from '@/components/ui/toolbar';
 import { MaintenanceStatusBadge, MaintenancePriorityBadge, MaintenanceReviewStatusBadge } from '@/components/badges';
 import { ExportMenu } from '@/components/export-menu';
 import { MaintenanceReports } from './maintenance-reports';
+import {
+  PremiumPageHero,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 // dueAt/overdue only apply once a request is approved (the SLA timer starts then).
 function isApproved(r: MaintenanceRequest): boolean {
@@ -86,7 +96,15 @@ async function createCategoryAction(formData: FormData) {
 export default async function MaintenancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; assignedAdminId?: string; reviewStatus?: string; categoryId?: string; from?: string; to?: string; catErr?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    assignedAdminId?: string;
+    reviewStatus?: string;
+    categoryId?: string;
+    from?: string;
+    to?: string;
+    catErr?: string;
+  }>;
 }) {
   const sp = await searchParams;
   const listQs = new URLSearchParams({ pageSize: '100' });
@@ -126,9 +144,9 @@ export default async function MaintenancePage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="الصيانة"
-        description="إدارة طلبات الصيانة: الإسناد، متابعة الحالة، وإنشاء طلب نيابة عن العميل."
+      <PremiumPageHero
+        title="طلبات الصيانة"
+        description="متابعة طلبات الصيانة المفتوحة والمغلقة عبر المشاريع والوحدات."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الصيانة' },
@@ -150,12 +168,11 @@ export default async function MaintenancePage({
         }
       />
 
-      {/* Filters */}
-      <FilterBar
+      <PremiumFilterBar
         method="get"
         action="/dashboard/maintenance"
         trailing={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <Button type="submit" variant="primary" size="sm">تصفية</Button>
             {hasFilters && (
               <Link href="/dashboard/maintenance">
@@ -165,39 +182,63 @@ export default async function MaintenancePage({
           </div>
         }
       >
-        <FilterField label="الحالة" htmlFor="maint-status">
-          <Select id="maint-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36">
+        <PremiumFilterField label="الحالة" htmlFor="maint-status">
+          <Select
+            id="maint-status"
+            name="status"
+            inputSize="sm"
+            defaultValue={sp.status ?? ''}
+            className="w-36"
+          >
             <option value="">كل الحالات</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{STATUS_LABEL[s]}</option>
             ))}
           </Select>
-        </FilterField>
-        <FilterField label="المراجعة" htmlFor="maint-review">
-          <Select id="maint-review" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-36">
+        </PremiumFilterField>
+        <PremiumFilterField label="المراجعة" htmlFor="maint-review">
+          <Select
+            id="maint-review"
+            name="reviewStatus"
+            inputSize="sm"
+            defaultValue={sp.reviewStatus ?? ''}
+            className="w-36"
+          >
             <option value="">كل المراجعات</option>
             {REVIEW_STATUSES.map((s) => (
               <option key={s} value={s}>{REVIEW_LABEL[s]}</option>
             ))}
           </Select>
-        </FilterField>
-        <FilterField label="التصنيف" htmlFor="maint-category">
-          <Select id="maint-category" name="categoryId" inputSize="sm" defaultValue={sp.categoryId ?? ''} className="w-44">
+        </PremiumFilterField>
+        <PremiumFilterField label="التصنيف" htmlFor="maint-category">
+          <Select
+            id="maint-category"
+            name="categoryId"
+            inputSize="sm"
+            defaultValue={sp.categoryId ?? ''}
+            className="w-44"
+          >
             <option value="">كل التصنيفات</option>
             {cats.map((c) => (
               <option key={c.id} value={c.id}>{tx(c.name)}</option>
             ))}
           </Select>
-        </FilterField>
-        <FilterField label="المشرف" htmlFor="maint-admin">
-          <Select id="maint-admin" name="assignedAdminId" inputSize="sm" defaultValue={sp.assignedAdminId ?? ''} className="w-36">
+        </PremiumFilterField>
+        <PremiumFilterField label="المشرف" htmlFor="maint-admin">
+          <Select
+            id="maint-admin"
+            name="assignedAdminId"
+            inputSize="sm"
+            defaultValue={sp.assignedAdminId ?? ''}
+            className="w-36"
+          >
             <option value="">كل المشرفين</option>
             {admins.map((a) => (
               <option key={a.id} value={a.id}>{a.fullName}</option>
             ))}
           </Select>
-        </FilterField>
-      </FilterBar>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
       {/* KPI + analytics */}
       <MaintenanceReports filters={reportFilters} />
@@ -210,131 +251,138 @@ export default async function MaintenancePage({
       )}
 
       {/* Requests table */}
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>طلبات الصيانة</CardTitle>
-          {reqsRes.data && (
+      <PremiumSectionCard
+        title="طلبات الصيانة"
+        trailing={
+          reqsRes.data ? (
             <span className="text-xs text-slate-400 tabular-nums">
               {reqsRes.data.meta.total.toLocaleString('ar-EG')} طلب
             </span>
-          )}
-        </CardHeader>
-        <CardBody className="p-0">
-          {rows.length === 0 ? (
-            <EmptyState
-              icon={<Wrench />}
-              title="لا توجد طلبات صيانة"
-              description={hasFilters ? 'لا توجد طلبات تطابق الفلاتر المختارة' : 'لم يتم تسجيل أي طلبات صيانة بعد'}
-              action={
-                hasFilters ? (
-                  <Link href="/dashboard/maintenance">
-                    <Button variant="outline" size="sm">مسح الفلاتر</Button>
-                  </Link>
-                ) : undefined
-              }
-            />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[1020px]">
-                <thead className="bg-surface-muted/50 text-xs font-semibold text-slate-500 border-b border-hairline">
-                  <tr>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">العميل</th>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">الوحدة</th>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">التصنيف</th>
-                    <th className="px-5 py-3 text-start">الوصف</th>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">الأولوية</th>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">المراجعة</th>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">الحالة</th>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">الموعد المستهدف</th>
-                    <th className="px-5 py-3 text-start whitespace-nowrap">التاريخ</th>
-                    <th className="px-5 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((m) => {
-                    const overdue = isOverdue(m);
-                    return (
-                      <tr
-                        key={m.id}
-                        className={cn(
-                          'group border-t border-hairline transition-colors',
-                          overdue ? 'bg-danger-50/20' : 'hover:bg-brand-50/20',
-                        )}
+          ) : undefined
+        }
+        padded={false}
+      >
+        {rows.length === 0 ? (
+          <PremiumEmptyState
+            icon={<Wrench />}
+            title="لا توجد طلبات صيانة"
+            description={
+              hasFilters
+                ? 'لا توجد طلبات تطابق الفلاتر المختارة'
+                : 'لم يتم تسجيل أي طلبات صيانة بعد'
+            }
+            action={
+              hasFilters ? (
+                <Link href="/dashboard/maintenance">
+                  <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                </Link>
+              ) : undefined
+            }
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[1020px]">
+              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                <tr>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">العميل</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">التصنيف</th>
+                  <th className="text-start py-3 px-4">الوصف</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الأولوية</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">المراجعة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">الموعد المستهدف</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">التاريخ</th>
+                  <th className="py-3 ps-4 pe-5" />
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((m) => {
+                  const overdue = isOverdue(m);
+                  return (
+                    <tr
+                      key={m.id}
+                      className={cn(
+                        'group border-t border-hairline transition-colors',
+                        overdue ? 'bg-danger-50/20' : 'hover:bg-canvas/40',
+                      )}
+                    >
+                      <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap">
+                        {m.customer?.fullName ?? '—'}
+                      </td>
+                      <td className="px-5 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
+                        {m.unit?.code ?? '—'}
+                      </td>
+                      <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
+                        {m.category ? tx(m.category.name) : '—'}
+                      </td>
+                      <td
+                        className="px-5 py-3 text-slate-600 max-w-[200px] truncate"
+                        title={m.description}
                       >
-                        <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap">
-                          {m.customer?.fullName ?? '—'}
-                        </td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
-                          {m.unit?.code ?? '—'}
-                        </td>
-                        <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
-                          {m.category ? tx(m.category.name) : '—'}
-                        </td>
-                        <td className="px-5 py-3 text-slate-600 max-w-[200px] truncate" title={m.description}>
-                          {m.description}
-                        </td>
-                        <td className="px-5 py-3 whitespace-nowrap">
-                          {m.priority
-                            ? <MaintenancePriorityBadge priority={m.priority} />
-                            : <span className="text-slate-300 text-xs">—</span>}
-                        </td>
-                        <td className="px-5 py-3 whitespace-nowrap">
-                          <MaintenanceReviewStatusBadge status={m.reviewStatus} />
-                        </td>
-                        <td className="px-5 py-3 whitespace-nowrap">
-                          <div className="flex flex-wrap items-center gap-1">
-                            <MaintenanceStatusBadge status={m.status} />
-                            {m.unresolvedAt ? (
-                              <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2 py-0.5 text-[10px] font-medium">
-                                لم تُحل
-                              </span>
-                            ) : m.complaintAt ? (
-                              <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-medium">
-                                شكوى
-                              </span>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="px-5 py-3 text-xs tabular-nums whitespace-nowrap">
-                          {isApproved(m) && m.dueAt ? (
-                            <span className={overdue ? 'text-danger-600 font-semibold' : 'text-slate-500'}>
-                              {formatDate(m.dueAt)}{overdue ? ' · متأخر' : ''}
+                        {m.description}
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        {m.priority ? (
+                          <MaintenancePriorityBadge priority={m.priority} />
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        <MaintenanceReviewStatusBadge status={m.reviewStatus} />
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <MaintenanceStatusBadge status={m.status} />
+                          {m.unresolvedAt ? (
+                            <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2 py-0.5 text-[10px] font-medium">
+                              لم تُحل
                             </span>
-                          ) : (
-                            <span className="text-slate-300">—</span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3 text-xs text-slate-500 tabular-nums whitespace-nowrap">
-                          {formatDate(m.createdAt)}
-                        </td>
-                        <td className="px-5 py-3 whitespace-nowrap">
-                          <Link href={`/dashboard/maintenance/${m.id}`}>
-                            <IconButton label="عرض تفاصيل الطلب" variant="outline" size="sm">
-                              <Eye />
-                            </IconButton>
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardBody>
-      </Card>
+                          ) : m.complaintAt ? (
+                            <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-medium">
+                              شكوى
+                            </span>
+                          ) : null}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3 text-xs tabular-nums whitespace-nowrap">
+                        {isApproved(m) && m.dueAt ? (
+                          <span className={overdue ? 'text-danger-600 font-semibold' : 'text-slate-500'}>
+                            {formatDate(m.dueAt)}{overdue ? ' · متأخر' : ''}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-xs text-slate-500 tabular-nums whitespace-nowrap">
+                        {formatDate(m.createdAt)}
+                      </td>
+                      <td className="px-5 py-3 whitespace-nowrap">
+                        <Link href={`/dashboard/maintenance/${m.id}`}>
+                          <IconButton label="عرض تفاصيل الطلب" variant="outline" size="sm">
+                            <Eye />
+                          </IconButton>
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PremiumSectionCard>
 
       {/* Category management */}
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-4 w-4 text-brand-500 shrink-0" />
-            <CardTitle>تصنيفات الصيانة</CardTitle>
-          </div>
+      <PremiumSectionCard
+        title="تصنيفات الصيانة"
+        icon={<Settings2 />}
+        trailing={
           <span className="text-xs text-slate-400 tabular-nums">{cats.length} تصنيف</span>
-        </CardHeader>
-
-        {/* Premium category cards */}
+        }
+        padded={false}
+      >
         {cats.length > 0 && (
           <div className="px-5 pt-4 pb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {cats.map((c) => {
@@ -345,9 +393,7 @@ export default async function MaintenancePage({
                   key={c.id}
                   className="group flex overflow-hidden rounded-xl border border-hairline bg-white shadow-xs hover:shadow-soft transition-all duration-150"
                 >
-                  {/* Priority color bar — RTL start side (appears on right in Arabic) */}
                   <div className={cn('w-1 shrink-0', PRIORITY_DOT[c.priority] ?? 'bg-slate-400')} />
-                  {/* Card body */}
                   <div className="flex-1 px-4 py-3.5">
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="min-w-0">
@@ -356,10 +402,12 @@ export default async function MaintenancePage({
                           <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{c.name.en}</p>
                         )}
                       </div>
-                      <span className={cn(
-                        'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0',
-                        PRIORITY_BADGE[c.priority] ?? 'bg-slate-100 text-slate-600',
-                      )}>
+                      <span
+                        className={cn(
+                          'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0',
+                          PRIORITY_BADGE[c.priority] ?? 'bg-slate-100 text-slate-600',
+                        )}
+                      >
                         {PRIORITY_LABEL[c.priority] ?? c.priority}
                       </span>
                     </div>
@@ -431,7 +479,7 @@ export default async function MaintenancePage({
             </p>
           </form>
         </div>
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }
