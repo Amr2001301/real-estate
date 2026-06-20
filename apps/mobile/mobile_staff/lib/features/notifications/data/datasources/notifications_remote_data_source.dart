@@ -8,6 +8,7 @@ abstract interface class NotificationsRemoteDataSource {
   Future<int> unreadCount();
   Future<void> markRead(String id);
   Future<void> markAllRead();
+  Future<void> registerDevice(String token, String platform);
 }
 
 class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource {
@@ -16,7 +17,6 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
 
   @override
   Future<List<NotificationDto>> list() async {
-    // Paginated shape: { data: [...], meta }.
     final res = await _dio.get<Map<String, dynamic>>('/me/notifications');
     final data = (res.data?['data'] as List?) ?? const [];
     return data
@@ -39,5 +39,10 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
   @override
   Future<void> markAllRead() async {
     await _dio.patch<dynamic>('/me/notifications/read-all');
+  }
+
+  @override
+  Future<void> registerDevice(String token, String platform) async {
+    await _dio.post<dynamic>('/me/devices', data: {'token': token, 'platform': platform});
   }
 }

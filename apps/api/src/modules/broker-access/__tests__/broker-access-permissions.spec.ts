@@ -12,6 +12,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { BrokerAccessController } from '../broker-access.controller';
 import { BrokerAccessService } from '../broker-access.service';
+import { NotificationsService } from '../../notifications/notifications.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -83,8 +84,18 @@ function makePrismaMock() {
     brokerUnitAccess: {
       findMany: jest.fn().mockResolvedValue([]),
       findUnique: jest.fn().mockResolvedValue(null),
-      create: jest.fn().mockResolvedValue({ id: 'ua1' }),
-      update: jest.fn().mockResolvedValue({ id: 'ua1', active: false }),
+      create: jest.fn().mockResolvedValue({
+        id: 'ua1',
+        unit: { code: 'U-01', building: { phase: { projectId: PROJECT_ID } } },
+      }),
+      update: jest.fn().mockResolvedValue({
+        id: 'ua1',
+        active: false,
+        unit: { code: 'U-01', building: { phase: { projectId: PROJECT_ID } } },
+      }),
+    },
+    brokerUser: {
+      findMany: jest.fn().mockResolvedValue([]),
     },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
@@ -108,10 +119,19 @@ describe('Broker access module · permissions enforcement', () => {
     })
     class MockPrismaModule {}
 
+    const notificationsServiceMock = {
+      sendToUser: jest.fn().mockResolvedValue(undefined),
+      sendToUsers: jest.fn().mockResolvedValue(undefined),
+      sendToRoles: jest.fn().mockResolvedValue(undefined),
+    };
+
     @Module({
       imports: [MockPrismaModule],
       controllers: [BrokerAccessController],
-      providers: [BrokerAccessService],
+      providers: [
+        BrokerAccessService,
+        { provide: NotificationsService, useValue: notificationsServiceMock },
+      ],
     })
     class TestModule {}
 

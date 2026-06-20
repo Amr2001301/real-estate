@@ -31,3 +31,17 @@ class MarkAllNotificationsRead implements UseCase<void, NoParams> {
   @override
   Future<Result<void>> call(NoParams params) => _repo.markAllRead();
 }
+
+class RegisterDeviceParams {
+  const RegisterDeviceParams({required this.token, required this.platform});
+  final String token;
+  final String platform;
+}
+
+class RegisterDevice implements UseCase<void, RegisterDeviceParams> {
+  const RegisterDevice(this._repo);
+  final NotificationsRepository _repo;
+  @override
+  Future<Result<void>> call(RegisterDeviceParams params) =>
+      _repo.registerDevice(params.token, params.platform);
+}

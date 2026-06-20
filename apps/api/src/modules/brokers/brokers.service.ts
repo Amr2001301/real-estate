@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, BrokerStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import {
   CreateBrokerDto,
@@ -24,7 +25,10 @@ const COUNTS_SELECT = {
 
 @Injectable()
 export class BrokersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async create(dto: CreateBrokerDto) {
     const code = dto.code
@@ -190,11 +194,30 @@ export class BrokersService {
       data.notes = existing.notes ? `${existing.notes}\n${line}` : line;
     }
 
-    return this.prisma.broker.update({
+    const updated = await this.prisma.broker.update({
       where: { id },
       data,
       include: COUNTS_SELECT,
     });
+
+    // Notify all active broker users about the status change.
+    const brokerUsers = await this.prisma.brokerUser.findMany({
+      where: { brokerId: id, status: 'ACTIVE' },
+      select: { userId: true },
+    });
+    const userIds = brokerUsers.map((u) => u.userId);
+    const notifPayload = {
+      entityType: 'broker',
+      entityId: id,
+      companyName: existing.companyName,
+    };
+    if (status === BrokerStatus.ACTIVE) {
+      await this.notifications.sendToUsers(userIds, 'broker_approved', notifPayload);
+    } else if (status === BrokerStatus.SUSPENDED || status === BrokerStatus.TERMINATED) {
+      await this.notifications.sendToUsers(userIds, 'broker_suspended', notifPayload);
+    }
+
+    return updated;
   }
 
   // ── Internal helpers ──────────────────────────────────────────────────────

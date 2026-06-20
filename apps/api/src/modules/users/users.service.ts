@@ -11,6 +11,7 @@ import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { R2Service } from '../media/r2.service';
+import { NotificationsService } from '../notifications/notifications.module';
 
 /** Avatars: small images only, capped well below the document limit. */
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
@@ -35,6 +36,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly r2: R2Service,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async create(dto: CreateUserDto) {
@@ -170,20 +172,38 @@ export class UsersService {
 
   async deactivate(id: string) {
     await this.assertExists(id);
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id },
       data: { active: false },
       select: this.publicSelect(),
     });
+    try {
+      await this.notifications.sendToUser(id, 'user_account_suspended', {
+        entityType: 'user',
+        entityId: id,
+      });
+    } catch {
+      // best-effort — deactivation must not fail due to notification errors
+    }
+    return updated;
   }
 
   async activate(id: string) {
     await this.assertExists(id);
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id },
       data: { active: true },
       select: this.publicSelect(),
     });
+    try {
+      await this.notifications.sendToUser(id, 'user_account_approved', {
+        entityType: 'user',
+        entityId: id,
+      });
+    } catch {
+      // best-effort — activation must not fail due to notification errors
+    }
+    return updated;
   }
 
   /**

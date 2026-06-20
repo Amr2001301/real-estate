@@ -6,6 +6,9 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    // Firebase — Phase 5. Processes google-services.json at build time.
+    // Replace android/app/google-services.json with the real file from Firebase Console.
+    id("com.google.gms.google-services")
 }
 
 // Load release-signing credentials from an UNTRACKED file at

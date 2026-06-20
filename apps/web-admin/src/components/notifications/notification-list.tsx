@@ -84,6 +84,23 @@ const TEMPLATE_LABEL: Record<string, string> = {
   maintenance_request_complaint_submitted: 'شكوى صيانة جديدة',
   maintenance_request_unresolved: 'طلب صيانة لم يُحل',
   maintenance_request_resolution_confirmed: 'تأكيد حل طلب الصيانة',
+  maintenance_sla_warning: 'تحذير: اقتراب موعد الصيانة',
+  maintenance_sla_breached: 'تجاوز موعد الصيانة',
+  // Leads / CRM
+  lead_created: 'فرصة جديدة في CRM',
+  lead_assigned_sales: 'تم إسناد فرصة',
+  lead_stage_changed: 'تحديث مرحلة الفرصة',
+  lead_note_added: 'ملاحظة جديدة على الفرصة',
+  // Broker status
+  broker_approved: 'تم تفعيل حساب الوسيط',
+  broker_suspended: 'تم تعليق حساب الوسيط',
+  // Broker unit access
+  broker_unit_access_requested: 'طلب وصول وسيط للوحدة',
+  broker_unit_access_approved: 'تم اعتماد وصول الوسيط',
+  broker_unit_access_rejected: 'تم رفض وصول الوسيط',
+  // User account lifecycle
+  user_account_approved: 'تم تفعيل الحساب',
+  user_account_suspended: 'تم تعليق الحساب',
 };
 
 interface RelatedLink {
@@ -126,6 +143,17 @@ function relatedLink(
     }
     if (entityType === 'visit' && entityId) {
       return { href: `/dashboard/visits/appointments/${entityId}`, icon: CalendarClock, label: 'الزيارة' };
+    }
+    if (entityType === 'lead' && entityId) {
+      return isBroker
+        ? { href: `/dashboard/broker-leads/${entityId}`, icon: Users, label: 'الفرصة' }
+        : { href: `/dashboard/leads/${entityId}`, icon: Users, label: 'الفرصة' };
+    }
+    if (entityType === 'broker' && entityId) {
+      return { href: `/dashboard/brokers/${entityId}`, icon: Users, label: 'الوسيط' };
+    }
+    if (entityType === 'user' && entityId) {
+      return { href: `/dashboard/users/${entityId}`, icon: Users, label: 'المستخدم' };
     }
     if (maintenanceRequestId) {
       return { href: `/dashboard/maintenance/${maintenanceRequestId}`, icon: Wrench, label: 'طلب الصيانة' };

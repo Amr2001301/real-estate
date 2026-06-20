@@ -12,6 +12,7 @@ import request from 'supertest';
 import { UserRole } from '@prisma/client';
 import { BrokersController } from '../brokers.controller';
 import { BrokersService } from '../brokers.service';
+import { NotificationsService } from '../../notifications/notifications.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -70,6 +71,7 @@ function makePrismaMock() {
           id: where.id ?? BROKER_ID,
           status: 'ACTIVE',
           notes: null,
+          companyName: 'Test Co',
         })),
       findMany: jest.fn().mockResolvedValue([]),
       count: jest.fn().mockResolvedValue(0),
@@ -79,6 +81,9 @@ function makePrismaMock() {
         status: 'ACTIVE',
         ...data,
       })),
+    },
+    brokerUser: {
+      findMany: jest.fn().mockResolvedValue([]),
     },
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
@@ -105,10 +110,19 @@ describe('Brokers module · permissions enforcement', () => {
     })
     class MockPrismaModule {}
 
+    const notificationsServiceMock = {
+      sendToUser: jest.fn().mockResolvedValue(undefined),
+      sendToUsers: jest.fn().mockResolvedValue(undefined),
+      sendToRoles: jest.fn().mockResolvedValue(undefined),
+    };
+
     @Module({
       imports: [MockPrismaModule],
       controllers: [BrokersController],
-      providers: [BrokersService],
+      providers: [
+        BrokersService,
+        { provide: NotificationsService, useValue: notificationsServiceMock },
+      ],
     })
     class TestBrokersModule {}
 

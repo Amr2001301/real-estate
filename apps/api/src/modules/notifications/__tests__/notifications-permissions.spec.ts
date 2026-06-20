@@ -80,6 +80,7 @@ function makePrismaMock() {
     },
     user: {
       findUnique: jest.fn().mockResolvedValue({ locale: 'ar' }),
+      findMany: jest.fn().mockResolvedValue([{ id: 'u-1' }]),
     },
     deviceToken: {
       upsert: jest.fn().mockImplementation(async ({ where, create, update }) => ({
@@ -176,6 +177,16 @@ describe('Notifications module · permissions enforcement', () => {
         adminBypass: true,
       });
     });
+
+    it.each<[string]>([['broadcast'], ['previewBroadcast']])(
+      '%s → notifications:send, adminBypass true',
+      (m) => {
+        expect(getMeta(m)).toMatchObject({
+          codes: ['notifications:send'],
+          adminBypass: true,
+        });
+      },
+    );
 
     it.each<[string]>([['myList'], ['markRead'], ['markAllRead'], ['registerDevice']])(
       '%s — no permission metadata (self-service)',
@@ -303,6 +314,75 @@ describe('Notifications module · permissions enforcement', () => {
         .expect(403);
       expect(mock.notificationTemplate.findUnique).not.toHaveBeenCalled();
       expect(mock.notification.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Broadcast endpoints ───────────────────────────────────────────────────
+
+  describe('Admin broadcast endpoints (ADMIN-only)', () => {
+    const BROADCAST_BODY = {
+      title_ar: 'عنوان',
+      title_en: 'Title',
+      body_ar: 'نص',
+      body_en: 'Body',
+      target: 'ALL_CUSTOMERS',
+      channel: 'IN_APP',
+    };
+
+    it('ADMIN → 201 on POST /notifications/broadcast; notification.create called', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer())
+        .post('/notifications/broadcast')
+        .send(BROADCAST_BODY)
+        .expect(201);
+      expect(mock.notification.create).toHaveBeenCalled();
+    });
+
+    it('ADMIN → 201 on POST /notifications/broadcast/preview; notification.create NOT called', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      mock.notification.create.mockClear();
+      await request(app.getHttpServer())
+        .post('/notifications/broadcast/preview')
+        .send({ target: 'ALL_CUSTOMERS' })
+        .expect(201);
+      expect(mock.notification.create).not.toHaveBeenCalled();
+    });
+
+    it('SALES (with notifications:send) → 403 on POST /notifications/broadcast', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-1',
+        role: UserRole.SALES,
+        codes: ['notifications:send'],
+      };
+      await request(app.getHttpServer())
+        .post('/notifications/broadcast')
+        .send(BROADCAST_BODY)
+        .expect(403);
+      expect(mock.notification.create).not.toHaveBeenCalled();
+    });
+
+    it('CUSTOMER with zero permissions → 403 on POST /notifications/broadcast', async () => {
+      FakeAuthGuard.currentUser = { sub: 'cust-1', role: UserRole.CUSTOMER, codes: [] };
+      await request(app.getHttpServer())
+        .post('/notifications/broadcast')
+        .send(BROADCAST_BODY)
+        .expect(403);
+    });
+
+    it('BROKER with zero permissions → 403 on POST /notifications/broadcast/preview', async () => {
+      FakeAuthGuard.currentUser = { sub: 'broker-1', role: UserRole.BROKER, codes: [] };
+      await request(app.getHttpServer())
+        .post('/notifications/broadcast/preview')
+        .send({ target: 'ALL_CUSTOMERS' })
+        .expect(403);
+    });
+
+    it('unauthenticated → 403 on POST /notifications/broadcast', async () => {
+      FakeAuthGuard.currentUser = null;
+      await request(app.getHttpServer())
+        .post('/notifications/broadcast')
+        .send(BROADCAST_BODY)
+        .expect(403);
     });
   });
 

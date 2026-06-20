@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import {
   GrantBrokerProjectAccessDto,
   GrantBrokerUnitAccessDto,
@@ -47,7 +48,10 @@ const UNIT_ACCESS_INCLUDE = {
 
 @Injectable()
 export class BrokerAccessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async listAccess(brokerId: string) {
     await this.assertBrokerExists(brokerId);
@@ -144,37 +148,83 @@ export class BrokerAccessService {
       where: { brokerId_unitId: { brokerId, unitId: dto.unitId } },
     });
 
+    let result;
     if (existing) {
-      return this.prisma.brokerUnitAccess.update({
+      result = await this.prisma.brokerUnitAccess.update({
         where: { id: existing.id },
         data: { active: dto.active ?? true },
         include: UNIT_ACCESS_INCLUDE,
       });
+    } else {
+      result = await this.prisma.brokerUnitAccess.create({
+        data: {
+          brokerId,
+          unitId: dto.unitId,
+          active: dto.active ?? true,
+        },
+        include: UNIT_ACCESS_INCLUDE,
+      });
     }
 
-    return this.prisma.brokerUnitAccess.create({
-      data: {
-        brokerId,
-        unitId: dto.unitId,
-        active: dto.active ?? true,
-      },
-      include: UNIT_ACCESS_INCLUDE,
-    });
+    // Notify broker users that unit access was approved.
+    if (dto.active !== false) {
+      const unitCode = result.unit.code;
+      const projectName = (result.unit.building?.phase as { projectId?: string } | null)?.projectId ?? '';
+      await this.notifyBrokerUsers(brokerId, 'broker_unit_access_approved', {
+        entityType: 'unit',
+        entityId: dto.unitId,
+        unitCode,
+        projectName,
+      });
+    }
+
+    return result;
   }
 
   async revokeUnit(brokerId: string, unitId: string) {
     await this.assertBrokerExists(brokerId);
     const existing = await this.prisma.brokerUnitAccess.findUnique({
       where: { brokerId_unitId: { brokerId, unitId } },
+      include: UNIT_ACCESS_INCLUDE,
     });
     if (!existing) {
       throw new NotFoundException('Unit access grant not found for this broker');
     }
-    return this.prisma.brokerUnitAccess.update({
+    const result = await this.prisma.brokerUnitAccess.update({
       where: { id: existing.id },
       data: { active: false },
       include: UNIT_ACCESS_INCLUDE,
     });
+
+    // Notify broker users that access was revoked.
+    await this.notifyBrokerUsers(brokerId, 'broker_unit_access_rejected', {
+      entityType: 'unit',
+      entityId: unitId,
+      unitCode: existing.unit.code,
+      projectName: '',
+    });
+
+    return result;
+  }
+
+  private async notifyBrokerUsers(
+    brokerId: string,
+    templateCode: string,
+    payload: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      const users = await this.prisma.brokerUser.findMany({
+        where: { brokerId, status: 'ACTIVE' },
+        select: { userId: true },
+      });
+      await this.notifications.sendToUsers(
+        users.map((u) => u.userId),
+        templateCode,
+        payload,
+      );
+    } catch {
+      // Best-effort — access operations must not fail due to notification errors.
+    }
   }
 
   // ── Internal helpers ──────────────────────────────────────────────────────

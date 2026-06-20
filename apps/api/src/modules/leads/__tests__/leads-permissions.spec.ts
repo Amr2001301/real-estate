@@ -3,8 +3,9 @@ import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { UserRole } from '@prisma/client';
-import { LeadsModule } from '../leads.module';
 import { LeadsController } from '../leads.controller';
+import { LeadsService } from '../leads.service';
+import { NotificationsService } from '../../notifications/notifications.module';
 import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
@@ -149,8 +150,24 @@ describe('Leads module · permissions enforcement', () => {
     })
     class MockPrismaModule {}
 
+    const notificationsServiceMock = {
+      sendToUser: jest.fn().mockResolvedValue(undefined),
+      sendToUsers: jest.fn().mockResolvedValue(undefined),
+      sendToRoles: jest.fn().mockResolvedValue(undefined),
+    };
+
+    @Module({
+      imports: [MockPrismaModule],
+      controllers: [LeadsController],
+      providers: [
+        LeadsService,
+        { provide: NotificationsService, useValue: notificationsServiceMock },
+      ],
+    })
+    class TestLeadsModule {}
+
     const moduleRef = await Test.createTestingModule({
-      imports: [MockPrismaModule, LeadsModule],
+      imports: [TestLeadsModule],
       providers: [
         Reflector,
         { provide: APP_GUARD, useClass: FakeAuthGuard },

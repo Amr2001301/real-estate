@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { ReactNode } from 'react';
-import { FileEdit, Inbox, Bell, CheckCheck, Clock } from 'lucide-react';
+import { FileEdit, Inbox, Bell, CheckCheck, Clock, Megaphone } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { NotificationItem, Paged } from '@/lib/types';
 import { formatDate } from '@/lib/format';
@@ -51,11 +51,18 @@ export default async function AdminNotificationsInboxPage() {
           { label: 'الإشعارات' },
         ]}
         actions={
-          <Link href="/dashboard/notifications/templates">
-            <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
-              قوالب الإشعارات
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/dashboard/notifications/broadcast">
+              <Button variant="primary" size="sm" leftIcon={<Megaphone className="h-3.5 w-3.5" />}>
+                إرسال يدوي
+              </Button>
+            </Link>
+            <Link href="/dashboard/notifications/templates">
+              <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
+                قوالب الإشعارات
+              </Button>
+            </Link>
+          </div>
         }
       />
 

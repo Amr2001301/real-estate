@@ -3,8 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AppointmentStatus, Prisma, LeadStage } from '@prisma/client';
+import { AppointmentStatus, Prisma, LeadStage, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.module';
 import {
   CreateLeadDto,
   UpdateLeadDto,
@@ -17,7 +18,10 @@ import { paginate, takeSkip } from '../../common/utils/pagination';
 
 @Injectable()
 export class LeadsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // ----- Sources -----
   listSources() {
@@ -47,10 +51,10 @@ export class LeadsService {
    * the lookup and the insert.
    */
   async create(dto: CreateLeadDto) {
-    return this.prisma.$transaction(async (tx) => {
+    const lead = await this.prisma.$transaction(async (tx) => {
       const client = await this.resolveClient(tx, dto);
 
-      const lead = await tx.lead.create({
+      const created = await tx.lead.create({
         data: {
           clientId: client.id,
           fullName: client.fullName,
@@ -65,16 +69,38 @@ export class LeadsService {
 
       if (dto.notes && dto.assignedSalesId) {
         await tx.leadNote.create({
-          data: { leadId: lead.id, salesId: dto.assignedSalesId, body: dto.notes },
+          data: { leadId: created.id, salesId: dto.assignedSalesId, body: dto.notes },
         });
       }
 
       await tx.leadActivity.create({
-        data: { leadId: lead.id, type: 'created', payload: {} },
+        data: { leadId: created.id, type: 'created', payload: {} },
       });
 
-      return lead;
+      return created;
     });
+
+    // Notify ADMIN + SALES_MANAGER that a new lead was created.
+    const projectName = dto.projectInterestId
+      ? await this.resolveProjectName(dto.projectInterestId)
+      : '';
+    const notifPayload = {
+      entityType: 'lead',
+      entityId: lead.id,
+      customerName: lead.fullName,
+      projectName,
+    };
+    await this.notifications.sendToRoles(
+      [UserRole.ADMIN, UserRole.SALES_MANAGER],
+      'lead_created',
+      notifPayload,
+    );
+    // If already assigned on creation, notify the sales rep.
+    if (lead.assignedSalesId) {
+      await this.notifications.sendToUser(lead.assignedSalesId, 'lead_assigned_sales', notifPayload);
+    }
+
+    return lead;
   }
 
   /**
@@ -317,11 +343,22 @@ export class LeadsService {
         payload: { from: lead.stage, to: dto.stage, reason: dto.reason ?? null },
       },
     });
+    // Notify assigned sales rep and managers about the stage change.
+    const stagePayload = {
+      entityType: 'lead',
+      entityId: id,
+      customerName: lead.fullName,
+      fromStage: lead.stage,
+      toStage: dto.stage,
+    };
+    const recipients = [lead.assignedSalesId].filter((v): v is string => !!v);
+    await this.notifications.sendToUsers(recipients, 'lead_stage_changed', stagePayload);
+    await this.notifications.sendToRoles([UserRole.SALES_MANAGER], 'lead_stage_changed', stagePayload);
     return updated;
   }
 
   async assign(id: string, dto: AssignLeadDto) {
-    await this.assertExists(id);
+    const lead = await this.assertExists(id);
     const updated = await this.prisma.lead.update({
       where: { id },
       data: { assignedSalesId: dto.assignedSalesId },
@@ -329,14 +366,32 @@ export class LeadsService {
     await this.prisma.leadActivity.create({
       data: { leadId: id, type: 'assigned', payload: { salesId: dto.assignedSalesId } },
     });
+    // Notify the newly assigned sales rep.
+    if (dto.assignedSalesId) {
+      await this.notifications.sendToUser(dto.assignedSalesId, 'lead_assigned_sales', {
+        entityType: 'lead',
+        entityId: id,
+        customerName: lead.fullName,
+        projectName: '',
+      });
+    }
     return updated;
   }
 
   async addNote(leadId: string, salesId: string, dto: CreateLeadNoteDto) {
-    await this.assertExists(leadId);
-    return this.prisma.leadNote.create({
+    const lead = await this.assertExists(leadId);
+    const note = await this.prisma.leadNote.create({
       data: { leadId, salesId, body: dto.body },
     });
+    // Notify the assigned sales rep (if different from the note author).
+    if (lead.assignedSalesId && lead.assignedSalesId !== salesId) {
+      await this.notifications.sendToUser(lead.assignedSalesId, 'lead_note_added', {
+        entityType: 'lead',
+        entityId: leadId,
+        customerName: lead.fullName,
+      });
+    }
+    return note;
   }
 
   async pipelineCounts() {
@@ -352,5 +407,18 @@ export class LeadsService {
     const lead = await this.prisma.lead.findUnique({ where: { id } });
     if (!lead) throw new NotFoundException('Lead not found');
     return lead;
+  }
+
+  private async resolveProjectName(projectId: string): Promise<string> {
+    try {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { name: true },
+      });
+      const name = project?.name as { ar?: string; en?: string } | null;
+      return name?.ar ?? name?.en ?? '';
+    } catch {
+      return '';
+    }
   }
 }

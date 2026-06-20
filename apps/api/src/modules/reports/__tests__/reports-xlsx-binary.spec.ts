@@ -36,15 +36,18 @@ class FakeAuthGuard implements CanActivate {
   }
 }
 
+const ZERO_AGG_XLSX = { _sum: { amount: null, totalAmount: null, totalNet: null, netAmount: null } };
+
 function makePrismaMock() {
   return {
     userPermission: { findMany: jest.fn().mockResolvedValue([]) },
-    project: { count: jest.fn().mockResolvedValue(4) },
+    project: { count: jest.fn().mockResolvedValue(4), findMany: jest.fn().mockResolvedValue([]) },
     unit: {
       count: jest.fn().mockImplementation(async (args?: { where?: { status?: string } }) => {
         const status = args?.where?.status;
         if (status === 'AVAILABLE') return 60;
         if (status === 'RESERVED') return 25;
+        if (status === 'SOLD') return 15;
         return 100;
       }),
     },
@@ -59,6 +62,7 @@ function makePrismaMock() {
     leadSource: { findMany: jest.fn().mockResolvedValue([{ id: 's1', name: { ar: 'مباشر', en: 'Direct' } }]) },
     deposit: {
       count: jest.fn().mockResolvedValue(3),
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX),
       findMany: jest.fn().mockResolvedValue([
         { id: 'd1', createdAt: new Date('2026-05-31T09:00:00Z'), contract: { contractNumber: 'CON-1', customer: { fullName: 'علي' } } },
       ]),
@@ -66,20 +70,28 @@ function makePrismaMock() {
     maintenanceRequest: { count: jest.fn().mockResolvedValue(5), findMany: jest.fn().mockResolvedValue([]) },
     contract: {
       count: jest.fn().mockResolvedValue(2),
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX),
       findMany: jest.fn().mockResolvedValue([
         { id: 'c1', contractNumber: 'CON-9', createdAt: new Date('2026-05-31T08:00:00Z'), customer: { fullName: 'سارة' } },
       ]),
     },
     reservation: {
       count: jest.fn().mockImplementation(async (args?: { where?: { expiresAt?: unknown } }) => (args?.where?.expiresAt ? 1 : 2)),
+      groupBy: jest.fn().mockResolvedValue([]),
       findMany: jest.fn().mockResolvedValue([
         { id: 'r1', reservationNumber: 'RES-1', createdAt: new Date('2026-05-31T11:00:00Z'), unit: { code: 'A-1' }, client: { fullName: 'خالد' }, lead: null },
       ]),
     },
     visitAppointment: { count: jest.fn().mockResolvedValue(1) },
-    visitRequest: { findMany: jest.fn().mockResolvedValue([]) },
+    visitRequest: { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) },
     infoRequest: { count: jest.fn().mockResolvedValue(0), findMany: jest.fn().mockResolvedValue([]) },
+    user: { count: jest.fn().mockResolvedValue(0) },
+    installment: { aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX) },
+    bonusEntry: { aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX) },
+    brokerPayout: { aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX), groupBy: jest.fn().mockResolvedValue([]) },
+    brokerCommission: { aggregate: jest.fn().mockResolvedValue(ZERO_AGG_XLSX) },
     $transaction: jest.fn((ops: unknown) => (Array.isArray(ops) ? Promise.all(ops) : (ops as () => unknown)())),
+    $queryRawUnsafe: jest.fn().mockResolvedValue([]),
   };
 }
 

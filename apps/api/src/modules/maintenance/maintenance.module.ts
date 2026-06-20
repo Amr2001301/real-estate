@@ -1039,6 +1039,86 @@ export class MaintenanceService {
   }
 
   /**
+   * SLA check sweep — fires `maintenance_sla_warning` when dueAt is ≤2 h away,
+   * and `maintenance_sla_breached` when dueAt has already passed. Both are
+   * sent only once per request: presence of any existing Notification row with
+   * the matching templateCode + entityId in payload acts as the dedup guard,
+   * so no schema migration is needed. Best-effort per request; one failure
+   * never blocks the others.
+   */
+  async checkSla(): Promise<{ warned: number; breached: number }> {
+    const now = new Date();
+    const warningHorizon = new Date(now.getTime() + 2 * 60 * 60_000);
+
+    const [warningCandidates, breachCandidates] = await Promise.all([
+      this.prisma.maintenanceRequest.findMany({
+        where: {
+          dueAt: { gte: now, lte: warningHorizon },
+          status: { notIn: [MaintenanceStatus.RESOLVED, MaintenanceStatus.CLOSED] },
+          reviewStatus: MaintenanceReviewStatus.APPROVED,
+        },
+        select: { id: true },
+      }),
+      this.prisma.maintenanceRequest.findMany({
+        where: {
+          dueAt: { lt: now },
+          status: { notIn: [MaintenanceStatus.RESOLVED, MaintenanceStatus.CLOSED] },
+          reviewStatus: MaintenanceReviewStatus.APPROVED,
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    let warned = 0;
+    let breached = 0;
+
+    for (const r of warningCandidates) {
+      const exists = await this.prisma.notification.findFirst({
+        where: {
+          templateCode: 'maintenance_sla_warning',
+          payload: { path: ['entityId'], equals: r.id },
+        },
+        select: { id: true },
+      });
+      if (exists) continue;
+      try {
+        await this.notifications.sendToRoles(
+          [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
+          'maintenance_sla_warning',
+          { entityType: 'maintenance', entityId: r.id, requestId: r.id },
+        );
+        warned++;
+      } catch {
+        // best-effort
+      }
+    }
+
+    for (const r of breachCandidates) {
+      const exists = await this.prisma.notification.findFirst({
+        where: {
+          templateCode: 'maintenance_sla_breached',
+          payload: { path: ['entityId'], equals: r.id },
+        },
+        select: { id: true },
+      });
+      if (exists) continue;
+      try {
+        await this.notifications.sendToRoles(
+          [UserRole.ADMIN, UserRole.MAINTENANCE_SUPERVISOR],
+          'maintenance_sla_breached',
+          { entityType: 'maintenance', entityId: r.id, requestId: r.id },
+        );
+        breached++;
+      } catch {
+        // best-effort
+      }
+    }
+
+    this.logger.log(`SLA check: warned=${warned} breached=${breached}`);
+    return { warned, breached };
+  }
+
+  /**
    * Cron sweep — flags complaints older than the unresolved window as
    * unresolved (durable `unresolvedAt`, no status enum change). Idempotent: the
    * updateMany guard (`unresolvedAt: null`) means a re-run never re-flags or
@@ -1834,9 +1914,25 @@ class MaintenanceUnresolvedCron {
   }
 }
 
+/**
+ * Hourly SLA check: fires `maintenance_sla_warning` when a request's dueAt is
+ * ≤2 h away, and `maintenance_sla_breached` once it has passed. Each fires only
+ * once per request (deduped via the Notification table — no schema migration
+ * needed). ScheduleModule is registered globally in AppModule.
+ */
+@Injectable()
+class MaintenanceSlaCheckCron {
+  constructor(private readonly svc: MaintenanceService) {}
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async run() {
+    await this.svc.checkSla();
+  }
+}
+
 @Module({
   imports: [DocumentsModule, MediaModule, NotificationsModule],
   controllers: [MaintenanceController],
-  providers: [MaintenanceService, MaintenanceUnresolvedCron],
+  providers: [MaintenanceService, MaintenanceUnresolvedCron, MaintenanceSlaCheckCron],
 })
 export class MaintenanceModule {}

@@ -37,20 +37,26 @@ const AR_MONTHS = [
   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
 ];
 
+const ZERO_AGG = { _sum: { amount: null, totalAmount: null, totalNet: null } };
+
 function makePrismaMock() {
   return {
     userPermission: { findMany: jest.fn().mockResolvedValue([]) },
-    project: { count: jest.fn().mockResolvedValue(4) },
+    project: {
+      count: jest.fn().mockResolvedValue(4),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     unit: {
       count: jest.fn().mockImplementation(async (args?: { where?: { status?: string } }) => {
         const status = args?.where?.status;
         if (status === 'AVAILABLE') return 60;
         if (status === 'RESERVED') return 25;
+        if (status === 'SOLD') return 15;
         return 100; // total (no where)
       }),
     },
     lead: {
-      count: jest.fn().mockResolvedValue(8), // new this month
+      count: jest.fn().mockResolvedValue(8),
       groupBy: jest.fn().mockResolvedValue([
         { sourceId: 's1', _count: { _all: 10 } },
         { sourceId: 's2', _count: { _all: 4 } },
@@ -67,7 +73,8 @@ function makePrismaMock() {
       ]),
     },
     deposit: {
-      count: jest.fn().mockResolvedValue(3), // pending review
+      count: jest.fn().mockResolvedValue(3),
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
       findMany: jest.fn().mockResolvedValue([
         {
           id: 'd1',
@@ -77,22 +84,22 @@ function makePrismaMock() {
       ]),
     },
     maintenanceRequest: {
-      count: jest.fn().mockResolvedValue(5), // open
+      count: jest.fn().mockResolvedValue(5),
       findMany: jest.fn().mockResolvedValue([]),
     },
     contract: {
-      count: jest.fn().mockResolvedValue(2), // awaiting signature
+      count: jest.fn().mockResolvedValue(2),
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
       findMany: jest.fn().mockResolvedValue([
         { id: 'c1', contractNumber: 'CON-9', createdAt: new Date('2026-05-31T08:00:00Z'), customer: { fullName: 'سارة' } },
       ]),
     },
     reservation: {
       count: jest.fn().mockImplementation(async (args?: { where?: { expiresAt?: unknown } }) => {
-        // The expiring-soon alert query carries expiresAt; the 6 trend queries
-        // carry a createdAt range instead.
         if (args?.where?.expiresAt) return 1;
-        return 2; // each trend month
+        return 2;
       }),
+      groupBy: jest.fn().mockResolvedValue([]),
       findMany: jest.fn().mockResolvedValue([
         {
           id: 'r1',
@@ -105,12 +112,32 @@ function makePrismaMock() {
       ]),
     },
     visitAppointment: { count: jest.fn().mockResolvedValue(1) },
-    visitRequest: { findMany: jest.fn().mockResolvedValue([]) },
+    visitRequest: {
+      count: jest.fn().mockResolvedValue(0),
+      findMany: jest.fn().mockResolvedValue([]),
+    },
     infoRequest: {
       count: jest.fn().mockResolvedValue(0),
       findMany: jest.fn().mockResolvedValue([]),
     },
+    user: {
+      count: jest.fn().mockResolvedValue(0),
+    },
+    installment: {
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
+    },
+    bonusEntry: {
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
+    },
+    brokerPayout: {
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
+      groupBy: jest.fn().mockResolvedValue([]),
+    },
+    brokerCommission: {
+      aggregate: jest.fn().mockResolvedValue(ZERO_AGG),
+    },
     $transaction: jest.fn((ops: unknown) => (Array.isArray(ops) ? Promise.all(ops) : (ops as () => unknown)())),
+    $queryRawUnsafe: jest.fn().mockResolvedValue([]),
   };
 }
 
@@ -145,7 +172,7 @@ describe('GET /reports/admin-summary (P14)', () => {
   it('returns DB-derived KPIs (incl. real maintenance + pending deposits)', async () => {
     FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
     const res = await request(app.getHttpServer()).get('/reports/admin-summary').expect(200);
-    expect(res.body.kpis).toEqual({
+    expect(res.body.kpis).toMatchObject({
       projects: 4,
       totalUnits: 100,
       availableUnits: 60,

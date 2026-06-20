@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/app_notification.dart';
 import '../cubit/notifications_cubit.dart';
@@ -84,6 +85,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 }
 
+/// Resolves the in-app navigation route for a staff notification.
+/// Returns null when no specific deep-link target applies.
+String? _resolveStaffRoute(AppNotification n) {
+  final code = n.templateCode;
+  final entityId = n.payload['entityId'] as String?;
+
+  if (code.startsWith('maintenance_')) {
+    final id = entityId ?? n.payload['requestId'] as String?;
+    if (id != null && id.isNotEmpty) return '/maintenance/$id';
+    return '/maintenance';
+  }
+  if (code.startsWith('visit_')) {
+    final id = entityId ?? n.payload['visitId'] as String?;
+    if (id != null && id.isNotEmpty) return '/visits/$id';
+    return '/visits';
+  }
+  if (code.startsWith('reservation_')) {
+    final id = entityId ?? n.payload['reservationId'] as String?;
+    if (id != null && id.isNotEmpty) return '/reservations/$id';
+    return '/reservations';
+  }
+  if (code.startsWith('lead_')) {
+    final id = entityId ?? n.payload['leadId'] as String?;
+    if (id != null && id.isNotEmpty) return '/leads/$id';
+  }
+  if (code.startsWith('broker_lead_') || code.startsWith('broker_commission_') || code.startsWith('broker_payout_')) {
+    return '/broker/commissions';
+  }
+  if (code.startsWith('payment_proof_') || code.startsWith('booking_payment_proof_')) {
+    return '/payments-review';
+  }
+  return null;
+}
+
 class _NotificationTile extends StatelessWidget {
   const _NotificationTile(this.notification);
   final AppNotification notification;
@@ -103,9 +138,13 @@ class _NotificationTile extends StatelessWidget {
         : (message is String ? message : null);
 
     return AppCard(
-      onTap: notification.read
-          ? null
-          : () => context.read<NotificationsCubit>().markRead(notification.id),
+      onTap: () {
+        if (!notification.read) {
+          context.read<NotificationsCubit>().markRead(notification.id);
+        }
+        final route = _resolveStaffRoute(notification);
+        if (route != null) context.push(route);
+      },
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

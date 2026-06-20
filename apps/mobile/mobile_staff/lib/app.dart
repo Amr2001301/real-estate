@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -45,11 +48,15 @@ import 'features/installments/domain/repositories/installments_repository.dart';
 import 'features/leads/data/datasources/leads_remote_data_source.dart';
 import 'features/leads/data/repositories/leads_repository_impl.dart';
 import 'features/leads/domain/repositories/leads_repository.dart';
+import 'bootstrap.dart' show pendingPushRoute;
 import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
+import 'features/notifications/data/firebase_push_token_provider.dart';
 import 'features/notifications/data/repositories/notifications_repository_impl.dart';
 import 'features/notifications/domain/repositories/notifications_repository.dart';
 import 'features/notifications/domain/usecases/notification_use_cases.dart';
 import 'features/notifications/presentation/cubit/unread_count_cubit.dart';
+import 'features/notifications/presentation/fcm_route_resolver.dart';
+import 'features/notifications/presentation/push_registration_service.dart';
 import 'features/payments_review/data/datasources/payments_review_remote_data_source.dart';
 import 'features/payments_review/data/repositories/payments_review_repository_impl.dart';
 import 'features/payments_review/domain/repositories/payments_review_repository.dart';
@@ -164,6 +171,12 @@ class StaffApp extends StatelessWidget {
           create: (ctx) => BrokerCommissionsRepositoryImpl(
               BrokerCommissionsRemoteDataSourceImpl(ctx.read<Dio>())),
         ),
+        RepositoryProvider<PushRegistrationService>(
+          create: (ctx) => PushRegistrationService(
+            const FirebasePushTokenProvider(),
+            RegisterDevice(ctx.read<NotificationsRepository>()),
+          ),
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -199,10 +212,46 @@ class _StaffRoot extends StatefulWidget {
 class _StaffRootState extends State<_StaffRoot> {
   late final router = createStaffRouter(context.read<SessionCubit>());
 
+  StreamSubscription<RemoteMessage>? _fcmOpenSub;
+  StreamSubscription<RemoteMessage>? _fcmFgSub;
+  StreamSubscription<String>? _tokenSub;
+
   @override
   void initState() {
     super.initState();
     _wireRefresher();
+    _wireFcm();
+  }
+
+  @override
+  void dispose() {
+    _fcmOpenSub?.cancel();
+    _fcmFgSub?.cancel();
+    _tokenSub?.cancel();
+    super.dispose();
+  }
+
+  void _wireFcm() {
+    try {
+      _fcmOpenSub = FirebaseMessaging.onMessageOpenedApp.listen((msg) {
+        final route = resolveStaffFcmRoute(msg);
+        if (route != null) router.push(route);
+      });
+      _fcmFgSub = FirebaseMessaging.onMessage.listen((_) {
+        if (mounted) context.read<UnreadCountCubit>().load();
+      });
+      _tokenSub = FirebaseMessaging.instance.onTokenRefresh.listen((_) {
+        if (mounted) context.read<PushRegistrationService>().registerIfPossible();
+      });
+      if (pendingPushRoute != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          router.push(pendingPushRoute!);
+          pendingPushRoute = null;
+        });
+      }
+    } catch (_) {
+      // Firebase not initialised — push disabled; IN_APP continues normally.
+    }
   }
 
   /// Wires the 401→refresh handler now that the auth repository exists. On
@@ -231,6 +280,7 @@ class _StaffRootState extends State<_StaffRoot> {
       listener: (context, state) {
         if (state.isAuthenticated) {
           context.read<UnreadCountCubit>().load();
+          context.read<PushRegistrationService>().registerIfPossible();
         } else {
           context.read<UnreadCountCubit>().clear();
         }

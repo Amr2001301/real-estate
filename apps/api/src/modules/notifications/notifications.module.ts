@@ -1,4 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -20,6 +22,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  MaxLength,
 } from 'class-validator';
 import { Prisma, NotificationChannel, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
@@ -50,6 +53,37 @@ class SendNotificationDto {
 class RegisterDeviceDto {
   @IsString() token!: string;
   @IsString() platform!: string; // ios | android | web
+}
+
+/** Who the broadcast targets — used in BroadcastNotificationDto. */
+export enum BroadcastTarget {
+  USER = 'USER',
+  ROLE = 'ROLE',
+  ALL_CUSTOMERS = 'ALL_CUSTOMERS',
+  ALL_BROKERS = 'ALL_BROKERS',
+  ALL_SALES = 'ALL_SALES',
+  ALL_MAINTENANCE_SUPERVISORS = 'ALL_MAINTENANCE_SUPERVISORS',
+  ALL_ACTIVE = 'ALL_ACTIVE',
+}
+
+class BroadcastNotificationDto {
+  @IsString() @MaxLength(200) title_ar!: string;
+  @IsString() @MaxLength(200) title_en!: string;
+  @IsString() @MaxLength(500) body_ar!: string;
+  @IsString() @MaxLength(500) body_en!: string;
+  @IsEnum(BroadcastTarget) target!: BroadcastTarget;
+  @IsOptional() @IsUUID() targetUserId?: string;
+  @IsOptional() @IsEnum(UserRole) targetRole?: UserRole;
+  @IsEnum(NotificationChannel) channel!: NotificationChannel;
+  @IsOptional() @IsString() @MaxLength(60) entityType?: string;
+  @IsOptional() @IsString() @MaxLength(36) entityId?: string;
+}
+
+/** Dry-run DTO — only the targeting fields; returns count without sending. */
+class BroadcastPreviewDto {
+  @IsEnum(BroadcastTarget) target!: BroadcastTarget;
+  @IsOptional() @IsUUID() targetUserId?: string;
+  @IsOptional() @IsEnum(UserRole) targetRole?: UserRole;
 }
 
 type Locale = 'ar' | 'en';
@@ -209,10 +243,23 @@ export class NotificationsService {
         select: { locale: true },
       });
       const locale = pickLocale(user?.locale ?? 'ar');
+      // FCM data values must all be strings. Include entityType/entityId so
+      // the mobile app can deep-link directly from the push tap without a
+      // separate API call. Never include sensitive fields.
+      const fcmData: Record<string, string> = {
+        templateCode: dto.templateCode,
+        notificationId: notification.id,
+      };
+      if (payload.entityType && typeof payload.entityType === 'string') {
+        fcmData['entityType'] = payload.entityType;
+      }
+      if (payload.entityId && typeof payload.entityId === 'string') {
+        fcmData['entityId'] = payload.entityId;
+      }
       await this.push.sendToUser(dto.userId, {
         title: resolveText(tpl.subject, payload, locale, dto.templateCode),
         body: resolveText(tpl.body, payload, locale, ''),
-        data: { templateCode: dto.templateCode, notificationId: notification.id },
+        data: fcmData,
       });
     } catch (err) {
       this.logger.warn(
@@ -297,6 +344,116 @@ export class NotificationsService {
   unregisterDevice(token: string) {
     return this.prisma.deviceToken.deleteMany({ where: { token } });
   }
+
+  /**
+   * Admin manual broadcast. Resolves recipients by target, creates one
+   * Notification record per user via the `admin_broadcast` passthrough
+   * template (content interpolated from payload vars), and attempts push.
+   *
+   * PUSH guard: PUSH channel is rejected when Firebase is not configured so
+   * the admin gets an explicit error rather than silent no-op delivery.
+   *
+   * Audit: every notification's payload carries broadcastId, sentBy,
+   * broadcastAt, targetType, and targetValue for traceability.
+   */
+  async broadcastNotification(
+    adminId: string,
+    dto: BroadcastNotificationDto,
+  ): Promise<{ broadcastId: string; recipientCount: number; sent: number; failed: number }> {
+    // Reject PUSH explicitly when Firebase is not configured — silent no-op
+    // would mislead the admin into thinking the push was delivered.
+    if (dto.channel === NotificationChannel.PUSH && !this.push.pushEnabled) {
+      throw new BadRequestException(
+        'PUSH channel requires Firebase configuration. Select IN_APP instead, or configure Firebase credentials.',
+      );
+    }
+
+    const broadcastId = randomUUID();
+    const userIds = await this.resolveRecipients(dto.target, dto.targetUserId, dto.targetRole);
+
+    if (userIds.length === 0) {
+      return { broadcastId, recipientCount: 0, sent: 0, failed: 0 };
+    }
+
+    const payload: Record<string, unknown> = {
+      title_ar: dto.title_ar,
+      title_en: dto.title_en,
+      body_ar: dto.body_ar,
+      body_en: dto.body_en,
+      sentBy: adminId,
+      broadcastAt: new Date().toISOString(),
+      broadcastId,
+      // Audit: which target was used + its value (role name or user UUID)
+      targetType: dto.target,
+      targetValue: dto.targetUserId ?? dto.targetRole ?? dto.target,
+      ...(dto.entityType ? { entityType: dto.entityType } : {}),
+      ...(dto.entityId ? { entityId: dto.entityId } : {}),
+    };
+
+    const results = await Promise.allSettled(
+      userIds.map((userId) =>
+        this.send({ userId, templateCode: 'admin_broadcast', payload, channel: dto.channel }),
+      ),
+    );
+
+    const sent = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+
+    this.logger.log(
+      `Broadcast ${broadcastId} by admin ${adminId}: ` +
+      `target=${dto.target} recipients=${userIds.length} sent=${sent} failed=${failed}`,
+    );
+
+    return { broadcastId, recipientCount: userIds.length, sent, failed };
+  }
+
+  /**
+   * Dry-run preview — resolves recipient count without sending anything.
+   * Also returns whether Firebase push is currently enabled.
+   */
+  async previewBroadcast(
+    dto: BroadcastPreviewDto,
+  ): Promise<{ recipientCount: number; pushEnabled: boolean }> {
+    const userIds = await this.resolveRecipients(dto.target, dto.targetUserId, dto.targetRole);
+    return { recipientCount: userIds.length, pushEnabled: this.push.pushEnabled };
+  }
+
+  private async resolveRecipients(
+    target: BroadcastTarget,
+    targetUserId?: string,
+    targetRole?: UserRole,
+  ): Promise<string[]> {
+    switch (target) {
+      case BroadcastTarget.USER:
+        if (!targetUserId) throw new BadRequestException('targetUserId required when target is USER');
+        return [targetUserId];
+      case BroadcastTarget.ROLE:
+        if (!targetRole) throw new BadRequestException('targetRole required when target is ROLE');
+        return this.activeUserIdsByRole([targetRole]);
+      case BroadcastTarget.ALL_CUSTOMERS:
+        return this.activeUserIdsByRole([UserRole.CUSTOMER]);
+      case BroadcastTarget.ALL_BROKERS:
+        return this.activeUserIdsByRole([UserRole.BROKER]);
+      case BroadcastTarget.ALL_SALES:
+        return this.activeUserIdsByRole([UserRole.SALES]);
+      case BroadcastTarget.ALL_MAINTENANCE_SUPERVISORS:
+        return this.activeUserIdsByRole([UserRole.MAINTENANCE_SUPERVISOR]);
+      case BroadcastTarget.ALL_ACTIVE: {
+        const users = await this.prisma.user.findMany({ where: { active: true }, select: { id: true } });
+        return users.map((u) => u.id);
+      }
+      default:
+        throw new BadRequestException('Invalid broadcast target');
+    }
+  }
+
+  private async activeUserIdsByRole(roles: UserRole[]): Promise<string[]> {
+    const users = await this.prisma.user.findMany({
+      where: { role: { in: roles }, active: true },
+      select: { id: true },
+    });
+    return users.map((u) => u.id);
+  }
 }
 
 @ApiTags('notifications')
@@ -323,6 +480,28 @@ class NotificationsController {
   @Post('notifications/send')
   send(@Body() dto: SendNotificationDto) {
     return this.svc.send(dto);
+  }
+
+  /**
+   * Dry-run preview: resolves recipient count without sending any notifications.
+   * Must be declared before /broadcast to avoid route collision.
+   */
+  @Roles(UserRole.ADMIN)
+  @Permissions('notifications:send')
+  @Post('notifications/broadcast/preview')
+  previewBroadcast(@Body() dto: BroadcastPreviewDto) {
+    return this.svc.previewBroadcast(dto);
+  }
+
+  /**
+   * Admin manual broadcast — sends to a resolved audience and returns a
+   * delivery summary. Requires notifications:send permission.
+   */
+  @Roles(UserRole.ADMIN)
+  @Permissions('notifications:send')
+  @Post('notifications/broadcast')
+  broadcast(@CurrentUser() user: AuthUser, @Body() dto: BroadcastNotificationDto) {
+    return this.svc.broadcastNotification(user.sub, dto);
   }
 
   @Get('me/notifications')

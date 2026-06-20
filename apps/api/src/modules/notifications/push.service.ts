@@ -29,6 +29,11 @@ export class PushService {
     private readonly firebase: FirebaseService,
   ) {}
 
+  /** Whether Firebase credentials are present and the Admin SDK initialised. */
+  get pushEnabled(): boolean {
+    return this.firebase.enabled;
+  }
+
   async sendToUser(
     userId: string,
     payload: { title: string; body: string; data?: Record<string, string> },

@@ -47,6 +47,26 @@ const REQUIRED_CODES = [
   'broker_payout_processing',
   'broker_payout_paid',
   'broker_payout_cancelled',
+  // Leads / CRM
+  'lead_created',
+  'lead_assigned_sales',
+  'lead_stage_changed',
+  'lead_note_added',
+  // Broker status
+  'broker_approved',
+  'broker_suspended',
+  // Broker unit access
+  'broker_unit_access_requested',
+  'broker_unit_access_approved',
+  'broker_unit_access_rejected',
+  // Maintenance SLA
+  'maintenance_sla_warning',
+  'maintenance_sla_breached',
+  // User account lifecycle
+  'user_account_approved',
+  'user_account_suspended',
+  // Admin manual broadcast (passthrough — content from payload vars)
+  'admin_broadcast',
 ];
 
 describe('Seed · non-visit P4 templates', () => {
