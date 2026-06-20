@@ -86,6 +86,8 @@ class BroadcastPreviewDto {
   @IsEnum(BroadcastTarget) target!: BroadcastTarget;
   @IsOptional() @IsUUID() targetUserId?: string;
   @IsOptional() @IsEnum(UserRole) targetRole?: UserRole;
+  /** When PUSH, also returns estimated device token counts. */
+  @IsOptional() @IsEnum(NotificationChannel) channel?: NotificationChannel;
 }
 
 type Locale = 'ar' | 'en';
@@ -374,25 +376,39 @@ export class NotificationsService implements OnModuleInit {
   }
 
   /**
-   * Admin manual broadcast. Resolves recipients by target, creates one
-   * Notification record per user via the `admin_broadcast` passthrough
-   * template (content interpolated from payload vars), and attempts push.
+   * Admin manual broadcast. Channel determines the delivery path strictly:
    *
-   * PUSH guard: PUSH channel is rejected when Firebase is not configured so
-   * the admin gets an explicit error rather than silent no-op delivery.
+   * IN_APP → creates one Notification DB record per recipient. No push.
+   * PUSH   → sends FCM push per recipient. No Notification DB records.
+   *          Blocked when Firebase is not configured (never silent no-op).
    *
-   * Audit: every notification's payload carries broadcastId, sentBy,
-   * broadcastAt, targetType, and targetValue for traceability.
+   * The two paths have separate result counters so the admin always knows
+   * exactly what was delivered and via which mechanism.
+   *
+   * Audit: every payload carries broadcastId, sentBy, broadcastAt,
+   * targetType, and targetValue for traceability.
    */
   async broadcastNotification(
     adminId: string,
     dto: BroadcastNotificationDto,
-  ): Promise<{ broadcastId: string; recipientCount: number; sent: number; failed: number; failureHint?: string }> {
-    // Reject PUSH explicitly when Firebase is not configured — silent no-op
-    // would mislead the admin into thinking the push was delivered.
+  ): Promise<{
+    broadcastId: string;
+    channel: NotificationChannel;
+    recipientCount: number;
+    // IN_APP
+    notificationRecordsCreated?: number;
+    failed?: number;
+    // PUSH
+    pushSent?: number;
+    pushFailed?: number;
+    noDeviceTokens?: number;
+    failureHint?: string;
+  }> {
+    // Guard: reject PUSH before any DB writes when Firebase is not configured.
+    // Returning success here would mislead the admin into thinking push was delivered.
     if (dto.channel === NotificationChannel.PUSH && !this.push.pushEnabled) {
       throw new BadRequestException(
-        'PUSH channel requires Firebase configuration. Select IN_APP instead, or configure Firebase credentials.',
+        'PUSH channel is not available — Firebase is not configured or the API was not restarted after adding credentials.',
       );
     }
 
@@ -400,10 +416,11 @@ export class NotificationsService implements OnModuleInit {
     const userIds = await this.resolveRecipients(dto.target, dto.targetUserId, dto.targetRole);
 
     if (userIds.length === 0) {
-      return { broadcastId, recipientCount: 0, sent: 0, failed: 0 };
+      return { broadcastId, channel: dto.channel, recipientCount: 0 };
     }
 
-    const payload: Record<string, unknown> = {
+    // Audit payload carried inside every Notification row / FCM data envelope.
+    const auditPayload: Record<string, unknown> = {
       title_ar: dto.title_ar,
       title_en: dto.title_en,
       body_ar: dto.body_ar,
@@ -411,64 +428,162 @@ export class NotificationsService implements OnModuleInit {
       sentBy: adminId,
       broadcastAt: new Date().toISOString(),
       broadcastId,
-      // Audit: which target was used + its value (role name or user UUID)
       targetType: dto.target,
       targetValue: dto.targetUserId ?? dto.targetRole ?? dto.target,
       ...(dto.entityType ? { entityType: dto.entityType } : {}),
       ...(dto.entityId ? { entityId: dto.entityId } : {}),
     };
 
-    const results = await Promise.allSettled(
-      userIds.map((userId) =>
-        this.send({ userId, templateCode: 'admin_broadcast', payload, channel: dto.channel }),
-      ),
-    );
-
-    const sent = results.filter((r) => r.status === 'fulfilled').length;
-    const rejections = results.filter(
-      (r): r is PromiseRejectedResult => r.status === 'rejected',
-    );
-    const failed = rejections.length;
-
-    // Log each failure reason server-side without exposing PII.
-    if (failed > 0) {
-      rejections.forEach((r, i) => {
-        this.logger.warn(
-          `Broadcast ${broadcastId} recipient[${i}] failed: ${(r.reason as Error).message ?? r.reason}`,
-        );
+    // ── IN_APP path ───────────────────────────────────────────────────────────
+    if (dto.channel === NotificationChannel.IN_APP) {
+      const tpl = await this.prisma.notificationTemplate.findUnique({
+        where: { code: 'admin_broadcast' },
       });
+      if (!tpl) {
+        throw new BadRequestException(
+          'Template admin_broadcast not found in the database — restart the API to auto-create it.',
+        );
+      }
+
+      const results = await Promise.allSettled(
+        userIds.map((userId) =>
+          this.prisma.notification.create({
+            data: {
+              userId,
+              templateCode: 'admin_broadcast',
+              payload: auditPayload as Prisma.InputJsonValue,
+              channel: NotificationChannel.IN_APP,
+              sentAt: new Date(),
+            },
+          }),
+        ),
+      );
+
+      const notificationRecordsCreated = results.filter((r) => r.status === 'fulfilled').length;
+      const failed = results.filter((r) => r.status === 'rejected').length;
+
+      if (failed > 0) {
+        (results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')).forEach(
+          (r, i) => this.logger.warn(
+            `Broadcast ${broadcastId} IN_APP[${i}] failed: ${(r.reason as Error).message}`,
+          ),
+        );
+      }
+
+      this.logger.log(
+        `Broadcast ${broadcastId} by ${adminId}: IN_APP target=${dto.target} ` +
+        `recipients=${userIds.length} created=${notificationRecordsCreated} failed=${failed}`,
+      );
+
+      return {
+        broadcastId,
+        channel: NotificationChannel.IN_APP,
+        recipientCount: userIds.length,
+        notificationRecordsCreated,
+        failed,
+        ...(failed > 0 ? { failureHint: 'database_error' } : {}),
+      };
     }
 
-    this.logger.log(
-      `Broadcast ${broadcastId} by admin ${adminId}: ` +
-      `target=${dto.target} recipients=${userIds.length} sent=${sent} failed=${failed}`,
+    // ── PUSH path ─────────────────────────────────────────────────────────────
+    // Firebase is confirmed enabled by the guard above.
+    // Batch-fetch locales so each recipient gets their preferred language.
+    // No Notification DB records are created — PUSH is delivery-only.
+    const usersWithLocale = await this.prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, locale: true },
+    });
+    const localeMap = new Map(
+      usersWithLocale.map((u) => [u.id, pickLocale(u.locale ?? 'ar')]),
     );
 
-    // Classify the dominant failure type for UI display — no sensitive data.
-    let failureHint: string | undefined;
-    if (failed > 0) {
-      const msgs = rejections.map((r) => String((r.reason as Error).message ?? '').toLowerCase());
-      if (msgs.some((m) => m.includes('not found'))) {
-        failureHint = 'template_missing';
-      } else if (msgs.some((m) => m.includes('firebase') || m.includes('fcm') || m.includes('push'))) {
-        failureHint = 'push_not_configured';
+    const pushResults = await Promise.allSettled(
+      userIds.map((userId) => {
+        const locale = localeMap.get(userId) ?? 'ar';
+        const fcmData: Record<string, string> = { broadcastId };
+        if (dto.entityType) fcmData['entityType'] = dto.entityType;
+        if (dto.entityId)   fcmData['entityId']   = dto.entityId;
+        return this.push.sendToUser(userId, {
+          title: locale === 'en' ? dto.title_en : dto.title_ar,
+          body:  locale === 'en' ? dto.body_en  : dto.body_ar,
+          data:  fcmData,
+        });
+      }),
+    );
+
+    let pushSent = 0;
+    let pushFailed = 0;
+    let noDeviceTokens = 0;
+
+    for (const r of pushResults) {
+      if (r.status === 'fulfilled') {
+        const res = r.value;
+        if (!res.enabled) {
+          // Defensive: guard above should have prevented this.
+          pushFailed++;
+        } else if (res.sent === 0 && res.failed === 0) {
+          // User has no registered device tokens.
+          noDeviceTokens++;
+        } else {
+          pushSent  += res.sent;
+          pushFailed += res.failed;
+        }
       } else {
-        failureHint = 'database_error';
+        pushFailed++;
+        this.logger.warn(`Broadcast ${broadcastId} PUSH failed: ${(r.reason as Error).message}`);
       }
     }
 
-    return { broadcastId, recipientCount: userIds.length, sent, failed, failureHint };
+    this.logger.log(
+      `Broadcast ${broadcastId} by ${adminId}: PUSH target=${dto.target} ` +
+      `recipients=${userIds.length} pushSent=${pushSent} pushFailed=${pushFailed} noDeviceTokens=${noDeviceTokens}`,
+    );
+
+    const failureHint =
+      noDeviceTokens === userIds.length ? 'no_device_tokens' :
+      pushFailed > 0                    ? 'push_failed'       :
+      undefined;
+
+    return {
+      broadcastId,
+      channel: NotificationChannel.PUSH,
+      recipientCount: userIds.length,
+      pushSent,
+      pushFailed,
+      noDeviceTokens,
+      ...(failureHint ? { failureHint } : {}),
+    };
   }
 
   /**
    * Dry-run preview — resolves recipient count without sending anything.
-   * Also returns whether Firebase push is currently enabled.
+   * When channel=PUSH also counts registered device tokens so the admin
+   * can see how many recipients have no device before sending.
    */
-  async previewBroadcast(
-    dto: BroadcastPreviewDto,
-  ): Promise<{ recipientCount: number; pushEnabled: boolean }> {
+  async previewBroadcast(dto: BroadcastPreviewDto): Promise<{
+    recipientCount: number;
+    pushEnabled: boolean;
+    estimatedDeviceCount?: number;
+    usersWithoutDevices?: number;
+  }> {
     const userIds = await this.resolveRecipients(dto.target, dto.targetUserId, dto.targetRole);
-    return { recipientCount: userIds.length, pushEnabled: this.push.pushEnabled };
+    const base = { recipientCount: userIds.length, pushEnabled: this.push.pushEnabled };
+
+    if (dto.channel !== NotificationChannel.PUSH || userIds.length === 0) {
+      return base;
+    }
+
+    // Count device tokens so the admin can see device coverage before sending.
+    const tokens = await this.prisma.deviceToken.findMany({
+      where: { userId: { in: userIds } },
+      select: { userId: true },
+    });
+    const usersWithDevices = new Set(tokens.map((t) => t.userId));
+    return {
+      ...base,
+      estimatedDeviceCount: tokens.length,
+      usersWithoutDevices: userIds.filter((id) => !usersWithDevices.has(id)).length,
+    };
   }
 
   private async resolveRecipients(

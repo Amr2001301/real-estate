@@ -9,11 +9,16 @@ import { getSession } from '@/lib/session';
 export interface BroadcastPreviewResult {
   recipientCount?: number;
   pushEnabled?: boolean;
+  /** PUSH: total registered device tokens across all recipients. */
+  estimatedDeviceCount?: number;
+  /** PUSH: number of recipients with no registered device token. */
+  usersWithoutDevices?: number;
   error?: string;
 }
 
 export async function previewBroadcastAction(
   target: string,
+  channel: string,
   targetUserId?: string,
   targetRole?: string,
 ): Promise<BroadcastPreviewResult> {
@@ -22,14 +27,21 @@ export async function previewBroadcastAction(
     return { error: 'هذه الميزة متاحة للمدير (ADMIN) فقط.' };
   }
   try {
-    const payload: Record<string, unknown> = { target };
+    const payload: Record<string, unknown> = { target, channel };
     if (targetUserId) payload.targetUserId = targetUserId;
     if (targetRole)   payload.targetRole   = targetRole;
-    const result = await api.post<{ recipientCount: number; pushEnabled: boolean }>(
-      '/notifications/broadcast/preview',
-      payload,
-    );
-    return { recipientCount: result.recipientCount, pushEnabled: result.pushEnabled };
+    const result = await api.post<{
+      recipientCount: number;
+      pushEnabled: boolean;
+      estimatedDeviceCount?: number;
+      usersWithoutDevices?: number;
+    }>('/notifications/broadcast/preview', payload);
+    return {
+      recipientCount: result.recipientCount,
+      pushEnabled: result.pushEnabled,
+      estimatedDeviceCount: result.estimatedDeviceCount,
+      usersWithoutDevices: result.usersWithoutDevices,
+    };
   } catch (e) {
     return { error: (e as Error).message };
   }
@@ -39,11 +51,17 @@ export interface BroadcastState {
   error?: string;
   ok?: boolean;
   broadcastId?: string;
+  channel?: 'IN_APP' | 'PUSH';
   recipientCount?: number;
-  sent?: number;
+  // IN_APP counters
+  notificationRecordsCreated?: number;
   failed?: number;
-  /** Safe failure category returned by the backend for UI display. */
-  failureHint?: 'template_missing' | 'push_not_configured' | 'database_error';
+  // PUSH counters
+  pushSent?: number;
+  pushFailed?: number;
+  noDeviceTokens?: number;
+  /** Safe failure category from backend — no PII. */
+  failureHint?: 'database_error' | 'no_device_tokens' | 'push_failed';
 }
 
 export async function broadcastNotificationAction(
@@ -94,18 +112,26 @@ export async function broadcastNotificationAction(
   try {
     const result = await api.post<{
       broadcastId: string;
+      channel: string;
       recipientCount: number;
-      sent: number;
-      failed: number;
+      notificationRecordsCreated?: number;
+      failed?: number;
+      pushSent?: number;
+      pushFailed?: number;
+      noDeviceTokens?: number;
       failureHint?: string;
     }>('/notifications/broadcast', payload);
     revalidatePath('/dashboard/notifications');
     return {
       ok: true,
       broadcastId: result.broadcastId,
+      channel: result.channel as BroadcastState['channel'],
       recipientCount: result.recipientCount,
-      sent: result.sent,
+      notificationRecordsCreated: result.notificationRecordsCreated,
       failed: result.failed,
+      pushSent: result.pushSent,
+      pushFailed: result.pushFailed,
+      noDeviceTokens: result.noDeviceTokens,
       failureHint: result.failureHint as BroadcastState['failureHint'],
     };
   } catch (e) {
