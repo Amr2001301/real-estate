@@ -112,17 +112,20 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
   const colCls = COL_CLS[activeItems.length] ?? 'grid-cols-3 lg:grid-cols-6';
 
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
 
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-hairline bg-canvas/50">
-        <div className="flex items-center gap-2.5">
-          <div className="relative shrink-0">
-            <Bell className="h-4 w-4 text-slate-600" />
+      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+        <div className="flex items-center gap-3">
+          <div className="relative h-8 w-8 rounded-xl bg-danger-50 ring-1 ring-danger-100 flex items-center justify-center shrink-0">
+            <Bell className="h-[15px] w-[15px] text-danger-600" />
             <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-danger-500 ring-2 ring-white" />
           </div>
-          <p className="text-[13px] font-bold text-slate-800">يتطلب اتخاذ إجراء</p>
-          <span className="inline-flex items-center h-5 px-2 rounded-full bg-danger-50 border border-danger-100 text-danger-700 text-[10px] font-bold">
+          <div>
+            <p className="text-[14px] font-bold text-navy leading-none">يتطلب اتخاذ إجراء</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">{total} بند يحتاج متابعة</p>
+          </div>
+          <span className="inline-flex items-center h-5 px-2 rounded-full bg-danger-50 border border-danger-100 text-danger-700 text-[10px] font-bold ms-1">
             {total} معلق
           </span>
         </div>
@@ -135,13 +138,12 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
           const t = TONE[item.tone];
           return (
             <Link key={item.key} href={item.href as never} className="group block">
-              <div className="bg-surface h-full px-4 py-4 flex flex-col gap-2 hover:bg-slate-50/60 transition-colors duration-150">
+              <div className="bg-surface h-full px-5 py-5 flex flex-col gap-2.5 hover:bg-canvas/60 transition-colors duration-150">
 
-                {/* Icon (reading-start / right in RTL) + pulsing dot (end) */}
+                {/* Icon + pulsing dot */}
                 <div className="flex items-start justify-between gap-2">
                   <div className={cn(
-                    'h-8 w-8 rounded-xl flex items-center justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
-                    'transition-transform duration-150 group-hover:scale-110',
+                    'h-9 w-9 rounded-xl flex items-center justify-center [&_svg]:h-4 [&_svg]:w-4 shrink-0',
                     t.icon,
                   )}>
                     {item.icon}
@@ -150,12 +152,12 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
                 </div>
 
                 {/* Count */}
-                <p className={cn('text-[28px] font-black tabular-nums leading-none mt-1', t.count)}>
+                <p className={cn('text-[30px] font-black tabular-nums leading-none mt-0.5', t.count)}>
                   {item.value}
                 </p>
 
                 {/* Label */}
-                <p className="text-[12px] font-bold text-slate-800 leading-snug">
+                <p className="text-[12.5px] font-bold text-slate-800 leading-snug">
                   {item.label}
                 </p>
 
@@ -172,8 +174,8 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
 
       {/* Cleared items — compact footer */}
       {clearedItems.length > 0 && (
-        <div className="px-5 py-2.5 border-t border-hairline bg-slate-50/40 flex items-center gap-x-4 gap-y-1 flex-wrap">
-          <span className="text-[11px] font-medium text-slate-400 shrink-0">مكتمل:</span>
+        <div className="px-6 py-2.5 border-t border-hairline bg-canvas/40 flex items-center gap-x-4 gap-y-1 flex-wrap">
+          <span className="text-[11px] font-semibold text-slate-400 shrink-0">مكتمل:</span>
           {clearedItems.map((item) => (
             <span key={item.key} className="inline-flex items-center gap-1.5 text-[11px] text-slate-400">
               <CheckCircle2 className="h-3 w-3 text-success-500 shrink-0" />

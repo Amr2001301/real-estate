@@ -92,10 +92,10 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
 
           const rowContent = (
             <>
-              {/* Type icon — colored, h-8 w-8 */}
+              {/* Type icon — h-9 w-9, larger container */}
               <span
                 className={cn(
-                  'inline-flex h-8 w-8 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
+                  'inline-flex h-9 w-9 items-center justify-center rounded-xl [&_svg]:h-4 [&_svg]:w-4 shrink-0',
                   meta.bg,
                 )}
               >
@@ -132,15 +132,15 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
                 )}
               </div>
 
-              {/* Relative time */}
-              <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0 tabular-nums">
+              {/* Relative time — fixed-width column so it never shifts */}
+              <span className="text-[10.5px] text-slate-400 whitespace-nowrap shrink-0 tabular-nums w-[68px] text-start">
                 {r.time}
               </span>
             </>
           );
 
           const rowCn = cn(
-            'flex items-center gap-2.5 px-4 py-3 transition-colors border-s-2',
+            'flex items-center gap-3 px-5 py-3.5 transition-colors border-s-2',
             meta.border,
           );
 
@@ -149,7 +149,7 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
               <Link
                 key={r.id}
                 href={r.href as never}
-                className={cn(rowCn, 'hover:bg-slate-50/80 group')}
+                className={cn(rowCn, 'hover:bg-canvas/60 group')}
               >
                 {rowContent}
                 <ChevronLeft className="h-3 w-3 text-slate-200 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />

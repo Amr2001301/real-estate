@@ -59,20 +59,20 @@ export function ProjectHealthMatrix({ projects, className }: Props) {
 
         return (
           <Link key={p.id} href={`/dashboard/projects/${p.id}` as never} className="group block">
-            <div className="bg-canvas/50 border border-hairline rounded-[18px] p-4 flex flex-col gap-3 hover:border-brand-200 hover:bg-surface hover:shadow-soft transition-all duration-150 h-full">
+            <div className="bg-canvas/40 border border-hairline rounded-[18px] p-4 sm:p-5 flex flex-col gap-3.5 hover:border-brand-200/80 hover:bg-surface hover:shadow-soft transition-all duration-150 h-full">
 
               {/* Name + contract value */}
               <div className="flex items-start justify-between gap-2">
-                <p className="text-[13px] font-bold text-slate-900 leading-snug line-clamp-2 flex-1">
+                <p className="text-[13.5px] font-bold text-navy leading-snug line-clamp-2 flex-1">
                   {p.name}
                 </p>
-                <p className="text-[12px] font-bold text-brand-700 tabular-nums shrink-0 leading-none mt-0.5">
+                <p className="text-[12.5px] font-bold text-brand-700 tabular-nums shrink-0 leading-none mt-0.5">
                   {formatCompact(p.contractValue)}
                 </p>
               </div>
 
               {/* Stacked inventory bar */}
-              <div className="h-2 w-full rounded-full overflow-hidden bg-surface-muted flex">
+              <div className="h-2.5 w-full rounded-full overflow-hidden bg-surface-muted flex">
                 {availPct > 0 && (
                   <div className="bg-emerald-400 shrink-0" style={{ width: `${availPct}%` }} />
                 )}
@@ -85,7 +85,7 @@ export function ProjectHealthMatrix({ projects, className }: Props) {
               </div>
 
               {/* Unit counts */}
-              <div className="flex items-center gap-3 text-[10px] font-semibold">
+              <div className="flex items-center gap-3 text-[10.5px] font-semibold">
                 <span className="flex items-center gap-1 text-emerald-700">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0" />
                   {p.availableUnits} متاح
@@ -101,15 +101,15 @@ export function ProjectHealthMatrix({ projects, className }: Props) {
               </div>
 
               {/* Footer: health badge + contracts count */}
-              <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-hairline mt-auto">
+              <div className="flex items-center justify-between gap-2 pt-3 border-t border-hairline mt-auto">
                 <span className={cn(
-                  'inline-flex items-center gap-1.5 h-5 px-2 rounded-full border text-[10px] font-semibold',
+                  'inline-flex items-center gap-1.5 h-[22px] px-2.5 rounded-full border text-[10px] font-semibold',
                   h.badgeCls,
                 )}>
                   <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', h.dotCls)} />
                   {h.label}
                 </span>
-                <span className="text-[10px] text-slate-400 tabular-nums">
+                <span className="text-[10.5px] font-medium text-slate-400 tabular-nums">
                   {p.signedContracts} عقد موقّع
                 </span>
               </div>

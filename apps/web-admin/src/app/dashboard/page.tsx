@@ -15,8 +15,6 @@ import { getSession } from '@/lib/session';
 import { cn } from '@/lib/cn';
 import { formatCompact } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { ChartPanel } from '@/components/dashboard/chart-panel';
 import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-chart';
 import { LeadSourceDonut } from '@/components/dashboard/lead-source-donut';
@@ -124,8 +122,9 @@ function relativeTime(iso: string): string {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
+    <div className="flex items-center gap-2.5">
+      <span className="h-[5px] w-[5px] rounded-full bg-brand-400/80 shrink-0" />
+      <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">
         {children}
       </span>
       <div className="flex-1 h-px bg-hairline" />
@@ -135,8 +134,8 @@ function SectionLabel({ children }: { children: ReactNode }) {
 
 function EmptyBlock({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-      <TrendingUp className="h-5 w-5 text-slate-300" aria-hidden />
+    <div className="flex flex-col items-center justify-center gap-2.5 py-10 text-center">
+      <TrendingUp className="h-5 w-5 text-slate-200" aria-hidden />
       <p className="text-sm text-slate-400">{message}</p>
     </div>
   );
@@ -181,18 +180,20 @@ function RevenueCommandStrip({
   const prevMonthCollected = financial?.prevMonthCollected ?? 0;
   const collectionDeltaPct = pctDelta(collectedThisMonth, prevMonthCollected);
 
-  const signedThisMonth    = financial?.signedContractsThisMonth ?? 0;
+  const signedThisMonth     = financial?.signedContractsThisMonth ?? 0;
   const prevSignedContracts = financial?.prevMonthSignedContracts ?? 0;
-  const contractsDelta     = prevSignedContracts > 0 ? signedThisMonth - prevSignedContracts : null;
+  const contractsDelta      = prevSignedContracts > 0 ? signedThisMonth - prevSignedContracts : null;
 
   const activeUnits = kpis
     ? kpis.availableUnits + kpis.reservedUnits + kpis.soldUnits
     : null;
 
+  void activeUnits;
+
   const rateIconCls = rate === null  ? 'bg-slate-100 text-slate-400'   :
                       rate >= 70     ? 'bg-success-50 text-success-600' :
                       rate >= 40     ? 'bg-amber-50 text-amber-600'     :
-                                        'bg-danger-50 text-danger-500';
+                                       'bg-danger-50 text-danger-500';
 
   const tiles: CommandTile[] = [
     {
@@ -223,11 +224,11 @@ function RevenueCommandStrip({
       sub:      rate === null  ? '—'             :
                 rate >= 70     ? 'أداء ممتاز'    :
                 rate >= 40     ? 'يحتاج متابعة'  :
-                                  'أداء منخفض',
+                                 'أداء منخفض',
       valueCls: rate === null  ? 'text-slate-400'  :
                 rate >= 70     ? 'text-success-700' :
                 rate >= 40     ? 'text-brand-600'   :
-                                  'text-danger-700',
+                                 'text-danger-700',
       icon:     <Activity className="h-4 w-4" />,
       iconCls:  rateIconCls,
     },
@@ -256,26 +257,34 @@ function RevenueCommandStrip({
   ];
 
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="bg-surface px-5 py-5 flex flex-col gap-3.5">
+        {tiles.map((tile, idx) => (
+          <div
+            key={tile.label}
+            className={cn(
+              'bg-surface px-6 py-6 flex flex-col gap-4',
+              idx === 0 && 'bg-canvas/40',
+            )}
+          >
             <div className="flex items-start justify-between gap-2">
               <span className={cn(
-                'inline-flex h-8 w-8 items-center justify-center rounded-xl shrink-0 [&_svg]:h-4 [&_svg]:w-4',
+                'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 [&_svg]:h-[17px] [&_svg]:w-[17px]',
                 tile.iconCls,
               )}>
                 {tile.icon}
               </span>
-              <p className="text-[11px] font-medium text-slate-400 text-end leading-snug">{tile.label}</p>
+              <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug max-w-[90px]">
+                {tile.label}
+              </p>
             </div>
             <div>
-              <p className={cn('text-[22px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
+              <p className={cn('text-[26px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
                 {tile.value}
               </p>
-              <p className="text-[11px] text-slate-400 mt-2 leading-none">{tile.sub}</p>
+              <p className="text-[11px] text-slate-400 mt-2.5 leading-none">{tile.sub}</p>
               {tile.delta && (
-                <p className={cn('text-[10px] font-semibold mt-1 leading-none', tile.deltaCls)}>
+                <p className={cn('text-[10px] font-semibold mt-2 leading-none', tile.deltaCls)}>
                   {tile.delta}
                 </p>
               )}
@@ -293,34 +302,39 @@ function CashFlowPreviewCard({
   forecast,
   overdueTotal,
 }: {
-  forecast:    NonNullable<AdminSummary['cashflowForecast']>;
+  forecast:     NonNullable<AdminSummary['cashflowForecast']>;
   overdueTotal: number;
 }) {
   const { next30, next3160, next6190 } = forecast;
   const grandTotal = next30 + next3160 + next6190 + overdueTotal;
 
   const slots = [
-    { label: 'خلال 30 يوم',   amount: next30,       barCls: 'bg-success-400', valueCls: 'text-success-700' },
-    { label: '31 – 60 يوم',  amount: next3160,      barCls: 'bg-amber-400',   valueCls: 'text-amber-700'   },
-    { label: '61 – 90 يوم',  amount: next6190,      barCls: 'bg-brand-400',   valueCls: 'text-brand-700'   },
-    { label: 'متأخر حالياً', amount: overdueTotal,  barCls: 'bg-danger-400',  valueCls: 'text-danger-700'  },
+    { label: 'خلال 30 يوم',  amount: next30,      barCls: 'bg-success-400', valueCls: 'text-success-700' },
+    { label: '31 – 60 يوم', amount: next3160,     barCls: 'bg-amber-400',   valueCls: 'text-amber-700'   },
+    { label: '61 – 90 يوم', amount: next6190,     barCls: 'bg-brand-400',   valueCls: 'text-brand-700'   },
+    { label: 'متأخر حالياً', amount: overdueTotal, barCls: 'bg-danger-400',  valueCls: 'text-danger-700'  },
   ] as const;
 
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-hairline bg-canvas/50">
-        <div className="flex items-center gap-2.5">
-          <CalendarDays className="h-4 w-4 text-slate-500" />
-          <p className="text-[13px] font-bold text-slate-800">توقع التدفق النقدي</p>
-          {grandTotal > 0 && (
-            <span className="inline-flex items-center h-5 px-2 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-[10px] font-bold">
-              {formatCompact(grandTotal)} إجمالي
-            </span>
-          )}
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+            <CalendarDays className="h-4 w-4 text-brand-600" />
+          </div>
+          <div>
+            <p className="text-[14px] font-bold text-navy leading-none">توقع التدفق النقدي</p>
+            {grandTotal > 0 && (
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                الإجمالي:{' '}
+                <span className="font-semibold text-slate-600">{formatCompact(grandTotal)} ر.س</span>
+              </p>
+            )}
+          </div>
         </div>
         <Link
           href={'/dashboard/financial-dashboard' as never}
-          className="flex items-center gap-1 text-[11px] text-brand-700 hover:text-brand-800 font-bold transition-colors"
+          className="flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 transition-colors"
         >
           تفاصيل التحصيل
           <ArrowLeft className="h-3 w-3" />
@@ -331,13 +345,13 @@ function CashFlowPreviewCard({
         {slots.map((slot) => {
           const pct = grandTotal > 0 ? Math.round((slot.amount / grandTotal) * 100) : 0;
           return (
-            <div key={slot.label} className="bg-surface px-5 py-4 flex flex-col gap-2">
+            <div key={slot.label} className="bg-surface px-6 py-5 flex flex-col gap-2.5">
               <p className="text-[11px] font-medium text-slate-400 leading-none">{slot.label}</p>
-              <p className={cn('text-[20px] font-black tabular-nums leading-none tracking-tight', slot.valueCls)}>
+              <p className={cn('text-[24px] font-black tabular-nums leading-none tracking-tight', slot.valueCls)}>
                 {formatCompact(slot.amount)}
               </p>
               <div className="h-1.5 w-full rounded-full bg-surface-muted overflow-hidden">
-                <div className={cn('h-full rounded-full transition-all', slot.barCls)} style={{ width: `${pct}%` }} />
+                <div className={cn('h-full rounded-full', slot.barCls)} style={{ width: `${pct}%` }} />
               </div>
               <p className="text-[10px] text-slate-400 leading-none tabular-nums">{pct}% من الإجمالي</p>
             </div>
@@ -399,27 +413,36 @@ export default async function DashboardHome() {
   const hasFinancial = !!summary?.financial;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
 
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <PageHeader
-        title="لوحة التحكم"
-        description="نظرة عامة على أداء المنصة والإجراءات التشغيلية المعلقة."
-        actions={
-          <>
-            <GenerateReportButton />
-            <Link href={'/dashboard/projects/new' as never}>
-              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                مشروع جديد
-              </Button>
-            </Link>
-          </>
-        }
-      />
+      {/* ── Premium Command Hero ──────────────────────────────────────────────── */}
+      <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
+        <div className="px-7 sm:px-9 py-7">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+            <div className="min-w-0">
+              <h1 className="text-[28px] sm:text-[32px] font-bold tracking-tight text-navy leading-tight">
+                لوحة التحكم
+              </h1>
+              <p className="mt-1.5 text-sm text-slate-500 leading-relaxed">
+                نظرة عامة على أداء المنصة والإجراءات التشغيلية المعلقة.
+              </p>
+            </div>
+            <div className="flex items-center gap-2.5 shrink-0">
+              <GenerateReportButton />
+              <Link href={'/dashboard/projects/new' as never}>
+                <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                  مشروع جديد
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {/* ── Error banner ────────────────────────────────────────────────────── */}
+      {/* ── Error banner ─────────────────────────────────────────────────────── */}
       {error && (
-        <div className="rounded-2xl bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm flex items-start gap-3">
+        <div className="rounded-[18px] bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">تعذر تحميل المؤشرات الحية</p>
@@ -428,23 +451,22 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {/* ── 1. Revenue Command Strip ─────────────────────────────────────────── */}
+      {/* ── Executive KPI Strip ──────────────────────────────────────────────── */}
       {summary && (
         <RevenueCommandStrip kpis={kpis} financial={summary.financial} />
       )}
 
-      {/* ── 2. Action Required ──────────────────────────────────────────────── */}
-      <div className="space-y-2.5">
+      {/* ── Action Required ──────────────────────────────────────────────────── */}
+      <div className="space-y-3">
         <SectionLabel>يتطلب اتخاذ إجراء</SectionLabel>
         <ActionQueue alerts={summary?.alerts} />
       </div>
 
-      {/* ── 3. Performance Analytics: Trend chart + Sales Funnel ─────────────── */}
-      <div className="space-y-2.5">
+      {/* ── Performance Analytics ────────────────────────────────────────────── */}
+      <div className="space-y-3">
         <SectionLabel>تحليل الأداء</SectionLabel>
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-5">
 
-          {/* Monthly trend chart */}
           <ChartPanel
             title="اتجاه الحجوزات الشهري"
             description="الحجوزات المسجلة — آخر 6 أشهر"
@@ -461,7 +483,6 @@ export default async function DashboardHome() {
             }
           </ChartPanel>
 
-          {/* Sales Funnel — sits alongside trend chart */}
           {hasFunnel && summary?.funnel && (
             <div className="lg:col-span-5">
               <SalesFunnelCard funnel={summary.funnel} />
@@ -470,30 +491,23 @@ export default async function DashboardHome() {
         </div>
       </div>
 
-      {/* ── 4. Financial Health + Lead Sources ──────────────────────────────── */}
+      {/* ── Financial Health + Lead Sources ──────────────────────────────────── */}
       {(hasFinancial || leadSlices.length > 0) && (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <SectionLabel>الصحة المالية ومصادر العملاء</SectionLabel>
-          <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-5">
 
-            {/* Financial Health */}
             {hasFinancial && summary?.financial && (
-              <div className={cn(
-                'lg:col-span-8',
-                leadSlices.length === 0 && 'lg:col-span-12',
-              )}>
+              <div className={cn('lg:col-span-8', leadSlices.length === 0 && 'lg:col-span-12')}>
                 <FinancialHealthCard financial={summary.financial} />
               </div>
             )}
 
-            {/* Lead Sources donut */}
             {leadSlices.length > 0 && (
               <ChartPanel
                 title="مصادر الفرص"
                 description="توزيع العملاء المحتملين حسب القناة"
-                className={cn(
-                  hasFinancial ? 'lg:col-span-4' : 'lg:col-span-12',
-                )}
+                className={cn(hasFinancial ? 'lg:col-span-4' : 'lg:col-span-12')}
               >
                 <LeadSourceDonut
                   slices={leadSlices}
@@ -506,9 +520,9 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {/* ── 5. Cash Flow Forecast ───────────────────────────────────────────── */}
+      {/* ── Cash Flow Forecast ───────────────────────────────────────────────── */}
       {summary?.cashflowForecast && (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           <SectionLabel>توقع التدفق النقدي — الـ 90 يوم القادمة</SectionLabel>
           <CashFlowPreviewCard
             forecast={summary.cashflowForecast}
@@ -517,65 +531,65 @@ export default async function DashboardHome() {
         </div>
       )}
 
-      {/* ── 6. Project Health Matrix + Activity Feed ─────────────────────────── */}
-      <div className="space-y-2.5">
+      {/* ── Project Health + Activity Feed ───────────────────────────────────── */}
+      <div className="space-y-3">
         <SectionLabel>أداء المشاريع والنشاط الأخير</SectionLabel>
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-5">
 
           {/* Project Health Matrix */}
-          <Card className="lg:col-span-7 p-0 overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-hairline bg-canvas/40">
-              <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
-                  <Building2 className="h-3.5 w-3.5 text-brand-600" />
+          <div className="lg:col-span-7 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+                  <Building2 className="h-4 w-4 text-brand-600" />
                 </div>
-                <h2 className="text-sm font-bold text-slate-900">صحة المشاريع</h2>
-                {topProjects.length > 0 && (
-                  <span className="text-2xs font-bold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
-                    {topProjects.length} مشروع
-                  </span>
-                )}
+                <div>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">صحة المشاريع</h2>
+                  {topProjects.length > 0 && (
+                    <p className="text-[11px] text-slate-400 mt-0.5">{topProjects.length} مشروع نشط</p>
+                  )}
+                </div>
               </div>
               <Link
                 href={'/dashboard/projects' as never}
-                className="flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 font-bold transition-colors"
+                className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
               >
                 عرض الكل
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
-            <div className="p-4">
+            <div className="p-5">
               <ProjectHealthMatrix projects={topProjects} />
             </div>
-          </Card>
+          </div>
 
           {/* Activity Feed */}
-          <Card className="lg:col-span-5 p-0 overflow-hidden">
-            <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-hairline bg-canvas/40">
-              <div className="flex items-center gap-2.5">
-                <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
-                  <Activity className="h-3.5 w-3.5 text-brand-600" />
+          <div className="lg:col-span-5 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+                  <Activity className="h-4 w-4 text-brand-600" />
                 </div>
-                <h2 className="text-sm font-bold text-slate-900">آخر النشاطات</h2>
-                {activityRows.length > 0 && (
-                  <span className="text-2xs font-bold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
-                    {activityRows.length}
-                  </span>
-                )}
+                <div>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">آخر النشاطات</h2>
+                  {activityRows.length > 0 && (
+                    <p className="text-[11px] text-slate-400 mt-0.5">{activityRows.length} نشاط مسجّل</p>
+                  )}
+                </div>
               </div>
               <Link
                 href={'/dashboard/audit' as never}
-                className="flex items-center gap-1 text-xs text-brand-700 hover:text-brand-800 font-bold transition-colors"
+                className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
               >
                 عرض الكل
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
             {activityRows.length > 0
-              ? <ActivityTable rows={activityRows} compact />
+              ? <ActivityTable rows={activityRows.slice(0, 6)} compact />
               : <EmptyBlock message="لا توجد نشاطات مسجلة بعد" />
             }
-          </Card>
+          </div>
 
         </div>
       </div>
