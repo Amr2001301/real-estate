@@ -6,13 +6,13 @@ import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import type { LeadStage } from '@/lib/types';
 
-const STAGE_CONFIG: Array<{ key: LeadStage; label: string; dot: string }> = [
-  { key: 'NEW',         label: 'جدد',    dot: 'bg-slate-400'   },
-  { key: 'INTERESTED',  label: 'مهتمون', dot: 'bg-sky-400'     },
-  { key: 'VISIT',       label: 'زيارة',  dot: 'bg-violet-400'  },
-  { key: 'NEGOTIATION', label: 'تفاوض',  dot: 'bg-amber-400'   },
-  { key: 'WON',         label: 'فوز',    dot: 'bg-emerald-400' },
-  { key: 'LOST',        label: 'خسارة',  dot: 'bg-rose-400'    },
+const STAGE_CONFIG: Array<{ key: LeadStage; label: string; dot: string; count: string }> = [
+  { key: 'NEW',         label: 'جدد',    dot: 'bg-slate-400',   count: 'bg-slate-100 text-slate-600'     },
+  { key: 'INTERESTED',  label: 'مهتمون', dot: 'bg-sky-400',     count: 'bg-sky-50 text-sky-700'          },
+  { key: 'VISIT',       label: 'زيارة',  dot: 'bg-violet-400',  count: 'bg-violet-50 text-violet-700'    },
+  { key: 'NEGOTIATION', label: 'تفاوض',  dot: 'bg-amber-400',   count: 'bg-amber-50 text-amber-700'      },
+  { key: 'WON',         label: 'فوز',    dot: 'bg-emerald-400', count: 'bg-emerald-50 text-emerald-700'  },
+  { key: 'LOST',        label: 'خسارة',  dot: 'bg-rose-400',    count: 'bg-rose-50 text-rose-700'        },
 ];
 
 interface Props {
@@ -34,12 +34,10 @@ function relativeTime(date: Date): string {
 
 export function PipelineStatsBar({ totalLeads, wonCount, counts, className }: Props) {
   const router = useRouter();
-  // loadedAt resets on every manual refresh so the displayed time stays accurate
   const [loadedAt, setLoadedAt] = useState(() => new Date());
   const [spinning, setSpinning] = useState(false);
   const [, setTick] = useState(0);
 
-  // Re-render every 30 s so relative time stays live
   useEffect(() => {
     const t = window.setInterval(() => setTick((x) => x + 1), 30_000);
     return () => window.clearInterval(t);
@@ -57,62 +55,74 @@ export function PipelineStatsBar({ totalLeads, wonCount, counts, className }: Pr
 
   return (
     <div className={cn(
-      'flex flex-wrap items-center gap-x-4 gap-y-2',
-      'rounded-xl border border-slate-200/80 bg-white px-4 py-3 shadow-xs',
+      'bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden',
       className,
     )}>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-5 sm:px-6 py-4">
 
-      {/* Refresh + timestamp */}
-      <div className="flex items-center gap-2.5 shrink-0">
-        <button
-          type="button"
-          onClick={handleRefresh}
-          disabled={spinning}
-          aria-label="تحديث البيانات"
-          className={cn(
-            'inline-flex h-7 w-7 items-center justify-center rounded-lg',
-            'text-slate-400 ring-1 ring-inset ring-slate-200',
-            'hover:text-slate-700 hover:bg-slate-50 transition-colors',
-            'focus-visible:outline-none disabled:opacity-50',
-          )}
-        >
-          <RefreshCw className={cn('h-3.5 w-3.5 transition-transform', spinning && 'animate-spin')} />
-        </button>
-        <span className="text-xs text-slate-400">
-          آخر تحديث:{' '}
-          <span className="font-semibold text-slate-600">{relativeTime(loadedAt)}</span>
-        </span>
+        {/* Totals — hero metrics on the right (RTL-first) */}
+        <div className="flex items-center gap-5 shrink-0">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">إجمالي</p>
+            <p className="text-[22px] font-black text-navy tabular-nums leading-none">
+              {totalLeads.toLocaleString('ar-EG')}
+            </p>
+          </div>
+          <div className="h-10 w-px bg-hairline shrink-0" />
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.1em]">تحويل</p>
+            <p className="text-[22px] font-black text-brand-600 tabular-nums leading-none">{conversion}%</p>
+          </div>
+        </div>
+
+        <div className="hidden sm:block h-7 w-px bg-hairline shrink-0" />
+
+        {/* Stage counts */}
+        <div className="flex items-center gap-x-3 gap-y-2 flex-wrap flex-1">
+          {STAGE_CONFIG.map((s) => {
+            const n = counts[s.key] ?? 0;
+            return (
+              <span key={s.key} className="inline-flex items-center gap-1.5">
+                <span className={cn('h-2 w-2 rounded-full shrink-0', s.dot)} />
+                <span className="text-[12px] text-slate-500">{s.label}</span>
+                <span className={cn(
+                  'inline-flex items-center justify-center min-w-[20px] h-5 px-1 rounded-full text-[10.5px] font-bold tabular-nums',
+                  n > 0 ? s.count : 'bg-slate-100 text-slate-400',
+                )}>
+                  {n}
+                </span>
+              </span>
+            );
+          })}
+        </div>
+
+        <div className="hidden sm:block h-7 w-px bg-hairline shrink-0" />
+
+        {/* Refresh + timestamp */}
+        <div className="flex items-center gap-2.5 shrink-0 ms-auto sm:ms-0">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={spinning}
+            aria-label="تحديث البيانات"
+            className={cn(
+              'inline-flex h-8 w-8 items-center justify-center rounded-xl',
+              'bg-slate-50 text-slate-400 ring-1 ring-slate-200/80',
+              'hover:bg-brand-50 hover:text-brand-600 hover:ring-brand-100 transition-colors',
+              'focus-visible:outline-none disabled:opacity-50',
+            )}
+          >
+            <RefreshCw className={cn('h-3.5 w-3.5 transition-transform', spinning && 'animate-spin')} />
+          </button>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-[10px] text-slate-400 leading-none">آخر تحديث</p>
+            <p className="text-[12px] font-semibold text-slate-600 leading-none">
+              {relativeTime(loadedAt)}
+            </p>
+          </div>
+        </div>
+
       </div>
-
-      <span aria-hidden className="hidden sm:block w-px h-4 bg-slate-200/80" />
-
-      {/* Stage counts — colored dots match the column headers */}
-      <div className="flex items-center gap-x-3 gap-y-1 flex-wrap flex-1">
-        {STAGE_CONFIG.map((s) => (
-          <span key={s.key} className="inline-flex items-center gap-1.5 text-xs">
-            <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', s.dot)} />
-            <span className="text-slate-500">{s.label}</span>
-            <span className="font-bold text-slate-700 tabular-nums">{counts[s.key] ?? 0}</span>
-          </span>
-        ))}
-      </div>
-
-      <span aria-hidden className="hidden sm:block w-px h-4 bg-slate-200/80" />
-
-      {/* Summary totals */}
-      <div className="flex items-center gap-4 shrink-0 text-xs">
-        <span className="text-slate-500">
-          إجمالي{' '}
-          <span className="font-black text-slate-800 tabular-nums">
-            {totalLeads.toLocaleString('ar-EG')}
-          </span>
-        </span>
-        <span className="text-slate-500">
-          تحويل{' '}
-          <span className="font-black text-slate-800 tabular-nums">{conversion}%</span>
-        </span>
-      </div>
-
     </div>
   );
 }

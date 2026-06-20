@@ -4,6 +4,15 @@ import { cn } from '@/lib/cn';
 
 type Tone = 'gray' | 'info' | 'purple' | 'warning' | 'success' | 'danger';
 
+const ACCENT: Record<Tone, string> = {
+  gray:    'bg-slate-400',
+  info:    'bg-sky-400',
+  purple:  'bg-violet-400',
+  warning: 'bg-amber-400',
+  success: 'bg-emerald-400',
+  danger:  'bg-rose-400',
+};
+
 const DOT: Record<Tone, string> = {
   gray:    'bg-slate-400',
   info:    'bg-sky-400',
@@ -11,6 +20,15 @@ const DOT: Record<Tone, string> = {
   warning: 'bg-amber-400',
   success: 'bg-emerald-400',
   danger:  'bg-rose-400',
+};
+
+const COUNT_CLS: Record<Tone, string> = {
+  gray:    'bg-slate-100 text-slate-600',
+  info:    'bg-sky-50 text-sky-700',
+  purple:  'bg-violet-50 text-violet-700',
+  warning: 'bg-amber-50 text-amber-700',
+  success: 'bg-emerald-50 text-emerald-700',
+  danger:  'bg-rose-50 text-rose-700',
 };
 
 interface Props {
@@ -26,37 +44,51 @@ export function StageColumn({ label, count, tone, isOver, isEmpty, children }: P
   return (
     <div className="flex flex-col w-[300px] sm:w-[316px] shrink-0">
 
-      {/* Text-only header with a single small dot for stage identity */}
-      <div className="mb-2.5 flex items-center justify-between gap-2 px-1">
-        <div className="flex items-center gap-2">
-          <span className={cn('h-2 w-2 rounded-full shrink-0', DOT[tone])} />
-          <h3 className="text-[13px] font-bold text-slate-800">{label}</h3>
-        </div>
-        <span className="text-[11px] font-black text-slate-400 tabular-nums">{count}</span>
-      </div>
-
-      {/* Lane — cards sit on a subtle gray surface */}
+      {/* Premium column card */}
       <div className={cn(
-        'flex flex-col gap-2.5 rounded-2xl p-2.5 min-h-[300px] transition-all duration-150',
+        'flex flex-col rounded-[20px] border overflow-hidden min-h-[400px] transition-all duration-150',
         isOver
-          ? 'bg-slate-200/70 ring-1 ring-inset ring-slate-300/70'
-          : 'bg-slate-100/60',
+          ? 'border-brand-200/80 shadow-[0_4px_24px_-4px_rgb(200_162_75/0.18),0_0_0_1px_rgb(200_162_75/0.15)]'
+          : 'border-hairline shadow-soft bg-surface',
       )}>
-        {isEmpty ? (
-          <div className={cn(
-            'flex-1 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed py-12 transition-colors',
-            isOver
-              ? 'border-slate-400/50 bg-slate-100/60 text-slate-500'
-              : 'border-slate-200 text-slate-300',
-          )}>
-            <Inbox className="h-5 w-5" strokeWidth={1.5} />
-            <p className="text-[11px] font-medium text-center px-4 leading-relaxed">
-              {isOver ? 'أفلت العميل هنا' : 'لا توجد فرص'}
-            </p>
+        {/* Colored accent stripe */}
+        <div className={cn('h-[3px] w-full shrink-0', ACCENT[tone])} />
+
+        {/* Column header */}
+        <div className="flex items-center justify-between gap-2 px-4 py-3.5 bg-canvas/40 border-b border-hairline">
+          <div className="flex items-center gap-2">
+            <span className={cn('h-2 w-2 rounded-full shrink-0', DOT[tone])} />
+            <h3 className="text-[13px] font-bold text-navy leading-none">{label}</h3>
           </div>
-        ) : (
-          children
-        )}
+          <span className={cn(
+            'inline-flex items-center justify-center min-w-[22px] h-[22px] px-1.5 rounded-full text-[10.5px] font-bold tabular-nums',
+            COUNT_CLS[tone],
+          )}>
+            {count}
+          </span>
+        </div>
+
+        {/* Card lane */}
+        <div className={cn(
+          'flex flex-col gap-2.5 p-3 flex-1 transition-colors duration-150',
+          isOver ? 'bg-brand-50/15' : 'bg-canvas/20',
+        )}>
+          {isEmpty ? (
+            <div className={cn(
+              'flex-1 flex flex-col items-center justify-center gap-2 rounded-[14px] border-2 border-dashed py-12 transition-colors',
+              isOver
+                ? 'border-brand-300/60 bg-brand-50/20 text-brand-500'
+                : 'border-hairline text-slate-300',
+            )}>
+              <Inbox className="h-5 w-5" strokeWidth={1.5} />
+              <p className="text-[11px] font-medium text-center px-4 leading-relaxed">
+                {isOver ? 'أفلت العميل هنا' : 'لا توجد فرص'}
+              </p>
+            </div>
+          ) : (
+            children
+          )}
+        </div>
       </div>
     </div>
   );

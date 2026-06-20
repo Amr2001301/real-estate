@@ -150,8 +150,8 @@ export function LeadPipelineBoard({ initialLeads, counts }: Props) {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-thin">
-        <div className="flex gap-5 pb-4 min-w-max">
+      <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 overflow-x-auto scrollbar-thin pb-1">
+        <div className="flex gap-4 pb-6 pt-1 min-w-max">
           {STAGES.map((s) => {
             const items = grouped[s.stage];
             const total = counts[s.stage] ?? items.length;

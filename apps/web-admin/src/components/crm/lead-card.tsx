@@ -66,28 +66,28 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
   return (
     <div
       className={cn(
-        'group relative rounded-xl bg-white overflow-hidden',
-        'border border-slate-200/80 border-s-2',
+        'group relative rounded-[18px] bg-surface overflow-hidden',
+        'border border-hairline border-s-2',
         STAGE_BORDER[lead.stage],
-        'shadow-[0_1px_4px_rgb(0_0_0/_0.08),0_0_0_1px_rgb(0_0_0/_0.02)]',
+        'shadow-[0_1px_6px_rgb(0_0_0/_0.06),0_0_0_1px_rgb(15_30_51/_0.025)]',
         'transition-all duration-150',
-        dragging && 'shadow-xl scale-[1.02] rotate-[0.4deg]',
+        dragging && 'shadow-[0_12px_32px_rgb(0_0_0/_0.18)] scale-[1.02] rotate-[0.4deg]',
       )}
     >
       {/* ── Content ──────────────────────────────────────────── */}
       <div className="px-4 pt-4 pb-3">
 
-        {/* Name + ID — name owns the full width */}
+        {/* Name + ID */}
         <div className="flex items-start justify-between gap-2 mb-3">
           <h4
             className={cn(
               'text-[14px] font-bold leading-snug flex-1 min-w-0',
-              isNameless ? 'text-slate-400 italic' : 'text-slate-900',
+              isNameless ? 'text-slate-400 italic' : 'text-navy',
             )}
           >
             {displayName}
           </h4>
-          <span className="font-mono text-[10px] text-slate-400 shrink-0 mt-px leading-none whitespace-nowrap">
+          <span className="font-mono text-[10px] text-slate-400 shrink-0 mt-px leading-none whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded">
             #{lead.id.slice(0, 4).toUpperCase()}-{lead.id.slice(4, 8).toUpperCase()}
           </span>
         </div>
@@ -102,7 +102,7 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
               {lead.projectInterest ? tx(lead.projectInterest.name) : 'مشروع غير محدد'}
             </span>
             {lead.unitInterest && (
-              <span className="shrink-0 font-mono text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+              <span className="shrink-0 font-mono text-[10px] text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded">
                 {lead.unitInterest.code}
               </span>
             )}
@@ -135,12 +135,12 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
       </div>
 
       {/* ── Footer ───────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-3.5 py-2.5 border-t border-slate-100 bg-slate-50/50">
+      <div className="flex items-center gap-2 px-3.5 py-2.5 border-t border-hairline/60 bg-canvas/40">
 
-        {/* Avatar as compact identity marker */}
+        {/* Avatar */}
         <span
           className={cn(
-            'inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold shrink-0',
+            'inline-flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold shrink-0 ring-1 ring-black/[0.05]',
             paletteFor(avatarSeed),
           )}
           aria-hidden
@@ -155,11 +155,11 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
           </span>
         )}
 
-        {/* Contact + grip */}
+        {/* Contact icons + grip */}
         <div className="flex items-center gap-0.5 ms-auto">
           {phone && (
             <span
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
               aria-label={`هاتف ${phone}`}
               title={phone}
             >
@@ -168,7 +168,7 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
           )}
           {email && (
             <span
-              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-colors"
               aria-label={`بريد ${email}`}
               title={email}
             >
@@ -195,7 +195,7 @@ export function LeadCard({ lead }: { lead: Lead }) {
     <Link
       href={`/dashboard/leads/${lead.id}` as never}
       prefetch={false}
-      className="block hover:-translate-y-px transition-transform duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/30 rounded-xl"
+      className="block hover:-translate-y-0.5 hover:shadow-card transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 rounded-[18px]"
     >
       <LeadCardBody lead={lead} />
     </Link>
