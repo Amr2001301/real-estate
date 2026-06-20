@@ -20,18 +20,18 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDnzIyYCuL_Yr3LbuK4XLAlN1NCyUOXz1w',
-    appId: '1:354414583922:android:875a26c80ae4b97a6ae2eb',
-    messagingSenderId: '354414583922',
-    projectId: 'real-estate-3054e',
-    storageBucket: 'real-estate-3054e.firebasestorage.app',
+    apiKey: 'AIzaSyCePXKUedBLWujzogp2k7rrbWsye5BeOeA',
+    appId: '1:263789595470:android:2b02b9aefccb88ab97ac1f',
+    messagingSenderId: '263789595470',
+    projectId: 'real-estate-platform-238d6',
+    storageBucket: 'real-estate-platform-238d6.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB16uNd3lL68YhxTBKnL8Y0FUsShgHSi2Y',
-    appId: '1:354414583922:ios:46c0c76b348d62ae6ae2eb',
-    messagingSenderId: '354414583922',
-    projectId: 'real-estate-3054e',
-    storageBucket: 'real-estate-3054e.firebasestorage.app',
+    apiKey: 'AIzaSyB6eud6l_CHNk2HuyO-kLJBhBom-vLNoVM',
+    appId: '1:263789595470:ios:a3646e61dec80f1d97ac1f',
+    messagingSenderId: '263789595470',
+    projectId: 'real-estate-platform-238d6',
+    storageBucket: 'real-estate-platform-238d6.firebasestorage.app',
     iosBundleId: 'com.realestate.customer.mobileCustomer',
   );
 }
