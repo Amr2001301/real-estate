@@ -60,7 +60,10 @@ import 'features/profile/domain/repositories/profile_repository.dart';
 import 'features/visits/data/datasources/visits_remote_data_source.dart';
 import 'features/visits/data/repositories/visits_repository_impl.dart';
 import 'features/visits/domain/repositories/visits_repository.dart';
-import 'bootstrap.dart' show customerNavigatorKey, pendingPushRoute;
+import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import 'bootstrap.dart' show customerNavigatorKey, flutterLocalNotifications, pendingPushRoute;
 import 'features/notifications/presentation/fcm_route_resolver.dart';
 import 'router/app_router.dart';
 
@@ -255,6 +258,8 @@ class _CustomerRootState extends State<_CustomerRoot> {
         _lastBannerId = notifId;
 
         final route = resolveFcmRoute(msg);
+        HapticFeedback.lightImpact();
+        _playForegroundSound();
         showAppNotificationBanner(
           context,
           overlay: customerNavigatorKey.currentState?.overlay,
@@ -294,6 +299,38 @@ class _CustomerRootState extends State<_CustomerRoot> {
       sessionCubit.adoptSignedOut();
       return null;
     };
+  }
+
+  /// Plays the default notification sound on Android without showing a heads-up
+  /// popup. Uses the low-importance `devora_sound` channel (no visual popup) and
+  /// cancels the notification immediately so the drawer stays clean.
+  /// iOS sound is handled by [setForegroundNotificationPresentationOptions].
+  Future<void> _playForegroundSound() async {
+    try {
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          'devora_sound',
+          'Devora Sound',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          playSound: true,
+          enableVibration: false,
+          autoCancel: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: false,
+          presentBadge: false,
+          presentSound: false,
+        ),
+      );
+      await flutterLocalNotifications.show(98765, null, null, details);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        flutterLocalNotifications.cancel(98765);
+      });
+      debugPrint('[Banner] sound played true');
+    } catch (e) {
+      debugPrint('[Banner] sound played false: $e');
+    }
   }
 
   @override

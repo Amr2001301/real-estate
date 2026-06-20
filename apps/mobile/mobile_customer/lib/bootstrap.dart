@@ -56,14 +56,23 @@ Future<void> _initLocalNotifications() async {
     );
     // Create the Android notification channel so FCM and local notifications
     // both use the same importance/sound configuration.
-    await flutterLocalNotifications
+    final androidPlugin = flutterLocalNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const AndroidNotificationChannel(
-          'devora_push',
-          'Devora Push',
-          importance: Importance.high,
-        ));
+            AndroidFlutterLocalNotificationsPlugin>();
+    // High-importance channel for background/terminated FCM (shows heads-up).
+    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
+      'devora_push',
+      'Devora Push',
+      importance: Importance.high,
+    ));
+    // Default-importance channel for foreground sound only (no heads-up popup).
+    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
+      'devora_sound',
+      'Devora Sound',
+      importance: Importance.defaultImportance,
+      playSound: true,
+      enableVibration: false,
+    ));
     debugPrint('[LocalNotifications] initialized');
   } catch (e) {
     // Plugin native code not linked yet (first run after adding dependency).

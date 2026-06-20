@@ -48,7 +48,10 @@ import 'features/installments/domain/repositories/installments_repository.dart';
 import 'features/leads/data/datasources/leads_remote_data_source.dart';
 import 'features/leads/data/repositories/leads_repository_impl.dart';
 import 'features/leads/domain/repositories/leads_repository.dart';
-import 'bootstrap.dart' show staffNavigatorKey, pendingPushRoute;
+import 'package:flutter/services.dart' show HapticFeedback;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import 'bootstrap.dart' show flutterLocalNotifications, pendingPushRoute, staffNavigatorKey;
 import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
 import 'features/notifications/data/firebase_push_token_provider.dart';
 import 'features/notifications/data/repositories/notifications_repository_impl.dart';
@@ -267,6 +270,8 @@ class _StaffRootState extends State<_StaffRoot> {
         _lastBannerId = notifId;
 
         final route = resolveStaffFcmRoute(msg);
+        HapticFeedback.lightImpact();
+        _playForegroundSound();
         showAppNotificationBanner(
           context,
           overlay: staffNavigatorKey.currentState?.overlay,
@@ -302,6 +307,34 @@ class _StaffRootState extends State<_StaffRoot> {
       sessionCubit.adoptSignedOut();
       return null;
     };
+  }
+
+  Future<void> _playForegroundSound() async {
+    try {
+      const details = NotificationDetails(
+        android: AndroidNotificationDetails(
+          'devora_sound',
+          'Devora Sound',
+          importance: Importance.defaultImportance,
+          priority: Priority.defaultPriority,
+          playSound: true,
+          enableVibration: false,
+          autoCancel: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: false,
+          presentBadge: false,
+          presentSound: false,
+        ),
+      );
+      await flutterLocalNotifications.show(98765, null, null, details);
+      Future.delayed(const Duration(milliseconds: 300), () {
+        flutterLocalNotifications.cancel(98765);
+      });
+      debugPrint('[Banner] sound played true');
+    } catch (e) {
+      debugPrint('[Banner] sound played false: $e');
+    }
   }
 
   @override

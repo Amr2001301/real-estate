@@ -4,25 +4,21 @@ import 'package:flutter/material.dart';
 
 import '../design/tokens/app_colors.dart';
 
-// Brand constants — source: AppPalette
-const _kNavy   = AppPalette.navy;           // 0xFF0F1E33
-const _kGold   = AppPalette.gold400;        // 0xFFC8A24B
-const _kBody   = AppPalette.darkInkMuted;   // 0xFF9AA6B6
+// Brand palette
+const _kNavy = AppPalette.navy;        // 0xFF0F1E33
+const _kGold = AppPalette.gold400;     // 0xFFC8A24B
+const _kBody = AppPalette.darkInkMuted; // 0xFF9AA6B6
 
 OverlayEntry? _activeBanner;
 
-/// Shows a branded top-slide notification banner over the entire app.
+/// Shows a polished top-slide notification banner over the entire app.
 ///
-/// Pass [overlay] explicitly (from `navigatorKey.currentState?.overlay`) when
-/// the [context] does not have an [Overlay] ancestor — which is the case for
-/// root-level State objects whose context is a parent of [MaterialApp].
+/// Supply [overlay] explicitly (from `navigatorKey.currentState?.overlay`) when
+/// the caller context is a parent of [MaterialApp] and therefore has no
+/// [Overlay] ancestor. Falls back to [Overlay.maybeOf] otherwise.
 ///
-/// Falls back to [Overlay.maybeOf] on [context] when [overlay] is null.
-/// Logs `[Banner] overlay unavailable` and returns silently if neither
-/// resolves — the app is never crashed by a missing banner.
-///
-/// If a banner is already visible it is replaced immediately.
-/// Auto-dismisses after ~4.5 s; swipe-up or the × button also dismiss.
+/// Logs `[Banner] overlay unavailable` and returns safely if neither resolves.
+/// Replaces any currently visible banner immediately.
 void showAppNotificationBanner(
   BuildContext context, {
   required String title,
@@ -33,8 +29,6 @@ void showAppNotificationBanner(
 }) {
   debugPrint('[Banner] show requested');
 
-  // Prefer an explicitly supplied overlay (e.g. from a GlobalKey<NavigatorState>)
-  // so that callers whose BuildContext is above MaterialApp still work.
   final resolvedOverlay = overlay ??
       (context.mounted ? Overlay.maybeOf(context, rootOverlay: true) : null);
 
@@ -43,7 +37,8 @@ void showAppNotificationBanner(
     return;
   }
 
-  // Remove any existing banner without animation so the new one appears clean.
+  // Replace the current banner instantly (no outgoing animation) so the new
+  // content appears immediately without overlapping.
   _activeBanner?.remove();
   _activeBanner = null;
 
@@ -55,6 +50,7 @@ void showAppNotificationBanner(
     entryRemoved = true;
     if (identical(_activeBanner, entry)) _activeBanner = null;
     entry.remove();
+    debugPrint('[Banner] dismissed');
   }
 
   entry = OverlayEntry(
@@ -74,10 +70,10 @@ void showAppNotificationBanner(
 
   _activeBanner = entry;
   resolvedOverlay.insert(entry);
-  debugPrint('[Banner] overlay inserted');
+  debugPrint('[Banner] foreground banner shown');
 }
 
-// ── Animation widget ──────────────────────────────────────────────────────────
+// ── Animated host ─────────────────────────────────────────────────────────────
 
 class _BannerWidget extends StatefulWidget {
   const _BannerWidget({
@@ -110,22 +106,25 @@ class _BannerWidgetState extends State<_BannerWidget>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 380),
+      duration: const Duration(milliseconds: 340),
     );
+    // Slide in from above the screen, easing into rest position.
     _slide = Tween<Offset>(
-      begin: const Offset(0, -1.4),
+      begin: const Offset(0, -1.2),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
-    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    // Subtle fade so the card doesn't pop harshly.
+    _fade = Tween<double>(begin: 0.0, end: 1.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: const Interval(0, 0.6)));
 
     _ctrl.forward();
-    _autoTimer = Timer(const Duration(milliseconds: 4500), _animatedDismiss);
+    _autoTimer = Timer(const Duration(seconds: 4), _animatedDismiss);
   }
 
   void _animatedDismiss() {
     if (!mounted) return;
     _autoTimer?.cancel();
-    _ctrl.reverse().then((_) {
+    _ctrl.reverse(from: 1.0).then((_) {
       if (mounted) widget.onDismiss();
     });
   }
@@ -139,12 +138,14 @@ class _BannerWidgetState extends State<_BannerWidget>
 
   @override
   Widget build(BuildContext context) {
-    // viewPadding.top = status bar height (stable even when keyboard opens).
+    // viewPadding.top is the physical status-bar/notch inset, stable even when
+    // the keyboard is open (unlike padding.top which changes with soft keyboard).
     final topInset = MediaQuery.of(context).viewPadding.top;
+
     return Positioned(
-      top: topInset + 10,
-      left: 12,
-      right: 12,
+      top: topInset + 14,
+      left: 16,
+      right: 16,
       child: Material(
         color: Colors.transparent,
         child: SlideTransition(
@@ -155,8 +156,7 @@ class _BannerWidgetState extends State<_BannerWidget>
               behavior: HitTestBehavior.opaque,
               onTap: widget.onTap,
               onVerticalDragEnd: (d) {
-                // Swipe-up to dismiss.
-                if ((d.primaryVelocity ?? 0) < -150) _animatedDismiss();
+                if ((d.primaryVelocity ?? 0) < -100) _animatedDismiss();
               },
               child: Directionality(
                 textDirection: widget.textDirection,
@@ -190,97 +190,103 @@ class _BannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: const BoxConstraints(minHeight: 64, maxHeight: 96),
       decoration: BoxDecoration(
         color: _kNavy,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        // Thin gold border — 0.5 px so it reads as a subtle glow, not a frame.
         border: Border.all(
-          color: _kGold.withValues(alpha: 0.28),
-          width: 1,
+          color: _kGold.withValues(alpha: 0.20),
+          width: 0.5,
         ),
         boxShadow: const [
+          // Deep shadow for elevation.
           BoxShadow(
-            color: Color(0x55000000),
-            blurRadius: 28,
+            color: Color(0x4D000000),
+            blurRadius: 20,
             spreadRadius: -2,
-            offset: Offset(0, 10),
+            offset: Offset(0, 8),
+          ),
+          // Soft ambient shadow.
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        // Slightly smaller than the outer radius to keep the border visible.
+        borderRadius: BorderRadius.circular(19.5),
+        child: Stack(
           children: [
-            // ── Gold top accent bar ──────────────────────────────────────
-            Container(
-              height: 2,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _kGold.withValues(alpha: 0.0),
-                    _kGold,
-                    _kGold.withValues(alpha: 0.0),
-                  ],
+            // ── Leading accent stripe ─────────────────────────────────────
+            // PositionedDirectional respects RTL: start = right in Arabic,
+            // so the gold stripe appears on the icon side (leading edge).
+            PositionedDirectional(
+              start: 0,
+              top: 0,
+              bottom: 0,
+              width: 3,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: AlignmentDirectional.topCenter,
+                    end: AlignmentDirectional.bottomCenter,
+                    colors: [
+                      _kGold.withValues(alpha: 0.7),
+                      _kGold,
+                      _kGold.withValues(alpha: 0.7),
+                    ],
+                  ),
                 ),
               ),
             ),
-            // ── Content row ─────────────────────────────────────────────
+
+            // ── Content ──────────────────────────────────────────────────
+            // Start padding = 3 (stripe) + 10 (gap) = 13. End = 10.
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 8, 12),
+              padding: const EdgeInsetsDirectional.fromSTEB(13, 10, 10, 10),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Icon container
+                  // Notification icon
                   Container(
-                    width: 42,
-                    height: 42,
+                    width: 36,
+                    height: 36,
                     decoration: BoxDecoration(
                       color: _kGold.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(11),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: _kGold.withValues(alpha: 0.30),
-                        width: 1,
+                        color: _kGold.withValues(alpha: 0.22),
+                        width: 0.5,
                       ),
                     ),
                     child: const Icon(
                       Icons.notifications_outlined,
                       color: _kGold,
-                      size: 20,
+                      size: 17,
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Text content
+
+                  // Title + body — takes all remaining horizontal space.
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Title row + timestamp
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                title,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13.5,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1.3,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'الآن',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.38),
-                                fontSize: 10.5,
-                              ),
-                            ),
-                          ],
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            height: 1.25,
+                            letterSpacing: -0.1,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         if (body.isNotEmpty) ...[
                           const SizedBox(height: 3),
@@ -288,7 +294,7 @@ class _BannerCard extends StatelessWidget {
                             body,
                             style: const TextStyle(
                               color: _kBody,
-                              fontSize: 12.5,
+                              fontSize: 12,
                               height: 1.4,
                             ),
                             maxLines: 2,
@@ -298,19 +304,38 @@ class _BannerCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Close button — its own GestureDetector absorbs the tap
-                  // before it bubbles up to the parent card's onTap (navigate).
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onClose,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(8, 2, 4, 4),
-                      child: Icon(
-                        Icons.close_rounded,
-                        color: Colors.white.withValues(alpha: 0.40),
-                        size: 16,
+                  const SizedBox(width: 6),
+
+                  // Trailing: close button on top, timestamp below.
+                  // In RTL this column is on the left (trailing) side.
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Close button has its own GestureDetector so it absorbs
+                      // taps before they bubble to the outer card onTap.
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: onClose,
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Icon(
+                            Icons.close_rounded,
+                            color: Colors.white.withValues(alpha: 0.35),
+                            size: 14,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 5),
+                      Text(
+                        'الآن',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.28),
+                          fontSize: 10,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

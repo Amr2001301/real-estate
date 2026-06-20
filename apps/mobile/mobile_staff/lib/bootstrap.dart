@@ -46,14 +46,21 @@ Future<void> _initLocalNotifications() async {
     await flutterLocalNotifications.initialize(
       const InitializationSettings(android: androidSettings, iOS: iosSettings),
     );
-    await flutterLocalNotifications
+    final androidPlugin = flutterLocalNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(const AndroidNotificationChannel(
-          'devora_push',
-          'Devora Push',
-          importance: Importance.high,
-        ));
+            AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
+      'devora_push',
+      'Devora Push',
+      importance: Importance.high,
+    ));
+    await androidPlugin?.createNotificationChannel(const AndroidNotificationChannel(
+      'devora_sound',
+      'Devora Sound',
+      importance: Importance.defaultImportance,
+      playSound: true,
+      enableVibration: false,
+    ));
     debugPrint('[LocalNotifications] initialized');
   } catch (e) {
     debugPrint('[LocalNotifications] init failed (rebuild required?): $e');
