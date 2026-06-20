@@ -363,12 +363,14 @@ export class NotificationsService implements OnModuleInit {
     });
   }
 
-  registerDevice(userId: string, dto: RegisterDeviceDto) {
-    return this.prisma.deviceToken.upsert({
+  async registerDevice(userId: string, dto: RegisterDeviceDto) {
+    const result = await this.prisma.deviceToken.upsert({
       where: { token: dto.token },
       create: { userId, token: dto.token, platform: dto.platform },
       update: { userId, platform: dto.platform },
     });
+    this.logger.log(`[DeviceToken] registered for user ${userId} platform=${dto.platform}`);
+    return result;
   }
 
   unregisterDevice(token: string) {

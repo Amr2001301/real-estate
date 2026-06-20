@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../domain/services/push_token_provider.dart';
 
@@ -33,7 +34,8 @@ class FirebasePushTokenProvider implements PushTokenProvider {
   Future<String?> getToken() async {
     try {
       return await FirebaseMessaging.instance.getToken();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[PushReg] FCM getToken() threw: $e');
       return null;
     }
   }

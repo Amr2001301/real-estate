@@ -202,6 +202,15 @@ class _CustomerRootState extends State<_CustomerRoot> {
     super.initState();
     _wireRefresher();
     _wireFcm();
+    // BlocListener only fires on *transitions*. If the app relaunches with a
+    // persisted session the state is already authenticated — no transition fires
+    // and registration would be skipped. Run best-effort after the first frame.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (context.read<SessionCubit>().state.isAuthenticated) {
+        context.read<PushRegistrationService>().registerIfPossible();
+      }
+    });
   }
 
   @override
