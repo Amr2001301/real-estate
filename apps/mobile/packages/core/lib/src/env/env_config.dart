@@ -1,3 +1,7 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 import 'app_environment.dart';
 
 /// Immutable, per-environment configuration.
@@ -77,13 +81,32 @@ class EnvConfig {
 
   /// Called once from the entrypoint. `--dart-define` values can override the
   /// preset (e.g. pointing dev at a LAN backend) without code changes.
+  ///
+  /// For dev builds on Android emulator, `localhost` is automatically remapped
+  /// to `10.0.2.2` (the host machine alias). Override with
+  /// `--dart-define=API_BASE_URL=http://192.168.x.x:4000/v1` for a real device
+  /// on LAN, or any time you need to point at a non-default host.
   static EnvConfig initialize(EnvConfig base) {
     const overrideUrl = String.fromEnvironment('API_BASE_URL');
-    final resolved = overrideUrl.isEmpty
+
+    String resolvedUrl = base.apiBaseUrl;
+    if (overrideUrl.isNotEmpty) {
+      resolvedUrl = overrideUrl;
+    } else if (base.environment == AppEnvironment.dev &&
+        !kIsWeb &&
+        Platform.isAndroid) {
+      // On Android emulator, localhost/127.0.0.1 resolves to the emulator
+      // itself, not the host machine. The host is reachable via 10.0.2.2.
+      resolvedUrl = resolvedUrl
+          .replaceFirst('localhost', '10.0.2.2')
+          .replaceFirst('127.0.0.1', '10.0.2.2');
+    }
+
+    final resolved = resolvedUrl == base.apiBaseUrl
         ? base
         : EnvConfig(
             environment: base.environment,
-            apiBaseUrl: overrideUrl,
+            apiBaseUrl: resolvedUrl,
             whatsappNumber: base.whatsappNumber,
             contactPhone: base.contactPhone,
             appStoreUrl: base.appStoreUrl,

@@ -1,15 +1,25 @@
 import 'package:core/core.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
 import 'features/notifications/presentation/fcm_route_resolver.dart';
 
+/// Root navigator key — gives access to the root [Overlay] from contexts
+/// that are ancestors of [MaterialApp].
+final GlobalKey<NavigatorState> staffNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Pending deep-link route from a push tap while the app was terminated.
 /// Checked by [StaffApp] after the router is created.
 String? pendingPushRoute;
+
+/// Shared plugin instance — initialised during bootstrap, used in [StaffApp].
+final FlutterLocalNotificationsPlugin flutterLocalNotifications =
+    FlutterLocalNotificationsPlugin();
 
 /// Background/terminated FCM message handler — must be a top-level function.
 @pragma('vm:entry-point')
@@ -20,9 +30,34 @@ Future<void> _fcmBackgroundHandler(RemoteMessage message) async {
 /// Shared startup for every Staff App flavor entrypoint.
 Future<void> bootstrap(EnvConfig env) async {
   WidgetsFlutterBinding.ensureInitialized();
-  EnvConfig.initialize(env);
+  final config = EnvConfig.initialize(env);
+
+  debugPrint('[Startup] platform=${defaultTargetPlatform.name} apiBaseUrl=${config.apiBaseUrl}');
+
+  await _initLocalNotifications();
   await _initFirebase();
   runApp(await buildAppRoot(env: EnvConfig.current, child: const StaffApp()));
+}
+
+Future<void> _initLocalNotifications() async {
+  try {
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const iosSettings = DarwinInitializationSettings();
+    await flutterLocalNotifications.initialize(
+      const InitializationSettings(android: androidSettings, iOS: iosSettings),
+    );
+    await flutterLocalNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(const AndroidNotificationChannel(
+          'devora_push',
+          'Devora Push',
+          importance: Importance.high,
+        ));
+    debugPrint('[LocalNotifications] initialized');
+  } catch (e) {
+    debugPrint('[LocalNotifications] init failed (rebuild required?): $e');
+  }
 }
 
 Future<void> _initFirebase() async {
@@ -31,6 +66,12 @@ Future<void> _initFirebase() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FirebaseMessaging.onBackgroundMessage(_fcmBackgroundHandler);
+
+    await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
     final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {

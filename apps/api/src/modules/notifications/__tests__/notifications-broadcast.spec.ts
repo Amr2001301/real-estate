@@ -1,6 +1,6 @@
 import { BadRequestException, Logger } from '@nestjs/common';
 import { NotificationChannel, UserRole } from '@prisma/client';
-import { NotificationsService, BroadcastTarget } from '../notifications.module';
+import { NotificationsService, BroadcastTarget, BroadcastChannel } from '../notifications.module';
 import { PushService, PushResult } from '../push.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 
@@ -122,12 +122,17 @@ const BASE_IN_APP = {
   title_en: 'Title',
   body_ar: 'نص',
   body_en: 'Body',
-  channel: NotificationChannel.IN_APP,
+  channel: BroadcastChannel.IN_APP,
 };
 
 const BASE_PUSH = {
   ...BASE_IN_APP,
-  channel: NotificationChannel.PUSH,
+  channel: BroadcastChannel.PUSH,
+};
+
+const BASE_DUAL = {
+  ...BASE_IN_APP,
+  channel: BroadcastChannel.IN_APP_AND_PUSH,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -170,7 +175,7 @@ describe('NotificationsService · PUSH strict channel semantics', () => {
       target: BroadcastTarget.ALL_CUSTOMERS,
     });
 
-    expect(result.channel).toBe(NotificationChannel.PUSH);
+    expect(result.channel).toBe(BroadcastChannel.PUSH);
     expect(result.recipientCount).toBe(2);
     expect(result.pushSent).toBe(2);
     expect(result.pushFailed).toBe(0);
@@ -266,7 +271,7 @@ describe('NotificationsService · IN_APP strict channel semantics', () => {
       target: BroadcastTarget.ALL_CUSTOMERS,
     });
 
-    expect(result.channel).toBe(NotificationChannel.IN_APP);
+    expect(result.channel).toBe(BroadcastChannel.IN_APP);
     expect(result.notificationRecordsCreated).toBe(2);
     expect(result.failed).toBe(0);
     expect(prisma.notification.create).toHaveBeenCalledTimes(2);
@@ -627,7 +632,7 @@ describe('NotificationsService · previewBroadcast', () => {
     const { svc } = makeService(prisma, { pushEnabled: true });
     const result = await svc.previewBroadcast({
       target: BroadcastTarget.ALL_CUSTOMERS,
-      channel: NotificationChannel.PUSH,
+      channel: BroadcastChannel.PUSH,
     });
     expect(result.recipientCount).toBe(3);
     expect(result.estimatedDeviceCount).toBe(3); // 2+1
@@ -643,5 +648,160 @@ describe('NotificationsService · previewBroadcast', () => {
     const result = await svc.previewBroadcast({ target: BroadcastTarget.ALL_CUSTOMERS });
     expect(result.estimatedDeviceCount).toBeUndefined();
     expect(prisma.deviceToken.findMany).not.toHaveBeenCalled();
+  });
+
+  it('IN_APP_AND_PUSH preview returns estimatedDeviceCount and usersWithoutDevices', async () => {
+    const tokens = [{ userId: 'c-1' }, { userId: 'c-1' }]; // 2 tokens for c-1; c-2 has none
+    const prisma = makePrisma(
+      [
+        { id: 'c-1', role: UserRole.CUSTOMER, active: true },
+        { id: 'c-2', role: UserRole.CUSTOMER, active: true },
+      ],
+      tokens,
+    );
+    const { svc } = makeService(prisma, { pushEnabled: true });
+    const result = await svc.previewBroadcast({
+      target: BroadcastTarget.ALL_CUSTOMERS,
+      channel: BroadcastChannel.IN_APP_AND_PUSH,
+    });
+    expect(result.recipientCount).toBe(2);
+    expect(result.estimatedDeviceCount).toBe(2); // 2 tokens for c-1
+    expect(result.usersWithoutDevices).toBe(1);  // c-2 has none
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// IN_APP_AND_PUSH semantics
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe('NotificationsService · IN_APP_AND_PUSH channel semantics', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it('IN_APP_AND_PUSH + Firebase disabled → throws BadRequestException, zero DB rows', async () => {
+    const prisma = makePrisma([
+      { id: 'c-1', role: UserRole.CUSTOMER, active: true },
+    ]);
+    const { svc } = makeService(prisma, { pushEnabled: false });
+
+    await expect(
+      svc.broadcastNotification('admin-1', {
+        ...BASE_DUAL,
+        target: BroadcastTarget.ALL_CUSTOMERS,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(prisma.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('IN_APP_AND_PUSH creates one DB row per user and sends FCM', async () => {
+    const prisma = makePrisma([
+      { id: 'c-1', role: UserRole.CUSTOMER, active: true },
+      { id: 'c-2', role: UserRole.CUSTOMER, active: true },
+    ]);
+    const { svc, push } = makeService(prisma, {
+      pushEnabled: true,
+      pushResultFn: () => ({ enabled: true, sent: 1, failed: 0, pruned: 0 }),
+    });
+
+    const result = await svc.broadcastNotification('admin-1', {
+      ...BASE_DUAL,
+      target: BroadcastTarget.ALL_CUSTOMERS,
+    });
+
+    expect(result.channel).toBe(BroadcastChannel.IN_APP_AND_PUSH);
+    expect(result.recipientCount).toBe(2);
+    // One DB row per user regardless of device count
+    expect(result.notificationRecordsCreated).toBe(2);
+    expect(result.failed).toBe(0);
+    expect(prisma.notification.create).toHaveBeenCalledTimes(2);
+    // FCM sent to each user
+    expect(push.sendToUser).toHaveBeenCalledTimes(2);
+    expect(result.pushSent).toBe(2);
+    expect(result.pushFailed).toBe(0);
+    expect(result.noDeviceTokens).toBe(0);
+  });
+
+  it('IN_APP_AND_PUSH creates exactly one DB row per user, not per device', async () => {
+    const prisma = makePrisma([
+      { id: 'c-1', role: UserRole.CUSTOMER, active: true },
+    ]);
+    const { svc } = makeService(prisma, {
+      pushEnabled: true,
+      // Simulate user with 3 devices: sent=3
+      pushResultFn: () => ({ enabled: true, sent: 3, failed: 0, pruned: 0 }),
+    });
+
+    const result = await svc.broadcastNotification('admin-1', {
+      ...BASE_DUAL,
+      target: BroadcastTarget.ALL_CUSTOMERS,
+    });
+
+    // One DB row regardless of device count
+    expect(prisma.notification.create).toHaveBeenCalledTimes(1);
+    expect(result.notificationRecordsCreated).toBe(1);
+    // Push sent to 3 devices (summed from PushResult)
+    expect(result.pushSent).toBe(3);
+  });
+
+  it('IN_APP_AND_PUSH FCM data includes notificationId from DB row', async () => {
+    const prisma = makePrisma([
+      { id: 'c-1', role: UserRole.CUSTOMER, active: true },
+    ]);
+    const { svc, push } = makeService(prisma, {
+      pushEnabled: true,
+      pushResultFn: () => ({ enabled: true, sent: 1, failed: 0, pruned: 0 }),
+    });
+
+    await svc.broadcastNotification('admin-1', {
+      ...BASE_DUAL,
+      target: BroadcastTarget.ALL_CUSTOMERS,
+    });
+
+    // The FCM call must include a notificationId in data (from the newly-created row)
+    const call = (push.sendToUser as jest.Mock).mock.calls[0];
+    const payload = call[1] as { data?: Record<string, string> };
+    expect(payload.data).toHaveProperty('notificationId');
+    expect(typeof payload.data?.['notificationId']).toBe('string');
+    expect(payload.data?.['notificationId']).not.toBe('');
+  });
+
+  it('IN_APP_AND_PUSH noDeviceTokens reported when users have no devices', async () => {
+    const prisma = makePrisma([
+      { id: 'c-1', role: UserRole.CUSTOMER, active: true },
+      { id: 'c-2', role: UserRole.CUSTOMER, active: true },
+    ]);
+    const { svc } = makeService(prisma, {
+      pushEnabled: true,
+      pushResultFn: () => ({ enabled: true, sent: 0, failed: 0, pruned: 0 }),
+    });
+
+    const result = await svc.broadcastNotification('admin-1', {
+      ...BASE_DUAL,
+      target: BroadcastTarget.ALL_CUSTOMERS,
+    });
+
+    // DB rows still created even when devices are absent
+    expect(result.notificationRecordsCreated).toBe(2);
+    expect(result.noDeviceTokens).toBe(2);
+    expect(result.pushSent).toBe(0);
+    expect(result.failureHint).toBe('no_device_tokens');
+  });
+
+  it('IN_APP_AND_PUSH DB rows have channel=IN_APP (not IN_APP_AND_PUSH)', async () => {
+    const prisma = makePrisma([
+      { id: 'c-1', role: UserRole.CUSTOMER, active: true },
+    ]);
+    const { svc } = makeService(prisma, {
+      pushEnabled: true,
+      pushResultFn: () => ({ enabled: true, sent: 1, failed: 0, pruned: 0 }),
+    });
+
+    await svc.broadcastNotification('admin-1', {
+      ...BASE_DUAL,
+      target: BroadcastTarget.ALL_CUSTOMERS,
+    });
+
+    // Stored in DB as IN_APP so they appear in the mobile notification list
+    expect(prisma.notifications[0]?.channel).toBe(NotificationChannel.IN_APP);
   });
 });

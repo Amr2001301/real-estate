@@ -31,6 +31,8 @@ dependencies:
   firebase_messaging: ^15.1.4
   # permission_handler is used by FirebasePushTokenProvider for iOS foreground permission.
   permission_handler: ^11.3.1
+  # Displays system notifications while the app is in the foreground (FCM onMessage).
+  flutter_local_notifications: ^18.0.1
 
   cupertino_icons: ^1.0.8
 

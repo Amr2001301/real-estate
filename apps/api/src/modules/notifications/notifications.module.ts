@@ -68,6 +68,22 @@ export enum BroadcastTarget {
   ALL_ACTIVE = 'ALL_ACTIVE',
 }
 
+/**
+ * Delivery channel for admin broadcasts. Separate from the Prisma
+ * NotificationChannel to allow IN_APP_AND_PUSH without a DB migration.
+ * String values intentionally match NotificationChannel where they overlap.
+ *
+ * IN_APP          → create Notification DB rows only. No FCM.
+ * PUSH            → send FCM only. No DB rows. Requires Firebase.
+ * IN_APP_AND_PUSH → create DB rows AND send FCM. Requires Firebase.
+ *                   One DB row per recipient regardless of device count.
+ */
+export enum BroadcastChannel {
+  IN_APP          = 'IN_APP',
+  PUSH            = 'PUSH',
+  IN_APP_AND_PUSH = 'IN_APP_AND_PUSH',
+}
+
 class BroadcastNotificationDto {
   @IsString() @IsNotEmpty() @MaxLength(200) title_ar!: string;
   @IsString() @IsNotEmpty() @MaxLength(200) title_en!: string;
@@ -76,7 +92,7 @@ class BroadcastNotificationDto {
   @IsEnum(BroadcastTarget) target!: BroadcastTarget;
   @IsOptional() @IsUUID() targetUserId?: string;
   @IsOptional() @IsEnum(UserRole) targetRole?: UserRole;
-  @IsEnum(NotificationChannel) channel!: NotificationChannel;
+  @IsEnum(BroadcastChannel) channel!: BroadcastChannel;
   @IsOptional() @IsString() @MaxLength(60) entityType?: string;
   @IsOptional() @IsString() @MaxLength(36) entityId?: string;
 }
@@ -86,8 +102,8 @@ class BroadcastPreviewDto {
   @IsEnum(BroadcastTarget) target!: BroadcastTarget;
   @IsOptional() @IsUUID() targetUserId?: string;
   @IsOptional() @IsEnum(UserRole) targetRole?: UserRole;
-  /** When PUSH, also returns estimated device token counts. */
-  @IsOptional() @IsEnum(NotificationChannel) channel?: NotificationChannel;
+  /** When PUSH or IN_APP_AND_PUSH, also returns estimated device token counts. */
+  @IsOptional() @IsEnum(BroadcastChannel) channel?: BroadcastChannel;
 }
 
 type Locale = 'ar' | 'en';
@@ -380,13 +396,12 @@ export class NotificationsService implements OnModuleInit {
   /**
    * Admin manual broadcast. Channel determines the delivery path strictly:
    *
-   * IN_APP → creates one Notification DB record per recipient. No push.
-   * PUSH   → sends FCM push per recipient. No Notification DB records.
-   *          Blocked when Firebase is not configured (never silent no-op).
+   * IN_APP          → create one Notification DB row per recipient. No FCM.
+   * PUSH            → send FCM per recipient. No DB rows. Requires Firebase.
+   * IN_APP_AND_PUSH → create DB rows AND send FCM. Requires Firebase.
+   *                   One DB row per user regardless of how many devices they have.
    *
-   * The two paths have separate result counters so the admin always knows
-   * exactly what was delivered and via which mechanism.
-   *
+   * Paths are strictly separated — no silent fallback ever occurs.
    * Audit: every payload carries broadcastId, sentBy, broadcastAt,
    * targetType, and targetValue for traceability.
    */
@@ -395,22 +410,25 @@ export class NotificationsService implements OnModuleInit {
     dto: BroadcastNotificationDto,
   ): Promise<{
     broadcastId: string;
-    channel: NotificationChannel;
+    channel: BroadcastChannel;
     recipientCount: number;
-    // IN_APP
+    // IN_APP + IN_APP_AND_PUSH
     notificationRecordsCreated?: number;
     failed?: number;
-    // PUSH
+    // PUSH + IN_APP_AND_PUSH
     pushSent?: number;
     pushFailed?: number;
     noDeviceTokens?: number;
     failureHint?: string;
   }> {
-    // Guard: reject PUSH before any DB writes when Firebase is not configured.
-    // Returning success here would mislead the admin into thinking push was delivered.
-    if (dto.channel === NotificationChannel.PUSH && !this.push.pushEnabled) {
+    // Guard: PUSH and IN_APP_AND_PUSH require Firebase. Block before any DB writes
+    // so the admin gets a clear error rather than silent non-delivery.
+    const needsPush = dto.channel === BroadcastChannel.PUSH ||
+                      dto.channel === BroadcastChannel.IN_APP_AND_PUSH;
+    if (needsPush && !this.push.pushEnabled) {
       throw new BadRequestException(
-        'PUSH channel is not available — Firebase is not configured or the API was not restarted after adding credentials.',
+        `${dto.channel} channel requires Firebase — not configured or the API was not ` +
+        `restarted after adding FIREBASE_* credentials. Use IN_APP to skip push.`,
       );
     }
 
@@ -437,7 +455,7 @@ export class NotificationsService implements OnModuleInit {
     };
 
     // ── IN_APP path ───────────────────────────────────────────────────────────
-    if (dto.channel === NotificationChannel.IN_APP) {
+    if (dto.channel === BroadcastChannel.IN_APP) {
       const tpl = await this.prisma.notificationTemplate.findUnique({
         where: { code: 'admin_broadcast' },
       });
@@ -479,7 +497,7 @@ export class NotificationsService implements OnModuleInit {
 
       return {
         broadcastId,
-        channel: NotificationChannel.IN_APP,
+        channel: BroadcastChannel.IN_APP,
         recipientCount: userIds.length,
         notificationRecordsCreated,
         failed,
@@ -487,73 +505,151 @@ export class NotificationsService implements OnModuleInit {
       };
     }
 
-    // ── PUSH path ─────────────────────────────────────────────────────────────
-    // Firebase is confirmed enabled by the guard above.
-    // Batch-fetch locales so each recipient gets their preferred language.
-    // No Notification DB records are created — PUSH is delivery-only.
-    const usersWithLocale = await this.prisma.user.findMany({
-      where: { id: { in: userIds } },
-      select: { id: true, locale: true },
-    });
-    const localeMap = new Map(
-      usersWithLocale.map((u) => [u.id, pickLocale(u.locale ?? 'ar')]),
-    );
+    // ── Shared push helper ────────────────────────────────────────────────────
+    // Used by PUSH and IN_APP_AND_PUSH paths.
+    const buildPushResults = async (
+      ids: string[],
+      notifIdByUser: Map<string, string>,
+    ) => {
+      const usersWithLocale = await this.prisma.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, locale: true },
+      });
+      const localeMap = new Map(
+        usersWithLocale.map((u) => [u.id, pickLocale(u.locale ?? 'ar')]),
+      );
 
-    const pushResults = await Promise.allSettled(
-      userIds.map((userId) => {
-        const locale = localeMap.get(userId) ?? 'ar';
-        const fcmData: Record<string, string> = { broadcastId };
-        if (dto.entityType) fcmData['entityType'] = dto.entityType;
-        if (dto.entityId)   fcmData['entityId']   = dto.entityId;
-        return this.push.sendToUser(userId, {
-          title: locale === 'en' ? dto.title_en : dto.title_ar,
-          body:  locale === 'en' ? dto.body_en  : dto.body_ar,
-          data:  fcmData,
-        });
-      }),
-    );
+      return Promise.allSettled(
+        ids.map((userId) => {
+          const locale = localeMap.get(userId) ?? 'ar';
+          const fcmData: Record<string, string> = {
+            broadcastId,
+            templateCode: 'admin_broadcast',
+          };
+          const notifId = notifIdByUser.get(userId);
+          if (notifId)       fcmData['notificationId'] = notifId;
+          if (dto.entityType) fcmData['entityType']    = dto.entityType;
+          if (dto.entityId)   fcmData['entityId']      = dto.entityId;
+          return this.push.sendToUser(userId, {
+            title: locale === 'en' ? dto.title_en : dto.title_ar,
+            body:  locale === 'en' ? dto.body_en  : dto.body_ar,
+            data:  fcmData,
+          });
+        }),
+      );
+    };
 
-    let pushSent = 0;
-    let pushFailed = 0;
-    let noDeviceTokens = 0;
-
-    for (const r of pushResults) {
-      if (r.status === 'fulfilled') {
-        const res = r.value;
-        if (!res.enabled) {
-          // Defensive: guard above should have prevented this.
-          pushFailed++;
-        } else if (res.sent === 0 && res.failed === 0) {
-          // User has no registered device tokens.
-          noDeviceTokens++;
+    const tallyCounts = (
+      results: PromiseSettledResult<Awaited<ReturnType<PushService['sendToUser']>>>[],
+      label: string,
+    ) => {
+      let pushSent = 0, pushFailed = 0, noDeviceTokens = 0;
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          const res = r.value;
+          if (!res.enabled)                        pushFailed++;
+          else if (res.sent === 0 && res.failed === 0) noDeviceTokens++;
+          else { pushSent += res.sent; pushFailed += res.failed; }
         } else {
-          pushSent  += res.sent;
-          pushFailed += res.failed;
+          pushFailed++;
+          this.logger.warn(`Broadcast ${broadcastId} ${label} PUSH: ${(r.reason as Error).message}`);
         }
+      }
+      return { pushSent, pushFailed, noDeviceTokens };
+    };
+
+    // ── PUSH path ─────────────────────────────────────────────────────────────
+    // Firebase confirmed enabled. No Notification DB rows — delivery only.
+    if (dto.channel === BroadcastChannel.PUSH) {
+      const rawResults = await buildPushResults(userIds, new Map());
+      const { pushSent, pushFailed, noDeviceTokens } = tallyCounts(rawResults, 'PUSH');
+
+      this.logger.log(
+        `Broadcast ${broadcastId} by ${adminId}: PUSH target=${dto.target} ` +
+        `recipients=${userIds.length} pushSent=${pushSent} pushFailed=${pushFailed} noDeviceTokens=${noDeviceTokens}`,
+      );
+
+      const failureHint =
+        noDeviceTokens === userIds.length ? 'no_device_tokens' :
+        pushFailed > 0                    ? 'push_failed'       : undefined;
+
+      return {
+        broadcastId,
+        channel: BroadcastChannel.PUSH,
+        recipientCount: userIds.length,
+        pushSent,
+        pushFailed,
+        noDeviceTokens,
+        ...(failureHint ? { failureHint } : {}),
+      };
+    }
+
+    // ── IN_APP_AND_PUSH path ──────────────────────────────────────────────────
+    // Phase 1: create one Notification DB row per recipient (channel=IN_APP).
+    const tpl2 = await this.prisma.notificationTemplate.findUnique({
+      where: { code: 'admin_broadcast' },
+    });
+    if (!tpl2) {
+      throw new BadRequestException(
+        'Template admin_broadcast not found — restart the API to auto-create it.',
+      );
+    }
+
+    const dbResults2 = await Promise.allSettled(
+      userIds.map((userId) =>
+        this.prisma.notification.create({
+          data: {
+            userId,
+            templateCode: 'admin_broadcast',
+            payload: auditPayload as Prisma.InputJsonValue,
+            channel: NotificationChannel.IN_APP,
+            sentAt: new Date(),
+          },
+        }),
+      ),
+    );
+
+    let notificationRecordsCreated2 = 0;
+    let dbFailed = 0;
+    const notifIdByUser = new Map<string, string>();
+
+    for (const [i, r] of dbResults2.entries()) {
+      if (r.status === 'fulfilled') {
+        notificationRecordsCreated2++;
+        notifIdByUser.set(userIds[i]!, r.value.id);
       } else {
-        pushFailed++;
-        this.logger.warn(`Broadcast ${broadcastId} PUSH failed: ${(r.reason as Error).message}`);
+        dbFailed++;
+        this.logger.warn(
+          `Broadcast ${broadcastId} IN_APP+PUSH DB[${i}]: ${(r.reason as Error).message}`,
+        );
       }
     }
 
+    // Phase 2: send FCM (best-effort, including notificationId for deep-link).
+    const rawResults2 = await buildPushResults(userIds, notifIdByUser);
+    const { pushSent: ps2, pushFailed: pf2, noDeviceTokens: nd2 } =
+      tallyCounts(rawResults2, 'IN_APP+PUSH');
+
     this.logger.log(
-      `Broadcast ${broadcastId} by ${adminId}: PUSH target=${dto.target} ` +
-      `recipients=${userIds.length} pushSent=${pushSent} pushFailed=${pushFailed} noDeviceTokens=${noDeviceTokens}`,
+      `Broadcast ${broadcastId} by ${adminId}: IN_APP+PUSH target=${dto.target} ` +
+      `recipients=${userIds.length} dbCreated=${notificationRecordsCreated2} dbFailed=${dbFailed} ` +
+      `pushSent=${ps2} pushFailed=${pf2} noDeviceTokens=${nd2}`,
     );
 
-    const failureHint =
-      noDeviceTokens === userIds.length ? 'no_device_tokens' :
-      pushFailed > 0                    ? 'push_failed'       :
-      undefined;
+    const failureHint2 =
+      nd2 === userIds.length && ps2 === 0 ? 'no_device_tokens' :
+      pf2 > 0 || dbFailed > 0            ? 'push_failed'       : undefined;
 
     return {
       broadcastId,
-      channel: NotificationChannel.PUSH,
+      channel: BroadcastChannel.IN_APP_AND_PUSH,
       recipientCount: userIds.length,
-      pushSent,
-      pushFailed,
-      noDeviceTokens,
-      ...(failureHint ? { failureHint } : {}),
+      notificationRecordsCreated: notificationRecordsCreated2,
+      failed: dbFailed,
+      pushSent: ps2,
+      pushFailed: pf2,
+      noDeviceTokens: nd2,
+      ...(failureHint2 ? { failureHint: failureHint2 } : {}),
     };
   }
 
@@ -571,7 +667,9 @@ export class NotificationsService implements OnModuleInit {
     const userIds = await this.resolveRecipients(dto.target, dto.targetUserId, dto.targetRole);
     const base = { recipientCount: userIds.length, pushEnabled: this.push.pushEnabled };
 
-    if (dto.channel !== NotificationChannel.PUSH || userIds.length === 0) {
+    const needsDeviceInfo = dto.channel === BroadcastChannel.PUSH ||
+                            dto.channel === BroadcastChannel.IN_APP_AND_PUSH;
+    if (!needsDeviceInfo || userIds.length === 0) {
       return base;
     }
 

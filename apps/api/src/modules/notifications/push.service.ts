@@ -57,6 +57,10 @@ export class PushService {
       tokens,
       notification: { title: payload.title, body: payload.body },
       data: payload.data,
+      // Ensure foreground (flutter_local_notifications) and background
+      // (system tray) notifications use the same Android channel so
+      // importance / sound settings are consistent.
+      android: { notification: { channelId: 'devora_push' } },
     });
 
     // Collect tokens the FCM backend says are dead, and prune them.

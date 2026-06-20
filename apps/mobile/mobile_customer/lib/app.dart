@@ -60,7 +60,7 @@ import 'features/profile/domain/repositories/profile_repository.dart';
 import 'features/visits/data/datasources/visits_remote_data_source.dart';
 import 'features/visits/data/repositories/visits_repository_impl.dart';
 import 'features/visits/domain/repositories/visits_repository.dart';
-import 'bootstrap.dart' show pendingPushRoute;
+import 'bootstrap.dart' show customerNavigatorKey, pendingPushRoute;
 import 'features/notifications/presentation/fcm_route_resolver.dart';
 import 'router/app_router.dart';
 
@@ -190,12 +190,19 @@ class _CustomerRoot extends StatefulWidget {
 }
 
 class _CustomerRootState extends State<_CustomerRoot> {
-  late final router = createCustomerRouter(context.read<SessionCubit>());
+  late final router = createCustomerRouter(
+    context.read<SessionCubit>(),
+    navigatorKey: customerNavigatorKey,
+  );
 
   // FCM stream subscriptions. Null when Firebase is not configured.
   StreamSubscription<RemoteMessage>? _fcmOpenSub;
   StreamSubscription<RemoteMessage>? _fcmFgSub;
   StreamSubscription<String>? _tokenSub;
+
+  // Last notificationId shown as a banner — prevents duplicate overlays when
+  // the same FCM message is delivered more than once.
+  String? _lastBannerId;
 
   @override
   void initState() {
@@ -231,9 +238,30 @@ class _CustomerRootState extends State<_CustomerRoot> {
         if (route != null) router.push(route);
       });
 
-      // App in foreground → refresh the unread badge; no local overlay.
-      _fcmFgSub = FirebaseMessaging.onMessage.listen((_) {
-        if (mounted) context.read<UnreadCountCubit>().load();
+      // App in foreground → branded in-app banner + refresh unread badge.
+      _fcmFgSub = FirebaseMessaging.onMessage.listen((msg) {
+        debugPrint('[FCM] foreground message received');
+        if (!mounted) return;
+        context.read<UnreadCountCubit>().load();
+
+        final n    = msg.notification;
+        final title = n?.title  ?? msg.data['title']  as String? ?? '';
+        final body  = n?.body   ?? msg.data['body']   as String? ?? '';
+        if (title.isEmpty && body.isEmpty) return;
+
+        // Guard duplicate banners for the same DB notification row.
+        final notifId = msg.data['notificationId'] as String?;
+        if (notifId != null && notifId == _lastBannerId) return;
+        _lastBannerId = notifId;
+
+        final route = resolveFcmRoute(msg);
+        showAppNotificationBanner(
+          context,
+          overlay: customerNavigatorKey.currentState?.overlay,
+          title: title,
+          body: body,
+          onTap: route != null ? () { if (mounted) router.push(route); } : null,
+        );
       });
 
       // FCM token refreshed by platform → re-register with the backend.

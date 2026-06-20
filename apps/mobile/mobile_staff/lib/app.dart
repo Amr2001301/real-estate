@@ -48,7 +48,7 @@ import 'features/installments/domain/repositories/installments_repository.dart';
 import 'features/leads/data/datasources/leads_remote_data_source.dart';
 import 'features/leads/data/repositories/leads_repository_impl.dart';
 import 'features/leads/domain/repositories/leads_repository.dart';
-import 'bootstrap.dart' show pendingPushRoute;
+import 'bootstrap.dart' show staffNavigatorKey, pendingPushRoute;
 import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
 import 'features/notifications/data/firebase_push_token_provider.dart';
 import 'features/notifications/data/repositories/notifications_repository_impl.dart';
@@ -210,11 +210,16 @@ class _StaffRoot extends StatefulWidget {
 }
 
 class _StaffRootState extends State<_StaffRoot> {
-  late final router = createStaffRouter(context.read<SessionCubit>());
+  late final router = createStaffRouter(
+    context.read<SessionCubit>(),
+    navigatorKey: staffNavigatorKey,
+  );
 
   StreamSubscription<RemoteMessage>? _fcmOpenSub;
   StreamSubscription<RemoteMessage>? _fcmFgSub;
   StreamSubscription<String>? _tokenSub;
+
+  String? _lastBannerId;
 
   @override
   void initState() {
@@ -246,8 +251,29 @@ class _StaffRootState extends State<_StaffRoot> {
         final route = resolveStaffFcmRoute(msg);
         if (route != null) router.push(route);
       });
-      _fcmFgSub = FirebaseMessaging.onMessage.listen((_) {
-        if (mounted) context.read<UnreadCountCubit>().load();
+      // App in foreground → branded in-app banner + refresh unread badge.
+      _fcmFgSub = FirebaseMessaging.onMessage.listen((msg) {
+        debugPrint('[FCM] foreground message received');
+        if (!mounted) return;
+        context.read<UnreadCountCubit>().load();
+
+        final n     = msg.notification;
+        final title = n?.title ?? msg.data['title'] as String? ?? '';
+        final body  = n?.body  ?? msg.data['body']  as String? ?? '';
+        if (title.isEmpty && body.isEmpty) return;
+
+        final notifId = msg.data['notificationId'] as String?;
+        if (notifId != null && notifId == _lastBannerId) return;
+        _lastBannerId = notifId;
+
+        final route = resolveStaffFcmRoute(msg);
+        showAppNotificationBanner(
+          context,
+          overlay: staffNavigatorKey.currentState?.overlay,
+          title: title,
+          body: body,
+          onTap: route != null ? () { if (mounted) router.push(route); } : null,
+        );
       });
       _tokenSub = FirebaseMessaging.instance.onTokenRefresh.listen((_) {
         if (mounted) context.read<PushRegistrationService>().registerIfPossible();

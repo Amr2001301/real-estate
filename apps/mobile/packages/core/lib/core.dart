@@ -101,5 +101,8 @@ export 'src/widgets/state_view.dart';
 export 'src/widgets/status_badge.dart';
 export 'src/widgets/summary_tile.dart';
 
+// Foreground in-app notification banner (shared between customer + staff)
+export 'src/notifications/notification_banner.dart';
+
 // Gallery (dev/visual verification)
 export 'src/gallery/component_gallery_screen.dart';

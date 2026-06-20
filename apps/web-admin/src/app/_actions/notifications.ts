@@ -51,7 +51,7 @@ export interface BroadcastState {
   error?: string;
   ok?: boolean;
   broadcastId?: string;
-  channel?: 'IN_APP' | 'PUSH';
+  channel?: 'IN_APP' | 'PUSH' | 'IN_APP_AND_PUSH';
   recipientCount?: number;
   // IN_APP counters
   notificationRecordsCreated?: number;

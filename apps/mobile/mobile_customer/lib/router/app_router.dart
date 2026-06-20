@@ -107,8 +107,12 @@ const _authRoutes = {'/login', '/register', '/login/otp'};
 /// requires an authenticated **customer-side** role. Screens get their
 /// cubit/bloc from route-scoped providers built from use cases; the app-wide
 /// AuthCubit/FavoritesCubit come from CustomerApp.
-GoRouter createCustomerRouter(SessionCubit sessionCubit) {
+GoRouter createCustomerRouter(
+  SessionCubit sessionCubit, {
+  GlobalKey<NavigatorState>? navigatorKey,
+}) {
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: '/splash',
     refreshListenable: Listenable.merge([
       _CubitRefresh(sessionCubit.stream),

@@ -52,6 +52,9 @@ class _FakeRemote implements NotificationsRemoteDataSource {
     markAllCalls++;
     if (markAllError != null) throw markAllError!;
   }
+
+  @override
+  Future<void> registerDevice(String token, String platform) async {}
 }
 
 class _FakeRepo implements NotificationsRepository {
@@ -85,6 +88,10 @@ class _FakeRepo implements NotificationsRepository {
     markAllCalls++;
     return markAllResult ?? const Ok(null);
   }
+
+  @override
+  Future<Result<void>> registerDevice(String token, String platform) async =>
+      const Ok(null);
 }
 
 DioException _dio(int status) => DioException(
