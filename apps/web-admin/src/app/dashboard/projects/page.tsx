@@ -15,19 +15,22 @@ import { tx, formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconButton } from '@/components/ui/icon-button';
-import { Card } from '@/components/ui/card';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
-import { EmptyState } from '@/components/ui/empty-state';
 import { ProjectStatusBadge } from '@/components/badges';
 import { ProjectThumbnail } from '@/components/projects/project-thumbnail';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-interface Search {
+interface Filters {
   page?: string;
   status?: string;
   city?: string;
@@ -39,7 +42,7 @@ const PAGE_SIZE = 12;
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: Promise<Search>;
+  searchParams: Promise<Filters>;
 }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
@@ -85,8 +88,10 @@ export default async function ProjectsPage({
   const featuredCount = allProjects.filter((p) => p.featured).length;
 
   return (
-    <div className="space-y-5">
-      <PageHeader
+    <div className="flex flex-col gap-5 lg:gap-6">
+
+      {/* ── Premium hero ── */}
+      <PremiumPageHero
         title="قائمة المشاريع"
         description="إدارة ومراقبة أداء المحفظة العقارية الحالية."
         breadcrumbs={[
@@ -104,88 +109,89 @@ export default async function ProjectsPage({
         }
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <PageKpiCard
-          label="إجمالي المشاريع"
-          value={total}
-          icon={<Building2 />}
-          tone="brand"
-        />
-        <PageKpiCard
-          label="مشاريع منشورة"
-          value={published}
-          icon={<CheckCircle2 />}
-          tone="success"
-        />
-        <PageKpiCard
-          label="مسودات"
-          value={drafts}
-          icon={<Pencil />}
-          tone="warning"
-        />
-        <PageKpiCard
-          label="مشاريع مميزة"
-          value={featuredCount}
-          icon={<Star />}
-          tone="accent"
-        />
-      </div>
+      {/* ── KPI strip ── */}
+      <PremiumMetricStrip
+        cols={4}
+        metrics={[
+          { label: 'إجمالي المشاريع',  value: total,         icon: <Building2 />,   tone: 'brand',   primary: true },
+          { label: 'مشاريع منشورة',    value: published,     icon: <CheckCircle2 />, tone: 'success' },
+          { label: 'مسودات',            value: drafts,        icon: <Pencil />,       tone: 'warning' },
+          { label: 'مشاريع مميزة',    value: featuredCount, icon: <Star />,         tone: 'purple'  },
+        ]}
+      />
 
+      {/* ── Error banner ── */}
       {pagedRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           تعذر تحميل المشاريع: {pagedRes.error}
         </div>
       )}
 
-      <form method="get" action="/dashboard/projects" className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
-        <Input
-          name="q"
-          type="search"
-          placeholder="بحث باسم المشروع..."
-          defaultValue={sp.q ?? ''}
-          className="flex-1 min-w-40 h-8 text-sm"
-        />
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
-          <option value="">كل الحالات</option>
-          <option value="DRAFT">مسودة</option>
-          <option value="PUBLISHED">منشور</option>
-          <option value="ARCHIVED">مؤرشف</option>
-        </Select>
-        <Select name="city" inputSize="sm" defaultValue={sp.city ?? ''} className="w-36 shrink-0">
-          <option value="">كل المدن</option>
-          {cities.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.status || sp.city || sp.q) && (
-            <Link href="/dashboard/projects">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+      {/* ── Filter bar ── */}
+      <PremiumFilterBar
+        method="get"
+        action="/dashboard/projects"
+        trailing={
+          <div className="flex items-center gap-1.5">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {(sp.status || sp.city || sp.q) && (
+              <Link href={'/dashboard/projects' as never}>
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+        }
+      >
+        <PremiumFilterField label="بحث" htmlFor="q">
+          <Input
+            id="q"
+            name="q"
+            type="search"
+            placeholder="بحث باسم المشروع..."
+            defaultValue={sp.q ?? ''}
+            className="flex-1 min-w-40 h-8 text-sm"
+          />
+        </PremiumFilterField>
 
-      <Card className="overflow-hidden">
+        <PremiumFilterField label="الحالة" htmlFor="status">
+          <Select id="status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
+            <option value="">كل الحالات</option>
+            <option value="DRAFT">مسودة</option>
+            <option value="PUBLISHED">منشور</option>
+            <option value="ARCHIVED">مؤرشف</option>
+          </Select>
+        </PremiumFilterField>
+
+        <PremiumFilterField label="المدينة" htmlFor="city">
+          <Select id="city" name="city" inputSize="sm" defaultValue={sp.city ?? ''} className="w-36 shrink-0">
+            <option value="">كل المدن</option>
+            {cities.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
+
+      {/* ── Projects table ── */}
+      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
         <div className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
+            <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
               <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">المشروع</th>
-                <th className="text-start font-semibold py-3 px-4">الموقع</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">المراحل</th>
-                <th className="text-start font-semibold py-3 px-4">النوع</th>
-                <th className="text-start font-semibold py-3 px-4">آخر تحديث</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
+                <th className="text-start py-3.5 ps-5 pe-4">المشروع</th>
+                <th className="text-start py-3.5 px-4">الموقع</th>
+                <th className="text-start py-3.5 px-4">الحالة</th>
+                <th className="text-start py-3.5 px-4">المراحل</th>
+                <th className="text-start py-3.5 px-4">النوع</th>
+                <th className="text-start py-3.5 px-4">آخر تحديث</th>
+                <th className="text-start py-3.5 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-hairline">
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={7} className="p-0">
-                    <EmptyState
+                    <PremiumEmptyState
                       icon={<Building2 />}
                       title="لا توجد مشاريع بعد"
                       description="ابدأ بإضافة أول مشروع لمحفظتك العقارية."
@@ -210,48 +216,53 @@ export default async function ProjectsPage({
                 const cover = p.media?.[0]?.url;
                 const phaseCount = p.phases?.length ?? 0;
                 return (
-                  <tr key={p.id} className="border-t border-hairline hover:bg-surface-muted/40 transition-colors">
-                    <td className="py-3 ps-5 pe-4">
+                  <tr
+                    key={p.id}
+                    className="hover:bg-canvas/40 transition-colors duration-100"
+                  >
+                    <td className="py-3.5 ps-5 pe-4">
                       <div className="flex items-center gap-3">
                         <ProjectThumbnail src={cover} alt={tx(p.name)} size="md" />
                         <div className="min-w-0">
                           <Link
                             href={`/dashboard/projects/${p.id}` as never}
-                            className="font-semibold text-slate-900 hover:text-brand-700 transition-colors"
+                            className="font-semibold text-navy hover:text-brand-700 transition-colors"
                           >
                             {tx(p.name)}
                           </Link>
-                          <p className="text-2xs text-slate-400 mt-0.5 font-mono">
-                            ID: PJ-{p.id.slice(0, 8).toUpperCase()}
+                          <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
+                            PJ-{p.id.slice(0, 8).toUpperCase()}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-600">
+                    <td className="py-3.5 px-4 text-slate-600">
                       <span className="inline-flex items-center gap-1.5">
-                        <MapPinned className="h-3.5 w-3.5 text-slate-400" />
+                        <MapPinned className="h-3.5 w-3.5 text-slate-400 shrink-0" />
                         {p.city || '—'}
                       </span>
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       <ProjectStatusBadge status={p.status} />
                     </td>
-                    <td className="py-3 px-4 text-slate-700 tabular-nums">
+                    <td className="py-3.5 px-4 text-slate-700 tabular-nums">
                       {phaseCount > 0 ? `${phaseCount} مرحلة` : '—'}
                     </td>
-                    <td className="py-3 px-4">
+                    <td className="py-3.5 px-4">
                       {p.featured ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
                           <Star className="h-3 w-3 fill-current" /> مميز
                         </span>
                       ) : (
-                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-500">قياسي</span>
+                        <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-500">
+                          قياسي
+                        </span>
                       )}
                     </td>
-                    <td className="py-3 px-4 text-slate-500 text-xs">
+                    <td className="py-3.5 px-4 text-slate-500 text-xs">
                       {formatDate(p.updatedAt)}
                     </td>
-                    <td className="py-3 ps-4 pe-5">
+                    <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/projects/${p.id}` as never}>
                         <IconButton label="عرض تفاصيل المشروع" variant="outline" size="sm">
                           <Eye />
@@ -264,16 +275,19 @@ export default async function ProjectsPage({
             </tbody>
           </table>
         </div>
+
         {paged && paged.meta.total > PAGE_SIZE && (
-          <Pagination
-            page={paged.meta.page}
-            pageSize={paged.meta.pageSize}
-            total={paged.meta.total}
-            basePath="/dashboard/projects"
-            params={{ status: sp.status, city: sp.city, q: sp.q }}
-          />
+          <div className="border-t border-hairline bg-canvas/20">
+            <Pagination
+              page={paged.meta.page}
+              pageSize={paged.meta.pageSize}
+              total={paged.meta.total}
+              basePath="/dashboard/projects"
+              params={{ status: sp.status, city: sp.city, q: sp.q }}
+            />
+          </div>
         )}
-      </Card>
+      </div>
     </div>
   );
 }
