@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:core/core.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -45,7 +48,7 @@ import 'features/favorites/domain/usecases/get_favorites.dart';
 import 'features/favorites/domain/usecases/remove_favorite.dart';
 import 'features/favorites/presentation/favorites_cubit.dart';
 import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
-import 'features/notifications/data/noop_push_token_provider.dart';
+import 'features/notifications/data/firebase_push_token_provider.dart';
 import 'features/notifications/data/repositories/notifications_repository_impl.dart';
 import 'features/notifications/domain/repositories/notifications_repository.dart';
 import 'features/notifications/domain/usecases/notification_use_cases.dart';
@@ -57,6 +60,8 @@ import 'features/profile/domain/repositories/profile_repository.dart';
 import 'features/visits/data/datasources/visits_remote_data_source.dart';
 import 'features/visits/data/repositories/visits_repository_impl.dart';
 import 'features/visits/domain/repositories/visits_repository.dart';
+import 'bootstrap.dart' show pendingPushRoute;
+import 'features/notifications/presentation/fcm_route_resolver.dart';
 import 'router/app_router.dart';
 
 /// Root of the Customer App. Provides feature repositories (data→domain
@@ -134,7 +139,7 @@ class CustomerApp extends StatelessWidget {
         ),
         RepositoryProvider<PushRegistrationService>(
           create: (ctx) => PushRegistrationService(
-            const NoopPushTokenProvider(),
+            const FirebasePushTokenProvider(),
             RegisterDevice(ctx.read<NotificationsRepository>()),
           ),
         ),
@@ -187,10 +192,56 @@ class _CustomerRoot extends StatefulWidget {
 class _CustomerRootState extends State<_CustomerRoot> {
   late final router = createCustomerRouter(context.read<SessionCubit>());
 
+  // FCM stream subscriptions. Null when Firebase is not configured.
+  StreamSubscription<RemoteMessage>? _fcmOpenSub;
+  StreamSubscription<RemoteMessage>? _fcmFgSub;
+  StreamSubscription<String>? _tokenSub;
+
   @override
   void initState() {
     super.initState();
     _wireRefresher();
+    _wireFcm();
+  }
+
+  @override
+  void dispose() {
+    _fcmOpenSub?.cancel();
+    _fcmFgSub?.cancel();
+    _tokenSub?.cancel();
+    super.dispose();
+  }
+
+  /// Wires FCM message streams. Guarded: if Firebase was not initialised (no
+  /// credentials) these streams are not available and the app continues normally.
+  void _wireFcm() {
+    try {
+      // App in background → user taps push notification.
+      _fcmOpenSub = FirebaseMessaging.onMessageOpenedApp.listen((msg) {
+        final route = resolveFcmRoute(msg);
+        if (route != null) router.push(route);
+      });
+
+      // App in foreground → refresh the unread badge; no local overlay.
+      _fcmFgSub = FirebaseMessaging.onMessage.listen((_) {
+        if (mounted) context.read<UnreadCountCubit>().load();
+      });
+
+      // FCM token refreshed by platform → re-register with the backend.
+      _tokenSub = FirebaseMessaging.instance.onTokenRefresh.listen((_) {
+        if (mounted) context.read<PushRegistrationService>().registerIfPossible();
+      });
+
+      // App opened from terminated state via push tap.
+      if (pendingPushRoute != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          router.push(pendingPushRoute!);
+          pendingPushRoute = null;
+        });
+      }
+    } catch (_) {
+      // Firebase not initialised — push is disabled; IN_APP continues normally.
+    }
   }
 
   /// Wires the 401→refresh handler now that the auth repository exists. On
