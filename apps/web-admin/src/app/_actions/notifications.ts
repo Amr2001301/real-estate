@@ -42,6 +42,8 @@ export interface BroadcastState {
   recipientCount?: number;
   sent?: number;
   failed?: number;
+  /** Safe failure category returned by the backend for UI display. */
+  failureHint?: 'template_missing' | 'push_not_configured' | 'database_error';
 }
 
 export async function broadcastNotificationAction(
@@ -95,6 +97,7 @@ export async function broadcastNotificationAction(
       recipientCount: number;
       sent: number;
       failed: number;
+      failureHint?: string;
     }>('/notifications/broadcast', payload);
     revalidatePath('/dashboard/notifications');
     return {
@@ -103,6 +106,7 @@ export async function broadcastNotificationAction(
       recipientCount: result.recipientCount,
       sent: result.sent,
       failed: result.failed,
+      failureHint: result.failureHint as BroadcastState['failureHint'],
     };
   } catch (e) {
     return { error: (e as Error).message };

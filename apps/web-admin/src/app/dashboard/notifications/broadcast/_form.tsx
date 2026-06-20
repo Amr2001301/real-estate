@@ -114,19 +114,44 @@ export default function BroadcastForm() {
 
       {/* Success result */}
       {state.ok && (
-        <div className="flex flex-col gap-2 rounded-2xl bg-success-50 border border-success-100 text-success-700 p-4 text-sm">
+        <div className={`flex flex-col gap-2 rounded-2xl p-4 text-sm border ${
+          (state.failed ?? 0) > 0 && state.sent === 0
+            ? 'bg-danger-50 border-danger-100 text-danger-700'
+            : (state.failed ?? 0) > 0
+              ? 'bg-warning-50 border-warning-200 text-warning-800'
+              : 'bg-success-50 border-success-100 text-success-700'
+        }`}>
           <div className="flex items-center gap-2 font-semibold">
-            <CheckCircle2 className="h-5 w-5 shrink-0" />
-            تم الإرسال بنجاح
+            {(state.failed ?? 0) > 0 && state.sent === 0
+              ? <AlertCircle className="h-5 w-5 shrink-0" />
+              : <CheckCircle2 className="h-5 w-5 shrink-0" />}
+            {(state.failed ?? 0) > 0 && state.sent === 0
+              ? 'فشل الإرسال لجميع المستقبلين'
+              : (state.failed ?? 0) > 0
+                ? 'تم الإرسال جزئيًا'
+                : 'تم الإرسال بنجاح'}
           </div>
-          <ul className="ps-7 list-disc space-y-0.5 text-success-600">
+          <ul className="ps-7 list-disc space-y-0.5">
             <li>المستقبلون المستهدفون: <span className="font-bold tabular-nums">{state.recipientCount}</span></li>
             <li>تم الإنشاء: <span className="font-bold tabular-nums">{state.sent}</span></li>
             {(state.failed ?? 0) > 0 && (
-              <li>فشل: <span className="font-bold tabular-nums text-warning-700">{state.failed}</span></li>
+              <li>فشل: <span className="font-bold tabular-nums">{state.failed}</span></li>
             )}
-            <li className="text-2xs text-success-500 font-mono" dir="ltr">ID: {state.broadcastId}</li>
+            <li className="text-2xs font-mono opacity-60" dir="ltr">ID: {state.broadcastId}</li>
           </ul>
+          {state.failureHint && (
+            <p className="mt-1 text-xs leading-relaxed ps-7">
+              {state.failureHint === 'template_missing' && (
+                <>سبب محتمل: قالب <code className="font-mono">admin_broadcast</code> غير موجود في قاعدة البيانات — أعد تشغيل الخادم لإنشائه تلقائيًا.</>
+              )}
+              {state.failureHint === 'push_not_configured' && (
+                <>سبب محتمل: Firebase غير مهيّأ أو لم يُعاد تشغيل الخادم بعد إضافة المتغيرات.</>
+              )}
+              {state.failureHint === 'database_error' && (
+                <>سبب محتمل: خطأ في قاعدة البيانات — راجع سجلات الخادم للتفاصيل.</>
+              )}
+            </p>
+          )}
         </div>
       )}
 
@@ -269,6 +294,22 @@ export default function BroadcastForm() {
               </span>
             )}
           </div>
+
+          {/* Task D: clarify that estimate is a dry-run, not a send */}
+          <p className="text-xs text-slate-400 leading-relaxed">
+            هذا الزر يحسب فقط عدد المستخدمين الذين سيستقبلون الإشعار — لن يُرسَل أي شيء حتى تضغط «إرسال».
+          </p>
+
+          {/* Dynamic PUSH warning — shown only when estimate says pushEnabled=false */}
+          {estimate != null && estimate.pushEnabled === false && channel === 'PUSH' && (
+            <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-200 text-danger-700 px-3 py-2.5 text-xs">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>
+                <strong>Firebase غير مفعّل على هذا الخادم.</strong> سيفشل الإرسال عبر PUSH.
+                تحقق من متغيرات البيئة (<code className="font-mono">FIREBASE_PROJECT_ID</code>، <code className="font-mono">FIREBASE_CLIENT_EMAIL</code>، <code className="font-mono">FIREBASE_PRIVATE_KEY</code>) ثم أعد تشغيل الخادم.
+              </p>
+            </div>
+          )}
 
           {/* Confirmation checkbox — only for mass targets, only after estimate */}
           {isMass && estimate != null && !estimate.error && (

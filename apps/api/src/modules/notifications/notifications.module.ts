@@ -8,6 +8,7 @@ import {
   Injectable,
   Logger,
   Module,
+  OnModuleInit,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -18,6 +19,7 @@ import { ApiTags } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEnum,
+  IsNotEmpty,
   IsObject,
   IsOptional,
   IsString,
@@ -67,10 +69,10 @@ export enum BroadcastTarget {
 }
 
 class BroadcastNotificationDto {
-  @IsString() @MaxLength(200) title_ar!: string;
-  @IsString() @MaxLength(200) title_en!: string;
-  @IsString() @MaxLength(500) body_ar!: string;
-  @IsString() @MaxLength(500) body_en!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) title_ar!: string;
+  @IsString() @IsNotEmpty() @MaxLength(200) title_en!: string;
+  @IsString() @IsNotEmpty() @MaxLength(500) body_ar!: string;
+  @IsString() @IsNotEmpty() @MaxLength(500) body_en!: string;
   @IsEnum(BroadcastTarget) target!: BroadcastTarget;
   @IsOptional() @IsUUID() targetUserId?: string;
   @IsOptional() @IsEnum(UserRole) targetRole?: UserRole;
@@ -117,13 +119,39 @@ function resolveText(
 }
 
 @Injectable()
-export class NotificationsService {
+export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly push: PushService,
   ) {}
+
+  /**
+   * Ensures the `admin_broadcast` passthrough template always exists in the
+   * database, independent of whether the seed script has been run.
+   * The template body is intentionally `{{var}}` — content is interpolated at
+   * send-time from the broadcast payload.
+   */
+  async onModuleInit() {
+    try {
+      await this.prisma.notificationTemplate.upsert({
+        where: { code: 'admin_broadcast' },
+        create: {
+          code: 'admin_broadcast',
+          channel: NotificationChannel.IN_APP,
+          subject: { ar: '{{title_ar}}', en: '{{title_en}}' } as Prisma.InputJsonValue,
+          body:    { ar: '{{body_ar}}',  en: '{{body_en}}'  } as Prisma.InputJsonValue,
+        },
+        update: {},
+      });
+      this.logger.log('admin_broadcast template verified');
+    } catch (err) {
+      // Non-fatal: log and continue — send() will fail with a clear message if
+      // the template is still missing (e.g. DB not yet migrated).
+      this.logger.error(`admin_broadcast template upsert failed: ${(err as Error).message}`);
+    }
+  }
 
   upsertTemplate(dto: UpsertTemplateDto) {
     return this.prisma.notificationTemplate.upsert({
@@ -359,7 +387,7 @@ export class NotificationsService {
   async broadcastNotification(
     adminId: string,
     dto: BroadcastNotificationDto,
-  ): Promise<{ broadcastId: string; recipientCount: number; sent: number; failed: number }> {
+  ): Promise<{ broadcastId: string; recipientCount: number; sent: number; failed: number; failureHint?: string }> {
     // Reject PUSH explicitly when Firebase is not configured — silent no-op
     // would mislead the admin into thinking the push was delivered.
     if (dto.channel === NotificationChannel.PUSH && !this.push.pushEnabled) {
@@ -397,14 +425,39 @@ export class NotificationsService {
     );
 
     const sent = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
+    const rejections = results.filter(
+      (r): r is PromiseRejectedResult => r.status === 'rejected',
+    );
+    const failed = rejections.length;
+
+    // Log each failure reason server-side without exposing PII.
+    if (failed > 0) {
+      rejections.forEach((r, i) => {
+        this.logger.warn(
+          `Broadcast ${broadcastId} recipient[${i}] failed: ${(r.reason as Error).message ?? r.reason}`,
+        );
+      });
+    }
 
     this.logger.log(
       `Broadcast ${broadcastId} by admin ${adminId}: ` +
       `target=${dto.target} recipients=${userIds.length} sent=${sent} failed=${failed}`,
     );
 
-    return { broadcastId, recipientCount: userIds.length, sent, failed };
+    // Classify the dominant failure type for UI display — no sensitive data.
+    let failureHint: string | undefined;
+    if (failed > 0) {
+      const msgs = rejections.map((r) => String((r.reason as Error).message ?? '').toLowerCase());
+      if (msgs.some((m) => m.includes('not found'))) {
+        failureHint = 'template_missing';
+      } else if (msgs.some((m) => m.includes('firebase') || m.includes('fcm') || m.includes('push'))) {
+        failureHint = 'push_not_configured';
+      } else {
+        failureHint = 'database_error';
+      }
+    }
+
+    return { broadcastId, recipientCount: userIds.length, sent, failed, failureHint };
   }
 
   /**
