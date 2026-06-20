@@ -14,8 +14,6 @@ interface Props {
 
 async function getUnreadCount(): Promise<number> {
   try {
-    // Dedicated count endpoint → { count }. (The list endpoint is paginated, so
-    // counting its rows was wrong/always-0.)
     const res = await api.get<{ count: number }>('/me/notifications/unread-count');
     return Number(res.count) || 0;
   } catch {
@@ -26,35 +24,42 @@ async function getUnreadCount(): Promise<number> {
 export async function Topbar({ user, notificationsHref, leading }: Props) {
   const unread = await getUnreadCount();
   return (
-    <header className="shrink-0 z-30 h-[72px] bg-canvas/95 backdrop-blur-md border-b border-hairline shadow-soft">
-      <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center gap-3">
+    <header className="shrink-0 z-30 h-[72px] bg-canvas/96 backdrop-blur-xl border-b border-slate-200/60 shadow-[0_1px_0_0_rgb(15_30_51/_0.05),0_2px_20px_-6px_rgb(15_30_51/_0.07)]">
+      <div className="h-full px-5 sm:px-7 lg:px-8 flex items-center gap-4">
         {leading && <div className="lg:hidden shrink-0">{leading}</div>}
 
-        <div className="hidden md:flex items-center flex-1 max-w-xl mx-auto">
-          <div className="relative w-full">
+        {/* Search — pill, luxury command feel */}
+        <div className="hidden md:flex items-center flex-1 max-w-[500px] mx-auto">
+          <div className="relative w-full group">
             <Search
               aria-hidden
-              className="pointer-events-none absolute inset-y-0 start-3.5 my-auto h-4 w-4 text-slate-400"
+              className="pointer-events-none absolute inset-y-0 start-4 my-auto h-[15px] w-[15px] text-slate-300 group-focus-within:text-brand-400/70 transition-colors duration-200"
             />
             <input
               type="search"
               placeholder="بحث عن وحدات، عملاء، مشاريع…"
               aria-label="بحث"
-              className="h-10 w-full ps-10 pe-3 rounded-xl border border-hairline/80 bg-white/90 text-sm placeholder:text-slate-400 text-slate-900 focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15 transition-colors shadow-xs"
+              className="h-[42px] w-full ps-10 pe-5 rounded-full border border-slate-200/70 bg-white/55 text-[13.5px] placeholder:text-slate-300 text-slate-700 focus:outline-none focus:border-brand-400/40 focus:bg-white/90 focus:shadow-[0_0_0_3px_rgb(200_162_75/_0.07)] transition-all duration-200 shadow-[inset_0_1px_3px_rgb(0_0_0/_0.04),0_1px_2px_rgb(0_0_0/_0.02)]"
             />
           </div>
         </div>
 
         <div className="flex md:hidden flex-1" />
 
+        {/* Action cluster — refined spacing */}
         <div className="flex items-center gap-1.5 ms-auto shrink-0">
-          <IconButton label="المساعدة" variant="ghost" size="md" className="hidden sm:inline-flex text-slate-500 hover:text-navy">
+          <IconButton
+            label="المساعدة"
+            variant="ghost"
+            size="md"
+            className="hidden sm:inline-flex text-slate-400/70 hover:text-slate-600 hover:bg-slate-100/70 rounded-xl transition-colors duration-150"
+          >
             <HelpCircle />
           </IconButton>
 
           <NotificationBell href={notificationsHref} initialCount={unread} />
 
-          <div className="h-5 w-px bg-hairline mx-1 hidden sm:block" />
+          <div className="h-[18px] w-px bg-slate-200/80 mx-1 hidden sm:block" />
 
           <UserMenu user={{ fullName: user.fullName, role: user.role }} />
         </div>

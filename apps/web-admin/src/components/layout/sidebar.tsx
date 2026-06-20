@@ -34,27 +34,27 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
   return (
     <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text">
 
-      {/* Brand header */}
-      <div className="px-5 h-[64px] flex items-center border-b border-sidebar-border/30 shrink-0">
+      {/* Brand header — matches topbar height (72px) for visual alignment */}
+      <div className="px-5 h-[72px] flex items-center border-b border-white/[0.07] shrink-0">
         <Brand theme="dark" />
       </div>
 
-      {/* User profile card — near top, mirrors website account sidebar */}
-      <div className="px-3 pt-3 pb-3 border-b border-sidebar-border/20 shrink-0">
-        <div className="relative flex items-center gap-3 p-3 rounded-2xl bg-white/[0.07] ring-1 ring-white/10 overflow-hidden">
-          {/* Thin gold sheen along top edge — matches website account sidebar */}
+      {/* User profile card */}
+      <div className="px-3 pt-3 pb-3 border-b border-white/[0.06] shrink-0">
+        <div className="relative flex items-center gap-3 p-3 rounded-2xl bg-white/[0.07] ring-1 ring-white/[0.09] overflow-hidden">
+          {/* Subtle gold sheen along top */}
           <span
-            className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-brand-400/50 to-transparent"
+            className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-brand-400/60 to-transparent"
             aria-hidden
           />
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-navy text-sm font-bold shrink-0 shadow-[0_4px_12px_-4px_rgb(200_162_75/0.5)]">
+          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-navy text-sm font-bold shrink-0 shadow-[0_4px_14px_-4px_rgb(200_162_75/0.55)]">
             {initials(user.fullName)}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-white truncate leading-snug">
+            <p className="text-[13px] font-semibold text-white truncate leading-snug">
               {user.fullName}
             </p>
-            <span className="inline-flex items-center mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/10 text-brand-300 ring-1 ring-white/15">
+            <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/[0.09] text-brand-300/90 ring-1 ring-white/[0.12]">
               {ROLE_LABEL[user.role]}
             </span>
           </div>
@@ -62,10 +62,10 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-4 space-y-5">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3 space-y-5">
         {resolved.map((section) => (
           <div key={section.title}>
-            <p className="px-3 mb-2 text-[9px] font-bold uppercase tracking-[0.18em] text-sidebar-text-muted/60">
+            <p className="px-3 mb-2 text-[9.5px] font-bold uppercase tracking-[0.18em] text-sidebar-text-muted/38 select-none">
               {section.title}
             </p>
             <div className="space-y-0.5">
@@ -86,14 +86,14 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
         ))}
       </nav>
 
-      {/* Logout footer — minimal, user context already shown above */}
-      <div className="border-t border-sidebar-border/30 px-3 py-3 shrink-0">
+      {/* Logout footer */}
+      <div className="border-t border-white/[0.06] px-3 py-3 shrink-0">
         <form action={logoutAction}>
           <button
             type="submit"
-            className="w-full flex items-center gap-2.5 px-3 h-9 rounded-lg text-[12px] font-medium text-sidebar-text-muted hover:text-white hover:bg-sidebar-bg-hover transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+            className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[12.5px] font-medium text-sidebar-text-muted/55 hover:text-white/85 hover:bg-white/[0.07] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset"
           >
-            <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+            <LogOut className="h-[15px] w-[15px] shrink-0 opacity-70 group-hover:opacity-100" aria-hidden />
             تسجيل الخروج
           </button>
         </form>
@@ -108,7 +108,7 @@ export function Sidebar({ user, sections, className }: Omit<Props, 'onNavigate'>
     <aside
       className={`hidden lg:flex w-[256px] shrink-0 relative z-20 ${className ?? ''}`}
       style={{
-        boxShadow: '-12px 0 32px -16px rgb(15 30 51 / 0.20)',
+        boxShadow: '-16px 0 40px -16px rgb(15 30 51 / 0.28)',
       }}
     >
       <div className="h-full w-full">
