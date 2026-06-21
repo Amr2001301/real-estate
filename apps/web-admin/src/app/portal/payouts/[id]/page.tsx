@@ -13,7 +13,7 @@ import { api, safe } from '@/lib/api';
 import type { PortalPayout } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
 import {
@@ -62,7 +62,7 @@ export default async function PortalPayoutDetailPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title={payout.payoutNumber}
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },

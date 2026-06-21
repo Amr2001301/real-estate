@@ -17,14 +17,18 @@ import type { Paged, PortalVisitRequest } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -56,7 +60,6 @@ function avatarColor(name: string): string {
   return AVATAR_COLORS[code % AVATAR_COLORS.length]!;
 }
 
-/** Time-aware urgency label for a scheduled appointment — runs server-side. */
 function appointmentUrgency(
   iso: string | null | undefined,
 ): { label: string; className: string } | null {
@@ -97,7 +100,6 @@ export default async function PortalVisitsPage({
 
   const paged        = r.data;
   const rows         = paged?.data ?? [];
-  // Pending = NEW (not seen by admin yet) + UNDER_REVIEW (admin is reviewing)
   const pendingCount   = (rNew.data?.meta.total ?? 0) + (rUnderReview.data?.meta.total ?? 0);
   const scheduledCount = rConverted.data?.meta.total ?? 0;
   const rejectedCount  = rRejected.data?.meta.total  ?? 0;
@@ -105,8 +107,7 @@ export default async function PortalVisitsPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="الزيارات"
         description="طلبات الزيارات لعملائك — تابع حالة كل طلب والموعد المجدول مع العميل."
         breadcrumbs={[
@@ -129,53 +130,61 @@ export default async function PortalVisitsPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي الطلبات"  value={paged?.meta.total ?? 0} icon={<CalendarClock />}  tone="brand"   />
-        <PageKpiCard label="بانتظار الجدولة" value={pendingCount}           icon={<Clock />}           tone="warning" />
-        <PageKpiCard label="موعد مجدول"      value={scheduledCount}         icon={<CalendarCheck2 />}  tone="success" />
-        <PageKpiCard label="مرفوض / ملغى"    value={rejectedCount}          icon={<XCircle />}         tone="danger"  />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي الطلبات',  value: paged?.meta.total ?? 0, icon: <CalendarClock />, tone: 'brand'   },
+          { label: 'بانتظار الجدولة', value: pendingCount,            icon: <Clock />,          tone: 'warning' },
+          { label: 'موعد مجدول',      value: scheduledCount,          icon: <CalendarCheck2 />, tone: 'success' },
+          { label: 'مرفوض / ملغى',    value: rejectedCount,           icon: <XCircle />,        tone: 'danger'  },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
+      <PremiumFilterBar
         method="get"
         action="/portal/visits"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        trailing={
+          <div className="flex items-center gap-1.5 ms-auto shrink-0">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {(sp.requestStatus || sp.q) && (
+              <Link href="/portal/visits">
+                <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
+              </Link>
+            )}
+          </div>
+        }
       >
-        <Input
-          inputSize="sm"
-          name="q"
-          leftAddon={<Search />}
-          placeholder="ابحث باسم العميل أو رقم الجوال…"
-          defaultValue={sp.q ?? ''}
-          className="flex-1 min-w-[180px]"
-        />
-        <Select
-          name="requestStatus"
-          inputSize="sm"
-          defaultValue={sp.requestStatus ?? ''}
-          className="w-52 shrink-0"
-        >
-          <option value="">كل الحالات</option>
-          <option value="NEW">جديد — لم يُراجع بعد</option>
-          <option value="UNDER_REVIEW">قيد المراجعة</option>
-          <option value="CONVERTED">تم الجدولة</option>
-          <option value="REJECTED">مرفوض</option>
-          <option value="CANCELLED">ملغى</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.requestStatus || sp.q) && (
-            <Link href="/portal/visits">
-              <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+        <PremiumFilterField label="بحث">
+          <Input
+            inputSize="sm"
+            name="q"
+            leftAddon={<Search />}
+            placeholder="ابحث باسم العميل أو رقم الجوال…"
+            defaultValue={sp.q ?? ''}
+            className="flex-1 min-w-[180px]"
+          />
+        </PremiumFilterField>
+        <PremiumFilterField label="الحالة">
+          <Select
+            name="requestStatus"
+            inputSize="sm"
+            defaultValue={sp.requestStatus ?? ''}
+            className="w-52"
+          >
+            <option value="">كل الحالات</option>
+            <option value="NEW">جديد — لم يُراجع بعد</option>
+            <option value="UNDER_REVIEW">قيد المراجعة</option>
+            <option value="CONVERTED">تم الجدولة</option>
+            <option value="REJECTED">مرفوض</option>
+            <option value="CANCELLED">ملغى</option>
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<CalendarClock />}
+        title="قائمة الزيارات"
+        padded={false}
+      >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
@@ -234,7 +243,6 @@ export default async function PortalVisitsPage({
                         : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Client */}
                     <td className="py-3 ps-5 pe-4">
                       {clientName ? (
                         <div className="flex items-center gap-2.5">
@@ -265,7 +273,6 @@ export default async function PortalVisitsPage({
                       )}
                     </td>
 
-                    {/* Project / Unit */}
                     <td className="py-3 px-4">
                       <div className="flex items-start gap-1.5">
                         <Building2 className="h-3.5 w-3.5 text-brand-500 shrink-0 mt-px" />
@@ -283,7 +290,6 @@ export default async function PortalVisitsPage({
                       </div>
                     </td>
 
-                    {/* Scheduled appointment (high priority: is today's visit happening?) */}
                     <td className="py-3 px-4">
                       {appt ? (
                         <div className="space-y-1.5">
@@ -312,7 +318,6 @@ export default async function PortalVisitsPage({
                       )}
                     </td>
 
-                    {/* Request status */}
                     <td className="py-3 px-4">
                       {v.requestStatus ? (
                         <VisitRequestStatusBadge status={v.requestStatus} />
@@ -321,7 +326,6 @@ export default async function PortalVisitsPage({
                       )}
                     </td>
 
-                    {/* Preferred date (lower priority — admin already saw it) */}
                     <td className="py-3 px-4 text-xs text-slate-500 whitespace-nowrap">
                       {formatDate(v.preferredDate)}
                     </td>
@@ -341,7 +345,7 @@ export default async function PortalVisitsPage({
             params={{ requestStatus: sp.requestStatus, q: sp.q }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }

@@ -1,10 +1,14 @@
 import { Banknote, Building2, Target, TrendingUp, Award } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
-import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+} from '@/components/premium';
 import {
   TargetsManagementClient,
   type PerformanceRow,
@@ -158,7 +162,7 @@ export default async function TargetsPage({
   return (
     <div className="space-y-4">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="أهداف وأداء المبيعات"
         description={
           canManage
@@ -172,9 +176,21 @@ export default async function TargetsPage({
       />
 
       {/* ── Filter bar ────────────────────────────────────────────────────── */}
-      <form method="get" action="/dashboard/targets">
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-4 py-2.5 shadow-xs">
-          <label className="sr-only" htmlFor="f-salesId">المندوب</label>
+      <PremiumFilterBar
+        method="get"
+        action="/dashboard/targets"
+        trailing={
+          <div className="flex items-center gap-2 ms-auto shrink-0">
+            {hasFilters && (
+              <a href="/dashboard/targets">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </a>
+            )}
+            <Button type="submit" variant="primary" size="sm">تطبيق</Button>
+          </div>
+        }
+      >
+        <PremiumFilterField label="المندوب" htmlFor="f-salesId">
           <Select
             id="f-salesId"
             name="salesId"
@@ -191,8 +207,9 @@ export default async function TargetsPage({
               </option>
             ))}
           </Select>
+        </PremiumFilterField>
 
-          <label className="sr-only" htmlFor="f-month">الشهر</label>
+        <PremiumFilterField label="الشهر" htmlFor="f-month">
           <Select
             id="f-month"
             name="month"
@@ -205,8 +222,9 @@ export default async function TargetsPage({
               <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </Select>
+        </PremiumFilterField>
 
-          <label className="sr-only" htmlFor="f-year">السنة</label>
+        <PremiumFilterField label="السنة" htmlFor="f-year">
           <Select
             id="f-year"
             name="year"
@@ -219,55 +237,46 @@ export default async function TargetsPage({
               <option key={y} value={y}>{y}</option>
             ))}
           </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
-          <div className="ms-auto flex items-center gap-2">
-            {hasFilters && (
-              <a href="/dashboard/targets">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
-              </a>
-            )}
-            <Button type="submit" variant="primary" size="sm">
-              تطبيق
-            </Button>
-          </div>
-        </div>
-      </form>
-
-      {/* ── KPI cards ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard
-          label="عدد الأهداف"
-          value={String(targets.length)}
-          icon={<Target className="h-5 w-5" />}
-          tone="neutral"
-        />
-        <PageKpiCard
-          label="هدف القيمة الإجمالي"
-          value={totalAmountTarget === 0 ? '—' : fmtAmt(totalAmountTarget)}
-          icon={<Banknote className="h-5 w-5" />}
-          tone="brand"
-          compact
-        />
-        <PageKpiCard
-          label="القيمة المحققة"
-          value={fmtAmt(totalAchievedAmount)}
-          sub={overallPct !== null ? `${overallPct}% من الهدف` : undefined}
-          icon={<TrendingUp className="h-5 w-5" />}
-          tone={totalAchievedAmount > 0 ? 'success' : 'neutral'}
-          compact
-        />
-        <PageKpiCard
-          label="هدف الوحدات الإجمالي"
-          value={num(totalUnitsTarget)}
-          sub={totalAchievedUnits > 0 ? `${num(totalAchievedUnits)} وحدة محققة` : undefined}
-          icon={<Building2 className="h-5 w-5" />}
-          tone="info"
-        />
-      </div>
+      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
+      <PremiumMetricStrip
+        metrics={[
+          {
+            label: 'عدد الأهداف',
+            value: String(targets.length),
+            icon: <Target />,
+            tone: 'neutral',
+          },
+          {
+            label: 'هدف القيمة الإجمالي',
+            value: totalAmountTarget === 0 ? '—' : fmtAmt(totalAmountTarget),
+            icon: <Banknote />,
+            tone: 'brand',
+            valueSize: 'compact',
+          },
+          {
+            label: 'القيمة المحققة',
+            value: fmtAmt(totalAchievedAmount),
+            sub: overallPct !== null ? `${overallPct}% من الهدف` : undefined,
+            icon: <TrendingUp />,
+            tone: totalAchievedAmount > 0 ? 'success' : 'neutral',
+            valueSize: 'compact',
+          },
+          {
+            label: 'هدف الوحدات الإجمالي',
+            value: num(totalUnitsTarget),
+            sub: totalAchievedUnits > 0 ? `${num(totalAchievedUnits)} وحدة محققة` : undefined,
+            icon: <Building2 />,
+            tone: 'info',
+          },
+        ]}
+      />
 
       {/* ── Performance insights strip ────────────────────────────────────── */}
       {hasMeaningfulPerf ? (
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-hairline bg-white px-5 py-3 shadow-xs">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 bg-surface border border-hairline rounded-[20px] shadow-soft px-5 py-3">
           <div className="flex items-center gap-2">
             <Award className="h-4 w-4 text-brand-500 shrink-0" />
             <span className="text-2xs text-slate-400">أعلى تحقيقًا</span>
@@ -314,7 +323,7 @@ export default async function TargetsPage({
           )}
         </div>
       ) : targets.length > 0 ? (
-        <div className="flex items-center gap-3 rounded-xl border border-hairline bg-white px-5 py-3 shadow-xs">
+        <div className="flex items-center gap-3 bg-surface border border-hairline rounded-[20px] shadow-soft px-5 py-3">
           <TrendingUp className="h-4 w-4 text-slate-300 shrink-0" />
           <p className="text-xs text-slate-500">
             لا توجد نتائج محققة بعد.{' '}

@@ -14,7 +14,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { PortalContract } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import {
   DetailHero,
@@ -52,7 +52,7 @@ export default async function PortalContractDetailPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title={contract.contractNumber ?? 'عقد'}
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },

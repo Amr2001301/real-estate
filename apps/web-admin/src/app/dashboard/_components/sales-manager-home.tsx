@@ -22,8 +22,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
+import { PremiumPageHero } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -236,9 +235,12 @@ export async function SalesManagerDashboard() {
   return (
     <div className="space-y-5">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="لوحة مدير المبيعات"
         description="متابعة أداء فريق المبيعات، الفرص، الزيارات، الحجوزات، وتحقيق الأهداف."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+        ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/dashboard/leads/new">
@@ -598,7 +600,7 @@ interface ManagerTile {
 
 function ManagerCommandStrip({ tiles }: { tiles: ManagerTile[] }) {
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-hairline">
         {tiles.map((tile) => (
           <div key={tile.label} className="bg-surface px-5 py-5">
@@ -630,7 +632,7 @@ function TeamPerformanceTable({
   className?: string;
 }) {
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <div className={cn('bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden', className)}>
       <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
@@ -757,7 +759,7 @@ function TeamPerformanceTable({
           </table>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 
@@ -773,7 +775,7 @@ function PipelineCard({
   const items = STAGE_META.map((s) => ({ ...s, count: stageCount[s.stage] ?? 0 }));
 
   return (
-    <Card className="p-0 overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
         <div className="flex items-center gap-2">
           <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
@@ -825,7 +827,7 @@ function PipelineCard({
           <p className="text-xs text-slate-400">لا توجد فرص مفتوحة حالياً.</p>
         )}
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -895,7 +897,7 @@ function ManagerSection({
   children:   React.ReactNode;
 }) {
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <div className={cn('bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden', className)}>
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-hairline bg-canvas/40">
         <div className="flex items-center gap-2">
           <div className={cn('h-7 w-7 rounded-lg flex items-center justify-center shrink-0', iconBg)}>
@@ -912,6 +914,6 @@ function ManagerSection({
         </Link>
       </div>
       <div className="divide-y divide-hairline">{children}</div>
-    </Card>
+    </div>
   );
 }

@@ -13,13 +13,15 @@ import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
 import { CommissionsFilterBar } from '@/components/broker/commissions-filter-bar';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -70,8 +72,7 @@ export default async function PortalCommissionsPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="عمولاتي"
         description="العمولات المستحقة من العقود الموقّعة — تتبّع الإجمالي والصافي وحالة كل عمولة."
         breadcrumbs={[
@@ -87,19 +88,22 @@ export default async function PortalCommissionsPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي العمولات" value={paged?.meta.total ?? 0} icon={<BadgePercent />} tone="brand"   />
-        <PageKpiCard label="قيد الاعتماد"   value={pendingCount}           icon={<Clock />}        tone="warning" />
-        <PageKpiCard label="معتمدة"         value={approvedCount}          icon={<CheckCircle2 />} tone="success" />
-        <PageKpiCard label="مرفوضة"         value={rejectedCount}          icon={<XCircle />}      tone="danger"  />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي العمولات', value: paged?.meta.total ?? 0, icon: <BadgePercent />, tone: 'brand'   },
+          { label: 'قيد الاعتماد',   value: pendingCount,           icon: <Clock />,        tone: 'warning' },
+          { label: 'معتمدة',         value: approvedCount,          icon: <CheckCircle2 />, tone: 'success' },
+          { label: 'مرفوضة',         value: rejectedCount,          icon: <XCircle />,      tone: 'danger'  },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <CommissionsFilterBar projects={projects} sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }} />
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<BadgePercent />}
+        title="قائمة العمولات"
+        padded={false}
+      >
         {rows.length > 0 && (
           <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
@@ -163,7 +167,6 @@ export default async function PortalCommissionsPage({
                         : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Unit / Project (what this commission is for) */}
                     <td className="py-3 ps-5 pe-4">
                       <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
@@ -171,12 +174,10 @@ export default async function PortalCommissionsPage({
                       </p>
                     </td>
 
-                    {/* Status (is it approved?) */}
                     <td className="py-3 px-4">
                       <BrokerCommissionStatusBadge status={c.status} />
                     </td>
 
-                    {/* Net amount (primary number) + gross + deduction below */}
                     <td className="py-3 px-4">
                       <p className="text-sm font-bold text-slate-900 tabular-nums">
                         {formatCurrency(c.netAmount)}
@@ -187,7 +188,6 @@ export default async function PortalCommissionsPage({
                       </p>
                     </td>
 
-                    {/* Reference: commission# + contract# below */}
                     <td className="py-3 px-4">
                       <span className="inline-flex items-center gap-1 text-2xs text-brand-700">
                         <BadgePercent className="h-3 w-3 shrink-0" />
@@ -200,12 +200,10 @@ export default async function PortalCommissionsPage({
                       )}
                     </td>
 
-                    {/* Earned date */}
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
                       {formatDate(c.earnedAt)}
                     </td>
 
-                    {/* Action */}
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/commissions/${c.id}` as never}>
                         <IconButton label="عرض" variant="ghost" size="sm">
@@ -229,9 +227,8 @@ export default async function PortalCommissionsPage({
             params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
 
-      {/* ── Bottom hint ─────────────────────────────────────────────────────── */}
       <p className="text-2xs text-slate-400 text-center">
         العمولة «معتمدة» تعني أن الإدارة وافقت عليها وستُدرج في دفعتك القادمة. الأرقام مقفلة عند توقيع العقد.
       </p>

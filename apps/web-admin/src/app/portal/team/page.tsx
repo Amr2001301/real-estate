@@ -18,16 +18,20 @@ import {
 import { api, safe } from '@/lib/api';
 import type { BrokerUser, BrokerUserStatus, Paged } from '@/lib/types';
 import { formatDate } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerUserStatusBadge } from '@/components/badges';
 import { ConfirmingForm } from '@/components/confirming-form';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+} from '@/components/premium';
 import { setTeamMemberStatusAction } from './actions';
 
 export const dynamic = 'force-dynamic';
@@ -116,8 +120,7 @@ export default async function PortalTeamPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="فريق العمل"
         description="إدارة الموظفين المنضمين لشركة الوساطة — التحكم بالصلاحيات والحالة."
         breadcrumbs={[
@@ -146,46 +149,54 @@ export default async function PortalTeamPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي الأعضاء"  value={totalAll}       icon={<Users />}      tone="brand"   />
-        <PageKpiCard label="نشط"             value={activeCount}    icon={<UserCheck />}  tone="success" />
-        <PageKpiCard label="دعوة معلقة"      value={invitedCount}   icon={<UserPlus />}   tone="warning" />
-        <PageKpiCard label="موقوف"           value={suspendedCount} icon={<PauseCircle />} tone="danger"  />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي الأعضاء', value: totalAll,       icon: <Users />,       tone: 'brand'   },
+          { label: 'نشط',             value: activeCount,    icon: <UserCheck />,   tone: 'success' },
+          { label: 'دعوة معلقة',      value: invitedCount,   icon: <UserPlus />,    tone: 'warning' },
+          { label: 'موقوف',           value: suspendedCount, icon: <PauseCircle />, tone: 'danger'  },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
+      <PremiumFilterBar
         method="get"
         action="/portal/team"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        trailing={
+          <div className="flex items-center gap-1.5 ms-auto shrink-0">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {(sp.q || sp.status) && (
+              <Link href="/portal/team">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+        }
       >
-        <Input
-          name="q"
-          inputSize="sm"
-          placeholder="بحث بالاسم أو البريد أو الجوال"
-          defaultValue={sp.q ?? ''}
-          className="w-64 shrink-0"
-        />
-        <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44 shrink-0">
-          <option value="">كل الحالات</option>
-          <option value="ACTIVE">نشط</option>
-          <option value="INVITED">دعوة</option>
-          <option value="SUSPENDED">موقوف</option>
-          <option value="REMOVED">مُزال</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.q || sp.status) && (
-            <Link href="/portal/team">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+        <PremiumFilterField label="بحث">
+          <Input
+            name="q"
+            inputSize="sm"
+            placeholder="بحث بالاسم أو البريد أو الجوال"
+            defaultValue={sp.q ?? ''}
+            className="w-64"
+          />
+        </PremiumFilterField>
+        <PremiumFilterField label="الحالة">
+          <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-44">
+            <option value="">كل الحالات</option>
+            <option value="ACTIVE">نشط</option>
+            <option value="INVITED">دعوة</option>
+            <option value="SUSPENDED">موقوف</option>
+            <option value="REMOVED">مُزال</option>
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<Users />}
+        title="أعضاء الفريق"
+        padded={false}
+      >
         {items.length === 0 ? (
           <EmptyState
             icon={<Users />}
@@ -217,7 +228,6 @@ export default async function PortalTeamPage({
                       key={m.id}
                       className="border-t border-hairline align-middle hover:bg-surface-muted/40 transition-colors"
                     >
-                      {/* Member identity */}
                       <td className="py-3 ps-5 pe-4">
                         <div className="flex items-center gap-2.5">
                           <div
@@ -254,24 +264,21 @@ export default async function PortalTeamPage({
                         </div>
                       </td>
 
-                      {/* Status */}
                       <td className="py-3 px-4">
                         <BrokerUserStatusBadge status={m.status} />
                       </td>
 
-                      {/* Permissions */}
                       <td className="py-3 px-4">
                         <div className="flex flex-wrap items-center gap-1">
-                          <PermissionPill icon={Crown}       label="جهة اتصال رئيسية" on={m.isPrimaryContact} />
-                          <PermissionPill icon={ShieldCheck} label="إدارة الفريق"      on={m.canManageBrokerUsers} />
-                          <PermissionPill icon={BadgePercent} label="عرض العمولات"     on={m.canViewCommissions} />
+                          <PermissionPill icon={Crown}        label="جهة اتصال رئيسية" on={m.isPrimaryContact} />
+                          <PermissionPill icon={ShieldCheck}  label="إدارة الفريق"      on={m.canManageBrokerUsers} />
+                          <PermissionPill icon={BadgePercent} label="عرض العمولات"      on={m.canViewCommissions} />
                           {!m.isPrimaryContact && !m.canManageBrokerUsers && !m.canViewCommissions && (
                             <span className="text-2xs text-slate-400">لا توجد صلاحيات إضافية</span>
                           )}
                         </div>
                       </td>
 
-                      {/* Join date */}
                       <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
                         {m.joinedAt ? (
                           formatDate(m.joinedAt)
@@ -283,7 +290,6 @@ export default async function PortalTeamPage({
                         )}
                       </td>
 
-                      {/* Actions */}
                       <td className="py-3 ps-4 pe-5">
                         <div className="flex items-center justify-end gap-1.5">
                           <Link href={`/portal/team/${m.id}/edit`}>
@@ -339,17 +345,17 @@ export default async function PortalTeamPage({
             </div>
           </>
         )}
-      </Card>
 
-      {meta && meta.total > meta.pageSize && (
-        <Pagination
-          basePath="/portal/team"
-          page={meta.page}
-          pageSize={meta.pageSize}
-          total={meta.total}
-          params={{ status: sp.status, q: sp.q }}
-        />
-      )}
+        {meta && meta.total > meta.pageSize && (
+          <Pagination
+            basePath="/portal/team"
+            page={meta.page}
+            pageSize={meta.pageSize}
+            total={meta.total}
+            params={{ status: sp.status, q: sp.q }}
+          />
+        )}
+      </PremiumSectionCard>
     </div>
   );
 }

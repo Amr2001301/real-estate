@@ -1,6 +1,6 @@
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import PortalLeadForm from '../_form';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +17,7 @@ export default async function NewPortalLeadPage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+      <PremiumPageHero
         title="إضافة فرصة جديدة"
         description="سجّل بيانات عميل محتمل لإحالته إلى فريق المبيعات."
         breadcrumbs={[

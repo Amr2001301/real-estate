@@ -16,7 +16,7 @@ import { api, safe } from '@/lib/api';
 import type { PortalReservation, ReservationActivityType } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import { ReservationStatusBadge } from '@/components/badges';
 import {
@@ -78,7 +78,7 @@ export default async function PortalReservationDetailPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title={res.reservationNumber ?? 'حجز'}
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },

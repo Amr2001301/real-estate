@@ -17,13 +17,17 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -91,8 +95,7 @@ export default async function PortalContractsPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="عقودي"
         description="العقود المنبثقة من حجوزاتك — موقّعة أو قيد التوقيع."
         breadcrumbs={[
@@ -108,52 +111,62 @@ export default async function PortalContractsPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <PageKpiCard label="إجمالي العقود" value={totalAll}     icon={<FileText />}     tone="brand"   />
-        <PageKpiCard label="موقّعة"        value={signedCount}  icon={<CheckCircle2 />} tone="success" />
-        <PageKpiCard label="قيد التوقيع"   value={pendingCount} icon={<Clock />}        tone="warning" />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي العقود', value: totalAll,     icon: <FileText />,     tone: 'brand'   },
+          { label: 'موقّعة',        value: signedCount,  icon: <CheckCircle2 />, tone: 'success' },
+          { label: 'قيد التوقيع',   value: pendingCount, icon: <Clock />,        tone: 'warning' },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
+      <PremiumFilterBar
         method="get"
         action="/portal/contracts"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        trailing={
+          <div className="flex items-center gap-1.5 ms-auto shrink-0">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {isFiltered && (
+              <Link href="/portal/contracts">
+                <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
+              </Link>
+            )}
+          </div>
+        }
       >
-        <Input
-          inputSize="sm"
-          name="q"
-          leftAddon={<Search />}
-          placeholder="ابحث برقم العقد أو اسم العميل…"
-          defaultValue={sp.q ?? ''}
-          className="flex-1 min-w-[180px]"
-        />
-        <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56 shrink-0">
-          <option value="">كل المشاريع</option>
-          {projects.map((p) => (
-            <option key={p.project.id} value={p.project.id}>
-              {tx(p.project.name)}
-            </option>
-          ))}
-        </Select>
-        <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-44 shrink-0">
-          <option value="">كل العقود</option>
-          <option value="yes">موقّعة فقط</option>
-          <option value="no">قيد التوقيع فقط</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {isFiltered && (
-            <Link href="/portal/contracts">
-              <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+        <PremiumFilterField label="بحث">
+          <Input
+            inputSize="sm"
+            name="q"
+            leftAddon={<Search />}
+            placeholder="ابحث برقم العقد أو اسم العميل…"
+            defaultValue={sp.q ?? ''}
+            className="flex-1 min-w-[180px]"
+          />
+        </PremiumFilterField>
+        <PremiumFilterField label="المشروع">
+          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
+            <option value="">كل المشاريع</option>
+            {projects.map((p) => (
+              <option key={p.project.id} value={p.project.id}>
+                {tx(p.project.name)}
+              </option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+        <PremiumFilterField label="الحالة">
+          <Select name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-44">
+            <option value="">كل العقود</option>
+            <option value="yes">موقّعة فقط</option>
+            <option value="no">قيد التوقيع فقط</option>
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<FileText />}
+        title="قائمة العقود"
+        padded={false}
+      >
         {rows.length > 0 && (
           <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
@@ -212,7 +225,6 @@ export default async function PortalContractsPage({
                         : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Client + phone (entity first) */}
                     <td className="py-3 ps-5 pe-4">
                       {clientName ? (
                         <div className="flex items-start gap-2">
@@ -245,7 +257,6 @@ export default async function PortalContractsPage({
                       )}
                     </td>
 
-                    {/* Unit / Project */}
                     <td className="py-3 px-4">
                       <CodeText className="text-xs font-semibold text-slate-800">{c.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
@@ -253,7 +264,6 @@ export default async function PortalContractsPage({
                       </p>
                     </td>
 
-                    {/* Status (key question first) */}
                     <td className="py-3 px-4">
                       {isSigned ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-700 px-2 py-0.5 text-xs font-semibold">
@@ -268,7 +278,6 @@ export default async function PortalContractsPage({
                       )}
                     </td>
 
-                    {/* Locked commission (financial outcome) */}
                     <td className="py-3 px-4">
                       {c.reservation?.commissionLockedPct != null ? (
                         <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-amber-100">
@@ -285,22 +294,18 @@ export default async function PortalContractsPage({
                       )}
                     </td>
 
-                    {/* Total contract value (deal size context) */}
                     <td className="py-3 px-4 tabular-nums font-semibold text-slate-900 text-xs">
                       {formatCurrency(c.totalAmount)}
                     </td>
 
-                    {/* Contract number (reference, de-emphasised) */}
                     <td className="py-3 px-4">
                       <CodeText className="text-2xs text-slate-500">{c.contractNumber ?? '—'}</CodeText>
                     </td>
 
-                    {/* Date */}
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
                       {formatDate(c.createdAt)}
                     </td>
 
-                    {/* Action */}
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/contracts/${c.id}` as never}>
                         <IconButton label="عرض" variant="ghost" size="sm">
@@ -324,7 +329,7 @@ export default async function PortalContractsPage({
             params={{ projectId: sp.projectId, signed: sp.signed, q: sp.q }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }

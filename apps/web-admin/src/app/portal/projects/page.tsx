@@ -1,6 +1,6 @@
 import { api, safe } from '@/lib/api';
 import type { PortalProject } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { ProjectsPanel } from '@/components/broker/projects-panel';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +12,7 @@ export default async function PortalProjectsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title="المشاريع المتاحة"
         description="قائمة المشاريع المُصرَّح لك بالعمل عليها وفقاً لصلاحيات حساب الوساطة."
         breadcrumbs={[

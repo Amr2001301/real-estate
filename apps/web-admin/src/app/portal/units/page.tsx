@@ -11,15 +11,17 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { CodeText } from '@/components/ui/code-text';
 import { UnitStatusBadge } from '@/components/badges';
 import { UnitsFilterBar } from '@/components/broker/units-filter-bar';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -80,8 +82,7 @@ export default async function PortalUnitsPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="الوحدات المتاحة"
         description="استعرض الوحدات التي يحق لك العمل عليها — متاحة، محجوزة، أو مباعة."
         breadcrumbs={[
@@ -97,20 +98,22 @@ export default async function PortalUnitsPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي الوحدات"  value={paged?.meta.total ?? 0} icon={<Home />}          tone="brand"   />
-        <PageKpiCard label="متاحة للبيع"     value={availableCount}         icon={<CheckCircle2 />}  tone="success" />
-        <PageKpiCard label="محجوزة"          value={reservedCount}          icon={<BookmarkCheck />} tone="warning" />
-        <PageKpiCard label="مباعة"           value={soldCount}              icon={<Tag />}           tone="info"    />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي الوحدات', value: paged?.meta.total ?? 0, icon: <Home />,          tone: 'brand'   },
+          { label: 'متاحة للبيع',    value: availableCount,         icon: <CheckCircle2 />,  tone: 'success' },
+          { label: 'محجوزة',         value: reservedCount,          icon: <BookmarkCheck />, tone: 'warning' },
+          { label: 'مباعة',          value: soldCount,              icon: <Tag />,           tone: 'info'    },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <UnitsFilterBar projects={projects} typeOptions={typeOptions} sp={sp} />
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
-
+      <PremiumSectionCard
+        icon={<Home />}
+        title="الوحدات المتاحة"
+        padded={false}
+      >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
@@ -126,11 +129,10 @@ export default async function PortalUnitsPage({
           />
         ) : (
           <>
-            {/* ── Mobile card list (< sm) ──────────────────────────────────── */}
+            {/* Mobile card list (< sm) */}
             <ul className="sm:hidden divide-y divide-hairline">
               {rows.map((u) => (
                 <li key={u.id} className="px-4 py-4 space-y-2">
-                  {/* Unit code + type + status + action */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2 min-w-0">
                       <p className="font-bold text-slate-900 text-base shrink-0">
@@ -150,19 +152,16 @@ export default async function PortalUnitsPage({
                     )}
                   </div>
 
-                  {/* Project name */}
                   <p className="text-xs font-semibold text-slate-800">
                     {tx(u.building.phase.project.name)}
                   </p>
 
-                  {/* Location line */}
                   <p className="text-2xs text-slate-400">
                     {u.building.phase.project.city}
                     {' · '}
                     <CodeText>{u.building.name}</CodeText>
                   </p>
 
-                  {/* Specs + price */}
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-2xs text-slate-500 tabular-nums">
                       {u.area} م² · {u.bedrooms} غرف · {u.bathrooms} حمامات · دور {u.floor}
@@ -175,7 +174,7 @@ export default async function PortalUnitsPage({
               ))}
             </ul>
 
-            {/* ── Desktop table (≥ sm) ─────────────────────────────────────── */}
+            {/* Desktop table (≥ sm) */}
             <div className="hidden sm:block overflow-x-auto scrollbar-thin">
               <table className="w-full text-sm">
                 <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
@@ -194,7 +193,6 @@ export default async function PortalUnitsPage({
                       key={u.id}
                       className="border-t border-hairline hover:bg-surface-muted/40 transition-colors align-top"
                     >
-                      {/* 1 — Unit (primary identity) */}
                       <td className="py-3 ps-5 pe-4">
                         <p className="font-bold text-slate-900 text-sm">
                           <CodeText>{u.code}</CodeText>
@@ -204,7 +202,6 @@ export default async function PortalUnitsPage({
                         </p>
                       </td>
 
-                      {/* 2 — Project / Location */}
                       <td className="py-3 px-4">
                         <p className="font-semibold text-slate-800 text-xs">
                           {tx(u.building.phase.project.name)}
@@ -217,7 +214,6 @@ export default async function PortalUnitsPage({
                         </p>
                       </td>
 
-                      {/* 3 — Specs (compact two-line) */}
                       <td className="py-3 px-4">
                         <p className="text-xs font-semibold text-slate-700 tabular-nums">
                           {u.area} م²
@@ -227,14 +223,12 @@ export default async function PortalUnitsPage({
                         </p>
                       </td>
 
-                      {/* 4 — Price */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <p className="font-bold text-slate-900 tabular-nums text-sm">
                           {formatCurrency(u.price)}
                         </p>
                       </td>
 
-                      {/* 5 — Status + Eligibility (merged) */}
                       <td className="py-3 px-4">
                         <UnitStatusBadge status={u.status} />
                         <p className="text-2xs text-slate-400 mt-1.5 flex items-center gap-1">
@@ -243,7 +237,6 @@ export default async function PortalUnitsPage({
                         </p>
                       </td>
 
-                      {/* 6 — Action */}
                       <td className="py-3 ps-4 pe-5">
                         {u.status === 'AVAILABLE' && (
                           <Link href="/portal/reservations/new">
@@ -283,7 +276,7 @@ export default async function PortalUnitsPage({
             }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }

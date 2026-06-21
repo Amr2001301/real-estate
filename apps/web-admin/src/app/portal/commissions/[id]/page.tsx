@@ -11,7 +11,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { PortalCommission } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
 import {
@@ -46,7 +46,7 @@ export default async function PortalCommissionDetailPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title={c.commissionNumber}
         description="تفاصيل حساب العمولة — الأرقام مثبتة عند توقيع العقد ولا تتغير."
         breadcrumbs={[

@@ -14,13 +14,15 @@ import type { Paged, PortalPayout } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { IconButton } from '@/components/ui/icon-button';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerPayoutStatusBadge } from '@/components/badges';
 import { PayoutsFilterBar } from '@/components/broker/payouts-filter-bar';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -78,8 +80,7 @@ export default async function PortalPayoutsPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="مدفوعاتي"
         description="الدفعات المالية المرتبطة بعمولاتك — دفعة «مدفوعة» تعني أن الإدارة صرفتها وسجّلتها."
         breadcrumbs={[
@@ -95,19 +96,22 @@ export default async function PortalPayoutsPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي الدفعات"      value={paged?.meta.total ?? 0} icon={<Wallet />}          tone="brand"   />
-        <PageKpiCard label="مدفوعة"              value={paidCount}              icon={<CircleDollarSign />} tone="success" />
-        <PageKpiCard label="قيد التنفيذ"         value={processingCount}        icon={<Loader2 />}          tone="warning" />
-        <PageKpiCard label="معتمدة — بانتظار صرف" value={approvedCount}        icon={<Clock />}            tone="info"    />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي الدفعات',       value: paged?.meta.total ?? 0, icon: <Wallet />,          tone: 'brand'   },
+          { label: 'مدفوعة',               value: paidCount,              icon: <CircleDollarSign />, tone: 'success' },
+          { label: 'قيد التنفيذ',           value: processingCount,        icon: <Loader2 />,          tone: 'warning' },
+          { label: 'معتمدة — بانتظار صرف', value: approvedCount,           icon: <Clock />,            tone: 'info'    },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <PayoutsFilterBar sp={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }} />
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<Wallet />}
+        title="قائمة المدفوعات"
+        padded={false}
+      >
         {rows.length > 0 && (
           <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <div className="flex items-center gap-1.5">
@@ -176,7 +180,6 @@ export default async function PortalPayoutsPage({
                           : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Payout number + period (merged) */}
                     <td className="py-3 ps-5 pe-4">
                       <span className="inline-flex items-center gap-1.5 text-xs text-brand-700 font-semibold">
                         <Wallet className="h-3 w-3 text-brand-500 shrink-0" />
@@ -189,7 +192,6 @@ export default async function PortalPayoutsPage({
                       )}
                     </td>
 
-                    {/* Net amount (primary number) */}
                     <td className="py-3 px-4">
                       <p
                         className={cn(
@@ -217,12 +219,10 @@ export default async function PortalPayoutsPage({
                       )}
                     </td>
 
-                    {/* Status */}
                     <td className="py-3 px-4">
                       <BrokerPayoutStatusBadge status={p.status} />
                     </td>
 
-                    {/* Payment method + paid date (merged) */}
                     <td className="py-3 px-4">
                       <p className="text-xs text-slate-700">
                         {p.paymentMethod ? (
@@ -243,7 +243,6 @@ export default async function PortalPayoutsPage({
                       </p>
                     </td>
 
-                    {/* Reference */}
                     <td className="py-3 px-4">
                       {p.paymentReference ? (
                         <CodeText className="text-2xs text-slate-500">{p.paymentReference}</CodeText>
@@ -252,7 +251,6 @@ export default async function PortalPayoutsPage({
                       )}
                     </td>
 
-                    {/* Action */}
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/payouts/${p.id}` as never}>
                         <IconButton label="عرض" variant="ghost" size="sm">
@@ -276,9 +274,8 @@ export default async function PortalPayoutsPage({
             params={{ q: sp.q, status: sp.status, period: sp.period, from: sp.from, to: sp.to }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
 
-      {/* ── Bottom hint ─────────────────────────────────────────────────────── */}
       <p className="text-2xs text-slate-400 text-center">
         الدفعة «مدفوعة» تعني أن الإدارة صرفتها خارجياً (تحويل بنكي / شيك) وسجّلتها في النظام. تواصل مع إدارتك للاستفسار.
       </p>

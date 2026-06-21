@@ -18,16 +18,19 @@ import type {
 } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { MonthlyTrendChart } from '@/components/broker/monthly-trend-chart';
 import { FunnelCard } from '@/components/broker/funnel-card';
 import { ExportMenu } from '@/components/export-menu';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -53,7 +56,6 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-// ── Conversion rate card ──────────────────────────────────────────────────────
 interface ConversionMetric {
   label: string;
   value: number;
@@ -66,7 +68,7 @@ function ConversionCard({ label, value, fromLabel, toLabel }: ConversionMetric) 
   const isHigh = pctVal >= 60;
   const isMed  = pctVal >= 30;
   return (
-    <Card className="p-4 overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-4 overflow-hidden">
       <div className="flex items-start justify-between gap-2 mb-3">
         <p className="text-xs font-medium text-slate-600 leading-snug">{label}</p>
         <span
@@ -92,11 +94,10 @@ function ConversionCard({ label, value, fromLabel, toLabel }: ConversionMetric) 
         <ArrowLeft className="h-3 w-3 text-slate-300 shrink-0 rotate-180" aria-hidden />
         <span className="text-slate-500">{toLabel}</span>
       </div>
-    </Card>
+    </div>
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
 export default async function PortalPerformancePage({
   searchParams,
 }: {
@@ -126,7 +127,6 @@ export default async function PortalPerformancePage({
   const summary  = perf.summary;
   const projects = projectsRes.data ?? [];
 
-  // Max sales value used for relative bar widths in project table
   const maxSales = Math.max(
     ...perf.projectBreakdown.map((p) => Number(p.salesGross || 0)),
     1,
@@ -137,8 +137,7 @@ export default async function PortalPerformancePage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="أدائي"
         description="مؤشرات أداء شركة الوساطة الخاصة بك — الأرقام مأخوذة من نشاطك الفعلي."
         breadcrumbs={[
@@ -155,48 +154,55 @@ export default async function PortalPerformancePage({
         }
       />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
+      <PremiumFilterBar
         method="get"
         action="/portal/performance"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        trailing={
+          <div className="flex items-center gap-1.5 ms-auto shrink-0">
+            <Button type="submit" variant="primary" size="sm">تطبيق</Button>
+            {isFiltered && (
+              <Link href="/portal/performance">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+        }
       >
-        <Select
-          name="projectId"
-          inputSize="sm"
-          defaultValue={sp.projectId ?? ''}
-          className="w-56 shrink-0"
-        >
-          <option value="">كل المشاريع</option>
-          {projects.map((p) => (
-            <option key={p.project.id} value={p.project.id}>
-              {tx(p.project.name)}
-            </option>
-          ))}
-        </Select>
-        <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-40 shrink-0" />
-        <Input name="to"   inputSize="sm" type="date" defaultValue={sp.to ?? ''}   className="w-40 shrink-0" />
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تطبيق</Button>
-          {isFiltered && (
-            <Link href="/portal/performance">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+        <PremiumFilterField label="المشروع">
+          <Select
+            name="projectId"
+            inputSize="sm"
+            defaultValue={sp.projectId ?? ''}
+            className="w-56"
+          >
+            <option value="">كل المشاريع</option>
+            {projects.map((p) => (
+              <option key={p.project.id} value={p.project.id}>
+                {tx(p.project.name)}
+              </option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+        <PremiumFilterField label="من تاريخ">
+          <Input name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-40" />
+        </PremiumFilterField>
+        <PremiumFilterField label="إلى تاريخ">
+          <Input name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-40" />
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
-      {/* ── Primary KPI strip ───────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-        <PageKpiCard label="فرص مُرسلة"     value={summary.leadsSubmitted}     icon={<UserPlus />}      tone="brand"   />
-        <PageKpiCard label="حجوزات"          value={summary.reservationsCreated} icon={<BookmarkCheck />} tone="info"    />
-        <PageKpiCard label="عقود موقّعة"     value={summary.contractsSigned}     icon={<FileText />}      tone="accent"  />
-        <PageKpiCard label="إجمالي المبيعات" value={formatCurrency(summary.salesGross)}  icon={<Banknote />}  tone="success" compact />
-        <PageKpiCard label="صافي العمولات"   value={formatCurrency(summary.commissionsNet)} icon={<BadgePercent />} tone="warning" compact />
-        <PageKpiCard label="مدفوع"           value={formatCurrency(summary.payoutsTotalNet)} icon={<Wallet />} tone="success" compact />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'فرص مُرسلة',     value: summary.leadsSubmitted,     icon: <UserPlus />,      tone: 'brand'   },
+          { label: 'حجوزات',          value: summary.reservationsCreated, icon: <BookmarkCheck />, tone: 'info'    },
+          { label: 'عقود موقّعة',     value: summary.contractsSigned,     icon: <FileText />,      tone: 'teal'    },
+          { label: 'إجمالي المبيعات', value: formatCurrency(summary.salesGross),        icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: 'صافي العمولات',   value: formatCurrency(summary.commissionsNet),    icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
+          { label: 'مدفوع',           value: formatCurrency(summary.payoutsTotalNet),   icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
+        ]}
+      />
 
-      {/* ── Conversion rates ────────────────────────────────────────────────── */}
+      {/* Conversion rates */}
       <div>
         <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
           معدلات التحويل
@@ -229,11 +235,11 @@ export default async function PortalPerformancePage({
         </div>
       </div>
 
-      {/* ── Funnel + Monthly trend (side by side on lg) ─────────────────────── */}
+      {/* Funnel + Monthly trend */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <FunnelCard summary={summary} title="قمع تحويل نشاطك" />
 
-        <Card className="p-5 flex flex-col">
+        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-5 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-brand-600" />
@@ -244,11 +250,11 @@ export default async function PortalPerformancePage({
           <div className="flex-1">
             <MonthlyTrendChart data={perf.monthlyTrend} />
           </div>
-        </Card>
+        </div>
       </div>
 
-      {/* ── Project breakdown ───────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      {/* Project breakdown */}
+      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
         <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-hairline">
           <Building2 className="h-4 w-4 text-brand-600" />
           <h2 className="text-sm font-bold text-slate-900">تفصيل المشاريع</h2>
@@ -304,11 +310,11 @@ export default async function PortalPerformancePage({
             </table>
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* ── Agent breakdown ─────────────────────────────────────────────────── */}
+      {/* Agent breakdown */}
       {perf.canSeeAllAgents && perf.agentBreakdown.length > 0 && (
-        <Card className="overflow-hidden">
+        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
           <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-hairline">
             <UsersIcon className="h-4 w-4 text-brand-600" />
             <h2 className="text-sm font-bold text-slate-900">أداء الوكلاء</h2>
@@ -359,7 +365,7 @@ export default async function PortalPerformancePage({
               </tbody>
             </table>
           </div>
-        </Card>
+        </div>
       )}
 
       {!perf.canSeeAllAgents && (

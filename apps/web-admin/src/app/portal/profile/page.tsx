@@ -20,7 +20,6 @@ import { api, safe } from '@/lib/api';
 import type { PortalMe } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Card } from '@/components/ui/card';
 import { CodeText } from '@/components/ui/code-text';
 import { BrokerStatusBadge, BrokerUserStatusBadge } from '@/components/badges';
 
@@ -190,8 +189,8 @@ export default async function PortalProfilePage() {
       )}
 
       {/* ── Identity hero ────────────────────────────────────────────── */}
-      <Card
-        className="overflow-hidden"
+      <div
+        className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden"
         style={{ borderTopWidth: 3, borderTopColor: '#C8A24B' }}
       >
         <div className="p-5 sm:p-6">
@@ -271,13 +270,13 @@ export default async function PortalProfilePage() {
             </div>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* ── Bottom grid ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
         {/* Company card */}
-        <Card className="lg:col-span-2 overflow-hidden">
+        <div className="lg:col-span-2 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
           {/* Company header */}
           <div className="flex items-start gap-3 p-5 pb-4 border-b border-hairline">
             {me.broker.logoUrl ? (
@@ -396,10 +395,10 @@ export default async function PortalProfilePage() {
               )}
             </div>
           </div>
-        </Card>
+        </div>
 
         {/* Permissions card */}
-        <Card className="p-5">
+        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-5">
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="h-4 w-4 text-brand-600 shrink-0" />
             <h2 className="text-sm font-bold text-slate-900">صلاحياتك</h2>
@@ -430,7 +429,7 @@ export default async function PortalProfilePage() {
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-slate-300" />
             <p>لتعديل أي بيانات أو صلاحيات، تواصل مع مدير الحساب أو إدارة المنصة.</p>
           </div>
-        </Card>
+        </div>
 
       </div>
     </div>

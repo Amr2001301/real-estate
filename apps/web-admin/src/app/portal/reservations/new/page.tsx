@@ -1,6 +1,6 @@
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalLead, PortalUnit } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import PortalReservationForm from '../_form';
 
 export const dynamic = 'force-dynamic';
@@ -23,7 +23,7 @@ export default async function NewPortalReservationPage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+      <PremiumPageHero
         title="حجز جديد"
         description="أنشئ حجزاً لفرصة معتمدة على وحدة متاحة."
         breadcrumbs={[

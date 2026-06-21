@@ -20,7 +20,7 @@ import { api, safe } from '@/lib/api';
 import type { PortalLead, AppointmentStatus } from '@/lib/types';
 import { tx, formatDate, formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import {
   BrokerLeadStatusBadge,
@@ -149,7 +149,7 @@ export default async function PortalLeadDetailPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title={lead.fullName}
         breadcrumbs={[
           { label: 'البوابة', href: '/portal' },

@@ -1,14 +1,16 @@
 import Link from 'next/link';
-import { Phone, Mail, Building2, User, ExternalLink, AlertCircle } from 'lucide-react';
+import { Phone, Mail, Building2, User, ExternalLink, AlertCircle, Activity } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, VisitRequest, VisitActivity, User as UserType } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/table';
 import { VisitRequestStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { VisitTimelineCard } from '../../_components/visit-timeline';
 import { RequestDetailActions } from './_components/request-detail-actions';
+import {
+  PremiumPageHero,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,12 +19,12 @@ interface VisitRequestDetail extends VisitRequest {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
-  WEBSITE: 'الموقع الإلكتروني',
+  WEBSITE:    'الموقع الإلكتروني',
   MOBILE_APP: 'التطبيق',
-  SALES: 'فريق المبيعات',
-  PHONE: 'هاتف',
-  WHATSAPP: 'واتساب',
-  OTHER: 'أخرى',
+  SALES:      'فريق المبيعات',
+  PHONE:      'هاتف',
+  WHATSAPP:   'واتساب',
+  OTHER:      'أخرى',
 };
 
 export default async function VisitRequestDetailPage({
@@ -46,16 +48,16 @@ export default async function VisitRequestDetailPage({
     );
   }
 
-  const req = reqRes.data;
+  const req          = reqRes.data;
   const salesOptions = salesRes.data?.data ?? [];
-  const customerName = req.customerName ?? req.user?.fullName ?? req.lead?.fullName ?? '—';
-  const customerPhone = req.customerPhone ?? req.user?.phone ?? req.lead?.phone ?? null;
-  const customerEmail = req.customerEmail ?? req.user?.email ?? req.lead?.email ?? null;
+  const customerName  = req.customerName  ?? req.user?.fullName  ?? req.lead?.fullName  ?? '—';
+  const customerPhone = req.customerPhone ?? req.user?.phone     ?? req.lead?.phone     ?? null;
+  const customerEmail = req.customerEmail ?? req.user?.email     ?? req.lead?.email     ?? null;
   const activities: VisitActivity[] = req.visitActivities ?? [];
 
   return (
-    <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+    <div className="space-y-5">
+      <PremiumPageHero
         title={`طلب زيارة — ${req.requestNumber ?? req.id.slice(0, 8)}`}
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
@@ -70,15 +72,13 @@ export default async function VisitRequestDetailPage({
         }
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         {/* Left: main content */}
-        <div className="xl:col-span-2 space-y-6">
-          {/* Request info card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>تفاصيل الطلب</CardTitle>
-            </CardHeader>
-            <CardBody className="grid grid-cols-2 gap-4 text-sm">
+        <div className="xl:col-span-2 space-y-5">
+
+          {/* Request info */}
+          <PremiumSectionCard title="تفاصيل الطلب">
+            <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-slate-500 mb-0.5">التاريخ المفضل</p>
                 <p className="font-medium">{formatDate(req.preferredDate)}</p>
@@ -111,9 +111,6 @@ export default async function VisitRequestDetailPage({
                   <p className="font-medium">{formatDateTime(req.convertedAt)}</p>
                 </div>
               )}
-              {/* Customer's submitted message. Pre-this-fix rows have only
-                  `notes` populated; new rows have `requestNotes` too. Fall
-                  back to either so legacy records render correctly. */}
               {(req.requestNotes ?? req.notes) && (
                 <div className="col-span-2">
                   <p className="text-slate-500 mb-0.5">ملاحظات العميل</p>
@@ -126,61 +123,49 @@ export default async function VisitRequestDetailPage({
                   <p className="text-slate-700">{req.adminNotes}</p>
                 </div>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </PremiumSectionCard>
 
           {/* Linked appointments */}
           {req.appointments && req.appointments.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>الزيارات المرتبطة</CardTitle>
-              </CardHeader>
-              <CardBody className="p-0">
-                <DataTable
-                  rowKey={(a) => a.id}
-                  rows={req.appointments}
-                  emptyMessage="لا توجد زيارات"
-                  columns={[
-                    {
-                      key: 'number',
-                      header: 'رقم الزيارة',
-                      cell: (a) => (
-                        <Link
-                          href={`/dashboard/visits/appointments/${a.id}` as never}
-                          className="font-mono text-xs text-brand-700 hover:underline"
-                        >
-                          {a.visitNumber}
-                        </Link>
-                      ),
-                    },
-                    { key: 'date', header: 'الموعد', cell: (a) => formatDateTime(a.scheduledAt) },
-                    { key: 'sales', header: 'المندوب', cell: (a) => a.assignedSales?.fullName ?? '—' },
-                    { key: 'status', header: 'الحالة', cell: (a) => <AppointmentStatusBadge status={a.status} /> },
-                  ]}
-                />
-              </CardBody>
-            </Card>
+            <PremiumSectionCard title="الزيارات المرتبطة" padded={false}>
+              <DataTable
+                rowKey={(a) => a.id}
+                rows={req.appointments}
+                emptyMessage="لا توجد زيارات"
+                columns={[
+                  {
+                    key: 'number',
+                    header: 'رقم الزيارة',
+                    cell: (a) => (
+                      <Link
+                        href={`/dashboard/visits/appointments/${a.id}` as never}
+                        className="font-mono text-xs text-brand-700 hover:underline"
+                      >
+                        {a.visitNumber}
+                      </Link>
+                    ),
+                  },
+                  { key: 'date',   header: 'الموعد',   cell: (a) => formatDateTime(a.scheduledAt) },
+                  { key: 'sales',  header: 'المندوب',  cell: (a) => a.assignedSales?.fullName ?? '—' },
+                  { key: 'status', header: 'الحالة',   cell: (a) => <AppointmentStatusBadge status={a.status} /> },
+                ]}
+              />
+            </PremiumSectionCard>
           )}
 
           {/* Timeline */}
-          <Card>
-            <CardBody>
-              <VisitTimelineCard activities={activities} />
-            </CardBody>
-          </Card>
+          <PremiumSectionCard icon={<Activity />} title="سجل الأحداث">
+            <VisitTimelineCard activities={activities} />
+          </PremiumSectionCard>
         </div>
 
         {/* Right sidebar */}
         <div className="space-y-4">
+
           {/* Customer card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="h-4 w-4 text-brand-600" />
-                معلومات العميل
-              </CardTitle>
-            </CardHeader>
-            <CardBody className="space-y-3 text-sm">
+          <PremiumSectionCard icon={<User />} title="معلومات العميل">
+            <div className="space-y-3 text-sm">
               <p className="font-semibold text-slate-900 text-base">{customerName}</p>
               {customerPhone && (
                 <a href={`tel:${customerPhone}`} className="flex items-center gap-2 text-slate-600 hover:text-brand-700">
@@ -194,16 +179,13 @@ export default async function VisitRequestDetailPage({
                   <span dir="ltr">{customerEmail}</span>
                 </a>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </PremiumSectionCard>
 
           {/* Lead/Client link */}
           {(req.lead || req.user) && (
-            <Card>
-              <CardHeader>
-                <CardTitle>الربط بـ CRM</CardTitle>
-              </CardHeader>
-              <CardBody className="space-y-2 text-sm">
+            <PremiumSectionCard title="الربط بـ CRM">
+              <div className="space-y-2 text-sm">
                 {req.lead && (
                   <Link href={`/dashboard/leads/${req.leadId}` as never} className="flex items-center gap-2 text-brand-700 hover:underline">
                     <ExternalLink className="h-4 w-4" />
@@ -216,19 +198,13 @@ export default async function VisitRequestDetailPage({
                     {req.user.fullName}
                   </p>
                 )}
-              </CardBody>
-            </Card>
+              </div>
+            </PremiumSectionCard>
           )}
 
           {/* Project/Unit card */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-brand-600" />
-                المشروع والوحدة
-              </CardTitle>
-            </CardHeader>
-            <CardBody className="space-y-2 text-sm">
+          <PremiumSectionCard icon={<Building2 />} title="المشروع والوحدة">
+            <div className="space-y-2 text-sm">
               <Link
                 href={`/dashboard/projects/${req.projectId}` as never}
                 className="font-medium text-brand-700 hover:underline"
@@ -240,8 +216,8 @@ export default async function VisitRequestDetailPage({
                   وحدة: {req.unit.code} — {req.unit.type}
                 </p>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </PremiumSectionCard>
         </div>
       </div>
     </div>

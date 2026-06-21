@@ -1,6 +1,6 @@
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalLead, PortalProject, PortalUnit } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import PortalVisitForm from '../_form';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export default async function NewPortalVisitPage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+      <PremiumPageHero
         title="طلب زيارة جديدة"
         description="اقترح موعد زيارة لأحد عملائك في أحد المشاريع المتاحة."
         breadcrumbs={[

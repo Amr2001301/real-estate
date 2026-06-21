@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import { api, safe } from '@/lib/api';
 import type { BrokerUser } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { TeamMemberForm } from '../../_form';
 import { updateTeamMemberAction } from '../../actions';
 import { BrokerUserStatusBadge } from '@/components/badges';
@@ -25,7 +25,7 @@ export default async function EditTeamMemberPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title={`تعديل: ${member.user.fullName}`}
         description="حدِّث بيانات العضو وصلاحياته. التغييرات على «جهة الاتصال الرئيسية» تُلغي تلقائيًا الاختيار السابق."
         breadcrumbs={[

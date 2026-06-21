@@ -19,14 +19,18 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { BrokerLeadStatusBadge, LeadStageBadge } from '@/components/badges';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -96,8 +100,7 @@ export default async function PortalLeadsPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="فرصي"
         description="الفرص التي قمتَ بإرسالها للإدارة — تابع حالة كل فرصة ومرحلتها."
         breadcrumbs={[
@@ -120,66 +123,76 @@ export default async function PortalLeadsPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي الفرص"  value={totalLeads}    icon={<Users />}     tone="brand"   />
-        <PageKpiCard label="قيد المراجعة"  value={pendingCount}  icon={<Clock />}     tone="warning" />
-        <PageKpiCard label="موافق عليها"   value={approvedCount} icon={<UserCheck />} tone="success" />
-        <PageKpiCard label="مرفوضة"        value={rejectedCount} icon={<UserX />}     tone="danger"  />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي الفرص', value: totalLeads,    icon: <Users />,     tone: 'brand'   },
+          { label: 'قيد المراجعة', value: pendingCount,  icon: <Clock />,     tone: 'warning' },
+          { label: 'موافق عليها',  value: approvedCount, icon: <UserCheck />, tone: 'success' },
+          { label: 'مرفوضة',       value: rejectedCount, icon: <UserX />,     tone: 'danger'  },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
-      <form
+      <PremiumFilterBar
         method="get"
         action="/portal/leads"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        trailing={
+          <div className="flex items-center gap-1.5 ms-auto shrink-0">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {(sp.q || sp.brokerApprovalStatus || sp.stage) && (
+              <Link href="/portal/leads">
+                <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
+              </Link>
+            )}
+          </div>
+        }
       >
-        <Input
-          name="q"
-          inputSize="sm"
-          leftAddon={<Search />}
-          placeholder="بحث: اسم / هاتف / بريد"
-          defaultValue={sp.q ?? ''}
-          className="flex-1 min-w-[160px]"
-        />
-        <Select
-          name="brokerApprovalStatus"
-          inputSize="sm"
-          defaultValue={sp.brokerApprovalStatus ?? ''}
-          className="w-44 shrink-0"
-        >
-          <option value="">كل حالات المراجعة</option>
-          <option value="PENDING">قيد المراجعة</option>
-          <option value="APPROVED">موافق عليه</option>
-          <option value="REJECTED">مرفوض</option>
-          <option value="DUPLICATE">مكرر</option>
-        </Select>
-        <Select
-          name="stage"
-          inputSize="sm"
-          defaultValue={sp.stage ?? ''}
-          className="w-40 shrink-0"
-        >
-          <option value="">كل المراحل</option>
-          <option value="NEW">جديد</option>
-          <option value="INTERESTED">مهتم</option>
-          <option value="VISIT">زيارة</option>
-          <option value="NEGOTIATION">تفاوض</option>
-          <option value="WON">فوز</option>
-          <option value="LOST">خسارة</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {(sp.q || sp.brokerApprovalStatus || sp.stage) && (
-            <Link href="/portal/leads">
-              <Button type="button" variant="ghost" size="sm">مسح التصفية</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+        <PremiumFilterField label="بحث">
+          <Input
+            name="q"
+            inputSize="sm"
+            leftAddon={<Search />}
+            placeholder="بحث: اسم / هاتف / بريد"
+            defaultValue={sp.q ?? ''}
+            className="flex-1 min-w-[160px]"
+          />
+        </PremiumFilterField>
+        <PremiumFilterField label="حالة المراجعة">
+          <Select
+            name="brokerApprovalStatus"
+            inputSize="sm"
+            defaultValue={sp.brokerApprovalStatus ?? ''}
+            className="w-44"
+          >
+            <option value="">كل حالات المراجعة</option>
+            <option value="PENDING">قيد المراجعة</option>
+            <option value="APPROVED">موافق عليه</option>
+            <option value="REJECTED">مرفوض</option>
+            <option value="DUPLICATE">مكرر</option>
+          </Select>
+        </PremiumFilterField>
+        <PremiumFilterField label="المرحلة">
+          <Select
+            name="stage"
+            inputSize="sm"
+            defaultValue={sp.stage ?? ''}
+            className="w-40"
+          >
+            <option value="">كل المراحل</option>
+            <option value="NEW">جديد</option>
+            <option value="INTERESTED">مهتم</option>
+            <option value="VISIT">زيارة</option>
+            <option value="NEGOTIATION">تفاوض</option>
+            <option value="WON">فوز</option>
+            <option value="LOST">خسارة</option>
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<Users />}
+        title="قائمة الفرص"
+        padded={false}
+      >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
@@ -232,7 +245,6 @@ export default async function PortalLeadsPage({
                       isDuplicate && 'opacity-60',
                     )}
                   >
-                    {/* Client + contact (merged) */}
                     <td className="py-3 ps-5 pe-4">
                       <div className="flex items-start gap-2.5">
                         <span
@@ -264,7 +276,6 @@ export default async function PortalLeadsPage({
                       </div>
                     </td>
 
-                    {/* Project / unit interest */}
                     <td className="py-3 px-4">
                       {l.projectInterest ? (
                         <>
@@ -284,12 +295,10 @@ export default async function PortalLeadsPage({
                       )}
                     </td>
 
-                    {/* CRM stage */}
                     <td className="py-3 px-4">
                       <LeadStageBadge stage={l.stage} />
                     </td>
 
-                    {/* Broker review status */}
                     <td className="py-3 px-4">
                       {l.brokerApprovalStatus ? (
                         <BrokerLeadStatusBadge status={l.brokerApprovalStatus} />
@@ -298,12 +307,10 @@ export default async function PortalLeadsPage({
                       )}
                     </td>
 
-                    {/* Date submitted */}
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
                       {formatDate(l.brokerSubmittedAt ?? l.createdAt)}
                     </td>
 
-                    {/* Action */}
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/leads/${l.id}` as never}>
                         <IconButton label="عرض" variant="ghost" size="sm">
@@ -331,7 +338,7 @@ export default async function PortalLeadsPage({
             }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }

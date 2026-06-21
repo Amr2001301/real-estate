@@ -39,7 +39,6 @@ import type {
 } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCompact } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerStatusBadge, BrokerLeadStatusBadge } from '@/components/badges';
@@ -191,7 +190,7 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
   ];
 
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
         {tiles.map((tile) => (
           <div key={tile.label} className="bg-surface px-5 py-5">
@@ -267,7 +266,7 @@ function BrokerActionQueue({
   }
 
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-hairline bg-canvas/50">
         <div className="flex items-center gap-2.5">
           <div className="relative shrink-0">
@@ -484,7 +483,7 @@ export default async function PortalDashboard() {
     <div className="space-y-5">
 
       {/* ── 1. Hero ───────────────────────────────────────────────────────────── */}
-      <div className="rounded-2xl bg-surface border border-hairline shadow-xs px-5 py-4">
+      <div className="rounded-[20px] bg-surface border border-hairline shadow-soft px-5 py-4">
         <div className="flex items-start sm:items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3.5 min-w-0 flex-1">
             <div className="h-11 w-11 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shrink-0 shadow-sm">
@@ -569,7 +568,7 @@ export default async function PortalDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-4">
 
           {/* Recent leads */}
-          <Card className="lg:col-span-8 p-0 overflow-hidden">
+          <div className="lg:col-span-8 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-hairline bg-canvas/40">
               <div className="flex items-center gap-2.5">
                 <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
@@ -672,13 +671,13 @@ export default async function PortalDashboard() {
                 </table>
               </div>
             )}
-          </Card>
+          </div>
 
           {/* Sidebar */}
           <div className="lg:col-span-4 flex flex-col gap-4">
 
             {/* Quick actions */}
-            <Card className="p-5">
+            <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-5">
               <h2 className="text-sm font-bold text-slate-900 mb-3">إجراءات سريعة</h2>
               <Link href="/portal/leads/new" className="block">
                 <Button variant="primary" size="md" leftIcon={<UserPlus className="h-4 w-4" />} fullWidth>
@@ -718,10 +717,10 @@ export default async function PortalDashboard() {
                   </Link>
                 ))}
               </div>
-            </Card>
+            </div>
 
             {/* Available projects */}
-            <Card className="p-0 overflow-hidden">
+            <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-hairline bg-canvas/40">
                 <div className="flex items-center gap-2">
                   <div className="h-6 w-6 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
@@ -782,7 +781,7 @@ export default async function PortalDashboard() {
                   })}
                 </div>
               )}
-            </Card>
+            </div>
           </div>
         </div>
       </div>
@@ -791,7 +790,7 @@ export default async function PortalDashboard() {
       {activity.length > 0 && (
         <div className="space-y-2.5">
           <SectionLabel>آخر النشاطات</SectionLabel>
-          <Card className="p-0 overflow-hidden">
+          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-hairline bg-canvas/40">
               <div className="flex items-center gap-2.5">
                 <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
@@ -846,7 +845,7 @@ export default async function PortalDashboard() {
                 );
               })}
             </div>
-          </Card>
+          </div>
         </div>
       )}
 

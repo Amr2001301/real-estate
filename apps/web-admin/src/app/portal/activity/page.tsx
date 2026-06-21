@@ -23,11 +23,15 @@ import type {
 } from '@/lib/types';
 import { tx, formatDateTime } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Select } from '@/components/ui/select';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
+import {
+  PremiumPageHero,
+  PremiumFilterBar,
+  PremiumFilterField,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -158,7 +162,7 @@ export default async function PortalActivityPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title="النشاط"
         description="سجل أحداث الفرص والزيارات الخاصة بشركة الوساطة."
         breadcrumbs={[
@@ -173,65 +177,70 @@ export default async function PortalActivityPage({
         </div>
       )}
 
-      <form
+      <PremiumFilterBar
         method="get"
         action="/portal/activity"
-        className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs"
+        trailing={
+          <div className="flex items-center gap-1.5 ms-auto shrink-0">
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {(sp.type || sp.entityType) && (
+              <Link href="/portal/activity">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </div>
+        }
       >
-        <Select
-          name="type"
-          inputSize="sm"
-          defaultValue={sp.type ?? ''}
-          className="w-52 shrink-0"
-        >
-          <option value="">كل الأحداث</option>
-          <option value="LEAD_SUBMITTED">إرسال فرصة</option>
-          <option value="VISIT_REQUESTED">طلب زيارة</option>
-          <option value="LEAD_APPROVED">اعتماد فرصة</option>
-          <option value="LEAD_REJECTED">رفض فرصة</option>
-          <option value="LEAD_MARKED_DUPLICATE">فرصة مكررة</option>
-          <option value="RESERVATION_CREATED">إنشاء حجز</option>
-          <option value="CONTRACT_CREATED">إنشاء عقد</option>
-          <option value="CONTRACT_SIGNED">توقيع عقد</option>
-          <option value="COMMISSION_EARNED">استحقاق عمولة</option>
-          <option value="COMMISSION_APPROVED">اعتماد عمولة</option>
-          <option value="COMMISSION_REJECTED">رفض عمولة</option>
-          <option value="COMMISSION_CANCELLED">إلغاء عمولة</option>
-          <option value="PAYOUT_CREATED">إنشاء دفعة</option>
-          <option value="PAYOUT_APPROVED">اعتماد دفعة</option>
-          <option value="PAYOUT_PROCESSING">دفعة قيد التنفيذ</option>
-          <option value="PAYOUT_PAID">صرف دفعة</option>
-          <option value="PAYOUT_CANCELLED">إلغاء دفعة</option>
-        </Select>
-        <Select
-          name="entityType"
-          inputSize="sm"
-          defaultValue={sp.entityType ?? ''}
-          className="w-44 shrink-0"
-        >
-          <option value="">كل الكيانات</option>
-          <option value="Lead">الفرص</option>
-          <option value="VisitRequest">الزيارات</option>
-          <option value="Reservation">الحجوزات</option>
-          <option value="Contract">العقود</option>
-          <option value="Commission">العمولات</option>
-          <option value="Payout">المدفوعات</option>
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">
-            تصفية
-          </Button>
-          {(sp.type || sp.entityType) && (
-            <Link href="/portal/activity">
-              <Button type="button" variant="ghost" size="sm">
-                مسح
-              </Button>
-            </Link>
-          )}
-        </div>
-      </form>
+        <PremiumFilterField label="نوع الحدث">
+          <Select
+            name="type"
+            inputSize="sm"
+            defaultValue={sp.type ?? ''}
+            className="w-52"
+          >
+            <option value="">كل الأحداث</option>
+            <option value="LEAD_SUBMITTED">إرسال فرصة</option>
+            <option value="VISIT_REQUESTED">طلب زيارة</option>
+            <option value="LEAD_APPROVED">اعتماد فرصة</option>
+            <option value="LEAD_REJECTED">رفض فرصة</option>
+            <option value="LEAD_MARKED_DUPLICATE">فرصة مكررة</option>
+            <option value="RESERVATION_CREATED">إنشاء حجز</option>
+            <option value="CONTRACT_CREATED">إنشاء عقد</option>
+            <option value="CONTRACT_SIGNED">توقيع عقد</option>
+            <option value="COMMISSION_EARNED">استحقاق عمولة</option>
+            <option value="COMMISSION_APPROVED">اعتماد عمولة</option>
+            <option value="COMMISSION_REJECTED">رفض عمولة</option>
+            <option value="COMMISSION_CANCELLED">إلغاء عمولة</option>
+            <option value="PAYOUT_CREATED">إنشاء دفعة</option>
+            <option value="PAYOUT_APPROVED">اعتماد دفعة</option>
+            <option value="PAYOUT_PROCESSING">دفعة قيد التنفيذ</option>
+            <option value="PAYOUT_PAID">صرف دفعة</option>
+            <option value="PAYOUT_CANCELLED">إلغاء دفعة</option>
+          </Select>
+        </PremiumFilterField>
+        <PremiumFilterField label="نوع الكيان">
+          <Select
+            name="entityType"
+            inputSize="sm"
+            defaultValue={sp.entityType ?? ''}
+            className="w-44"
+          >
+            <option value="">كل الكيانات</option>
+            <option value="Lead">الفرص</option>
+            <option value="VisitRequest">الزيارات</option>
+            <option value="Reservation">الحجوزات</option>
+            <option value="Contract">العقود</option>
+            <option value="Commission">العمولات</option>
+            <option value="Payout">المدفوعات</option>
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<Activity />}
+        title="سجل النشاط"
+        padded={false}
+      >
         {rows.length === 0 ? (
           <EmptyState
             icon={<Activity />}
@@ -323,7 +332,7 @@ export default async function PortalActivityPage({
             params={{ type: sp.type, entityType: sp.entityType }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }

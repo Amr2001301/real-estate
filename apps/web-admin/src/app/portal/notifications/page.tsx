@@ -1,6 +1,6 @@
 import { api, safe } from '@/lib/api';
 import type { NotificationItem } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import { NotificationList } from '@/components/notifications/notification-list';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +25,7 @@ export default async function PortalNotificationsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title="الإشعارات"
         description="تنبيهات بشأن فرصك، حجوزاتك، عقودك، وعمولاتك."
         breadcrumbs={[

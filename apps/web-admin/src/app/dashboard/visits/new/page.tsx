@@ -1,6 +1,6 @@
 import { api, safe } from '@/lib/api';
 import type { Paged, User, LeadStage, Project } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero } from '@/components/premium';
 import NewVisitForm from './_form';
 
 export const dynamic = 'force-dynamic';
@@ -46,7 +46,7 @@ export default async function NewVisitPage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+      <PremiumPageHero
         title="زيارة جديدة"
         description="أنشئ زيارة جديدة مباشرة. يمكن ربطها بعميل محتمل، عميل مسجل، أو حفظها كزيارة بدون حساب."
         breadcrumbs={[

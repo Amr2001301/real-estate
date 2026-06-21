@@ -5,7 +5,6 @@ import {
   Eye,
   Clock,
   CheckCircle2,
-  XCircle,
   ArrowRightLeft,
   BadgePercent,
   Phone,
@@ -18,13 +17,15 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
-import { Card } from '@/components/ui/card';
-import { PageHeader } from '@/components/ui/page-header';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
 import { ReservationsFilterBar } from '@/components/broker/reservations-filter-bar';
 import { ReservationStatusBadge } from '@/components/badges';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumSectionCard,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -92,8 +93,7 @@ export default async function PortalReservationsPage({
   return (
     <div className="space-y-5">
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="حجوزاتي"
         description="الحجوزات التي أنشأتها عبر البوابة — تابع الحالة والعمولة المُقفلة."
         breadcrumbs={[
@@ -116,22 +116,25 @@ export default async function PortalReservationsPage({
         </div>
       )}
 
-      {/* ── KPI strip ───────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard label="إجمالي الحجوزات" value={paged?.meta.total ?? 0} icon={<BookmarkCheck />}  tone="brand"   />
-        <PageKpiCard label="قيد المراجعة"    value={pendingCount}            icon={<Clock />}          tone="warning" />
-        <PageKpiCard label="تمت الموافقة"    value={approvedCount}           icon={<CheckCircle2 />}   tone="success" />
-        <PageKpiCard label="محوّل إلى عقد"   value={convertedCount}          icon={<ArrowRightLeft />} tone="info"    />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي الحجوزات', value: paged?.meta.total ?? 0, icon: <BookmarkCheck />,  tone: 'brand'   },
+          { label: 'قيد المراجعة',    value: pendingCount,            icon: <Clock />,          tone: 'warning' },
+          { label: 'تمت الموافقة',    value: approvedCount,           icon: <CheckCircle2 />,   tone: 'success' },
+          { label: 'محوّل إلى عقد',   value: convertedCount,          icon: <ArrowRightLeft />, tone: 'info'    },
+        ]}
+      />
 
-      {/* ── Filter bar ──────────────────────────────────────────────────────── */}
       <ReservationsFilterBar
         projects={projects}
         sp={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
       />
 
-      {/* ── Table ───────────────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<BookmarkCheck />}
+        title="قائمة الحجوزات"
+        padded={false}
+      >
         {rows.length > 0 && (
           <div className="flex items-center gap-2 px-5 py-2.5 border-b border-hairline bg-surface-muted/30 text-xs text-slate-500">
             <span className="font-bold text-slate-700">{paged?.meta.total?.toLocaleString()}</span>
@@ -193,7 +196,6 @@ export default async function PortalReservationsPage({
                           : 'hover:bg-surface-muted/40',
                     )}
                   >
-                    {/* Client + phone (entity first) */}
                     <td className="py-3 ps-5 pe-4">
                       {clientName ? (
                         <div className="flex items-start gap-2.5">
@@ -224,7 +226,6 @@ export default async function PortalReservationsPage({
                       )}
                     </td>
 
-                    {/* Unit / Project */}
                     <td className="py-3 px-4">
                       <CodeText className="text-xs font-semibold text-slate-800">{r.unit?.code ?? '—'}</CodeText>
                       <p className="text-2xs text-slate-500 mt-0.5">
@@ -232,12 +233,10 @@ export default async function PortalReservationsPage({
                       </p>
                     </td>
 
-                    {/* Status */}
                     <td className="py-3 px-4">
                       <ReservationStatusBadge status={r.status} />
                     </td>
 
-                    {/* Locked commission */}
                     <td className="py-3 px-4">
                       {r.commissionLockedPct != null ? (
                         <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-amber-100">
@@ -254,17 +253,14 @@ export default async function PortalReservationsPage({
                       )}
                     </td>
 
-                    {/* Reservation number (reference, de-emphasised) */}
                     <td className="py-3 px-4">
                       <CodeText className="text-2xs text-slate-500">{r.reservationNumber ?? '—'}</CodeText>
                     </td>
 
-                    {/* Date */}
                     <td className="py-3 px-4 text-2xs text-slate-500 whitespace-nowrap">
                       {formatDate(r.createdAt)}
                     </td>
 
-                    {/* Action */}
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/portal/reservations/${r.id}` as never}>
                         <IconButton label="عرض" variant="ghost" size="sm">
@@ -288,7 +284,7 @@ export default async function PortalReservationsPage({
             params={{ q: sp.q, status: sp.status, projectId: sp.projectId, from: sp.from, to: sp.to }}
           />
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }
