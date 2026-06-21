@@ -138,27 +138,27 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
           const t = TONE[item.tone];
           return (
             <Link key={item.key} href={item.href as never} className="group block">
-              <div className="bg-surface h-full px-5 py-5 flex flex-col gap-2.5 hover:bg-canvas/60 transition-colors duration-150">
+              <div className="bg-surface h-full px-5 py-5 flex flex-col gap-3 hover:bg-canvas/60 transition-colors duration-150">
 
-                {/* Icon + pulsing dot */}
+                {/* Label row + icon */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className={cn(
-                    'h-9 w-9 rounded-xl flex items-center justify-center [&_svg]:h-4 [&_svg]:w-4 shrink-0',
-                    t.icon,
-                  )}>
-                    {item.icon}
+                  <p className="text-[11px] font-medium text-slate-400 leading-none">
+                    {item.label}
+                  </p>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={cn('h-2 w-2 rounded-full animate-pulse shrink-0', t.dot)} />
+                    <div className={cn(
+                      'h-9 w-9 rounded-xl flex items-center justify-center [&_svg]:h-4 [&_svg]:w-4 shrink-0',
+                      t.icon,
+                    )}>
+                      {item.icon}
+                    </div>
                   </div>
-                  <span className={cn('h-2 w-2 rounded-full animate-pulse mt-1.5 shrink-0', t.dot)} />
                 </div>
 
                 {/* Count */}
-                <p className={cn('text-[30px] font-black tabular-nums leading-none mt-0.5', t.count)}>
+                <p className={cn('text-[30px] font-black tabular-nums leading-none', t.count)}>
                   {item.value}
-                </p>
-
-                {/* Label */}
-                <p className="text-[12.5px] font-bold text-slate-800 leading-snug">
-                  {item.label}
                 </p>
 
                 {/* Description */}

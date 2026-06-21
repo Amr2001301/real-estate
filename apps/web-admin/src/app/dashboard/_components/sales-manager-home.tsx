@@ -22,7 +22,7 @@ import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PremiumPageHero } from '@/components/premium';
+import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -267,60 +267,66 @@ export async function SalesManagerDashboard() {
         }
       />
 
-      {/* ── Command Strip — two rows of 4 ─────────────────────────────────── */}
-      <ManagerCommandStrip
-        tiles={[
+      {/* ── Metric strip — two rows of 4 ─────────────────────────────────── */}
+      <PremiumMetricStrip
+        metrics={[
           {
             label:    'إجمالي فرص الفريق',
             value:    leadsRes.error ? '—' : teamLeads,
             sub:      `${teamOpenLeads} مفتوحة`,
-            valueCls: 'text-brand-700',
+            icon:     <Users />,
+            tone:     'brand',
           },
           {
             label:    'فرص مفتوحة',
             value:    perfRes.error ? '—' : teamOpenLeads,
             sub:      `من أصل ${teamLeads} فرصة`,
-            valueCls: 'text-violet-700',
+            icon:     <Zap />,
+            tone:     'purple',
           },
           {
             label:    'زيارات قادمة للفريق',
             value:    perfRes.error ? '—' : teamUpcomingVisits,
             sub:      'مجدولة لاحقاً',
-            valueCls: 'text-blue-700',
+            icon:     <CalendarClock />,
+            tone:     'info',
           },
           {
             label:    'حجوزات نشطة',
             value:    perfRes.error ? '—' : teamActiveReservations,
             sub:      teamExpiringCount > 0 ? `${teamExpiringCount} تنتهي قريباً` : 'لا حجوزات تنتهي',
-            valueCls: teamExpiringCount > 0 ? 'text-amber-700' : 'text-emerald-700',
+            icon:     <BookmarkCheck />,
+            tone:     teamExpiringCount > 0 ? 'warning' : 'success',
           },
           {
             label:    'عقود موقّعة الشهر',
             value:    perfRes.error ? '—' : teamSigned,
             sub:      period,
-            valueCls: 'text-emerald-700',
+            icon:     <FileText />,
+            tone:     'success',
           },
           {
-            label:    'القيمة المحققة',
-            value:    perfRes.error ? '—' : formatCurrency(teamRealized),
-            sub:      'هذا الشهر',
-            valueCls: 'text-slate-900',
+            label:     'القيمة المحققة',
+            value:     perfRes.error ? '—' : formatCurrency(teamRealized),
+            sub:       'هذا الشهر',
+            icon:      <Banknote />,
+            tone:      'brand',
+            valueSize: 'compact',
           },
           {
-            label:    'تحقيق الهدف المالي',
-            value:    perfRes.error ? '—' : pctDisplay(teamAmountPct),
-            sub:      perfRes.error ? undefined : pctSub(teamAmountPct),
-            valueCls:
-              teamAmountPct === null  ? 'text-slate-400'    :
-              teamAmountPct >= 80     ? 'text-success-700'  :
-              teamAmountPct >= 50     ? 'text-amber-700'    :
-                                        'text-brand-700',
+            label:     'تحقيق الهدف المالي',
+            value:     perfRes.error ? '—' : pctDisplay(teamAmountPct),
+            sub:       perfRes.error ? undefined : pctSub(teamAmountPct),
+            icon:      <TrendingUp />,
+            tone:      teamAmountPct === null ? 'neutral' : teamAmountPct >= 80 ? 'success' : teamAmountPct >= 50 ? 'warning' : 'brand',
+            valueSize: 'compact',
           },
           {
             label:    'تنبيهات الفريق',
             value:    managerAlerts.length,
             sub:      managerAlerts.length > 0 ? 'تحتاج مراجعة' : 'لا شيء الآن',
-            valueCls: managerAlerts.length > 0 ? 'text-amber-700' : 'text-success-700',
+            icon:     <Bell />,
+            tone:     managerAlerts.length > 0 ? 'warning' : 'success',
           },
         ]}
       />
@@ -585,35 +591,6 @@ export async function SalesManagerDashboard() {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Manager Command Strip ─────────────────────────────────────────────────────
-
-interface ManagerTile {
-  label:    string;
-  value:    string | number;
-  sub?:     string;
-  valueCls: string;
-}
-
-function ManagerCommandStrip({ tiles }: { tiles: ManagerTile[] }) {
-  return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-hairline">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="bg-surface px-5 py-5">
-            <p className="text-[11px] font-medium text-slate-400 mb-2 leading-none">{tile.label}</p>
-            <p className={cn('text-[22px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
-              {tile.value}
-            </p>
-            {tile.sub && (
-              <p className="text-[11px] text-slate-400 mt-2 leading-none">{tile.sub}</p>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import {
-  Users,
   Zap,
   CalendarClock,
   BookmarkCheck,
@@ -17,20 +16,21 @@ import {
   Bell,
   CheckCircle2,
   ArrowUpRight,
-  Target,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import {
   LeadStageBadge,
   ReservationStatusBadge,
   AppointmentStatusBadge,
 } from '@/components/badges';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+} from '@/components/premium';
 
 interface BonusEntryRow {
   id: string;
@@ -77,35 +77,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
         {children}
       </span>
       <div className="flex-1 h-px bg-hairline" />
-    </div>
-  );
-}
-
-// ── Command Strip ─────────────────────────────────────────────────────────────
-
-interface CommandTile {
-  label:    string;
-  value:    string | number;
-  sub?:     string;
-  valueCls: string;
-}
-
-function SalesCommandStrip({ tiles }: { tiles: CommandTile[] }) {
-  return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-hairline">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="bg-surface px-5 py-5">
-            <p className="text-[11px] font-medium text-slate-400 mb-2 leading-none">{tile.label}</p>
-            <p className={cn('text-[22px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
-              {tile.value}
-            </p>
-            {tile.sub && (
-              <p className="text-[11px] text-slate-400 mt-2 leading-none">{tile.sub}</p>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -190,54 +161,15 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   const showVisits       = !visitsRes.error       && upcomingVisitRows.length    > 0;
   const showReservations = !reservationsRes.error  && activeReservationRows.length > 0;
 
-  // ── Command Strip tiles ───────────────────────────────────────────────────
-  const commandTiles: CommandTile[] = [
-    {
-      label:    'فرصي المفتوحة',
-      value:    openLeads.length,
-      sub:      staleLeadsCount > 0 ? `${staleLeadsCount} تحتاج متابعة` : 'كلها في الوقت',
-      valueCls: 'text-brand-700',
-    },
-    {
-      label:    'متابعات مستحقة',
-      value:    staleLeadsCount,
-      sub:      staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة',
-      valueCls: staleLeadsCount > 0 ? 'text-amber-700' : 'text-success-700',
-    },
-    {
-      label:    'زياراتي القادمة',
-      value:    visits.length,
-      sub:      todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم',
-      valueCls: 'text-blue-700',
-    },
-    {
-      label:    'حجوزاتي النشطة',
-      value:    activeReservations.length,
-      sub:      expiringWithin7Count > 0
-                  ? `${expiringWithin7Count} تنتهي قريباً`
-                  : 'لا حجوزات تنتهي قريباً',
-      valueCls: expiringWithin7Count > 0 ? 'text-amber-700' : 'text-emerald-700',
-    },
-    {
-      label:    'عقود هذا الشهر',
-      value:    closedDeals,
-      sub:      signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود',
-      valueCls: 'text-violet-700',
-    },
-    {
-      label:    'الوحدات المتاحة',
-      value:    availableUnits,
-      sub:      'جاهزة للعرض',
-      valueCls: 'text-teal-700',
-    },
-  ];
-
   return (
     <div className="space-y-5">
       {/* ── Header ────────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title="لوحة المبيعات"
         description="نظرة سريعة على فرصك، زياراتك، حجوزاتك، والعقود المتوقعة."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+        ]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/dashboard/leads/new">
@@ -259,8 +191,53 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         }
       />
 
-      {/* ── Command Strip ─────────────────────────────────────────────────── */}
-      <SalesCommandStrip tiles={commandTiles} />
+      {/* ── Metric strip ──────────────────────────────────────────────────── */}
+      <PremiumMetricStrip
+        metrics={[
+          {
+            label:    'فرصي المفتوحة',
+            value:    openLeads.length,
+            sub:      staleLeadsCount > 0 ? `${staleLeadsCount} تحتاج متابعة` : 'كلها في الوقت',
+            icon:     <Zap />,
+            tone:     'brand',
+          },
+          {
+            label:    'متابعات مستحقة',
+            value:    staleLeadsCount,
+            sub:      staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة',
+            icon:     <AlertTriangle />,
+            tone:     staleLeadsCount > 0 ? 'warning' : 'success',
+          },
+          {
+            label:    'زياراتي القادمة',
+            value:    visits.length,
+            sub:      todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم',
+            icon:     <CalendarClock />,
+            tone:     'info',
+          },
+          {
+            label:    'حجوزاتي النشطة',
+            value:    activeReservations.length,
+            sub:      expiringWithin7Count > 0 ? `${expiringWithin7Count} تنتهي قريباً` : 'لا حجوزات تنتهي قريباً',
+            icon:     <BookmarkCheck />,
+            tone:     expiringWithin7Count > 0 ? 'warning' : 'success',
+          },
+          {
+            label:    'عقود هذا الشهر',
+            value:    closedDeals,
+            sub:      signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود',
+            icon:     <FileText />,
+            tone:     'purple',
+          },
+          {
+            label:    'الوحدات المتاحة',
+            value:    availableUnits,
+            sub:      'جاهزة للعرض',
+            icon:     <Home />,
+            tone:     'teal',
+          },
+        ]}
+      />
 
       {/* ── Quick Access ──────────────────────────────────────────────────── */}
       <div className="space-y-2.5">
@@ -519,7 +496,7 @@ export function QuickAccessStrip({
   trailingSlot?: React.ReactNode;
 }) {
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex flex-wrap gap-px bg-hairline">
         {links.map((l) => (
           <Link
@@ -563,7 +540,7 @@ function TodayPriorityPanel({
   const total = todayVisits.length + expiringUrgent.length;
 
   return (
-    <div className="bg-surface border border-hairline rounded-2xl shadow-xs overflow-hidden">
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex items-center gap-2.5 px-5 py-3 border-b border-hairline bg-amber-50/40">
         <div className="relative shrink-0">
           <Bell className="h-4 w-4 text-amber-600" />
@@ -669,7 +646,7 @@ function SectionCard({
   children:   React.ReactNode;
 }) {
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <div className={cn('bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden', className)}>
       <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-hairline bg-canvas/40">
         <div className="flex items-center gap-2">
           <div className={cn('h-7 w-7 rounded-lg flex items-center justify-center shrink-0', iconBg)}>
@@ -698,6 +675,6 @@ function SectionCard({
       ) : (
         <div className="divide-y divide-hairline">{children}</div>
       )}
-    </Card>
+    </div>
   );
 }
