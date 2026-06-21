@@ -5,14 +5,13 @@ import { Plus, FileEdit, ArrowRight, Bell } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Translatable } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
+import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -63,7 +62,7 @@ export default async function NotificationTemplatesPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title="قوالب الإشعارات"
         description="إدارة قوالب نصوص الإشعارات لجميع قنوات الإرسال."
         breadcrumbs={[
@@ -86,16 +85,12 @@ export default async function NotificationTemplatesPage() {
         </div>
       )}
 
-      <Card className="overflow-hidden">
-        {/* ── Card header ──────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-hairline">
-          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-            <Bell className="h-3.5 w-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-slate-800">قوالب الإشعارات</h2>
-          <CountChip count={templates.length} />
-        </div>
-
+      <PremiumSectionCard
+        icon={<Bell />}
+        title="قوالب الإشعارات"
+        trailing={<CountChip count={templates.length} />}
+        padded={false}
+      >
         {/* ── Template list ────────────────────────────────────────────────── */}
         {templates.length === 0 ? (
           <CompactEmpty
@@ -192,7 +187,7 @@ export default async function NotificationTemplatesPage() {
             </form>
           </div>
         </details>
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }

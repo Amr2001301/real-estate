@@ -2,8 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { requireAdmin } from '@/lib/session';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
+import { PremiumPageHero } from '@/components/premium';
 import BroadcastForm from './_form';
 
 export const dynamic = 'force-dynamic';
@@ -15,9 +15,14 @@ export default async function BroadcastNotificationPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader
+      <PremiumPageHero
         title="إرسال إشعار يدوي"
         description="أنشئ وأرسل إشعاراً مخصصاً إلى جمهور محدد. الإشعار يصل فوراً إلى قائمة إشعارات المستخدم."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'الإشعارات', href: '/dashboard/notifications' },
+          { label: 'إرسال يدوي' },
+        ]}
         actions={
           <Link href="/dashboard/notifications">
             <Button variant="ghost" leftIcon={<ArrowRight className="h-4 w-4" />}>

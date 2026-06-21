@@ -5,13 +5,17 @@ import { api, safe } from '@/lib/api';
 import type { Paged, User, UserRole } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import {
+  PremiumPageHero,
+  PremiumSectionCard,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+  PremiumFilterField,
+} from '@/components/premium';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -188,8 +192,7 @@ export default async function UsersPage({
     <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <PageHeader
-        className="mb-0"
+      <PremiumPageHero
         title="المستخدمون"
         description="إدارة حسابات المستخدمين، الأدوار، حالة التفعيل، وربط فرق المبيعات."
         breadcrumbs={[
@@ -208,104 +211,103 @@ export default async function UsersPage({
       />
 
       {/* ── KPI summary strip ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <PageKpiCard
-          label="إجمالي المستخدمين"
-          value={total}
-          icon={<Users />}
-          tone="info"
-        />
-        <PageKpiCard
-          label="المستخدمون النشطون"
-          value={active}
-          icon={<UserCheck />}
-          tone="success"
-        />
-        <PageKpiCard
-          label="معطلون"
-          value={inactive}
-          icon={<UserX />}
-          tone="neutral"
-        />
-        <PageKpiCard
-          label="أدوار إدارية"
-          value={adminRoles}
-          sub={lastLogin ? `آخر دخول: ${formatDate(lastLogin)}` : undefined}
-          icon={<Shield />}
-          tone="brand"
-        />
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي المستخدمين', value: total, icon: <Users />, tone: 'info' },
+          { label: 'المستخدمون النشطون', value: active, icon: <UserCheck />, tone: 'success' },
+          { label: 'معطلون', value: inactive, icon: <UserX />, tone: 'neutral' },
+          {
+            label: 'أدوار إدارية',
+            value: adminRoles,
+            sub: lastLogin ? `آخر دخول: ${formatDate(lastLogin)}` : undefined,
+            icon: <Shield />,
+            tone: 'brand',
+          },
+        ]}
+      />
 
       {/* ── Create user (collapsible via showCreate=1) ──────────────────── */}
       {showCreate && (
-        <Card>
-          <CardHeader>
-            <CardTitle>إضافة مستخدم جديد</CardTitle>
+        <PremiumSectionCard
+          title="إضافة مستخدم جديد"
+          trailing={
             <Link
               href={cancelCreateUrl as never}
               className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
             >
               إلغاء
             </Link>
-          </CardHeader>
-          <CardBody>
-            <form
-              action={createUserAction}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
-            >
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-600">الدور</label>
-                <Select name="role" inputSize="sm" defaultValue="SALES">
-                  {CREATABLE_ROLES.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-600">الاسم الكامل</label>
-                <Input
-                  name="fullName"
-                  inputSize="sm"
-                  required
-                  placeholder="الاسم الكامل"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-600">البريد الإلكتروني</label>
-                <Input
-                  name="email"
-                  type="email"
-                  inputSize="sm"
-                  required
-                  placeholder="user@example.com"
-                  dir="ltr"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-slate-600">كلمة مرور مؤقتة</label>
-                <Input
-                  name="password"
-                  type="password"
-                  inputSize="sm"
-                  required
-                  minLength={8}
-                  placeholder="٨ أحرف على الأقل"
-                />
-              </div>
-              <div className="flex items-end">
-                <Button type="submit" variant="primary" size="sm" fullWidth>
-                  إنشاء الحساب
-                </Button>
-              </div>
-            </form>
-          </CardBody>
-        </Card>
+          }
+        >
+          <form
+            action={createUserAction}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
+          >
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">الدور</label>
+              <Select name="role" inputSize="sm" defaultValue="SALES">
+                {CREATABLE_ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </Select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">الاسم الكامل</label>
+              <Input
+                name="fullName"
+                inputSize="sm"
+                required
+                placeholder="الاسم الكامل"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">البريد الإلكتروني</label>
+              <Input
+                name="email"
+                type="email"
+                inputSize="sm"
+                required
+                placeholder="user@example.com"
+                dir="ltr"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-600">كلمة مرور مؤقتة</label>
+              <Input
+                name="password"
+                type="password"
+                inputSize="sm"
+                required
+                minLength={8}
+                placeholder="٨ أحرف على الأقل"
+              />
+            </div>
+            <div className="flex items-end">
+              <Button type="submit" variant="primary" size="sm" fullWidth>
+                إنشاء الحساب
+              </Button>
+            </div>
+          </form>
+        </PremiumSectionCard>
       )}
 
       {/* ── Filters ─────────────────────────────────────────────────────── */}
-      <form method="get" action="/dashboard/users">
+      <PremiumFilterBar
+        method="get"
+        action="/dashboard/users"
+        trailing={
+          <>
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {hasFilter && (
+              <Link href={clearFilterUrl as never}>
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </>
+        }
+      >
         {showCreate && <input type="hidden" name="showCreate" value="1" />}
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs">
+        <PremiumFilterField label="بحث">
           <div className="w-60">
             <Input
               name="q"
@@ -315,6 +317,8 @@ export default async function UsersPage({
               leftAddon={<Search />}
             />
           </div>
+        </PremiumFilterField>
+        <PremiumFilterField label="الدور">
           <Select
             name="role"
             inputSize="sm"
@@ -326,6 +330,8 @@ export default async function UsersPage({
               <option key={r} value={r}>{ROLE_LABEL[r]}</option>
             ))}
           </Select>
+        </PremiumFilterField>
+        <PremiumFilterField label="الحالة">
           <Select
             name="status"
             inputSize="sm"
@@ -336,16 +342,8 @@ export default async function UsersPage({
             <option value="active">نشط فقط</option>
             <option value="inactive">معطل فقط</option>
           </Select>
-          <div className="flex items-center gap-1.5 ms-auto">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
-            {hasFilter && (
-              <Link href={clearFilterUrl as never}>
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
-              </Link>
-            )}
-          </div>
-        </div>
-      </form>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
       {/* ── Error state ─────────────────────────────────────────────────── */}
       {usersRes.error && (
@@ -355,7 +353,12 @@ export default async function UsersPage({
       )}
 
       {/* ── Users table ─────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <PremiumSectionCard
+        icon={<Users />}
+        title="قائمة المستخدمين"
+        description={`${rows.length} مستخدم`}
+        padded={false}
+      >
         {rows.length === 0 ? (
           <EmptyState
             icon={<Users />}
@@ -519,7 +522,7 @@ export default async function UsersPage({
             </table>
           </div>
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }

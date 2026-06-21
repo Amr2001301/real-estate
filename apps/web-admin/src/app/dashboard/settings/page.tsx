@@ -11,13 +11,15 @@ import {
 import { api, safe } from '@/lib/api';
 import type { SettingItem } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/cn';
 import { SettingCard } from './_components/setting-row';
 import { AddSettingPanel } from './_components/add-setting-panel';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -173,21 +175,17 @@ export default async function SettingsPage({
   return (
     <div className="space-y-4">
 
-      {/* ── Header row ──────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <PageHeader
-          title="إعدادات النظام"
-          description="إدارة إعدادات المنصة وقيمها التشغيلية. كل تعديل يُسجَّل تلقائياً في سجل التدقيق."
-          breadcrumbs={[
-            { label: 'لوحة التحكم', href: '/dashboard' },
-            { label: 'إعدادات النظام' },
-          ]}
-          meta={<Settings className="h-4 w-4 text-brand-600" />}
-        />
-        <div className="shrink-0 pt-1">
-          <AddSettingPanel />
-        </div>
-      </div>
+      {/* ── Header ──────────────────────────────────────────────────── */}
+      <PremiumPageHero
+        title="إعدادات النظام"
+        description="إدارة إعدادات المنصة وقيمها التشغيلية. كل تعديل يُسجَّل تلقائياً في سجل التدقيق."
+        breadcrumbs={[
+          { label: 'لوحة التحكم', href: '/dashboard' },
+          { label: 'إعدادات النظام' },
+        ]}
+        meta={<Settings className="h-4 w-4 text-brand-600" />}
+        actions={<AddSettingPanel />}
+      />
 
       {/* ── Toast banners ───────────────────────────────────────────────── */}
       {sp.err && (
@@ -207,47 +205,35 @@ export default async function SettingsPage({
       )}
 
       {/* ── KPI strip ───────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-x-1 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        {[
+      <PremiumMetricStrip
+        metrics={[
           {
-            icon:  <Database className="h-3.5 w-3.5" />,
             label: 'إجمالي الإعدادات',
-            value: String(items.length),
-            cls:   'bg-brand-50 text-brand-600',
+            value: items.length,
+            icon: <Database />,
+            tone: 'brand',
           },
           {
-            icon:  <Layers className="h-3.5 w-3.5" />,
             label: 'المجموعات',
-            value: String(grouped.size),
-            cls:   'bg-slate-100 text-slate-500',
+            value: grouped.size,
+            icon: <Layers />,
+            tone: 'neutral',
           },
           {
-            icon:  <ShieldAlert className="h-3.5 w-3.5" />,
             label: 'محمية / حساسة',
-            value: String(sensitiveCount),
-            cls:   'bg-amber-50 text-amber-600',
+            value: sensitiveCount,
+            icon: <ShieldAlert />,
+            tone: 'warning',
           },
           {
-            icon:  <Clock className="h-3.5 w-3.5" />,
             label: 'آخر تحديث',
             value: lastUpdated ? formatDateTime(lastUpdated) : '—',
-            cls:   'bg-slate-100 text-slate-500',
+            icon: <Clock />,
+            tone: 'neutral',
+            valueSize: 'compact',
           },
-        ].map((kpi, i, arr) => (
-          <div key={i} className="flex items-center shrink-0">
-            <div className="flex items-center gap-2.5 px-4 first:ps-0 last:pe-0">
-              <span className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg shrink-0', kpi.cls)}>
-                {kpi.icon}
-              </span>
-              <div>
-                <p className="text-2xs text-slate-500 font-medium leading-tight">{kpi.label}</p>
-                <p className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{kpi.value}</p>
-              </div>
-            </div>
-            {i < arr.length - 1 && <div className="hidden sm:block h-8 w-px bg-hairline shrink-0" />}
-          </div>
-        ))}
-      </div>
+        ]}
+      />
 
       {/* ── Info banner ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 rounded-2xl bg-info-50 border border-info-100 text-info-800 px-4 py-3 text-sm">
@@ -256,7 +242,7 @@ export default async function SettingsPage({
       </div>
 
       {/* ── Group nav + search ───────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
 
         {/* Group pills */}
         <div className="flex items-center gap-2 px-4 pt-3 pb-2.5 overflow-x-auto scrollbar-thin border-b border-hairline flex-nowrap">
@@ -329,11 +315,11 @@ export default async function SettingsPage({
             </Link>
           )}
         </form>
-      </Card>
+      </div>
 
       {/* ── Empty state ──────────────────────────────────────────────────── */}
       {items.length === 0 && (
-        <div className="rounded-2xl border border-hairline bg-surface shadow-xs px-5 py-12 flex flex-col items-center text-center gap-3">
+        <div className="rounded-2xl border border-hairline bg-surface shadow-soft px-5 py-12 flex flex-col items-center text-center gap-3">
           <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
             <Settings className="h-6 w-6" />
           </span>
@@ -357,7 +343,7 @@ export default async function SettingsPage({
 
       {/* ── Group cards ──────────────────────────────────────────────────── */}
       {orderedGroups.map(([group, rows]) => (
-        <Card key={group} className="overflow-hidden">
+        <div key={group} className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
 
           {/* Group header */}
           <div className="flex items-center gap-3 px-5 py-3.5 bg-surface-muted/30 border-b border-hairline">
@@ -393,7 +379,7 @@ export default async function SettingsPage({
               );
             })}
           </div>
-        </Card>
+        </div>
       ))}
 
     </div>

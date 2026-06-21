@@ -7,8 +7,6 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PermissionItem, Paged, User, UserRole } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -20,6 +18,11 @@ import {
   type PermissionCategory,
   type PermissionMeta,
 } from '@/lib/permission-labels';
+import {
+  PremiumPageHero,
+  PremiumMetricStrip,
+  PremiumFilterBar,
+} from '@/components/premium';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -149,8 +152,7 @@ export default async function PermissionsPage({
     <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <PageHeader
-        className="mb-0"
+      <PremiumPageHero
         title="الصلاحيات"
         description="مراجعة صلاحيات النظام وإدارة صلاحيات المستخدمين حسب الأدوار والأقسام."
         breadcrumbs={[
@@ -161,27 +163,14 @@ export default async function PermissionsPage({
       />
 
       {/* ── KPI summary strip ───────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-x-1 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3.5 shadow-xs">
-        {[
-          { label: 'إجمالي الصلاحيات', value: all.length },
-          { label: 'المجموعات',         value: totalGroups },
-          { label: 'المستخدمون',        value: users.length },
-          { label: 'صلاحيات إدارية',   value: adminPerms },
-        ].map((kpi, i) => (
-          <div key={i} className="flex items-center shrink-0">
-            <div className="flex items-center gap-2.5 px-4 first:ps-0 last:pe-0">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 shrink-0">
-                <ShieldCheck className="h-3.5 w-3.5" />
-              </span>
-              <div>
-                <p className="text-2xs text-slate-500 font-medium leading-tight">{kpi.label}</p>
-                <p className="text-base font-bold text-slate-900 tabular-nums leading-tight">{kpi.value}</p>
-              </div>
-            </div>
-            {i < 3 && <div className="hidden sm:block h-8 w-px bg-hairline shrink-0" />}
-          </div>
-        ))}
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'إجمالي الصلاحيات', value: all.length, icon: <ShieldCheck />, tone: 'brand' },
+          { label: 'المجموعات', value: totalGroups, icon: <ShieldCheck />, tone: 'neutral' },
+          { label: 'المستخدمون', value: users.length, icon: <UsersIcon />, tone: 'info' },
+          { label: 'صلاحيات إدارية', value: adminPerms, icon: <ShieldCheck />, tone: 'warning' },
+        ]}
+      />
 
       {/* ── Info notice (compact) ────────────────────────────────────────── */}
       <div className="flex items-center gap-2 rounded-xl border border-info-100 bg-info-50 px-4 py-2.5 text-xs text-info-800">
@@ -205,10 +194,19 @@ export default async function PermissionsPage({
         <div className="lg:col-span-2 space-y-4">
 
           {/* Search bar */}
-          <form
+          <PremiumFilterBar
             method="get"
             action="/dashboard/permissions"
-            className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs"
+            trailing={
+              <>
+                <Button type="submit" variant="primary" size="sm">بحث</Button>
+                {sp.q && (
+                  <Link href="/dashboard/permissions">
+                    <Button type="button" variant="ghost" size="sm">مسح</Button>
+                  </Link>
+                )}
+              </>
+            }
           >
             <div className="flex-1 min-w-[240px]">
               <Input
@@ -219,19 +217,11 @@ export default async function PermissionsPage({
                 leftAddon={<SearchIcon />}
               />
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <Button type="submit" variant="primary" size="sm">بحث</Button>
-              {sp.q && (
-                <Link href="/dashboard/permissions">
-                  <Button type="button" variant="ghost" size="sm">مسح</Button>
-                </Link>
-              )}
-            </div>
-          </form>
+          </PremiumFilterBar>
 
           {/* Permission group cards */}
           {sections.length === 0 ? (
-            <Card className="overflow-hidden">
+            <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
               <EmptyState
                 icon={<ShieldCheck />}
                 title="لا توجد صلاحيات مطابقة"
@@ -244,11 +234,11 @@ export default async function PermissionsPage({
                   ) : undefined
                 }
               />
-            </Card>
+            </div>
           ) : (
             <div className="space-y-4">
               {sections.map((section) => (
-                <Card key={section.category} className="overflow-hidden">
+                <div key={section.category} className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
                   {/* Group header */}
                   <div className="flex items-center justify-between px-5 py-3 border-b border-hairline bg-surface-muted/40">
                     <div className="flex items-center gap-2">
@@ -295,7 +285,7 @@ export default async function PermissionsPage({
                       </li>
                     ))}
                   </ul>
-                </Card>
+                </div>
               ))}
             </div>
           )}
@@ -303,7 +293,7 @@ export default async function PermissionsPage({
 
         {/* ── User permissions side panel (1 col, sticky) ──────────────── */}
         <div className="lg:sticky lg:top-4">
-          <Card className="overflow-hidden">
+          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
 
             {/* Panel header */}
             <div className="px-4 pt-4 pb-3 border-b border-hairline bg-surface-muted/40">
@@ -370,7 +360,7 @@ export default async function PermissionsPage({
                 </ul>
               )}
             </div>
-          </Card>
+          </div>
         </div>
 
       </div>

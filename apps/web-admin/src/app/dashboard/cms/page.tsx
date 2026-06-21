@@ -4,12 +4,11 @@ import { FileText, Image, BookOpen, Plus, Globe, FileEdit } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { tx, formatDate } from '@/lib/format';
 import type { Translatable } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { PremiumPageHero, PremiumSectionCard, PremiumMetricStrip } from '@/components/premium';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -88,8 +87,7 @@ export default async function CmsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        className="mb-0"
+      <PremiumPageHero
         title="إدارة المحتوى"
         description="إدارة الصفحات، البانرات، والمقالات المنشورة على المنصة."
         breadcrumbs={[
@@ -99,23 +97,17 @@ export default async function CmsPage() {
       />
 
       {/* ── Summary strip ──────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-hairline bg-surface px-5 py-3 shadow-xs">
-        <SummaryPill icon={<FileText className="h-3.5 w-3.5" />} label="الصفحات" value={pages.length} />
-        <div className="w-px h-4 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-        <SummaryPill icon={<Image className="h-3.5 w-3.5" />} label="البانرات" value={banners.length} sub={`${activeBanners} نشط`} />
-        <div className="w-px h-4 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-        <SummaryPill icon={<BookOpen className="h-3.5 w-3.5" />} label="المقالات" value={articles.length} sub={`${publishedArticles} منشور`} />
-        <div className="w-px h-4 bg-hairline shrink-0 hidden sm:block" aria-hidden />
-        <div className="flex items-center gap-2.5">
-          <span className="text-2xs text-slate-500">الحالة:</span>
-          <span className="text-xs font-semibold text-success-700 tabular-nums">{publishedPages} منشور</span>
-          <span className="text-2xs text-slate-300" aria-hidden>·</span>
-          <span className="text-xs font-medium text-slate-500 tabular-nums">{pages.length - publishedPages} مسودة</span>
-        </div>
-      </div>
+      <PremiumMetricStrip
+        metrics={[
+          { label: 'الصفحات', value: pages.length, icon: <FileText /> },
+          { label: 'البانرات', value: banners.length, sub: `${activeBanners} نشط`, icon: <Image /> },
+          { label: 'المقالات', value: articles.length, sub: `${publishedArticles} منشور`, icon: <BookOpen /> },
+          { label: 'منشور', value: publishedPages, icon: <Globe />, tone: 'success' },
+        ]}
+      />
 
       {/* ── Section 1: Pages ───────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
         {/*
          * The <details> wraps ONLY the section header + form.
          * The list/empty-state is a sibling OUTSIDE <details>, always visible.
@@ -240,10 +232,10 @@ export default async function CmsPage() {
             </table>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* ── Section 2: Banners ─────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
+      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
         <details className="group">
           <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors border-b border-hairline">
             <div className="flex items-center gap-2 min-w-0">
@@ -352,22 +344,19 @@ export default async function CmsPage() {
             ))}
           </div>
         )}
-      </Card>
+      </div>
 
       {/* ── Section 3: Articles ────────────────────────────────────────────── */}
       {/*
        * Articles are read-only from this page — no create action exists here.
        * Static header: no toggle, no form panel.
        */}
-      <Card className="overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-hairline">
-          <BookOpen className="h-4 w-4 text-brand-600 shrink-0" />
-          <h3 className="text-sm font-semibold text-slate-900">المقالات</h3>
-          {articles.length > 0 && (
-            <CountChip count={articles.length} />
-          )}
-        </div>
-
+      <PremiumSectionCard
+        icon={<BookOpen />}
+        title="المقالات"
+        trailing={articles.length > 0 ? <CountChip count={articles.length} /> : undefined}
+        padded={false}
+      >
         {articles.length === 0 ? (
           <CompactEmpty
             icon={<BookOpen />}
@@ -416,7 +405,7 @@ export default async function CmsPage() {
             </table>
           </div>
         )}
-      </Card>
+      </PremiumSectionCard>
     </div>
   );
 }
@@ -460,28 +449,6 @@ function CompactEmpty({
       </div>
       <p className="text-sm font-medium text-slate-700">{title}</p>
       <p className="text-xs text-slate-400 max-w-xs">{description}</p>
-    </div>
-  );
-}
-
-/** Summary pill for the stats strip at the top. */
-function SummaryPill({
-  icon,
-  label,
-  value,
-  sub,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-  sub?: string;
-}) {
-  return (
-    <div className="flex items-center gap-2 shrink-0">
-      <span className="text-slate-400 shrink-0">{icon}</span>
-      <span className="text-2xs text-slate-500">{label}</span>
-      <span className="text-sm font-bold text-slate-900 tabular-nums leading-none">{value}</span>
-      {sub && <span className="text-2xs text-slate-400">({sub})</span>}
     </div>
   );
 }
