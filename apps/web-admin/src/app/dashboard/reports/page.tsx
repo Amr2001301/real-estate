@@ -25,7 +25,7 @@ import {
   type CompareMode,
   type PeriodMode,
 } from '@/lib/report-filter';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportMenu } from '@/components/export-menu';
@@ -199,8 +199,7 @@ export default async function ReportsPage({
     <div className="space-y-4">
 
       {/* ─── Header ──────────────────────────────────────────────────────── */}
-      <PageHeader
-        className="mb-0"
+      <PremiumPageHero
         title="التقارير"
         description="تقرير المبيعات والعمليات — أداء العقود والدفعات والحجوزات خلال الفترة المحددة."
         breadcrumbs={[
@@ -235,8 +234,8 @@ export default async function ReportsPage({
       {/* ═══════════════════════════════════════════════════════════════════
           METRIC STRIP — one unified card, 5 metrics inline
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-x-reverse divide-hairline">
+      <div className="rounded-[20px] overflow-hidden shadow-soft">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
 
           {/* Total Sales */}
           <MetricCell
@@ -327,18 +326,13 @@ export default async function ReportsPage({
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
         {/* Monthly Trend */}
-        <div className="lg:col-span-3 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-          <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
-                <BarChart3 />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">اتجاه المبيعات الشهري</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">أداء العقود خلال {year}</p>
-              </div>
-            </div>
-            <div className="text-end shrink-0">
+        <PremiumSectionCard
+          className="lg:col-span-3"
+          icon={<BarChart3 />}
+          title="اتجاه المبيعات الشهري"
+          description={`أداء العقود خلال ${year}`}
+          trailing={
+            <div className="text-end">
               <p className="text-base font-black tabular-nums text-slate-900 leading-none">
                 {trendData.reduce((s, d) => s + d.contracts, 0).toLocaleString('ar-EG')} عقد
               </p>
@@ -348,33 +342,33 @@ export default async function ReportsPage({
                 </p>
               )}
             </div>
-          </div>
+          }
+          padded={false}
+        >
           <div className="px-5 py-5">
             <SalesTrendChart data={trendData} highlightMonths={highlightMonths} />
           </div>
-        </div>
+        </PremiumSectionCard>
 
         {/* Conversion Funnel — vertical, proportional bars */}
-        <div className="lg:col-span-2 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-          <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
-                <TrendingUp />
-              </span>
-              <p className="text-[13px] font-bold text-slate-800">مسار التحويل</p>
-            </div>
-            {overallConvStr && (
-              <span className={cn(
-                'inline-flex items-center h-6 px-2.5 rounded-full text-[11px] font-black border shrink-0',
-                overallConvRate >= 50 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                overallConvRate >= 25 ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                'bg-violet-50 border-violet-200 text-violet-700',
-              )}>
-                {overallConvStr} إجمالي
-              </span>
-            )}
-          </div>
-
+        <PremiumSectionCard
+          className="lg:col-span-2"
+          icon={<TrendingUp />}
+          title="مسار التحويل"
+          trailing={
+            overallConvStr
+              ? <span className={cn(
+                  'inline-flex items-center h-6 px-2.5 rounded-full text-[11px] font-black border shrink-0',
+                  overallConvRate >= 50 ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                  overallConvRate >= 25 ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                  'bg-violet-50 border-violet-200 text-violet-700',
+                )}>
+                  {overallConvStr} إجمالي
+                </span>
+              : undefined
+          }
+          padded={false}
+        >
           {funnelStages.length === 0 ? (
             <EmptyState icon={<TrendingUp />} title="لا توجد بيانات" description="لا يوجد بيانات للمسار في الفترة المحددة." />
           ) : (
@@ -441,7 +435,7 @@ export default async function ReportsPage({
               </div>
             </div>
           )}
-        </div>
+        </PremiumSectionCard>
 
       </div>
 
@@ -449,22 +443,17 @@ export default async function ReportsPage({
           ROW 3 — Reservation Status (horizontal stacked bar)
       ════════════════════════════════════════════════════════════════════ */}
       {reservationEntries.length > 0 && (
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-          <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-600 [&_svg]:h-4 [&_svg]:w-4">
-                <BookmarkCheck />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">حالة الحجوزات</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">توزيع الحجوزات حسب الحالة خلال الفترة</p>
-              </div>
-            </div>
+        <PremiumSectionCard
+          icon={<BookmarkCheck />}
+          title="حالة الحجوزات"
+          description="توزيع الحجوزات حسب الحالة خلال الفترة"
+          trailing={
             <span className="text-sm font-black tabular-nums text-slate-900 shrink-0">
               {reservationTotal.toLocaleString('ar-EG')} حجز
             </span>
-          </div>
-
+          }
+          padded={false}
+        >
           <div className="px-5 pt-4 pb-3">
             {/* Stacked bar */}
             <div className="flex h-3 rounded-full overflow-hidden gap-px mb-4">
@@ -498,7 +487,7 @@ export default async function ReportsPage({
               ))}
             </div>
           </div>
-        </div>
+        </PremiumSectionCard>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -507,24 +496,21 @@ export default async function ReportsPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Project Rankings */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-          <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 [&_svg]:h-4 [&_svg]:w-4">
-              <BarChart3 />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-bold text-slate-800">أداء المشاريع</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">مرتبة حسب إجمالي قيمة العقود</p>
-            </div>
-            {byProject.length > 0 && (
-              <span className="text-xs text-slate-400 tabular-nums shrink-0">{byProject.length} مشروع</span>
-            )}
-          </div>
-
+        <PremiumSectionCard
+          icon={<BarChart3 />}
+          title="أداء المشاريع"
+          description="مرتبة حسب إجمالي قيمة العقود"
+          trailing={
+            byProject.length > 0
+              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{byProject.length} مشروع</span>
+              : undefined
+          }
+          padded={false}
+        >
           {byProject.length === 0 ? (
             <EmptyState icon={<FileText />} title="لا توجد مبيعات" description="لا توجد بيانات مبيعات للفترة المحددة." />
           ) : (
-            <div className="divide-y divide-hairline flex-1">
+            <div className="divide-y divide-hairline">
               {byProject.map((p, idx) => {
                 const sharePct = salesTotal > 0 ? (Number(p.total) / salesTotal) * 100 : 0;
                 const isTop    = idx === 0;
@@ -555,27 +541,24 @@ export default async function ReportsPage({
               })}
             </div>
           )}
-        </div>
+        </PremiumSectionCard>
 
         {/* Broker Leaderboard */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-          <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-600 [&_svg]:h-4 [&_svg]:w-4">
-              <Users />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-[13px] font-bold text-slate-800">أداء الوسطاء</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">مرتبون حسب العمولات المعتمدة</p>
-            </div>
-            {brokers.length > 0 && (
-              <span className="text-xs text-slate-400 tabular-nums shrink-0">{brokers.length} وسيط</span>
-            )}
-          </div>
-
+        <PremiumSectionCard
+          icon={<Users />}
+          title="أداء الوسطاء"
+          description="مرتبون حسب العمولات المعتمدة"
+          trailing={
+            brokers.length > 0
+              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{brokers.length} وسيط</span>
+              : undefined
+          }
+          padded={false}
+        >
           {brokers.length === 0 ? (
             <EmptyState icon={<Users />} title="لا يوجد وسطاء" description="لا توجد بيانات وسطاء للفترة المحددة." />
           ) : (
-            <div className="divide-y divide-hairline flex-1">
+            <div className="divide-y divide-hairline">
               {brokers.map((b, idx) => {
                 const sharePct = totalCommissions > 0 ? (b.commissionAmount / totalCommissions) * 100 : 0;
                 return (
@@ -604,7 +587,7 @@ export default async function ReportsPage({
               })}
             </div>
           )}
-        </div>
+        </PremiumSectionCard>
 
       </div>
 
@@ -643,7 +626,7 @@ export default async function ReportsPage({
             sub:   'نسبة التحصيل من المبيعات',
           },
         ].map((item) => (
-          <div key={item.label} className="bg-surface rounded-2xl border border-hairline shadow-xs p-4">
+          <div key={item.label} className="bg-surface rounded-[20px] border border-hairline shadow-soft p-4">
             <div className={cn('inline-flex h-7 w-7 items-center justify-center rounded-lg mb-2.5', item.iconBg)}>
               {item.icon}
             </div>

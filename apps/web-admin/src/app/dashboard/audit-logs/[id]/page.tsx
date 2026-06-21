@@ -4,10 +4,14 @@ import { ScrollText, Activity, ArrowRightLeft } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, UserRole } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
+import {
+  PremiumPageHero,
+  PremiumDetailLayout,
+  PremiumSectionCard,
+  PremiumCommandPanel,
+} from '@/components/premium';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -254,6 +258,9 @@ function jsonPreview(value: unknown): string {
   try { return JSON.stringify(value, null, 2); } catch { return String(value); }
 }
 
+const CMD_LINK = 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 hover:bg-white/[0.07] hover:text-white/95 transition-colors';
+const CMD_ICON = 'h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/[0.08] text-brand-300 shrink-0 [&_svg]:h-4 [&_svg]:w-4';
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function AuditLogDetailPage({
@@ -278,22 +285,33 @@ export default async function AuditLogDetailPage({
   return (
     <div className="space-y-4">
 
-      {/* ── Header — breadcrumbs only ────────────────────────────────────── */}
-      <PageHeader
-        title="تفاصيل حدث التدقيق"
-        description="سجل كامل لما تغيّر، من قِبل من، ومن أين."
+      <PremiumPageHero
+        title={eventLabel(log.action, log.entityType)}
+        description={`${areaLabel(log.entityType)} · ${log.actor?.fullName ?? 'نظام / غير معروف'}`}
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'سجلات التدقيق', href: '/dashboard/audit-logs' },
           { label: id.slice(0, 8) },
         ]}
-        meta={<ScrollText className="h-4 w-4 text-brand-600" />}
+        meta={
+          <>
+            <span
+              className={cn(
+                'inline-block px-3 py-1 rounded-xl font-mono text-xs font-bold',
+                methodBadgeCls(log.action),
+              )}
+              dir="ltr"
+            >
+              {log.action}
+            </span>
+            <span className="text-xs text-slate-500">{formatDateTime(log.createdAt)}</span>
+          </>
+        }
       />
 
       {/* ── Hero event card ──────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-xs overflow-hidden">
+      <div className="rounded-2xl border border-hairline bg-surface shadow-soft overflow-hidden">
 
-        {/* Main row: icon + title/actor + method badge */}
         <div className="flex items-start gap-4 px-5 py-5">
           <span
             className={cn(
@@ -305,7 +323,6 @@ export default async function AuditLogDetailPage({
           </span>
 
           <div className="min-w-0 flex-1">
-            {/* Title + badge */}
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="text-xl font-bold text-slate-900 leading-tight">
@@ -326,7 +343,6 @@ export default async function AuditLogDetailPage({
               </span>
             </div>
 
-            {/* Meta chips */}
             <div className="flex flex-wrap items-center gap-2 mt-3">
               <span className="inline-flex items-center text-xs text-slate-600 bg-slate-50 border border-hairline px-2.5 py-1 rounded-lg">
                 {areaLabel(log.entityType)}
@@ -353,9 +369,8 @@ export default async function AuditLogDetailPage({
           </div>
         </div>
 
-        {/* Entity ID footer bar — full UUID, always readable */}
         {log.entityId && (
-          <div className="border-t border-hairline bg-surface-muted/40 px-5 py-2.5 flex items-center gap-3 flex-wrap">
+          <div className="border-t border-hairline bg-canvas/40 px-5 py-2.5 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide shrink-0">
               معرّف الكيان:
             </span>
@@ -371,275 +386,339 @@ export default async function AuditLogDetailPage({
         )}
       </div>
 
-      {/* ── ملخص الحدث — 2-row × 3-col grid ────────────────────────────── */}
-      <Card className="overflow-hidden">
-        <div className="px-5 py-3 border-b border-hairline bg-surface-muted/30">
-          <h2 className="text-sm font-semibold text-slate-900">ملخص الحدث</h2>
-        </div>
-
-        {/* Row 1: who · what · where */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-hairline border-b border-hairline">
-
-          {/* من قام بالإجراء */}
-          <div className="px-5 py-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              من قام بالإجراء
-            </p>
-            {log.actor ? (
-              <div className="space-y-1.5">
-                <p className="text-sm font-semibold text-slate-900">{log.actor.fullName}</p>
-                <span
-                  className={cn(
-                    'inline-block px-2 py-0.5 rounded-full text-xs font-medium',
-                    ROLE_BADGE_CLS[log.actor.role] ?? 'bg-slate-100 text-slate-600',
+      <PremiumDetailLayout
+        main={
+          <div className="space-y-4">
+            {/* ملخص الحدث */}
+            <PremiumSectionCard title="ملخص الحدث" padded={false}>
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-hairline border-b border-hairline">
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    من قام بالإجراء
+                  </p>
+                  {log.actor ? (
+                    <div className="space-y-1.5">
+                      <p className="text-sm font-semibold text-slate-900">{log.actor.fullName}</p>
+                      <span
+                        className={cn(
+                          'inline-block px-2 py-0.5 rounded-full text-xs font-medium',
+                          ROLE_BADGE_CLS[log.actor.role] ?? 'bg-slate-100 text-slate-600',
+                        )}
+                      >
+                        {ROLE_LABEL[log.actor.role] ?? log.actor.role}
+                      </span>
+                      {log.actor.email && (
+                        <p className="text-xs text-slate-500 font-mono" dir="ltr">{log.actor.email}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-slate-400 italic">نظام / غير معروف</p>
                   )}
-                >
-                  {ROLE_LABEL[log.actor.role] ?? log.actor.role}
-                </span>
-                {log.actor.email && (
-                  <p className="text-xs text-slate-500 font-mono" dir="ltr">{log.actor.email}</p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400 italic">نظام / غير معروف</p>
-            )}
-          </div>
+                </div>
 
-          {/* نوع الإجراء */}
-          <div className="px-5 py-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              نوع الإجراء
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-semibold text-slate-900">
-                {eventLabel(log.action, log.entityType)}
-              </span>
-              <span
-                className={cn(
-                  'inline-block px-2 py-0.5 rounded font-mono text-xs font-bold',
-                  methodBadgeCls(log.action),
-                )}
-                dir="ltr"
-              >
-                {log.action}
-              </span>
-            </div>
-          </div>
-
-          {/* القسم / المساحة */}
-          <div className="px-5 py-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              القسم / المساحة
-            </p>
-            <p className="text-sm font-semibold text-slate-900">{areaLabel(log.entityType)}</p>
-          </div>
-        </div>
-
-        {/* Row 2: when · IP · entity ID */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-hairline">
-
-          {/* وقت التنفيذ */}
-          <div className="px-5 py-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              وقت التنفيذ
-            </p>
-            <p className="text-sm font-semibold text-slate-900">{formatDateTime(log.createdAt)}</p>
-          </div>
-
-          {/* عنوان IP */}
-          <div className="px-5 py-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              عنوان IP
-            </p>
-            {ipFmt.isLocal ? (
-              <span
-                className="inline-block px-2.5 py-1 rounded-lg text-sm font-medium bg-slate-100 text-slate-600"
-                title={log.ip ?? ''}
-              >
-                محلي
-              </span>
-            ) : ipFmt.label !== '—' ? (
-              <span className="font-mono text-sm text-slate-900" dir="ltr">{ipFmt.label}</span>
-            ) : (
-              <span className="text-sm text-slate-400">—</span>
-            )}
-          </div>
-
-          {/* معرّف الكيان المستهدف */}
-          <div className="px-5 py-4">
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-              معرّف الكيان المستهدف
-            </p>
-            {log.entityId ? (
-              <div className="space-y-2">
-                <span
-                  className="font-mono text-[11px] text-slate-600 bg-surface-muted border border-hairline px-2 py-1.5 rounded-md break-all inline-block"
-                  dir="ltr"
-                >
-                  {log.entityId}
-                </span>
-                {link && (
-                  <div>
-                    <Link href={link as never}>
-                      <Button variant="outline" size="sm">فتح السجل</Button>
-                    </Link>
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    نوع الإجراء
+                  </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-slate-900">
+                      {eventLabel(log.action, log.entityType)}
+                    </span>
+                    <span
+                      className={cn(
+                        'inline-block px-2 py-0.5 rounded font-mono text-xs font-bold',
+                        methodBadgeCls(log.action),
+                      )}
+                      dir="ltr"
+                    >
+                      {log.action}
+                    </span>
                   </div>
-                )}
-              </div>
-            ) : (
-              <span className="text-sm text-slate-400">—</span>
-            )}
-          </div>
-        </div>
-      </Card>
-
-      {/* ── ما الذي تغير؟ ────────────────────────────────────────────────── */}
-      <Card className="overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-hairline bg-surface-muted/30">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-brand-600 shrink-0">
-            <ArrowRightLeft className="h-3.5 w-3.5" />
-          </span>
-          <h2 className="text-sm font-semibold text-slate-900">ما الذي تغير؟</h2>
-          {diffs && (
-            <span className="ms-auto text-2xs text-slate-400">
-              {diffs.length} {diffs.length === 1 ? 'حقل' : 'حقول'} تغيّرت
-            </span>
-          )}
-        </div>
-
-        {diffs ? (
-          /* Diff table: before/after available */
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-muted/50 text-2xs font-semibold text-slate-500 border-b border-hairline">
-                <tr>
-                  <th className="text-start py-2.5 ps-5 pe-4">الحقل</th>
-                  <th className="text-start py-2.5 px-4">القيمة السابقة</th>
-                  <th className="text-start py-2.5 px-4">القيمة الجديدة</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {diffs.map((d) => (
-                  <tr key={d.key} className="hover:bg-surface-muted/20 transition-colors">
-                    <td className="py-2.5 ps-5 pe-4 whitespace-nowrap">
-                      <span className="font-medium text-slate-900">{fieldLabel(d.key)}</span>
-                      <span className="font-mono text-2xs text-slate-400 ms-1.5">{d.key}</span>
-                    </td>
-                    <td className="py-2.5 px-4 text-xs text-danger-700 bg-danger-50/40">{d.before}</td>
-                    <td className="py-2.5 px-4 text-xs text-success-700 bg-success-50/40 font-medium">{d.after}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : afterScalars ? (
-          /* Scalar fields from after — no before captured */
-          <div>
-            <p className="px-5 pt-3 pb-2 text-2xs text-amber-700 bg-amber-50/60 border-b border-hairline">
-              القيمة قبل التغيير غير متوفرة. يُعرض أدناه الوضع بعد تنفيذ الحدث.
-            </p>
-            {afterScalars.map((f) => (
-              <div
-                key={f.key}
-                className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline last:border-0 hover:bg-surface-muted/20 transition-colors"
-              >
-                <div className="w-48 shrink-0">
-                  <span className="text-sm font-medium text-slate-700">{fieldLabel(f.key)}</span>
-                  <span className="font-mono text-2xs text-slate-400 block">{f.key}</span>
                 </div>
-                <span className="text-sm text-slate-900 flex-1">{f.value}</span>
-              </div>
-            ))}
-          </div>
-        ) : keySummary ? (
-          /* Key summary for complex/nested after data */
-          <div>
-            <p className="px-5 pt-3 pb-2 text-2xs text-amber-700 bg-amber-50/60 border-b border-hairline">
-              القيمة قبل التغيير غير متوفرة. فيما يلي ملخص البيانات المحدَّثة.
-            </p>
-            {keySummary.map((f) => (
-              <div
-                key={f.key}
-                className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline last:border-0 hover:bg-surface-muted/20 transition-colors"
-              >
-                <div className="w-48 shrink-0">
-                  <span className="text-sm font-medium text-slate-700">{fieldLabel(f.key)}</span>
-                  <span className="font-mono text-2xs text-slate-400 block">{f.key}</span>
+
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    القسم / المساحة
+                  </p>
+                  <p className="text-sm font-semibold text-slate-900">{areaLabel(log.entityType)}</p>
                 </div>
-                <span className="text-sm text-slate-500 flex-1">{f.summary}</span>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="px-5 py-6 text-sm text-slate-400 text-center">
-            لا تتوفر بيانات تغيير لهذا الحدث.
-          </p>
-        )}
-      </Card>
 
-      {/* ── التفاصيل التقنية — collapsed by default ──────────────────────── */}
-      {(beforeJson || afterJson) && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-slate-400 px-1">التفاصيل التقنية (البيانات الخام)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-hairline">
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    وقت التنفيذ
+                  </p>
+                  <p className="text-sm font-semibold text-slate-900">{formatDateTime(log.createdAt)}</p>
+                </div>
 
-          {/* Technical route info */}
-          <div className="rounded-2xl border border-hairline bg-surface shadow-xs px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-1.5">
-            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide shrink-0">المسار التقني</span>
-            <span className="font-mono text-xs text-slate-600" dir="ltr">{log.entityType}</span>
-            <span
-              className={cn(
-                'inline-block px-2 py-0.5 rounded font-mono text-xs font-bold shrink-0',
-                methodBadgeCls(log.action),
-              )}
-              dir="ltr"
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    عنوان IP
+                  </p>
+                  {ipFmt.isLocal ? (
+                    <span
+                      className="inline-block px-2.5 py-1 rounded-lg text-sm font-medium bg-slate-100 text-slate-600"
+                      title={log.ip ?? ''}
+                    >
+                      محلي
+                    </span>
+                  ) : ipFmt.label !== '—' ? (
+                    <span className="font-mono text-sm text-slate-900" dir="ltr">{ipFmt.label}</span>
+                  ) : (
+                    <span className="text-sm text-slate-400">—</span>
+                  )}
+                </div>
+
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                    معرّف الكيان المستهدف
+                  </p>
+                  {log.entityId ? (
+                    <div className="space-y-2">
+                      <span
+                        className="font-mono text-[11px] text-slate-600 bg-canvas border border-hairline px-2 py-1.5 rounded-md break-all inline-block"
+                        dir="ltr"
+                      >
+                        {log.entityId}
+                      </span>
+                      {link && (
+                        <div>
+                          <Link href={link as never}>
+                            <Button variant="outline" size="sm">فتح السجل</Button>
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-slate-400">—</span>
+                  )}
+                </div>
+              </div>
+            </PremiumSectionCard>
+
+            {/* ما الذي تغير؟ */}
+            <PremiumSectionCard
+              title="ما الذي تغير؟"
+              icon={<ArrowRightLeft className="h-4 w-4" />}
+              trailing={
+                diffs ? (
+                  <span className="text-2xs text-slate-400">
+                    {diffs.length} {diffs.length === 1 ? 'حقل' : 'حقول'} تغيّرت
+                  </span>
+                ) : undefined
+              }
+              padded={false}
             >
-              {log.action}
-            </span>
-          </div>
-
-          <details className="rounded-2xl border border-hairline bg-surface shadow-xs overflow-hidden">
-            <summary className="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors list-none">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-amber-50 text-amber-600 text-[10px] font-bold shrink-0">ق</span>
-                <span className="text-sm font-medium text-slate-700">البيانات قبل التغيير</span>
-                {!beforeJson && <span className="text-2xs text-slate-400">(غير متوفر)</span>}
-              </div>
-              <span className="text-2xs text-slate-400">انقر للتوسيع</span>
-            </summary>
-            <div className="border-t border-hairline">
-              {beforeJson ? (
-                <pre dir="ltr" className="px-5 py-4 text-2xs font-mono text-slate-700 leading-relaxed overflow-auto max-h-80 scrollbar-thin bg-surface-muted/20">
-                  {beforeJson}
-                </pre>
+              {diffs ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      <tr>
+                        <th className="text-start py-2.5 ps-5 pe-4">الحقل</th>
+                        <th className="text-start py-2.5 px-4">القيمة السابقة</th>
+                        <th className="text-start py-2.5 px-4">القيمة الجديدة</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-hairline">
+                      {diffs.map((d) => (
+                        <tr key={d.key} className="hover:bg-canvas/40 transition-colors duration-100">
+                          <td className="py-2.5 ps-5 pe-4 whitespace-nowrap">
+                            <span className="font-medium text-slate-900">{fieldLabel(d.key)}</span>
+                            <span className="font-mono text-2xs text-slate-400 ms-1.5">{d.key}</span>
+                          </td>
+                          <td className="py-2.5 px-4 text-xs text-danger-700 bg-danger-50/40">{d.before}</td>
+                          <td className="py-2.5 px-4 text-xs text-success-700 bg-success-50/40 font-medium">{d.after}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : afterScalars ? (
+                <div>
+                  <p className="px-5 pt-3 pb-2 text-2xs text-amber-700 bg-amber-50/60 border-b border-hairline">
+                    القيمة قبل التغيير غير متوفرة. يُعرض أدناه الوضع بعد تنفيذ الحدث.
+                  </p>
+                  {afterScalars.map((f) => (
+                    <div
+                      key={f.key}
+                      className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline last:border-0 hover:bg-canvas/40 transition-colors"
+                    >
+                      <div className="w-48 shrink-0">
+                        <span className="text-sm font-medium text-slate-700">{fieldLabel(f.key)}</span>
+                        <span className="font-mono text-2xs text-slate-400 block">{f.key}</span>
+                      </div>
+                      <span className="text-sm text-slate-900 flex-1">{f.value}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : keySummary ? (
+                <div>
+                  <p className="px-5 pt-3 pb-2 text-2xs text-amber-700 bg-amber-50/60 border-b border-hairline">
+                    القيمة قبل التغيير غير متوفرة. فيما يلي ملخص البيانات المحدَّثة.
+                  </p>
+                  {keySummary.map((f) => (
+                    <div
+                      key={f.key}
+                      className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline last:border-0 hover:bg-canvas/40 transition-colors"
+                    >
+                      <div className="w-48 shrink-0">
+                        <span className="text-sm font-medium text-slate-700">{fieldLabel(f.key)}</span>
+                        <span className="font-mono text-2xs text-slate-400 block">{f.key}</span>
+                      </div>
+                      <span className="text-sm text-slate-500 flex-1">{f.summary}</span>
+                    </div>
+                  ))}
+                </div>
               ) : (
-                <p className="px-5 py-3 text-2xs text-slate-500">
-                  غير متوفر — المعترض الحالي لا يلتقط القيمة السابقة.
+                <p className="px-5 py-6 text-sm text-slate-400 text-center">
+                  لا تتوفر بيانات تغيير لهذا الحدث.
                 </p>
               )}
-            </div>
-          </details>
+            </PremiumSectionCard>
 
-          <details className="rounded-2xl border border-hairline bg-surface shadow-xs overflow-hidden">
-            <summary className="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors list-none">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-emerald-50 text-emerald-600 text-[10px] font-bold shrink-0">ب</span>
-                <span className="text-sm font-medium text-slate-700">البيانات بعد التغيير</span>
-                {!afterJson && <span className="text-2xs text-slate-400">(غير متوفر)</span>}
+            {/* التفاصيل التقنية */}
+            {(beforeJson || afterJson) && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-slate-400 px-1">التفاصيل التقنية (البيانات الخام)</p>
+
+                <div className="rounded-2xl border border-hairline bg-surface shadow-soft px-5 py-3 flex flex-wrap items-center gap-x-6 gap-y-1.5">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide shrink-0">المسار التقني</span>
+                  <span className="font-mono text-xs text-slate-600" dir="ltr">{log.entityType}</span>
+                  <span
+                    className={cn(
+                      'inline-block px-2 py-0.5 rounded font-mono text-xs font-bold shrink-0',
+                      methodBadgeCls(log.action),
+                    )}
+                    dir="ltr"
+                  >
+                    {log.action}
+                  </span>
+                </div>
+
+                <details className="rounded-2xl border border-hairline bg-surface shadow-soft overflow-hidden">
+                  <summary className="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-canvas/40 transition-colors list-none">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-amber-50 text-amber-600 text-[10px] font-bold shrink-0">ق</span>
+                      <span className="text-sm font-medium text-slate-700">البيانات قبل التغيير</span>
+                      {!beforeJson && <span className="text-2xs text-slate-400">(غير متوفر)</span>}
+                    </div>
+                    <span className="text-2xs text-slate-400">انقر للتوسيع</span>
+                  </summary>
+                  <div className="border-t border-hairline">
+                    {beforeJson ? (
+                      <pre dir="ltr" className="px-5 py-4 text-2xs font-mono text-slate-700 leading-relaxed overflow-auto max-h-80 scrollbar-thin bg-canvas/20">
+                        {beforeJson}
+                      </pre>
+                    ) : (
+                      <p className="px-5 py-3 text-2xs text-slate-500">
+                        غير متوفر — المعترض الحالي لا يلتقط القيمة السابقة.
+                      </p>
+                    )}
+                  </div>
+                </details>
+
+                <details className="rounded-2xl border border-hairline bg-surface shadow-soft overflow-hidden">
+                  <summary className="flex items-center justify-between px-5 py-3 cursor-pointer select-none hover:bg-canvas/40 transition-colors list-none">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-emerald-50 text-emerald-600 text-[10px] font-bold shrink-0">ب</span>
+                      <span className="text-sm font-medium text-slate-700">البيانات بعد التغيير</span>
+                      {!afterJson && <span className="text-2xs text-slate-400">(غير متوفر)</span>}
+                    </div>
+                    <span className="text-2xs text-slate-400">انقر للتوسيع</span>
+                  </summary>
+                  <div className="border-t border-hairline">
+                    {afterJson ? (
+                      <pre dir="ltr" className="px-5 py-4 text-2xs font-mono text-slate-700 leading-relaxed overflow-auto max-h-[28rem] scrollbar-thin bg-canvas/20">
+                        {afterJson}
+                      </pre>
+                    ) : (
+                      <p className="px-5 py-3 text-2xs text-slate-500">غير متوفر</p>
+                    )}
+                  </div>
+                </details>
               </div>
-              <span className="text-2xs text-slate-400">انقر للتوسيع</span>
-            </summary>
-            <div className="border-t border-hairline">
-              {afterJson ? (
-                <pre dir="ltr" className="px-5 py-4 text-2xs font-mono text-slate-700 leading-relaxed overflow-auto max-h-[28rem] scrollbar-thin bg-surface-muted/20">
-                  {afterJson}
-                </pre>
-              ) : (
-                <p className="px-5 py-3 text-2xs text-slate-500">غير متوفر</p>
+            )}
+          </div>
+        }
+        side={
+          <div className="space-y-4">
+            <PremiumCommandPanel title="التنقل">
+              {link && (
+                <Link href={link as never} className={CMD_LINK}>
+                  <span className={CMD_ICON}><Activity /></span>
+                  فتح السجل المرتبط
+                </Link>
               )}
-            </div>
-          </details>
-        </div>
-      )}
+              <Link href="/dashboard/audit-logs" className={CMD_LINK}>
+                <span className={CMD_ICON}><ScrollText /></span>
+                قائمة سجلات التدقيق
+              </Link>
+            </PremiumCommandPanel>
+
+            {log.actor && (
+              <PremiumSectionCard title="المنفّذ">
+                <dl className="flex flex-col gap-3 text-sm">
+                  <div>
+                    <dt className="text-2xs text-slate-500 mb-0.5">الاسم</dt>
+                    <dd className="font-medium text-slate-900">{log.actor.fullName}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-2xs text-slate-500 mb-0.5">الدور</dt>
+                    <dd>
+                      <span
+                        className={cn(
+                          'inline-block px-2 py-0.5 rounded-full text-xs font-medium',
+                          ROLE_BADGE_CLS[log.actor.role] ?? 'bg-slate-100 text-slate-600',
+                        )}
+                      >
+                        {ROLE_LABEL[log.actor.role] ?? log.actor.role}
+                      </span>
+                    </dd>
+                  </div>
+                  {log.actor.email && (
+                    <div>
+                      <dt className="text-2xs text-slate-500 mb-0.5">البريد</dt>
+                      <dd className="text-xs font-mono text-slate-700" dir="ltr">{log.actor.email}</dd>
+                    </div>
+                  )}
+                </dl>
+              </PremiumSectionCard>
+            )}
+
+            <PremiumSectionCard title="تفاصيل الحدث">
+              <dl className="flex flex-col gap-3 text-sm">
+                <div>
+                  <dt className="text-2xs text-slate-500 mb-0.5">القسم</dt>
+                  <dd className="font-medium text-slate-800">{areaLabel(log.entityType)}</dd>
+                </div>
+                <div>
+                  <dt className="text-2xs text-slate-500 mb-0.5">الوقت</dt>
+                  <dd className="text-xs text-slate-700">{formatDateTime(log.createdAt)}</dd>
+                </div>
+                <div>
+                  <dt className="text-2xs text-slate-500 mb-0.5">عنوان IP</dt>
+                  <dd>
+                    {ipFmt.isLocal ? (
+                      <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-xs">محلي</span>
+                    ) : ipFmt.label !== '—' ? (
+                      <span className="font-mono text-xs text-slate-700" dir="ltr">{ipFmt.label}</span>
+                    ) : (
+                      <span className="text-xs text-slate-400">—</span>
+                    )}
+                  </dd>
+                </div>
+                {log.entityId && (
+                  <div>
+                    <dt className="text-2xs text-slate-500 mb-0.5">معرّف الكيان</dt>
+                    <dd className="font-mono text-[11px] text-slate-600 break-all" dir="ltr">{log.entityId}</dd>
+                  </div>
+                )}
+              </dl>
+            </PremiumSectionCard>
+          </div>
+        }
+      />
 
     </div>
   );

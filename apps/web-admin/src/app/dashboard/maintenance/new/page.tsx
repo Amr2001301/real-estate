@@ -1,9 +1,7 @@
 import Link from 'next/link';
-import { AlertCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardBody } from '@/components/ui/card';
 import { NewMaintenanceForm } from './new-maintenance-form';
 
 export const dynamic = 'force-dynamic';
@@ -23,16 +21,53 @@ export default async function NewMaintenancePage({
   const admins = adminsRes.data?.data ?? [];
 
   return (
-    <div className="space-y-5">
-      <PageHeader
-        title="طلب صيانة جديد"
-        description="إنشاء طلب صيانة نيابة عن العميل. عند اختيار مسؤول يبدأ الطلب بحالة «مسند»، وإلا «مفتوح»."
-        breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الصيانة', href: '/dashboard/maintenance' },
-          { label: 'طلب جديد' },
-        ]}
-      />
+    <div className="flex flex-col gap-5 lg:gap-6">
+
+      {/* ── Premium header card ── */}
+      <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
+        <div className="px-7 sm:px-9 pt-8 pb-7">
+          <nav aria-label="breadcrumb" className="mb-5">
+            <ol className="flex flex-wrap items-center gap-1 text-xs text-slate-400">
+              <li className="flex items-center gap-1">
+                <Link
+                  href={'/dashboard' as never}
+                  className="font-medium hover:text-brand-600 transition-colors duration-150"
+                >
+                  لوحة التحكم
+                </Link>
+                <span className="text-slate-300 text-sm select-none">›</span>
+              </li>
+              <li className="flex items-center gap-1">
+                <Link
+                  href={'/dashboard/maintenance' as never}
+                  className="font-medium hover:text-brand-600 transition-colors duration-150"
+                >
+                  الصيانة
+                </Link>
+                <span className="text-slate-300 text-sm select-none">›</span>
+              </li>
+              <li>
+                <span className="font-semibold text-slate-600">طلب جديد</span>
+              </li>
+            </ol>
+          </nav>
+          <div className="flex items-start justify-between gap-6">
+            <div className="min-w-0">
+              <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
+                طلب صيانة جديد
+              </h1>
+              <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
+                إنشاء طلب صيانة نيابة عن العميل. عند اختيار مسؤول يبدأ الطلب بحالة «مسند»، وإلا «مفتوح».
+              </p>
+            </div>
+            <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
+              جديد
+            </span>
+          </div>
+        </div>
+      </div>
 
       {sp.err && (
         <div className="rounded-xl bg-warning-50 border border-warning-100 text-warning-700 px-4 py-3 text-sm flex items-start gap-2">
@@ -44,19 +79,7 @@ export default async function NewMaintenancePage({
         </div>
       )}
 
-      <Card>
-        <CardBody>
-          <NewMaintenanceForm customers={customers} admins={admins} />
-        </CardBody>
-      </Card>
-
-      <Link
-        href="/dashboard/maintenance"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
-      >
-        <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-        العودة إلى قائمة الصيانة
-      </Link>
+      <NewMaintenanceForm customers={customers} admins={admins} />
     </div>
   );
 }

@@ -22,15 +22,19 @@ import {
 import { api, safe } from '@/lib/api';
 import type { User, Lead, Paged, Reservation, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
 import { ConfirmButton } from '@/components/confirm-button';
 import { LeadStageBadge, ReservationStatusBadge, AppointmentStatusBadge } from '@/components/badges';
 import { cn } from '@/lib/cn';
 import { activateClientAction, deactivateClientAction } from '../actions';
+import {
+  PremiumPageHero,
+  PremiumDetailLayout,
+  PremiumSectionCard,
+  PremiumCommandPanel,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 interface AuditLog {
   id: string;
@@ -93,6 +97,9 @@ const ACTION_LABEL: Record<string, string> = {
   DELETE: 'حذف',
 };
 
+const CMD_LINK = 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 hover:bg-white/[0.07] hover:text-white/95 transition-colors';
+const CMD_ICON = 'h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/[0.08] text-brand-300 shrink-0 [&_svg]:h-4 [&_svg]:w-4';
+
 export default async function ClientDetailPage({
   params,
 }: {
@@ -127,8 +134,8 @@ export default async function ClientDetailPage({
   const visits = visitsRes.data?.data ?? [];
 
   return (
-    <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+    <div className="space-y-5">
+      <PremiumPageHero
         title={u.fullName}
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
@@ -140,11 +147,7 @@ export default async function ClientDetailPage({
             <Badge tone={role === 'CUSTOMER' ? 'success' : 'info'} variant="soft">
               {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
             </Badge>
-            <Badge
-              tone={u.active ? 'success' : 'gray'}
-              variant="soft"
-              dot
-            >
+            <Badge tone={u.active ? 'success' : 'gray'} variant="soft" dot>
               {u.active ? 'نشط' : 'موقوف'}
             </Badge>
             <span className="text-2xs font-mono text-slate-400">
@@ -156,22 +159,13 @@ export default async function ClientDetailPage({
           <>
             {u.phone && (
               <a href={`tel:${u.phone}`}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="md"
-                  leftIcon={<Phone className="h-4 w-4" />}
-                >
+                <Button type="button" variant="outline" size="md" leftIcon={<Phone className="h-4 w-4" />}>
                   اتصال
                 </Button>
               </a>
             )}
             <Link href={`/dashboard/clients/${id}/edit` as never}>
-              <Button
-                variant="primary"
-                size="md"
-                leftIcon={<Pencil className="h-4 w-4" />}
-              >
+              <Button variant="primary" size="md" leftIcon={<Pencil className="h-4 w-4" />}>
                 تعديل الملف
               </Button>
             </Link>
@@ -179,111 +173,95 @@ export default async function ClientDetailPage({
         }
       />
 
-      {/* Profile hero */}
-      <Card className="overflow-hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5 p-5 sm:p-6">
-          <span
-            className={cn(
-              'inline-flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold ring-2 ring-white shadow-sm uppercase tabular-nums',
-              paletteFor(u.fullName ?? u.id),
-            )}
-            aria-hidden
-          >
-            {initials(u.fullName)}
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h2 className="text-xl font-semibold text-slate-900 tracking-tight truncate">
-                {u.fullName}
-              </h2>
-              <Badge tone={role === 'CUSTOMER' ? 'success' : 'info'} variant="soft" size="sm">
-                {role === 'CUSTOMER' ? 'مالك حالي' : 'عميل متصفّح'}
-              </Badge>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">
-              {role === 'CUSTOMER'
-                ? 'عميل أبرم عقداً ويملك وحدات داخل المحفظة.'
-                : 'عميل مسجّل يتصفح المشاريع والوحدات على المنصة.'}
-            </p>
-
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <ContactCell
-                icon={<Mail className="h-4 w-4" />}
-                tone="info"
-                label="البريد الإلكتروني"
-                value={u.email}
-                href={u.email ? `mailto:${u.email}` : undefined}
-              />
-              <ContactCell
-                icon={<Phone className="h-4 w-4" />}
-                tone="brand"
-                label="رقم الهاتف"
-                value={u.phone}
-                href={u.phone ? `tel:${u.phone}` : undefined}
-              />
-              <ContactCell
-                icon={<Languages className="h-4 w-4" />}
-                tone="purple"
-                label="اللغة المفضلة"
-                value={u.locale === 'en' ? 'الإنجليزية' : 'العربية'}
-              />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-          {/* CRM Opportunities (Leads linked to this client) */}
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5 text-brand-600" />
-                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
-                  فرص المبيعات (CRM)
-                </h2>
-                <span className="text-2xs font-semibold text-slate-400">
-                  {leads.length}
-                </span>
-              </div>
-              <Link href={`/dashboard/leads/new?clientId=${u.id}` as never}>
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="sm"
-                  leftIcon={<Plus className="h-3.5 w-3.5" />}
+      <PremiumDetailLayout
+        main={
+          <div className="space-y-5">
+            <PremiumSectionCard title="الملف الشخصي">
+              <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
+                <span
+                  className={cn(
+                    'inline-flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold ring-2 ring-white shadow-sm uppercase tabular-nums',
+                    paletteFor(u.fullName ?? u.id),
+                  )}
+                  aria-hidden
                 >
-                  فرصة CRM جديدة
-                </Button>
-              </Link>
-            </div>
+                  {initials(u.fullName)}
+                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                    <h2 className="text-xl font-semibold text-navy tracking-tight truncate">
+                      {u.fullName}
+                    </h2>
+                    <Badge tone={role === 'CUSTOMER' ? 'success' : 'info'} variant="soft" size="sm">
+                      {role === 'CUSTOMER' ? 'مالك حالي' : 'عميل متصفّح'}
+                    </Badge>
+                  </div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {role === 'CUSTOMER'
+                      ? 'عميل أبرم عقداً ويملك وحدات داخل المحفظة.'
+                      : 'عميل مسجّل يتصفح المشاريع والوحدات على المنصة.'}
+                  </p>
+                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <ContactCell
+                      icon={<Mail className="h-4 w-4" />}
+                      tone="info"
+                      label="البريد الإلكتروني"
+                      value={u.email}
+                      href={u.email ? `mailto:${u.email}` : undefined}
+                    />
+                    <ContactCell
+                      icon={<Phone className="h-4 w-4" />}
+                      tone="brand"
+                      label="رقم الهاتف"
+                      value={u.phone}
+                      href={u.phone ? `tel:${u.phone}` : undefined}
+                    />
+                    <ContactCell
+                      icon={<Languages className="h-4 w-4" />}
+                      tone="purple"
+                      label="اللغة المفضلة"
+                      value={u.locale === 'en' ? 'الإنجليزية' : 'العربية'}
+                    />
+                  </div>
+                </div>
+              </div>
+            </PremiumSectionCard>
 
-            <div className="mt-4">
+            <PremiumSectionCard
+              title="فرص المبيعات (CRM)"
+              icon={<Briefcase className="h-4 w-4" />}
+              trailing={
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400 tabular-nums">{leads.length}</span>
+                  <Link href={`/dashboard/leads/new?clientId=${u.id}` as never}>
+                    <Button type="button" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
+                      فرصة CRM جديدة
+                    </Button>
+                  </Link>
+                </div>
+              }
+              padded={false}
+            >
               {leads.length === 0 ? (
-                <EmptyState
+                <PremiumEmptyState
                   icon={<Briefcase />}
                   title="لا توجد فرص بيع لهذا العميل"
                   description="أنشئ فرصة CRM لبدء متابعة هذا العميل في خط أنابيب المبيعات."
                   action={
                     <Link href={`/dashboard/leads/new?clientId=${u.id}` as never}>
-                      <Button
-                        type="button"
-                        variant="primary"
-                        size="sm"
-                        leftIcon={<Plus className="h-3.5 w-3.5" />}
-                      >
+                      <Button type="button" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
                         إنشاء فرصة CRM
                       </Button>
                     </Link>
                   }
                 />
               ) : (
-                <ul className="flex flex-col divide-y divide-hairline -mx-2">
+                <ul className="flex flex-col divide-y divide-hairline">
                   {leads.map((l) => (
                     <li key={l.id}>
                       <Link
                         href={`/dashboard/leads/${l.id}` as never}
-                        className="flex items-center gap-3 px-2 py-3 hover:bg-surface-muted/40 rounded-lg transition-colors"
+                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
                       >
                         <span className="font-mono text-2xs text-slate-400 shrink-0">
                           #{l.id.slice(0, 8).toUpperCase()}
@@ -291,9 +269,7 @@ export default async function ClientDetailPage({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <p className="text-sm font-medium text-slate-900">
-                              {l.projectInterest
-                                ? tx(l.projectInterest.name)
-                                : 'فرصة CRM'}
+                              {l.projectInterest ? tx(l.projectInterest.name) : 'فرصة CRM'}
                             </p>
                             <LeadStageBadge stage={l.stage} />
                           </div>
@@ -316,41 +292,32 @@ export default async function ClientDetailPage({
                   ))}
                 </ul>
               )}
-            </div>
-          </Card>
+            </PremiumSectionCard>
 
-          {/* Reservations */}
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <BookmarkCheck className="h-5 w-5 text-brand-600" />
-                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
-                  الحجوزات
-                </h2>
-                <span className="text-2xs font-semibold text-slate-400">
-                  {reservations.length}
-                </span>
-              </div>
-              {reservations.length > 0 && (
-                <Link
-                  href={`/dashboard/reservations?clientId=${u.id}` as never}
-                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                >
-                  عرض كل الحجوزات
-                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                </Link>
-              )}
-            </div>
-
-            <div className="mt-4">
+            <PremiumSectionCard
+              title="الحجوزات"
+              icon={<BookmarkCheck className="h-4 w-4" />}
+              trailing={
+                reservations.length > 0 ? (
+                  <Link
+                    href={`/dashboard/reservations?clientId=${u.id}` as never}
+                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                  >
+                    عرض كل الحجوزات
+                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                  </Link>
+                ) : undefined
+              }
+              padded={false}
+            >
               {reservations.length === 0 ? (
-                <EmptyState
+                <PremiumEmptyState
                   icon={<BookmarkCheck />}
                   title="لا توجد حجوزات لهذا العميل"
                   description="ستظهر هنا أي حجوزات يقوم بها العميل على الوحدات."
                 />
               ) : (
-                <ul className="flex flex-col divide-y divide-hairline -mx-2">
+                <ul className="flex flex-col divide-y divide-hairline">
                   {reservations.map((r) => {
                     const projectName = r.unit?.building?.phase?.project?.name
                       ? tx(r.unit.building.phase.project.name)
@@ -359,7 +326,7 @@ export default async function ClientDetailPage({
                       <li key={r.id}>
                         <Link
                           href={`/dashboard/reservations/${r.id}` as never}
-                          className="flex items-center gap-3 px-2 py-3 hover:bg-surface-muted/40 rounded-lg transition-colors"
+                          className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
                         >
                           <span className="font-mono text-2xs text-slate-400 shrink-0">
                             {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
@@ -392,46 +359,37 @@ export default async function ClientDetailPage({
                   })}
                 </ul>
               )}
-            </div>
-          </Card>
+            </PremiumSectionCard>
 
-          {/* Visits */}
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <CalendarClock className="h-5 w-5 text-brand-600" />
-                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
-                  الزيارات
-                </h2>
-                <span className="text-2xs font-semibold text-slate-400">
-                  {visits.length}
-                </span>
-              </div>
-              {visits.length > 0 && (
-                <Link
-                  href={`/dashboard/visits?clientId=${u.id}` as never}
-                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                >
-                  عرض كل الزيارات
-                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                </Link>
-              )}
-            </div>
-
-            <div className="mt-4">
+            <PremiumSectionCard
+              title="الزيارات"
+              icon={<CalendarClock className="h-4 w-4" />}
+              trailing={
+                visits.length > 0 ? (
+                  <Link
+                    href={`/dashboard/visits?clientId=${u.id}` as never}
+                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                  >
+                    عرض كل الزيارات
+                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                  </Link>
+                ) : undefined
+              }
+              padded={false}
+            >
               {visits.length === 0 ? (
-                <EmptyState
+                <PremiumEmptyState
                   icon={<CalendarClock />}
                   title="لا توجد زيارات لهذا العميل"
                   description="ستظهر هنا أي زيارات مجدولة أو منفّذة."
                 />
               ) : (
-                <ul className="flex flex-col divide-y divide-hairline -mx-2">
+                <ul className="flex flex-col divide-y divide-hairline">
                   {visits.map((v) => (
                     <li key={v.id}>
                       <Link
                         href={`/dashboard/visits/appointments/${v.id}` as never}
-                        className="flex items-center gap-3 px-2 py-3 hover:bg-surface-muted/40 rounded-lg transition-colors"
+                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
                       >
                         <span className="font-mono text-2xs text-slate-400 shrink-0">
                           {v.visitNumber}
@@ -463,30 +421,23 @@ export default async function ClientDetailPage({
                   ))}
                 </ul>
               )}
-            </div>
-          </Card>
+            </PremiumSectionCard>
 
-          {/* Recent activity */}
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <Activity className="h-5 w-5 text-brand-600" />
-                <h2 className="text-base font-semibold text-slate-900 tracking-tight">
-                  آخر النشاط
-                </h2>
-              </div>
-              <Link
-                href={`/dashboard/clients/${id}/activity` as never}
-                className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-              >
-                عرض السجل الكامل
-                <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-              </Link>
-            </div>
-
-            <div className="mt-4">
+            <PremiumSectionCard
+              title="آخر النشاط"
+              icon={<Activity className="h-4 w-4" />}
+              trailing={
+                <Link
+                  href={`/dashboard/clients/${id}/activity` as never}
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
+                >
+                  عرض السجل الكامل
+                  <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
+                </Link>
+              }
+            >
               {recentActivity.length === 0 && reservationActivities.length === 0 ? (
-                <EmptyState
+                <PremiumEmptyState
                   icon={<Activity />}
                   title="لا يوجد نشاط بعد"
                   description="ستظهر التغييرات والعمليات هنا تلقائياً."
@@ -501,64 +452,68 @@ export default async function ClientDetailPage({
                   ))}
                 </ol>
               )}
-            </div>
-          </Card>
-        </div>
+            </PremiumSectionCard>
+          </div>
+        }
+        side={
+          <div className="space-y-5">
+            <PremiumCommandPanel title="إجراءات سريعة">
+              {u.phone && (
+                <a href={`tel:${u.phone}`} className={CMD_LINK}>
+                  <span className={CMD_ICON}><Phone /></span>
+                  اتصال
+                </a>
+              )}
+              <Link href={`/dashboard/clients/${id}/edit` as never} className={CMD_LINK}>
+                <span className={CMD_ICON}><Pencil /></span>
+                تعديل الملف
+              </Link>
+              <Link href={`/dashboard/clients/${id}/activity` as never} className={CMD_LINK}>
+                <span className={CMD_ICON}><Activity /></span>
+                سجل النشاط الكامل
+              </Link>
+              <Link href={`/dashboard/clients?role=${role}` as never} className={CMD_LINK}>
+                <span className={CMD_ICON}><ArrowLeft /></span>
+                قائمة العملاء
+              </Link>
+            </PremiumCommandPanel>
 
-        <div className="space-y-6">
-          {/* Account info */}
-          <Card className="p-5 sm:p-6">
-            <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-4">
-              معلومات الحساب
-            </h3>
-            <dl className="flex flex-col gap-3 text-sm">
-              <Row label="حالة الحساب" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
-                {u.active ? (
-                  <Badge tone="success" variant="soft" dot size="sm">
-                    نشط
+            <PremiumSectionCard title="معلومات الحساب">
+              <dl className="flex flex-col gap-3 text-sm">
+                <Row label="حالة الحساب" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
+                  {u.active ? (
+                    <Badge tone="success" variant="soft" dot size="sm">نشط</Badge>
+                  ) : (
+                    <Badge tone="gray" variant="soft" dot size="sm">موقوف</Badge>
+                  )}
+                </Row>
+                <Row label="نوع العميل" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
+                  <Badge tone={role === 'CUSTOMER' ? 'success' : 'info'} variant="soft" size="sm">
+                    {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
                   </Badge>
-                ) : (
-                  <Badge tone="gray" variant="soft" dot size="sm">
-                    موقوف
-                  </Badge>
-                )}
-              </Row>
-              <Row label="نوع العميل" icon={<ShieldAlert className="h-3.5 w-3.5" />}>
-                <Badge
-                  tone={role === 'CUSTOMER' ? 'success' : 'info'}
-                  variant="soft"
-                  size="sm"
-                >
-                  {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
-                </Badge>
-              </Row>
-              <Row label="تاريخ التسجيل" icon={<Calendar className="h-3.5 w-3.5" />}>
-                <span className="text-slate-700">{formatDate(u.createdAt)}</span>
-              </Row>
-              <Row label="آخر دخول" icon={<Clock className="h-3.5 w-3.5" />}>
-                <span className="text-slate-700">
-                  {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : '— لم يدخل بعد —'}
-                </span>
-              </Row>
-              <Row label="معرّف العميل" icon={<Hash className="h-3.5 w-3.5" />}>
-                <span className="font-mono text-2xs text-slate-500">
-                  #{u.id.slice(0, 8).toUpperCase()}
-                </span>
-              </Row>
-            </dl>
-          </Card>
+                </Row>
+                <Row label="تاريخ التسجيل" icon={<Calendar className="h-3.5 w-3.5" />}>
+                  <span className="text-slate-700">{formatDate(u.createdAt)}</span>
+                </Row>
+                <Row label="آخر دخول" icon={<Clock className="h-3.5 w-3.5" />}>
+                  <span className="text-slate-700">
+                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : '— لم يدخل بعد —'}
+                  </span>
+                </Row>
+                <Row label="معرّف العميل" icon={<Hash className="h-3.5 w-3.5" />}>
+                  <span className="font-mono text-2xs text-slate-500">
+                    #{u.id.slice(0, 8).toUpperCase()}
+                  </span>
+                </Row>
+              </dl>
+            </PremiumSectionCard>
 
-          {/* Status / danger zone */}
-          <Card className="p-5">
-            <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
-              حالة الحساب
-            </h3>
-            <p className="mt-2 text-xs text-slate-500">
-              {u.active
-                ? 'يمكن للعميل تسجيل الدخول واستخدام المنصة. أوقف الحساب لمنع الوصول مؤقتاً.'
-                : 'الحساب متوقف حالياً. أعد تفعيله لاستعادة وصول العميل إلى المنصة.'}
-            </p>
-            <div className="mt-4">
+            <PremiumSectionCard title="حالة الحساب">
+              <p className="text-xs text-slate-500 mb-4">
+                {u.active
+                  ? 'يمكن للعميل تسجيل الدخول واستخدام المنصة. أوقف الحساب لمنع الوصول مؤقتاً.'
+                  : 'الحساب متوقف حالياً. أعد تفعيله لاستعادة وصول العميل إلى المنصة.'}
+              </p>
               {u.active ? (
                 <ConfirmButton
                   label="إيقاف الحساب"
@@ -567,12 +522,7 @@ export default async function ClientDetailPage({
                 />
               ) : (
                 <form action={activateClientAction.bind(null, id)}>
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    size="sm"
-                    leftIcon={<Power className="h-4 w-4" />}
-                  >
+                  <Button type="submit" variant="primary" size="sm" leftIcon={<Power className="h-4 w-4" />}>
                     إعادة تفعيل الحساب
                   </Button>
                 </form>
@@ -583,10 +533,10 @@ export default async function ClientDetailPage({
                   الحساب موقوف منذ {formatDate(u.updatedAt ?? u.createdAt)}
                 </p>
               )}
-            </div>
-          </Card>
-        </div>
-      </div>
+            </PremiumSectionCard>
+          </div>
+        }
+      />
     </div>
   );
 }
@@ -654,11 +604,11 @@ function ContactCell({
   );
 
   const className =
-    'flex items-center gap-3 rounded-xl bg-surface-muted/60 px-3 py-2.5 ring-1 ring-inset ring-hairline';
+    'flex items-center gap-3 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline';
 
   if (href && value) {
     return (
-      <a href={href} className={cn(className, 'hover:bg-surface-muted transition-colors')}>
+      <a href={href} className={cn(className, 'hover:bg-canvas transition-colors')}>
         {inner}
       </a>
     );

@@ -36,7 +36,7 @@ import {
   type CompareMode,
   type PeriodMode,
 } from '@/lib/report-filter';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 import { ExportMenu } from '@/components/export-menu';
 import { ReportsTabs } from '../_components/reports-tabs';
 import { FinancialFilterBar } from './_components/financial-filter-bar';
@@ -161,8 +161,7 @@ export default async function FinancialReportsPage({
     <div className="space-y-4">
 
       {/* ─── Header ──────────────────────────────────────────────────────── */}
-      <PageHeader
-        className="mb-0"
+      <PremiumPageHero
         title="التقارير المالية"
         description="رقابة التحصيل — المحصّل، المتبقي، المتأخر، والمستحقات القادمة."
         breadcrumbs={[
@@ -211,7 +210,7 @@ export default async function FinancialReportsPage({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
 
         {/* Contract value */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
           <div className="h-[3px] bg-amber-400" />
           <div className="p-5 flex flex-col gap-4 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -231,7 +230,7 @@ export default async function FinancialReportsPage({
         </div>
 
         {/* Collected + rate */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
           <div className="h-[3px] bg-emerald-400" />
           <div className="p-5 flex flex-col gap-4 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -259,7 +258,7 @@ export default async function FinancialReportsPage({
         </div>
 
         {/* Outstanding */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
           <div className="h-[3px] bg-slate-300" />
           <div className="p-5 flex flex-col gap-4 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -279,7 +278,7 @@ export default async function FinancialReportsPage({
         </div>
 
         {/* Overdue */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
+        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
           <div className="h-[3px] bg-danger-500" />
           <div className="p-5 flex flex-col gap-4 flex-1">
             <div className="flex items-start justify-between gap-2">
@@ -307,7 +306,7 @@ export default async function FinancialReportsPage({
       </div>
 
       {/* Secondary stats strip */}
-      <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
+      <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
           {[
             { label: 'المحصّل هذا الشهر',       value: formatCurrency(collectedMonth), cls: 'text-success-700', ltr: true },
@@ -328,7 +327,7 @@ export default async function FinancialReportsPage({
 
       {/* Collection efficiency bar */}
       {contractVal > 0 && (
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs px-5 py-4">
+        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft px-5 py-4">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
@@ -376,17 +375,12 @@ export default async function FinancialReportsPage({
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
 
         {/* Cashflow bar chart */}
-        <div className="xl:col-span-3 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-          <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-                <BarChart3 />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">اتجاهات التدفق النقدي</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">المحصّل والمستحق خلال الأشهر الستة الماضية</p>
-              </div>
-            </div>
+        <PremiumSectionCard
+          className="xl:col-span-3"
+          icon={<BarChart3 />}
+          title="اتجاهات التدفق النقدي"
+          description="المحصّل والمستحق خلال الأشهر الستة الماضية"
+          trailing={
             <div className="flex items-center gap-3 shrink-0">
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
                 <span className="h-2 w-2 rounded-sm bg-emerald-500" />المحصّل
@@ -395,25 +389,23 @@ export default async function FinancialReportsPage({
                 <span className="h-2 w-2 rounded-sm bg-amber-400" />المستحق
               </span>
             </div>
-          </div>
+          }
+          padded={false}
+        >
           <div className="px-5 py-5">
             <CashflowBarChart data={dash?.cashflowTrend ?? []} />
           </div>
-        </div>
+        </PremiumSectionCard>
 
         {/* Payment distribution */}
-        <div className="xl:col-span-2 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-          <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-              <CreditCard />
-            </span>
-            <div>
-              <p className="text-[13px] font-bold text-slate-800">توزيع قيمة العقود</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">محصّل · متأخر · متبقي</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-4 px-5 py-5 flex-1">
+        <PremiumSectionCard
+          className="xl:col-span-2"
+          icon={<CreditCard />}
+          title="توزيع قيمة العقود"
+          description="محصّل · متأخر · متبقي"
+          padded={false}
+        >
+          <div className="flex flex-col gap-4 px-5 py-5">
             {contractVal > 0 && (
               /* Stacked bar */
               <div className="h-4 rounded-full bg-slate-100 overflow-hidden flex">
@@ -455,23 +447,19 @@ export default async function FinancialReportsPage({
               </div>
             </div>
           </div>
-        </div>
+        </PremiumSectionCard>
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
           ROW 3 — Cashflow Forecast (conditional)
       ════════════════════════════════════════════════════════════════════ */}
       {forecast && (forecast.next30 > 0 || forecast.next3160 > 0 || forecast.next6190 > 0) && (
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-          <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-              <CalendarDays />
-            </span>
-            <div>
-              <p className="text-[13px] font-bold text-slate-800">توقعات التحصيل القادمة</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">الأقساط PENDING المستحقة في الفترات القادمة</p>
-            </div>
-          </div>
+        <PremiumSectionCard
+          icon={<CalendarDays />}
+          title="توقعات التحصيل القادمة"
+          description="الأقساط PENDING المستحقة في الفترات القادمة"
+          padded={false}
+        >
           <div className="grid grid-cols-3 gap-px bg-hairline">
             {[
               { label: 'خلال 30 يومًا',  amount: forecast.next30,   pctCls: 'bg-brand-500',  valCls: 'text-brand-700',  bg: 'bg-brand-50/60' },
@@ -494,29 +482,25 @@ export default async function FinancialReportsPage({
               );
             })}
           </div>
-        </div>
+        </PremiumSectionCard>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
           ROW 4 — Aging Analysis
       ════════════════════════════════════════════════════════════════════ */}
       {aging.length > 0 && (
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-          <div className="flex items-center justify-between gap-4 px-5 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-danger-50 text-danger-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-                <AlertTriangle />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">أعمار المتأخرات</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">توزيع المبالغ المتأخرة حسب عمر الدين</p>
-              </div>
-            </div>
+        <PremiumSectionCard
+          tone="danger"
+          icon={<AlertTriangle />}
+          title="أعمار المتأخرات"
+          description="توزيع المبالغ المتأخرة حسب عمر الدين"
+          trailing={
             <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
               {formatCurrency(aging.reduce((s, b) => s + num(b.amount), 0))} إجمالي
             </span>
-          </div>
-
+          }
+          padded={false}
+        >
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
             {aging.map((b) => {
               const amt    = num(b.amount);
@@ -558,28 +542,24 @@ export default async function FinancialReportsPage({
               );
             })}
           </div>
-        </div>
+        </PremiumSectionCard>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
           ROW 5 — Overdue Installments Table
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-        <div className="flex items-center gap-2.5 px-5 py-4 border-b border-danger-100 bg-danger-50/40">
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-danger-100 text-danger-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-            <AlertTriangle />
-          </span>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-bold text-danger-800">الأقساط المتأخرة</p>
-            {overdueCount > 0 && (
-              <p className="text-[11px] text-danger-600 mt-0.5">{overdueCount} قسط متأخر محسوب</p>
-            )}
-          </div>
-          <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap shrink-0 flex items-center gap-1">
+      <PremiumSectionCard
+        tone="danger"
+        icon={<AlertTriangle />}
+        title="الأقساط المتأخرة"
+        description={overdueCount > 0 ? `${overdueCount} قسط متأخر محسوب` : undefined}
+        trailing={
+          <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap flex items-center gap-1">
             عرض الكل <ArrowUpRight className="h-3 w-3" />
           </Link>
-        </div>
-
+        }
+        padded={false}
+      >
         {(!dash?.overdue || dash.overdue.length === 0) ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <BadgeCheck className="h-7 w-7 text-slate-200" />
@@ -637,7 +617,7 @@ export default async function FinancialReportsPage({
             </table>
           </div>
         )}
-      </div>
+      </PremiumSectionCard>
 
       {/* ═══════════════════════════════════════════════════════════════════
           ROW 6 — Upcoming Payments (2 col)
@@ -647,20 +627,19 @@ export default async function FinancialReportsPage({
           { title: 'المستحقات هذا الأسبوع',  rows: dash?.upcomingThisWeek  ?? [], empty: 'لا توجد مستحقات هذا الأسبوع' },
           { title: 'بقية مستحقات الشهر',    rows: dash?.upcomingThisMonth ?? [], empty: 'لا توجد مستحقات إضافية هذا الشهر' },
         ].map((panel) => (
-          <div key={panel.title} className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-100 text-slate-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-                  <CalendarDays />
-                </span>
-                <p className="text-[13px] font-bold text-slate-800">{panel.title}</p>
-              </div>
-              {panel.rows.length > 0 && (
-                <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-                  {formatCurrency(panel.rows.reduce((s, r) => s + num(r.amount), 0))}
-                </span>
-              )}
-            </div>
+          <PremiumSectionCard
+            key={panel.title}
+            icon={<CalendarDays />}
+            title={panel.title}
+            trailing={
+              panel.rows.length > 0
+                ? <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
+                    {formatCurrency(panel.rows.reduce((s, r) => s + num(r.amount), 0))}
+                  </span>
+                : undefined
+            }
+            padded={false}
+          >
             {panel.rows.length === 0 ? (
               <div className="flex flex-col items-center gap-1.5 py-8 text-center">
                 <BadgeCheck className="h-6 w-6 text-slate-200" />
@@ -681,7 +660,7 @@ export default async function FinancialReportsPage({
                 ))}
               </div>
             )}
-          </div>
+          </PremiumSectionCard>
         ))}
       </div>
 
@@ -689,16 +668,12 @@ export default async function FinancialReportsPage({
           ROW 7 — Collection by Payment Type
       ════════════════════════════════════════════════════════════════════ */}
       {(dash?.collectionByType ?? []).length > 0 && (
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-          <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-              <Wallet />
-            </span>
-            <div>
-              <p className="text-[13px] font-bold text-slate-800">التحصيل حسب نوع الدفعة</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">توزيع الدفعات المسجلة والمؤكدة</p>
-            </div>
-          </div>
+        <PremiumSectionCard
+          icon={<Wallet />}
+          title="التحصيل حسب نوع الدفعة"
+          description="توزيع الدفعات المسجلة والمؤكدة"
+          padded={false}
+        >
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[520px]">
               <thead className="bg-surface-muted/60 text-[10px] font-bold tracking-wide text-slate-500 border-b border-hairline">
@@ -727,7 +702,7 @@ export default async function FinancialReportsPage({
               </tbody>
             </table>
           </div>
-        </div>
+        </PremiumSectionCard>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -737,16 +712,12 @@ export default async function FinancialReportsPage({
 
         {/* Booking pipeline */}
         {dash?.booking && (
-          <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-                <Receipt />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">خط الحجوزات</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">مبالغ الحجز قبل التحول لعقود</p>
-              </div>
-            </div>
+          <PremiumSectionCard
+            icon={<Receipt />}
+            title="خط الحجوزات"
+            description="مبالغ الحجز قبل التحول لعقود"
+            padded={false}
+          >
             <div className="divide-y divide-hairline">
               {[
                 { label: 'حجوزات قيد المراجعة', value: `${dash.booking.pendingReservationsCount} · ${formatCurrency(dash.booking.pendingReservationsBookingAmount)}`, cls: 'text-amber-700' },
@@ -760,21 +731,17 @@ export default async function FinancialReportsPage({
                 </div>
               ))}
             </div>
-          </div>
+          </PremiumSectionCard>
         )}
 
         {/* Liabilities */}
         {dash?.liabilities && (
-          <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-50 text-amber-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-                <Coins />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">الالتزامات غير المدفوعة</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">العمولات والمستحقات المعلقة</p>
-              </div>
-            </div>
+          <PremiumSectionCard
+            icon={<Coins />}
+            title="الالتزامات غير المدفوعة"
+            description="العمولات والمستحقات المعلقة"
+            padded={false}
+          >
             <div className="divide-y divide-hairline">
               {[
                 { label: 'إجمالي الالتزامات غير المدفوعة', value: formatCurrency(dash.liabilities.totalUnpaidLiabilities),                      cls: 'text-danger-700 font-black' },
@@ -788,29 +755,24 @@ export default async function FinancialReportsPage({
                 </div>
               ))}
             </div>
-          </div>
+          </PremiumSectionCard>
         )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
           ROW 9 — Recent Deposits
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline">
-          <div className="flex items-center gap-2.5">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
-              <CircleDollarSign />
-            </span>
-            <div>
-              <p className="text-[13px] font-bold text-slate-800">آخر الدفعات</p>
-              <p className="text-[11px] text-slate-400 mt-0.5">أحدث الدفعات المسجلة حسب الفلاتر المختارة</p>
-            </div>
-          </div>
+      <PremiumSectionCard
+        icon={<CircleDollarSign />}
+        title="آخر الدفعات"
+        description="أحدث الدفعات المسجلة حسب الفلاتر المختارة"
+        trailing={
           <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap flex items-center gap-1">
             عرض الكل <ArrowUpRight className="h-3 w-3" />
           </Link>
-        </div>
-
+        }
+        padded={false}
+      >
         {(!dash || dash.recentDeposits.length === 0) ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <CircleDollarSign className="h-7 w-7 text-slate-200" />
@@ -872,7 +834,7 @@ export default async function FinancialReportsPage({
             </table>
           </div>
         )}
-      </div>
+      </PremiumSectionCard>
 
     </div>
   );

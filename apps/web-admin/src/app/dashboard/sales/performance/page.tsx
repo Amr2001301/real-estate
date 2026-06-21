@@ -15,7 +15,7 @@ import {
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { formatCurrency } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
+import { PremiumPageHero, PremiumSectionCard, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -176,8 +176,7 @@ export default async function SalesPerformancePage({
     <div className="space-y-4">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <PageHeader
-        className="mb-0"
+      <PremiumPageHero
         title="أداء فريق المبيعات"
         description={`مقارنة الإنجاز بالأهداف — ${periodLabel(period)}`}
         breadcrumbs={[
@@ -196,35 +195,40 @@ export default async function SalesPerformancePage({
       />
 
       {/* ── Filter bar ──────────────────────────────────────────────────── */}
-      <form
+      <PremiumFilterBar
         method="get"
         action="/dashboard/sales/performance"
-        className="flex flex-wrap items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 shadow-xs"
+        trailing={
+          <>
+            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            {hasFilter && (
+              <Link href="/dashboard/sales/performance">
+                <Button type="button" variant="ghost" size="sm">مسح</Button>
+              </Link>
+            )}
+          </>
+        }
       >
-        <div className="flex items-center gap-1.5 shrink-0">
-          <CalendarDays className="h-4 w-4 text-slate-400" />
-          <Input name="period" inputSize="sm" type="month" defaultValue={period} className="w-40" />
-        </div>
-        <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-52 shrink-0">
-          <option value="">كل المندوبين</option>
-          {actors.map((a) => (
-            <option key={a.id} value={a.id}>{a.fullName}</option>
-          ))}
-        </Select>
-        <div className="flex items-center gap-1.5 ms-auto">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
-          {hasFilter && (
-            <Link href="/dashboard/sales/performance">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
-            </Link>
-          )}
-        </div>
-      </form>
+        <PremiumFilterField label="الفترة" htmlFor="period">
+          <div className="flex items-center gap-1.5">
+            <CalendarDays className="h-4 w-4 text-slate-400" />
+            <Input id="period" name="period" inputSize="sm" type="month" defaultValue={period} className="w-40" />
+          </div>
+        </PremiumFilterField>
+        <PremiumFilterField label="المندوب" htmlFor="salesId">
+          <Select id="salesId" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-52">
+            <option value="">كل المندوبين</option>
+            {actors.map((a) => (
+              <option key={a.id} value={a.id}>{a.fullName}</option>
+            ))}
+          </Select>
+        </PremiumFilterField>
+      </PremiumFilterBar>
 
       {/* ═══════════════════════════════════════════════════════════════════
           HERO — compact attainment strip
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
+      <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden">
         <div className={cn('h-[3px]', teamTheme.bar)} />
 
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr_1fr_1fr] divide-y lg:divide-y-0 divide-x-0 lg:divide-x lg:divide-x-reverse divide-hairline">
@@ -341,28 +345,20 @@ export default async function SalesPerformancePage({
           description="تأكد من وجود مندوبين لديهم نشاط أو أهداف في هذه الفترة."
         />
       ) : (
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-
-          {/* Card header */}
-          <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
-                <BarChart3 />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">تفاصيل أداء الفريق</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">{rows.length} مندوب · {periodLabel(period)}</p>
-              </div>
-            </div>
-            {/* Column legend */}
+        <PremiumSectionCard
+          icon={<BarChart3 />}
+          title="تفاصيل أداء الفريق"
+          description={`${rows.length} مندوب · ${periodLabel(period)}`}
+          trailing={
             <div className="hidden lg:flex items-center gap-4 text-[10px] text-slate-400">
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-sky-300 inline-block" />فرص</span>
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-violet-300 inline-block" />زيارات</span>
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-amber-300 inline-block" />حجوزات</span>
               <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-sm bg-emerald-300 inline-block" />عقود</span>
             </div>
-          </div>
-
+          }
+          padded={false}
+        >
           {/* Column headers */}
           <div className="hidden lg:grid grid-cols-[56px_1fr_140px_200px_44px_44px_44px_44px] items-center gap-2 px-6 py-2.5 bg-slate-50/80 border-b border-hairline">
             <div />
@@ -490,7 +486,7 @@ export default async function SalesPerformancePage({
             <CountCell value={totalRes}       color="text-amber-600"   bold />
             <CountCell value={totalContracts} color="text-emerald-600" bold />
           </div>
-        </div>
+        </PremiumSectionCard>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -500,16 +496,13 @@ export default async function SalesPerformancePage({
         <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
           {/* Pipeline summary */}
-          <div className="lg:col-span-2 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-hairline">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-sky-50 text-sky-600 [&_svg]:h-4 [&_svg]:w-4">
-                <TrendingUp />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">ملخص الأنبوب</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">مجموع نشاط الفريق</p>
-              </div>
-            </div>
+          <PremiumSectionCard
+            className="lg:col-span-2"
+            icon={<TrendingUp />}
+            title="ملخص الأنبوب"
+            description="مجموع نشاط الفريق"
+            padded={false}
+          >
             <div className="px-5 py-5 space-y-0">
               {pipelineFlow.map((stage, i) => (
                 <div key={stage.label}>
@@ -568,32 +561,28 @@ export default async function SalesPerformancePage({
                 </div>
               )}
             </div>
-          </div>
+          </PremiumSectionCard>
 
           {/* Bonus entries */}
-          <div className="lg:col-span-3 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline shrink-0">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 [&_svg]:h-4 [&_svg]:w-4">
-                  <BadgePercent />
-                </span>
-                <div>
-                  <p className="text-[13px] font-bold text-slate-800">المكافآت والعمولات</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{periodLabel(period)}</p>
-                </div>
-              </div>
+          <PremiumSectionCard
+            className="lg:col-span-3"
+            icon={<BadgePercent />}
+            title="المكافآت والعمولات"
+            description={periodLabel(period)}
+            trailing={
               <Link href="/dashboard/bonus">
                 <Button variant="ghost" size="sm">عرض الكل</Button>
               </Link>
-            </div>
-
+            }
+            padded={false}
+          >
             {bonus.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center py-10 text-sm text-slate-400">
+              <div className="flex items-center justify-center py-10 text-sm text-slate-400">
                 لا توجد مكافآت في هذه الفترة
               </div>
             ) : (
               <>
-                <div className="divide-y divide-hairline flex-1">
+                <div className="divide-y divide-hairline">
                   {bonus.map((entry) => {
                     const S = {
                       PENDING:  { label: 'قيد الانتظار', cls: 'bg-slate-100 text-slate-600' },
@@ -621,7 +610,7 @@ export default async function SalesPerformancePage({
                     );
                   })}
                 </div>
-                <div className="flex items-center justify-between px-5 py-3 bg-slate-50/60 border-t border-hairline shrink-0">
+                <div className="flex items-center justify-between px-5 py-3 bg-slate-50/60 border-t border-hairline">
                   <div className="flex items-center gap-4">
                     {(['PENDING', 'APPROVED', 'PAID'] as const).map((st) => {
                       const count = bonus.filter((b) => b.status === st).length;
@@ -636,7 +625,7 @@ export default async function SalesPerformancePage({
                 </div>
               </>
             )}
-          </div>
+          </PremiumSectionCard>
 
         </div>
       )}

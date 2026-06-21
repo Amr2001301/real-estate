@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Plus, Loader2, Check, ShieldCheck, ShieldOff, Clock, HelpCircle } from 'lucide-react';
+import { Plus, Loader2, Check, ShieldCheck, ShieldOff, Clock, HelpCircle, X } from 'lucide-react';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx, formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import {
@@ -15,6 +17,12 @@ import {
   type MaintenanceUnitOption,
   type MaintenanceItemOption,
 } from './actions';
+
+const NAV_SECTIONS = [
+  { id: 'section-customer-unit', num: '01', label: 'العميل والوحدة',    sub: 'تحديد العميل والوحدة المعنية' },
+  { id: 'section-items',         num: '02', label: 'عناصر الصيانة',     sub: 'اختيار عناصر العمل المطلوبة' },
+  { id: 'section-description',   num: '03', label: 'الوصف والإسناد',    sub: 'تفاصيل المشكلة والمسؤول' },
+];
 
 interface Option {
   id: string;
@@ -107,106 +115,190 @@ export function NewMaintenanceForm({
   const canSubmit = !!customerId && !!unitId && selected.size > 0 && description.trim().length >= 5;
 
   return (
-    <form action={createRequestAction} className="space-y-4 max-w-2xl">
+    <form action={createRequestAction} className="flex flex-col gap-4 lg:gap-5">
       {/* Hidden inputs carry the selected category ids to the server action. */}
       {[...selected].map((catId) => (
         <input key={catId} type="hidden" name="categoryIds" value={catId} />
       ))}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="customerId" className="text-xs font-medium text-slate-500">العميل</label>
-          <Select id="customerId" name="customerId" required value={customerId} onChange={(e) => onCustomerChange(e.target.value)}>
-            <option value="" disabled>— اختر العميل —</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>{c.fullName}</option>
-            ))}
-          </Select>
-        </div>
+      <PremiumFormLayout
+        navSections={NAV_SECTIONS}
+        sidebarBadge="جديد"
+        sidebarInfo="الطلبات المُنشأة من لوحة التحكم تُعتمد تلقائياً، ويُحتسب الموعد المستهدف فوراً."
+      >
+        {/* ── Panel 01: العميل والوحدة ── */}
+        <PremiumFormPanel
+          id="section-customer-unit"
+          number="01"
+          title="العميل والوحدة"
+          description="اختر العميل أولاً، ثم حدد الوحدة العقارية المرتبطة بالطلب."
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="customerId" className="text-xs font-medium text-slate-500">العميل</label>
+              <Select
+                id="customerId"
+                name="customerId"
+                required
+                value={customerId}
+                onChange={(e) => onCustomerChange(e.target.value)}
+              >
+                <option value="" disabled>— اختر العميل —</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>{c.fullName}</option>
+                ))}
+              </Select>
+            </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="unitId" className="text-xs font-medium text-slate-500">الوحدة</label>
-          <Select id="unitId" name="unitId" required disabled={unitDisabled} value={unitId} onChange={(e) => onUnitChange(e.target.value)}>
-            <option value="" disabled>{customerId ? '— اختر الوحدة —' : '— اختر العميل أولاً —'}</option>
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>{u.code}{u.building ? ` · ${u.building.name}` : ''}</option>
-            ))}
-          </Select>
-          {loadingUnits && (
-            <p className="text-[11px] text-slate-400 inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> جارٍ تحميل الوحدات…</p>
-          )}
-          {unitsError && <p className="text-[11px] text-danger-600">{unitsError}</p>}
-          {showNoUnits && <p className="text-[11px] text-warning-700">لا توجد وحدات مرتبطة بهذا العميل.</p>}
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="assignedAdminId" className="text-xs font-medium text-slate-500">المسؤول (اختياري)</label>
-          <Select id="assignedAdminId" name="assignedAdminId" defaultValue="">
-            <option value="">— بدون إسناد —</option>
-            {admins.map((a) => (
-              <option key={a.id} value={a.id}>{a.fullName} — {assigneeRoleLabel(a.role)}</option>
-            ))}
-          </Select>
-        </div>
-      </div>
-
-      {/* Maintenance category/item selection (depends on the chosen unit). */}
-      <div className="flex flex-col gap-2">
-        <label className="text-xs font-medium text-slate-500">عناصر الصيانة</label>
-        {!unitId ? (
-          <p className="text-[11px] text-slate-400">اختر الوحدة أولاً لعرض عناصر الصيانة المتاحة.</p>
-        ) : loadingItems ? (
-          <p className="text-[11px] text-slate-400 inline-flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> جارٍ تحميل العناصر…</p>
-        ) : itemsError ? (
-          <p className="text-[11px] text-danger-600">{itemsError}</p>
-        ) : showNoItems ? (
-          <p className="text-[11px] text-warning-700">لا توجد عناصر صيانة مفعلة لهذه الوحدة.</p>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {items.map((it) => {
-              const catId = it.categoryId!;
-              const isSel = selected.has(catId);
-              return (
-                <button
-                  key={it.id}
-                  type="button"
-                  onClick={() => toggleCategory(catId)}
-                  className={cn(
-                    'text-start rounded-xl border p-3 transition-colors',
-                    isSel ? 'border-brand-300 bg-brand-50/60 ring-1 ring-inset ring-brand-200' : 'border-hairline bg-surface hover:bg-surface-muted/50',
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-semibold text-slate-900">{tx(it.name)}</span>
-                    <span className={cn('inline-flex h-5 w-5 items-center justify-center rounded-full border', isSel ? 'bg-brand-600 border-brand-600 text-white' : 'border-slate-300 text-transparent')}>
-                      <Check className="h-3 w-3" />
-                    </span>
-                  </div>
-                  <div className="mt-1.5 text-[11px]"><ItemWarranty item={it} /></div>
-                </button>
-              );
-            })}
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="unitId" className="text-xs font-medium text-slate-500">الوحدة</label>
+              <Select
+                id="unitId"
+                name="unitId"
+                required
+                disabled={unitDisabled}
+                value={unitId}
+                onChange={(e) => onUnitChange(e.target.value)}
+              >
+                <option value="" disabled>
+                  {customerId ? '— اختر الوحدة —' : '— اختر العميل أولاً —'}
+                </option>
+                {units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.code}{u.building ? ` · ${u.building.name}` : ''}
+                  </option>
+                ))}
+              </Select>
+              {loadingUnits && (
+                <p className="text-[11px] text-slate-400 inline-flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> جارٍ تحميل الوحدات…
+                </p>
+              )}
+              {unitsError && <p className="text-[11px] text-danger-600">{unitsError}</p>}
+              {showNoUnits && <p className="text-[11px] text-warning-700">لا توجد وحدات مرتبطة بهذا العميل.</p>}
+            </div>
           </div>
-        )}
-      </div>
+        </PremiumFormPanel>
 
-      <div className="flex flex-col gap-1">
-        <label htmlFor="description" className="text-xs font-medium text-slate-500">وصف المشكلة</label>
-        <Textarea id="description" name="description" required minLength={5} rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="اكتب وصفاً واضحاً للمشكلة (5 أحرف على الأقل)" />
-      </div>
+        {/* ── Panel 02: عناصر الصيانة ── */}
+        <PremiumFormPanel
+          id="section-items"
+          number="02"
+          title="عناصر الصيانة"
+          description="اختر عنصراً أو أكثر من عناصر الصيانة المفعّلة للوحدة."
+        >
+          {!unitId ? (
+            <p className="text-sm text-slate-400">اختر الوحدة أولاً لعرض عناصر الصيانة المتاحة.</p>
+          ) : loadingItems ? (
+            <p className="text-sm text-slate-400 inline-flex items-center gap-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> جارٍ تحميل العناصر…
+            </p>
+          ) : itemsError ? (
+            <p className="text-sm text-danger-600">{itemsError}</p>
+          ) : showNoItems ? (
+            <p className="text-sm text-warning-700">لا توجد عناصر صيانة مفعلة لهذه الوحدة.</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {items.map((it) => {
+                const catId = it.categoryId!;
+                const isSel = selected.has(catId);
+                return (
+                  <button
+                    key={it.id}
+                    type="button"
+                    onClick={() => toggleCategory(catId)}
+                    className={cn(
+                      'text-start rounded-xl border p-3 transition-colors',
+                      isSel
+                        ? 'border-brand-300 bg-brand-50/60 ring-1 ring-inset ring-brand-200'
+                        : 'border-hairline bg-surface hover:bg-canvas/40',
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-sm font-semibold text-slate-900">{tx(it.name)}</span>
+                      <span
+                        className={cn(
+                          'inline-flex h-5 w-5 items-center justify-center rounded-full border',
+                          isSel
+                            ? 'bg-brand-600 border-brand-600 text-white'
+                            : 'border-slate-300 text-transparent',
+                        )}
+                      >
+                        <Check className="h-3 w-3" />
+                      </span>
+                    </div>
+                    <div className="mt-1.5 text-[11px]"><ItemWarranty item={it} /></div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </PremiumFormPanel>
 
-      <p className="text-[11px] text-slate-400">
-        الطلبات المُنشأة من لوحة التحكم تُعتمد تلقائياً، ويُحتسب الموعد المستهدف فوراً وفق أطول مدة معالجة بين العناصر المختارة.
-      </p>
+        {/* ── Panel 03: الوصف والإسناد ── */}
+        <PremiumFormPanel
+          id="section-description"
+          number="03"
+          title="الوصف والإسناد"
+          description="اكتب وصفاً واضحاً للمشكلة، وحدد المسؤول عن المتابعة إن وجد."
+        >
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="description" className="text-xs font-medium text-slate-500">وصف المشكلة</label>
+              <Textarea
+                id="description"
+                name="description"
+                required
+                minLength={5}
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="اكتب وصفاً واضحاً للمشكلة (5 أحرف على الأقل)"
+              />
+            </div>
 
-      <div className="flex items-center gap-2 pt-1">
-        <Button type="submit" variant="primary" size="md" disabled={!canSubmit} leftIcon={<Plus className="h-4 w-4" />}>
-          إنشاء الطلب
-        </Button>
-        <Link href="/dashboard/maintenance">
-          <Button type="button" variant="secondary" size="md">إلغاء</Button>
-        </Link>
-      </div>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="assignedAdminId" className="text-xs font-medium text-slate-500">
+                المسؤول (اختياري)
+              </label>
+              <Select id="assignedAdminId" name="assignedAdminId" defaultValue="">
+                <option value="">— بدون إسناد —</option>
+                {admins.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.fullName} — {assigneeRoleLabel(a.role)}
+                  </option>
+                ))}
+              </Select>
+              <p className="text-[11px] text-slate-400">
+                عند اختيار مسؤول يبدأ الطلب بحالة «مسند»، وإلا يبدأ بحالة «مفتوح».
+              </p>
+            </div>
+          </div>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
+
+      <FormFooter
+        sticky
+        primary={
+          <>
+            <Link href={'/dashboard/maintenance' as never}>
+              <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
+                إلغاء
+              </Button>
+            </Link>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={!canSubmit}
+              leftIcon={<Plus className="h-4 w-4" />}
+            >
+              إنشاء الطلب
+            </Button>
+          </>
+        }
+        helper="الطلبات المُنشأة من لوحة التحكم تُعتمد تلقائياً."
+      />
     </form>
   );
 }

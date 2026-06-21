@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { formatCurrency } from '@/lib/format';
 import type {
   InstallmentPlanTemplate,
@@ -307,564 +307,612 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
     };
   }
 
+  // ── nav sections (dynamic: legacy section only when no duration options) ──
+  const navSections = useDurationModel
+    ? [
+        { id: 'section-plan-info',    num: '01', label: 'معلومات الخطة',       sub: 'الاسم والوصف والمشروع والوحدة' },
+        { id: 'section-pricing',      num: '02', label: 'التسعير',             sub: 'السعر والخصم ودفعة الحجز' },
+        { id: 'section-down-payment', num: '03', label: 'الدفعة الأولى',       sub: 'نوع المقدم وقيمته' },
+        { id: 'section-durations',    num: '04', label: 'خيارات المدة',        sub: 'المدد المتاحة ونسب الزيادة' },
+        { id: 'section-start-date',   num: '05', label: 'تاريخ بدء الأقساط',  sub: 'متى يبدأ احتساب الأقساط' },
+      ]
+    : [
+        { id: 'section-plan-info',    num: '01', label: 'معلومات الخطة',       sub: 'الاسم والوصف والمشروع والوحدة' },
+        { id: 'section-pricing',      num: '02', label: 'التسعير',             sub: 'السعر والخصم ودفعة الحجز' },
+        { id: 'section-down-payment', num: '03', label: 'الدفعة الأولى',       sub: 'نوع المقدم وقيمته' },
+        { id: 'section-durations',    num: '04', label: 'خيارات المدة',        sub: 'المدد المتاحة ونسب الزيادة' },
+        { id: 'section-legacy',       num: '05', label: 'إعدادات قديمة',       sub: 'للخطط القديمة فقط' },
+        { id: 'section-start-date',   num: '06', label: 'تاريخ بدء الأقساط',  sub: 'متى يبدأ احتساب الأقساط' },
+      ];
+
   return (
-    <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
+    <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
-        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-5 py-4 text-sm shadow-soft">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <p className="font-medium">{state.error}</p>
         </div>
       )}
 
-      {/* ── Section 1: Plan Info ─────────────────────────────────────────── */}
-      <FormSection
-        title="معلومات الخطة"
-        description="الاسم والوصف وربط الخطة بمشروع ووحدة."
-      >
-        <Field label="اسم الخطة" name="name" required>
-          <Input
-            id="name"
-            name="name"
-            required
-            defaultValue={d?.name}
-            placeholder="مثال: خطة 24 قسط شهري"
-          />
-        </Field>
-
-        <Field label="وصف / ملاحظات" name="description">
-          <Textarea
-            id="description"
-            name="description"
-            rows={2}
-            defaultValue={d?.description ?? ''}
-            placeholder="وصف اختياري للخطة..."
-          />
-        </Field>
-
-        {/* Project — used to filter units */}
-        <Field label="المشروع" name="projectId" required hint="اختر المشروع لتحميل الوحدات المتاحة">
-          <Select
-            id="projectId"
-            name="projectId"
-            required
-            value={projectId}
-            onChange={(e) => {
-              setProjectId(e.target.value);
-              setUnitId('');
-              setUnitTouched(false);
-            }}
-          >
-            <option value="">— اختر مشروعاً —</option>
-            {projects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name.ar}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        {/* Unit — always required, visible once project is selected */}
-        <Field
-          label="الوحدة"
-          name="unitId"
-          required
-          error={unitError}
-          hint={
-            !projectId
-              ? 'اختر المشروع أولاً لتحميل الوحدات'
-              : unitsLoading
-              ? 'جاري تحميل الوحدات…'
-              : units.length === 0 && mode === 'create'
-              ? 'لا توجد وحدات متاحة بدون خطة تقسيط في هذا المشروع'
-              : units.length === 0
-              ? 'لا توجد وحدات متاحة في هذا المشروع'
-              : undefined
-          }
-        >
-          <Select
-            id="unitId"
-            name="unitId"
-            required
-            value={unitId}
-            disabled={!projectId || unitsLoading || units.length === 0}
-            onChange={(e) => handleUnitChange(e.target.value)}
-            invalid={!!unitError}
-            onBlur={() => setUnitTouched(true)}
-          >
-            <option value="">— اختر وحدة —</option>
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.code} — {u.type} — {formatCurrency(u.price)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="الحالة" name="status">
-            <Select id="status" name="status" defaultValue={d?.status ?? 'DRAFT'}>
-              <option value="DRAFT">مسودة</option>
-              <option value="ACTIVE">نشطة</option>
-              <option value="INACTIVE">غير نشطة</option>
-            </Select>
-          </Field>
-          <Field label="الصلاحية" hint="ثابتة: للمبيعات فقط">
-            <input type="hidden" name="visibility" value="SALES_ONLY" />
-            <div className="h-10 flex items-center rounded-xl border border-hairline bg-slate-50 px-3 text-sm text-slate-500">
-              مبيعات فقط
-            </div>
-          </Field>
-        </div>
-      </FormSection>
-
-      {/* ── Section 2: Pricing ───────────────────────────────────────────── */}
-      <FormSection
-        title="التسعير"
-        description="السعر الإجمالي والخصم وصافي السعر ومبلغ الحجز."
-        aside={
-          netPrice > 0 ? (
-            <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
-              <p className="text-brand-700 font-medium">صافي السعر</p>
-              <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(netPrice)}</p>
-            </div>
-          ) : null
+      <PremiumFormLayout
+        navSections={navSections}
+        sidebarBadge={mode === 'edit' ? 'تعديل' : 'جديد'}
+        sidebarInfo={
+          mode === 'edit'
+            ? 'سيتم تحديث بيانات الخطة فور الحفظ.'
+            : 'بعد الإنشاء يمكن ربط الخطة بحجوزات جديدة.'
         }
       >
-        {/* Total price — read-only by default, editable when override is on */}
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center justify-between">
-            <label htmlFor="totalPrice" className="text-sm font-medium text-slate-700">
-              السعر الإجمالي (ج.م)
-              <span className="text-danger-600 ms-0.5">*</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={manualPriceOverride}
-                onChange={(e) => handleManualOverrideChange(e.target.checked)}
-                className="accent-brand-500 h-3.5 w-3.5"
-              />
-              <span className="text-xs text-slate-600">تعديل السعر يدوياً</span>
-            </label>
-          </div>
-          <Input
-            id="totalPrice"
-            name="totalPrice"
-            required
-            readOnly={!manualPriceOverride}
-            className={!manualPriceOverride ? 'bg-slate-50 text-slate-600 cursor-default' : ''}
-            placeholder="يُحدَّد تلقائياً من سعر الوحدة"
-            {...(manualPriceOverride
-              ? numericInputProps(totalPrice, setTotalPrice, { allowEmpty: false })
-              : { value: totalPrice, onChange: () => {} })}
-          />
-          <p className="text-xs text-slate-500">
-            السعر الافتراضي مأخوذ من سعر الوحدة، ويمكن تعديله يدوياً عند الحاجة.
-          </p>
-        </div>
-
-        <div>
-          <span className="text-sm font-medium text-slate-700">نوع الخصم</span>
-          <div className="flex flex-wrap gap-3 mt-2">
-            {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
-              <label
-                key={t}
-                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
-                  discountType === t
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-hairline bg-surface text-muted hover:border-brand-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="discountType"
-                  value={t}
-                  checked={discountType === t}
-                  onChange={() => setDiscountType(t)}
-                  className="accent-brand-500"
-                />
-                <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <Field
-          label={discountType === 'FIXED' ? 'قيمة الخصم (ج.م)' : 'نسبة الخصم (%)'}
-          name="discountValue"
-          hint={
-            discountType === 'PERCENTAGE'
-              ? 'نسبة من السعر الإجمالي. اتركها صفراً إذا لم يكن هناك خصم.'
-              : 'اتركها صفراً إذا لم يكن هناك خصم'
-          }
+        {/* ── Panel 01: معلومات الخطة ── */}
+        <PremiumFormPanel
+          id="section-plan-info"
+          number="01"
+          title="معلومات الخطة"
+          description="الاسم والوصف وربط الخطة بمشروع ووحدة."
         >
-          <Input
-            id="discountValue"
-            name="discountValue"
-            placeholder={discountType === 'PERCENTAGE' ? '10' : '0'}
-            {...numericInputProps(discountValue, setDiscountValue, { allowEmpty: true })}
-          />
-        </Field>
-
-        {disc > 0 && (
-          <div className="rounded-xl bg-slate-50 border border-hairline p-3 text-sm">
-            <p className="text-slate-600 font-medium">
-              {discountType === 'PERCENTAGE' ? 'قيمة الخصم المحتسبة' : 'قيمة الخصم'}
-            </p>
-            <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc)}</p>
-          </div>
-        )}
-
-        <div>
-          <span className="text-sm font-medium text-slate-700">نوع دفعة الحجز</span>
-          <div className="flex flex-wrap gap-3 mt-2">
-            {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
-              <label
-                key={t}
-                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
-                  reservationAmountType === t
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-hairline bg-surface text-muted hover:border-brand-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="reservationAmountType"
-                  value={t}
-                  checked={reservationAmountType === t}
-                  onChange={() => setReservationAmountType(t)}
-                  className="accent-brand-500"
-                />
-                <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <Field
-          label={reservationAmountType === 'FIXED' ? 'قيمة دفعة الحجز (ج.م)' : 'نسبة دفعة الحجز (%)'}
-          name="reservationAmountValue"
-          required
-          hint={
-            reservationAmountType === 'PERCENTAGE'
-              ? 'نسبة من سعر الوحدة. تُحتسب القيمة من سعر الوحدة المختارة عند إنشاء الحجز. مطلوبة وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
-              : 'مبلغ الحجز المطلوب من العميل. يُستخدم تلقائياً عند إنشاء الحجز. مطلوب وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
-          }
-        >
-          <Input
-            id="reservationAmountValue"
-            name="reservationAmountValue"
-            placeholder={reservationAmountType === 'PERCENTAGE' ? '10' : 'مثال: 50000'}
-            {...numericInputProps(reservationAmountValue, setReservationAmountValue, { allowEmpty: true })}
-          />
-        </Field>
-
-        {reservation > 0 && (
-          <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
-            <p className="text-brand-700 font-medium">
-              {reservationAmountType === 'PERCENTAGE' ? 'دفعة الحجز المحتسبة (من صافي السعر)' : 'دفعة الحجز'}
-            </p>
-            <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation)}</p>
-            {reservationAmountType === 'PERCENTAGE' && (
-              <p className="text-brand-700/80 text-xs mt-1">
-                عند إنشاء الحجز ستُحتسب النسبة من سعر الوحدة المختارة.
-              </p>
-            )}
-          </div>
-        )}
-      </FormSection>
-
-      {/* ── Section 3: Down Payment ──────────────────────────────────────── */}
-      <FormSection
-        title="الدفعة الأولى (المقدم)"
-        description="حدد نوع المقدم وقيمته."
-        aside={
-          dpAmount > 0 ? (
-            <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-sm">
-              <p className="text-amber-700 font-medium">قيمة المقدم</p>
-              <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount)}</p>
-            </div>
-          ) : null
-        }
-      >
-        <div>
-          <span className="text-sm font-medium text-slate-700">نوع المقدم</span>
-          <div className="flex flex-wrap gap-3 mt-2">
-            {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
-              <label
-                key={t}
-                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
-                  downPaymentType === t
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-hairline bg-surface text-muted hover:border-brand-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="downPaymentType"
-                  value={t}
-                  checked={downPaymentType === t}
-                  onChange={() => setDownPaymentType(t)}
-                  className="accent-brand-500"
-                />
-                <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <Field
-          label={downPaymentType === 'FIXED' ? 'قيمة المقدم (ج.م)' : 'نسبة المقدم (%)'}
-          name="downPaymentValue"
-          required
-        >
-          <Input
-            id="downPaymentValue"
-            name="downPaymentValue"
-            placeholder={downPaymentType === 'PERCENTAGE' ? '10' : '0'}
-            {...numericInputProps(downPaymentValue, setDownPaymentValue, { allowEmpty: true })}
-          />
-        </Field>
-      </FormSection>
-
-      {/* ── Section 4: Duration Options ─────────────────────────────────── */}
-      <FormSection
-        title="خيارات مدة التقسيط"
-        description="حدد المدد المتاحة ونسبة الزيادة لكل مدة. المبيعات سيختارون مدة من القائمة فقط (نسبة الزيادة للعرض فقط ولا يمكنهم تعديلها)."
-      >
-        {/* Serialize duration options as a hidden JSON field for the server action */}
-        <input
-          type="hidden"
-          name="durationOptions"
-          value={JSON.stringify(
-            durationCalcRows.map((r) => ({
-              durationMonths: r.months,
-              increasePercentage: r.pct,
-            })),
-          )}
-        />
-
-        {reservationPlusDownError && (
-          <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>{reservationPlusDownError}</p>
-          </div>
-        )}
-
-        {reservationAmountError && (
-          <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>{reservationAmountError}</p>
-          </div>
-        )}
-
-        {durationOptionsError && (
-          <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>{durationOptionsError}</p>
-          </div>
-        )}
-
-        <div className="rounded-2xl border border-hairline overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-hairline">
-              <tr>
-                <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">المدة (شهر)</th>
-                <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">نسبة الزيادة %</th>
-                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">المبلغ المُمول</th>
-                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">القسط الشهري</th>
-                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">إجمالي السداد</th>
-                <th className="px-3 py-2.5"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-hairline">
-              {durationCalcRows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-6 text-center text-xs text-slate-400">
-                    {mode === 'edit'
-                      ? 'خطة قديمة بدون خيارات مدة. اضغط "إضافة خيار مدة" للترقية إلى النظام الجديد.'
-                      : 'أضف خيار مدة واحد على الأقل'}
-                  </td>
-                </tr>
-              ) : (
-                durationCalcRows.map((row) => (
-                  <tr key={row.key} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-3 py-2">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="12"
-                        value={row.durationMonths}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === '' || /^[0-9]+$/.test(v))
-                            updateDurationOption(row.key, { durationMonths: v });
-                        }}
-                        className="max-w-24"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        type="text"
-                        inputMode="decimal"
-                        placeholder="0"
-                        value={row.increasePercentage}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === '' || /^[0-9]*\.?[0-9]*$/.test(v))
-                            updateDurationOption(row.key, { increasePercentage: v });
-                        }}
-                        className="max-w-28"
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-end tabular-nums text-slate-700">
-                      {row.months > 0 && netPrice > 0
-                        ? formatCurrency(row.financedAmount)
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-end tabular-nums font-medium">
-                      {row.months > 0 && netPrice > 0
-                        ? formatCurrency(row.monthlyInstallment)
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-end tabular-nums text-slate-700">
-                      {row.months > 0 && netPrice > 0
-                        ? formatCurrency(row.totalPayable)
-                        : '—'}
-                    </td>
-                    <td className="px-3 py-2 text-end">
-                      <button
-                        type="button"
-                        onClick={() => removeDurationOption(row.key)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition"
-                        aria-label="حذف خيار المدة"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={addDurationOption}
-            leftIcon={<Plus className="h-4 w-4" />}
-          >
-            إضافة خيار مدة
-          </Button>
-        </div>
-
-        <p className="text-xs text-slate-500 leading-relaxed">
-          نسبة الزيادة تُطبَّق على المتبقي بعد دفعة الحجز والدفعة الأولى. الصيغة:{' '}
-          <span className="font-mono" dir="ltr">
-            financed = remaining × (1 + %); monthly = financed / months
-          </span>
-        </p>
-      </FormSection>
-
-      {/* ── Legacy fields — kept only when no duration options ──────────── */}
-      {!useDurationModel && (
-        <FormSection
-          title="إعدادات قديمة (اختيارية)"
-          description="هذه الحقول للخطط القديمة فقط. للخطط الجديدة استخدم خيارات المدة بالأعلى."
-        >
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="عدد الأقساط" name="installmentsCount">
+          <div className="flex flex-col gap-5">
+            <Field label="اسم الخطة" name="name" required>
               <Input
-                id="installmentsCount"
-                name="installmentsCount"
-                placeholder="12"
-                {...numericInputProps(installmentsCount, (v) => {
-                  if (v === '' || /^[0-9]+$/.test(v)) setInstallmentsCount(v);
-                })}
+                id="name"
+                name="name"
+                required
+                defaultValue={d?.name}
+                placeholder="مثال: خطة 24 قسط شهري"
               />
             </Field>
-            <Field label="تكرار القسط" name="frequency">
+
+            <Field label="وصف / ملاحظات" name="description">
+              <Textarea
+                id="description"
+                name="description"
+                rows={2}
+                defaultValue={d?.description ?? ''}
+                placeholder="وصف اختياري للخطة..."
+              />
+            </Field>
+
+            {/* Project — used to filter units */}
+            <Field label="المشروع" name="projectId" required hint="اختر المشروع لتحميل الوحدات المتاحة">
               <Select
-                id="frequency"
-                name="frequency"
-                value={frequency}
-                onChange={(e) => setFrequency(e.target.value as InstallmentFrequency)}
+                id="projectId"
+                name="projectId"
+                required
+                value={projectId}
+                onChange={(e) => {
+                  setProjectId(e.target.value);
+                  setUnitId('');
+                  setUnitTouched(false);
+                }}
               >
-                <option value="MONTHLY">شهري</option>
-                <option value="QUARTERLY">ربع سنوي (كل 3 أشهر)</option>
-                <option value="SEMI_ANNUAL">نصف سنوي (كل 6 أشهر)</option>
-                <option value="YEARLY">سنوي</option>
+                <option value="">— اختر مشروعاً —</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name.ar}
+                  </option>
+                ))}
               </Select>
             </Field>
-          </div>
 
-          <Field
-            label="الدفعة الأخيرة (ج.م)"
-            name="finalPaymentAmount"
-            hint="اتركها فارغة إذا لم تكن هناك دفعة بالون"
-          >
-            <Input
-              id="finalPaymentAmount"
-              name="finalPaymentAmount"
-              placeholder="0"
-              {...numericInputProps(finalPaymentAmount, setFinalPaymentAmount, { allowEmpty: true })}
-            />
-          </Field>
-        </FormSection>
-      )}
-
-      {/* ── Start-date rule (applies to both models) ────────────────────── */}
-      <FormSection
-        title="تاريخ بدء الأقساط"
-        description="حدد متى يبدأ احتساب تواريخ الأقساط."
-      >
-        <div>
-          <div className="flex flex-col gap-2">
-            {(['MANUAL', 'AFTER_RESERVATION', 'AFTER_CONTRACT'] as StartDateRule[]).map((r) => (
-              <label
-                key={r}
-                className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition ${
-                  startDateRule === r
-                    ? 'border-brand-500 bg-brand-50 text-brand-700'
-                    : 'border-hairline bg-surface text-muted hover:border-brand-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="startDateRule"
-                  value={r}
-                  checked={startDateRule === r}
-                  onChange={() => setStartDateRule(r)}
-                  className="accent-brand-500"
-                />
-                <span>
-                  {r === 'MANUAL'
-                    ? 'تاريخ محدد يدوياً'
-                    : r === 'AFTER_RESERVATION'
-                      ? 'بعد تاريخ الحجز'
-                      : 'بعد تاريخ التعاقد'}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {startDateRule === 'MANUAL' && (
-          <Field label="تاريخ بدء الأقساط" name="manualStartDate" required>
-            <Input
-              id="manualStartDate"
-              name="manualStartDate"
-              type="date"
+            {/* Unit — always required, visible once project is selected */}
+            <Field
+              label="الوحدة"
+              name="unitId"
               required
-              value={manualStartDate}
-              onChange={(e) => setManualStartDate(e.target.value)}
+              error={unitError}
+              hint={
+                !projectId
+                  ? 'اختر المشروع أولاً لتحميل الوحدات'
+                  : unitsLoading
+                  ? 'جاري تحميل الوحدات…'
+                  : units.length === 0 && mode === 'create'
+                  ? 'لا توجد وحدات متاحة بدون خطة تقسيط في هذا المشروع'
+                  : units.length === 0
+                  ? 'لا توجد وحدات متاحة في هذا المشروع'
+                  : undefined
+              }
+            >
+              <Select
+                id="unitId"
+                name="unitId"
+                required
+                value={unitId}
+                disabled={!projectId || unitsLoading || units.length === 0}
+                onChange={(e) => handleUnitChange(e.target.value)}
+                invalid={!!unitError}
+                onBlur={() => setUnitTouched(true)}
+              >
+                <option value="">— اختر وحدة —</option>
+                {units.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.code} — {u.type} — {formatCurrency(u.price)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="الحالة" name="status">
+                <Select id="status" name="status" defaultValue={d?.status ?? 'DRAFT'}>
+                  <option value="DRAFT">مسودة</option>
+                  <option value="ACTIVE">نشطة</option>
+                  <option value="INACTIVE">غير نشطة</option>
+                </Select>
+              </Field>
+              <Field label="الصلاحية" hint="ثابتة: للمبيعات فقط">
+                <input type="hidden" name="visibility" value="SALES_ONLY" />
+                <div className="h-10 flex items-center rounded-xl border border-hairline bg-canvas/40 px-3 text-sm text-slate-500">
+                  مبيعات فقط
+                </div>
+              </Field>
+            </div>
+          </div>
+        </PremiumFormPanel>
+
+        {/* ── Panel 02: التسعير ── */}
+        <PremiumFormPanel
+          id="section-pricing"
+          number="02"
+          title="التسعير"
+          description="السعر الإجمالي والخصم وصافي السعر ومبلغ الحجز."
+        >
+          <div className="flex flex-col gap-5">
+            {/* Total price — read-only by default, editable when override is on */}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="totalPrice" className="text-sm font-medium text-slate-700">
+                  السعر الإجمالي (ج.م)
+                  <span className="text-danger-600 ms-0.5">*</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={manualPriceOverride}
+                    onChange={(e) => handleManualOverrideChange(e.target.checked)}
+                    className="accent-brand-500 h-3.5 w-3.5"
+                  />
+                  <span className="text-xs text-slate-600">تعديل السعر يدوياً</span>
+                </label>
+              </div>
+              <Input
+                id="totalPrice"
+                name="totalPrice"
+                required
+                readOnly={!manualPriceOverride}
+                className={!manualPriceOverride ? 'bg-canvas/40 text-slate-600 cursor-default' : ''}
+                placeholder="يُحدَّد تلقائياً من سعر الوحدة"
+                {...(manualPriceOverride
+                  ? numericInputProps(totalPrice, setTotalPrice, { allowEmpty: false })
+                  : { value: totalPrice, onChange: () => {} })}
+              />
+              <p className="text-xs text-slate-500">
+                السعر الافتراضي مأخوذ من سعر الوحدة، ويمكن تعديله يدوياً عند الحاجة.
+              </p>
+            </div>
+
+            <div>
+              <span className="text-sm font-medium text-slate-700">نوع الخصم</span>
+              <div className="flex flex-wrap gap-3 mt-2">
+                {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
+                  <label
+                    key={t}
+                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                      discountType === t
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="discountType"
+                      value={t}
+                      checked={discountType === t}
+                      onChange={() => setDiscountType(t)}
+                      className="accent-brand-500"
+                    />
+                    <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Field
+              label={discountType === 'FIXED' ? 'قيمة الخصم (ج.م)' : 'نسبة الخصم (%)'}
+              name="discountValue"
+              hint={
+                discountType === 'PERCENTAGE'
+                  ? 'نسبة من السعر الإجمالي. اتركها صفراً إذا لم يكن هناك خصم.'
+                  : 'اتركها صفراً إذا لم يكن هناك خصم'
+              }
+            >
+              <Input
+                id="discountValue"
+                name="discountValue"
+                placeholder={discountType === 'PERCENTAGE' ? '10' : '0'}
+                {...numericInputProps(discountValue, setDiscountValue, { allowEmpty: true })}
+              />
+            </Field>
+
+            {disc > 0 && (
+              <div className="rounded-xl bg-canvas/40 border border-hairline p-3 text-sm">
+                <p className="text-slate-600 font-medium">
+                  {discountType === 'PERCENTAGE' ? 'قيمة الخصم المحتسبة' : 'قيمة الخصم'}
+                </p>
+                <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc)}</p>
+              </div>
+            )}
+
+            <div>
+              <span className="text-sm font-medium text-slate-700">نوع دفعة الحجز</span>
+              <div className="flex flex-wrap gap-3 mt-2">
+                {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
+                  <label
+                    key={t}
+                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                      reservationAmountType === t
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="reservationAmountType"
+                      value={t}
+                      checked={reservationAmountType === t}
+                      onChange={() => setReservationAmountType(t)}
+                      className="accent-brand-500"
+                    />
+                    <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Field
+              label={reservationAmountType === 'FIXED' ? 'قيمة دفعة الحجز (ج.م)' : 'نسبة دفعة الحجز (%)'}
+              name="reservationAmountValue"
+              required
+              hint={
+                reservationAmountType === 'PERCENTAGE'
+                  ? 'نسبة من سعر الوحدة. تُحتسب القيمة من سعر الوحدة المختارة عند إنشاء الحجز. مطلوبة وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
+                  : 'مبلغ الحجز المطلوب من العميل. يُستخدم تلقائياً عند إنشاء الحجز. مطلوب وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
+              }
+            >
+              <Input
+                id="reservationAmountValue"
+                name="reservationAmountValue"
+                placeholder={reservationAmountType === 'PERCENTAGE' ? '10' : 'مثال: 50000'}
+                {...numericInputProps(reservationAmountValue, setReservationAmountValue, { allowEmpty: true })}
+              />
+            </Field>
+
+            {reservation > 0 && (
+              <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
+                <p className="text-brand-700 font-medium">
+                  {reservationAmountType === 'PERCENTAGE' ? 'دفعة الحجز المحتسبة (من صافي السعر)' : 'دفعة الحجز'}
+                </p>
+                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation)}</p>
+                {reservationAmountType === 'PERCENTAGE' && (
+                  <p className="text-brand-700/80 text-xs mt-1">
+                    عند إنشاء الحجز ستُحتسب النسبة من سعر الوحدة المختارة.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {netPrice > 0 && (
+              <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
+                <p className="text-brand-700 font-medium">صافي السعر</p>
+                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(netPrice)}</p>
+              </div>
+            )}
+          </div>
+        </PremiumFormPanel>
+
+        {/* ── Panel 03: الدفعة الأولى (المقدم) ── */}
+        <PremiumFormPanel
+          id="section-down-payment"
+          number="03"
+          title="الدفعة الأولى (المقدم)"
+          description="حدد نوع المقدم وقيمته."
+        >
+          <div className="flex flex-col gap-5">
+            <div>
+              <span className="text-sm font-medium text-slate-700">نوع المقدم</span>
+              <div className="flex flex-wrap gap-3 mt-2">
+                {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
+                  <label
+                    key={t}
+                    className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                      downPaymentType === t
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="downPaymentType"
+                      value={t}
+                      checked={downPaymentType === t}
+                      onChange={() => setDownPaymentType(t)}
+                      className="accent-brand-500"
+                    />
+                    <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <Field
+              label={downPaymentType === 'FIXED' ? 'قيمة المقدم (ج.م)' : 'نسبة المقدم (%)'}
+              name="downPaymentValue"
+              required
+            >
+              <Input
+                id="downPaymentValue"
+                name="downPaymentValue"
+                placeholder={downPaymentType === 'PERCENTAGE' ? '10' : '0'}
+                {...numericInputProps(downPaymentValue, setDownPaymentValue, { allowEmpty: true })}
+              />
+            </Field>
+
+            {dpAmount > 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-sm">
+                <p className="text-amber-700 font-medium">قيمة المقدم</p>
+                <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount)}</p>
+              </div>
+            )}
+          </div>
+        </PremiumFormPanel>
+
+        {/* ── Panel 04: خيارات مدة التقسيط ── */}
+        <PremiumFormPanel
+          id="section-durations"
+          number="04"
+          title="خيارات مدة التقسيط"
+          description="حدد المدد المتاحة ونسبة الزيادة لكل مدة. المبيعات سيختارون مدة من القائمة فقط (نسبة الزيادة للعرض فقط ولا يمكنهم تعديلها)."
+        >
+          <div className="flex flex-col gap-4">
+            {/* Serialize duration options as a hidden JSON field for the server action */}
+            <input
+              type="hidden"
+              name="durationOptions"
+              value={JSON.stringify(
+                durationCalcRows.map((r) => ({
+                  durationMonths: r.months,
+                  increasePercentage: r.pct,
+                })),
+              )}
             />
-          </Field>
+
+            {reservationPlusDownError && (
+              <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>{reservationPlusDownError}</p>
+              </div>
+            )}
+
+            {reservationAmountError && (
+              <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>{reservationAmountError}</p>
+              </div>
+            )}
+
+            {durationOptionsError && (
+              <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>{durationOptionsError}</p>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-hairline overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-canvas/40 border-b border-hairline">
+                  <tr>
+                    <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">المدة (شهر)</th>
+                    <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">نسبة الزيادة %</th>
+                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">المبلغ المُمول</th>
+                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">القسط الشهري</th>
+                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">إجمالي السداد</th>
+                    <th className="px-3 py-2.5"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {durationCalcRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-6 text-center text-xs text-slate-400">
+                        {mode === 'edit'
+                          ? 'خطة قديمة بدون خيارات مدة. اضغط "إضافة خيار مدة" للترقية إلى النظام الجديد.'
+                          : 'أضف خيار مدة واحد على الأقل'}
+                      </td>
+                    </tr>
+                  ) : (
+                    durationCalcRows.map((row) => (
+                      <tr key={row.key} className="hover:bg-canvas/40 transition-colors">
+                        <td className="px-3 py-2">
+                          <Input
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="12"
+                            value={row.durationMonths}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === '' || /^[0-9]+$/.test(v))
+                                updateDurationOption(row.key, { durationMonths: v });
+                            }}
+                            className="max-w-24"
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder="0"
+                            value={row.increasePercentage}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              if (v === '' || /^[0-9]*\.?[0-9]*$/.test(v))
+                                updateDurationOption(row.key, { increasePercentage: v });
+                            }}
+                            className="max-w-28"
+                          />
+                        </td>
+                        <td className="px-3 py-2 text-end tabular-nums text-slate-700">
+                          {row.months > 0 && netPrice > 0
+                            ? formatCurrency(row.financedAmount)
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-end tabular-nums font-medium">
+                          {row.months > 0 && netPrice > 0
+                            ? formatCurrency(row.monthlyInstallment)
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-end tabular-nums text-slate-700">
+                          {row.months > 0 && netPrice > 0
+                            ? formatCurrency(row.totalPayable)
+                            : '—'}
+                        </td>
+                        <td className="px-3 py-2 text-end">
+                          <button
+                            type="button"
+                            onClick={() => removeDurationOption(row.key)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition"
+                            aria-label="حذف خيار المدة"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addDurationOption}
+                leftIcon={<Plus className="h-4 w-4" />}
+              >
+                إضافة خيار مدة
+              </Button>
+            </div>
+
+            <p className="text-xs text-slate-500 leading-relaxed">
+              نسبة الزيادة تُطبَّق على المتبقي بعد دفعة الحجز والدفعة الأولى. الصيغة:{' '}
+              <span className="font-mono" dir="ltr">
+                financed = remaining × (1 + %); monthly = financed / months
+              </span>
+            </p>
+          </div>
+        </PremiumFormPanel>
+
+        {/* ── Panel 05: إعدادات قديمة — only when no duration options ── */}
+        {!useDurationModel && (
+          <PremiumFormPanel
+            id="section-legacy"
+            number="05"
+            title="إعدادات قديمة (اختيارية)"
+            description="هذه الحقول للخطط القديمة فقط. للخطط الجديدة استخدم خيارات المدة بالأعلى."
+          >
+            <div className="flex flex-col gap-5">
+              <div className="grid grid-cols-2 gap-4">
+                <Field label="عدد الأقساط" name="installmentsCount">
+                  <Input
+                    id="installmentsCount"
+                    name="installmentsCount"
+                    placeholder="12"
+                    {...numericInputProps(installmentsCount, (v) => {
+                      if (v === '' || /^[0-9]+$/.test(v)) setInstallmentsCount(v);
+                    })}
+                  />
+                </Field>
+                <Field label="تكرار القسط" name="frequency">
+                  <Select
+                    id="frequency"
+                    name="frequency"
+                    value={frequency}
+                    onChange={(e) => setFrequency(e.target.value as InstallmentFrequency)}
+                  >
+                    <option value="MONTHLY">شهري</option>
+                    <option value="QUARTERLY">ربع سنوي (كل 3 أشهر)</option>
+                    <option value="SEMI_ANNUAL">نصف سنوي (كل 6 أشهر)</option>
+                    <option value="YEARLY">سنوي</option>
+                  </Select>
+                </Field>
+              </div>
+
+              <Field
+                label="الدفعة الأخيرة (ج.م)"
+                name="finalPaymentAmount"
+                hint="اتركها فارغة إذا لم تكن هناك دفعة بالون"
+              >
+                <Input
+                  id="finalPaymentAmount"
+                  name="finalPaymentAmount"
+                  placeholder="0"
+                  {...numericInputProps(finalPaymentAmount, setFinalPaymentAmount, { allowEmpty: true })}
+                />
+              </Field>
+            </div>
+          </PremiumFormPanel>
         )}
-      </FormSection>
+
+        {/* ── Panel 05/06: تاريخ بدء الأقساط ── */}
+        <PremiumFormPanel
+          id="section-start-date"
+          number={useDurationModel ? '05' : '06'}
+          title="تاريخ بدء الأقساط"
+          description="حدد متى يبدأ احتساب تواريخ الأقساط."
+        >
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              {(['MANUAL', 'AFTER_RESERVATION', 'AFTER_CONTRACT'] as StartDateRule[]).map((r) => (
+                <label
+                  key={r}
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2.5 text-sm transition ${
+                    startDateRule === r
+                      ? 'border-brand-500 bg-brand-50 text-brand-700'
+                      : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="startDateRule"
+                    value={r}
+                    checked={startDateRule === r}
+                    onChange={() => setStartDateRule(r)}
+                    className="accent-brand-500"
+                  />
+                  <span>
+                    {r === 'MANUAL'
+                      ? 'تاريخ محدد يدوياً'
+                      : r === 'AFTER_RESERVATION'
+                        ? 'بعد تاريخ الحجز'
+                        : 'بعد تاريخ التعاقد'}
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            {startDateRule === 'MANUAL' && (
+              <Field label="تاريخ بدء الأقساط" name="manualStartDate" required>
+                <Input
+                  id="manualStartDate"
+                  name="manualStartDate"
+                  type="date"
+                  required
+                  value={manualStartDate}
+                  onChange={(e) => setManualStartDate(e.target.value)}
+                />
+              </Field>
+            )}
+          </div>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
 
       {/* ── Net price summary ─────────────────────────────────────────────── */}
       {netPrice > 0 && (

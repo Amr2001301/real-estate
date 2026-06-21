@@ -27,16 +27,20 @@ import type {
   UnitStatusHistoryEntry,
 } from '@/lib/types';
 import { tx, formatCurrency, formatDate, formatDateTime } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { EmptyState } from '@/components/ui/empty-state';
 import { ReservationStatusBadge, UnitStatusBadge } from '@/components/badges';
 import { ConfirmButton } from '@/components/confirm-button';
 import { UnitMediaPanel } from './media-panel';
 import { MaintenanceItemsCard } from './maintenance-items-card';
 import { deleteUnitAction } from '../actions';
+import {
+  PremiumPageHero,
+  PremiumDetailLayout,
+  PremiumSectionCard,
+  PremiumCommandPanel,
+  PremiumEmptyState,
+} from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +49,11 @@ const STATUS_LABEL: Record<UnitStatus, string> = {
   RESERVED: 'محجوزة',
   SOLD: 'مباعة',
 };
+
+const CMD_LINK =
+  'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 hover:bg-white/[0.07] hover:text-white/95 transition-colors';
+const CMD_ICON =
+  'h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/[0.08] text-brand-300 shrink-0 [&_svg]:h-4 [&_svg]:w-4';
 
 export default async function UnitDetailPage({
   params,
@@ -66,7 +75,6 @@ export default async function UnitDetailPage({
   }
 
   const unit = unitRes.data;
-  // Unit mutations (edit/status-change/delete) are ADMIN-only.
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
   const projectName = tx(unit.building?.phase?.project?.name);
@@ -81,10 +89,18 @@ export default async function UnitDetailPage({
   );
   const pastReservations = reservations.filter((r) => r.id !== activeReservation?.id);
 
+  const locationParts = [
+    projectName !== '—' ? projectName : null,
+    phaseName !== '—' ? phaseName : null,
+    buildingName ? `مبنى ${buildingName}` : null,
+    city || null,
+  ].filter(Boolean) as string[];
+
   return (
-    <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+    <div className="space-y-5">
+      <PremiumPageHero
         title={`الوحدة ${unit.code}`}
+        description={locationParts.join(' · ') || undefined}
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوحدات', href: '/dashboard/units' },
@@ -93,27 +109,16 @@ export default async function UnitDetailPage({
         meta={
           <>
             <UnitStatusBadge status={unit.status} />
-            <Badge tone="gray" variant="soft">
-              {unit.type}
-            </Badge>
-            {projectName !== '—' && (
-              <span className="text-sm text-slate-500 inline-flex items-center gap-1.5">
-                <Building2 className="h-3.5 w-3.5" />
-                {projectName}
-                {phaseName !== '—' && ` · ${phaseName}`}
-                {buildingName && ` · مبنى ${buildingName}`}
-              </span>
-            )}
+            <Badge tone="gray" variant="soft">{unit.type}</Badge>
+            <span className="text-sm font-semibold text-navy tabular-nums">
+              {formatCurrency(unit.price)}
+            </span>
           </>
         }
         actions={
           isAdmin ? (
             <Link href={`/dashboard/units/${id}/edit` as never}>
-              <Button
-                variant="outline"
-                size="md"
-                leftIcon={<Pencil className="h-4 w-4" />}
-              >
+              <Button variant="outline" size="md" leftIcon={<Pencil className="h-4 w-4" />}>
                 تعديل الوحدة
               </Button>
             </Link>
@@ -121,11 +126,11 @@ export default async function UnitDetailPage({
         }
       />
 
-      {/* Hero / price band */}
-      <Card className="overflow-hidden">
+      {/* Media / price band */}
+      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
         <div className="relative grid grid-cols-1 lg:grid-cols-[1.5fr_1fr]">
           {/* Image / placeholder */}
-          <div className="relative h-48 sm:h-56 lg:h-64 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 lg:rounded-s-2xl overflow-hidden">
+          <div className="relative h-48 sm:h-56 lg:h-64 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 lg:rounded-s-[19px] overflow-hidden">
             {cover ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -173,206 +178,204 @@ export default async function UnitDetailPage({
             />
           </div>
         </div>
-      </Card>
+      </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <div className="xl:col-span-2 space-y-6">
-          {/* Specifications */}
-          <Card className="p-5 sm:p-6">
-            <SectionTitle title="المواصفات الفنية" accent="brand" />
-            <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 mt-4">
-              <KV label="كود الوحدة" value={<span className="font-mono">{unit.code}</span>} />
-              <KV label="النوع" value={unit.type} />
-              <KV label="الطابق" value={unit.floor === 0 ? 'أرضي' : unit.floor} />
-              <KV label="المساحة" value={`${unit.area} م²`} />
-              <KV label="الغرف" value={unit.bedrooms} />
-              <KV label="دورات المياه" value={unit.bathrooms} />
-            </dl>
-          </Card>
+      <PremiumDetailLayout
+        main={
+          <>
+            {/* Specifications */}
+            <PremiumSectionCard title="المواصفات الفنية">
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+                <KV label="كود الوحدة" value={<span className="font-mono">{unit.code}</span>} />
+                <KV label="النوع" value={unit.type} />
+                <KV label="الطابق" value={unit.floor === 0 ? 'أرضي' : unit.floor} />
+                <KV label="المساحة" value={`${unit.area} م²`} />
+                <KV label="الغرف" value={unit.bedrooms} />
+                <KV label="دورات المياه" value={unit.bathrooms} />
+              </dl>
+            </PremiumSectionCard>
 
-          {/* Project / Location */}
-          <Card className="p-5 sm:p-6">
-            <SectionTitle title="بيانات المشروع" accent="info" />
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 mt-4">
-              <KV
-                label="المشروع"
-                value={
-                  unit.building?.phase?.project ? (
-                    <Link
-                      href={
-                        `/dashboard/projects/${unit.building.phase.project.id}` as never
-                      }
-                      className="text-brand-700 hover:text-brand-800 font-medium"
-                    >
-                      {projectName}
-                    </Link>
-                  ) : (
-                    projectName
-                  )
-                }
-              />
-              <KV label="المرحلة" value={phaseName} />
-              <KV label="المبنى" value={buildingName ? `مبنى ${buildingName}` : '—'} />
-              <KV
-                label="المدينة"
-                value={
-                  city ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <MapPin className="h-3.5 w-3.5 text-slate-400" />
-                      {city}
-                    </span>
-                  ) : (
-                    '—'
-                  )
-                }
-              />
-            </dl>
-          </Card>
-
-          {/* Status & reservation */}
-          <Card className="p-5 sm:p-6">
-            <SectionTitle title="حالة الحجز" accent="warning" />
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <Stat
-                icon={<Bookmark className="h-4 w-4" />}
-                label="الحالة الحالية"
-                value={<UnitStatusBadge status={unit.status} />}
-              />
-              <Stat
-                icon={<CalendarClock className="h-4 w-4" />}
-                label="انتهاء الحجز"
-                value={
-                  unit.reservationExpiresAt
-                    ? formatDate(unit.reservationExpiresAt)
-                    : '—'
-                }
-              />
-              <Stat
-                icon={<History className="h-4 w-4" />}
-                label="آخر تحديث"
-                value={formatDate(unit.updatedAt)}
-              />
-            </div>
-
-            {activeReservation ? (
-              <div className="mt-5 rounded-2xl border border-warning-100 bg-warning-50/40 p-4 sm:p-5">
-                <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
-                  <div className="flex items-center gap-2">
-                    <BookmarkCheck className="h-5 w-5 text-warning-600" />
-                    <h3 className="text-sm font-semibold text-slate-900">الحجز النشط</h3>
-                    <ReservationStatusBadge status={activeReservation.status} />
-                  </div>
-                  <Link
-                    href={`/dashboard/reservations/${activeReservation.id}` as never}
-                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                  >
-                    تفاصيل الحجز
-                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                  </Link>
-                </div>
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                  <KV
-                    label="رقم الحجز"
-                    value={
-                      <span className="font-mono">
-                        {activeReservation.reservationNumber ??
-                          `#${activeReservation.id.slice(0, 8).toUpperCase()}`}
-                      </span>
-                    }
-                  />
-                  <KV
-                    label="العميل"
-                    value={
+            {/* Project / Location */}
+            <PremiumSectionCard title="بيانات المشروع" icon={<Building2 />}>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                <KV
+                  label="المشروع"
+                  value={
+                    unit.building?.phase?.project ? (
+                      <Link
+                        href={`/dashboard/projects/${unit.building.phase.project.id}` as never}
+                        className="text-brand-700 hover:text-brand-800 font-medium"
+                      >
+                        {projectName}
+                      </Link>
+                    ) : (
+                      projectName
+                    )
+                  }
+                />
+                <KV label="المرحلة" value={phaseName} />
+                <KV label="المبنى" value={buildingName ? `مبنى ${buildingName}` : '—'} />
+                <KV
+                  label="المدينة"
+                  value={
+                    city ? (
                       <span className="inline-flex items-center gap-1.5">
-                        <UserIcon className="h-3.5 w-3.5 text-slate-400" />
-                        {activeReservation.client?.fullName ??
-                          activeReservation.lead?.fullName ??
-                          '—'}
+                        <MapPin className="h-3.5 w-3.5 text-slate-400" />
+                        {city}
                       </span>
-                    }
-                  />
-                  <KV
-                    label="المندوب المسؤول"
-                    value={
-                      activeReservation.sales?.fullName ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <UserCog className="h-3.5 w-3.5 text-slate-400" />
-                          {activeReservation.sales.fullName}
-                        </span>
-                      ) : (
-                        '—'
-                      )
-                    }
-                  />
-                  <KV
-                    label="ينتهي في"
-                    value={formatDate(activeReservation.expiresAt)}
-                  />
-                </dl>
-              </div>
-            ) : (
-              unit.status === 'AVAILABLE' && (
-                <p className="mt-4 text-xs text-slate-500">
-                  لا توجد حجوزات نشطة لهذه الوحدة حالياً. الوحدة جاهزة للعرض والبيع الفوري.
-                </p>
-              )
-            )}
-          </Card>
+                    ) : (
+                      '—'
+                    )
+                  }
+                />
+              </dl>
+            </PremiumSectionCard>
 
-          {/* Reservation history */}
-          {pastReservations.length > 0 && (
-            <Card className="p-5 sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <SectionTitle title="سجل الحجوزات" accent="brand" />
-                <span className="text-2xs font-semibold text-slate-500">
-                  {pastReservations.length} حجز
-                </span>
+            {/* Status & reservation */}
+            <PremiumSectionCard title="حالة الحجز">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <Stat
+                  icon={<Bookmark className="h-4 w-4" />}
+                  label="الحالة الحالية"
+                  value={<UnitStatusBadge status={unit.status} />}
+                />
+                <Stat
+                  icon={<CalendarClock className="h-4 w-4" />}
+                  label="انتهاء الحجز"
+                  value={
+                    unit.reservationExpiresAt
+                      ? formatDate(unit.reservationExpiresAt)
+                      : '—'
+                  }
+                />
+                <Stat
+                  icon={<History className="h-4 w-4" />}
+                  label="آخر تحديث"
+                  value={formatDate(unit.updatedAt)}
+                />
               </div>
-              <ul className="mt-4 flex flex-col divide-y divide-hairline -mx-2">
-                {pastReservations.map((r) => (
-                  <li key={r.id}>
+
+              {activeReservation ? (
+                <div className="mt-5 rounded-2xl border border-warning-100 bg-warning-50/40 p-4 sm:p-5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
+                    <div className="flex items-center gap-2">
+                      <BookmarkCheck className="h-5 w-5 text-warning-600" />
+                      <h3 className="text-sm font-semibold text-slate-900">الحجز النشط</h3>
+                      <ReservationStatusBadge status={activeReservation.status} />
+                    </div>
                     <Link
-                      href={`/dashboard/reservations/${r.id}` as never}
-                      className="flex items-center gap-3 px-2 py-3 hover:bg-surface-muted/40 rounded-lg transition-colors"
+                      href={`/dashboard/reservations/${activeReservation.id}` as never}
+                      className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
                     >
-                      <span className="font-mono text-2xs text-slate-400 shrink-0">
-                        {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-medium text-slate-900 truncate">
-                            {r.client?.fullName ?? r.lead?.fullName ?? '—'}
-                          </p>
-                          <ReservationStatusBadge status={r.status} />
-                        </div>
-                        <p className="text-2xs text-slate-500 mt-0.5">
-                          {formatDateTime(r.createdAt)}
-                        </p>
-                      </div>
-                      <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
+                      تفاصيل الحجز
+                      <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                     </Link>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-
-          {/* Maintenance / warranty items (ADMIN-only API) */}
-          {isAdmin && <MaintenanceItemsCard unitId={id} />}
-
-          {/* Activity / history timeline */}
-          <Card className="p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <SectionTitle title="سجل النشاط" accent="accent" />
-              {history.length > 0 && (
-                <span className="text-2xs font-semibold text-slate-500">
-                  {history.length} نشاط
-                </span>
+                  </div>
+                  <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                    <KV
+                      label="رقم الحجز"
+                      value={
+                        <span className="font-mono">
+                          {activeReservation.reservationNumber ??
+                            `#${activeReservation.id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                      }
+                    />
+                    <KV
+                      label="العميل"
+                      value={
+                        <span className="inline-flex items-center gap-1.5">
+                          <UserIcon className="h-3.5 w-3.5 text-slate-400" />
+                          {activeReservation.client?.fullName ??
+                            activeReservation.lead?.fullName ??
+                            '—'}
+                        </span>
+                      }
+                    />
+                    <KV
+                      label="المندوب المسؤول"
+                      value={
+                        activeReservation.sales?.fullName ? (
+                          <span className="inline-flex items-center gap-1.5">
+                            <UserCog className="h-3.5 w-3.5 text-slate-400" />
+                            {activeReservation.sales.fullName}
+                          </span>
+                        ) : (
+                          '—'
+                        )
+                      }
+                    />
+                    <KV
+                      label="ينتهي في"
+                      value={formatDate(activeReservation.expiresAt)}
+                    />
+                  </dl>
+                </div>
+              ) : (
+                unit.status === 'AVAILABLE' && (
+                  <p className="mt-4 text-xs text-slate-500">
+                    لا توجد حجوزات نشطة لهذه الوحدة حالياً. الوحدة جاهزة للعرض والبيع الفوري.
+                  </p>
+                )
               )}
-            </div>
-            <div className="mt-4">
+            </PremiumSectionCard>
+
+            {/* Reservation history */}
+            {pastReservations.length > 0 && (
+              <PremiumSectionCard
+                title="سجل الحجوزات"
+                trailing={
+                  <span className="text-xs text-slate-400 tabular-nums">
+                    {pastReservations.length} حجز
+                  </span>
+                }
+                padded={false}
+              >
+                <ul className="flex flex-col divide-y divide-hairline">
+                  {pastReservations.map((r) => (
+                    <li key={r.id}>
+                      <Link
+                        href={`/dashboard/reservations/${r.id}` as never}
+                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100"
+                      >
+                        <span className="font-mono text-2xs text-slate-400 shrink-0">
+                          {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-medium text-slate-900 truncate">
+                              {r.client?.fullName ?? r.lead?.fullName ?? '—'}
+                            </p>
+                            <ReservationStatusBadge status={r.status} />
+                          </div>
+                          <p className="text-2xs text-slate-500 mt-0.5">
+                            {formatDateTime(r.createdAt)}
+                          </p>
+                        </div>
+                        <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </PremiumSectionCard>
+            )}
+
+            {/* Maintenance / warranty items (ADMIN-only API) */}
+            {isAdmin && <MaintenanceItemsCard unitId={id} />}
+
+            {/* Activity / history timeline */}
+            <PremiumSectionCard
+              title="سجل النشاط"
+              trailing={
+                history.length > 0 ? (
+                  <span className="text-xs text-slate-400 tabular-nums">
+                    {history.length} نشاط
+                  </span>
+                ) : undefined
+              }
+            >
               {history.length === 0 ? (
-                <EmptyState
+                <PremiumEmptyState
                   icon={<History />}
                   title="لا توجد أحداث بعد"
                   description="ستظهر هنا تغييرات الحالة وعمليات الحجز للوحدة."
@@ -384,65 +387,71 @@ export default async function UnitDetailPage({
                   ))}
                 </ol>
               )}
-            </div>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <UnitMediaPanel unit={unit} />
-
-          {isAdmin && (
-            <Card className="p-5">
-              <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
-                منطقة الخطر
-              </h3>
-              <p className="mt-2 text-xs text-slate-500">
-                حذف الوحدة سيؤدي إلى إزالتها نهائياً. لا يمكن التراجع.
-              </p>
-              <div className="mt-4">
-                <ConfirmButton
-                  label="حذف الوحدة"
-                  confirm="هل أنت متأكد من حذف هذه الوحدة؟"
-                  action={deleteUnitAction.bind(null, id)}
-                />
+            </PremiumSectionCard>
+          </>
+        }
+        side={
+          <>
+            <PremiumCommandPanel title="إجراءات سريعة">
+              <div className="flex flex-col gap-0.5">
+                {isAdmin && (
+                  <Link href={`/dashboard/units/${id}/edit` as never} className={CMD_LINK}>
+                    <span className={CMD_ICON}><Pencil /></span>
+                    <span>تعديل الوحدة</span>
+                  </Link>
+                )}
+                <Link href="/dashboard/units" className={CMD_LINK}>
+                  <span className={CMD_ICON}><ArrowLeft /></span>
+                  <span>قائمة الوحدات</span>
+                </Link>
+                {unit.building?.phase?.project && (
+                  <Link
+                    href={`/dashboard/projects/${unit.building.phase.project.id}` as never}
+                    className={CMD_LINK}
+                  >
+                    <span className={CMD_ICON}><Building2 /></span>
+                    <span>عرض المشروع</span>
+                  </Link>
+                )}
+                <Link
+                  href={`/dashboard/reservations?unitId=${id}` as never}
+                  className={CMD_LINK}
+                >
+                  <span className={CMD_ICON}><Bookmark /></span>
+                  <span>حجوزات الوحدة</span>
+                </Link>
               </div>
-            </Card>
-          )}
-        </div>
-      </div>
+            </PremiumCommandPanel>
+
+            <UnitMediaPanel unit={unit} />
+
+            {isAdmin && (
+              <PremiumSectionCard title="منطقة الخطر" tone="danger">
+                <div className="space-y-3">
+                  <p className="text-xs text-slate-500">
+                    حذف الوحدة سيؤدي إلى إزالتها نهائياً. لا يمكن التراجع.
+                  </p>
+                  <ConfirmButton
+                    label="حذف الوحدة"
+                    confirm="هل أنت متأكد من حذف هذه الوحدة؟"
+                    action={deleteUnitAction.bind(null, id)}
+                  />
+                </div>
+              </PremiumSectionCard>
+            )}
+          </>
+        }
+      />
     </div>
   );
 }
 
-function SectionTitle({
-  title,
-  accent,
-}: {
-  title: string;
-  accent: 'brand' | 'info' | 'warning' | 'accent';
-}) {
-  const color: Record<typeof accent, string> = {
-    brand: 'bg-brand-500',
-    info: 'bg-info-500',
-    warning: 'bg-warning-500',
-    accent: 'bg-accent-500',
-  };
-  return (
-    <div className="flex items-center gap-2">
-      <span className={`h-5 w-1 rounded-full ${color[accent]}`} />
-      <h2 className="text-base font-semibold text-slate-900 tracking-tight">
-        {title}
-      </h2>
-    </div>
-  );
-}
+// ── Local helpers ─────────────────────────────────────────────────────────────
 
 function KV({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-2xs font-medium uppercase tracking-wide text-slate-500">
-        {label}
-      </dt>
+      <dt className="text-2xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className="mt-1 text-sm font-medium text-slate-900 truncate">{value}</dd>
     </div>
   );
@@ -458,7 +467,7 @@ function Stat({
   value: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-surface-muted/60 p-3 ring-1 ring-inset ring-hairline">
+    <div className="rounded-xl bg-canvas/60 p-3 ring-1 ring-inset ring-hairline">
       <div className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-slate-500">
         <span className="text-slate-400">{icon}</span>
         {label}
@@ -483,9 +492,7 @@ function QuickStat({
         <span className="text-slate-400">{icon}</span>
         {label}
       </div>
-      <p className="mt-1.5 text-lg sm:text-xl font-bold text-slate-900 tabular-nums">
-        {value}
-      </p>
+      <p className="mt-1.5 text-lg sm:text-xl font-bold text-slate-900 tabular-nums">{value}</p>
     </div>
   );
 }
@@ -526,7 +533,8 @@ function HistoryItem({ entry }: { entry: UnitStatusHistoryEntry }) {
           )}
           {entry.changedBy?.fullName && (
             <p className="mt-1 text-2xs text-slate-500">
-              بواسطة <span className="font-medium text-slate-700">{entry.changedBy.fullName}</span>
+              بواسطة{' '}
+              <span className="font-medium text-slate-700">{entry.changedBy.fullName}</span>
             </p>
           )}
         </div>

@@ -1,16 +1,20 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Pencil, Building2, Home, Calendar, User } from 'lucide-react';
+import { Pencil, Building2, Home, Calendar, User, ChevronLeft } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { InstallmentPlanTemplate, PlanPaymentType } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { PlanTemplateStatusBadge } from '@/components/badges';
 import { PlanDetailActions } from '../_components/plan-detail-actions';
 import { DurationSelector } from './_components/duration-selector';
+import {
+  PremiumPageHero,
+  PremiumDetailLayout,
+  PremiumSectionCard,
+  PremiumCommandPanel,
+} from '@/components/premium';
 
 const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
   RESERVATION: 'دفعة حجز',
@@ -39,6 +43,9 @@ const START_DATE_RULE_LABELS: Record<string, string> = {
   AFTER_CONTRACT: 'بعد تاريخ التعاقد',
 };
 
+const CMD_LINK = 'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 hover:bg-white/[0.07] hover:text-white/95 transition-colors';
+const CMD_ICON = 'h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/[0.08] text-brand-300 shrink-0 [&_svg]:h-4 [&_svg]:w-4';
+
 export default async function InstallmentPlanDetailPage({
   params,
 }: {
@@ -60,8 +67,8 @@ export default async function InstallmentPlanDetailPage({
   const hasDurationOptions = durationOptions.length > 0;
 
   return (
-    <div className="space-y-6 pb-2">
-      <PageHeader
+    <div className="space-y-5 pb-2">
+      <PremiumPageHero
         title={plan.name}
         description={plan.description ?? 'خطة تقسيط'}
         breadcrumbs={[
@@ -69,6 +76,7 @@ export default async function InstallmentPlanDetailPage({
           { label: 'خطط التقسيط', href: '/dashboard/installments' },
           { label: plan.name },
         ]}
+        meta={<PlanTemplateStatusBadge status={plan.status} />}
         actions={
           isAdmin ? (
             <div className="flex items-center gap-2">
@@ -88,15 +96,10 @@ export default async function InstallmentPlanDetailPage({
         }
       />
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        {/* ── Main content ─────────────────────────────────────────────── */}
-        <div className="xl:col-span-2 flex flex-col gap-6">
-          {/* Plan info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>تفاصيل الخطة</CardTitle>
-            </CardHeader>
-            <CardBody>
+      <PremiumDetailLayout
+        main={
+          <div className="space-y-5">
+            <PremiumSectionCard title="تفاصيل الخطة">
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
                 <div>
                   <dt className="text-slate-500 mb-0.5">صافي السعر</dt>
@@ -171,16 +174,10 @@ export default async function InstallmentPlanDetailPage({
                   </div>
                 )}
               </dl>
-            </CardBody>
-          </Card>
+            </PremiumSectionCard>
 
-          {/* Duration options or legacy schedule */}
-          {hasDurationOptions ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>خيارات مدة التقسيط ({durationOptions.length})</CardTitle>
-              </CardHeader>
-              <CardBody>
+            {hasDurationOptions ? (
+              <PremiumSectionCard title={`خيارات مدة التقسيط (${durationOptions.length})`}>
                 <DurationSelector
                   options={durationOptions}
                   netPrice={Number(plan.netPrice)}
@@ -188,80 +185,104 @@ export default async function InstallmentPlanDetailPage({
                   downPaymentAmount={Number(plan.downPaymentAmount)}
                   totalPrice={Number(plan.totalPrice)}
                 />
-              </CardBody>
-            </Card>
-          ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>جدول السداد ({scheduleItems.length} دفعة)</CardTitle>
-            </CardHeader>
-            <CardBody className="p-0">
-              {scheduleItems.length === 0 ? (
-                <p className="text-sm text-slate-400 p-5">لا يوجد جدول سداد محفوظ لهذه الخطة.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50 border-b border-hairline">
-                      <tr>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-slate-500">#</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-slate-500">نوع الدفعة</th>
-                        <th className="px-4 py-3 text-start text-xs font-medium text-slate-500">تاريخ الاستحقاق</th>
-                        <th className="px-4 py-3 text-end text-xs font-medium text-slate-500">المبلغ</th>
-                        <th className="px-4 py-3 text-end text-xs font-medium text-slate-500">الرصيد المتبقي</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-hairline">
-                      {scheduleItems.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-4 py-3 text-slate-500 tabular-nums">{item.paymentNumber}</td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PAYMENT_TYPE_BADGE[item.paymentType]}`}
-                            >
-                              {PAYMENT_TYPE_LABELS[item.paymentType]}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-slate-600 text-xs">
-                            {item.dueDate ? formatDate(item.dueDate) : '—'}
-                          </td>
-                          <td className="px-4 py-3 text-end font-medium tabular-nums">
-                            {formatCurrency(item.amount)}
-                          </td>
-                          <td className="px-4 py-3 text-end text-slate-500 tabular-nums text-xs">
-                            {formatCurrency(item.remainingBalance)}
-                          </td>
+              </PremiumSectionCard>
+            ) : (
+              <PremiumSectionCard
+                title={`جدول السداد (${scheduleItems.length} دفعة)`}
+                padded={false}
+              >
+                {scheduleItems.length === 0 ? (
+                  <p className="text-sm text-slate-400 p-5">لا يوجد جدول سداد محفوظ لهذه الخطة.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                        <tr>
+                          <th className="px-4 py-3 text-start">#</th>
+                          <th className="px-4 py-3 text-start">نوع الدفعة</th>
+                          <th className="px-4 py-3 text-start">تاريخ الاستحقاق</th>
+                          <th className="px-4 py-3 text-end">المبلغ</th>
+                          <th className="px-4 py-3 text-end">الرصيد المتبقي</th>
                         </tr>
-                      ))}
-                    </tbody>
-                    <tfoot className="bg-slate-50 border-t-2 border-slate-200">
-                      <tr>
-                        <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-slate-700">
-                          الإجمالي
-                        </td>
-                        <td className="px-4 py-3 text-end font-bold text-slate-900 tabular-nums">
-                          {formatCurrency(
-                            scheduleItems.reduce((s, i) => s + Number(i.amount), 0),
-                          )}
-                        </td>
-                        <td />
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              )}
-            </CardBody>
-          </Card>
-          )}
-        </div>
+                      </thead>
+                      <tbody className="divide-y divide-hairline">
+                        {scheduleItems.map((item) => (
+                          <tr key={item.id} className="hover:bg-canvas/40 transition-colors duration-100">
+                            <td className="px-4 py-3 text-slate-500 tabular-nums">{item.paymentNumber}</td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PAYMENT_TYPE_BADGE[item.paymentType]}`}
+                              >
+                                {PAYMENT_TYPE_LABELS[item.paymentType]}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-600 text-xs">
+                              {item.dueDate ? formatDate(item.dueDate) : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-end font-medium tabular-nums">
+                              {formatCurrency(item.amount)}
+                            </td>
+                            <td className="px-4 py-3 text-end text-slate-500 tabular-nums text-xs">
+                              {formatCurrency(item.remainingBalance)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-canvas/40 border-t-2 border-hairline">
+                        <tr>
+                          <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-slate-700">
+                            الإجمالي
+                          </td>
+                          <td className="px-4 py-3 text-end font-bold text-slate-900 tabular-nums">
+                            {formatCurrency(
+                              scheduleItems.reduce((s, i) => s + Number(i.amount), 0),
+                            )}
+                          </td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                )}
+              </PremiumSectionCard>
+            )}
+          </div>
+        }
+        side={
+          <div className="space-y-5">
+            {isAdmin && (
+              <PremiumCommandPanel title="إجراءات">
+                {plan.status !== 'ACTIVE' && (
+                  <div className="px-1">
+                    <PlanDetailActions planId={plan.id} action="activate" />
+                  </div>
+                )}
+                {plan.status === 'ACTIVE' && (
+                  <div className="px-1">
+                    <PlanDetailActions planId={plan.id} action="deactivate" />
+                  </div>
+                )}
+                <Link href={`/dashboard/installments/${id}/edit`} className={CMD_LINK}>
+                  <span className={CMD_ICON}><Pencil /></span>
+                  تعديل الخطة
+                </Link>
+                <Link href="/dashboard/installments" className={CMD_LINK}>
+                  <span className={CMD_ICON}><ChevronLeft /></span>
+                  قائمة خطط التقسيط
+                </Link>
+              </PremiumCommandPanel>
+            )}
 
-        {/* ── Sidebar ───────────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4">
-          {/* Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle>الحالة والصلاحية</CardTitle>
-            </CardHeader>
-            <CardBody>
+            {!isAdmin && (
+              <PremiumCommandPanel title="التنقل">
+                <Link href="/dashboard/installments" className={CMD_LINK}>
+                  <span className={CMD_ICON}><ChevronLeft /></span>
+                  قائمة خطط التقسيط
+                </Link>
+              </PremiumCommandPanel>
+            )}
+
+            <PremiumSectionCard title="الحالة والصلاحية">
               <div className="flex flex-col gap-3 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">الحالة</span>
@@ -269,20 +290,14 @@ export default async function InstallmentPlanDetailPage({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">الصلاحية</span>
-                  <span className="text-xs font-medium bg-slate-100 text-slate-600 rounded-full px-2 py-0.5">
+                  <span className="text-xs font-medium bg-canvas text-slate-600 rounded-full px-2 py-0.5 border border-hairline">
                     مبيعات فقط
                   </span>
                 </div>
               </div>
-            </CardBody>
-          </Card>
+            </PremiumSectionCard>
 
-          {/* Project / Unit */}
-          <Card>
-            <CardHeader>
-              <CardTitle>المشروع والوحدة</CardTitle>
-            </CardHeader>
-            <CardBody>
+            <PremiumSectionCard title="المشروع والوحدة">
               <div className="flex flex-col gap-3 text-sm">
                 {plan.project && (
                   <div className="flex items-start gap-2">
@@ -306,15 +321,9 @@ export default async function InstallmentPlanDetailPage({
                   <p className="text-xs text-slate-400">تنطبق على كامل المشروع</p>
                 )}
               </div>
-            </CardBody>
-          </Card>
+            </PremiumSectionCard>
 
-          {/* Metadata */}
-          <Card>
-            <CardHeader>
-              <CardTitle>معلومات الإنشاء</CardTitle>
-            </CardHeader>
-            <CardBody>
+            <PremiumSectionCard title="معلومات الإنشاء">
               <div className="flex flex-col gap-3 text-sm">
                 {plan.createdBy && (
                   <div className="flex items-start gap-2">
@@ -340,10 +349,10 @@ export default async function InstallmentPlanDetailPage({
                   </div>
                 </div>
               </div>
-            </CardBody>
-          </Card>
-        </div>
-      </div>
+            </PremiumSectionCard>
+          </div>
+        }
+      />
     </div>
   );
 }

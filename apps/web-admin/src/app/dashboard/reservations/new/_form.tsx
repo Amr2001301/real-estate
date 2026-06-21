@@ -8,8 +8,8 @@ import { SubmitButton } from '@/components/form/submit-button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { LeadStage } from '@/lib/types';
 import { computeDurationOption } from '@/lib/installment-calc';
 import { createReservationAction, type ReservationFormState } from '../actions';
@@ -104,6 +104,13 @@ function formatClientLabel(c: Client): string {
   const phone = c.phone ?? 'بدون هاتف';
   return `${c.fullName} — ${role} — ${phone}`;
 }
+
+const NAV_SECTIONS = [
+  { id: 'section-unit',    num: '01', label: 'الوحدة العقارية',            sub: 'اختيار الوحدة المراد حجزها' },
+  { id: 'section-client',  num: '02', label: 'العميل',                     sub: 'فرصة CRM أو عميل مسجل' },
+  { id: 'section-details', num: '03', label: 'تفاصيل الحجز',               sub: 'المندوب والمدة والملاحظات' },
+  { id: 'section-plan',    num: '04', label: 'خطة التقسيط ومبلغ الحجز',   sub: 'الخطة والمبلغ ومدة التقسيط' },
+];
 
 export default function NewReservationForm({
   units,
@@ -200,442 +207,466 @@ export default function NewReservationForm({
   }, [selectedPlan, selectedDuration]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
+    <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
-        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-5 py-4 text-sm shadow-soft">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <p className="font-medium">{state.error}</p>
         </div>
       )}
 
-      <FormSection
-        title="الوحدة العقارية"
-        description="اختر الوحدة المراد حجزها. يجب أن تكون الوحدة في حالة متاحة."
+      <PremiumFormLayout
+        navSections={NAV_SECTIONS}
+        sidebarBadge="جديد"
+        sidebarInfo="الحجز يبدأ بحالة قيد المراجعة. يمكن اعتماده أو رفضه من صفحة التفاصيل."
       >
-        <Field label="الوحدة" name="unitId" required>
-          <Select name="unitId" required value={selectedUnitId} onChange={handleUnitChange}>
-            <option value="">— اختر وحدة —</option>
-            {units.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.code} — {u.type}
-                {u.building?.phase?.project?.name.ar
-                  ? ` (${u.building.phase.project.name.ar})`
-                  : ''}
-              </option>
-            ))}
-          </Select>
-        </Field>
-      </FormSection>
-
-      <FormSection
-        title="العميل"
-        description="اختر مصدر واحد فقط: إما عميل محتمل من CRM، أو عميل مسجل في النظام."
-      >
-        <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-foreground">نوع المالك</span>
-          <div className="flex flex-wrap gap-3">
-            <label
-              className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
-                ownerType === 'lead'
-                  ? 'border-brand-500 bg-brand-50 text-brand-700'
-                  : 'border-hairline bg-surface text-muted hover:border-brand-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name="ownerType"
-                value="lead"
-                checked={ownerType === 'lead'}
-                onChange={() => setOwnerType('lead')}
-                className="accent-brand-500"
-              />
-              <span>عميل محتمل من CRM</span>
-            </label>
-            <label
-              className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
-                ownerType === 'client'
-                  ? 'border-brand-500 bg-brand-50 text-brand-700'
-                  : 'border-hairline bg-surface text-muted hover:border-brand-300'
-              }`}
-            >
-              <input
-                type="radio"
-                name="ownerType"
-                value="client"
-                checked={ownerType === 'client'}
-                onChange={() => setOwnerType('client')}
-                className="accent-brand-500"
-              />
-              <span>عميل مسجل</span>
-            </label>
-          </div>
-        </div>
-
-        {ownerType === 'lead' ? (
-          <Field
-            label="العميل المحتمل (Lead)"
-            name="leadId"
-            hint="فرصة من CRM — اسم، مشروع الاهتمام، مرحلة، هاتف"
-            required
-          >
-            <Select name="leadId" required>
-              <option value="">— اختر فرصة —</option>
-              {leads.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {formatLeadLabel(l)}
+        {/* ── Section 01: الوحدة العقارية ── */}
+        <PremiumFormPanel
+          id="section-unit"
+          number="01"
+          title="الوحدة العقارية"
+          description="اختر الوحدة المراد حجزها. يجب أن تكون الوحدة في حالة متاحة."
+        >
+          <Field label="الوحدة" name="unitId" required>
+            <Select name="unitId" required value={selectedUnitId} onChange={handleUnitChange}>
+              <option value="">— اختر وحدة —</option>
+              {units.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.code} — {u.type}
+                  {u.building?.phase?.project?.name.ar
+                    ? ` (${u.building.phase.project.name.ar})`
+                    : ''}
                 </option>
               ))}
             </Select>
           </Field>
-        ) : (
-          <Field
-            label="العميل المسجل"
-            name="clientId"
-            hint="حساب مسجل في النظام — اسم، نوع الحساب، هاتف"
-            required
-          >
-            <Select name="clientId" required>
-              <option value="">— اختر عميلاً مسجلاً —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {formatClientLabel(c)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        )}
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection
-        title="تفاصيل الحجز"
-        description="حدد المندوب المسؤول، مدة صلاحية الحجز، وأي ملاحظات داخلية."
-      >
-        <Field label="المندوب المسؤول" name="salesId">
-          <Select name="salesId">
-            <option value="">— اختر مندوباً —</option>
-            {salesOptions.map((s) => (
-              <option key={s.id} value={s.id}>
-                {salesActorLabel(s)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        <Field
-          label="صلاحية الحجز (بالساعات)"
-          name="expiresInHours"
-          hint="المدة الزمنية التي يبقى فيها الحجز قيد المراجعة قبل انتهائه تلقائياً"
+        {/* ── Section 02: العميل ── */}
+        <PremiumFormPanel
+          id="section-client"
+          number="02"
+          title="العميل"
+          description="اختر مصدر واحد فقط: إما عميل محتمل من CRM، أو عميل مسجل في النظام."
         >
-          <Select name="expiresInHours" defaultValue="72">
-            <option value="24">24 ساعة (يوم)</option>
-            <option value="48">48 ساعة (يومان)</option>
-            <option value="72">72 ساعة (3 أيام) — افتراضي</option>
-            <option value="120">120 ساعة (5 أيام)</option>
-            <option value="168">168 ساعة (أسبوع)</option>
-            <option value="336">336 ساعة (أسبوعان)</option>
-          </Select>
-        </Field>
-
-        <Field label="ملاحظات" name="notes" hint="ملاحظات داخلية اختيارية">
-          <Textarea name="notes" rows={3} placeholder="أضف ملاحظات اختيارية…" />
-        </Field>
-      </FormSection>
-
-      <FormSection
-        title="خطة التقسيط ومبلغ الحجز"
-        description="اختر خطة التقسيط للوحدة، أو حدِّد مبلغ الحجز يدوياً (قيمة ثابتة أو نسبة من سعر الوحدة)."
-      >
-        <Field
-          label="خطة التقسيط"
-          name="installmentPlanTemplateId"
-          hint={
-            !selectedUnitId
-              ? 'اختر الوحدة أولاً لعرض الخطط المتاحة'
-              : availablePlans.length === 0
-                ? 'لا توجد خطط نشطة لهذه الوحدة/المشروع'
-                : 'مبلغ الحجز المطلوب يتم تحديده تلقائياً من الخطة المختارة.'
-          }
-        >
-          <Select
-            name="installmentPlanTemplateId"
-            value={selectedPlanId}
-            onChange={handlePlanChange}
-            disabled={!selectedUnitId || availablePlans.length === 0}
-          >
-            <option value="">— بدون خطة (اختياري) —</option>
-            {availablePlans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — مبلغ الحجز: {p.reservationAmount}
-              </option>
-            ))}
-          </Select>
-        </Field>
-
-        {selectedPlanInvalid && (
-          <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-sm">
-            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-medium">لا يمكن استخدام هذه الخطة لإنشاء حجز.</p>
-              <p className="text-xs mt-1">
-                الخطة المختارة لا تحدد دفعة الحجز (reservationAmount = 0). يرجى تعديل الخطة
-                وتحديد قيمة موجبة لـ &laquo;دفعة الحجز&raquo; قبل ربطها بحجز جديد.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {selectedPlan && (
-          <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-slate-900">تفاصيل الخطة المختارة</h3>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-              <div className="flex items-center justify-between">
-                <dt className="text-slate-500">مبلغ الحجز المطلوب</dt>
-                <dd
-                  className={
-                    selectedPlanHasBookingAmount
-                      ? 'font-bold tabular-nums text-brand-700'
-                      : 'font-bold tabular-nums text-danger-700'
-                  }
+          <div className="flex flex-col gap-5">
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium text-foreground">نوع المالك</span>
+              <div className="flex flex-wrap gap-3">
+                <label
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                    ownerType === 'lead'
+                      ? 'border-brand-500 bg-brand-50 text-brand-700'
+                      : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                  }`}
                 >
-                  {requiredBookingAmount || '0'}
-                </dd>
+                  <input
+                    type="radio"
+                    name="ownerType"
+                    value="lead"
+                    checked={ownerType === 'lead'}
+                    onChange={() => setOwnerType('lead')}
+                    className="accent-brand-500"
+                  />
+                  <span>عميل محتمل من CRM</span>
+                </label>
+                <label
+                  className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
+                    ownerType === 'client'
+                      ? 'border-brand-500 bg-brand-50 text-brand-700'
+                      : 'border-hairline bg-surface text-muted hover:border-brand-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="ownerType"
+                    value="client"
+                    checked={ownerType === 'client'}
+                    onChange={() => setOwnerType('client')}
+                    className="accent-brand-500"
+                  />
+                  <span>عميل مسجل</span>
+                </label>
               </div>
-              {selectedPlan.downPaymentAmount !== undefined && (
-                <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">الدفعة الأولى</dt>
-                  <dd className="font-medium tabular-nums">
-                    {toFiniteOrEmpty(selectedPlan.downPaymentAmount) || '0'}
-                  </dd>
-                </div>
-              )}
-              {selectedPlan.durationOptions.length > 0 && (
-                <div className="flex items-center justify-between">
-                  <dt className="text-slate-500">خيارات المدة المتاحة</dt>
-                  <dd className="font-medium tabular-nums">
-                    {selectedPlan.durationOptions.length}
-                  </dd>
-                </div>
-              )}
-              <div className="flex items-center justify-between sm:col-span-2 border-t border-hairline pt-2 mt-1">
-                <dt className="text-slate-500">حالة دفع مبلغ الحجز</dt>
-                <dd className="font-medium text-amber-700">غير مدفوع (سيتم التأكيد لاحقاً)</dd>
-              </div>
-            </dl>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              مبلغ الحجز المطلوب يتم تحديده من خطة التقسيط ولا يمكن للمبيعات تعديله. تأكيد السداد يتم من صفحة تفاصيل الحجز بعد الإنشاء.
-            </p>
-          </div>
-        )}
+            </div>
 
-        {/* P8 — Booking amount mode. PLAN keeps the current behavior (server
-            copies plan.reservationAmount). FIXED + PERCENTAGE are admin
-            overrides; the radio sends `bookingAmountMode` only when the admin
-            chose an override. */}
-        <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-3">
-          <div>
-            <h3 className="text-sm font-semibold text-slate-900">طريقة تحديد مبلغ الحجز</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              يمكنك ترك مبلغ الحجز ليُحسب من خطة التقسيط، أو إدخاله يدوياً كقيمة ثابتة أو كنسبة من سعر الوحدة.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="radio"
-                name="bookingAmountModeRadio"
-                value="PLAN"
-                checked={bookingAmountMode === 'PLAN'}
-                onChange={() => setBookingAmountMode('PLAN')}
-              />
-              <span>من خطة التقسيط</span>
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="radio"
-                name="bookingAmountModeRadio"
-                value="FIXED"
-                checked={bookingAmountMode === 'FIXED'}
-                onChange={() => setBookingAmountMode('FIXED')}
-              />
-              <span>مبلغ ثابت</span>
-            </label>
-            <label className="inline-flex items-center gap-2">
-              <input
-                type="radio"
-                name="bookingAmountModeRadio"
-                value="PERCENTAGE"
-                checked={bookingAmountMode === 'PERCENTAGE'}
-                onChange={() => setBookingAmountMode('PERCENTAGE')}
-              />
-              <span>نسبة من سعر الوحدة</span>
-            </label>
-          </div>
-          {/* Hidden field sent to the server only when admin chose an override. */}
-          {(bookingAmountMode === 'FIXED' || bookingAmountMode === 'PERCENTAGE') && (
-            <input type="hidden" name="bookingAmountMode" value={bookingAmountMode} />
-          )}
-
-          {bookingAmountMode === 'FIXED' && (
-            <Field
-              label="مبلغ الحجز (قيمة ثابتة)"
-              name="bookingAmount"
-              hint="أدخل مبلغاً موجباً. سيُسجَّل كـ FIXED ويُسترجع في تفاصيل الحجز."
-              required
-            >
-              <input
-                type="number"
-                name="bookingAmount"
-                min="1"
-                step="0.01"
-                value={fixedAmountInput}
-                onChange={(e) => setFixedAmountInput(e.target.value)}
-                className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
-                placeholder="مثلاً 50000"
-                required
-              />
-            </Field>
-          )}
-
-          {bookingAmountMode === 'PERCENTAGE' && (
-            <>
+            {ownerType === 'lead' ? (
               <Field
-                label="النسبة المئوية من سعر الوحدة"
-                name="bookingAmountPercent"
-                hint="نسبة بين 0.01 و 100. سيتم حساب المبلغ تلقائياً وعرضه قبل الإرسال."
+                label="العميل المحتمل (Lead)"
+                name="leadId"
+                hint="فرصة من CRM — اسم، مشروع الاهتمام، مرحلة، هاتف"
                 required
               >
-                <input
-                  type="number"
-                  name="bookingAmountPercent"
-                  min="0.01"
-                  max="100"
-                  step="0.01"
-                  value={percentInput}
-                  onChange={(e) => setPercentInput(e.target.value)}
-                  className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
-                  placeholder="مثلاً 5"
-                  required
-                />
-              </Field>
-              <div className="rounded-xl bg-slate-50 border border-hairline p-3 text-sm space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">سعر الوحدة المختارة</span>
-                  <span className="font-medium tabular-nums">
-                    {selectedUnitPrice > 0 ? selectedUnitPrice.toLocaleString('ar') : '— غير محدد —'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">مبلغ الحجز المحسوب</span>
-                  <span className="font-bold tabular-nums text-brand-700">
-                    {percentPreviewAmount != null
-                      ? percentPreviewAmount.toLocaleString('ar')
-                      : '—'}
-                  </span>
-                </div>
-                {selectedUnitPrice <= 0 && (
-                  <p className="text-xs text-danger-700 flex items-center gap-1.5">
-                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                    لا يمكن حساب النسبة لأن سعر الوحدة غير محدد. اختر وحدة بسعر &gt; 0 أو استخدم وضع المبلغ الثابت.
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        {planHasDurations && (
-          <>
-            <input
-              type="hidden"
-              name="installmentPlanDurationOptionId"
-              value={selectedDurationOptionId}
-            />
-            <Field
-              label="مدة التقسيط"
-              name="installmentPlanDurationOptionSelect"
-              required
-              hint="اختر مدة التقسيط بعد الاتفاق مع العميل. القيم المالية أدناه يتم حفظها كلقطة وقت إنشاء الحجز."
-            >
-              <Select
-                name="installmentPlanDurationOptionSelect"
-                value={selectedDurationOptionId}
-                onChange={(e) => setSelectedDurationOptionId(e.target.value)}
-                required
-              >
-                <option value="">— اختر مدة —</option>
-                {selectedPlan!.durationOptions
-                  .slice()
-                  .sort((a, b) => a.durationMonths - b.durationMonths)
-                  .map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.durationMonths} شهر — زيادة {Number(o.increasePercentage)}%
+                <Select name="leadId" required>
+                  <option value="">— اختر فرصة —</option>
+                  {leads.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {formatLeadLabel(l)}
                     </option>
                   ))}
+                </Select>
+              </Field>
+            ) : (
+              <Field
+                label="العميل المسجل"
+                name="clientId"
+                hint="حساب مسجل في النظام — اسم، نوع الحساب، هاتف"
+                required
+              >
+                <Select name="clientId" required>
+                  <option value="">— اختر عميلاً مسجلاً —</option>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {formatClientLabel(c)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
+        </PremiumFormPanel>
+
+        {/* ── Section 03: تفاصيل الحجز ── */}
+        <PremiumFormPanel
+          id="section-details"
+          number="03"
+          title="تفاصيل الحجز"
+          description="حدد المندوب المسؤول، مدة صلاحية الحجز، وأي ملاحظات داخلية."
+        >
+          <div className="flex flex-col gap-5">
+            <Field label="المندوب المسؤول" name="salesId">
+              <Select name="salesId">
+                <option value="">— اختر مندوباً —</option>
+                {salesOptions.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {salesActorLabel(s)}
+                  </option>
+                ))}
               </Select>
             </Field>
 
-            {durationMissing && (
-              <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+            <Field
+              label="صلاحية الحجز (بالساعات)"
+              name="expiresInHours"
+              hint="المدة الزمنية التي يبقى فيها الحجز قيد المراجعة قبل انتهائه تلقائياً"
+            >
+              <Select name="expiresInHours" defaultValue="72">
+                <option value="24">24 ساعة (يوم)</option>
+                <option value="48">48 ساعة (يومان)</option>
+                <option value="72">72 ساعة (3 أيام) — افتراضي</option>
+                <option value="120">120 ساعة (5 أيام)</option>
+                <option value="168">168 ساعة (أسبوع)</option>
+                <option value="336">336 ساعة (أسبوعان)</option>
+              </Select>
+            </Field>
+
+            <Field label="ملاحظات" name="notes" hint="ملاحظات داخلية اختيارية">
+              <Textarea name="notes" rows={3} placeholder="أضف ملاحظات اختيارية…" />
+            </Field>
+          </div>
+        </PremiumFormPanel>
+
+        {/* ── Section 04: خطة التقسيط ومبلغ الحجز ── */}
+        <PremiumFormPanel
+          id="section-plan"
+          number="04"
+          title="خطة التقسيط ومبلغ الحجز"
+          description="اختر خطة التقسيط للوحدة، أو حدِّد مبلغ الحجز يدوياً (قيمة ثابتة أو نسبة من سعر الوحدة)."
+        >
+          <div className="flex flex-col gap-5">
+            <Field
+              label="خطة التقسيط"
+              name="installmentPlanTemplateId"
+              hint={
+                !selectedUnitId
+                  ? 'اختر الوحدة أولاً لعرض الخطط المتاحة'
+                  : availablePlans.length === 0
+                    ? 'لا توجد خطط نشطة لهذه الوحدة/المشروع'
+                    : 'مبلغ الحجز المطلوب يتم تحديده تلقائياً من الخطة المختارة.'
+              }
+            >
+              <Select
+                name="installmentPlanTemplateId"
+                value={selectedPlanId}
+                onChange={handlePlanChange}
+                disabled={!selectedUnitId || availablePlans.length === 0}
+              >
+                <option value="">— بدون خطة (اختياري) —</option>
+                {availablePlans.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — مبلغ الحجز: {p.reservationAmount}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            {selectedPlanInvalid && (
+              <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-sm">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <p>اختر مدة التقسيط قبل إنشاء الحجز.</p>
+                <div>
+                  <p className="font-medium">لا يمكن استخدام هذه الخطة لإنشاء حجز.</p>
+                  <p className="text-xs mt-1">
+                    الخطة المختارة لا تحدد دفعة الحجز (reservationAmount = 0). يرجى تعديل الخطة
+                    وتحديد قيمة موجبة لـ &laquo;دفعة الحجز&raquo; قبل ربطها بحجز جديد.
+                  </p>
+                </div>
               </div>
             )}
 
-            {selectedDuration && previewSnapshot && (
-              <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4 space-y-2">
-                <h3 className="text-sm font-semibold text-slate-900">
-                  لقطة الحساب (سيتم حفظها مع الحجز)
-                </h3>
+            {selectedPlan && (
+              <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-3">
+                <h3 className="text-sm font-semibold text-slate-900">تفاصيل الخطة المختارة</h3>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500">مدة التقسيط</dt>
-                    <dd className="font-medium tabular-nums">
-                      {selectedDuration.durationMonths} شهر
+                    <dt className="text-slate-500">مبلغ الحجز المطلوب</dt>
+                    <dd
+                      className={
+                        selectedPlanHasBookingAmount
+                          ? 'font-bold tabular-nums text-brand-700'
+                          : 'font-bold tabular-nums text-danger-700'
+                      }
+                    >
+                      {requiredBookingAmount || '0'}
                     </dd>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500">نسبة الزيادة</dt>
-                    <dd className="font-medium tabular-nums">
-                      {Number(selectedDuration.increasePercentage)}%
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500">المبلغ المتبقي</dt>
-                    <dd className="font-medium tabular-nums">
-                      {previewSnapshot.remainingAmount.toFixed(2)}
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <dt className="text-slate-500">المبلغ الممول</dt>
-                    <dd className="font-medium tabular-nums">
-                      {previewSnapshot.financedAmount.toFixed(2)}
-                    </dd>
-                  </div>
+                  {selectedPlan.downPaymentAmount !== undefined && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-slate-500">الدفعة الأولى</dt>
+                      <dd className="font-medium tabular-nums">
+                        {toFiniteOrEmpty(selectedPlan.downPaymentAmount) || '0'}
+                      </dd>
+                    </div>
+                  )}
+                  {selectedPlan.durationOptions.length > 0 && (
+                    <div className="flex items-center justify-between">
+                      <dt className="text-slate-500">خيارات المدة المتاحة</dt>
+                      <dd className="font-medium tabular-nums">
+                        {selectedPlan.durationOptions.length}
+                      </dd>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between sm:col-span-2 border-t border-hairline pt-2 mt-1">
-                    <dt className="text-slate-700 font-medium">القسط الشهري</dt>
-                    <dd className="font-bold tabular-nums text-brand-700 text-base">
-                      {previewSnapshot.monthlyInstallment.toFixed(2)}
-                    </dd>
-                  </div>
-                  <div className="flex items-center justify-between sm:col-span-2">
-                    <dt className="text-slate-700 font-medium">إجمالي السداد</dt>
-                    <dd className="font-bold tabular-nums">
-                      {previewSnapshot.totalPayable.toFixed(2)}
-                    </dd>
+                    <dt className="text-slate-500">حالة دفع مبلغ الحجز</dt>
+                    <dd className="font-medium text-amber-700">غير مدفوع (سيتم التأكيد لاحقاً)</dd>
                   </div>
                 </dl>
                 <p className="text-xs text-slate-400 leading-relaxed">
-                  نسبة الزيادة والقيم المحسوبة للعرض فقط ولا يمكن للمبيعات تعديلها. سيتم تجميد هذه القيم على الحجز عند الإنشاء.
+                  مبلغ الحجز المطلوب يتم تحديده من خطة التقسيط ولا يمكن للمبيعات تعديله. تأكيد السداد يتم من صفحة تفاصيل الحجز بعد الإنشاء.
                 </p>
               </div>
             )}
-          </>
-        )}
 
-        <Field label="ملاحظات مبلغ الحجز" name="bookingNotes">
-          <Textarea name="bookingNotes" rows={2} placeholder="ملاحظات داخلية اختيارية حول مبلغ الحجز…" />
-        </Field>
-      </FormSection>
+            {/* P8 — Booking amount mode. PLAN keeps the current behavior (server
+                copies plan.reservationAmount). FIXED + PERCENTAGE are admin
+                overrides; the radio sends `bookingAmountMode` only when the admin
+                chose an override. */}
+            <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">طريقة تحديد مبلغ الحجز</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  يمكنك ترك مبلغ الحجز ليُحسب من خطة التقسيط، أو إدخاله يدوياً كقيمة ثابتة أو كنسبة من سعر الوحدة.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="bookingAmountModeRadio"
+                    value="PLAN"
+                    checked={bookingAmountMode === 'PLAN'}
+                    onChange={() => setBookingAmountMode('PLAN')}
+                  />
+                  <span>من خطة التقسيط</span>
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="bookingAmountModeRadio"
+                    value="FIXED"
+                    checked={bookingAmountMode === 'FIXED'}
+                    onChange={() => setBookingAmountMode('FIXED')}
+                  />
+                  <span>مبلغ ثابت</span>
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="bookingAmountModeRadio"
+                    value="PERCENTAGE"
+                    checked={bookingAmountMode === 'PERCENTAGE'}
+                    onChange={() => setBookingAmountMode('PERCENTAGE')}
+                  />
+                  <span>نسبة من سعر الوحدة</span>
+                </label>
+              </div>
+              {/* Hidden field sent to the server only when admin chose an override. */}
+              {(bookingAmountMode === 'FIXED' || bookingAmountMode === 'PERCENTAGE') && (
+                <input type="hidden" name="bookingAmountMode" value={bookingAmountMode} />
+              )}
+
+              {bookingAmountMode === 'FIXED' && (
+                <Field
+                  label="مبلغ الحجز (قيمة ثابتة)"
+                  name="bookingAmount"
+                  hint="أدخل مبلغاً موجباً. سيُسجَّل كـ FIXED ويُسترجع في تفاصيل الحجز."
+                  required
+                >
+                  <input
+                    type="number"
+                    name="bookingAmount"
+                    min="1"
+                    step="0.01"
+                    value={fixedAmountInput}
+                    onChange={(e) => setFixedAmountInput(e.target.value)}
+                    className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
+                    placeholder="مثلاً 50000"
+                    required
+                  />
+                </Field>
+              )}
+
+              {bookingAmountMode === 'PERCENTAGE' && (
+                <>
+                  <Field
+                    label="النسبة المئوية من سعر الوحدة"
+                    name="bookingAmountPercent"
+                    hint="نسبة بين 0.01 و 100. سيتم حساب المبلغ تلقائياً وعرضه قبل الإرسال."
+                    required
+                  >
+                    <input
+                      type="number"
+                      name="bookingAmountPercent"
+                      min="0.01"
+                      max="100"
+                      step="0.01"
+                      value={percentInput}
+                      onChange={(e) => setPercentInput(e.target.value)}
+                      className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
+                      placeholder="مثلاً 5"
+                      required
+                    />
+                  </Field>
+                  <div className="rounded-xl bg-slate-50 border border-hairline p-3 text-sm space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">سعر الوحدة المختارة</span>
+                      <span className="font-medium tabular-nums">
+                        {selectedUnitPrice > 0 ? selectedUnitPrice.toLocaleString('ar') : '— غير محدد —'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">مبلغ الحجز المحسوب</span>
+                      <span className="font-bold tabular-nums text-brand-700">
+                        {percentPreviewAmount != null
+                          ? percentPreviewAmount.toLocaleString('ar')
+                          : '—'}
+                      </span>
+                    </div>
+                    {selectedUnitPrice <= 0 && (
+                      <p className="text-xs text-danger-700 flex items-center gap-1.5">
+                        <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                        لا يمكن حساب النسبة لأن سعر الوحدة غير محدد. اختر وحدة بسعر &gt; 0 أو استخدم وضع المبلغ الثابت.
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+
+            {planHasDurations && (
+              <>
+                <input
+                  type="hidden"
+                  name="installmentPlanDurationOptionId"
+                  value={selectedDurationOptionId}
+                />
+                <Field
+                  label="مدة التقسيط"
+                  name="installmentPlanDurationOptionSelect"
+                  required
+                  hint="اختر مدة التقسيط بعد الاتفاق مع العميل. القيم المالية أدناه يتم حفظها كلقطة وقت إنشاء الحجز."
+                >
+                  <Select
+                    name="installmentPlanDurationOptionSelect"
+                    value={selectedDurationOptionId}
+                    onChange={(e) => setSelectedDurationOptionId(e.target.value)}
+                    required
+                  >
+                    <option value="">— اختر مدة —</option>
+                    {selectedPlan!.durationOptions
+                      .slice()
+                      .sort((a, b) => a.durationMonths - b.durationMonths)
+                      .map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.durationMonths} شهر — زيادة {Number(o.increasePercentage)}%
+                        </option>
+                      ))}
+                  </Select>
+                </Field>
+
+                {durationMissing && (
+                  <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
+                    <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <p>اختر مدة التقسيط قبل إنشاء الحجز.</p>
+                  </div>
+                )}
+
+                {selectedDuration && previewSnapshot && (
+                  <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4 space-y-2">
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      لقطة الحساب (سيتم حفظها مع الحجز)
+                    </h3>
+                    <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">مدة التقسيط</dt>
+                        <dd className="font-medium tabular-nums">
+                          {selectedDuration.durationMonths} شهر
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">نسبة الزيادة</dt>
+                        <dd className="font-medium tabular-nums">
+                          {Number(selectedDuration.increasePercentage)}%
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">المبلغ المتبقي</dt>
+                        <dd className="font-medium tabular-nums">
+                          {previewSnapshot.remainingAmount.toFixed(2)}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <dt className="text-slate-500">المبلغ الممول</dt>
+                        <dd className="font-medium tabular-nums">
+                          {previewSnapshot.financedAmount.toFixed(2)}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between sm:col-span-2 border-t border-hairline pt-2 mt-1">
+                        <dt className="text-slate-700 font-medium">القسط الشهري</dt>
+                        <dd className="font-bold tabular-nums text-brand-700 text-base">
+                          {previewSnapshot.monthlyInstallment.toFixed(2)}
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between sm:col-span-2">
+                        <dt className="text-slate-700 font-medium">إجمالي السداد</dt>
+                        <dd className="font-bold tabular-nums">
+                          {previewSnapshot.totalPayable.toFixed(2)}
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      نسبة الزيادة والقيم المحسوبة للعرض فقط ولا يمكن للمبيعات تعديلها. سيتم تجميد هذه القيم على الحجز عند الإنشاء.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
+
+            <Field label="ملاحظات مبلغ الحجز" name="bookingNotes">
+              <Textarea name="bookingNotes" rows={2} placeholder="ملاحظات داخلية اختيارية حول مبلغ الحجز…" />
+            </Field>
+          </div>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
 
       <FormFooter
         sticky
@@ -649,7 +680,7 @@ export default function NewReservationForm({
           )
         }
         secondary={
-          <Link href="/dashboard/reservations">
+          <Link href={'/dashboard/reservations' as never}>
             <Button variant="ghost" size="md" type="button">
               إلغاء
             </Button>
