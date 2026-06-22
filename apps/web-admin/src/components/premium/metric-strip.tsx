@@ -102,40 +102,36 @@ export function PremiumMetricStrip({ metrics, cols, variant = 'dashboard', class
             <div
               key={i}
               className={cn(
-                'flex flex-col px-4 py-4 min-h-[96px]',
+                'flex items-center gap-4 px-5 py-4 min-h-[88px]',
                 m.primary ? 'bg-brand-50/40' : 'bg-surface',
               )}
             >
-              {/* ① icon (start) + label (end) */}
-              <div className="flex items-start justify-between gap-2">
-                {m.icon && (
-                  <span className={cn(
-                    'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg [&_svg]:h-[13px] [&_svg]:w-[13px]',
-                    ICON_TONE[tone],
-                  )}>
-                    {m.icon}
-                  </span>
-                )}
-                <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug line-clamp-2">
+              {/* Icon — rounded-square badge, first DOM child = RIGHT in RTL */}
+              {m.icon && (
+                <span className={cn(
+                  'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl [&_svg]:h-5 [&_svg]:w-5',
+                  ICON_TONE[tone],
+                )}>
+                  {m.icon}
+                </span>
+              )}
+
+              {/* Text group — label above value, sits to LEFT of icon in RTL */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-semibold text-slate-400 leading-snug line-clamp-2">
                   {m.label}
                 </p>
+                <p className={cn(
+                  'mt-1.5 font-black tabular-nums leading-none tracking-tight',
+                  isLongString ? 'text-[18px]' : 'text-[24px]',
+                  VALUE_TONE[tone],
+                )}>
+                  {m.value}
+                </p>
+                {m.sub && (
+                  <p className="mt-1 text-[10px] text-slate-400 leading-snug">{m.sub}</p>
+                )}
               </div>
-
-              {/* ② hero value */}
-              <p className={cn(
-                'mt-2.5 font-black tabular-nums leading-none tracking-tight',
-                isLongString
-                  ? m.primary ? 'text-[18px]' : 'text-[17px]'
-                  : m.primary ? 'text-[22px]' : 'text-[20px]',
-                VALUE_TONE[tone],
-              )}>
-                {m.value}
-              </p>
-
-              {/* ③ sub — optional; no bottom spacer */}
-              {m.sub && (
-                <p className="mt-1.5 text-[10px] text-slate-400 leading-snug">{m.sub}</p>
-              )}
             </div>
           );
         }
