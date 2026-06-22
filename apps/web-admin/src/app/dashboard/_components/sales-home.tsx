@@ -5,12 +5,8 @@ import {
   BookmarkCheck,
   FileText,
   Home,
-  Wallet,
-  CreditCard,
   Plus,
   CalendarPlus,
-  Boxes,
-  Building2,
   AlertCircle,
   AlertTriangle,
   Bell,
@@ -19,7 +15,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
-import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
+import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,11 +28,6 @@ import {
   PremiumMetricStrip,
 } from '@/components/premium';
 
-interface BonusEntryRow {
-  id: string;
-  amount: string | number;
-  status: 'PENDING' | 'APPROVED' | 'PAID';
-}
 interface PerformanceRow {
   signedContractsCount: number;
 }
@@ -86,7 +77,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export async function SalesDashboard({ userId }: { userId: string }) {
   const nowIso = new Date().toISOString();
 
-  const [leadsRes, reservationsRes, visitsRes, unitsRes, bonusRes, perfRes] =
+  const [leadsRes, reservationsRes, visitsRes, unitsRes, perfRes] =
     await Promise.all([
       safe(api.get<Paged<Lead>>('/leads?pageSize=100')),
       safe(api.get<Paged<Reservation>>('/reservations?pageSize=100')),
@@ -96,7 +87,6 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         ),
       ),
       safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
-      safe(api.get<BonusEntryRow[]>('/bonus-entries?status=PENDING')),
       safe(
         api.get<PerformanceRow[]>(
           `/sales-targets/performance?period=${nowIso.slice(0, 7)}`,
@@ -115,14 +105,10 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   const activeReservations = reservations.filter(
     (r) => r.status === 'PENDING' || r.status === 'APPROVED',
   );
-  const convertedDeals     = reservations.filter((r) => r.status === 'CONVERTED').length;
-  const signedThisMonth    = (perfRes.data ?? [])[0]?.signedContractsCount;
-  const closedDeals        = signedThisMonth ?? convertedDeals;
-  const availableUnits     = unitsRes.data?.meta.total ?? 0;
-  const pendingComp        = (bonusRes.data ?? []).reduce(
-    (sum, b) => sum + Number(b.amount ?? 0),
-    0,
-  );
+  const convertedDeals  = reservations.filter((r) => r.status === 'CONVERTED').length;
+  const signedThisMonth = (perfRes.data ?? [])[0]?.signedContractsCount;
+  const closedDeals     = signedThisMonth ?? convertedDeals;
+  const availableUnits  = unitsRes.data?.meta.total ?? 0;
 
   const staleLeadsCount = openLeads.filter(
     (l) => !l.upcomingVisit && leadAgeDays(l) >= 3,
@@ -152,17 +138,18 @@ export async function SalesDashboard({ userId }: { userId: string }) {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
 
-  const upcomingVisitRows    = visits.slice(0, 5);
+  const upcomingVisitRows     = visits.slice(0, 5);
   const activeReservationRows = activeReservations
     .slice()
     .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())
     .slice(0, 5);
 
-  const showVisits       = !visitsRes.error       && upcomingVisitRows.length    > 0;
-  const showReservations = !reservationsRes.error  && activeReservationRows.length > 0;
+  const showVisits       = !visitsRes.error      && upcomingVisitRows.length     > 0;
+  const showReservations = !reservationsRes.error && activeReservationRows.length > 0;
 
   return (
     <div className="space-y-5">
+
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title="لوحة المبيعات"
@@ -191,80 +178,57 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         }
       />
 
-      {/* ── Metric strip ──────────────────────────────────────────────────── */}
+      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
         metrics={[
           {
-            label:    'فرصي المفتوحة',
-            value:    openLeads.length,
-            sub:      staleLeadsCount > 0 ? `${staleLeadsCount} تحتاج متابعة` : 'كلها في الوقت',
-            icon:     <Zap />,
-            tone:     'brand',
+            label: 'فرصي المفتوحة',
+            value: openLeads.length,
+            sub:   staleLeadsCount > 0 ? 'بعضها يحتاج متابعة' : 'لا متابعات متأخرة',
+            icon:  <Zap />,
+            tone:  'brand',
           },
           {
-            label:    'متابعات مستحقة',
-            value:    staleLeadsCount,
-            sub:      staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة',
-            icon:     <AlertTriangle />,
-            tone:     staleLeadsCount > 0 ? 'warning' : 'success',
+            label: 'متابعات مستحقة',
+            value: staleLeadsCount,
+            sub:   staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة',
+            icon:  <AlertTriangle />,
+            tone:  staleLeadsCount > 0 ? 'warning' : 'success',
           },
           {
-            label:    'زياراتي القادمة',
-            value:    visits.length,
-            sub:      todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم',
-            icon:     <CalendarClock />,
-            tone:     'info',
+            label: 'زياراتي القادمة',
+            value: visits.length,
+            sub:   todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم',
+            icon:  <CalendarClock />,
+            tone:  'info',
           },
           {
-            label:    'حجوزاتي النشطة',
-            value:    activeReservations.length,
-            sub:      expiringWithin7Count > 0 ? `${expiringWithin7Count} تنتهي قريباً` : 'لا حجوزات تنتهي قريباً',
-            icon:     <BookmarkCheck />,
-            tone:     expiringWithin7Count > 0 ? 'warning' : 'success',
+            label: 'حجوزاتي النشطة',
+            value: activeReservations.length,
+            sub:   expiringWithin7Count > 0
+                     ? `${expiringWithin7Count} تنتهي قريباً`
+                     : 'لا حجوزات تنتهي قريباً',
+            icon:  <BookmarkCheck />,
+            tone:  expiringWithin7Count > 0 ? 'warning' : 'success',
           },
           {
-            label:    'عقود هذا الشهر',
-            value:    closedDeals,
-            sub:      signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود',
-            icon:     <FileText />,
-            tone:     'purple',
+            label: 'عقود هذا الشهر',
+            value: closedDeals,
+            sub:   signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود',
+            icon:  <FileText />,
+            tone:  'purple',
           },
           {
-            label:    'الوحدات المتاحة',
-            value:    availableUnits,
-            sub:      'جاهزة للعرض',
-            icon:     <Home />,
-            tone:     'teal',
+            label: 'الوحدات المتاحة',
+            value: availableUnits,
+            sub:   'جاهزة للعرض',
+            icon:  <Home />,
+            tone:  'teal',
           },
         ]}
       />
 
-      {/* ── Quick Access ──────────────────────────────────────────────────── */}
-      <div className="space-y-2.5">
-        <SectionLabel>وصول سريع</SectionLabel>
-        <QuickAccessStrip
-          links={[
-            { href: '/dashboard/units',           label: 'تصفّح الوحدات',    icon: <Boxes className="h-3.5 w-3.5" />      },
-            { href: '/dashboard/projects',        label: 'تصفّح المشاريع',   icon: <Building2 className="h-3.5 w-3.5" />   },
-            { href: '/dashboard/contracts',       label: 'عرض العقود',       icon: <FileText className="h-3.5 w-3.5" />    },
-            { href: '/dashboard/installments',    label: 'خطط التقسيط',     icon: <CreditCard className="h-3.5 w-3.5" />  },
-            { href: '/dashboard/my-compensation', label: 'مستحقاتي وأهدافي', icon: <Wallet className="h-3.5 w-3.5" />      },
-          ]}
-          trailingSlot={
-            !bonusRes.error && pendingComp > 0 ? (
-              <Link
-                href="/dashboard/my-compensation"
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 hover:text-amber-800 transition-colors"
-              >
-                <Wallet className="h-3.5 w-3.5" />
-                {formatCurrency(pendingComp)} معلّق
-              </Link>
-            ) : undefined
-          }
-        />
-      </div>
-
-      {/* ── أولويات اليوم ─────────────────────────────────────────────────── */}
+      {/* ── Today priorities ──────────────────────────────────────────────── */}
       {hasTodayPriorities && (
         <div className="space-y-2.5">
           <SectionLabel>أولويات اليوم</SectionLabel>
@@ -486,56 +450,14 @@ function ReservationRow({ reservation: r }: { reservation: Reservation }) {
   );
 }
 
-// ── Quick Access Strip (exported — shared with Sales Manager) ─────────────────
-
-export function QuickAccessStrip({
-  links,
-  trailingSlot,
-}: {
-  links: { href: string; label: string; icon: React.ReactNode }[];
-  trailingSlot?: React.ReactNode;
-}) {
-  return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex flex-wrap gap-px bg-hairline">
-        {links.map((l) => (
-          <Link
-            key={l.href}
-            href={l.href as never}
-            className="bg-surface flex-1 min-w-[80px] flex flex-col items-center gap-2 px-3 py-3.5 hover:bg-canvas/60 transition-colors group"
-          >
-            <span className={cn(
-              'h-8 w-8 rounded-xl flex items-center justify-center',
-              'bg-canvas/80 border border-hairline',
-              '[&_svg]:h-3.5 [&_svg]:w-3.5 text-slate-400',
-              'group-hover:bg-brand-50 group-hover:border-brand-100 group-hover:text-brand-600',
-              'transition-colors',
-            )}>
-              {l.icon}
-            </span>
-            <span className="text-[10px] font-semibold text-slate-500 group-hover:text-brand-700 transition-colors text-center leading-tight">
-              {l.label}
-            </span>
-          </Link>
-        ))}
-        {trailingSlot && (
-          <div className="bg-surface flex items-center justify-center px-5 py-3.5 border-s border-hairline">
-            {trailingSlot}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 // ── Today priority panel ──────────────────────────────────────────────────────
 
 function TodayPriorityPanel({
   todayVisits,
   expiringUrgent,
 }: {
-  todayVisits:     VisitAppointment[];
-  expiringUrgent:  Reservation[];
+  todayVisits:    VisitAppointment[];
+  expiringUrgent: Reservation[];
 }) {
   const total = todayVisits.length + expiringUrgent.length;
 

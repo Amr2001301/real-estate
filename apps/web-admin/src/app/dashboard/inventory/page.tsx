@@ -182,6 +182,7 @@ export default async function InventoryPage({
 
       {/* ── 2. KPI strip ────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           {

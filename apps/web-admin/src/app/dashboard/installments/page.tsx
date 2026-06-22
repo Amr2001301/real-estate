@@ -95,6 +95,7 @@ export default async function InstallmentPlansPage({
 
       {isAdmin && stats && (
         <PremiumMetricStrip
+          variant="compact"
           metrics={[
             {
               label: 'إجمالي الخطط',

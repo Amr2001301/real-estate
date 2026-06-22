@@ -106,6 +106,7 @@ export default async function ContractsPage({
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={3}
         metrics={[
           {

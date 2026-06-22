@@ -11,123 +11,183 @@ type Tone =
   | 'purple'
   | 'teal';
 
+// Icon container — semantic color signals metric health
 const ICON_TONE: Record<Tone, string> = {
-  brand:   'bg-brand-50   ring-1 ring-brand-200/70   text-brand-600',
-  success: 'bg-success-50 ring-1 ring-success-200/70 text-success-600',
-  warning: 'bg-warning-50 ring-1 ring-warning-200/70 text-warning-600',
-  danger:  'bg-danger-50  ring-1 ring-danger-200/70  text-danger-600',
-  info:    'bg-info-50    ring-1 ring-info-200/70    text-info-600',
-  neutral: 'bg-slate-50   ring-1 ring-slate-200/70   text-slate-500',
-  purple:  'bg-purple-50  ring-1 ring-purple-200/70  text-purple-600',
-  teal:    'bg-teal-50    ring-1 ring-teal-200/70    text-teal-600',
+  brand:   'bg-brand-100  text-brand-700',
+  success: 'bg-success-50 text-success-600',
+  warning: 'bg-amber-50   text-amber-600',
+  danger:  'bg-danger-50  text-danger-500',
+  info:    'bg-info-50    text-info-600',
+  neutral: 'bg-slate-100  text-slate-500',
+  purple:  'bg-purple-50  text-purple-600',
+  teal:    'bg-teal-50    text-teal-600',
+};
+
+// Value text — same semantic signal as the icon
+const VALUE_TONE: Record<Tone, string> = {
+  brand:   'text-brand-700',
+  success: 'text-success-700',
+  warning: 'text-amber-700',
+  danger:  'text-danger-700',
+  info:    'text-info-700',
+  neutral: 'text-slate-900',
+  purple:  'text-purple-700',
+  teal:    'text-teal-700',
 };
 
 export interface Metric {
-  label: string;
-  value: string | number;
-  /** Small supporting text rendered below the value */
-  sub?: string;
-  icon?: ReactNode;
-  tone?: Tone;
-  /** Slightly features this tile — subtle warm tint + larger value size. */
-  primary?: boolean;
+  label:     string;
+  value:     string | number;
+  /** Single focused context line rendered below the value */
+  sub?:      string;
+  icon?:     ReactNode;
+  tone?:     Tone;
+  /** Slightly features this tile: warm gold tint + larger value */
+  primary?:  boolean;
   /**
    * Controls value font size.
-   * - `'auto'` (default): numeric values use full size; string values longer than
-   *   8 chars (e.g. formatted currency) automatically use compact sizing.
+   * - `'auto'` (default): string values longer than 8 chars auto-compact.
    * - `'normal'`: always full size.
    * - `'compact'`: always compact — use for long financial strings.
    */
   valueSize?: 'auto' | 'normal' | 'compact';
+  /** Optional trend line (e.g. "↑12% عن الشهر الماضي"). Always occupies space; shows "—" if absent. */
+  trend?:    string;
+  trendCls?: string;
 }
 
+// Responsive column classes — 8 maps to 4-wide desktop (balanced 2×4 for 8-item grids)
 const COLS: Record<number, string> = {
   2: 'grid-cols-2',
   3: 'grid-cols-2 sm:grid-cols-3',
   4: 'grid-cols-2 sm:grid-cols-4',
   5: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
   6: 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-6',
+  8: 'grid-cols-2 sm:grid-cols-4',
 };
 
 export interface PremiumMetricStripProps {
-  metrics: Metric[];
-  /** Number of columns. Defaults to metrics.length capped at 6. */
-  cols?: 2 | 3 | 4 | 5 | 6;
+  metrics:    Metric[];
+  /** Desktop column count. Defaults to metrics.length capped at 6. Use 4 for 8-item grids. */
+  cols?:      2 | 3 | 4 | 5 | 6 | 8;
+  /**
+   * `'dashboard'` (default) — rich KPI card ~148px, with trend row.
+   * `'compact'` — tight page-summary card ~96px, no trend row. Use on list pages.
+   */
+  variant?:   'dashboard' | 'compact';
   className?: string;
 }
 
-export function PremiumMetricStrip({
-  metrics,
-  cols,
-  className,
-}: PremiumMetricStripProps) {
-  const effectiveCols = cols ?? (Math.min(metrics.length, 6) as 2 | 3 | 4 | 5 | 6);
+export function PremiumMetricStrip({ metrics, cols, variant = 'dashboard', className }: PremiumMetricStripProps) {
+  const effectiveCols = cols ?? (Math.min(metrics.length, 6) as 2 | 3 | 4 | 5 | 6 | 8);
 
   return (
-    <div
-      className={cn(
-        'grid gap-px bg-hairline rounded-[20px] overflow-hidden shadow-soft',
-        COLS[effectiveCols] ?? COLS[4],
-        className,
-      )}
-    >
+    <div className={cn(
+      'grid gap-px bg-hairline rounded-[20px] overflow-hidden shadow-soft',
+      COLS[effectiveCols] ?? COLS[4],
+      className,
+    )}>
       {metrics.map((m, i) => {
         const tone = m.tone ?? 'neutral';
 
-        // Auto-detect: numeric values (counts) stay full size.
-        // String values longer than 8 chars (formatted currency, etc.) go compact.
-        const isCompact =
+        // Auto-compact: numeric values stay full size; strings > 8 chars (currency) go compact
+        const isLongString =
           m.valueSize === 'compact' ||
           (m.valueSize !== 'normal' &&
             typeof m.value === 'string' &&
             m.value.length > 8);
 
+        if (variant === 'compact') {
+          return (
+            <div
+              key={i}
+              className={cn(
+                'flex flex-col px-4 py-4 min-h-[96px]',
+                m.primary ? 'bg-brand-50/40' : 'bg-surface',
+              )}
+            >
+              {/* ① icon (start) + label (end) */}
+              <div className="flex items-start justify-between gap-2">
+                {m.icon && (
+                  <span className={cn(
+                    'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg [&_svg]:h-[13px] [&_svg]:w-[13px]',
+                    ICON_TONE[tone],
+                  )}>
+                    {m.icon}
+                  </span>
+                )}
+                <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug line-clamp-2">
+                  {m.label}
+                </p>
+              </div>
+
+              {/* ② hero value */}
+              <p className={cn(
+                'mt-2.5 font-black tabular-nums leading-none tracking-tight',
+                isLongString
+                  ? m.primary ? 'text-[18px]' : 'text-[17px]'
+                  : m.primary ? 'text-[22px]' : 'text-[20px]',
+                VALUE_TONE[tone],
+              )}>
+                {m.value}
+              </p>
+
+              {/* ③ sub — optional; no bottom spacer */}
+              {m.sub && (
+                <p className="mt-1.5 text-[10px] text-slate-400 leading-snug">{m.sub}</p>
+              )}
+            </div>
+          );
+        }
+
+        // ── dashboard variant (default) ──────────────────────────────────────
         return (
           <div
             key={i}
             className={cn(
-              'flex items-start gap-3 px-5 py-5',
-              m.primary ? 'bg-[#FEFAF3]' : 'bg-surface',
+              'flex flex-col px-5 py-5 min-h-[148px]',
+              m.primary ? 'bg-brand-50/40' : 'bg-surface',
             )}
           >
-            {/* Icon container — first in DOM = right in RTL */}
-            {m.icon && (
-              <span
-                className={cn(
-                  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl',
-                  '[&_svg]:h-5 [&_svg]:w-5',
+            {/* ① icon (left) + label (right) */}
+            <div className="flex items-start justify-between gap-2">
+              {m.icon && (
+                <span className={cn(
+                  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[15px] [&_svg]:w-[15px]',
                   ICON_TONE[tone],
-                )}
-              >
-                {m.icon}
-              </span>
+                )}>
+                  {m.icon}
+                </span>
+              )}
+              <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug line-clamp-2">
+                {m.label}
+              </p>
+            </div>
+
+            {/* ② hero value */}
+            <p className={cn(
+              'mt-4 font-black tabular-nums leading-none tracking-tight',
+              isLongString
+                ? m.primary ? 'text-[22px]' : 'text-[20px]'
+                : m.primary ? 'text-[28px]' : 'text-[26px]',
+              VALUE_TONE[tone],
+            )}>
+              {m.value}
+            </p>
+
+            {/* ③ single context / unit line */}
+            {m.sub && (
+              <p className="mt-2 text-[11px] text-slate-400 leading-snug">{m.sub}</p>
             )}
 
-            {/* Text group: label → value → sub */}
-            <div className="flex flex-col min-w-0 flex-1 gap-0.5 pt-0.5">
-              <span className="text-[13px] font-bold text-navy/70 leading-snug truncate">
-                {m.label}
-              </span>
-
-              <span
-                className={cn(
-                  'font-black text-navy tabular-nums leading-none mt-1 break-words',
-                  isCompact
-                    ? m.primary
-                      ? 'text-[20px] sm:text-[23px]'
-                      : 'text-[18px] sm:text-[21px]'
-                    : m.primary
-                      ? 'text-[28px] sm:text-[32px]'
-                      : 'text-[24px] sm:text-[28px]',
-                )}
-              >
-                {m.value}
-              </span>
-
-              {m.sub && (
-                <span className="text-xs text-slate-400 leading-snug mt-0.5">
-                  {m.sub}
-                </span>
+            {/* ④ trend — always rendered so every card has identical height */}
+            <div className="mt-auto pt-3">
+              {m.trend ? (
+                <p className={cn('text-[10px] font-semibold leading-none', m.trendCls ?? 'text-slate-400')}>
+                  {m.trend}
+                </p>
+              ) : (
+                <p className="text-[10px] text-slate-300 leading-none select-none">—</p>
               )}
             </div>
           </div>

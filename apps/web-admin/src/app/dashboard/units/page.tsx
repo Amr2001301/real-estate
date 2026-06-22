@@ -137,6 +137,7 @@ export default async function UnitsPage({
 
       {/* ── KPI strip ── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           {

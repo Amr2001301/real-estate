@@ -111,6 +111,7 @@ export default async function ProjectsPage({
 
       {/* ── KPI strip ── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           { label: 'إجمالي المشاريع',  value: total,         icon: <Building2 />,   tone: 'brand',   primary: true },

@@ -151,6 +151,7 @@ export default async function VisitsPage({
       />
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           {
             label: 'طلبات جديدة',

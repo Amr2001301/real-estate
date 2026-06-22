@@ -142,16 +142,24 @@ function EmptyBlock({ message }: { message: string }) {
 }
 
 // ── Revenue Command Strip ─────────────────────────────────────────────────────
+//
+// Card anatomy (RTL — every card is identical):
+//   ① label (11px, right)      [icon 32×32, left]
+//   ② PRIMARY VALUE (26-28px, hero, semantic color)
+//   ③ context / unit line (11px)
+//   ④ trend indicator (10px) — always rendered; shows "—" when no data
+//      → consistent card height regardless of data availability
 
 interface CommandTile {
-  label:    string;
-  value:    string;
-  sub:      string;
-  valueCls: string;
-  delta?:   string;
+  label:     string;
+  value:     string;
+  sub:       string;
+  valueCls:  string;
+  delta?:    string;
   deltaCls?: string;
-  icon:     ReactNode;
-  iconCls:  string;
+  icon:      ReactNode;
+  iconCls:   string;
+  featured?: boolean;
 }
 
 function pctDelta(current: number, prev: number): number | null {
@@ -170,46 +178,50 @@ function RevenueCommandStrip({
   kpis:      AdminSummary['kpis'] | undefined | null;
   financial: AdminSummary['financial'] | undefined | null;
 }) {
-  const hasFin    = financial != null;
-  const total     = financial?.totalContractValue     ?? 0;
-  const collected = financial?.totalCollectedVerified ?? 0;
-  const overdue   = financial?.overdueTotal           ?? 0;
-  const rate      = total > 0 ? Math.round((collected / total) * 100) : null;
+  const hasFin     = financial != null;
+  const total      = financial?.totalContractValue     ?? 0;
+  const collected  = financial?.totalCollectedVerified ?? 0;
+  const overdue    = financial?.overdueTotal           ?? 0;
+  const rate       = total > 0 ? Math.round((collected / total) * 100)  : null;
+  const overdueRate = total > 0 ? Math.round((overdue  / total) * 100)  : null;
 
-  const collectedThisMonth = financial?.collectedThisMonth ?? 0;
-  const prevMonthCollected = financial?.prevMonthCollected ?? 0;
+  const collectedThisMonth = financial?.collectedThisMonth    ?? 0;
+  const prevMonthCollected = financial?.prevMonthCollected     ?? 0;
   const collectionDeltaPct = pctDelta(collectedThisMonth, prevMonthCollected);
 
   const signedThisMonth     = financial?.signedContractsThisMonth ?? 0;
-  const prevSignedContracts = financial?.prevMonthSignedContracts ?? 0;
+  const prevSignedContracts = financial?.prevMonthSignedContracts  ?? 0;
   const contractsDelta      = prevSignedContracts > 0 ? signedThisMonth - prevSignedContracts : null;
 
-  const activeUnits = kpis
-    ? kpis.availableUnits + kpis.reservedUnits + kpis.soldUnits
-    : null;
+  // Semantic color for collection rate: green ≥ 70, amber 40–69, red < 40
+  const rateValueCls =
+    rate === null  ? 'text-slate-400'  :
+    rate >= 70     ? 'text-success-700' :
+    rate >= 40     ? 'text-amber-700'   :
+                     'text-danger-700';
 
-  void activeUnits;
-
-  const rateIconCls = rate === null  ? 'bg-slate-100 text-slate-400'   :
-                      rate >= 70     ? 'bg-success-50 text-success-600' :
-                      rate >= 40     ? 'bg-amber-50 text-amber-600'     :
-                                       'bg-danger-50 text-danger-500';
+  const rateIconCls =
+    rate === null  ? 'bg-slate-100 text-slate-400'   :
+    rate >= 70     ? 'bg-success-50 text-success-600' :
+    rate >= 40     ? 'bg-amber-50 text-amber-600'     :
+                     'bg-danger-50 text-danger-500';
 
   const tiles: CommandTile[] = [
+    // ── Total Contracts: featured — most important, gold tint ──────────────
     {
       label:    'إجمالي التعاقدات',
       value:    hasFin ? formatCompact(total) : '—',
-      sub:      'القيمة الكلية للعقود',
+      sub:      'القيمة الكلية للعقود النشطة',
       valueCls: 'text-slate-900',
       icon:     <Building2 className="h-4 w-4" />,
-      iconCls:  'bg-slate-100 text-slate-600',
+      iconCls:  'bg-brand-100 text-brand-700',
+      featured: true,
     },
+    // ── Collected: positive metric, green; trend vs last month ─────────────
     {
-      label:    'محصّل',
+      label:    'إجمالي المحصّل',
       value:    hasFin ? formatCompact(collected) : '—',
-      sub:      hasFin && collectedThisMonth > 0
-                  ? `هذا الشهر: ${formatCompact(collectedThisMonth)}`
-                  : rate !== null ? `${rate}% من الإجمالي` : '—',
+      sub:      rate !== null ? `${rate}% من قيمة العقود` : '—',
       valueCls: 'text-success-700',
       delta:    collectionDeltaPct !== null ? deltaLabel(collectionDeltaPct) : undefined,
       deltaCls: collectionDeltaPct !== null && collectionDeltaPct >= 0
@@ -218,32 +230,42 @@ function RevenueCommandStrip({
       icon:     <TrendingUp className="h-4 w-4" />,
       iconCls:  'bg-success-50 text-success-600',
     },
+    // ── Collection rate: semantic color tells health at a glance ───────────
     {
       label:    'معدل التحصيل',
       value:    rate !== null ? `${rate}%` : '—',
-      sub:      rate === null  ? '—'             :
-                rate >= 70     ? 'أداء ممتاز'    :
-                rate >= 40     ? 'يحتاج متابعة'  :
-                                 'أداء منخفض',
-      valueCls: rate === null  ? 'text-slate-400'  :
-                rate >= 70     ? 'text-success-700' :
-                rate >= 40     ? 'text-brand-600'   :
-                                 'text-danger-700',
+      sub:      rate === null  ? '—'                          :
+                rate >= 70     ? 'أداء ممتاز — فوق المستهدف' :
+                rate >= 40     ? 'يحتاج متابعة'              :
+                                 'أداء منخفض — تدخل مطلوب',
+      valueCls: rateValueCls,
       icon:     <Activity className="h-4 w-4" />,
       iconCls:  rateIconCls,
+      // No trend line: the rate itself IS the status signal
     },
+    // ── Overdue: critical metric, red when non-zero ────────────────────────
     {
-      label:    'متأخر',
+      label:    'مبالغ متأخرة',
       value:    hasFin ? formatCompact(overdue) : '—',
-      sub:      hasFin && overdue > 0 ? 'تجاوزت الاستحقاق' : 'لا متأخرات',
+      sub:      overdue > 0
+                  ? overdueRate !== null
+                    ? `${overdueRate}% من إجمالي العقود`
+                    : 'تجاوزت تاريخ الاستحقاق'
+                  : 'لا مبالغ متأخرة',
       valueCls: hasFin && overdue > 0 ? 'text-danger-700' : 'text-slate-400',
       icon:     <AlertCircle className="h-4 w-4" />,
-      iconCls:  hasFin && overdue > 0 ? 'bg-danger-50 text-danger-500' : 'bg-slate-100 text-slate-400',
+      iconCls:  hasFin && overdue > 0
+                  ? 'bg-danger-50 text-danger-500'
+                  : 'bg-slate-100 text-slate-400',
+      // No trend: current state, not a flow metric
     },
+    // ── Monthly contracts: count; delta vs last month ──────────────────────
     {
       label:    'عقود الشهر',
       value:    hasFin ? String(signedThisMonth) : '—',
-      sub:      kpis ? `${kpis.soldUnits} مباعة · ${kpis.reservedUnits} محجوزة` : '—',
+      sub:      kpis
+                  ? `${kpis.soldUnits} وحدة مباعة · ${kpis.reservedUnits} محجوزة`
+                  : '—',
       valueCls: 'text-slate-900',
       delta:    contractsDelta !== null
                   ? `${contractsDelta >= 0 ? '+' : ''}${contractsDelta} عن الشهر الماضي`
@@ -259,34 +281,47 @@ function RevenueCommandStrip({
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
-        {tiles.map((tile, idx) => (
+        {tiles.map((tile) => (
           <div
             key={tile.label}
             className={cn(
-              'bg-surface px-6 py-6 flex flex-col gap-4',
-              idx === 0 && 'bg-canvas/40',
+              'flex flex-col px-5 py-5 min-h-[152px]',
+              tile.featured ? 'bg-brand-50/40' : 'bg-surface',
             )}
           >
+            {/* ① label (RTL start = right) + icon (RTL end = left) */}
             <div className="flex items-start justify-between gap-2">
               <span className={cn(
-                'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 [&_svg]:h-[17px] [&_svg]:w-[17px]',
+                'inline-flex h-8 w-8 items-center justify-center rounded-xl shrink-0 [&_svg]:h-[15px] [&_svg]:w-[15px]',
                 tile.iconCls,
               )}>
                 {tile.icon}
               </span>
-              <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug max-w-[90px]">
+              <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug">
                 {tile.label}
               </p>
             </div>
-            <div>
-              <p className={cn('text-[26px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
-                {tile.value}
-              </p>
-              <p className="text-[11px] text-slate-400 mt-2.5 leading-none">{tile.sub}</p>
-              {tile.delta && (
-                <p className={cn('text-[10px] font-semibold mt-2 leading-none', tile.deltaCls)}>
+
+            {/* ② hero value — sole dominant figure */}
+            <p className={cn(
+              'mt-4 tabular-nums leading-none tracking-tight font-black',
+              tile.featured ? 'text-[28px]' : 'text-[26px]',
+              tile.valueCls,
+            )}>
+              {tile.value}
+            </p>
+
+            {/* ③ context / unit line */}
+            <p className="mt-2 text-[11px] text-slate-400 leading-snug">{tile.sub}</p>
+
+            {/* ④ trend — always rendered for equal card heights */}
+            <div className="mt-auto pt-3">
+              {tile.delta ? (
+                <p className={cn('text-[10px] font-semibold leading-none', tile.deltaCls)}>
                   {tile.delta}
                 </p>
+              ) : (
+                <p className="text-[10px] text-slate-300 leading-none select-none">—</p>
               )}
             </div>
           </div>

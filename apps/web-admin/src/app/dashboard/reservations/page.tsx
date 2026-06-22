@@ -124,6 +124,7 @@ export default async function ReservationsPage({
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={5}
         metrics={[
           { label: 'إجمالي الحجوزات', value: stats?.total   ?? '—', icon: <BookmarkCheck />, tone: 'neutral', primary: true },

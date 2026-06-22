@@ -6,21 +6,17 @@ import {
   BookmarkCheck,
   FileText,
   Banknote,
-  Target,
   AlertCircle,
   Plus,
   CalendarPlus,
   Wallet,
-  AlertTriangle,
-  Building2,
-  Boxes,
   TrendingUp,
   ArrowUpRight,
   Bell,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
-import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
+import { formatCurrency, formatCompact, formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { Button } from '@/components/ui/button';
@@ -30,7 +26,6 @@ import {
   ReservationStatusBadge,
   AppointmentStatusBadge,
 } from '@/components/badges';
-import { QuickAccessStrip } from './sales-home';
 
 interface PerformanceRow {
   salesId:                   string;
@@ -71,15 +66,24 @@ const STAGE_META = [
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+// Cap at 200 % — above that show a qualitative label so the card stays readable
 function pctDisplay(value: number | null): string {
-  if (value === null)  return '—';
-  if (value > 999)     return '+999%';
+  if (value === null) return '—';
+  if (value > 200)   return 'تجاوز الهدف';
   return `${value}%`;
 }
 
 function pctSub(value: number | null): string | undefined {
   if (value === null || value < 100) return undefined;
-  return value > 200 ? 'أعلى من الهدف بكثير' : 'تجاوز الهدف';
+  return value > 200 ? 'أعلى من الهدف بكثير' : 'تحقق الهدف';
+}
+
+// Format "2026-06" → "يونيو 2026"
+function formatPeriod(period: string): string {
+  const MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+  const [year, monthStr] = period.split('-');
+  const m = parseInt(monthStr ?? '1', 10);
+  return `${MONTHS[m - 1] ?? ''} ${year ?? ''}`.trim();
 }
 
 function pctTableDisplay(value: number | null): string {
@@ -221,17 +225,6 @@ export async function SalesManagerDashboard() {
   const showLeads        = !leadsRes.error         && recentLeads.length           > 0;
   const bottomCount      = [showVisits, showReservations, showLeads].filter(Boolean).length;
 
-  const managerQuickLinks = [
-    { href: '/dashboard/leads',           label: 'الفرص',     icon: <Zap className="h-3.5 w-3.5" />           },
-    { href: '/dashboard/visits',          label: 'الزيارات',  icon: <CalendarClock className="h-3.5 w-3.5" />  },
-    { href: '/dashboard/reservations',    label: 'الحجوزات',  icon: <BookmarkCheck className="h-3.5 w-3.5" />  },
-    { href: '/dashboard/contracts',       label: 'العقود',    icon: <FileText className="h-3.5 w-3.5" />       },
-    { href: '/dashboard/targets',         label: 'الأهداف',   icon: <Target className="h-3.5 w-3.5" />         },
-    { href: '/dashboard/my-compensation', label: 'المستحقات', icon: <Wallet className="h-3.5 w-3.5" />         },
-    { href: '/dashboard/projects',        label: 'المشاريع',  icon: <Building2 className="h-3.5 w-3.5" />      },
-    { href: '/dashboard/units',           label: 'الوحدات',   icon: <Boxes className="h-3.5 w-3.5" />          },
-  ];
-
   return (
     <div className="space-y-5">
       {/* ── Header ────────────────────────────────────────────────────────── */}
@@ -267,75 +260,76 @@ export async function SalesManagerDashboard() {
         }
       />
 
-      {/* ── Metric strip — two rows of 4 ─────────────────────────────────── */}
+      {/* ── Metric strip — balanced 4+4 grid ─────────────────────────────── */}
       <PremiumMetricStrip
+        cols={4}
         metrics={[
+          // ── Row 1 ────────────────────────────────────────────────────────
           {
-            label:    'إجمالي فرص الفريق',
-            value:    leadsRes.error ? '—' : teamLeads,
-            sub:      `${teamOpenLeads} مفتوحة`,
-            icon:     <Users />,
-            tone:     'brand',
+            label: 'فرص الفريق',
+            value: leadsRes.error ? '—' : teamLeads,
+            sub:   `${teamOpenLeads} مفتوحة`,
+            icon:  <Users />,
+            tone:  'brand',
           },
           {
-            label:    'فرص مفتوحة',
-            value:    perfRes.error ? '—' : teamOpenLeads,
-            sub:      `من أصل ${teamLeads} فرصة`,
-            icon:     <Zap />,
-            tone:     'purple',
+            label: 'فرص مفتوحة',
+            value: perfRes.error ? '—' : teamOpenLeads,
+            sub:   `من أصل ${teamLeads} فرصة`,
+            icon:  <Zap />,
+            tone:  'purple',
           },
           {
-            label:    'زيارات قادمة للفريق',
-            value:    perfRes.error ? '—' : teamUpcomingVisits,
-            sub:      'مجدولة لاحقاً',
-            icon:     <CalendarClock />,
-            tone:     'info',
+            label: 'زيارات قادمة',
+            value: perfRes.error ? '—' : teamUpcomingVisits,
+            sub:   'مجدولة لاحقاً',
+            icon:  <CalendarClock />,
+            tone:  'info',
           },
           {
-            label:    'حجوزات نشطة',
-            value:    perfRes.error ? '—' : teamActiveReservations,
-            sub:      teamExpiringCount > 0 ? `${teamExpiringCount} تنتهي قريباً` : 'لا حجوزات تنتهي',
-            icon:     <BookmarkCheck />,
-            tone:     teamExpiringCount > 0 ? 'warning' : 'success',
+            label: 'حجوزات نشطة',
+            value: perfRes.error ? '—' : teamActiveReservations,
+            sub:   teamExpiringCount > 0 ? `${teamExpiringCount} تنتهي قريباً` : 'لا حجوزات تنتهي',
+            icon:  <BookmarkCheck />,
+            tone:  teamExpiringCount > 0 ? 'warning' : 'success',
+          },
+          // ── Row 2 ────────────────────────────────────────────────────────
+          {
+            label: 'عقود الشهر',
+            value: perfRes.error ? '—' : teamSigned,
+            sub:   formatPeriod(period),
+            icon:  <FileText />,
+            tone:  'success',
           },
           {
-            label:    'عقود موقّعة الشهر',
-            value:    perfRes.error ? '—' : teamSigned,
-            sub:      period,
-            icon:     <FileText />,
-            tone:     'success',
-          },
-          {
+            // Primary: most business-critical metric — gets warm gold tint + larger value
             label:     'القيمة المحققة',
-            value:     perfRes.error ? '—' : formatCurrency(teamRealized),
-            sub:       'هذا الشهر',
+            value:     perfRes.error ? '—' : formatCompact(teamRealized),
+            sub:       `هذا الشهر · ${formatPeriod(period)}`,
             icon:      <Banknote />,
             tone:      'brand',
             valueSize: 'compact',
+            primary:   true,
           },
           {
-            label:     'تحقيق الهدف المالي',
-            value:     perfRes.error ? '—' : pctDisplay(teamAmountPct),
-            sub:       perfRes.error ? undefined : pctSub(teamAmountPct),
-            icon:      <TrendingUp />,
-            tone:      teamAmountPct === null ? 'neutral' : teamAmountPct >= 80 ? 'success' : teamAmountPct >= 50 ? 'warning' : 'brand',
-            valueSize: 'compact',
+            label: 'الهدف المالي',
+            value: perfRes.error ? '—' : pctDisplay(teamAmountPct),
+            sub:   perfRes.error ? undefined : pctSub(teamAmountPct),
+            icon:  <TrendingUp />,
+            tone:  teamAmountPct === null ? 'neutral'
+                 : teamAmountPct >= 80    ? 'success'
+                 : teamAmountPct >= 50    ? 'warning'
+                 : 'brand',
           },
           {
-            label:    'تنبيهات الفريق',
-            value:    managerAlerts.length,
-            sub:      managerAlerts.length > 0 ? 'تحتاج مراجعة' : 'لا شيء الآن',
-            icon:     <Bell />,
-            tone:     managerAlerts.length > 0 ? 'warning' : 'success',
+            label: 'تنبيهات الفريق',
+            value: managerAlerts.length,
+            sub:   managerAlerts.length > 0 ? 'تحتاج مراجعة' : 'لا تنبيهات',
+            icon:  <Bell />,
+            tone:  managerAlerts.length > 0 ? 'warning' : 'success',
           },
         ]}
       />
-
-      {/* ── Quick Access ──────────────────────────────────────────────────── */}
-      <div className="space-y-2.5">
-        <SectionLabel>وصول سريع</SectionLabel>
-        <QuickAccessStrip links={managerQuickLinks} />
-      </div>
 
       {/* ── Pipeline ──────────────────────────────────────────────────────── */}
       {!leadsRes.error && pipelineMeaningful && (
