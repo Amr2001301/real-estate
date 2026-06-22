@@ -99,6 +99,7 @@ export default async function InfoRequestsPage({
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           {

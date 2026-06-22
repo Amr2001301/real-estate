@@ -123,6 +123,7 @@ export default async function AdminBrokerPayoutsPage({
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           {

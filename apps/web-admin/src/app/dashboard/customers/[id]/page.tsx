@@ -143,6 +143,7 @@ export default async function CustomerDetailPage({
       />
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           {
             label: 'العقود',

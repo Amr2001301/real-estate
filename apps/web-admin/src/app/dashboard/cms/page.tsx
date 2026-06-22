@@ -98,6 +98,7 @@ export default async function CmsPage() {
 
       {/* ── Summary strip ──────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'الصفحات', value: pages.length, icon: <FileText /> },
           { label: 'البانرات', value: banners.length, sub: `${activeBanners} نشط`, icon: <Image /> },

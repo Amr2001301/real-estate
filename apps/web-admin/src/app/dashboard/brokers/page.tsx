@@ -103,6 +103,7 @@ export default async function BrokersPage({
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           {

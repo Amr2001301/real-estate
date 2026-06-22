@@ -206,6 +206,7 @@ export default async function SettingsPage({
 
       {/* ── KPI strip ───────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           {
             label: 'إجمالي الإعدادات',

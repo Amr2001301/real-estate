@@ -162,6 +162,7 @@ export default async function DepositsPage({
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           {

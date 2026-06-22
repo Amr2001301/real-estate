@@ -121,6 +121,7 @@ export default async function AdminBrokerCommissionsPage({
 
       {/* ── KPI strip ────────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           {

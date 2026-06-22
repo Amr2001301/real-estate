@@ -164,6 +164,7 @@ export default async function PermissionsPage({
 
       {/* ── KPI summary strip ───────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي الصلاحيات', value: all.length, icon: <ShieldCheck />, tone: 'brand' },
           { label: 'المجموعات', value: totalGroups, icon: <ShieldCheck />, tone: 'neutral' },

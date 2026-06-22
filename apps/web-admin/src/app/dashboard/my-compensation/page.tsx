@@ -312,6 +312,7 @@ export default async function MyCompensationPage() {
 
       {/* KPI strip */}
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي المستحق', value: fmtAmt(owedTotal),    icon: <Hash />,         tone: 'brand',   sub: owedTotal === 0 ? 'لا توجد مستحقات مستحقة' : 'لم يُصرف بعد'    },
           { label: 'المدفوع',        value: fmtAmt(paidTotal),    icon: <Banknote />,     tone: 'success', sub: lastPaidAt ? `آخر دفعة: ${formatDate(lastPaidAt)}` : (paidTotal === 0 ? 'لا يوجد صرف بعد' : undefined) },
@@ -471,7 +472,7 @@ export default async function MyCompensationPage() {
       {/* Current activity */}
       {!allPerfZero && (
         <PremiumSectionCard icon={<TrendingUp />} title="نشاطي الحالي" description="هذا الشهر">
-          <PremiumMetricStrip metrics={activityMetrics} />
+          <PremiumMetricStrip variant="compact" metrics={activityMetrics} />
         </PremiumSectionCard>
       )}
     </div>

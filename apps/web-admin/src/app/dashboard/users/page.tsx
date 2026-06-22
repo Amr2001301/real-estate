@@ -212,6 +212,7 @@ export default async function UsersPage({
 
       {/* ── KPI summary strip ───────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي المستخدمين', value: total, icon: <Users />, tone: 'info' },
           { label: 'المستخدمون النشطون', value: active, icon: <UserCheck />, tone: 'success' },

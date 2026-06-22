@@ -136,6 +136,7 @@ export default async function BrokerDetailPage({
       />
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           {
             label: 'الموظفون',

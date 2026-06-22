@@ -165,6 +165,7 @@ export default async function DocumentsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           {
             label: hasFilters ? 'نتائج التصفية' : 'الإجمالي',

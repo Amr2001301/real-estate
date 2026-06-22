@@ -220,6 +220,7 @@ export default async function AuditLogsPage({
 
       {(meta || rows.length > 0) && (
         <PremiumMetricStrip
+          variant="compact"
           metrics={[
             {
               label: 'إجمالي السجلات',

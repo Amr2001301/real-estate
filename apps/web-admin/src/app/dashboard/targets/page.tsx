@@ -242,6 +242,7 @@ export default async function TargetsPage({
 
       {/* ── KPI strip ─────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           {
             label: 'عدد الأهداف',

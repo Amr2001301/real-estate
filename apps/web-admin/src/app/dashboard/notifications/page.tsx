@@ -66,6 +66,7 @@ export default async function AdminNotificationsInboxPage() {
 
       {/* ── Summary strip ──────────────────────────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'الإجمالي', value: items.length, icon: <Inbox /> },
           {
