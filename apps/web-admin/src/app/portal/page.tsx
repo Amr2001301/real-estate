@@ -152,6 +152,9 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
                   ? `${approved} معتمدة · ${approvalRate}% قبول`
                   : 'لا فرص مُرسلة بعد',
       valueCls: 'text-brand-700',
+      icon:     <UserPlus />,
+      iconCls:  'bg-brand-50 text-brand-600',
+      featured: false,
     },
     {
       label:    'عقود موقّعة',
@@ -160,12 +163,18 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
                   ? `${reservations} حجوزات · ${closingRate}% إغلاق`
                   : 'لا عقود بعد',
       valueCls: 'text-emerald-700',
+      icon:     <FilePen />,
+      iconCls:  'bg-emerald-50 text-emerald-600',
+      featured: false,
     },
     {
       label:    'حجم المبيعات',
       value:    perf ? formatCompact(salesGross) : '—',
       sub:      'إجمالي قيمة العقود',
       valueCls: 'text-slate-900',
+      icon:     <TrendingUp />,
+      iconCls:  'bg-slate-100 text-slate-600',
+      featured: false,
     },
     {
       label:    'عمولاتي',
@@ -174,6 +183,9 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
                   ? `${formatCompact(payoutsNet)} مُصرَف · ${payoutRate}%`
                   : 'لا عمولات بعد',
       valueCls: 'text-amber-700',
+      icon:     <BadgePercent />,
+      iconCls:  'bg-amber-50 text-amber-600',
+      featured: true,
     },
     {
       label:    'نسبة الصرف',
@@ -186,21 +198,55 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
                 payoutRate >= 80      ? 'text-success-700'  :
                 payoutRate >= 50      ? 'text-brand-600'    :
                                         'text-amber-600',
+      icon:     <Wallet />,
+      iconCls:  payoutRate === null   ? 'bg-slate-100 text-slate-400'    :
+                payoutRate >= 80      ? 'bg-success-50 text-success-600' :
+                payoutRate >= 50      ? 'bg-brand-50 text-brand-600'     :
+                                        'bg-amber-50 text-amber-600',
+      featured: false,
     },
   ];
 
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
-        {tiles.map((tile) => (
-          <div key={tile.label} className="bg-surface px-5 py-5">
-            <p className="text-[11px] font-medium text-slate-400 mb-2 leading-none">{tile.label}</p>
-            <p className={cn('text-[22px] font-black tabular-nums leading-none tracking-tight', tile.valueCls)}>
-              {tile.value}
-            </p>
-            <p className="text-[11px] text-slate-400 mt-2 leading-none">{tile.sub}</p>
-          </div>
-        ))}
+        {tiles.map((tile) => {
+          const isLong = tile.value !== '—' && tile.value.length > 6;
+          return (
+            <div
+              key={tile.label}
+              className={cn(
+                'flex flex-col px-5 py-5 min-h-[124px]',
+                tile.featured ? 'bg-brand-50/40 border-s-[3px] border-brand-400/70' : 'bg-surface',
+              )}
+            >
+              {/* Icon (first DOM child = RIGHT in RTL) + label */}
+              <div className="flex items-start justify-between gap-2">
+                <span className={cn(
+                  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[18px] [&_svg]:w-[18px]',
+                  tile.iconCls,
+                )}>
+                  {tile.icon}
+                </span>
+                <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug line-clamp-2">
+                  {tile.label}
+                </p>
+              </div>
+              {/* Value */}
+              <p className={cn(
+                'mt-3 font-black tabular-nums leading-none tracking-tight',
+                isLong
+                  ? tile.featured ? 'text-[22px]' : 'text-[20px]'
+                  : tile.featured ? 'text-[28px]' : 'text-[26px]',
+                tile.valueCls,
+              )}>
+                {tile.value}
+              </p>
+              {/* Sub */}
+              <p className="mt-2 text-[11px] text-slate-400 leading-snug">{tile.sub}</p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -223,99 +269,113 @@ function BrokerActionQueue({
       key: 'leads', label: 'فرص قيد المراجعة', description: 'بانتظار قرار من الإدارة',
       value: pendingLeads, href: '/portal/leads?status=PENDING' as const,
       icon: <UserPlus />,
-      iconCls:  pendingLeads > 0 ? 'bg-amber-50 text-amber-600'       : 'bg-slate-50 text-slate-300',
-      countCls: pendingLeads > 0 ? 'text-amber-700'                   : 'text-slate-200',
-      dotCls:   'bg-amber-500',
+      activeIconCls:  'bg-amber-50 text-amber-600',
+      activeCountCls: 'text-amber-700',
     },
     {
       key: 'visits', label: 'طلبات زيارة جديدة', description: 'بانتظار جدولة موعد',
       value: newVisits, href: '/portal/visits?requestStatus=NEW' as const,
       icon: <CalendarClock />,
-      iconCls:  newVisits > 0 ? 'bg-blue-50 text-blue-600'           : 'bg-slate-50 text-slate-300',
-      countCls: newVisits > 0 ? 'text-blue-700'                      : 'text-slate-200',
-      dotCls:  'bg-blue-500',
+      activeIconCls:  'bg-blue-50 text-blue-600',
+      activeCountCls: 'text-blue-700',
     },
     {
       key: 'payouts', label: 'دفعات جاهزة للصرف', description: 'معتمدة وبانتظار التحويل',
       value: approvedPayouts, href: '/portal/payouts?status=APPROVED' as const,
       icon: <Wallet />,
-      iconCls:  approvedPayouts > 0 ? 'bg-teal-50 text-teal-600'     : 'bg-slate-50 text-slate-300',
-      countCls: approvedPayouts > 0 ? 'text-teal-700'                : 'text-slate-200',
-      dotCls:   'bg-teal-500',
+      activeIconCls:  'bg-teal-50 text-teal-600',
+      activeCountCls: 'text-teal-700',
     },
     {
       key: 'units', label: 'وحدات للتسويق', description: 'جاهزة للعرض على العملاء',
       value: availableUnits, href: '/portal/units?status=AVAILABLE' as const,
       icon: <Home />,
-      iconCls:  availableUnits > 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-300',
-      countCls: availableUnits > 0 ? 'text-emerald-700'               : 'text-slate-200',
-      dotCls:   'bg-emerald-500',
+      activeIconCls:  'bg-emerald-50 text-emerald-600',
+      activeCountCls: 'text-emerald-700',
     },
   ];
 
-  if (actionTotal === 0 && availableUnits === 0) {
-    return (
-      <div className="flex items-center gap-3 bg-success-50 border border-success-100 rounded-2xl px-5 py-4">
-        <CheckCircle2 className="h-5 w-5 text-success-600 shrink-0" />
-        <div>
-          <p className="text-sm font-semibold text-success-800">لا توجد مهام معلقة</p>
-          <p className="text-xs text-success-600 mt-0.5">كل الإجراءات مكتملة</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-hairline bg-canvas/50">
-        <div className="flex items-center gap-2.5">
-          <div className="relative shrink-0">
-            <Bell className="h-4 w-4 text-slate-600" />
-            {actionTotal > 0 && (
-              <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            'relative h-8 w-8 rounded-xl flex items-center justify-center shrink-0',
+            actionTotal > 0 ? 'bg-amber-50 ring-1 ring-amber-100' : 'bg-success-50 ring-1 ring-success-100',
+          )}>
+            {actionTotal > 0 ? (
+              <>
+                <Bell className="h-[15px] w-[15px] text-amber-600" />
+                <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
+              </>
+            ) : (
+              <CheckCircle2 className="h-[15px] w-[15px] text-success-600" />
             )}
           </div>
-          <p className="text-[13px] font-bold text-slate-800">متابعة وفرص</p>
+          <div>
+            <p className={cn(
+              'text-[14px] font-bold leading-none',
+              actionTotal > 0 ? 'text-navy' : 'text-success-800',
+            )}>
+              متابعة وفرص
+            </p>
+            <p className={cn(
+              'text-[11px] mt-0.5',
+              actionTotal > 0 ? 'text-slate-400' : 'text-success-600',
+            )}>
+              {actionTotal > 0 ? `${actionTotal} بند يحتاج متابعة` : 'لا بنود معلقة'}
+            </p>
+          </div>
           {actionTotal > 0 && (
-            <span className="inline-flex items-center h-5 px-2 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-bold">
+            <span className="inline-flex items-center h-5 px-2 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-bold ms-1">
               {actionTotal} معلق
             </span>
           )}
         </div>
-        <p className="text-[11px] text-slate-400 hidden sm:block">انقر على أي بند للانتقال مباشرةً</p>
+        <p className="text-[11px] text-slate-400 hidden sm:block">
+          {actionTotal > 0 ? 'انقر على أي بند للانتقال مباشرةً' : 'كل الإجراءات مكتملة'}
+        </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-hairline">
+      {/* Cards */}
+      <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {slots.map((slot) => {
-          const active = slot.value > 0;
+          const isActive = slot.value > 0;
           return (
             <Link key={slot.key} href={slot.href as never} className="group block">
               <div className={cn(
-                'bg-surface h-full px-4 py-5 flex flex-col justify-between gap-4 transition-colors duration-150',
-                active && 'hover:bg-slate-50/80',
+                'flex flex-col rounded-[14px] border px-4 py-4 min-h-[96px] transition-colors duration-150',
+                isActive
+                  ? 'bg-surface border-hairline group-hover:bg-slate-50/60 group-hover:border-slate-200'
+                  : 'bg-canvas/20 border-hairline opacity-50',
               )}>
-                <div className="flex items-center justify-between">
+                {/* Top row: label (first DOM child = RIGHT in RTL) + icon */}
+                <div className="flex items-start justify-between gap-2">
+                  <p className={cn(
+                    'text-[12px] font-semibold leading-snug',
+                    isActive ? 'text-slate-700' : 'text-slate-400',
+                  )}>
+                    {slot.label}
+                  </p>
                   <div className={cn(
-                    'h-8 w-8 rounded-xl flex items-center justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
-                    slot.iconCls,
+                    'h-8 w-8 rounded-lg flex items-center justify-center [&_svg]:h-[14px] [&_svg]:w-[14px] shrink-0',
+                    isActive ? slot.activeIconCls : 'bg-slate-100 text-slate-300',
                   )}>
                     {slot.icon}
                   </div>
-                  {active && (
-                    <span className={cn('h-2 w-2 rounded-full animate-pulse shrink-0', slot.dotCls)} />
-                  )}
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <p className={cn('text-[30px] font-black tabular-nums leading-none tracking-tight', slot.countCls)}>
-                    {slot.value}
-                  </p>
-                  <p className={cn('text-[11px] font-bold leading-snug', active ? 'text-slate-800' : 'text-slate-300')}>
-                    {slot.label}
-                  </p>
-                  {active && (
-                    <p className="text-[10px] text-slate-400 leading-tight">{slot.description}</p>
-                  )}
-                </div>
+                {/* Count */}
+                <p className={cn(
+                  'mt-2 text-[30px] font-black tabular-nums leading-none tracking-tight',
+                  isActive ? slot.activeCountCls : 'text-slate-300',
+                )}>
+                  {slot.value}
+                </p>
+                {/* Description */}
+                <p className="mt-1 text-[11px] text-slate-400 leading-snug">
+                  {isActive ? slot.description : 'لا إجراءات معلقة'}
+                </p>
               </div>
             </Link>
           );
