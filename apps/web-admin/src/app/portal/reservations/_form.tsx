@@ -18,8 +18,8 @@ import { SubmitButton } from '@/components/form/submit-button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx, formatCurrency } from '@/lib/format';
 import { getUnitProjectId } from '@/lib/portal-units';
 import type { PortalLead, PortalUnit } from '@/lib/types';
@@ -44,6 +44,11 @@ interface Props {
   approvedLeads: PortalLead[];
   units: PortalUnit[];
 }
+
+const NAV_SECTIONS = [
+  { id: 'section-lead-unit', num: '01', label: 'الفرصة والوحدة', sub: 'الفرصة المعتمدة والوحدة' },
+  { id: 'section-notes',     num: '02', label: 'ملاحظات',        sub: 'معلومات إضافية' },
+];
 
 export default function PortalReservationForm({ approvedLeads, units }: Props) {
   const [state, formAction] = useActionState<PortalReservationFormState, FormData>(
@@ -144,16 +149,16 @@ export default function PortalReservationForm({ approvedLeads, units }: Props) {
   const leadsMissingSales = approvedLeads.filter((l) => !l.assignedSalesId);
 
   return (
-    <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
+    <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
-        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-5 py-4 text-sm shadow-soft">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <p className="font-medium">{state.error}</p>
         </div>
       )}
 
       {leadsMissingSales.length > 0 && (
-        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 px-5 py-4 text-sm shadow-soft">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold">
@@ -173,10 +178,17 @@ export default function PortalReservationForm({ approvedLeads, units }: Props) {
         </div>
       )}
 
-      <FormSection
-        title="الفرصة والوحدة"
-        description="الحجز يتطلب فرصة معتمدة + وحدة متاحة + مندوب مبيعات داخلي مُعيَّن على الفرصة."
+      <PremiumFormLayout
+        navSections={NAV_SECTIONS}
+        sidebarBadge="جديد"
+        sidebarInfo="الحجز يتطلب فرصة معتمدة ومندوب مبيعات مُعيَّن. سيتم احتساب العمولة كلقطة عند الإنشاء."
       >
+        <PremiumFormPanel
+          id="section-lead-unit"
+          number="01"
+          title="الفرصة والوحدة"
+          description="الحجز يتطلب فرصة معتمدة + وحدة متاحة + مندوب مبيعات داخلي مُعيَّن على الفرصة."
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="الفرصة" name="leadId" required hint="فرص معتمدة فقط">
             <Select
@@ -375,13 +387,19 @@ export default function PortalReservationForm({ approvedLeads, units }: Props) {
             />
           </div>
         )}
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection title="ملاحظات" description="معلومات إضافية لمندوب المبيعات الداخلي.">
-        <Field label="ملاحظة" name="notes">
-          <Textarea id="notes" name="notes" rows={3} />
-        </Field>
-      </FormSection>
+        <PremiumFormPanel
+          id="section-notes"
+          number="02"
+          title="ملاحظات"
+          description="معلومات إضافية لمندوب المبيعات الداخلي."
+        >
+          <Field label="ملاحظة" name="notes">
+            <Textarea id="notes" name="notes" rows={3} />
+          </Field>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
 
       <FormFooter
         sticky

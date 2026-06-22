@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx } from '@/lib/format';
 import type { Paged, PortalLead, PortalProject, PortalUnit } from '@/lib/types';
 import {
@@ -39,6 +39,13 @@ function getUnitProjectId(u: PortalUnit): string {
     ''
   );
 }
+
+const NAV_SECTIONS = [
+  { id: 'section-lead',     num: '01', label: 'الفرصة',          sub: 'ربط بفرصة موجودة' },
+  { id: 'section-visit',    num: '02', label: 'بيانات الزيارة',  sub: 'المشروع والموعد المقترح' },
+  { id: 'section-customer', num: '03', label: 'بيانات العميل',   sub: 'لعميل جديد غير مسجل' },
+  { id: 'section-notes',    num: '04', label: 'ملاحظات',         sub: 'تفاصيل إضافية' },
+];
 
 export default function PortalVisitForm({ projects, units, leads }: Props) {
   const [state, formAction] = useActionState<PortalVisitFormState, FormData>(
@@ -93,18 +100,25 @@ export default function PortalVisitForm({ projects, units, leads }: Props) {
   const hasLead = selectedLead !== null;
 
   return (
-    <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
+    <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
-        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-5 py-4 text-sm shadow-soft">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <p className="font-medium">{state.error}</p>
         </div>
       )}
 
-      <FormSection
-        title="الفرصة"
-        description="إن كانت الزيارة لعميل موجود اختر فرصته لتعبئة بياناته تلقائياً. خلاف ذلك اترك الحقل فارغاً وأدخل بيانات العميل أدناه."
+      <PremiumFormLayout
+        navSections={NAV_SECTIONS}
+        sidebarBadge="جديد"
+        sidebarInfo="ستراجع الإدارة الطلب وتجدول موعد الزيارة المناسب."
       >
+        <PremiumFormPanel
+          id="section-lead"
+          number="01"
+          title="الفرصة"
+          description="إن كانت الزيارة لعميل موجود اختر فرصته لتعبئة بياناته تلقائياً. خلاف ذلك اترك الحقل فارغاً وأدخل بيانات العميل أدناه."
+        >
         <Field label="فرصة موجودة" name="leadId">
           <Select
             id="leadId"
@@ -150,9 +164,14 @@ export default function PortalVisitForm({ projects, units, leads }: Props) {
             )}
           </div>
         )}
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection title="بيانات الزيارة" description="حدد المشروع والوحدة والتاريخ المقترح.">
+        <PremiumFormPanel
+          id="section-visit"
+          number="02"
+          title="بيانات الزيارة"
+          description="حدد المشروع والوحدة والتاريخ المقترح."
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="المشروع" name="projectId" required>
             <Select
@@ -197,10 +216,12 @@ export default function PortalVisitForm({ projects, units, leads }: Props) {
             <Input id="preferredDate" name="preferredDate" type="date" required dir="ltr" />
           </Field>
         </div>
-      </FormSection>
+        </PremiumFormPanel>
 
-      {!hasLead && (
-        <FormSection
+        {!hasLead && (
+        <PremiumFormPanel
+          id="section-customer"
+          number="03"
           title="بيانات العميل"
           description="مطلوبة لأنك لم تختر فرصة موجودة في الأعلى."
         >
@@ -221,24 +242,30 @@ export default function PortalVisitForm({ projects, units, leads }: Props) {
               <Input id="customerEmail" name="customerEmail" type="email" dir="ltr" />
             </Field>
           </div>
-        </FormSection>
-      )}
+        </PremiumFormPanel>
+        )}
 
-      {hasLead && (
-        <div className="flex items-start gap-2 rounded-xl bg-info-50/60 border border-info-100 text-info-700 p-3 text-xs">
-          <Info className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>
-            سيتم استخدام بيانات العميل من الفرصة المختارة تلقائياً — لا حاجة
-            لإعادة إدخالها.
-          </p>
-        </div>
-      )}
+        {hasLead && (
+          <div className="flex items-start gap-2 rounded-xl bg-info-50/60 border border-info-100 text-info-700 p-3 text-xs">
+            <Info className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>
+              سيتم استخدام بيانات العميل من الفرصة المختارة تلقائياً — لا حاجة
+              لإعادة إدخالها.
+            </p>
+          </div>
+        )}
 
-      <FormSection title="ملاحظات" description="أي تفاصيل إضافية تساعد في تنظيم الزيارة.">
-        <Field label="ملاحظة" name="notes">
-          <Textarea id="notes" name="notes" rows={3} />
-        </Field>
-      </FormSection>
+        <PremiumFormPanel
+          id="section-notes"
+          number="04"
+          title="ملاحظات"
+          description="أي تفاصيل إضافية تساعد في تنظيم الزيارة."
+        >
+          <Field label="ملاحظة" name="notes">
+            <Textarea id="notes" name="notes" rows={3} />
+          </Field>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
 
       <FormFooter
         sticky

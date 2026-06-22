@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { tx } from '@/lib/format';
 import type { PortalProject, PortalUnit, Paged } from '@/lib/types';
 import { createPortalLeadAction, type PortalLeadFormState } from './actions';
@@ -29,6 +29,12 @@ interface Props {
 function unitProjectId(u: PortalUnit): string {
   return u.building?.phase?.projectId ?? u.building?.phase?.project?.id ?? '';
 }
+
+const NAV_SECTIONS = [
+  { id: 'section-client',   num: '01', label: 'بيانات العميل', sub: 'الاسم وبيانات التواصل' },
+  { id: 'section-interest', num: '02', label: 'الاهتمام',      sub: 'المشروع والوحدة المستهدفة' },
+  { id: 'section-notes',    num: '03', label: 'ملاحظات',       sub: 'معلومات لفريق المبيعات' },
+];
 
 export default function PortalLeadForm({ projects, units }: Props) {
   const [state, formAction] = useActionState<PortalLeadFormState, FormData>(
@@ -50,15 +56,15 @@ export default function PortalLeadForm({ projects, units }: Props) {
   const noUnitsForProject = projectId !== '' && visibleUnits.length === 0;
 
   return (
-    <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
+    <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
-        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-5 py-4 text-sm shadow-soft">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <p className="font-medium">{state.error}</p>
         </div>
       )}
       {state.duplicate && (
-        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 border border-amber-100 text-amber-800 px-5 py-4 text-sm shadow-soft">
           <Info className="h-5 w-5 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="font-semibold">
@@ -77,7 +83,17 @@ export default function PortalLeadForm({ projects, units }: Props) {
         </div>
       )}
 
-      <FormSection title="بيانات العميل" description="معلومات التواصل الأساسية للعميل المحتمل.">
+      <PremiumFormLayout
+        navSections={NAV_SECTIONS}
+        sidebarBadge="جديد"
+        sidebarInfo="سيتم إخطار الإدارة بعد الإرسال للمراجعة والاعتماد."
+      >
+        <PremiumFormPanel
+          id="section-client"
+          number="01"
+          title="بيانات العميل"
+          description="معلومات التواصل الأساسية للعميل المحتمل."
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="الاسم الكامل" name="fullName" required>
             <Input id="fullName" name="fullName" required minLength={2} />
@@ -95,9 +111,14 @@ export default function PortalLeadForm({ projects, units }: Props) {
             <Input id="email" name="email" type="email" dir="ltr" />
           </Field>
         </div>
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection title="الاهتمام" description="حدد المشروع والوحدة التي يهتم بها العميل.">
+        <PremiumFormPanel
+          id="section-interest"
+          number="02"
+          title="الاهتمام"
+          description="حدد المشروع والوحدة التي يهتم بها العميل."
+        >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="المشروع" name="projectInterestId" hint="من المشاريع المتاحة لك">
             <Select
@@ -141,13 +162,19 @@ export default function PortalLeadForm({ projects, units }: Props) {
             </Select>
           </Field>
         </div>
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection title="ملاحظات" description="أي معلومات قد تساعد فريق المبيعات.">
-        <Field label="ملاحظة" name="note">
-          <Textarea id="note" name="note" rows={4} />
-        </Field>
-      </FormSection>
+        <PremiumFormPanel
+          id="section-notes"
+          number="03"
+          title="ملاحظات"
+          description="أي معلومات قد تساعد فريق المبيعات."
+        >
+          <Field label="ملاحظة" name="note">
+            <Textarea id="note" name="note" rows={4} />
+          </Field>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
 
       <FormFooter
         sticky
