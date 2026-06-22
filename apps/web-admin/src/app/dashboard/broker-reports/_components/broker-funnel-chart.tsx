@@ -27,8 +27,8 @@ function ConvBadge({ rate }: { rate: number }) {
     rate >= 0.4 ? 'text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200' :
                   'text-slate-500 bg-slate-100';
   return (
-    <div className="flex items-center justify-center py-1">
-      <span className={cn('inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold', cls)}>
+    <div className="flex items-center justify-center py-0.5">
+      <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-bold', cls)}>
         ↓ {(rate * 100).toFixed(0)}%
       </span>
     </div>
@@ -62,16 +62,16 @@ export function BrokerFunnelChart({
             )}
 
             {/* Stage card */}
-            <div className="relative flex items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 py-3 overflow-hidden">
+            <div className="relative flex items-center gap-2.5 rounded-xl border border-slate-100 bg-white px-3 py-2 overflow-hidden">
               {/* Start accent stripe */}
               <div
                 className="absolute inset-y-0 start-0 w-[3px] rounded-s-xl"
                 style={{ backgroundColor: hex }}
               />
 
-              {/* Large count */}
+              {/* Count */}
               <span
-                className="text-[26px] font-black tabular-nums leading-none shrink-0 ps-1"
+                className="text-[20px] font-black tabular-nums leading-none shrink-0 ps-1"
                 style={{ color: hex }}
               >
                 {stage.value.toLocaleString('ar-EG')}
@@ -79,10 +79,10 @@ export function BrokerFunnelChart({
 
               {/* Label + progress */}
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-semibold text-slate-700 truncate leading-snug">
+                <p className="text-[11px] font-semibold text-slate-700 truncate leading-snug">
                   {stage.label}
                 </p>
-                <div className="flex items-center gap-2 mt-1.5">
+                <div className="flex items-center gap-2 mt-1">
                   <div className="flex-1 h-1 rounded-full bg-slate-100 overflow-hidden">
                     <div
                       className="h-full rounded-full"

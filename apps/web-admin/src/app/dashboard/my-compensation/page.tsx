@@ -305,10 +305,7 @@ export default async function MyCompensationPage() {
       />
 
       {/* Read-only notice */}
-      <div className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-4 py-2.5">
-        <Eye className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-        <span className="text-xs text-slate-400">هذه الصفحة للعرض فقط — لا يمكنك تعديل أي بيانات من هنا.</span>
-      </div>
+    
 
       {/* KPI strip */}
       <PremiumMetricStrip
