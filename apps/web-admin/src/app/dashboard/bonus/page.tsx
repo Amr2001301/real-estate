@@ -18,7 +18,7 @@ import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { PageHeader } from '@/components/ui/page-header';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import { PremiumMetricStrip } from '@/components/premium';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -217,35 +217,16 @@ export default async function BonusPage({
       )}
 
       {/* ── KPI cards ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <PageKpiCard
-          label="إجمالي المعلق"
-          value={pendingTotal === 0 ? '0 ر.س.' : formatCurrency(pendingTotal)}
-          icon={<Clock className="h-5 w-5" />}
-          tone="warning"
-          compact
-        />
-        <PageKpiCard
-          label="إجمالي المعتمد"
-          value={approvedTotal === 0 ? '0 ر.س.' : formatCurrency(approvedTotal)}
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          tone="info"
-          compact
-        />
-        <PageKpiCard
-          label="إجمالي المدفوع"
-          value={paidTotal === 0 ? '0 ر.س.' : formatCurrency(paidTotal)}
-          icon={<Banknote className="h-5 w-5" />}
-          tone="success"
-          compact
-        />
-        <PageKpiCard
-          label="عدد المستحقات"
-          value={entryCount}
-          icon={<Hash className="h-5 w-5" />}
-          tone="brand"
-        />
-      </div>
+      <PremiumMetricStrip
+        variant="compact"
+        cols={4}
+        metrics={[
+          { label: 'إجمالي المعلق',  value: pendingTotal === 0 ? '0 ر.س.' : formatCurrency(pendingTotal),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
+          { label: 'إجمالي المعتمد', value: approvedTotal === 0 ? '0 ر.س.' : formatCurrency(approvedTotal), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
+          { label: 'إجمالي المدفوع', value: paidTotal === 0 ? '0 ر.س.' : formatCurrency(paidTotal),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: 'عدد المستحقات',  value: entryCount,                                                      icon: <Hash />,         tone: 'brand'   },
+        ]}
+      />
 
       {/* ── Compact filter bar — sr-only labels ────────────────────────────── */}
       <FilterBar

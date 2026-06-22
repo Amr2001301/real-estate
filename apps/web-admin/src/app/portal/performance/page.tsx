@@ -192,6 +192,7 @@ export default async function PortalPerformancePage({
       </PremiumFilterBar>
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'فرص مُرسلة',     value: summary.leadsSubmitted,     icon: <UserPlus />,      tone: 'brand'   },
           { label: 'حجوزات',          value: summary.reservationsCreated, icon: <BookmarkCheck />, tone: 'info'    },

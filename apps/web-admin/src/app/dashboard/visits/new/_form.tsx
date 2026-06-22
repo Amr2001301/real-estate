@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { FormSection } from '@/components/ui/form-section';
 import { FormFooter } from '@/components/ui/form-footer';
+import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { LeadStage, Project } from '@/lib/types';
 import { createVisitAction, type VisitFormState } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
@@ -88,6 +88,13 @@ function nowLocalInputValue(): string {
   return d.toISOString().slice(0, 16);
 }
 
+const NAV_SECTIONS = [
+  { id: 'section-client',   num: '01', label: 'العميل',             sub: 'نوع العميل والمصدر' },
+  { id: 'section-project',  num: '02', label: 'المشروع والوحدة',    sub: 'المشروع الذي سيُزار' },
+  { id: 'section-schedule', num: '03', label: 'موعد الزيارة',       sub: 'التاريخ والوقت والموقع' },
+  { id: 'section-agent',    num: '04', label: 'المندوب والملاحظات', sub: 'المندوب المسؤول والملاحظات' },
+];
+
 type OwnerType = 'lead' | 'client' | 'walkin';
 
 export default function NewVisitForm({
@@ -125,18 +132,25 @@ export default function NewVisitForm({
     ownerType === 'client' ? selectedClient?.phone ?? '' : '';
 
   return (
-    <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
+    <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
-        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-5 py-4 text-sm shadow-soft">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <p className="font-medium">{state.error}</p>
         </div>
       )}
 
-      <FormSection
-        title="العميل"
-        description="اختر نوع العميل. الزيارة بدون حساب مخصصة للعملاء غير المسجلين الذين يحضرون مباشرة."
+      <PremiumFormLayout
+        navSections={NAV_SECTIONS}
+        sidebarBadge="جديد"
+        sidebarInfo="الزيارة تُسجَّل بحالة مجدولة. يمكن تحديث حالتها بعد إنجازها من صفحة التفاصيل."
       >
+        <PremiumFormPanel
+          id="section-client"
+          number="01"
+          title="العميل"
+          description="اختر نوع العميل. الزيارة بدون حساب مخصصة للعملاء غير المسجلين الذين يحضرون مباشرة."
+        >
         <div className="flex flex-col gap-2">
           <span className="text-sm font-medium text-foreground">نوع العميل</span>
           <div className="flex flex-wrap gap-3">
@@ -239,12 +253,14 @@ export default function NewVisitForm({
             </Field>
           </div>
         )}
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection
-        title="المشروع والوحدة"
-        description="حدد المشروع الذي سيُزار. يمكنك اختياريًا تحديد وحدة معينة."
-      >
+        <PremiumFormPanel
+          id="section-project"
+          number="02"
+          title="المشروع والوحدة"
+          description="حدد المشروع الذي سيُزار. يمكنك اختياريًا تحديد وحدة معينة."
+        >
         <Field label="المشروع" name="projectId" required>
           <Select
             name="projectId"
@@ -271,16 +287,18 @@ export default function NewVisitForm({
             ))}
           </Select>
         </Field>
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection
-        title="موعد الزيارة"
-        description={
-          isAdmin
-            ? 'حدد موعد الزيارة. كمدير يمكنك إدخال زيارة سابقة لتوثيقها بأثر رجعي.'
-            : 'حدد موعد الزيارة. لا يمكن جدولة زيارة في الماضي.'
-        }
-      >
+        <PremiumFormPanel
+          id="section-schedule"
+          number="03"
+          title="موعد الزيارة"
+          description={
+            isAdmin
+              ? 'حدد موعد الزيارة. كمدير يمكنك إدخال زيارة سابقة لتوثيقها بأثر رجعي.'
+              : 'حدد موعد الزيارة. لا يمكن جدولة زيارة في الماضي.'
+          }
+        >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="التاريخ والوقت" name="scheduledAt" required>
             <Input
@@ -330,16 +348,18 @@ export default function NewVisitForm({
             <Input name="meetingPoint" placeholder="نقطة اللقاء…" />
           </Field>
         </div>
-      </FormSection>
+        </PremiumFormPanel>
 
-      <FormSection
-        title="المندوب والملاحظات"
-        description={
-          isAdmin
-            ? 'حدد المندوب المسؤول عن الزيارة وأضف أي ملاحظات داخلية.'
-            : 'سيتم تعيينك تلقائيًا كمندوب مسؤول.'
-        }
-      >
+        <PremiumFormPanel
+          id="section-agent"
+          number="04"
+          title="المندوب والملاحظات"
+          description={
+            isAdmin
+              ? 'حدد المندوب المسؤول عن الزيارة وأضف أي ملاحظات داخلية.'
+              : 'سيتم تعيينك تلقائيًا كمندوب مسؤول.'
+          }
+        >
         {isAdmin && (
           <Field label="المندوب المسؤول" name="assignedSalesId">
             <Select name="assignedSalesId">
@@ -356,7 +376,8 @@ export default function NewVisitForm({
         <Field label="ملاحظات داخلية" name="salesNotes">
           <Textarea name="salesNotes" rows={3} placeholder="ملاحظات اختيارية…" />
         </Field>
-      </FormSection>
+        </PremiumFormPanel>
+      </PremiumFormLayout>
 
       <FormFooter
         sticky

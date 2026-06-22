@@ -2,7 +2,7 @@ import { BarChart3, Users2, ClipboardClock, AlarmClock, Loader2, CheckCircle2 } 
 import { api, safe } from '@/lib/api';
 import type { MaintenanceReportSummary } from '@/lib/types';
 import { tx } from '@/lib/format';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import { PremiumMetricStrip } from '@/components/premium';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 
 interface Filters {
@@ -42,32 +42,16 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
   return (
     <div className="space-y-4">
       {/* KPI cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <PageKpiCard
-          label="قيد المراجعة"
-          value={num(r.pendingReviewCount)}
-          icon={<ClipboardClock className="h-5 w-5" />}
-          tone="warning"
-        />
-        <PageKpiCard
-          label="متأخرة"
-          value={num(r.overdueCount)}
-          icon={<AlarmClock className="h-5 w-5" />}
-          tone="danger"
-        />
-        <PageKpiCard
-          label="قيد التنفيذ"
-          value={num(r.inProgressCount)}
-          icon={<Loader2 className="h-5 w-5" />}
-          tone="info"
-        />
-        <PageKpiCard
-          label="تم الإنجاز"
-          value={num(r.resolvedCount)}
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          tone="success"
-        />
-      </div>
+      <PremiumMetricStrip
+        variant="compact"
+        cols={4}
+        metrics={[
+          { label: 'قيد المراجعة', value: num(r.pendingReviewCount), icon: <ClipboardClock />, tone: 'warning' },
+          { label: 'متأخرة',       value: num(r.overdueCount),       icon: <AlarmClock />,     tone: 'danger'  },
+          { label: 'قيد التنفيذ',  value: num(r.inProgressCount),    icon: <Loader2 />,        tone: 'info'    },
+          { label: 'تم الإنجاز',   value: num(r.resolvedCount),      icon: <CheckCircle2 />,   tone: 'success' },
+        ]}
+      />
 
       {/* Analytics panels — items-start prevents the shorter card from stretching */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">

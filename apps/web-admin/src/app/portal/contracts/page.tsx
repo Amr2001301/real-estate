@@ -112,6 +112,7 @@ export default async function PortalContractsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي العقود', value: totalAll,     icon: <FileText />,     tone: 'brand'   },
           { label: 'موقّعة',        value: signedCount,  icon: <CheckCircle2 />, tone: 'success' },

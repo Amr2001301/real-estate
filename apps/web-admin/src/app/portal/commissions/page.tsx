@@ -89,6 +89,7 @@ export default async function PortalCommissionsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي العمولات', value: paged?.meta.total ?? 0, icon: <BadgePercent />, tone: 'brand'   },
           { label: 'قيد الاعتماد',   value: pendingCount,           icon: <Clock />,        tone: 'warning' },

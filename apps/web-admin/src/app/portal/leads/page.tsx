@@ -124,6 +124,7 @@ export default async function PortalLeadsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي الفرص', value: totalLeads,    icon: <Users />,     tone: 'brand'   },
           { label: 'قيد المراجعة', value: pendingCount,  icon: <Clock />,     tone: 'warning' },

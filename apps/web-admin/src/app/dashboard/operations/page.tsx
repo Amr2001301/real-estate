@@ -25,7 +25,7 @@ import type { AuditLogItem, OperationsSummary, Paged } from '@/lib/types';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import { PremiumMetricStrip } from '@/components/premium';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 
@@ -318,38 +318,16 @@ export default async function OperationsCenterPage() {
       {summary && (
         <>
           {/* ── KPI row ─────────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <PageKpiCard
-              label="أحداث اليوم"
-              value={String(summary.totals.today)}
-              icon={<Activity />}
-              tone="brand"
-              sub="خلال الـ٢٤ ساعة الماضية"
-            />
-            <PageKpiCard
-              label="أحداث الأسبوع"
-              value={String(summary.totals.last7Days)}
-              icon={<TrendingUp />}
-              tone="info"
-              sub="آخر ٧ أيام"
-            />
-            <PageKpiCard
-              label="أكثر مستخدم نشاطًا"
-              value={topActor?.fullName ?? '—'}
-              icon={<UsersIcon />}
-              tone="success"
-              compact
-              sub={topActor ? (ROLE_LABEL[topActor.role] ?? topActor.role) : undefined}
-            />
-            <PageKpiCard
-              label="أكثر مساحة نشاطًا"
-              value={topEntityEntry ? areaLabel(topEntityEntry.entityType) : '—'}
-              icon={<Activity />}
-              tone="accent"
-              compact
-              sub={topEntityEntry ? `${topEntityEntry.count} حدث في ٧ أيام` : undefined}
-            />
-          </div>
+          <PremiumMetricStrip
+            variant="compact"
+            cols={4}
+            metrics={[
+              { label: 'أحداث اليوم',         value: String(summary.totals.today),                                icon: <Activity />,   tone: 'brand',   sub: 'خلال الـ٢٤ ساعة الماضية' },
+              { label: 'أحداث الأسبوع',       value: String(summary.totals.last7Days),                            icon: <TrendingUp />, tone: 'info',    sub: 'آخر ٧ أيام' },
+              { label: 'أكثر مستخدم نشاطًا',  value: topActor?.fullName ?? '—',                                   icon: <UsersIcon />,  tone: 'success', valueSize: 'compact', sub: topActor ? (ROLE_LABEL[topActor.role] ?? topActor.role) : undefined },
+              { label: 'أكثر مساحة نشاطًا',   value: topEntityEntry ? areaLabel(topEntityEntry.entityType) : '—', icon: <Activity />,   tone: 'purple',  valueSize: 'compact', sub: topEntityEntry ? `${topEntityEntry.count} حدث في ٧ أيام` : undefined },
+            ]}
+          />
 
           {/* ── Insights strip ───────────────────────────────────────────────── */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-2xl border border-hairline bg-surface p-4 shadow-xs">

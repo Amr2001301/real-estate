@@ -51,7 +51,7 @@ export interface Metric {
    * - `'compact'`: always compact — use for long financial strings.
    */
   valueSize?: 'auto' | 'normal' | 'compact';
-  /** Optional trend line (e.g. "↑12% عن الشهر الماضي"). Always occupies space; shows "—" if absent. */
+  /** Optional trend line (e.g. "↑12% عن الشهر الماضي"). Only rendered when provided. */
   trend?:    string;
   trendCls?: string;
 }
@@ -71,8 +71,8 @@ export interface PremiumMetricStripProps {
   /** Desktop column count. Defaults to metrics.length capped at 6. Use 4 for 8-item grids. */
   cols?:      2 | 3 | 4 | 5 | 6 | 8;
   /**
-   * `'dashboard'` (default) — rich KPI card ~148px, with trend row.
-   * `'compact'` — tight page-summary card ~96px, no trend row. Use on list pages.
+   * `'dashboard'` (default) — rich KPI card ~124px, with prominent icon and optional trend.
+   * `'compact'` — tight page-summary card ~88px, horizontal layout. Use on list pages.
    */
   variant?:   'dashboard' | 'compact';
   className?: string;
@@ -141,15 +141,15 @@ export function PremiumMetricStrip({ metrics, cols, variant = 'dashboard', class
           <div
             key={i}
             className={cn(
-              'flex flex-col px-5 py-5 min-h-[148px]',
+              'flex flex-col px-5 py-5 min-h-[124px]',
               m.primary ? 'bg-brand-50/40' : 'bg-surface',
             )}
           >
-            {/* ① icon (left) + label (right) */}
+            {/* ① icon (RIGHT in RTL, first DOM child) + label */}
             <div className="flex items-start justify-between gap-2">
               {m.icon && (
                 <span className={cn(
-                  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[15px] [&_svg]:w-[15px]',
+                  'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[18px] [&_svg]:w-[18px]',
                   ICON_TONE[tone],
                 )}>
                   {m.icon}
@@ -162,7 +162,7 @@ export function PremiumMetricStrip({ metrics, cols, variant = 'dashboard', class
 
             {/* ② hero value */}
             <p className={cn(
-              'mt-4 font-black tabular-nums leading-none tracking-tight',
+              'mt-3 font-black tabular-nums leading-none tracking-tight',
               isLongString
                 ? m.primary ? 'text-[22px]' : 'text-[20px]'
                 : m.primary ? 'text-[28px]' : 'text-[26px]',
@@ -171,21 +171,17 @@ export function PremiumMetricStrip({ metrics, cols, variant = 'dashboard', class
               {m.value}
             </p>
 
-            {/* ③ single context / unit line */}
+            {/* ③ sub */}
             {m.sub && (
               <p className="mt-2 text-[11px] text-slate-400 leading-snug">{m.sub}</p>
             )}
 
-            {/* ④ trend — always rendered so every card has identical height */}
-            <div className="mt-auto pt-3">
-              {m.trend ? (
-                <p className={cn('text-[10px] font-semibold leading-none', m.trendCls ?? 'text-slate-400')}>
-                  {m.trend}
-                </p>
-              ) : (
-                <p className="text-[10px] text-slate-300 leading-none select-none">—</p>
-              )}
-            </div>
+            {/* ④ trend — only rendered when data exists, no dead placeholder */}
+            {m.trend && (
+              <p className={cn('mt-auto pt-2 text-[10px] font-semibold leading-none', m.trendCls ?? 'text-slate-400')}>
+                {m.trend}
+              </p>
+            )}
           </div>
         );
       })}

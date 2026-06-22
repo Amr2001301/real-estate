@@ -150,6 +150,7 @@ export default async function PortalTeamPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي الأعضاء', value: totalAll,       icon: <Users />,       tone: 'brand'   },
           { label: 'نشط',             value: activeCount,    icon: <UserCheck />,   tone: 'success' },

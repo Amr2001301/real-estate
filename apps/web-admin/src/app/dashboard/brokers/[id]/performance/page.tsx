@@ -20,7 +20,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import { PremiumMetricStrip } from '@/components/premium';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
   BrokerStatusBadge,
@@ -130,14 +130,18 @@ export default async function BrokerPerformancePage({
         </div>
       </form>
 
-      <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 sm:gap-4">
-        <PageKpiCard label="فرص مُرسلة" value={summary.leadsSubmitted} icon={<UserPlus />} tone="brand" />
-        <PageKpiCard label="حجوزات" value={summary.reservationsCreated} icon={<BookmarkCheck />} tone="info" />
-        <PageKpiCard label="عقود موقّعة" value={summary.contractsSigned} icon={<FileText />} tone="accent" />
-        <PageKpiCard label="إجمالي المبيعات" value={formatCurrency(summary.salesGross)} icon={<Banknote />} tone="success" compact />
-        <PageKpiCard label="صافي العمولات" value={formatCurrency(summary.commissionsNet)} icon={<BadgePercent />} tone="warning" compact />
-        <PageKpiCard label="مدفوع" value={formatCurrency(summary.payoutsTotalNet)} icon={<Wallet />} tone="success" compact />
-      </div>
+      <PremiumMetricStrip
+        variant="compact"
+        cols={6}
+        metrics={[
+          { label: 'فرص مُرسلة',     value: summary.leadsSubmitted,                  icon: <UserPlus />,     tone: 'brand'   },
+          { label: 'حجوزات',         value: summary.reservationsCreated,             icon: <BookmarkCheck />, tone: 'info'    },
+          { label: 'عقود موقّعة',    value: summary.contractsSigned,                 icon: <FileText />,     tone: 'purple'  },
+          { label: 'إجمالي المبيعات', value: formatCurrency(summary.salesGross),     icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: 'صافي العمولات',  value: formatCurrency(summary.commissionsNet),  icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
+          { label: 'مدفوع',          value: formatCurrency(summary.payoutsTotalNet), icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-3">
         <Card className="p-4">

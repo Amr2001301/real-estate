@@ -117,6 +117,7 @@ export default async function PortalReservationsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي الحجوزات', value: paged?.meta.total ?? 0, icon: <BookmarkCheck />,  tone: 'brand'   },
           { label: 'قيد المراجعة',    value: pendingCount,            icon: <Clock />,          tone: 'warning' },

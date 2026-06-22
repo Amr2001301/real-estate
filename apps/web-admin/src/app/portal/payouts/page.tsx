@@ -97,6 +97,7 @@ export default async function PortalPayoutsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي الدفعات',       value: paged?.meta.total ?? 0, icon: <Wallet />,          tone: 'brand'   },
           { label: 'مدفوعة',               value: paidCount,              icon: <CircleDollarSign />, tone: 'success' },

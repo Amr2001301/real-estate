@@ -21,10 +21,10 @@ interface AlertData {
 
 type Tone = 'danger' | 'warning' | 'info';
 
-const TONE: Record<Tone, { icon: string; count: string; dot: string }> = {
-  danger:  { icon: 'bg-danger-50 text-danger-600',  count: 'text-danger-700',  dot: 'bg-danger-500'  },
-  warning: { icon: 'bg-amber-50 text-amber-600',    count: 'text-amber-700',   dot: 'bg-amber-500'   },
-  info:    { icon: 'bg-info-50 text-info-600',      count: 'text-info-700',    dot: 'bg-info-500'    },
+const TONE: Record<Tone, { icon: string; count: string }> = {
+  danger:  { icon: 'bg-danger-50 text-danger-600',  count: 'text-danger-700'  },
+  warning: { icon: 'bg-amber-50 text-amber-600',    count: 'text-amber-700'   },
+  info:    { icon: 'bg-info-50 text-info-600',       count: 'text-info-700'    },
 };
 
 interface ActionItem {
@@ -110,46 +110,46 @@ export function ActionQueue({ alerts }: { alerts: AlertData | null | undefined }
         </p>
       </div>
 
-      {/* 4-card grid — always fully rendered */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
+      {/* 4-card grid — padded gap spacing, no harsh divider lines */}
+      <div className="p-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
         {items.map((item) => {
           const isActive = item.value > 0;
           const t        = TONE[item.tone];
           return (
             <Link key={item.key} href={item.href as never} className="group block">
               <div className={cn(
-                'bg-surface h-full px-5 py-5 flex flex-col gap-3 hover:bg-canvas/60 transition-colors duration-150',
-                !isActive && 'opacity-70',
+                'flex flex-col rounded-[14px] border px-4 py-4 min-h-[96px] transition-colors duration-150',
+                isActive
+                  ? 'bg-surface border-hairline hover:bg-canvas/40 group-hover:border-slate-200'
+                  : 'bg-canvas/20 border-hairline opacity-40',
               )}>
 
-                {/* Label + icon row */}
+                {/* Top row: label + small icon */}
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[11px] font-medium text-slate-400 leading-snug">
+                  <p className={cn(
+                    'text-[12px] font-semibold leading-snug',
+                    isActive ? 'text-slate-700' : 'text-slate-400',
+                  )}>
                     {item.label}
                   </p>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {isActive && (
-                      <span className={cn('h-2 w-2 rounded-full animate-pulse shrink-0', t.dot)} />
-                    )}
-                    <div className={cn(
-                      'h-9 w-9 rounded-xl flex items-center justify-center [&_svg]:h-4 [&_svg]:w-4 shrink-0',
-                      isActive ? t.icon : 'bg-success-50 text-success-600',
-                    )}>
-                      {isActive ? item.icon : <CheckCircle2 />}
-                    </div>
+                  <div className={cn(
+                    'h-8 w-8 rounded-lg flex items-center justify-center [&_svg]:h-[14px] [&_svg]:w-[14px] shrink-0',
+                    isActive ? t.icon : 'bg-slate-100 text-slate-300',
+                  )}>
+                    {isActive ? item.icon : <CheckCircle2 />}
                   </div>
                 </div>
 
                 {/* Count */}
                 <p className={cn(
-                  'text-[30px] font-black tabular-nums leading-none',
-                  isActive ? t.count : 'text-success-600',
+                  'mt-2 text-[30px] font-black tabular-nums leading-none',
+                  isActive ? t.count : 'text-slate-300',
                 )}>
                   {item.value}
                 </p>
 
                 {/* Description */}
-                <p className="text-[11px] text-slate-400 leading-snug mt-auto">
+                <p className="mt-1 text-[11px] text-slate-400 leading-snug">
                   {isActive ? item.description : 'لا إجراءات معلقة'}
                 </p>
 

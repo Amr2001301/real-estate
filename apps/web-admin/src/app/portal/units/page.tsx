@@ -99,6 +99,7 @@ export default async function PortalUnitsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي الوحدات', value: paged?.meta.total ?? 0, icon: <Home />,          tone: 'brand'   },
           { label: 'متاحة للبيع',    value: availableCount,         icon: <CheckCircle2 />,  tone: 'success' },

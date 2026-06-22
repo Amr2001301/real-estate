@@ -131,6 +131,7 @@ export default async function PortalVisitsPage({
       )}
 
       <PremiumMetricStrip
+        variant="compact"
         metrics={[
           { label: 'إجمالي الطلبات',  value: paged?.meta.total ?? 0, icon: <CalendarClock />, tone: 'brand'   },
           { label: 'بانتظار الجدولة', value: pendingCount,            icon: <Clock />,          tone: 'warning' },

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PageKpiCard } from '@/components/ui/page-kpi-card';
+import { PremiumMetricStrip } from '@/components/premium';
 import { cn } from '@/lib/cn';
 import { ProjectCard } from '@/components/broker/project-card';
 
@@ -110,26 +110,15 @@ export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
     <div className="flex flex-col gap-4">
 
       {/* ── KPI strip ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        <PageKpiCard
-          label="إجمالي المشاريع"
-          value={totalCount}
-          icon={<Building2 />}
-          tone="brand"
-        />
-        <PageKpiCard
-          label="منشور"
-          value={publishedCount}
-          icon={<CheckCircle2 />}
-          tone="success"
-        />
-        <PageKpiCard
-          label="جاهز للتسويق"
-          value={readyCount}
-          icon={<Star />}
-          tone="info"
-        />
-      </div>
+      <PremiumMetricStrip
+        variant="compact"
+        cols={3}
+        metrics={[
+          { label: 'إجمالي المشاريع', value: totalCount,     icon: <Building2 />,    tone: 'brand'   },
+          { label: 'منشور',           value: publishedCount, icon: <CheckCircle2 />, tone: 'success' },
+          { label: 'جاهز للتسويق',   value: readyCount,     icon: <Star />,         tone: 'info'    },
+        ]}
+      />
 
       {/* ── Filter bar ────────────────────────────────────────────────────── */}
       {/* Mirrors the portal form pattern (Leads, Reservations, Contracts).   */}

@@ -285,14 +285,16 @@ function RevenueCommandStrip({
           <div
             key={tile.label}
             className={cn(
-              'flex flex-col px-5 py-5 min-h-[152px]',
-              tile.featured ? 'bg-brand-50/40' : 'bg-surface',
+              'flex flex-col px-5 py-5 min-h-[124px]',
+              tile.featured
+                ? 'bg-brand-50/40 border-s-[3px] border-brand-400/70'
+                : 'bg-surface',
             )}
           >
             {/* ① label (RTL start = right) + icon (RTL end = left) */}
             <div className="flex items-start justify-between gap-2">
               <span className={cn(
-                'inline-flex h-8 w-8 items-center justify-center rounded-xl shrink-0 [&_svg]:h-[15px] [&_svg]:w-[15px]',
+                'inline-flex h-11 w-11 items-center justify-center rounded-xl shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px]',
                 tile.iconCls,
               )}>
                 {tile.icon}
@@ -304,7 +306,7 @@ function RevenueCommandStrip({
 
             {/* ② hero value — sole dominant figure */}
             <p className={cn(
-              'mt-4 tabular-nums leading-none tracking-tight font-black',
+              'mt-3 tabular-nums leading-none tracking-tight font-black',
               tile.featured ? 'text-[28px]' : 'text-[26px]',
               tile.valueCls,
             )}>
@@ -314,16 +316,12 @@ function RevenueCommandStrip({
             {/* ③ context / unit line */}
             <p className="mt-2 text-[11px] text-slate-400 leading-snug">{tile.sub}</p>
 
-            {/* ④ trend — always rendered for equal card heights */}
-            <div className="mt-auto pt-3">
-              {tile.delta ? (
-                <p className={cn('text-[10px] font-semibold leading-none', tile.deltaCls)}>
-                  {tile.delta}
-                </p>
-              ) : (
-                <p className="text-[10px] text-slate-300 leading-none select-none">—</p>
-              )}
-            </div>
+            {/* ④ trend — only rendered when data exists, no placeholder */}
+            {tile.delta && (
+              <p className={cn('mt-auto pt-2 text-[10px] font-semibold leading-none', tile.deltaCls)}>
+                {tile.delta}
+              </p>
+            )}
           </div>
         ))}
       </div>
