@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Building2, CheckCircle2, Star } from 'lucide-react';
+import { Search, Building2, CheckCircle2, Star, Sparkles } from 'lucide-react';
 import type { PortalProject } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { Card } from '@/components/ui/card';
@@ -92,6 +92,7 @@ export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
   const totalCount     = projects.length;
   const publishedCount = projects.filter((p) => p.project.status === 'PUBLISHED').length;
   const readyCount     = projects.filter((p) => p.access.active).length;
+  const featuredCount  = projects.filter((p) => p.project.featured).length;
 
   // ── No projects from API ───────────────────────────────────────────────────
   if (totalCount === 0) {
@@ -112,11 +113,12 @@ export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
       {/* ── KPI strip ─────────────────────────────────────────────────────── */}
       <PremiumMetricStrip
         variant="compact"
-        cols={3}
+        cols={4}
         metrics={[
           { label: 'إجمالي المشاريع', value: totalCount,     icon: <Building2 />,    tone: 'brand'   },
           { label: 'منشور',           value: publishedCount, icon: <CheckCircle2 />, tone: 'success' },
           { label: 'جاهز للتسويق',   value: readyCount,     icon: <Star />,         tone: 'info'    },
+          { label: 'مميز',            value: featuredCount,  icon: <Sparkles />,     tone: 'warning' },
         ]}
       />
 
