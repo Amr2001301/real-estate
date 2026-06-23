@@ -14,6 +14,7 @@ import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
 import { AccountCard, type AccountCardAccent } from '@/components/account/AccountCard';
+import { UnitFilter, type UnitOption } from '@/components/account/UnitFilter';
 import { cn } from '@/lib/cn';
 
 export const metadata = buildMetadata({
@@ -107,6 +108,25 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     return (query ? `${routes.accountInstallments}?${query}` : routes.accountInstallments) as Route;
   };
 
+  // Derive unit info from loaded installments (dedup by contractId).
+  // Falls back to contractNumber when unit is missing from this batch.
+  const contractUnitMap = new Map<string, { code: string; type: string } | null>();
+  for (const inst of installments) {
+    const c = inst.plan?.contract;
+    if (c && !contractUnitMap.has(c.id)) {
+      contractUnitMap.set(c.id, c.unit ? { code: c.unit.code, type: c.unit.type } : null);
+    }
+  }
+  const unitOptions: UnitOption[] = contracts.map((c) => {
+    const unit = contractUnitMap.get(c.id) ?? null;
+    return {
+      contractId: c.id,
+      label: unit
+        ? `${unit.code} — ${unitTypeLabel(unit.type)}`
+        : (c.contractNumber ?? `#${c.id.slice(0, 6)}`),
+    };
+  });
+
   // Nothing on the whole schedule (not just an empty filter result).
   const scheduleEmpty = (summary?.counts.total ?? installments.length) === 0;
 
@@ -129,51 +149,54 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
         <>
           {summary && <SummaryCards summary={summary} />}
 
-          {/* Unified filter control bar — contracts (start) ⟷ status segmented (end) */}
-          <div className="flex flex-col items-stretch gap-4 rounded-xl border border-hairline bg-surface-soft/60 p-3 md:flex-row md:items-center md:justify-between">
-            {contracts.length > 1 ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-bold text-ink-muted">العقد:</span>
-                <FilterChip href={buildHref({ contractId: undefined })} active={!activeContractId}>
-                  كل العقود
-                </FilterChip>
-                {contracts.map((c) => (
-                  <FilterChip key={c.id} href={buildHref({ contractId: c.id })} active={activeContractId === c.id}>
-                    {c.contractNumber ?? `#${c.id.slice(0, 6)}`}
-                  </FilterChip>
-                ))}
-              </div>
-            ) : (
-              <span aria-hidden />
-            )}
+          {/* Unified filter panel */}
+          <div className="rounded-2xl border border-hairline bg-surface-soft/50 px-5 py-3 shadow-[0_1px_4px_rgb(15,30,51,0.04)]">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-5">
 
-            {/* Status segmented control */}
-            <div className="flex max-w-full items-center gap-1 overflow-x-auto rounded-lg border border-hairline/60 bg-surface p-1">
-              {FILTERS.map((f) => {
-                const count =
-                  f.key === 'all'
-                    ? summary?.counts.total
-                    : f.key === 'PAID'
-                      ? summary?.counts.paid
-                      : f.key === 'PENDING'
-                        ? summary?.counts.pending
-                        : summary?.counts.overdue;
-                const active = activeFilterKey === f.key;
-                return (
-                  <Link
-                    key={f.key}
-                    href={buildHref({ status: f.status })}
-                    aria-current={active ? 'true' : undefined}
-                    className={cn(
-                      'shrink-0 whitespace-nowrap rounded-md px-4 py-1.5 text-xs font-bold transition-all',
-                      active ? 'bg-navy text-white shadow-sm' : 'text-ink-muted hover:text-ink-strong',
-                    )}
-                  >
-                    {f.label}
-                    {typeof count === 'number' && <span className="ms-1 tabular-nums opacity-70">({count})</span>}
-                  </Link>
-                );
-              })}
+              {/* ── Right group: unit dropdown ────────────────────────────────── */}
+              {contracts.length > 1 ? (
+                <UnitFilter
+                  options={unitOptions}
+                  activeContractId={activeContractId}
+                  activeStatus={activeStatus}
+                />
+              ) : (
+                <span aria-hidden />
+              )}
+
+              {/* ── Left group: payment-status segmented control ──────────────── */}
+              <div className="flex shrink-0 self-start overflow-x-auto rounded-xl border border-hairline/60 bg-surface p-[3px] shadow-[inset_0_1px_2px_rgb(15,30,51,0.04)] lg:self-auto">
+                {FILTERS.map((f) => {
+                  const count =
+                    f.key === 'all'
+                      ? summary?.counts.total
+                      : f.key === 'PAID'
+                        ? summary?.counts.paid
+                        : f.key === 'PENDING'
+                          ? summary?.counts.pending
+                          : summary?.counts.overdue;
+                  const active = activeFilterKey === f.key;
+                  return (
+                    <Link
+                      key={f.key}
+                      href={buildHref({ status: f.status })}
+                      aria-current={active ? 'true' : undefined}
+                      className={cn(
+                        'inline-flex h-[calc(2.25rem-6px)] shrink-0 items-center whitespace-nowrap rounded-[0.5rem] px-3.5 text-xs font-bold transition-all duration-200',
+                        active
+                          ? 'bg-navy text-white shadow-sm'
+                          : 'text-ink-muted hover:text-ink-strong',
+                      )}
+                    >
+                      {f.label}
+                      {typeof count === 'number' && (
+                        <span className="ms-1 tabular-nums opacity-70">({count})</span>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+
             </div>
           </div>
 
@@ -210,46 +233,55 @@ function Header() {
   );
 }
 
+/**
+ * Format an amount string as whole SAR: strips sub-riyal decimal noise so that
+ * e.g. "13439000.08" → "١٣،٤٣٩،٠٠٠" instead of the 12-char "١٣،٤٣٩،٠٠٠،٠٨".
+ */
+const AMT_FMT = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
+function fmtAmt(s: string | null | undefined): string {
+  if (!s) return '—';
+  const n = Number(s);
+  if (!Number.isFinite(n)) return '—';
+  return AMT_FMT.format(Math.round(n));
+}
+
 /** Summary cards — warm-luxe surfaces (NOT admin KPI tiles). Totals describe the
  *  installment schedule only; the note clarifies booking amount is separate. */
 function SummaryCards({ summary }: { summary: NonNullable<MeInstallmentsResponse['summary']> }) {
   const hasOverdue = Number(summary.overdue) > 0;
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryItem
           icon={CheckCircle2}
-          chip="bg-emerald-50 text-emerald-600"
+          chip="bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/60"
           label="إجمالي المدفوع من الأقساط"
-          value={formatPrice(summary.totalPaid)}
+          amount={summary.totalPaid}
           sub={`${summary.counts.paid} قسط مدفوع`}
         />
         <SummaryItem
           icon={Wallet}
-          chip="bg-blue-50 text-blue-600"
+          chip="bg-blue-50 text-blue-600 ring-1 ring-blue-200/60"
           label="المتبقي من الأقساط"
-          value={formatPrice(summary.remaining)}
+          amount={summary.remaining}
           sub={`${summary.counts.pending + summary.counts.overdue} قسط غير مدفوع`}
         />
         <SummaryItem
           icon={AlertCircle}
-          chip="bg-rose-50 text-rose-600"
+          chip="bg-rose-50 text-rose-600 ring-1 ring-rose-200/60"
           pulse={hasOverdue}
           label="المتأخرات"
-          value={formatPrice(summary.overdue)}
+          amount={summary.overdue}
           sub={`${summary.counts.overdue} قسط متأخر`}
         />
         <SummaryItem
           icon={CalendarClock}
-          chip="bg-amber-50 text-amber-600"
+          chip="bg-amber-50 text-amber-600 ring-1 ring-amber-200/60"
           label="القسط القادم"
-          value={summary.nextDue ? formatPrice(summary.nextDue.amount) : '—'}
+          amount={summary.nextDue?.amount ?? null}
           sub={summary.nextDue ? `الاستحقاق: ${formatDate(summary.nextDue.dueDate)}` : 'لا يوجد قسط مستحق'}
         />
       </div>
-      <p className="text-[11px] text-ink-muted">
-        * هذه الإجماليات تخص جدول الأقساط فقط ولا تتضمن مبلغ الحجز — يظهر مبلغ الحجز في صفحتَي الحجوزات والدفعات.
-      </p>
     </div>
   );
 }
@@ -258,49 +290,67 @@ function SummaryItem({
   icon: Icon,
   chip,
   label,
-  value,
+  amount,
   sub,
   pulse,
 }: {
   icon: typeof CheckCircle2;
   chip: string;
   label: string;
-  value: string;
+  amount: string | null;
   sub?: string;
   pulse?: boolean;
 }) {
+  const formatted = fmtAmt(amount);
+  const isBlank = formatted === '—';
+
+  // Scale font down for long Arabic-numeral strings to prevent overflow.
+  // After decimal-strip, worst case is ~10 chars (e.g. "١٣،٤٣٩،٠٠٠").
+  const valCls = cn(
+    'font-display font-black leading-none tracking-tight text-ink-strong',
+    !isBlank && formatted.length > 9 ? 'text-[1.25rem]'
+    : !isBlank && formatted.length > 6 ? 'text-[1.5rem]'
+    : 'text-[1.75rem]',
+  );
+
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-hairline bg-surface p-5 text-right shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
-      <div className="min-w-0">
-        <div className="mb-1 text-[11px] font-bold text-ink-muted">{label}</div>
-        <div className="truncate font-mono text-lg font-black tracking-tight text-ink-strong" dir="auto">
-          {value}
+    // dir="rtl" explicit so the card is self-contained regardless of parent context
+    <div
+      className="flex flex-col rounded-2xl border border-hairline bg-surface p-5 shadow-[0_1px_6px_rgb(15,30,51,0.05)]"
+      dir="rtl"
+    >
+      {/* Top row: icon badge (RTL start = right) + label/subtitle to its left */}
+      <div className="flex items-center gap-3">
+        <span
+          className={cn(
+            'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+            chip,
+            pulse && 'animate-pulse',
+          )}
+        >
+          <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1 text-start">
+          <div className="text-[13px] font-bold leading-snug text-ink-strong">{label}</div>
+          {sub && <div className="mt-px text-[11px] font-medium text-ink-muted/65">{sub}</div>}
         </div>
-        {sub && <div className="mt-1 text-[11px] text-ink-muted">{sub}</div>}
       </div>
-      <span className={cn('inline-flex shrink-0 items-center justify-center rounded-xl p-3', chip, pulse && 'animate-pulse')}>
-        <Icon className="h-5 w-5" aria-hidden />
-      </span>
+
+      {/* Value — adaptive size prevents overflow; split spans prevent bidi reordering */}
+      <div className="mt-[14px] text-start">
+        {isBlank ? (
+          <span className="font-display text-[1.75rem] font-black leading-none text-ink-muted">—</span>
+        ) : (
+          <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap" dir="rtl">
+            <span className={valCls}>{formatted}</span>
+            <span className="text-[0.8125rem] font-bold text-ink-muted/60">ر.س</span>
+          </span>
+        )}
+      </div>
     </div>
   );
 }
 
-function FilterChip({ href, active, children }: { href: Route; active: boolean; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      aria-current={active ? 'true' : undefined}
-      className={cn(
-        'inline-flex items-center rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
-        active
-          ? 'bg-navy text-white shadow-sm'
-          : 'border border-hairline bg-surface text-ink-strong hover:border-gold-300 hover:text-gold-600',
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
 
 function InstallmentRow({ installment }: { installment: MeInstallment }) {
   const contract = installment.plan?.contract ?? null;

@@ -109,7 +109,7 @@ function HeroMetric({ icon: Icon, label, value, currency, hint, href, chipCls, g
   return (
     <Link
       href={href as Route}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface px-5 py-[1.125rem] shadow-[0_1px_6px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-gold-300/70 hover:shadow-[0_0_0_2px_rgba(200,162,75,0.11),0_10px_28px_-6px_rgba(15,30,51,0.16)]"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface p-5 shadow-[0_1px_6px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-gold-300/70 hover:shadow-[0_0_0_2px_rgba(200,162,75,0.11),0_10px_28px_-6px_rgba(15,30,51,0.16)]"
     >
       {/* hover glow overlay */}
       <span
@@ -120,33 +120,34 @@ function HeroMetric({ icon: Icon, label, value, currency, hint, href, chipCls, g
         aria-hidden
       />
 
-      {/* Top row: icon badge + title/subtitle — visually one connected block */}
-      <div className="relative flex items-start gap-3">
+      {/* Top row: icon badge + label/subtitle — one connected visual block */}
+      <div className="relative flex items-center gap-3">
         <span
           className={cn(
-            'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 transition-all duration-300 group-hover:scale-105',
+            'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 transition-all duration-300 group-hover:scale-105',
             chipCls,
           )}
         >
-          <Icon className="h-[1.05rem] w-[1.05rem]" aria-hidden />
+          <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
         </span>
-        <div className="min-w-0 flex-1 pt-0.5">
-          <div className="text-[14px] font-bold leading-tight text-ink-strong">{label}</div>
-          <div className="mt-0.5 text-[11px] font-medium text-ink-muted/65">{hint}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[13.5px] font-bold leading-snug text-ink-strong">{label}</div>
+          <div className="mt-px text-[11px] font-medium text-ink-muted/65">{hint}</div>
         </div>
       </div>
 
-      {/* Value — dominant metric, sits close below the header row */}
-      <div className="relative mt-4">
+      {/* Value — prominent, sits 14px below the label row */}
+      <div className="relative mt-[14px]">
         {currency ? (
-          <div className="flex items-baseline gap-1.5" dir="rtl">
-            <span className="font-display text-[1.875rem] font-black leading-none tracking-tight text-ink-strong">
+          /* Money: separate spans + whitespace-nowrap prevents clipping */
+          <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap" dir="rtl">
+            <span className="font-display text-[1.625rem] font-black leading-none tracking-tight text-ink-strong">
               {value}
             </span>
-            <span className="text-[0.875rem] font-bold text-ink-muted/70">{currency}</span>
-          </div>
+            <span className="text-[0.8125rem] font-bold text-ink-muted/60">{currency}</span>
+          </span>
         ) : (
-          <div className="font-display text-[1.875rem] font-black leading-none tracking-tight text-ink-strong">
+          <div className="font-display text-[2rem] font-black leading-none tracking-tight text-ink-strong">
             {value}
           </div>
         )}
