@@ -1,75 +1,93 @@
 import { routes } from '@/lib/routes';
+import { siteUrl } from '@/lib/seo';
 import { Container } from '@/components/ui/Container';
-import { Badge } from '@/components/ui/Badge';
-import { ButtonLink } from '@/components/ui/Button';
-import { Reveal } from '@/components/motion/Reveal';
+import { QrCode } from './QrCode';
 
 export function MobileAppPromo() {
+  const appUrl = siteUrl(routes.app);
+
   return (
-    <section className="py-10 sm:py-12 lg:py-14">
+    /*
+     * pt-24 (96px) > phone top-overflow (~90px) so the phone stays
+     * within the section's whitespace and never clips into the nav.
+     */
+    <section className="relative pb-8 pt-24">
       <Container>
         {/*
-         * Bleed wrapper: py-20 (80px) creates overflow space above and below.
-         * The card background starts at top-20, so the phone — which spans
-         * inset-y-0 (full wrapper height) — bleeds 80px above the card top.
-         * Nothing has overflow:hidden, so nothing clips the phone.
+         * Three clear zones:
+         *   left 0–22%  → QR card (inside pale-blue area)
+         *   left 22–50% → phone visual (absolute, overflows top)
+         *   left 50–100%→ text (z-30, no overlap possible)
+         *
+         * Card height is locked by min-h-[290px].
+         * Phone is absolute → cannot stretch the card.
          */}
-        <div className="relative py-20">
+        <div className="relative min-h-[290px] overflow-visible rounded-[28px] border border-[#dbe5ec] bg-white shadow-[0_4px_32px_-8px_rgba(15,30,51,0.08)]">
 
-          {/* Card background — inset so phone overflows above it */}
+          {/* Soft pale-blue radial glow — fades naturally into white, no hard edge */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 top-20 rounded-[2rem] border border-[#e8ddc8] bg-[#fdf8f0] shadow-xl"
+            className="absolute inset-0 rounded-[28px]"
+            style={{
+              background:
+                'radial-gradient(circle at 22% 50%, rgba(220,240,250,0.95) 0%, rgba(220,240,250,0.70) 28%, rgba(255,255,255,0) 56%)',
+            }}
           />
 
-          {/* ── Text column — right 56% on desktop ── */}
-          <div className="relative z-10 flex w-full flex-col items-end px-8 pb-12 pt-8 text-right sm:px-12 lg:ml-[44%] lg:w-auto lg:pb-16 lg:pl-4 lg:pr-14 lg:pt-28">
-            <Reveal>
-              <Badge tone="gold">تجربة رقمية متكاملة</Badge>
-
-              <h2 className="mt-5 text-4xl font-bold leading-[1.2] text-ink-strong sm:text-5xl lg:text-[3rem]">
-                كل خطواتك العقارية
-                <br />
-                <span className="relative inline-block">
-                  في مكان واحد
-                  <span
-                    aria-hidden
-                    className="absolute inset-x-0 -bottom-1.5 h-3 rounded-full bg-gold-300/75"
-                  />
-                </span>
-              </h2>
-
-              <p className="mt-5 max-w-sm text-[17px] leading-relaxed text-ink-muted">
-                تصفّح المشاريع والوحدات بسهولة، قارن الخيارات المناسبة، احجز زيارة، وابدأ رحلتك العقارية بثقة مع تجربة رقمية واضحة وسريعة.
-              </p>
-
-              <div className="mt-8 flex flex-wrap items-center justify-end gap-4">
-                <ButtonLink href={routes.units} variant="primary" size="lg">
-                  ابدأ التصفّح
-                </ButtonLink>
-                <ButtonLink href={routes.contact} variant="outline" size="lg">
-                  تحدث مع مستشار
-                </ButtonLink>
+          {/* ── Zone 1: QR card ── physically far left, vertically centered */}
+          <div className="absolute left-[60px] top-1/2 z-10 hidden -translate-y-1/2 lg:block">
+            <div className="w-[126px] rounded-2xl border border-[#dbe5ec] bg-white p-3 text-center shadow-sm">
+              <div className="flex items-center justify-center rounded-xl bg-white p-1 ring-1 ring-[#dbe5ec]">
+                <QrCode value={appUrl} size={86} className="h-[86px] w-[86px]" />
               </div>
-            </Reveal>
+              <p className="mt-2 text-[11px] font-medium leading-snug text-slate-500">
+                امسح الرمز
+                <br />
+                لتحميل التطبيق
+              </p>
+            </div>
           </div>
 
-          {/* ── Phone — desktop: absolute, spans bleed zone, overflows above card ── */}
-          <div className="pointer-events-none absolute inset-y-0 left-[3%] hidden w-[43%] items-center justify-center lg:flex">
+          {/* ── Zone 2: Phone — between QR and text, overflows card top ── */}
+          {/*
+           * center at left-[36%], -translate-x-1/2 → phone horizontal center = 36% of card
+           * -translate-y-[56%] → rises 56% × 420px = 235px above card center (145px) = 90px above card top
+           * phone right edge ≈ 36% + ~11% (half PNG width) = ~47% → safely left of text zone (50%+)
+           */}
+          <img
+            src="/mobile-transparent.png"
+            alt="تطبيق ديفورا العقاري"
+            className="absolute left-[36%] top-[48%] z-20 hidden h-[400px] w-auto -translate-x-1/2 -translate-y-[58%] object-contain drop-shadow-[0_20px_56px_rgba(15,30,51,0.18)] lg:block lg:h-[420px]"
+            style={{ background: 'transparent' }}
+          />
+
+          {/* ── Zone 3: Text — right 50%, z-30 guarantees no overlap ── */}
+          <div className="relative z-30 ml-auto flex min-h-[290px] w-full flex-col items-end justify-center px-8 py-10 text-right lg:w-[50%] lg:py-0 lg:pl-6 lg:pr-16">
+
+            <h2 className="text-2xl font-bold leading-[1.3] text-ink-strong sm:text-3xl lg:text-[1.9rem]">
+              احصل على أفضل تجربة
+              <br />
+              <span className="relative inline-block">
+                حمل تطبيق ديفورا الآن!
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 -bottom-1 h-2 rounded-full bg-gold-300/70"
+                />
+              </span>
+            </h2>
+
+            <p className="mt-3 max-w-[360px] text-[14.5px] leading-relaxed text-ink-muted">
+              اجعل تجربة العقارات أسهل وأسرع مع قوائم دقيقة، بحث ذكي، ومميزات لإدارة ممتلكاتك. انطلق الآن!
+            </p>
+
+          </div>
+
+          {/* ── Mobile: phone in-flow below text ── */}
+          <div className="flex justify-center pb-8 pt-2 lg:hidden">
             <img
               src="/mobile-transparent.png"
               alt="تطبيق ديفورا العقاري"
-              className="max-h-[600px] w-auto object-contain drop-shadow-[0_32px_72px_rgba(15,30,51,0.22)]"
-              style={{ background: 'transparent' }}
-            />
-          </div>
-
-          {/* ── Phone — mobile/tablet: in-flow below text ── */}
-          <div className="flex justify-center pb-6 pt-0 lg:hidden">
-            <img
-              src="/mobile-transparent.png"
-              alt="تطبيق ديفورا العقاري"
-              className="w-[240px] object-contain sm:w-[280px]"
+              className="w-[200px] object-contain sm:w-[240px]"
               style={{ background: 'transparent' }}
             />
           </div>
