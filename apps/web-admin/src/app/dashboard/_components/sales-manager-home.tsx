@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
-import { formatCurrency, formatCompact, formatDate, formatDateTime, tx } from '@/lib/format';
+import { formatCompact, formatDate, formatDateTime, tx } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { Button } from '@/components/ui/button';
@@ -84,12 +84,6 @@ function formatPeriod(period: string): string {
   const [year, monthStr] = period.split('-');
   const m = parseInt(monthStr ?? '1', 10);
   return `${MONTHS[m - 1] ?? ''} ${year ?? ''}`.trim();
-}
-
-function pctTableDisplay(value: number | null): string {
-  if (value === null) return '—';
-  if (value > 999)    return '+999%';
-  return `${value}%`;
 }
 
 function daysUntil(dateStr: string): number {
@@ -262,6 +256,7 @@ export async function SalesManagerDashboard() {
 
       {/* ── Metric strip — balanced 4+4 grid ─────────────────────────────── */}
       <PremiumMetricStrip
+        variant="compact"
         cols={4}
         metrics={[
           // ── Row 1 ────────────────────────────────────────────────────────
@@ -331,27 +326,26 @@ export async function SalesManagerDashboard() {
         ]}
       />
 
-      {/* ── Pipeline ──────────────────────────────────────────────────────── */}
-      {!leadsRes.error && pipelineMeaningful && (
-        <div className="space-y-2.5">
-          <SectionLabel>توزيع مسار المبيعات</SectionLabel>
-          <PipelineCard stageCount={pipelineStageCount} total={pipelineTotal} />
+      {/* ── Main 2-col: table (primary) + sidebar (pipeline + alerts) ───────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
+        {/* Primary col — team performance */}
+        <div className="lg:col-span-2">
+          <TeamPerformanceTable
+            perfError={perfRes.error}
+            repRows={repRows}
+            period={period}
+          />
         </div>
-      )}
 
-      {/* ── Alerts ────────────────────────────────────────────────────────── */}
-      {managerAlerts.length > 0 && (
-        <AlertStrip alerts={managerAlerts} />
-      )}
-
-      {/* ── Team Performance table ────────────────────────────────────────── */}
-      <div className="space-y-2.5">
-        <SectionLabel>أداء الفريق</SectionLabel>
-        <TeamPerformanceTable
-          perfError={perfRes.error}
-          repRows={repRows}
-          period={period}
-        />
+        {/* Sidebar — pipeline + alerts */}
+        <div className="space-y-4">
+          {!leadsRes.error && (
+            <PipelineCard stageCount={pipelineStageCount} total={pipelineTotal} />
+          )}
+          {managerAlerts.length > 0 && (
+            <AlertStrip alerts={managerAlerts} />
+          )}
+        </div>
       </div>
 
       {/* ── Bottom content cards ──────────────────────────────────────────── */}
@@ -638,17 +632,25 @@ function TeamPerformanceTable({
         <EmptyState icon={<Users />} title="لا يوجد مندوبو مبيعات بعد" className="py-8" />
       ) : (
         <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm min-w-[680px]">
-            <thead className="bg-canvas/50 text-2xs font-bold uppercase tracking-wider text-slate-400 border-b border-hairline">
+          <table className="w-full text-sm min-w-[620px]">
+            <thead className="bg-canvas/50 border-b border-hairline">
               <tr>
-                <th className="px-5 py-3 text-start">المندوب</th>
-                <th className="px-3 py-3 text-start whitespace-nowrap">الحالة</th>
-                <th className="px-3 py-3 text-end whitespace-nowrap">الفرص</th>
-                <th className="px-3 py-3 text-end whitespace-nowrap">الزيارات</th>
-                <th className="px-3 py-3 text-end whitespace-nowrap">الحجوزات</th>
-                <th className="px-3 py-3 text-end whitespace-nowrap">عقود</th>
-                <th className="px-4 py-3 text-end whitespace-nowrap">القيمة المحققة</th>
-                <th className="px-4 py-3 text-start whitespace-nowrap">تحقيق الهدف</th>
+                <th className="px-5 py-3 text-start text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">المندوب</th>
+                <th className="px-3 py-3 text-start text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">الحالة</th>
+                <th className="px-3 py-3 text-end text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-brand-400 inline-block" />فرص</span>
+                </th>
+                <th className="px-3 py-3 text-end text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-sky-400 inline-block" />زيارات</span>
+                </th>
+                <th className="px-3 py-3 text-end text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-violet-400 inline-block" />حجوزات</span>
+                </th>
+                <th className="px-3 py-3 text-end text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400 inline-block" />عقود</span>
+                </th>
+                <th className="px-4 py-3 text-end text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">المحقق</th>
+                <th className="px-4 py-3 text-start text-[11px] font-bold text-slate-500 tracking-tight whitespace-nowrap">الإنجاز</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
@@ -686,30 +688,25 @@ function TeamPerformanceTable({
                     <td className="px-3 py-3 tabular-nums text-slate-600 text-end font-medium">{r.visitsCount}</td>
                     <td className="px-3 py-3 tabular-nums text-slate-600 text-end font-medium">{r.reservationsCount}</td>
                     <td className="px-3 py-3 tabular-nums text-emerald-700 text-end font-bold">{r.signedContractsCount}</td>
-                    <td className="px-4 py-3 tabular-nums font-bold text-slate-900 whitespace-nowrap text-end">
+                    <td className="px-4 py-3 tabular-nums font-bold text-slate-900 whitespace-nowrap text-end text-[13px]">
                       {r.achievedAmount > 0 ? (
-                        formatCurrency(r.achievedAmount)
+                        formatCompact(r.achievedAmount)
                       ) : (
                         <span className="text-slate-400 font-normal">—</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex flex-col gap-1.5 min-w-[72px]">
-                        <div className="flex items-center gap-1.5">
+                      {r.targetAmountPercent !== null ? (
+                        <div className="flex flex-col gap-1 min-w-[80px]">
                           <span className={cn(
-                            'text-xs font-bold tabular-nums',
-                            r.targetAmountPercent !== null && r.targetAmountPercent >= 80 ? 'text-emerald-700'
-                            : r.targetAmountPercent !== null && r.targetAmountPercent >= 50 ? 'text-amber-600'
+                            'text-[18px] font-black tabular-nums leading-none',
+                            r.targetAmountPercent >= 80 ? 'text-emerald-700'
+                            : r.targetAmountPercent >= 50 ? 'text-amber-600'
                             : 'text-slate-500',
                           )}>
-                            {pctTableDisplay(r.targetAmountPercent)}
+                            {Math.round(r.targetAmountPercent)}%
                           </span>
-                          {r.targetAmountPercent !== null && r.targetAmountPercent > 100 && (
-                            <span className="text-2xs text-emerald-600 font-bold">↑</span>
-                          )}
-                        </div>
-                        {r.targetAmountPercent !== null && (
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
                             <div
                               className={cn(
                                 'h-full rounded-full',
@@ -720,8 +717,10 @@ function TeamPerformanceTable({
                               style={{ width: `${Math.min(r.targetAmountPercent, 100)}%` }}
                             />
                           </div>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <span className="text-2xs text-slate-300 font-medium">لا هدف</span>
+                      )}
                     </td>
                   </tr>
                 );
