@@ -326,27 +326,26 @@ export async function SalesManagerDashboard() {
         ]}
       />
 
-      {/* ── Main 2-col: table (primary) + sidebar (pipeline + alerts) ───────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
-        {/* Primary col — team performance */}
-        <div className="lg:col-span-2">
-          <TeamPerformanceTable
-            perfError={perfRes.error}
-            repRows={repRows}
-            period={period}
-          />
-        </div>
+      {/* ── Team Performance — full width ────────────────────────────────────── */}
+      <TeamPerformanceTable
+        perfError={perfRes.error}
+        repRows={repRows}
+        period={period}
+      />
 
-        {/* Sidebar — pipeline + alerts */}
-        <div className="space-y-4">
+      {/* ── Pipeline + Alerts — side by side ──────────────────────────────── */}
+      {(!leadsRes.error || managerAlerts.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
           {!leadsRes.error && (
-            <PipelineCard stageCount={pipelineStageCount} total={pipelineTotal} />
+            <div className={managerAlerts.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3'}>
+              <PipelineCard stageCount={pipelineStageCount} total={pipelineTotal} />
+            </div>
           )}
           {managerAlerts.length > 0 && (
-            <AlertStrip alerts={managerAlerts} />
+            <AlertCard alerts={managerAlerts} />
           )}
         </div>
-      </div>
+      )}
 
       {/* ── Bottom content cards ──────────────────────────────────────────── */}
       {bottomCount > 0 && (
@@ -801,48 +800,55 @@ function PipelineCard({
   );
 }
 
-// ── Alert Strip ───────────────────────────────────────────────────────────────
+// ── Alert Card ────────────────────────────────────────────────────────────────
 
-function AlertStrip({ alerts }: { alerts: ManagerAlert[] }) {
+function AlertCard({ alerts }: { alerts: ManagerAlert[] }) {
   const chipCls: Record<ManagerAlert['tone'], string> = {
-    warning: 'bg-amber-100 text-amber-800',
-    danger:  'bg-red-100 text-red-800',
-    info:    'bg-brand-100 text-brand-800',
+    warning: 'bg-amber-100 text-amber-800 border border-amber-200',
+    danger:  'bg-red-100   text-red-800   border border-red-200',
+    info:    'bg-brand-100 text-brand-800 border border-brand-200',
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-amber-100 bg-amber-50/60 px-5 py-3">
-      <div className="flex items-center gap-1.5 shrink-0">
-        <div className="relative shrink-0">
-          <Bell className="h-4 w-4 text-amber-600" />
-          <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
+    <div className="bg-surface border border-amber-100 rounded-[20px] shadow-soft overflow-hidden">
+      <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-amber-100 bg-amber-50/50">
+        <div className="flex items-center gap-2">
+          <div className="relative h-7 w-7 rounded-lg bg-amber-50 ring-1 ring-amber-200 flex items-center justify-center shrink-0">
+            <Bell className="h-3.5 w-3.5 text-amber-600" />
+            <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-amber-800 leading-tight">تنبيهات الفريق</h3>
+            <p className="text-2xs text-amber-600 mt-0.5">{alerts.length} بنود تحتاج مراجعة</p>
+          </div>
         </div>
-        <span className="text-xs font-bold text-amber-800">تنبيهات الفريق</span>
-        <span className="inline-flex items-center justify-center h-4 min-w-4 rounded-full bg-amber-200 text-amber-800 text-2xs font-black px-1 tabular-nums">
+        <span className="inline-flex items-center justify-center h-6 min-w-6 rounded-full bg-amber-200 text-amber-800 text-xs font-black px-2 tabular-nums">
           {alerts.length}
         </span>
       </div>
-      <span className="text-amber-200 select-none shrink-0">|</span>
-      {alerts.map((alert, i) => (
-        <span key={i} className="flex items-center gap-1.5 flex-wrap">
-          {i > 0 && <span className="text-amber-300 shrink-0">·</span>}
-          <span className={cn('inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold', chipCls[alert.tone])}>
-            {alert.count !== undefined && (
-              <span className="tabular-nums font-black">{alert.count}</span>
-            )}
-            {alert.label}
-          </span>
-          <span className="text-2xs text-amber-700 truncate max-w-xs">{alert.desc}</span>
-          {alert.href && (
-            <Link
-              href={alert.href as never}
-              className="text-2xs font-bold text-brand-700 hover:text-brand-800 transition-colors shrink-0"
-            >
-              فتح
-            </Link>
-          )}
-        </span>
-      ))}
+      <div className="divide-y divide-slate-50">
+        {alerts.map((alert, i) => (
+          <div key={i} className="flex items-start gap-3 px-5 py-3.5">
+            <span className={cn('inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-bold shrink-0 mt-0.5', chipCls[alert.tone])}>
+              {alert.count !== undefined && (
+                <span className="tabular-nums">{alert.count}</span>
+              )}
+              {alert.label}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-slate-600 leading-snug">{alert.desc}</p>
+              {alert.href && (
+                <Link
+                  href={alert.href as never}
+                  className="text-2xs font-bold text-brand-700 hover:text-brand-800 transition-colors mt-1 inline-block"
+                >
+                  عرض التفاصيل
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
