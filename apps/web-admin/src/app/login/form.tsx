@@ -1,86 +1,94 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { loginAction, type LoginState } from './actions';
 
 export default function LoginForm({ from }: { from?: string }) {
+  // ── Auth state (untouched) ─────────────────────────────────────────────
   const [state, action, pending] = useActionState<LoginState, FormData>(loginAction, {});
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <form action={action} className="space-y-8">
-
+    <form action={action} className="space-y-5">
       {/* Forward the middleware-supplied ?from=... so the action can honor it. */}
       {from ? <input type="hidden" name="from" value={from} /> : null}
 
-      {/* Email */}
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-slate-700 text-right">
+      {/* ── Email ────────────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <label className="block text-[13px] font-semibold text-navy/70">
           البريد الإلكتروني
         </label>
-        <input
-          name="email"
-          type="email"
-          required
-          autoComplete="email"
-          placeholder="ahmed@example.com"
-          className="w-full bg-transparent border-0 border-b border-slate-300 px-0 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 text-right focus:outline-none focus:border-brand-600 transition-colors"
-        />
+        <div className="relative">
+          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted">
+            <Mail className="h-[17px] w-[17px]" aria-hidden />
+          </span>
+          <input
+            name="email"
+            type="email"
+            required
+            autoComplete="email"
+            placeholder="ahmed@example.com"
+            className="h-[52px] w-full rounded-xl border border-hairline bg-surface pr-[2.625rem] pl-4 text-sm text-navy placeholder:text-text-muted transition-all focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/15"
+          />
+        </div>
       </div>
 
-      {/* Password */}
-      <div className="space-y-1.5">
-        <label className="block text-sm font-medium text-slate-700 text-right">
+      {/* ── Password ─────────────────────────────────────────────────── */}
+      <div className="space-y-2">
+        <label className="block text-[13px] font-semibold text-navy/70">
           كلمة المرور
         </label>
         <div className="relative">
+          <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-text-muted">
+            <Lock className="h-[17px] w-[17px]" aria-hidden />
+          </span>
           <input
             name="password"
             type={showPassword ? 'text' : 'password'}
             required
             autoComplete="current-password"
             placeholder="••••••••••"
-            className="w-full bg-transparent border-0 border-b border-slate-300 px-0 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 text-right pe-8 focus:outline-none focus:border-brand-600 transition-colors"
+            className="h-[52px] w-full rounded-xl border border-hairline bg-surface pr-[2.625rem] pl-[2.75rem] text-sm text-navy placeholder:text-text-muted transition-all focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/15"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute start-0 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
             tabIndex={-1}
             aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-text-muted transition-colors hover:text-navy"
           >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showPassword ? (
+              <EyeOff className="h-[17px] w-[17px]" />
+            ) : (
+              <Eye className="h-[17px] w-[17px]" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Error */}
+      {/* ── Error ────────────────────────────────────────────────────── */}
       {state.error && (
-        <p className="text-sm text-red-600 text-right bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-          {state.error}
-        </p>
+        <div className="rounded-xl border border-danger-100 bg-danger-50 px-4 py-3">
+          <p className="text-sm text-danger-600">{state.error}</p>
+        </div>
       )}
 
-      {/* Submit */}
+      {/* ── Submit ───────────────────────────────────────────────────── */}
       <button
         type="submit"
         disabled={pending}
-        className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#1E3348] text-white py-3.5 text-sm font-semibold hover:bg-[#172b3c] active:scale-[0.98] disabled:opacity-60 transition-all duration-150"
+        className="flex h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-navy text-sm font-bold text-white shadow-soft transition-colors duration-150 ease-smooth hover:bg-navy-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {pending ? (
           <>
-            <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
             جاري تسجيل الدخول…
           </>
         ) : (
-          <>
-            تسجيل الدخول
-            <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
-          </>
+          'تسجيل الدخول'
         )}
       </button>
-
     </form>
   );
 }

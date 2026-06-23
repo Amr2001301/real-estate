@@ -1,89 +1,249 @@
 import Image from 'next/image';
+import { Building2 } from 'lucide-react';
 import LoginForm from './form';
 
 export default async function LoginPage({
   searchParams,
 }: {
-  // Next.js 15 makes route params async.
   searchParams: Promise<{ from?: string | string[] }>;
 }) {
   const sp = await searchParams;
   const from = typeof sp.from === 'string' ? sp.from : undefined;
+
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row" dir="rtl">
+    // h-screen + overflow-y-auto = inner scroll container
+    // (body has `overflow: hidden` globally; this creates the real scroll surface)
+    <div className="relative h-screen overflow-y-auto bg-canvas" dir="rtl">
 
-      {/* ── Hero panel (right in RTL = visually left) ── */}
-      <div className="hidden lg:flex lg:w-[55%] relative flex-col justify-between p-12 overflow-hidden bg-[#0f1e2e]">
+      {/* ── Ambient page background ────────────────────────────────────── */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+        {/* Warm navy bloom — upper-left corner */}
+        <div className="absolute -left-48 -top-48 h-[560px] w-[560px] rounded-full bg-navy/[0.04] blur-[120px]" />
+        {/* Gold bloom — lower-right */}
+        <div className="absolute -bottom-48 right-[15%] h-[500px] w-[500px] rounded-full bg-brand-500/[0.07] blur-[110px]" />
+        {/* Warm cream haze — center */}
+        <div className="absolute left-1/2 top-1/2 h-[500px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand-50/60 blur-[130px]" />
+      </div>
 
-        {/* Layered gradient for depth */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0f1e2e] via-[#1a2e44] to-[#0c1a28]" />
-        {/* Subtle gold radial glow */}
-        <div className="absolute top-0 right-0 w-[60%] h-[60%] bg-brand-600/10 rounded-full blur-3xl -translate-y-1/4 translate-x-1/4" />
-        <div className="absolute bottom-0 left-0 w-[40%] h-[40%] bg-brand-500/8 rounded-full blur-2xl translate-y-1/4 -translate-x-1/4" />
+      {/* ── Centering wrapper ──────────────────────────────────────────── */}
+      <div className="flex min-h-full items-center justify-center px-4 py-8 sm:px-6 lg:py-10">
 
-        {/* Brand name */}
-        <div className="relative z-10 flex items-center gap-3">
-          <Image
-            src="/brand/devora-logo.png"
-            alt="Devora"
-            width={40}
-            height={40}
-            priority
-            className="h-10 w-10 rounded-xl object-cover ring-1 ring-inset ring-white/10"
-          />
-          <span className="text-xl font-bold text-white tracking-tight">ديفورا</span>
-        </div>
+        {/* ════════════════════════════════════════════════════════════════
+            AUTH SHELL — one composed luxury card floating on the page.
+            RTL flex: first child → right column; second child → left column.
+            ════════════════════════════════════════════════════════════════ */}
+        <div className="w-full max-w-[1120px] overflow-hidden rounded-[2rem] border border-hairline shadow-[0_32px_100px_-24px_rgba(15,30,51,0.22),0_8px_32px_-8px_rgba(15,30,51,0.10),0_0_0_1px_rgba(231,223,211,0.55)]">
+          <div className="flex flex-col lg:flex-row">
 
-        {/* Main hero text */}
-        <div className="relative z-10 space-y-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-400">
-            Enterprise Platform
-          </p>
-          <h1 className="text-[2.75rem] font-extrabold leading-[1.15] text-white">
-            أدِر مشاريعك العقارية
-            <br />
-            <span className="text-brand-400">باحترافية كاملة</span>
-          </h1>
-          <p className="text-base text-slate-300 max-w-sm leading-relaxed">
-            منصة متكاملة لإدارة الوحدات والمشاريع والحجوزات والعملاء في مكان واحد.
-          </p>
-        </div>
+            {/* ── RIGHT: Login panel ─────────────────────────────────── */}
+            <div className="relative flex w-full flex-col justify-center overflow-hidden bg-[#F6F1E9] px-8 py-12 lg:w-[440px] lg:shrink-0 lg:px-10 lg:py-14">
 
-        {/* Stats row */}
-        <div className="relative z-10 flex items-end gap-10 pt-6 border-t border-white/10">
-          {[
-            { value: '+500', label: 'وحدة عقارية' },
-            { value: '12', label: 'مشروع نشط' },
-            { value: '24/7', label: 'دعم متواصل' },
-          ].map((s) => (
-            <div key={s.label}>
-              <p className="text-3xl font-bold text-white">{s.value}</p>
-              <p className="text-xs text-slate-400 mt-1">{s.label}</p>
+              {/* Warm gold bloom — upper-right corner of the panel */}
+              <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full bg-brand-500/[0.07] blur-[70px]" />
+              {/* Warm cream accent — lower area */}
+              <div aria-hidden className="pointer-events-none absolute -bottom-10 left-4 h-52 w-52 rounded-full bg-brand-100/80 blur-[55px]" />
+              {/* Left-edge gradient — softens the hard seam with the dark panel */}
+              <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-[#0d1b2a]/[0.05] to-transparent" />
+
+              <div className="relative">
+                {/* Brand chip */}
+                <div className="mb-6 flex items-center gap-2.5">
+                  <Image
+                    src="/brand/devora-logo.png"
+                    alt="ديفورا"
+                    width={30}
+                    height={30}
+                    priority
+                    className="h-[30px] w-[30px] rounded-lg object-cover ring-1 ring-hairline"
+                  />
+                  <span className="text-sm font-bold text-navy">ديفورا</span>
+                </div>
+
+                {/* Inner form card — matches dashboard Card component exactly */}
+                <div className="rounded-2xl border border-hairline bg-surface px-7 py-7 shadow-soft">
+                  {/* Heading */}
+                  <div className="mb-7">
+                    <h1 className="text-[1.75rem] font-extrabold leading-tight tracking-tight text-navy">
+                      تسجيل الدخول
+                    </h1>
+                    <p className="mt-2 text-sm leading-relaxed text-text-secondary">
+                      أدخل بيانات حسابك للوصول إلى لوحة التحكم
+                    </p>
+                  </div>
+
+                  {/* Form — all auth logic lives here, untouched */}
+                  <LoginForm from={from} />
+                </div>
+
+                {/* Footer note */}
+                <p className="mt-5 text-center text-xs text-text-muted">
+                  © {new Date().getFullYear()} ديفورا — جميع الحقوق محفوظة
+                </p>
+              </div>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* ── Form panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-white">
-        {/* Mobile-only brand */}
-        <p className="lg:hidden text-lg font-bold text-slate-900 mb-8">ديفورا</p>
+            {/* ── LEFT: Brand / visual panel ─────────────────────────── */}
+            <div className="relative hidden flex-1 overflow-hidden lg:flex lg:flex-col">
 
-        <div className="w-full max-w-[420px]">
-          {/* Header */}
-          <div className="mb-10">
-            <h2 className="text-[1.9rem] font-extrabold text-slate-900 leading-tight mb-2">
-              تسجيل الدخول
-            </h2>
-            <p className="text-sm text-slate-500">
-              أدخل بيانات حسابك للوصول إلى لوحة التحكم.
-            </p>
+              {/* Dark navy base — matches sidebar-bg (#0F1E33) */}
+              <div className="absolute inset-0 bg-gradient-to-br from-navy via-[#0c1929] to-navy" />
+
+              {/* Ambient gold glow — upper right of panel */}
+              <div aria-hidden className="absolute -right-24 -top-24 h-[440px] w-[440px] rounded-full bg-brand-500/[0.13] blur-[90px]" />
+              {/* Ambient blue glow — lower center */}
+              <div aria-hidden className="absolute bottom-0 left-[25%] h-[380px] w-[380px] rounded-full bg-brand-500/[0.06] blur-[80px]" />
+
+              {/* Dot grid — very subtle depth texture */}
+              <div
+                aria-hidden
+                className="absolute inset-0 opacity-[0.04]"
+                style={{
+                  backgroundImage: 'radial-gradient(circle, #ffffff 1px, transparent 1px)',
+                  backgroundSize: '26px 26px',
+                }}
+              />
+
+              {/* Gold hairline at the top edge */}
+              <div aria-hidden className="absolute left-0 right-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-500/50 to-transparent" />
+
+              {/* ── Panel content ── */}
+              <div className="relative z-10 flex h-full flex-col p-10">
+
+                {/* Brand mark */}
+                <div className="flex items-center gap-3">
+                  <Image
+                    src="/brand/devora-logo.png"
+                    alt="ديفورا"
+                    width={38}
+                    height={38}
+                    priority
+                    className="h-[38px] w-[38px] rounded-xl object-cover ring-1 ring-white/10"
+                  />
+                  <div>
+                    <p className="text-[15px] font-bold leading-none text-white">ديفورا</p>
+                    <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-brand-400">
+                      Enterprise Platform
+                    </p>
+                  </div>
+                </div>
+
+                {/* ── Hero + dashboard preview — vertically centered ── */}
+                <div className="flex flex-1 flex-col justify-center gap-8">
+
+                  {/* Hero text */}
+                  <div>
+                    <p className="mb-2.5 text-[10.5px] font-semibold uppercase tracking-[0.22em] text-brand-400">
+                      منصة إدارة عقارية
+                    </p>
+                    <h2 className="text-[2.15rem] font-extrabold leading-[1.22] tracking-tight text-white">
+                      أدِر مشاريعك العقارية
+                      <br />
+                      <span className="text-brand-400">باحترافية كاملة</span>
+                    </h2>
+                    <p className="mt-3 text-[0.875rem] leading-relaxed text-slate-300/75">
+                      منصة متكاملة لإدارة الوحدات والمشاريع والحجوزات والعملاء في مكان واحد.
+                    </p>
+                  </div>
+
+                  {/* ── Mini dashboard preview ── */}
+                  <div className="w-full overflow-hidden rounded-2xl border border-white/[0.09] shadow-[0_16px_48px_-8px_rgba(0,0,0,0.45)]">
+                    <div className="flex">
+
+                      {/* Sidebar strip — RIGHT in RTL, mirrors the live admin sidebar */}
+                      <div className="w-[88px] shrink-0 bg-[#0c1829] py-3">
+                        {/* Mini brand */}
+                        <div className="mb-2 flex items-center gap-1.5 px-3">
+                          <Image
+                            src="/brand/devora-logo.png"
+                            alt=""
+                            width={14}
+                            height={14}
+                            className="h-[14px] w-[14px] rounded-md object-cover ring-1 ring-white/10"
+                          />
+                          <span className="text-[9px] font-bold text-white/80">ديفورا</span>
+                        </div>
+
+                        {/* Nav items */}
+                        <div className="mt-1.5 flex flex-col gap-0.5">
+                          {([
+                            { label: 'الوحدات',   active: true  },
+                            { label: 'الحجوزات',  active: false },
+                            { label: 'العملاء',   active: false },
+                            { label: 'المدفوعات', active: false },
+                          ] as const).map(({ label, active }) => (
+                            <div
+                              key={label}
+                              className={`relative flex items-center px-3 py-[5px] text-[9px] font-medium ${
+                                active ? 'bg-[#1C3050] text-white' : 'text-[#9AA6B6]'
+                              }`}
+                            >
+                              {active && (
+                                <span
+                                  aria-hidden
+                                  className="absolute left-0 top-[4px] bottom-[4px] w-[2.5px] rounded-r-full bg-brand-400"
+                                />
+                              )}
+                              {label}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Content area — LEFT in RTL */}
+                      <div className="flex-1 bg-canvas p-3">
+                        {/* Page header */}
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-navy">نظرة عامة</span>
+                          <span className="rounded-md bg-brand-50 px-1.5 py-[2px] text-[8px] font-semibold text-brand-700">
+                            مباشر
+                          </span>
+                        </div>
+
+                        {/* 3 KPI micro-cards */}
+                        <div className="mb-2 grid grid-cols-3 gap-1.5">
+                          {([
+                            { value: '+500', label: 'وحدة عقارية' },
+                            { value: '12',   label: 'مشروع نشط'  },
+                            { value: '+200', label: 'عميل مسجّل' },
+                          ] as const).map(({ value, label }) => (
+                            <div key={label} className="rounded-lg border border-hairline bg-surface p-2 shadow-xs">
+                              <p className="text-[12px] font-extrabold leading-none text-navy">{value}</p>
+                              <p className="mt-[5px] text-[8px] leading-none text-text-secondary">{label}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Activity row */}
+                        <div className="flex items-center gap-2 rounded-lg border border-hairline bg-surface px-2 py-[7px] shadow-xs">
+                          <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] bg-brand-50 ring-1 ring-brand-100/80">
+                            <Building2 className="h-2.5 w-2.5 text-brand-600" aria-hidden />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[9px] font-semibold leading-none text-navy">
+                              وحدة جديدة أُضيفت
+                            </p>
+                            <p className="mt-[3px] text-[7.5px] leading-none text-text-secondary">
+                              مشروع الورود · منذ 5 دقائق
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Panel footer */}
+                <div className="mt-8 border-t border-white/[0.08] pt-4">
+                  <p className="text-[11px] text-slate-600">
+                    © {new Date().getFullYear()} ديفورا — منصة الإدارة العقارية
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
-
-          <LoginForm from={from} />
         </div>
       </div>
-
     </div>
   );
 }
