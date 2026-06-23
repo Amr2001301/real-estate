@@ -9,7 +9,6 @@ import {
   Wrench,
   Banknote,
   MessageSquare,
-  ChevronLeft,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/cn';
@@ -90,9 +89,14 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
           const hasEntity    = r.entity !== '—';
           const entityIsCode = hasEntity && isCode(r.entity);
 
+          const rowCn = cn(
+            'flex items-center gap-3 px-5 py-3.5 transition-colors border-s-2',
+            meta.border,
+          );
+
           const rowContent = (
             <>
-              {/* Type icon — h-9 w-9, larger container */}
+              {/* Type icon */}
               <span
                 className={cn(
                   'inline-flex h-9 w-9 items-center justify-center rounded-xl [&_svg]:h-4 [&_svg]:w-4 shrink-0',
@@ -112,36 +116,37 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
                 {firstLetter(r.user)}
               </span>
 
-              {/* Sentence: actor + action badge + entity */}
-              <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-bold text-slate-900 shrink-0 leading-none">
-                  {r.user}
-                </span>
-                <span
-                  className={cn(
-                    'inline-flex items-center h-[17px] px-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap shrink-0',
-                    meta.badge,
+              {/* Content cluster (right) + time (left) — full-width flex with justify-between */}
+              <div className="flex-1 min-w-0 flex items-center justify-between gap-4">
+                {/* Right side: name + badge + entity */}
+                <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900 shrink-0 leading-none">
+                    {r.user}
+                  </span>
+                  <span
+                    className={cn(
+                      'inline-flex items-center h-[17px] px-1.5 rounded-full text-[10px] font-semibold whitespace-nowrap shrink-0',
+                      meta.badge,
+                    )}
+                  >
+                    {r.action}
+                  </span>
+                  {hasEntity && (
+                    entityIsCode
+                      ? <CodeText className="text-[10px] text-slate-500 shrink-0">{r.entity}</CodeText>
+                      : <span className="text-2xs text-slate-500 truncate">{r.entity}</span>
                   )}
+                </div>
+
+                {/* Left side: time — never wraps, never shrinks */}
+                <span
+                  dir="rtl"
+                  className="shrink-0 whitespace-nowrap text-[10.5px] text-slate-400 tabular-nums leading-none"
                 >
-                  {r.action}
+                  {r.time}
                 </span>
-                {hasEntity && (
-                  entityIsCode
-                    ? <CodeText className="text-[10px] text-slate-500 shrink-0">{r.entity}</CodeText>
-                    : <span className="text-2xs text-slate-500 truncate">{r.entity}</span>
-                )}
               </div>
-
-              {/* Relative time — fixed-width column so it never shifts */}
-              <span className="text-[10.5px] text-slate-400 whitespace-nowrap shrink-0 tabular-nums w-[68px] text-start">
-                {r.time}
-              </span>
             </>
-          );
-
-          const rowCn = cn(
-            'flex items-center gap-3 px-5 py-3.5 transition-colors border-s-2',
-            meta.border,
           );
 
           if (r.href) {
@@ -149,10 +154,9 @@ export function ActivityTable({ rows, className, compact = false }: Props) {
               <Link
                 key={r.id}
                 href={r.href as never}
-                className={cn(rowCn, 'hover:bg-canvas/60 group')}
+                className={cn(rowCn, 'hover:bg-canvas/60')}
               >
                 {rowContent}
-                <ChevronLeft className="h-3 w-3 text-slate-200 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
               </Link>
             );
           }
