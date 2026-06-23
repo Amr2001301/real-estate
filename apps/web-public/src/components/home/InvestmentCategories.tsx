@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { Home, Briefcase, Store, Stethoscope, Hotel, ArrowLeft } from 'lucide-react';
+import { Home, Briefcase, Store, Stethoscope, Hotel } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { Section } from '@/components/ui/Section';
 import { Stagger } from '@/components/motion/Stagger';
@@ -48,9 +48,8 @@ export function InvestmentCategories() {
                 </span>
                 <h3 className="text-lg font-bold leading-none text-ink-strong">{title}</h3>
                 <p className="text-xs text-ink-muted">{sub}</p>
-                <span className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-ink-muted transition-colors group-hover:text-gold-600">
+                <span className="mt-0.5 text-xs font-semibold text-ink-muted transition-colors group-hover:text-gold-600">
                   تصفّح
-                  <ArrowLeft className="h-3.5 w-3.5 transition-transform group-hover:-translate-x-1" aria-hidden />
                 </span>
               </div>
             </Link>

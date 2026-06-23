@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Route } from 'next';
-import { ArrowLeft, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { pickAr, cityLabel, formatNumber } from '@/lib/format';
 import type { PublicProjectListItem } from '@/lib/api-types';
@@ -48,9 +48,8 @@ export function ProjectCard({ project }: { project: PublicProjectListItem }) {
             ) : (
               <Badge tone="neutral">لا وحدات متاحة</Badge>
             )}
-            <span className="inline-flex items-center gap-1 text-sm font-medium text-ink-strong transition-colors group-hover:text-gold-600">
+            <span className="text-sm font-semibold text-ink-strong transition-colors group-hover:text-gold-600">
               تفاصيل المشروع
-              <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" aria-hidden />
             </span>
           </div>
         </div>

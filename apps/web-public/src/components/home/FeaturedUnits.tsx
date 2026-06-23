@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Home, ArrowLeft } from 'lucide-react';
+import { Home } from 'lucide-react';
 import type { ApiResult } from '@/lib/api';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
@@ -22,10 +22,9 @@ export function FeaturedUnits({ result }: { result: ApiResult<Paginated<PublicUn
         </div>
         <Link
           href={routes.units}
-          className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-ink-strong underline-offset-8 transition-colors hover:text-gold-600 hover:underline"
+          className="shrink-0 text-sm font-semibold text-gold-600 underline-offset-4 transition-colors hover:text-gold-700 hover:underline"
         >
           عرض كل الوحدات
-          <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" aria-hidden />
         </Link>
       </div>
 
