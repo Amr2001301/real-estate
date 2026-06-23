@@ -20,7 +20,6 @@ import {
   MapPin,
   ShieldCheck,
   ArrowUpRight,
-  Bell,
   ChevronLeft,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -252,134 +251,92 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
   );
 }
 
-// ── Broker Action Queue ───────────────────────────────────────────────────────
+// ── Portal Sidebar (Quick Actions + Pending Items + Nav) ─────────────────────
 
-function BrokerActionQueue({
-  pendingLeads, newVisits, approvedPayouts, availableUnits,
+function PortalSidebar({
+  pendingLeads,
+  newVisits,
+  approvedPayouts,
 }: {
   pendingLeads:    number;
   newVisits:       number;
   approvedPayouts: number;
-  availableUnits:  number;
 }) {
-  const actionTotal = pendingLeads + newVisits + approvedPayouts;
-
-  const slots = [
-    {
-      key: 'leads', label: 'فرص قيد المراجعة', description: 'بانتظار قرار من الإدارة',
-      value: pendingLeads, href: '/portal/leads?status=PENDING' as const,
-      icon: <UserPlus />,
-      activeIconCls:  'bg-amber-50 text-amber-600',
-      activeCountCls: 'text-amber-700',
-    },
-    {
-      key: 'visits', label: 'طلبات زيارة جديدة', description: 'بانتظار جدولة موعد',
-      value: newVisits, href: '/portal/visits?requestStatus=NEW' as const,
-      icon: <CalendarClock />,
-      activeIconCls:  'bg-blue-50 text-blue-600',
-      activeCountCls: 'text-blue-700',
-    },
-    {
-      key: 'payouts', label: 'دفعات جاهزة للصرف', description: 'معتمدة وبانتظار التحويل',
-      value: approvedPayouts, href: '/portal/payouts?status=APPROVED' as const,
-      icon: <Wallet />,
-      activeIconCls:  'bg-teal-50 text-teal-600',
-      activeCountCls: 'text-teal-700',
-    },
-    {
-      key: 'units', label: 'وحدات للتسويق', description: 'جاهزة للعرض على العملاء',
-      value: availableUnits, href: '/portal/units?status=AVAILABLE' as const,
-      icon: <Home />,
-      activeIconCls:  'bg-emerald-50 text-emerald-600',
-      activeCountCls: 'text-emerald-700',
-    },
-  ];
+  const pendingItems = (
+    [
+      pendingLeads    > 0 && { key: 'leads',   count: pendingLeads,    label: 'فرص قيد المراجعة',   href: '/portal/leads?status=PENDING',        icon: <UserPlus />,    iconCls: 'bg-amber-50 text-amber-600', badgeCls: 'bg-amber-100 text-amber-700' },
+      newVisits       > 0 && { key: 'visits',  count: newVisits,       label: 'طلبات زيارة جديدة',  href: '/portal/visits?requestStatus=NEW',    icon: <CalendarClock />, iconCls: 'bg-blue-50 text-blue-600', badgeCls: 'bg-blue-100 text-blue-700' },
+      approvedPayouts > 0 && { key: 'payouts', count: approvedPayouts, label: 'دفعات جاهزة للصرف', href: '/portal/payouts?status=APPROVED',     icon: <Wallet />,      iconCls: 'bg-teal-50 text-teal-600',   badgeCls: 'bg-teal-100 text-teal-700' },
+    ] as const
+  ).filter(Boolean) as Array<{ key: string; count: number; label: string; href: string; icon: ReactNode; iconCls: string; badgeCls: string }>;
 
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
-        <div className="flex items-center gap-3">
-          <div className={cn(
-            'relative h-8 w-8 rounded-xl flex items-center justify-center shrink-0',
-            actionTotal > 0 ? 'bg-amber-50 ring-1 ring-amber-100' : 'bg-success-50 ring-1 ring-success-100',
-          )}>
-            {actionTotal > 0 ? (
-              <>
-                <Bell className="h-[15px] w-[15px] text-amber-600" />
-                <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
-              </>
-            ) : (
-              <CheckCircle2 className="h-[15px] w-[15px] text-success-600" />
-            )}
-          </div>
-          <div>
-            <p className={cn(
-              'text-[14px] font-bold leading-none',
-              actionTotal > 0 ? 'text-navy' : 'text-success-800',
-            )}>
-              متابعة وفرص
-            </p>
-            <p className={cn(
-              'text-[11px] mt-0.5',
-              actionTotal > 0 ? 'text-slate-400' : 'text-success-600',
-            )}>
-              {actionTotal > 0 ? `${actionTotal} بند يحتاج متابعة` : 'لا بنود معلقة'}
-            </p>
-          </div>
-          {actionTotal > 0 && (
-            <span className="inline-flex items-center h-5 px-2 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-[10px] font-bold ms-1">
-              {actionTotal} معلق
-            </span>
-          )}
+      {/* CTAs */}
+      <div className="p-4 space-y-2">
+        <Link href="/portal/leads/new" className="block">
+          <Button variant="primary" size="md" leftIcon={<UserPlus className="h-4 w-4" />} fullWidth>
+            إضافة فرصة جديدة
+          </Button>
+        </Link>
+        <div className="grid grid-cols-2 gap-2">
+          <Link href="/portal/visits/new">
+            <Button variant="outline" size="sm" leftIcon={<CalendarClock className="h-3.5 w-3.5" />} fullWidth>
+              طلب زيارة
+            </Button>
+          </Link>
+          <Link href="/portal/reservations/new">
+            <Button variant="outline" size="sm" leftIcon={<BookmarkCheck className="h-3.5 w-3.5" />} fullWidth>
+              حجز جديد
+            </Button>
+          </Link>
         </div>
-        <p className="text-[11px] text-slate-400 hidden sm:block">
-          {actionTotal > 0 ? 'انقر على أي بند للانتقال مباشرةً' : 'كل الإجراءات مكتملة'}
-        </p>
       </div>
 
-      {/* Cards */}
-      <div className="p-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {slots.map((slot) => {
-          const isActive = slot.value > 0;
-          return (
-            <Link key={slot.key} href={slot.href as never} className="group block">
-              <div className={cn(
-                'flex flex-col rounded-[14px] border px-4 py-4 min-h-[96px] transition-colors duration-150',
-                isActive
-                  ? 'bg-surface border-hairline group-hover:bg-slate-50/60 group-hover:border-slate-200'
-                  : 'bg-canvas/20 border-hairline opacity-50',
-              )}>
-                {/* Top row: label (first DOM child = RIGHT in RTL) + icon */}
-                <div className="flex items-start justify-between gap-2">
-                  <p className={cn(
-                    'text-[12px] font-semibold leading-snug',
-                    isActive ? 'text-slate-700' : 'text-slate-400',
-                  )}>
-                    {slot.label}
-                  </p>
-                  <div className={cn(
-                    'h-8 w-8 rounded-lg flex items-center justify-center [&_svg]:h-[14px] [&_svg]:w-[14px] shrink-0',
-                    isActive ? slot.activeIconCls : 'bg-slate-100 text-slate-300',
-                  )}>
-                    {slot.icon}
-                  </div>
-                </div>
-                {/* Count */}
-                <p className={cn(
-                  'mt-2 text-[30px] font-black tabular-nums leading-none tracking-tight',
-                  isActive ? slot.activeCountCls : 'text-slate-300',
-                )}>
-                  {slot.value}
-                </p>
-                {/* Description */}
-                <p className="mt-1 text-[11px] text-slate-400 leading-snug">
-                  {isActive ? slot.description : 'لا إجراءات معلقة'}
-                </p>
+      {/* Pending items (only shown when > 0) */}
+      {pendingItems.length > 0 && (
+        <div className="border-t border-hairline divide-y divide-hairline">
+          {pendingItems.map((item) => (
+            <Link
+              key={item.key}
+              href={item.href as never}
+              className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-canvas/40 transition-colors"
+            >
+              <div className="flex items-center gap-2.5">
+                <span className={cn('h-7 w-7 rounded-lg flex items-center justify-center [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0', item.iconCls)}>
+                  {item.icon}
+                </span>
+                <span className="text-xs font-medium text-slate-700">{item.label}</span>
               </div>
+              <span className={cn('inline-flex items-center justify-center h-5 min-w-5 rounded-full text-2xs font-black tabular-nums px-1.5', item.badgeCls)}>
+                {item.count}
+              </span>
             </Link>
-          );
-        })}
+          ))}
+        </div>
+      )}
+
+      {/* Navigation grid */}
+      <div className="p-3 border-t border-hairline grid grid-cols-3 gap-1.5">
+        {([
+          { href: '/portal/projects',   Icon: Building2,    label: 'المشاريع'  },
+          { href: '/portal/units',       Icon: Home,         label: 'الوحدات'   },
+          { href: '/portal/leads',       Icon: UserPlus,     label: 'الفرص'     },
+          { href: '/portal/commissions', Icon: BadgePercent, label: 'العمولات'  },
+          { href: '/portal/payouts',     Icon: Wallet,       label: 'المدفوعات' },
+          { href: '/portal/performance', Icon: TrendingUp,   label: 'الأداء'    },
+        ] as const).map(({ href, Icon, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex flex-col items-center gap-1.5 px-1 py-3 rounded-xl bg-canvas/60 hover:bg-brand-50 border border-hairline transition-colors group"
+          >
+            <Icon className="h-4 w-4 text-slate-400 group-hover:text-brand-600 transition-colors" />
+            <span className="text-2xs font-medium text-slate-500 group-hover:text-brand-700 transition-colors text-center leading-tight">
+              {label}
+            </span>
+          </Link>
+        ))}
       </div>
     </div>
   );
@@ -444,11 +401,11 @@ function SalesFunnelCard({
             <div key={stage.label} className="contents">
 
               {/* Stage block */}
-              <div className="flex-1 flex flex-col items-center gap-3 bg-canvas/60 border border-hairline rounded-2xl px-2 sm:px-3 py-4">
-                <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center shrink-0', stage.iconBg)}>
-                  <Icon className={cn('h-4 w-4', stage.iconText)} />
+              <div className="flex-1 flex flex-col items-center gap-2 bg-canvas/60 border border-hairline rounded-2xl px-2 sm:px-3 py-3">
+                <div className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0', stage.iconBg)}>
+                  <Icon className={cn('h-3.5 w-3.5', stage.iconText)} />
                 </div>
-                <p className={cn('text-[22px] sm:text-[26px] font-black tabular-nums leading-none tracking-tight', stage.valueCls)}>
+                <p className={cn('text-[20px] sm:text-[24px] font-black tabular-nums leading-none tracking-tight', stage.valueCls)}>
                   {stage.value}
                 </p>
                 <p className="text-[10px] font-semibold text-slate-500 text-center leading-tight">
@@ -605,30 +562,11 @@ export default async function PortalDashboard() {
       {/* ── 2. KPI Strip ─────────────────────────────────────────────────────── */}
       <BrokerKpiStrip perf={perf} />
 
-      {/* ── 3. Action Queue ──────────────────────────────────────────────────── */}
-      <div className="space-y-2.5">
-        <SectionLabel>متابعة وفرص</SectionLabel>
-        <BrokerActionQueue
-          pendingLeads={pendingLeadsCount}
-          newVisits={newVisitsCount}
-          approvedPayouts={approvedPayoutsCount}
-          availableUnits={availableCount}
-        />
-      </div>
+      {/* ── 3. Leads + Sidebar ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-5">
 
-      {/* ── 4. Sales Funnel ──────────────────────────────────────────────────── */}
-      <div className="space-y-2.5">
-        <SectionLabel>تحليل الأداء</SectionLabel>
-        <SalesFunnelCard pipeline={pipeline} perf={perf} />
-      </div>
-
-      {/* ── 5. Leads table + Sidebar ─────────────────────────────────────────── */}
-      <div className="space-y-2.5">
-        <SectionLabel>الفرص والمشاريع</SectionLabel>
-        <div className="grid grid-cols-1 lg:grid-cols-12 items-start gap-4">
-
-          {/* Recent leads */}
-          <div className="lg:col-span-8 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+          {/* Recent leads — 2/3 */}
+          <div className="lg:col-span-2 bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
             <div className="flex items-center justify-between gap-2 px-5 py-3.5 border-b border-hairline bg-canvas/40">
               <div className="flex items-center gap-2.5">
                 <div className="h-7 w-7 rounded-lg bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
@@ -666,12 +604,12 @@ export default async function PortalDashboard() {
             ) : (
               <div className="overflow-x-auto scrollbar-thin">
                 <table className="w-full text-sm">
-                  <thead className="bg-canvas/40 text-2xs font-bold uppercase tracking-wider text-slate-400 border-b border-hairline">
+                  <thead className="bg-canvas/40 border-b border-hairline">
                     <tr>
-                      <th className="text-start py-3 ps-5 pe-3">العميل</th>
-                      <th className="text-start py-3 px-3">المشروع</th>
-                      <th className="text-start py-3 px-3">الحالة</th>
-                      <th className="text-start py-3 px-3 hidden md:table-cell">الإرسال</th>
+                      <th className="text-start py-3 ps-5 pe-3 text-[11px] font-bold text-slate-500">العميل</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-bold text-slate-500">المشروع</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-bold text-slate-500">الحالة</th>
+                      <th className="text-start py-3 px-3 text-[11px] font-bold text-slate-500 hidden md:table-cell">الإرسال</th>
                       <th className="py-3 ps-3 pe-5 w-px" />
                     </tr>
                   </thead>
@@ -733,51 +671,13 @@ export default async function PortalDashboard() {
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-4 flex flex-col gap-4">
-
-            {/* Quick actions */}
-            <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-5">
-              <h2 className="text-sm font-bold text-slate-900 mb-3">إجراءات سريعة</h2>
-              <Link href="/portal/leads/new" className="block">
-                <Button variant="primary" size="md" leftIcon={<UserPlus className="h-4 w-4" />} fullWidth>
-                  إضافة فرصة جديدة
-                </Button>
-              </Link>
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <Link href="/portal/visits/new">
-                  <Button variant="outline" size="sm" leftIcon={<CalendarClock className="h-3.5 w-3.5" />} fullWidth>
-                    طلب زيارة
-                  </Button>
-                </Link>
-                <Link href="/portal/reservations/new">
-                  <Button variant="outline" size="sm" leftIcon={<BookmarkCheck className="h-3.5 w-3.5" />} fullWidth>
-                    حجز جديد
-                  </Button>
-                </Link>
-              </div>
-              <div className="border-t border-hairline mt-3 pt-3 grid grid-cols-3 gap-1.5">
-                {([
-                  { href: '/portal/projects',   Icon: Building2,    label: 'المشاريع'  },
-                  { href: '/portal/units',       Icon: Home,         label: 'الوحدات'   },
-                  { href: '/portal/leads',       Icon: UserPlus,     label: 'الفرص'     },
-                  { href: '/portal/commissions', Icon: BadgePercent, label: 'العمولات'  },
-                  { href: '/portal/payouts',     Icon: Wallet,       label: 'المدفوعات' },
-                  { href: '/portal/performance', Icon: TrendingUp,   label: 'الأداء'    },
-                ] as const).map(({ href, Icon, label }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="flex flex-col items-center gap-1 px-1 py-2.5 rounded-xl bg-canvas/60 hover:bg-brand-50 border border-hairline transition-colors group"
-                  >
-                    <Icon className="h-3.5 w-3.5 text-slate-400 group-hover:text-brand-600 transition-colors" />
-                    <span className="text-2xs font-medium text-slate-500 group-hover:text-brand-700 transition-colors text-center leading-tight">
-                      {label}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
+          {/* Sidebar — 1/3 */}
+          <div className="space-y-4">
+            <PortalSidebar
+              pendingLeads={pendingLeadsCount}
+              newVisits={newVisitsCount}
+              approvedPayouts={approvedPayoutsCount}
+            />
 
             {/* Available projects */}
             <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
@@ -843,10 +743,17 @@ export default async function PortalDashboard() {
               )}
             </div>
           </div>
-        </div>
       </div>
 
-      {/* ── 6. Activity feed ─────────────────────────────────────────────────── */}
+      {/* ── 4. Sales Funnel ──────────────────────────────────────────────────── */}
+      {pipeline.length > 0 && (
+        <div className="space-y-2.5">
+          <SectionLabel>تحليل الأداء</SectionLabel>
+          <SalesFunnelCard pipeline={pipeline} perf={perf} />
+        </div>
+      )}
+
+      {/* ── 5. Activity feed ─────────────────────────────────────────────────── */}
       {activity.length > 0 && (
         <div className="space-y-2.5">
           <SectionLabel>آخر النشاطات</SectionLabel>
