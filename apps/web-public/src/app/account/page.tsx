@@ -95,22 +95,23 @@ function contractTitle(c: MeContract): string {
 // ── KPI Metric Tile ───────────────────────────────────────────────────────────
 
 interface MetricTile {
-  icon:     LucideIcon;
-  label:    string;
-  value:    string;
-  hint:     string;
-  href:     string;
-  chipCls:  string;
-  glowCls:  string;
+  icon:      LucideIcon;
+  label:     string;
+  value:     string;
+  currency?: string;
+  hint:      string;
+  href:      string;
+  chipCls:   string;
+  glowCls:   string;
 }
 
-function HeroMetric({ icon: Icon, label, value, hint, href, chipCls, glowCls }: MetricTile) {
+function HeroMetric({ icon: Icon, label, value, currency, hint, href, chipCls, glowCls }: MetricTile) {
   return (
     <Link
       href={href as Route}
-      className="group relative flex flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-hairline bg-surface px-4 py-8 text-center shadow-[0_8px_30px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-1.5 hover:border-gold-300/80 hover:shadow-[0_0_0_3px_rgba(200,162,75,0.14),0_24px_48px_-12px_rgba(15,30,51,0.22)]"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface px-5 py-[1.125rem] shadow-[0_1px_6px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-gold-300/70 hover:shadow-[0_0_0_2px_rgba(200,162,75,0.11),0_10px_28px_-6px_rgba(15,30,51,0.16)]"
     >
-      {/* corner glow */}
+      {/* hover glow overlay */}
       <span
         className={cn(
           'pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100',
@@ -118,34 +119,37 @@ function HeroMetric({ icon: Icon, label, value, hint, href, chipCls, glowCls }: 
         )}
         aria-hidden
       />
-      <span className="pointer-events-none absolute inset-0 rounded-2xl" style={GLOW} aria-hidden />
 
-      {/* Icon chip */}
-      <span
-        className={cn(
-          'relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl ring-1 transition-transform duration-300 group-hover:scale-105',
-          chipCls,
-        )}
-      >
-        <Icon className="h-6 w-6" aria-hidden />
-      </span>
-
-      {/* Value + label */}
-      <div className="relative min-w-0 w-full">
-        <div
-          className="font-display text-[2rem] font-black leading-none tracking-tight text-ink-strong"
-          dir="auto"
+      {/* Top row: icon badge + title/subtitle — visually one connected block */}
+      <div className="relative flex items-start gap-3">
+        <span
+          className={cn(
+            'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ring-1 transition-all duration-300 group-hover:scale-105',
+            chipCls,
+          )}
         >
-          {value}
+          <Icon className="h-[1.05rem] w-[1.05rem]" aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <div className="text-[14px] font-bold leading-tight text-ink-strong">{label}</div>
+          <div className="mt-0.5 text-[11px] font-medium text-ink-muted/65">{hint}</div>
         </div>
-        <div className="mt-2 text-sm font-semibold text-ink-muted">{label}</div>
-        <div className="mt-1 flex items-center justify-center gap-1 text-[10px] font-medium text-ink-muted/60">
-          {hint}
-          <ArrowLeft
-            className="h-3 w-3 -translate-x-1 text-gold-500 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100"
-            aria-hidden
-          />
-        </div>
+      </div>
+
+      {/* Value — dominant metric, sits close below the header row */}
+      <div className="relative mt-4">
+        {currency ? (
+          <div className="flex items-baseline gap-1.5" dir="rtl">
+            <span className="font-display text-[1.875rem] font-black leading-none tracking-tight text-ink-strong">
+              {value}
+            </span>
+            <span className="text-[0.875rem] font-bold text-ink-muted/70">{currency}</span>
+          </div>
+        ) : (
+          <div className="font-display text-[1.875rem] font-black leading-none tracking-tight text-ink-strong">
+            {value}
+          </div>
+        )}
       </div>
     </Link>
   );
@@ -305,9 +309,10 @@ export default async function AccountPage() {
   const recentReservations = reservations?.data ?? [];
 
   // ── Customer-only data ────────────────────────────────────────────────────
-  let contractsCount:     number | null = null;
-  let depositsTotalText:  string | null = null;
-  let maintenanceCount:   number | null = null;
+  let contractsCount:      number | null = null;
+  let depositsTotalText:   string | null = null;
+  let depositsAmountText:  string | null = null;
+  let maintenanceCount:    number | null = null;
   let recentContracts:    MeContract[]     = [];
   let recentNotifications: MeNotification[] = [];
   let primaryContract:    MeContract | null = null;
@@ -345,9 +350,10 @@ export default async function AccountPage() {
     const notificationsRaw = notifsR.status === 'fulfilled' ? notifsR.value : null;
     const notifications    = extractPaginatedData<MeNotification>(notificationsRaw);
 
-    contractsCount    = contracts   ? contracts.meta.total                   : null;
-    depositsTotalText = deposits    ? formatPrice(deposits.totals.totalAmount) : null;
-    maintenanceCount  = maintenance ? maintenance.meta.total                  : null;
+    contractsCount     = contracts   ? contracts.meta.total                    : null;
+    depositsTotalText  = deposits    ? formatPrice(deposits.totals.totalAmount) : null;
+    depositsAmountText = deposits    ? formatNumber(deposits.totals.totalAmount): null;
+    maintenanceCount   = maintenance ? maintenance.meta.total                   : null;
 
     recentContracts      = contracts?.data ?? [];
     recentNotifications  = notifications.slice(0, 3);
@@ -364,13 +370,14 @@ export default async function AccountPage() {
   const tiles: MetricTile[] = isCustomer
     ? [
         {
-          icon:    Wallet,
-          label:   'إجمالي المدفوعات',
-          value:   depositsTotalText ?? '—',
-          hint:    'إجمالي محصّل',
-          href:    routes.accountDeposits,
-          chipCls: 'bg-emerald-50 text-emerald-600 ring-emerald-200/60 group-hover:bg-emerald-100',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(16,185,129,0.08),transparent_55%)]',
+          icon:     Wallet,
+          label:    'إجمالي المدفوعات',
+          value:    depositsAmountText ?? '—',
+          currency: depositsAmountText ? 'ر.س' : undefined,
+          hint:     'إجمالي محصّل',
+          href:     routes.accountDeposits,
+          chipCls:  'bg-emerald-50 text-emerald-600 ring-emerald-200/60 group-hover:bg-emerald-100',
+          glowCls:  'bg-[radial-gradient(circle_at_80%_10%,rgba(16,185,129,0.08),transparent_55%)]',
         },
         {
           icon:    FileText,
