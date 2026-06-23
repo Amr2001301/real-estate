@@ -6,10 +6,11 @@ import { routes } from '@/lib/routes';
 import { Section } from '@/components/ui/Section';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
-import { ProjectShowcaseCard } from './ProjectShowcaseCard';
+import { Stagger } from '@/components/motion/Stagger';
+import { ProjectCard } from './ProjectCard';
 
 export function FeaturedProjects({ result }: { result: ApiResult<Paginated<PublicProjectListItem>> }) {
-  const projects = result.ok ? result.data.data.slice(0, 6) : [];
+  const projects = result.ok ? result.data.data.slice(0, 3) : [];
 
   return (
     <Section tone="canvas" className="py-12 sm:py-14 lg:py-16">
@@ -43,13 +44,11 @@ export function FeaturedProjects({ result }: { result: ApiResult<Paginated<Publi
             className="mx-auto max-w-2xl"
           />
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <Stagger className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
             {projects.map((project) => (
-              <div key={project.id} className="aspect-[4/3]">
-                <ProjectShowcaseCard project={project} />
-              </div>
+              <ProjectCard key={project.id} project={project} />
             ))}
-          </div>
+          </Stagger>
         )}
       </div>
     </Section>

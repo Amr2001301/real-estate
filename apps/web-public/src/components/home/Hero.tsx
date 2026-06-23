@@ -49,7 +49,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
       {/* Bottom fade anchors the SearchPanel */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-navy to-transparent" aria-hidden />
 
-      <Container className="relative pb-32 pt-28 sm:pb-36 lg:pb-44">
+      <Container className="relative pb-20 pt-28 sm:pb-24 lg:pb-28">
         <div className="max-w-[680px]">
           <Reveal>
             <Badge tone="gold">عقارات مختارة بعناية</Badge>
