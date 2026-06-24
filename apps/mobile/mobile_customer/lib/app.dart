@@ -47,6 +47,9 @@ import 'features/favorites/domain/usecases/add_favorite.dart';
 import 'features/favorites/domain/usecases/get_favorites.dart';
 import 'features/favorites/domain/usecases/remove_favorite.dart';
 import 'features/favorites/presentation/favorites_cubit.dart';
+import 'features/home_summary/data/datasources/home_summary_remote_data_source.dart';
+import 'features/home_summary/data/repositories/home_summary_repository_impl.dart';
+import 'features/home_summary/domain/repositories/home_summary_repository.dart';
 import 'features/notifications/data/datasources/notifications_remote_data_source.dart';
 import 'features/notifications/data/firebase_push_token_provider.dart';
 import 'features/notifications/data/repositories/notifications_repository_impl.dart';
@@ -138,6 +141,11 @@ class CustomerApp extends StatelessWidget {
         RepositoryProvider<DocumentsRepository>(
           create: (ctx) => DocumentsRepositoryImpl(
             DocumentsRemoteDataSourceImpl(ctx.read<Dio>()),
+          ),
+        ),
+        RepositoryProvider<HomeSummaryRepository>(
+          create: (ctx) => HomeSummaryRepositoryImpl(
+            HomeSummaryRemoteDataSourceImpl(ctx.read<Dio>()),
           ),
         ),
         RepositoryProvider<PushRegistrationService>(

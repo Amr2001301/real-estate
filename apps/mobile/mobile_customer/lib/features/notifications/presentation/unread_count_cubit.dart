@@ -23,4 +23,6 @@ class UnreadCountCubit extends Cubit<int> {
   }
 
   void clear() => emit(0);
+
+  void setCount(int count) => emit(count);
 }

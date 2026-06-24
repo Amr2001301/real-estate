@@ -7,9 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../favorites/presentation/widgets/favorite_toggle_button.dart';
-import '../../../installments/presentation/cubit/installments_cubit.dart';
-import '../../../maintenance/presentation/maintenance_requests_cubit.dart';
-import '../../../my_property/presentation/my_property_cubit.dart';
+import '../../../home_summary/presentation/home_summary_cubit.dart';
 import '../../domain/entities/catalog_enums.dart';
 import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
@@ -47,18 +45,11 @@ class HomeScreen extends StatelessWidget {
 
     return RefreshIndicator(
       onRefresh: () async {
-        final home = context.read<HomeCubit>();
-        final property = isCustomer ? context.read<MyPropertyCubit>() : null;
-        final installments = isCustomer
-            ? context.read<InstallmentsCubit>()
-            : null;
-        final maintenance = isCustomer
-            ? context.read<MaintenanceRequestsCubit>()
-            : null;
-        await home.load();
-        property?.load();
-        installments?.load();
-        maintenance?.load();
+        if (isCustomer) {
+          await context.read<HomeSummaryCubit>().load();
+        } else {
+          await context.read<HomeCubit>().load();
+        }
       },
       child: ListView(
         padding: EdgeInsets.only(

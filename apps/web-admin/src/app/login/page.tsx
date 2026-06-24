@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Building2 } from 'lucide-react';
+import { Building2, Calendar, Users, CreditCard } from 'lucide-react';
 import LoginForm from './form';
 
 export default async function LoginPage({
@@ -127,8 +127,8 @@ export default async function LoginPage({
                   </div>
                 </div>
 
-                {/* ── Hero + dashboard preview — vertically centered ── */}
-                <div className="flex flex-1 flex-col justify-center gap-8">
+                {/* ── Hero + feature value — vertically centered ── */}
+                <div className="flex flex-1 flex-col justify-center gap-7">
 
                   {/* Hero text */}
                   <div>
@@ -145,90 +145,39 @@ export default async function LoginPage({
                     </p>
                   </div>
 
-                  {/* ── Mini dashboard preview ── */}
-                  <div className="w-full overflow-hidden rounded-2xl border border-white/[0.09] shadow-[0_16px_48px_-8px_rgba(0,0,0,0.45)]">
-                    <div className="flex">
-
-                      {/* Sidebar strip — RIGHT in RTL, mirrors the live admin sidebar */}
-                      <div className="w-[88px] shrink-0 bg-[#0c1829] py-3">
-                        {/* Mini brand */}
-                        <div className="mb-2 flex items-center gap-1.5 px-3">
-                          <Image
-                            src="/brand/devora-logo.png"
-                            alt=""
-                            width={14}
-                            height={14}
-                            className="h-[14px] w-[14px] rounded-md object-cover ring-1 ring-white/10"
-                          />
-                          <span className="text-[9px] font-bold text-white/80">ديفورا</span>
-                        </div>
-
-                        {/* Nav items */}
-                        <div className="mt-1.5 flex flex-col gap-0.5">
-                          {([
-                            { label: 'الوحدات',   active: true  },
-                            { label: 'الحجوزات',  active: false },
-                            { label: 'العملاء',   active: false },
-                            { label: 'المدفوعات', active: false },
-                          ] as const).map(({ label, active }) => (
-                            <div
-                              key={label}
-                              className={`relative flex items-center px-3 py-[5px] text-[9px] font-medium ${
-                                active ? 'bg-[#1C3050] text-white' : 'text-[#9AA6B6]'
-                              }`}
-                            >
-                              {active && (
-                                <span
-                                  aria-hidden
-                                  className="absolute left-0 top-[4px] bottom-[4px] w-[2.5px] rounded-r-full bg-brand-400"
-                                />
-                              )}
-                              {label}
-                            </div>
-                          ))}
-                        </div>
+                  {/* Feature value cards — 2 × 2 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { Icon: Building2,  label: 'إدارة الوحدات'       },
+                      { Icon: Calendar,   label: 'متابعة الحجوزات'      },
+                      { Icon: Users,      label: 'لوحة عملاء متكاملة'  },
+                      { Icon: CreditCard, label: 'تقارير ومدفوعات'      },
+                    ].map(({ Icon, label }) => (
+                      <div
+                        key={label}
+                        className="flex items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.05] px-3.5 py-3"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-500/[0.14] ring-1 ring-brand-400/[0.22]">
+                          <Icon className="h-3.5 w-3.5 text-brand-400" aria-hidden />
+                        </span>
+                        <span className="text-[12px] font-semibold leading-snug text-white/80">{label}</span>
                       </div>
+                    ))}
+                  </div>
 
-                      {/* Content area — LEFT in RTL */}
-                      <div className="flex-1 bg-canvas p-3">
-                        {/* Page header */}
-                        <div className="mb-2 flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-navy">نظرة عامة</span>
-                          <span className="rounded-md bg-brand-50 px-1.5 py-[2px] text-[8px] font-semibold text-brand-700">
-                            مباشر
-                          </span>
-                        </div>
-
-                        {/* 3 KPI micro-cards */}
-                        <div className="mb-2 grid grid-cols-3 gap-1.5">
-                          {([
-                            { value: '+500', label: 'وحدة عقارية' },
-                            { value: '12',   label: 'مشروع نشط'  },
-                            { value: '+200', label: 'عميل مسجّل' },
-                          ] as const).map(({ value, label }) => (
-                            <div key={label} className="rounded-lg border border-hairline bg-surface p-2 shadow-xs">
-                              <p className="text-[12px] font-extrabold leading-none text-navy">{value}</p>
-                              <p className="mt-[5px] text-[8px] leading-none text-text-secondary">{label}</p>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Activity row */}
-                        <div className="flex items-center gap-2 rounded-lg border border-hairline bg-surface px-2 py-[7px] shadow-xs">
-                          <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] bg-brand-50 ring-1 ring-brand-100/80">
-                            <Building2 className="h-2.5 w-2.5 text-brand-600" aria-hidden />
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[9px] font-semibold leading-none text-navy">
-                              وحدة جديدة أُضيفت
-                            </p>
-                            <p className="mt-[3px] text-[7.5px] leading-none text-text-secondary">
-                              مشروع الورود · منذ 5 دقائق
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  {/* Trust stats — inline, no big cards */}
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                    <span className="text-[11.5px] text-white/45">
+                      <strong className="font-bold text-white/65">+500</strong>{' '}وحدة عقارية
+                    </span>
+                    <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-white/20" />
+                    <span className="text-[11.5px] text-white/45">
+                      <strong className="font-bold text-white/65">12</strong>{' '}مشروع نشط
+                    </span>
+                    <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-white/20" />
+                    <span className="text-[11.5px] text-white/45">
+                      <strong className="font-bold text-white/65">24/7</strong>{' '}دعم متواصل
+                    </span>
                   </div>
                 </div>
 

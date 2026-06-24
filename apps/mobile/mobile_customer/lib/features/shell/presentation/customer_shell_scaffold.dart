@@ -205,10 +205,11 @@ class CustomerShellScaffold extends StatelessWidget {
             ),
         ],
       ),
-      // Floating assistant — only on Home (avoids the maintenance tab's FAB).
+      // Floating assistant — only on Home for GUESTS (avoids cluttering the
+      // authenticated customer dashboard and the maintenance tab's FAB).
       // On iOS lift it clear of the floating glass dock so it never sits on the
       // bar; Android's in-slot bar needs no extra lift.
-      floatingActionButton: current == _Branch.home && compareCount == 0
+      floatingActionButton: current == _Branch.home && compareCount == 0 && !isCustomer
           ? Padding(
               padding: EdgeInsets.only(
                 bottom: context.isApplePlatform ? AppSpacing.sm : 0,

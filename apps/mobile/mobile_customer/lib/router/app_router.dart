@@ -48,6 +48,8 @@ import '../features/deposits/presentation/deposits_cubit.dart';
 import '../features/deposits/presentation/deposits_screen.dart';
 import '../features/finance/presentation/finance_hub_screen.dart';
 import '../features/installments/domain/entities/installment.dart';
+import '../features/home_summary/domain/repositories/home_summary_repository.dart';
+import '../features/home_summary/presentation/home_summary_cubit.dart';
 import '../features/installments/domain/repositories/installments_repository.dart';
 import '../features/installments/domain/usecases/get_my_installments.dart';
 import '../features/installments/domain/usecases/submit_payment_proof.dart';
@@ -180,32 +182,18 @@ GoRouter createCustomerRouter(
                       session.isAuthenticated && session.role.isCustomerSide;
                   return MultiBlocProvider(
                     providers: [
-                      BlocProvider(
-                        create: (ctx) => HomeCubit(
-                          GetFeaturedProjects(ctx.read<CatalogRepository>()),
-                        )..load(),
-                      ),
-                      if (isCustomer) ...[
+                      if (!isCustomer)
                         BlocProvider(
-                          create: (ctx) => MyPropertyCubit(
-                            GetMyProperties(ctx.read<MyPropertyRepository>()),
+                          create: (ctx) => HomeCubit(
+                            GetFeaturedProjects(ctx.read<CatalogRepository>()),
                           )..load(),
                         ),
+                      if (isCustomer)
                         BlocProvider(
-                          create: (ctx) => InstallmentsCubit(
-                            GetMyInstallments(
-                              ctx.read<InstallmentsRepository>(),
-                            ),
+                          create: (ctx) => HomeSummaryCubit(
+                            ctx.read<HomeSummaryRepository>(),
                           )..load(),
                         ),
-                        BlocProvider(
-                          create: (ctx) => MaintenanceRequestsCubit(
-                            GetMyMaintenanceRequests(
-                              ctx.read<MaintenanceRepository>(),
-                            ),
-                          )..load(),
-                        ),
-                      ],
                     ],
                     child: const HomeScreen(),
                   );
