@@ -404,7 +404,7 @@ class _UnitHeader extends StatelessWidget {
                                     color: Colors.white.withValues(
                                       alpha: 0.45,
                                     ),
-                                    fontSize: 8,
+                                    fontSize: 10,
                                   ),
                                 ),
                               ],
@@ -443,7 +443,7 @@ class _SmallChip extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 10, color: color),
+            Icon(icon, size: 12, color: color),
             const SizedBox(width: 4),
           ] else ...[
             Container(
@@ -457,7 +457,7 @@ class _SmallChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: color,
-              fontSize: 10.5,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.1,
             ),
@@ -689,7 +689,7 @@ class _FilterBar extends StatelessWidget {
                           : chip.label,
                       style: TextStyle(
                         color: selected ? Colors.white : colors.inkMuted,
-                        fontSize: 11.5,
+                        fontSize: 13,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
                       ),
@@ -774,7 +774,7 @@ class _InstallmentTable extends StatelessWidget {
                             'المبلغ',
                             style: TextStyle(
                               color: AppPalette.gold300.withValues(alpha: 0.95),
-                              fontSize: 11.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 0.3,
                             ),
@@ -797,7 +797,7 @@ class _InstallmentTable extends StatelessWidget {
                             'الاستحقاق',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.60),
-                              fontSize: 11.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -820,7 +820,7 @@ class _InstallmentTable extends StatelessWidget {
                             'الحالة',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.60),
-                              fontSize: 11.5,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -942,7 +942,7 @@ class _TableRow extends StatelessWidget {
                     '#$rowNum',
                     style: TextStyle(
                       color: colors.inkMuted.withValues(alpha: 0.55),
-                      fontSize: 9.5,
+                      fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
                       height: 1.0,
@@ -981,7 +981,7 @@ class _TableRow extends StatelessWidget {
                         typeLabel,
                         style: const TextStyle(
                           color: AppPalette.gold500,
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.1,
                         ),
@@ -1010,7 +1010,7 @@ class _TableRow extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: colors.inkMuted,
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: FontWeight.w500,
                       height: 1.1,
                     ),
@@ -1054,7 +1054,7 @@ class _TableRow extends StatelessWidget {
                           statusLabel,
                           style: TextStyle(
                             color: statusColor,
-                            fontSize: 10.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1092,7 +1092,7 @@ class _TableRow extends StatelessWidget {
                         children: [
                           const Icon(
                             Icons.upload_rounded,
-                            size: 10,
+                            size: 11,
                             color: _navy,
                           ),
                           const SizedBox(width: 3),
@@ -1100,7 +1100,7 @@ class _TableRow extends StatelessWidget {
                             installment.isResubmit ? 'إعادة إرسال' : 'إرسال',
                             style: const TextStyle(
                               color: _navy,
-                              fontSize: 9.5,
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -1227,7 +1227,7 @@ class _FinancialCard extends StatelessWidget {
                     'اللوحة المالية',
                     style: TextStyle(
                       color: AppPalette.gold300.withValues(alpha: 0.80),
-                      fontSize: 11,
+                      fontSize: 13,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.6,
                     ),
@@ -1250,7 +1250,7 @@ class _FinancialCard extends StatelessWidget {
                         '${property.totalMonths} شهرًا',
                         style: const TextStyle(
                           color: AppPalette.gold300,
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1288,7 +1288,7 @@ class _FinancialCard extends StatelessWidget {
                               'من $total',
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.42),
-                                fontSize: 10,
+                                fontSize: 11,
                               ),
                             ),
                           ],
@@ -1305,7 +1305,7 @@ class _FinancialCard extends StatelessWidget {
                           'القسط الشهري',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.48),
-                            fontSize: 11,
+                            fontSize: 13,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -1395,7 +1395,7 @@ class _MiniStat extends StatelessWidget {
             label,
             style: TextStyle(
               color: color.withValues(alpha: 0.70),
-              fontSize: 9.5,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -1522,7 +1522,7 @@ class _ContractCard extends StatelessWidget {
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
-                          fontSize: 14,
+                          fontSize: 15,
                         ),
                       ),
                     ],
@@ -1594,7 +1594,7 @@ class _CellWidget extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(cell.icon, size: 11, color: colors.inkMuted),
+              Icon(cell.icon, size: 12, color: colors.inkMuted),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
@@ -1603,7 +1603,7 @@ class _CellWidget extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: colors.inkMuted,
-                    fontSize: 10,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -1617,7 +1617,7 @@ class _CellWidget extends StatelessWidget {
             style: theme.textTheme.bodySmall?.copyWith(
               color: colors.inkStrong,
               fontWeight: FontWeight.w800,
-              fontSize: 12.5,
+              fontSize: 13.5,
             ),
           ),
         ],

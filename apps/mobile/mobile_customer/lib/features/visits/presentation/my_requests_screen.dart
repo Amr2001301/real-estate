@@ -591,14 +591,17 @@ class _InfoRow extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           '$label: ',
-          style:
-              theme.textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colors.inkMuted,
+            fontSize: 13,
+          ),
         ),
         Expanded(
           child: Text(
             value,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: highlight ? colors.inkStrong : colors.inkStrong,
+              color: colors.inkStrong,
+              fontSize: 14,
               fontWeight: highlight ? FontWeight.w700 : FontWeight.w600,
             ),
           ),

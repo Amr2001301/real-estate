@@ -266,6 +266,7 @@ class _DepositsHeader extends StatelessWidget {
                         Text(
                           l10n.financeDepositsDesc,
                           style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
                             color: AppPalette.gold300,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
@@ -379,7 +380,7 @@ class _DepositsSummary extends StatelessWidget {
                             l10n.depositPaidOn,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.3,
                             ),
@@ -493,7 +494,7 @@ class _SummaryCell extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.65),
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -631,7 +632,7 @@ class _DepositCard extends StatelessWidget {
                               typeLabel,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.75),
-                                fontSize: 13,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -777,7 +778,7 @@ class _VerifiedBadge extends StatelessWidget {
             verified ? l10n.depositVerified : l10n.depositPending,
             style: TextStyle(
               color: dotColor,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -867,7 +868,7 @@ class _ReceiptsButton extends StatelessWidget {
                       'اضغط لعرض أو تنزيل الإيصالات',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -1051,7 +1052,7 @@ class _FilterRow extends StatelessWidget {
                       item.label,
                       style: TextStyle(
                         color: active ? Colors.white : colors.inkStrong,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
                       ),
@@ -1076,7 +1077,7 @@ class _FilterRow extends StatelessWidget {
                           color: active
                               ? Colors.white
                               : item.dotColor ?? colors.inkMuted,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
                           height: 1.2,
                         ),

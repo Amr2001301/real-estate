@@ -221,6 +221,7 @@ class _MyPropertyHeader extends StatelessWidget {
                         Text(
                           'محفظتي العقارية',
                           style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
                             color: AppPalette.gold300,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.4,
@@ -328,7 +329,7 @@ class _PortfolioPill extends StatelessWidget {
             '$totalCount وحدة',
             style: const TextStyle(
               color: _navyDeep,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),
@@ -384,7 +385,7 @@ class _StatusMiniChip extends StatelessWidget {
             '$count $label',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.78),
-              fontSize: 10.5,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -672,7 +673,7 @@ class _StatusPill extends StatelessWidget {
                 : l10n.myPropertyStatusReserved,
             style: TextStyle(
               color: dotColor,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -709,6 +710,7 @@ class _StatsBlock extends StatelessWidget {
                     stats[i].label,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.inkMuted,
+                      fontSize: 13,
                     ),
                   ),
                   const Spacer(),
@@ -798,7 +800,7 @@ class _InstallmentBanner extends StatelessWidget {
               l10n.myPropertyInstallmentPlan,
               style: TextStyle(
                 color: AppPalette.gold500.withValues(alpha: 0.8),
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -813,7 +815,7 @@ class _InstallmentBanner extends StatelessWidget {
             ),
             style: const TextStyle(
               color: AppPalette.gold500,
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
           ),

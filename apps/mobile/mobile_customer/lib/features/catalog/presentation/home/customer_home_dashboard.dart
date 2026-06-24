@@ -13,6 +13,18 @@ const _navy = Color(0xFF0B1726);
 const _navyCard = Color(0xFF152236);
 const _navyLight = Color(0xFF243F62);
 
+// Compact Arabic monetary format for tight spaces: 119000 → "١١٩ ألف ج.م"
+String _compact(String raw, String lang) {
+  final n = (int.tryParse(raw) ?? double.tryParse(raw)?.round()) ?? 0;
+  if (n >= 1000000) {
+    return lang == 'ar' ? '${(n / 1000000).round()} مليون ج.م' : '${(n / 1000000).round()}M EGP';
+  }
+  if (n >= 1000) {
+    return lang == 'ar' ? '${(n / 1000).round()} ألف ج.م' : '${(n / 1000).round()}K EGP';
+  }
+  return PriceFormatter.formatString(raw, languageCode: lang);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Root
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,20 +100,7 @@ class _Body extends StatelessWidget {
           _ActionCard(action: summary.primaryAction),
           const SizedBox(height: AppSpacing.md),
 
-          // 2 · Property section header
-          _SectionRow(
-            icon: AppIcons.property,
-            title: l10n.homeOwnershipSummary,
-            trailing: summary.profile.ownedUnitsCount > 1
-                ? _Link(
-                    label: 'عرض كل وحداتي',
-                    onTap: () => context.push('/account/property'),
-                  )
-                : null,
-          ),
-          const SizedBox(height: AppSpacing.xs),
-
-          // 2b · Property unit: card + quick actions footer as one visual block
+          // 2 · Property unit: card + quick actions footer as one visual block
           if (summary.primaryProperty != null)
             _PropertyUnit(
               property: summary.primaryProperty!,
@@ -175,17 +174,17 @@ class _SectionRow extends StatelessWidget {
     return Row(
       children: [
         Container(
-          width: 30,
-          height: 30,
+          width: 34,
+          height: 34,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [_navyLight, _navy],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(9),
           ),
-          child: Icon(icon, size: 14, color: AppPalette.gold300),
+          child: Icon(icon, size: 16, color: AppPalette.gold300),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -196,14 +195,15 @@ class _SectionRow extends StatelessWidget {
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: colors.inkStrong,
                   fontWeight: FontWeight.w800,
+                  fontSize: 20,
                 ),
               ),
               if (countBadge != null) ...[
-                const SizedBox(width: 5),
+                const SizedBox(width: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
+                    horizontal: 7,
+                    vertical: 3,
                   ),
                   decoration: BoxDecoration(
                     color: colors.error.withValues(alpha: 0.10),
@@ -214,7 +214,7 @@ class _SectionRow extends StatelessWidget {
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: colors.error,
                       fontWeight: FontWeight.w800,
-                      fontSize: 10,
+                      fontSize: 11,
                     ),
                   ),
                 ),
@@ -246,7 +246,7 @@ class _Link extends StatelessWidget {
           style: TextStyle(
             color: context.appColors.brandGold,
             fontWeight: FontWeight.w700,
-            fontSize: 12,
+            fontSize: 13,
           ),
         ),
       ),
@@ -646,7 +646,7 @@ class _CardHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final dotColor = owned ? Colors.greenAccent : Colors.amber;
     return SizedBox(
-      height: 108,
+      height: 88,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -864,10 +864,7 @@ class _PlanBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final formatted = PriceFormatter.formatString(
-      monthlyAmount,
-      languageCode: lang,
-    );
+    final formatted = _compact(monthlyAmount, lang);
     return Container(
       margin: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -1248,22 +1245,24 @@ class _FinancialCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 3),
-                      // Amount: inside Expanded column — unlimited horizontal
-                      // space, no maxLines, no overflow → never truncated.
                       if (nextDue != null)
-                        Text(
-                          PriceFormatter.formatString(
-                            nextDue.amount,
-                            languageCode: lang,
-                          ),
-                          style: TextStyle(
-                            color: nextDue.isOverdue
-                                ? const Color(0xFFEF4444)
-                                : colors.inkStrong,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.3,
-                            height: 1.05,
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            PriceFormatter.formatString(
+                              nextDue.amount,
+                              languageCode: lang,
+                            ),
+                            style: TextStyle(
+                              color: nextDue.isOverdue
+                                  ? const Color(0xFFEF4444)
+                                  : colors.inkStrong,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.3,
+                              height: 1.05,
+                            ),
                           ),
                         )
                       else
@@ -1304,36 +1303,33 @@ class _FinancialCard extends StatelessWidget {
                   const SizedBox(width: AppSpacing.sm),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                      horizontal: 9,
+                      vertical: 4,
                     ),
                     decoration: BoxDecoration(
                       color: const Color(0xFFEF4444).withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(999),
                       border: Border.all(
                         color: const Color(0xFFEF4444).withValues(alpha: 0.28),
                       ),
                     ),
-                    child: Column(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          '${installments.overdueCount}',
-                          style: const TextStyle(
+                        Container(
+                          width: 5,
+                          height: 5,
+                          decoration: const BoxDecoration(
                             color: Color(0xFFEF4444),
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            height: 1.0,
+                            shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(height: 1),
+                        const SizedBox(width: 4),
                         Text(
-                          'متأخرة',
-                          style: TextStyle(
-                            color: const Color(0xFFEF4444).withValues(
-                              alpha: 0.70,
-                            ),
-                            fontSize: 9,
+                          '${installments.overdueCount} متأخرة',
+                          style: const TextStyle(
+                            color: Color(0xFFEF4444),
+                            fontSize: 11,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1664,28 +1660,28 @@ class _MRow extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: 11,
+          vertical: 14,
         ),
         child: Row(
           children: [
             Container(
-              width: 38,
-              height: 38,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [_navyLight, _navy],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(13),
               ),
               child: const Icon(
                 AppIcons.maintenance,
-                size: 16,
+                size: 22,
                 color: AppPalette.gold300,
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1699,45 +1695,46 @@ class _MRow extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colors.inkStrong,
                       fontWeight: FontWeight.w700,
+                      fontSize: 17,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     DateFormatter.mediumDate(
                       item.createdAt,
                       languageCode: lang,
                     ),
                     style: theme.textTheme.bodySmall
-                        ?.copyWith(color: colors.inkMuted, fontSize: 11),
+                        ?.copyWith(color: colors.inkMuted, fontSize: 14),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: AppSpacing.xs),
+            const SizedBox(width: AppSpacing.sm),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
               decoration: BoxDecoration(
                 color: sc.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: sc.withValues(alpha: 0.28)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Container(
-                    width: 5,
-                    height: 5,
+                    width: 6,
+                    height: 6,
                     decoration: BoxDecoration(
                       color: sc,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 5),
                   Text(
                     maintenanceStatusLabel(l10n, item.status),
                     style: TextStyle(
                       color: sc,
-                      fontSize: 10.5,
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

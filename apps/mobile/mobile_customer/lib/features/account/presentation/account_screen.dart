@@ -194,6 +194,7 @@ class _AccountHeader extends StatelessWidget {
                         Text(
                           l10n.navAccount,
                           style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
                             color: AppPalette.gold300,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.5,
@@ -236,7 +237,7 @@ class _AccountHeader extends StatelessWidget {
                             l10n.accountRoleCustomer,
                             style: const TextStyle(
                               color: _navyDeep,
-                              fontSize: 11,
+                              fontSize: 12,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.2,
                             ),
@@ -392,7 +393,7 @@ class _QuickTile extends StatelessWidget {
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: colors.inkStrong,
                       fontWeight: FontWeight.w700,
-                      fontSize: 10.5,
+                      fontSize: 12,
                     ),
                   ),
                 ],
@@ -422,7 +423,7 @@ class _QuickTile extends StatelessWidget {
                         '${item.badge}',
                         style: const TextStyle(
                           color: _navyDeep,
-                          fontSize: 9,
+                          fontSize: 10,
                           fontWeight: FontWeight.w900,
                         ),
                       ),

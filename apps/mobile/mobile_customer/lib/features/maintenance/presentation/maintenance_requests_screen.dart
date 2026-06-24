@@ -210,6 +210,7 @@ class _MaintenanceHeader extends StatelessWidget {
                         Text(
                           'طلبات الخدمة',
                           style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
                             color: AppPalette.gold300,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.4,
@@ -244,7 +245,7 @@ class _MaintenanceHeader extends StatelessWidget {
                                   '$requestCount',
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
@@ -432,6 +433,7 @@ class _RequestCard extends StatelessWidget {
                                           style: theme.textTheme.bodySmall
                                               ?.copyWith(
                                             color: colors.inkMuted,
+                                            fontSize: 13,
                                           ),
                                         ),
                                       ),
@@ -484,6 +486,7 @@ class _RequestCard extends StatelessWidget {
                               ),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: colors.inkMuted,
+                                fontSize: 13,
                               ),
                             ),
                           ],

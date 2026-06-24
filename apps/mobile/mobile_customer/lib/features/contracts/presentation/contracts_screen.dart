@@ -248,6 +248,7 @@ class _ContractsHeader extends StatelessWidget {
                         Text(
                           l10n.financeContractsDesc,
                           style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
                             color: AppPalette.gold300,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
@@ -492,7 +493,7 @@ class _ContractCard extends StatelessWidget {
                                 projectName,
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -650,7 +651,7 @@ class _SummaryCell extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.65),
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -691,7 +692,7 @@ class _StatusPill extends StatelessWidget {
             label,
             style: TextStyle(
               color: color,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -781,7 +782,7 @@ class _DocumentsButton extends StatelessWidget {
                       'اضغط لعرض أو تنزيل المستندات المرفقة',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -961,7 +962,7 @@ class _FilterRow extends StatelessWidget {
                       item.label,
                       style: TextStyle(
                         color: active ? Colors.white : colors.inkStrong,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
                       ),
@@ -983,7 +984,7 @@ class _FilterRow extends StatelessWidget {
                           color: active
                               ? Colors.white
                               : item.dotColor ?? colors.inkMuted,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
                           height: 1.2,
                         ),

@@ -268,6 +268,7 @@ class _InstallmentsHeader extends StatelessWidget {
                         Text(
                           l10n.financeInstallmentsDesc,
                           style: theme.textTheme.labelSmall?.copyWith(
+                            fontSize: 12,
                             color: AppPalette.gold300,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.3,
@@ -385,7 +386,7 @@ class _InstallmentsSummary extends StatelessWidget {
                             l10n.installmentStatusPaid,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 11,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.3,
                             ),
@@ -511,7 +512,7 @@ class _SummaryCell extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white.withValues(alpha: 0.65),
-            fontSize: 11,
+            fontSize: 13,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -726,7 +727,7 @@ class _InstallmentCard extends StatelessWidget {
                                 installment.contractNumber!,
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.7),
-                                  fontSize: 12,
+                                  fontSize: 13,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 0.3,
                                 ),
@@ -750,7 +751,7 @@ class _InstallmentCard extends StatelessWidget {
                           _statusLabel(l10n),
                           style: TextStyle(
                             color: style.accentColor,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -1042,7 +1043,7 @@ class _ViewProofCard extends StatelessWidget {
                       'اضغط لعرض أو تحميل الملف المرفق',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -1154,7 +1155,7 @@ class _SubmitProofButton extends StatelessWidget {
                       subtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.inkMuted,
-                        fontSize: 11,
+                        fontSize: 12,
                       ),
                     ),
                   ],
@@ -1225,7 +1226,7 @@ class _DateCell extends StatelessWidget {
               label.replaceAll(':', '').trim(),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: colors.inkMuted,
-                fontSize: 11,
+                fontSize: 13,
               ),
             ),
           ],
@@ -1364,7 +1365,7 @@ class _FilterRow extends StatelessWidget {
                       item.label,
                       style: TextStyle(
                         color: active ? Colors.white : colors.inkStrong,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.2,
                       ),
@@ -1389,7 +1390,7 @@ class _FilterRow extends StatelessWidget {
                           color: active
                               ? Colors.white
                               : item.dotColor ?? colors.inkMuted,
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
                           height: 1.2,
                         ),
