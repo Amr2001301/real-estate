@@ -29,11 +29,11 @@ class AppBottomNavItem {
 /// on iOS/macOS and Material elsewhere; explicit values force a style (tests).
 enum AppBottomNavStyle { adaptive, material, cupertino }
 
-/// Premium, layout-reserved bottom navigation bar.
+/// Warm-prestige bottom navigation bar.
 ///
-/// Full-width warm surface with subtle rounded top corners and an upward
-/// shadow. The active item shows a 24×3px animated gold indicator line above
-/// the icon; inactive items show muted icons and labels.
+/// Warm cream surface with pronounced rounded top corners and a dual-layer
+/// shadow (deep navy primary + soft gold accent). The active item shows an
+/// animated gold oval chip behind the icon — refined, not heavy.
 /// Works with `Scaffold.bottomNavigationBar` + `extendBody: false`.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
@@ -62,41 +62,55 @@ class AppBottomNav extends StatelessWidget {
 
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.surface,
+        // Warm cream ties the nav to the page canvas — not cold white.
+        color: colors.canvas,
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
+          topLeft: Radius.circular(18),
+          topRight: Radius.circular(18),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 20,
-            offset: const Offset(0, -6),
+            color: AppPalette.navy.withValues(alpha: 0.07),
+            blurRadius: 18,
+            offset: const Offset(0, -5),
+          ),
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 74,
-            child: Row(
-              children: [
-                for (var i = 0; i < items.length; i++)
-                  _NavItemView(
-                    item: items[i],
-                    selected: i == currentIndex,
-                    cupertino: cupertino,
-                    colors: colors,
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onSelect(i);
-                    },
-                  ),
-              ],
-            ),
-          ),
+        child: Builder(
+          builder: (ctx) {
+            // Use a capped bottom inset: enough to clear the home indicator
+            // visually without leaving a large empty cream strip at the bottom.
+            final deviceBottom = MediaQuery.paddingOf(ctx).bottom;
+            final bottomPad = deviceBottom > 0 ? 10.0 : 0.0;
+            return Padding(
+              padding: EdgeInsets.only(bottom: bottomPad),
+              child: SizedBox(
+                height: 74,
+                child: Row(
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      _NavItemView(
+                        item: items[i],
+                        selected: i == currentIndex,
+                        cupertino: cupertino,
+                        colors: colors,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onSelect(i);
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -122,42 +136,48 @@ class _NavItemView extends StatelessWidget {
     final theme = Theme.of(context);
     final iconData = selected ? (item.activeIcon ?? item.icon) : item.icon;
 
-    return SizedBox(
-      height: 74,
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Gold top indicator — animates from 0 to 24px wide when selected
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-            width: selected ? 24 : 0,
-            height: 3,
-            decoration: BoxDecoration(
-              color: AppPalette.gold500,
-              borderRadius: BorderRadius.circular(99),
-            ),
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Animated gold oval chip — expands when selected, disappears when not.
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          width: selected ? 46 : 32,
+          height: 24,
+          decoration: BoxDecoration(
+            color: selected
+                ? AppPalette.gold400.withValues(alpha: 0.13)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            border: selected
+                ? Border.all(
+                    color: AppPalette.gold400.withValues(alpha: 0.28),
+                    width: 0.75,
+                  )
+                : null,
           ),
-          const SizedBox(height: 7),
-          Icon(
-            iconData,
-            size: 22,
-            color: selected ? AppPalette.gold500 : colors.inkMuted,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            item.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
+          child: Center(
+            child: Icon(
+              iconData,
+              size: 22,
               color: selected ? AppPalette.gold500 : colors.inkMuted,
-              fontSize: 12.5,
-              fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              height: 1.1,
             ),
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          item.label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: selected ? AppPalette.gold600 : colors.inkMuted,
+            fontSize: 12.5,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            height: 1.1,
+          ),
+        ),
+      ],
     );
   }
 
@@ -176,8 +196,8 @@ class _NavItemView extends StatelessWidget {
               )
             : InkWell(
                 onTap: onTap,
-                splashColor: AppPalette.gold500.withValues(alpha: 0.06),
-                highlightColor: AppPalette.gold500.withValues(alpha: 0.04),
+                splashColor: AppPalette.gold400.withValues(alpha: 0.07),
+                highlightColor: AppPalette.gold400.withValues(alpha: 0.04),
                 child: _content(context),
               ),
       ),
