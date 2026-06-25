@@ -56,11 +56,19 @@ class MaintenanceRequestDto {
   final String? customerRatingText;
   final String? customerRatingSubmittedAt;
 
+  // Returns null for String/int values — tolerates backends that send name as
+  // a plain string instead of the {ar, en} locale map.
+  static Map<String, dynamic>? _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) return value;
+    if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
   factory MaintenanceRequestDto.fromJson(Map<String, dynamic> json) {
-    final customer = json['customer'] as Map<String, dynamic>?;
-    final unit = json['unit'] as Map<String, dynamic>?;
-    final category = json['category'] as Map<String, dynamic>?;
-    final categoryName = category?['name'] as Map<String, dynamic>?;
+    final customer = _asMap(json['customer']);
+    final unit = _asMap(json['unit']);
+    final category = _asMap(json['category']);
+    final categoryName = _asMap(category?['name']);
     return MaintenanceRequestDto(
       id: json['id'] as String,
       description: json['description'] as String? ?? '',

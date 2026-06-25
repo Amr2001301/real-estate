@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../dtos/notification_dto.dart';
 
@@ -27,8 +28,26 @@ class NotificationsRemoteDataSourceImpl implements NotificationsRemoteDataSource
 
   @override
   Future<int> unreadCount() async {
-    final res = await _dio.get<Map<String, dynamic>>('/me/notifications/unread-count');
-    return (res.data?['count'] as num?)?.toInt() ?? 0;
+    final res = await _dio.get<dynamic>('/me/notifications/unread-count');
+    assert(() {
+      debugPrint('[NotificationsDS] unreadCount: ${res.data} (${res.data?.runtimeType})');
+      return true;
+    }());
+    return parseUnreadCount(res.data);
+  }
+
+  @visibleForTesting
+  static int parseUnreadCount(dynamic data) {
+    if (data is int) return data;
+    if (data is num) return data.toInt();
+    if (data is String) return int.tryParse(data) ?? 0;
+    if (data is Map<String, dynamic>) {
+      final v = data['count'] ?? data['unreadCount'] ?? data['unread_count'];
+      if (v is int) return v;
+      if (v is num) return v.toInt();
+      if (v is String) return int.tryParse(v) ?? 0;
+    }
+    return 0;
   }
 
   @override

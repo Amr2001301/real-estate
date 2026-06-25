@@ -114,6 +114,33 @@ void main() {
       expect(r.customerRatingText, 'ممتاز');
     });
 
+    test('tolerates flat-string category name (backend sends plain string not locale map)', () {
+      final json = {
+        ..._json(),
+        'category': {'name': 'Plumbing'},
+      };
+      // Must not throw — _asMap('Plumbing') returns null, so categoryName → null
+      final r = MaintenanceRequestDto.fromJson(json).toEntity();
+      expect(r.categoryName, isNull);
+    });
+
+    test('tolerates missing category', () {
+      final m = Map<String, dynamic>.from(_json())..remove('category');
+      final r = MaintenanceRequestDto.fromJson(m).toEntity();
+      expect(r.categoryName, isNull);
+    });
+
+    test('tolerates null customer and unit', () {
+      final json = {
+        ..._json(),
+        'customer': null,
+        'unit': null,
+      };
+      final r = MaintenanceRequestDto.fromJson(json).toEntity();
+      expect(r.customerName, isNull);
+      expect(r.unitCode, isNull);
+    });
+
     test('detail dto parses documents array', () {
       final detail = MaintenanceDetailDto.fromJson({
         ..._json(),

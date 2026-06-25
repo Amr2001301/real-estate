@@ -323,6 +323,33 @@ void main() {
     });
   });
 
+  group('NotificationsRemoteDataSourceImpl.parseUnreadCount', () {
+    test('bare int', () {
+      expect(NotificationsRemoteDataSourceImpl.parseUnreadCount(7), 7);
+    });
+
+    test('bare num (double)', () {
+      expect(NotificationsRemoteDataSourceImpl.parseUnreadCount(3.0), 3);
+    });
+
+    test('bare string', () {
+      expect(NotificationsRemoteDataSourceImpl.parseUnreadCount('5'), 5);
+    });
+
+    test('map with int count', () {
+      expect(NotificationsRemoteDataSourceImpl.parseUnreadCount({'count': 4}), 4);
+    });
+
+    test('map with string count — {"count": "5"}', () {
+      expect(NotificationsRemoteDataSourceImpl.parseUnreadCount({'count': '5'}), 5);
+    });
+
+    test('null or unrecognised shape → 0', () {
+      expect(NotificationsRemoteDataSourceImpl.parseUnreadCount(null), 0);
+      expect(NotificationsRemoteDataSourceImpl.parseUnreadCount({}), 0);
+    });
+  });
+
   group('staffRedirect — /notifications is shared', () {
     SessionState signedIn(AppRole role) => SessionState.authenticated(
           Session(userId: 'u1', role: role),

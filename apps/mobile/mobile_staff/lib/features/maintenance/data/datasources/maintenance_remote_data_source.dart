@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/maintenance_request.dart';
 import '../dtos/maintenance_dtos.dart';
@@ -16,12 +17,25 @@ class MaintenanceRemoteDataSourceImpl implements MaintenanceRemoteDataSource {
 
   @override
   Future<List<MaintenanceRequestDto>> listAssigned() async {
-    final res = await _dio.get<Map<String, dynamic>>(
+    final res = await _dio.get<dynamic>(
       '/me/maintenance-requests',
       queryParameters: {'page': 1, 'pageSize': 100},
     );
-    final data = (res.data?['data'] as List?) ?? const [];
+    assert(() {
+      debugPrint('[MaintenanceDS] listAssigned: ${res.data?.runtimeType}');
+      return true;
+    }());
+    final data = _parseListResponse(res.data);
     return data.whereType<Map<String, dynamic>>().map(MaintenanceRequestDto.fromJson).toList();
+  }
+
+  static List<dynamic> _parseListResponse(dynamic data) {
+    if (data is List) return data;
+    if (data is Map<String, dynamic>) {
+      final items = data['data'] ?? data['items'] ?? data['results'];
+      if (items is List) return items;
+    }
+    return const [];
   }
 
   @override
