@@ -14,6 +14,19 @@ const _navy      = Color(0xFF0B1726);
 const _navyCard  = Color(0xFF152236);
 const _navyAccent= Color(0xFF1E3451);
 
+// Compact Arabic monetary display: 119000 → "119 ألف ج.م"
+String _compact(String? raw, String lang) {
+  if (raw == null || raw.isEmpty) return '—';
+  final n = (int.tryParse(raw) ?? double.tryParse(raw)?.round()) ?? 0;
+  if (n >= 1000000) {
+    return lang == 'ar' ? '${(n / 1000000).round()} مليون ج.م' : '${(n / 1000000).round()}M EGP';
+  }
+  if (n >= 1000) {
+    return lang == 'ar' ? '${(n / 1000).round()} ألف ج.م' : '${(n / 1000).round()}K EGP';
+  }
+  return PriceFormatter.formatString(raw, languageCode: lang);
+}
+
 enum _Filter { all, paid, pending, overdue }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -97,6 +110,15 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
             final pendingCount = all.length - paidCount - overdueCount;
             final nextInst     = _nextInstallment(all);
 
+            // Sum of all overdue installment amounts (raw int string)
+            final overdueTotalInt = all
+                .where((i) => i.status == InstallmentStatus.overdue)
+                .fold<int>(0, (sum, i) {
+              final n = int.tryParse(i.amount) ??
+                  double.tryParse(i.amount)?.round() ?? 0;
+              return sum + n;
+            });
+
             final displayed = switch (_filter) {
               _Filter.paid    => all.where((i) => i.status == InstallmentStatus.paid).toList(),
               _Filter.pending => all.where((i) => i.status == InstallmentStatus.pending).toList(),
@@ -143,14 +165,19 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
                       ),
                       // Tab 1: الملخص
                       _SummaryTab(
-                        property:     property,
-                        lang:         lang,
-                        l10n:         l10n,
-                        total:        all.length,
-                        paid:         paidCount,
-                        pending:      pendingCount,
-                        overdue:      overdueCount,
-                        nextInst:     nextInst,
+                        property:           property,
+                        lang:               lang,
+                        l10n:               l10n,
+                        total:              all.length,
+                        paid:               paidCount,
+                        pending:            pendingCount,
+                        overdue:            overdueCount,
+                        nextInst:           nextInst,
+                        overdueTotal:       overdueTotalInt.toString(),
+                        onViewInstallments: () {
+                          _tabs.animateTo(0);
+                          setState(() => _filter = _Filter.overdue);
+                        },
                       ),
                     ],
                   ),
@@ -354,7 +381,9 @@ class _UnitHeader extends StatelessWidget {
                                 label: owned
                                     ? l10n.myPropertyStatusOwned
                                     : l10n.myPropertyStatusReserved,
-                                color: owned ? Colors.greenAccent : Colors.amber,
+                                color: owned
+                                    ? const Color(0xFF34C77B)
+                                    : AppPalette.gold400,
                               ),
                               if (property.contractNumber != null)
                                 _SmallChip(
@@ -369,39 +398,50 @@ class _UnitHeader extends StatelessWidget {
                     ),
                     if (total > 0) ...[
                       const SizedBox(width: AppSpacing.md),
-                      SizedBox(
-                        width: 52,
-                        height: 52,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            CustomPaint(
-                              painter: _DonutPainter(
-                                  progress: progress),
-                              child: const SizedBox.expand(),
-                            ),
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(
-                                  '$paid',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w900,
-                                    height: 1.0,
+                      Semantics(
+                        label: '$paid من $total قسط مسدد',
+                        child: SizedBox(
+                          width: 58,
+                          height: 58,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              CustomPaint(
+                                painter: _DonutPainter(progress: progress),
+                                child: const SizedBox.expand(),
+                              ),
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    '$paid',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w900,
+                                      height: 1.0,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  '/ $total',
-                                  style: TextStyle(
-                                    color: Colors.white.withValues(alpha: 0.45),
-                                    fontSize: 10,
+                                  Text(
+                                    'من $total',
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(alpha: 0.50),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                  Text(
+                                    'قسط',
+                                    style: TextStyle(
+                                      color: AppPalette.gold300.withValues(alpha: 0.75),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -410,10 +450,10 @@ class _UnitHeader extends StatelessWidget {
 
                 // ── Next installment banner ───────────────────────────────
                 if (nextInst != null) ...[
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 9),
+                        horizontal: 14, vertical: 10),
                     decoration: BoxDecoration(
                       color: nextColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(12),
@@ -426,50 +466,33 @@ class _UnitHeader extends StatelessWidget {
                           nextIsOverdue
                               ? Icons.warning_amber_rounded
                               : Icons.pending_actions_rounded,
-                          size: 15,
+                          size: 16,
                           color: nextColor,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          nextIsOverdue
-                              ? 'قسط متأخر: '
-                              : 'القسط القادم: ',
-                          style: TextStyle(
-                            color: nextColor.withValues(alpha: 0.80),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          PriceFormatter.formatString(
-                            nextInst!.amount,
-                            languageCode: lang,
-                          ),
-                          style: TextStyle(
-                            color: nextColor,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Container(
-                          width: 3,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: nextColor.withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          DateFormatter.mediumDate(
-                            nextInst!.dueDate,
-                            languageCode: lang,
-                          ),
-                          style: TextStyle(
-                            color: nextColor.withValues(alpha: 0.85),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                nextIsOverdue ? 'قسط متأخر' : 'القسط القادم',
+                                style: TextStyle(
+                                  color: nextColor.withValues(alpha: 0.75),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 1),
+                              Text(
+                                '${_compact(nextInst!.amount, lang)}  ·  ${DateFormatter.mediumDate(nextInst!.dueDate, languageCode: lang)}',
+                                style: TextStyle(
+                                  color: nextColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -540,11 +563,11 @@ class _PillTabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 46,
+      height: 54,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: colors.hairline.withValues(alpha: 0.55)),
         boxShadow: [
           BoxShadow(
@@ -562,12 +585,12 @@ class _PillTabBar extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: _navy.withValues(alpha: 0.32),
-              blurRadius: 10,
-              offset: const Offset(0, 3),
+              color: _navy.withValues(alpha: 0.28),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -575,9 +598,9 @@ class _PillTabBar extends StatelessWidget {
         dividerColor: Colors.transparent,
         labelColor: Colors.white,
         unselectedLabelColor: colors.inkMuted,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5),
         unselectedLabelStyle:
-            const TextStyle(fontWeight: FontWeight.w500, fontSize: 13.5),
+            const TextStyle(fontWeight: FontWeight.w500, fontSize: 14.5),
         tabs: const [
           Tab(text: 'الأقساط'),
           Tab(text: 'الملخص'),
@@ -690,85 +713,91 @@ class _FilterBar extends StatelessWidget {
     ];
 
     return SizedBox(
-      height: 38,
+      height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
+        padding: const EdgeInsetsDirectional.only(end: 4),
         children: items.map((item) {
           final selected = filter == item.value;
           final dot      = _dotColors[item.value]!;
           return Padding(
             padding: const EdgeInsetsDirectional.only(end: 8),
-            child: GestureDetector(
-              onTap: () => onChanged(item.value),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: selected ? _navyCard : Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: selected ? _navyCard : const Color(0xFFE5E7EB),
+            child: Semantics(
+              button: true,
+              selected: selected,
+              label: '${item.label} ${item.count}',
+              child: GestureDetector(
+                onTap: () => onChanged(item.value),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: selected ? _navyCard : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selected ? _navyCard : const Color(0xFFD1D5DB),
+                    ),
+                    boxShadow: selected
+                        ? [
+                            BoxShadow(
+                              color: _navyCard.withValues(alpha: 0.18),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            )
+                          ]
+                        : null,
                   ),
-                  boxShadow: selected
-                      ? [
-                          BoxShadow(
-                            color: _navyCard.withValues(alpha: 0.18),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
-                      : null,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? dot
-                            : dot.withValues(alpha: 0.45),
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 7),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        color: selected
-                            ? Colors.white
-                            : const Color(0xFF6B7280),
-                        fontSize: 13,
-                        fontWeight: selected
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                      ),
-                    ),
-                    if (item.count > 0) ...[
-                      const SizedBox(width: 6),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                        width: 7,
+                        height: 7,
                         decoration: BoxDecoration(
                           color: selected
-                              ? dot.withValues(alpha: 0.22)
-                              : const Color(0xFFF3F4F6),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '${item.count}',
-                          style: TextStyle(
-                            color: selected
-                                ? dot
-                                : const Color(0xFF9CA3AF),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
+                              ? dot
+                              : dot.withValues(alpha: 0.60),
+                          shape: BoxShape.circle,
                         ),
                       ),
+                      const SizedBox(width: 7),
+                      Text(
+                        item.label,
+                        style: TextStyle(
+                          color: selected
+                              ? Colors.white
+                              : const Color(0xFF374151),
+                          fontSize: 13,
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                        ),
+                      ),
+                      if (item.count > 0) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? dot.withValues(alpha: 0.22)
+                                : const Color(0xFFF3F4F6),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '${item.count}',
+                            style: TextStyle(
+                              color: selected
+                                  ? dot
+                                  : const Color(0xFF6B7280),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ),
@@ -959,19 +988,16 @@ class _InstallmentCard extends StatelessWidget {
                           'المبلغ',
                           style: TextStyle(
                             color: const Color(0xFF9CA3AF),
-                            fontSize: 11,
+                            fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         Text(
-                          PriceFormatter.formatString(
-                            inst.amount,
-                            languageCode: lang,
-                          ),
+                          _compact(inst.amount, lang),
                           style: const TextStyle(
                             color: Color(0xFF1A1A2E),
-                            fontSize: 18,
+                            fontSize: 22,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.5,
                             height: 1.1,
@@ -987,16 +1013,16 @@ class _InstallmentCard extends StatelessWidget {
                         'تاريخ الاستحقاق',
                         style: TextStyle(
                           color: const Color(0xFF9CA3AF),
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           Icon(
                             Icons.event_rounded,
-                            size: 13,
+                            size: 14,
                             color: const Color(0xFF9CA3AF),
                           ),
                           const SizedBox(width: 4),
@@ -1007,7 +1033,7 @@ class _InstallmentCard extends StatelessWidget {
                             ),
                             style: const TextStyle(
                               color: Color(0xFF374151),
-                              fontSize: 14,
+                              fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -1235,16 +1261,20 @@ class _SummaryTab extends StatelessWidget {
     required this.pending,
     required this.overdue,
     required this.nextInst,
+    required this.overdueTotal,
+    required this.onViewInstallments,
   });
 
-  final Property      property;
-  final String        lang;
+  final Property         property;
+  final String           lang;
   final AppLocalizations l10n;
-  final int           total;
-  final int           paid;
-  final int           pending;
-  final int           overdue;
-  final Installment?  nextInst;
+  final int              total;
+  final int              paid;
+  final int              pending;
+  final int              overdue;
+  final Installment?     nextInst;
+  final String           overdueTotal;
+  final VoidCallback     onViewInstallments;
 
   @override
   Widget build(BuildContext context) {
@@ -1258,13 +1288,15 @@ class _SummaryTab extends StatelessWidget {
       children: [
         if (property.hasInstallmentPlan) ...[
           _FinancialCard(
-            property: property,
-            lang:     lang,
-            total:    total,
-            paid:     paid,
-            pending:  pending,
-            overdue:  overdue,
-            nextInst: nextInst,
+            property:           property,
+            lang:               lang,
+            total:              total,
+            paid:               paid,
+            pending:            pending,
+            overdue:            overdue,
+            nextInst:           nextInst,
+            overdueTotal:       overdueTotal,
+            onViewInstallments: onViewInstallments,
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
@@ -1285,6 +1317,8 @@ class _FinancialCard extends StatelessWidget {
     required this.pending,
     required this.overdue,
     required this.nextInst,
+    required this.overdueTotal,
+    required this.onViewInstallments,
   });
 
   final Property     property;
@@ -1294,10 +1328,14 @@ class _FinancialCard extends StatelessWidget {
   final int          pending;
   final int          overdue;
   final Installment? nextInst;
+  final String       overdueTotal;
+  final VoidCallback onViewInstallments;
 
   @override
   Widget build(BuildContext context) {
-    final progress = total > 0 ? paid / total : 0.0;
+    final hasOverdue = overdue > 0;
+    final hasNext    = nextInst != null;
+    const overdueColor = Color(0xFFEF4444);
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -1324,12 +1362,12 @@ class _FinancialCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned.fill(
-              child: IgnorePointer(child: _DotTexture())),
+          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Eyebrow
+
+              // ── 1. Eyebrow row ────────────────────────────────────────
               Row(
                 children: [
                   Text(
@@ -1364,184 +1402,213 @@ class _FinancialCard extends StatelessWidget {
                     ),
                 ],
               ),
-              const SizedBox(height: AppSpacing.md),
+              const SizedBox(height: AppSpacing.lg),
 
-              // Main row: donut + amount + stats
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Donut ring
-                  SizedBox(
-                    width: 100,
-                    height: 100,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        CustomPaint(
-                          painter: _DonutPainter(progress: progress),
-                          child: const SizedBox.expand(),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              '$paid',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                height: 1.0,
-                              ),
-                            ),
-                            Text(
-                              'من $total',
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.42),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+              // ── 2. Primary block ──────────────────────────────────────
+              if (hasOverdue) ...[
+                // Overdue state: largest element on the card
+                Text(
+                  'إجمالي المتأخرات',
+                  style: TextStyle(
+                    color: overdueColor.withValues(alpha: 0.72),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-                  const SizedBox(width: AppSpacing.lg),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'القسط الشهري',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.48),
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          PriceFormatter.formatString(
-                            property.monthlyAmount,
-                            languageCode: lang,
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        Row(
-                          children: [
-                            _MiniStat(
-                              label: 'مسددة',
-                              value: '$paid',
-                              color: const Color(0xFF4ADE80),
-                            ),
-                            const SizedBox(width: 6),
-                            _MiniStat(
-                              label: 'معلقة',
-                              value: '$pending',
-                              color: const Color(0xFFF59E0B),
-                            ),
-                            const SizedBox(width: 6),
-                            _MiniStat(
-                              label: 'متأخرة',
-                              value: '$overdue',
-                              color: const Color(0xFFEF4444),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // Progress bar
-              if (total > 0) ...[
-                const SizedBox(height: AppSpacing.lg),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'نسبة السداد',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.45),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Text(
-                      '${(progress * 100).round()}%',
-                      style: const TextStyle(
-                        color: AppPalette.gold300,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
                 ),
                 const SizedBox(height: 6),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: Container(
-                    height: 6,
-                    color: Colors.white.withValues(alpha: 0.10),
-                    child: FractionallySizedBox(
-                      widthFactor: 1,
-                      child: LayoutBuilder(
-                        builder: (_, constraints) => Stack(
-                          children: [
-                            Positioned.fill(
-                              child: Container(
-                                color: Colors.white
-                                    .withValues(alpha: 0.10),
-                              ),
-                            ),
-                            Positioned(
-                              left: 0,
-                              top: 0,
-                              bottom: 0,
-                              width: constraints.maxWidth * progress,
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Color(0xFFCFAA52),
-                                      AppPalette.gold400,
-                                    ],
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color:
-                                          Color(0x44D4A843),
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
+                Text(
+                  _compact(overdueTotal, lang),
+                  style: const TextStyle(
+                    color: overdueColor,
+                    fontSize: 32,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  '${overdue == 1 ? "قسط واحد متأخر" : "$overdue أقساط متأخرة"}'
+                  '${nextInst != null ? " · آخر استحقاق ${DateFormatter.mediumDate(nextInst!.dueDate, languageCode: lang)}" : ""}',
+                  style: TextStyle(
+                    color: overdueColor.withValues(alpha: 0.62),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                // CTA
+                Semantics(
+                  button: true,
+                  label: 'عرض الأقساط المتأخرة',
+                  child: GestureDetector(
+                    onTap: onViewInstallments,
+                    child: Container(
+                      height: 46,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFD4A843), AppPalette.gold500],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppPalette.gold400.withValues(alpha: 0.30),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.warning_amber_rounded, size: 17, color: _navy),
+                          SizedBox(width: 7),
+                          Text(
+                            'عرض الأقساط المتأخرة',
+                            style: TextStyle(
+                              color: _navy,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                  ),
+                ),
+              ] else if (hasNext) ...[
+                // No overdue — next installment is primary focus
+                Text(
+                  'القسط القادم',
+                  style: TextStyle(
+                    color: AppPalette.gold300.withValues(alpha: 0.75),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  _compact(nextInst!.amount, lang),
+                  style: const TextStyle(
+                    color: AppPalette.gold300,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    height: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  DateFormatter.mediumDate(
+                      nextInst!.dueDate, languageCode: lang),
+                  style: TextStyle(
+                    color: AppPalette.gold300.withValues(alpha: 0.65),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Semantics(
+                  button: true,
+                  label: 'عرض الأقساط',
+                  child: GestureDetector(
+                    onTap: onViewInstallments,
+                    child: Container(
+                      height: 46,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppPalette.gold400.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: AppPalette.gold400.withValues(alpha: 0.35)),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.list_alt_rounded,
+                              size: 17, color: AppPalette.gold400),
+                          SizedBox(width: 7),
+                          Text(
+                            'عرض الأقساط',
+                            style: TextStyle(
+                              color: AppPalette.gold300,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                // No plan / all paid
+                Text(
+                  'القسط الشهري',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.55),
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _compact(property.monthlyAmount, lang),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    height: 1.0,
                   ),
                 ),
               ],
 
-              // ── Next installment highlight ─────────────────────────────
-              if (nextInst != null) ...[
-                const SizedBox(height: 14),
+              // ── 3. Secondary: monthly installment ─────────────────────
+              if (hasOverdue || hasNext) ...[
+                const SizedBox(height: AppSpacing.lg),
                 Container(
-                  height: 0.5,
-                  color: Colors.white.withValues(alpha: 0.12),
+                    height: 0.5,
+                    color: Colors.white.withValues(alpha: 0.12)),
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Text(
+                      'القسط الشهري',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.50),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      _compact(property.monthlyAmount, lang),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 14),
-                _NextInstallmentRow(
-                  installment: nextInst!,
-                  lang: lang,
+              ],
+
+              // ── 4. Stats row ──────────────────────────────────────────
+              if (total > 0) ...[
+                const SizedBox(height: AppSpacing.md),
+                Container(
+                    height: 0.5,
+                    color: Colors.white.withValues(alpha: 0.12)),
+                const SizedBox(height: AppSpacing.md),
+                _CardStatsRow(
+                  total:   total,
+                  paid:    paid,
+                  overdue: overdue,
+                  pending: pending,
                 ),
               ],
             ],
@@ -1552,78 +1619,63 @@ class _FinancialCard extends StatelessWidget {
   }
 }
 
-class _NextInstallmentRow extends StatelessWidget {
-  const _NextInstallmentRow({
-    required this.installment,
-    required this.lang,
+// ── Card stats row ────────────────────────────────────────────────────────────
+
+class _CardStatsRow extends StatelessWidget {
+  const _CardStatsRow({
+    required this.total,
+    required this.paid,
+    required this.overdue,
+    required this.pending,
   });
 
-  final Installment installment;
-  final String      lang;
+  final int total;
+  final int paid;
+  final int overdue;
+  final int pending;
 
   @override
   Widget build(BuildContext context) {
-    final isOverdue = installment.status == InstallmentStatus.overdue;
-    final color     = isOverdue
-        ? const Color(0xFFEF4444)
-        : AppPalette.gold300;
-
     return Row(
       children: [
-        Container(
-          width: 36,
-          height: 36,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withValues(alpha: 0.30)),
-          ),
-          child: Icon(
-            isOverdue
-                ? Icons.warning_amber_rounded
-                : Icons.event_rounded,
-            color: color,
-            size: 18,
-          ),
-        ),
-        const SizedBox(width: 12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isOverdue ? 'قسط متأخر' : 'القسط القادم',
-                style: TextStyle(
-                  color: color.withValues(alpha: 0.75),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                DateFormatter.mediumDate(
-                  installment.dueDate,
-                  languageCode: lang,
-                ),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          child: _StatCell(
+            value: '$paid / $total',
+            label: 'مدفوع',
+            color: Colors.white,
           ),
         ),
-        Text(
-          PriceFormatter.formatString(
-            installment.amount,
-            languageCode: lang,
+        Container(
+            width: 0.5,
+            height: 38,
+            color: Colors.white.withValues(alpha: 0.15)),
+        Expanded(
+          child: _StatCell(
+            value: '$overdue',
+            label: 'متأخر',
+            color: const Color(0xFFEF4444),
           ),
-          style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -0.3,
+        ),
+        Container(
+            width: 0.5,
+            height: 38,
+            color: Colors.white.withValues(alpha: 0.15)),
+        Expanded(
+          child: _StatCell(
+            value: '$pending',
+            label: 'قيد الانتظار',
+            color: const Color(0xFFF59E0B),
+          ),
+        ),
+        Container(
+            width: 0.5,
+            height: 38,
+            color: Colors.white.withValues(alpha: 0.15)),
+        Expanded(
+          child: _StatCell(
+            value: '$paid',
+            label: 'مسدد',
+            color: const Color(0xFF4ADE80),
           ),
         ),
       ],
@@ -1631,48 +1683,44 @@ class _NextInstallmentRow extends StatelessWidget {
   }
 }
 
-class _MiniStat extends StatelessWidget {
-  const _MiniStat({
-    required this.label,
+class _StatCell extends StatelessWidget {
+  const _StatCell({
     required this.value,
+    required this.label,
     required this.color,
   });
-  final String label;
+
   final String value;
+  final String label;
   final Color  color;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 15,
-              fontWeight: FontWeight.w900,
-              height: 1.0,
-            ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            height: 1.0,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: TextStyle(
-              color: color.withValues(alpha: 0.70),
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.45),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }
@@ -1693,12 +1741,13 @@ class _ContractCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
 
-    final rows = <({IconData icon, String label, String value})>[
+    final rows = <({IconData icon, String label, String value, bool isCode})>[
       if (property.contractNumber != null)
         (
           icon: AppIcons.contract,
           label: l10n.myPropertyContractNumber,
           value: property.contractNumber!,
+          isCode: true,
         ),
       if (property.signedAt != null)
         (
@@ -1708,18 +1757,21 @@ class _ContractCard extends StatelessWidget {
             property.signedAt!,
             languageCode: lang,
           ),
+          isCode: false,
         ),
       if (property.reservationNumber != null)
         (
           icon: Icons.confirmation_number_rounded,
           label: l10n.myPropertyReservationNumber,
           value: property.reservationNumber!,
+          isCode: true,
         ),
       if (property.totalMonths != null)
         (
           icon: Icons.calendar_month_rounded,
           label: 'مدة التقسيط',
           value: '${property.totalMonths} شهرًا',
+          isCode: false,
         ),
     ];
 
@@ -1813,6 +1865,7 @@ class _ContractCard extends StatelessWidget {
                       icon:   item.icon,
                       label:  item.label,
                       value:  item.value,
+                      isCode: item.isCode,
                       colors: colors,
                     ),
                     if (!isLast) ...[
@@ -1841,15 +1894,28 @@ class _ContractInfoRow extends StatelessWidget {
     required this.label,
     required this.value,
     required this.colors,
+    this.isCode = false,
   });
 
   final IconData     icon;
   final String       label;
   final String       value;
   final AppColorsExt colors;
+  final bool         isCode;
 
   @override
   Widget build(BuildContext context) {
+    final valueText = Text(
+      value,
+      style: TextStyle(
+        color: colors.inkStrong,
+        fontSize: 14,
+        fontWeight: FontWeight.w800,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
@@ -1875,21 +1941,17 @@ class _ContractInfoRow extends StatelessWidget {
                   label,
                   style: TextStyle(
                     color: colors.inkMuted,
-                    fontSize: 11,
+                    fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: TextStyle(
-                    color: colors.inkStrong,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                isCode
+                    ? Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: valueText,
+                      )
+                    : valueText,
               ],
             ),
           ),
@@ -2000,20 +2062,25 @@ class _DonutPainter extends CustomPainter {
 class _BackBtn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new_rounded,
-          color: Colors.white,
-          size: 15,
+    return Semantics(
+      button: true,
+      label: 'العودة',
+      child: GestureDetector(
+        onTap: () => context.pop(),
+        child: Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+          ),
+          child: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 16,
+          ),
         ),
       ),
     );

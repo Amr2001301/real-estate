@@ -12,6 +12,18 @@ const _navyDeep = Color(0xFF0B1726);
 const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
+// Compact Arabic monetary format for tight spaces: 119000 → "119 ألف ج.م"
+String _compact(String raw, String lang) {
+  final n = (int.tryParse(raw) ?? double.tryParse(raw)?.round()) ?? 0;
+  if (n >= 1000000) {
+    return lang == 'ar' ? '${(n / 1000000).round()} مليون ج.م' : '${(n / 1000000).round()}M EGP';
+  }
+  if (n >= 1000) {
+    return lang == 'ar' ? '${(n / 1000).round()} ألف ج.م' : '${(n / 1000).round()}K EGP';
+  }
+  return PriceFormatter.formatString(raw, languageCode: lang);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // My Property Screen
 // ─────────────────────────────────────────────────────────────────────────────
@@ -229,7 +241,9 @@ class _MyPropertyHeader extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          l10n.accountMyProperty,
+                          showCount && totalCount > 1
+                              ? 'وحداتي'
+                              : l10n.accountMyProperty,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: theme.textTheme.titleLarge?.copyWith(
@@ -326,7 +340,7 @@ class _PortfolioPill extends StatelessWidget {
             ],
           ),
           child: Text(
-            '$totalCount وحدة',
+            totalCount == 1 ? 'وحدة واحدة' : '$totalCount وحدات',
             style: const TextStyle(
               color: _navyDeep,
               fontSize: 12,
@@ -337,13 +351,13 @@ class _PortfolioPill extends StatelessWidget {
         // Owned chip — only visible when there's a mix of statuses
         if (ownedCount > 0 && pendingCount > 0)
           _StatusMiniChip(
-            color: Colors.greenAccent,
+            color: const Color(0xFF34C77B),
             label: l10n.myPropertyStatusOwned,
             count: ownedCount,
           ),
         if (pendingCount > 0 && ownedCount > 0)
           _StatusMiniChip(
-            color: Colors.amber,
+            color: AppPalette.gold400,
             label: l10n.myPropertyStatusReserved,
             count: pendingCount,
           ),
@@ -512,7 +526,7 @@ class _CardHeader extends StatelessWidget {
     final indexStr = (index + 1).toString().padLeft(2, '0');
 
     return SizedBox(
-      height: 108,
+      height: 88,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -650,13 +664,15 @@ class _StatusPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dotColor = owned ? Colors.greenAccent : Colors.amber;
+    const ownedColor = Color(0xFF34C77B);
+    const reservedColor = AppPalette.gold400;
+    final dotColor = owned ? ownedColor : reservedColor;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: (owned ? Colors.green : Colors.amber).withValues(alpha: 0.14),
+        color: dotColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: dotColor.withValues(alpha: 0.45)),
+        border: Border.all(color: dotColor.withValues(alpha: 0.40)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -696,14 +712,14 @@ class _StatsBlock extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xs,
+        vertical: 4,
       ),
       child: Column(
         children: [
           for (var i = 0; i < stats.length; i++) ...[
             if (i > 0) Divider(height: 1, color: colors.hairline),
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 children: [
                   Text(
@@ -759,11 +775,11 @@ class _InstallmentBanner extends StatelessWidget {
         AppSpacing.lg,
         0,
         AppSpacing.lg,
-        AppSpacing.sm,
+        6,
       ),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm + 1,
+        vertical: 8,
       ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -805,19 +821,31 @@ class _InstallmentBanner extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            l10n.myPropertyInstallmentSummary(
-              PriceFormatter.formatString(
-                property.monthlyAmount,
-                languageCode: lang,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _compact(property.monthlyAmount ?? '0', lang),
+                style: const TextStyle(
+                  color: AppPalette.gold500,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                ),
               ),
-              property.totalMonths!,
-            ),
-            style: const TextStyle(
-              color: AppPalette.gold500,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-            ),
+              Text(
+                lang == 'ar'
+                    ? '/ شهريًا · ${property.totalMonths} شهرًا'
+                    : '/ mo · ${property.totalMonths} months',
+                style: TextStyle(
+                  color: AppPalette.gold500.withValues(alpha: 0.65),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -839,7 +867,7 @@ class _ActionRow extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(top: BorderSide(color: colors.hairline)),
       ),
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 10),
       child: Row(
         children: [
           Expanded(
@@ -885,17 +913,23 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Material(
-      color: navy ? _navyDeep : Colors.transparent,
+      color: Colors.transparent,
       borderRadius: BorderRadius.circular(AppRadii.lg),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
+        splashColor: navy
+            ? AppPalette.gold400.withValues(alpha: 0.10)
+            : colors.hairline.withValues(alpha: 0.5),
         child: Container(
           height: 44,
           decoration: BoxDecoration(
+            color: navy
+                ? AppPalette.gold400.withValues(alpha: 0.10)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(AppRadii.lg),
             border: navy
-                ? null
+                ? Border.all(color: AppPalette.gold400.withValues(alpha: 0.35))
                 : Border.all(color: colors.hairline.withValues(alpha: 0.8)),
           ),
           child: Row(
@@ -904,7 +938,7 @@ class _ActionButton extends StatelessWidget {
               Icon(
                 icon,
                 size: 17,
-                color: navy ? AppPalette.gold400 : colors.inkStrong,
+                color: navy ? AppPalette.gold500 : colors.inkStrong,
               ),
               const SizedBox(width: 6),
               Flexible(
@@ -913,7 +947,7 @@ class _ActionButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: navy ? Colors.white : colors.inkStrong,
+                    color: navy ? AppPalette.gold600 : colors.inkStrong,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),

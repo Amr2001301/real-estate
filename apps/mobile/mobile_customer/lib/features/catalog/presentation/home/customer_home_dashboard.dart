@@ -427,18 +427,20 @@ class _ActionCard extends StatelessWidget {
                             children: [
                               Icon(
                                 AppIcons.calendar,
-                                size: 12,
-                                color: Colors.white.withValues(alpha: 0.32),
+                                size: 13,
+                                color: Colors.white.withValues(alpha: 0.55),
                               ),
-                              const SizedBox(width: 3),
+                              const SizedBox(width: 4),
                               Text(
                                 DateFormatter.mediumDate(
                                   action.dueDate!,
                                   languageCode: lang,
                                 ),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.38),
-                                  fontSize: 13,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.60),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.2,
                                 ),
                               ),
                             ],
