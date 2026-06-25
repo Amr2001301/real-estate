@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../common/plan_banner.dart';
 import '../../../home_summary/domain/entities/home_summary.dart';
 import '../../../home_summary/presentation/home_summary_cubit.dart';
 import '../../../maintenance/presentation/maintenance_format.dart';
@@ -629,11 +630,16 @@ class _PropertyUnit extends StatelessWidget {
           if (property.hasInstallmentPlan &&
               property.monthlyAmount != null &&
               property.totalMonths != null)
-            _PlanBanner(
-              monthlyAmount: property.monthlyAmount!,
-              totalMonths: property.totalMonths!,
-              lang: lang,
-              l10n: l10n,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.sm),
+              child: PlanBanner(
+                labelText:     l10n.myPropertyInstallmentPlan,
+                amountText:    _compact(property.monthlyAmount!, lang),
+                secondaryText: lang == 'ar'
+                    ? 'شهريًا · ${property.totalMonths} شهرًا'
+                    : 'mo · ${property.totalMonths} months',
+              ),
             ),
           // Quick actions footer — 4 items in a horizontal row.
           // Separated from card body by a hairline; same border-radius clip.
@@ -866,107 +872,6 @@ class _StatsBlock extends StatelessWidget {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-}
-
-// Plan banner: amount and months stacked in a Column so neither can be
-// compressed by a sibling Expanded — no maxLines, no overflow, no ellipsis.
-class _PlanBanner extends StatelessWidget {
-  const _PlanBanner({
-    required this.monthlyAmount,
-    required this.totalMonths,
-    required this.lang,
-    required this.l10n,
-  });
-
-  final String monthlyAmount;
-  final int totalMonths;
-  final String lang;
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    final formatted = _compact(monthlyAmount, lang);
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        AppSpacing.sm,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppPalette.gold400.withValues(alpha: 0.09),
-            AppPalette.gold400.withValues(alpha: 0.04),
-          ],
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-        ),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(
-          color: AppPalette.gold400.withValues(alpha: 0.28),
-          width: 0.75,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: AppPalette.gold400.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(7),
-            ),
-            child: const Icon(
-              Icons.calendar_month_rounded,
-              size: 13,
-              color: AppPalette.gold500,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              l10n.myPropertyInstallmentPlan,
-              style: TextStyle(
-                color: AppPalette.gold500.withValues(alpha: 0.80),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          // Amount on its own line; months below it.
-          // Column here means neither text is constrained by a sibling.
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                formatted,
-                style: const TextStyle(
-                  color: AppPalette.gold500,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                l10n.homePlanMonthsSuffix(totalMonths),
-                style: TextStyle(
-                  color: AppPalette.gold500.withValues(alpha: 0.65),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../common/plan_banner.dart';
 import '../../notifications/presentation/widgets/customer_notification_button.dart';
 import '../domain/entities/property.dart';
 import 'my_property_cubit.dart';
@@ -770,84 +771,15 @@ class _InstallmentBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        0,
-        AppSpacing.lg,
-        6,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: 8,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppPalette.gold400.withValues(alpha: 0.09),
-            AppPalette.gold400.withValues(alpha: 0.04),
-          ],
-          begin: Alignment.centerRight,
-          end: Alignment.centerLeft,
-        ),
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: Border.all(
-          color: AppPalette.gold400.withValues(alpha: 0.28),
-          width: 0.75,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: AppPalette.gold400.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.calendar_month_rounded,
-              size: 15,
-              color: AppPalette.gold500,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              l10n.myPropertyInstallmentPlan,
-              style: TextStyle(
-                color: AppPalette.gold500.withValues(alpha: 0.8),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _compact(property.monthlyAmount ?? '0', lang),
-                style: const TextStyle(
-                  color: AppPalette.gold500,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                ),
-              ),
-              Text(
-                lang == 'ar'
-                    ? '/ شهريًا · ${property.totalMonths} شهرًا'
-                    : '/ mo · ${property.totalMonths} months',
-                style: TextStyle(
-                  color: AppPalette.gold500.withValues(alpha: 0.65),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                ),
-              ),
-            ],
-          ),
-        ],
+    final secondary = lang == 'ar'
+        ? 'شهريًا · ${property.totalMonths} شهرًا'
+        : 'mo · ${property.totalMonths} months';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(AppSpacing.lg, 0, AppSpacing.lg, 6),
+      child: PlanBanner(
+        labelText:     l10n.myPropertyInstallmentPlan,
+        amountText:    _compact(property.monthlyAmount ?? '0', lang),
+        secondaryText: secondary,
       ),
     );
   }
