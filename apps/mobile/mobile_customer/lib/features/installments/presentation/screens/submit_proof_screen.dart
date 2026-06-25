@@ -178,14 +178,17 @@ class _ProofHeader extends StatelessWidget {
                   height: 42,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
+                      colors: [_navyLight, _navyDeep],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppPalette.gold400.withValues(alpha: 0.35),
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF7C5200).withValues(alpha: 0.4),
+                        color: _navyDeep.withValues(alpha: 0.35),
                         blurRadius: 10,
                         offset: const Offset(0, 3),
                       ),
@@ -519,7 +522,7 @@ class _MethodChip extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: selected
               ? const LinearGradient(
-                  colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
+                  colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
@@ -528,14 +531,14 @@ class _MethodChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
-                ? Colors.transparent
+                ? AppPalette.gold400.withValues(alpha: 0.30)
                 : colors.hairline.withValues(alpha: 0.7),
             width: 1.5,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF3D2800).withValues(alpha: 0.35),
+                    color: _navyDeep.withValues(alpha: 0.30),
                     blurRadius: 12,
                     offset: const Offset(0, 3),
                   ),
@@ -719,7 +722,7 @@ class _FilePicker extends StatelessWidget {
                         end: Alignment.bottomRight,
                       )
                     : const LinearGradient(
-                        colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
+                        colors: [_navyLight, _navyDeep],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -868,19 +871,19 @@ class _SubmitButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: onTap != null
               ? const LinearGradient(
-                  colors: [Color(0xFF7C5200), Color(0xFF3D2800)],
+                  colors: [_navyLight, _navyDeep],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 )
               : null,
           color: onTap == null
-              ? const Color(0xFF7C5200).withValues(alpha: 0.4)
+              ? _navyCard.withValues(alpha: 0.45)
               : null,
           borderRadius: BorderRadius.circular(16),
           boxShadow: onTap != null
               ? [
                   BoxShadow(
-                    color: const Color(0xFF3D2800).withValues(alpha: 0.45),
+                    color: _navyDeep.withValues(alpha: 0.40),
                     blurRadius: 18,
                     offset: const Offset(0, 6),
                   ),

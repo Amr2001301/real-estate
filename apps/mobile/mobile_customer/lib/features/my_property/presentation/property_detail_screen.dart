@@ -10,11 +10,36 @@ import '../../installments/domain/entities/installment.dart';
 import '../../installments/presentation/cubit/installments_cubit.dart';
 import '../domain/entities/property.dart';
 
-const _navy = Color(0xFF0B1726);
-const _navyCard = Color(0xFF152236);
-const _navyAccent = Color(0xFF1E3451);
+const _navy      = Color(0xFF0B1726);
+const _navyCard  = Color(0xFF152236);
+const _navyAccent= Color(0xFF1E3451);
 
 enum _Filter { all, paid, pending, overdue }
+
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+Installment? _nextInstallment(List<Installment> all) {
+  final unpaid = all
+      .where((i) => i.status != InstallmentStatus.paid)
+      .toList()
+    ..sort((a, b) => a.dueDate.compareTo(b.dueDate));
+  return unpaid.isEmpty ? null : unpaid.first;
+}
+
+(Color, String) _statusStyle(InstallmentStatus s, AppLocalizations l10n) =>
+    switch (s) {
+      InstallmentStatus.paid => (const Color(0xFF34C77B), l10n.installmentStatusPaid),
+      InstallmentStatus.overdue => (const Color(0xFFEF4444), l10n.installmentStatusOverdue),
+      _ => (const Color(0xFFF59E0B), l10n.installmentStatusPending),
+    };
+
+String _paymentMethodLabel(PaymentMethod? method) => switch (method) {
+      PaymentMethod.cash         => 'نقدًا',
+      PaymentMethod.bankTransfer => 'تحويل بنكي',
+      PaymentMethod.cheque       => 'شيك',
+      PaymentMethod.other        => 'أخرى',
+      _                          => '—',
+    };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Property Detail Screen
@@ -36,7 +61,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
   @override
   void initState() {
     super.initState();
-    // index 0 = الأقساط  |  index 1 = الملخص
     _tabs = TabController(length: 2, vsync: this);
     context.read<InstallmentsCubit>().load();
   }
@@ -49,10 +73,10 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
 
   @override
   Widget build(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
-    final l10n = context.l10n;
+    final lang     = Localizations.localeOf(context).languageCode;
+    final l10n     = context.l10n;
     final property = widget.property;
-    final colors = context.appColors;
+    final colors   = context.appColors;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
@@ -64,41 +88,32 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
           builder: (context, state) {
             final all = state.status == DataStatus.success
                 ? state.data!
-                      .where((i) => i.contractId == property.contractId)
-                      .toList()
+                    .where((i) => i.contractId == property.contractId)
+                    .toList()
                 : const <Installment>[];
 
-            final paidCount =
-                all.where((i) => i.status == InstallmentStatus.paid).length;
-            final overdueCount = all
-                .where((i) => i.status == InstallmentStatus.overdue)
-                .length;
+            final paidCount    = all.where((i) => i.status == InstallmentStatus.paid).length;
+            final overdueCount = all.where((i) => i.status == InstallmentStatus.overdue).length;
             final pendingCount = all.length - paidCount - overdueCount;
+            final nextInst     = _nextInstallment(all);
 
             final displayed = switch (_filter) {
-              _Filter.paid => all
-                  .where((i) => i.status == InstallmentStatus.paid)
-                  .toList(),
-              _Filter.pending => all
-                  .where((i) => i.status == InstallmentStatus.pending)
-                  .toList(),
-              _Filter.overdue => all
-                  .where((i) => i.status == InstallmentStatus.overdue)
-                  .toList(),
-              _Filter.all => all,
+              _Filter.paid    => all.where((i) => i.status == InstallmentStatus.paid).toList(),
+              _Filter.pending => all.where((i) => i.status == InstallmentStatus.pending).toList(),
+              _Filter.overdue => all.where((i) => i.status == InstallmentStatus.overdue).toList(),
+              _Filter.all     => all,
             };
 
             return Column(
               children: [
-                // ── Unit card header ──────────────────────────────────
                 _UnitHeader(
-                  property: property,
-                  lang: lang,
-                  l10n: l10n,
-                  total: all.length,
-                  paid: paidCount,
+                  property:    property,
+                  lang:        lang,
+                  l10n:        l10n,
+                  total:       all.length,
+                  paid:        paidCount,
+                  nextInst:    nextInst,
                 ),
-                // ── Pill tab bar ──────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppSpacing.lg,
@@ -109,34 +124,33 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
                   child: _PillTabBar(controller: _tabs, colors: colors),
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                // ── Tab content ───────────────────────────────────────
                 Expanded(
                   child: TabBarView(
                     controller: _tabs,
                     children: [
                       // Tab 0: الأقساط
                       _InstallmentsTab(
-                        state: state,
-                        displayed: displayed,
-                        all: all,
-                        filter: _filter,
-                        onFilterChanged: (f) =>
-                            setState(() => _filter = f),
-                        paidCount: paidCount,
-                        pendingCount: pendingCount,
-                        overdueCount: overdueCount,
-                        lang: lang,
-                        l10n: l10n,
+                        state:            state,
+                        displayed:        displayed,
+                        all:              all,
+                        filter:           _filter,
+                        onFilterChanged:  (f) => setState(() => _filter = f),
+                        paidCount:        paidCount,
+                        pendingCount:     pendingCount,
+                        overdueCount:     overdueCount,
+                        lang:             lang,
+                        l10n:             l10n,
                       ),
                       // Tab 1: الملخص
                       _SummaryTab(
-                        property: property,
-                        lang: lang,
-                        l10n: l10n,
-                        total: all.length,
-                        paid: paidCount,
-                        pending: pendingCount,
-                        overdue: overdueCount,
+                        property:     property,
+                        lang:         lang,
+                        l10n:         l10n,
+                        total:        all.length,
+                        paid:         paidCount,
+                        pending:      pendingCount,
+                        overdue:      overdueCount,
+                        nextInst:     nextInst,
                       ),
                     ],
                   ),
@@ -150,7 +164,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen>
   }
 }
 
-// ── Unit header card ──────────────────────────────────────────────────────────
+// ── Unit header ───────────────────────────────────────────────────────────────
 
 class _UnitHeader extends StatelessWidget {
   const _UnitHeader({
@@ -159,19 +173,27 @@ class _UnitHeader extends StatelessWidget {
     required this.l10n,
     required this.total,
     required this.paid,
+    required this.nextInst,
   });
-  final Property property;
-  final String lang;
+
+  final Property      property;
+  final String        lang;
   final AppLocalizations l10n;
-  final int total;
-  final int paid;
+  final int           total;
+  final int           paid;
+  final Installment?  nextInst;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final topInset = MediaQuery.paddingOf(context).top;
-    final owned = property.status == PropertyStatus.owned;
-    final progress = total > 0 ? paid / total : 0.0;
+    final theme     = Theme.of(context);
+    final topInset  = MediaQuery.paddingOf(context).top;
+    final owned     = property.status == PropertyStatus.owned;
+    final progress  = total > 0 ? paid / total : 0.0;
+
+    final nextIsOverdue = nextInst?.status == InstallmentStatus.overdue;
+    final nextColor     = nextIsOverdue
+        ? const Color(0xFFEF4444)
+        : AppPalette.gold300;
 
     return Container(
       width: double.infinity,
@@ -197,16 +219,13 @@ class _UnitHeader extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned.fill(
-            child: IgnorePointer(child: _DotTexture()),
-          ),
-          // Gold radial glow
+          const Positioned.fill(child: IgnorePointer(child: _DotTexture())),
           PositionedDirectional(
             end: 0,
             top: 0,
             child: Container(
               width: 220,
-              height: 180,
+              height: 200,
               decoration: BoxDecoration(
                 gradient: RadialGradient(
                   center: Alignment.topRight,
@@ -219,23 +238,6 @@ class _UnitHeader extends StatelessWidget {
               ),
             ),
           ),
-          // Decorative arc — bottom-start
-          PositionedDirectional(
-            start: -56,
-            bottom: -56,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.03),
-                  width: 1.5,
-                ),
-              ),
-            ),
-          ),
-          // Gold hairline
           Positioned(
             bottom: 0,
             left: 56,
@@ -263,13 +265,11 @@ class _UnitHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back button row
                 _BackBtn(),
                 const SizedBox(height: AppSpacing.md),
-                // Main content row: icon + info + progress ring
                 Row(
                   children: [
-                    // Triple-ring icon
+                    // Icon
                     Stack(
                       alignment: Alignment.center,
                       children: [
@@ -280,9 +280,7 @@ class _UnitHeader extends StatelessWidget {
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: AppPalette.gold400.withValues(
-                                  alpha: 0.28,
-                                ),
+                                color: AppPalette.gold400.withValues(alpha: 0.28),
                                 blurRadius: 22,
                                 spreadRadius: 4,
                               ),
@@ -324,7 +322,6 @@ class _UnitHeader extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(width: AppSpacing.md),
-                    // Project info
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -350,7 +347,6 @@ class _UnitHeader extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          // Status + contract chips
                           Wrap(
                             spacing: 6,
                             children: [
@@ -358,9 +354,7 @@ class _UnitHeader extends StatelessWidget {
                                 label: owned
                                     ? l10n.myPropertyStatusOwned
                                     : l10n.myPropertyStatusReserved,
-                                color: owned
-                                    ? Colors.greenAccent
-                                    : Colors.amber,
+                                color: owned ? Colors.greenAccent : Colors.amber,
                               ),
                               if (property.contractNumber != null)
                                 _SmallChip(
@@ -373,7 +367,6 @@ class _UnitHeader extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // Mini donut progress
                     if (total > 0) ...[
                       const SizedBox(width: AppSpacing.md),
                       SizedBox(
@@ -383,7 +376,8 @@ class _UnitHeader extends StatelessWidget {
                           alignment: Alignment.center,
                           children: [
                             CustomPaint(
-                              painter: _DonutPainter(progress: progress),
+                              painter: _DonutPainter(
+                                  progress: progress),
                               child: const SizedBox.expand(),
                             ),
                             Column(
@@ -401,9 +395,7 @@ class _UnitHeader extends StatelessWidget {
                                 Text(
                                   '/ $total',
                                   style: TextStyle(
-                                    color: Colors.white.withValues(
-                                      alpha: 0.45,
-                                    ),
+                                    color: Colors.white.withValues(alpha: 0.45),
                                     fontSize: 10,
                                   ),
                                 ),
@@ -415,6 +407,75 @@ class _UnitHeader extends StatelessWidget {
                     ],
                   ],
                 ),
+
+                // ── Next installment banner ───────────────────────────────
+                if (nextInst != null) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 9),
+                    decoration: BoxDecoration(
+                      color: nextColor.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: nextColor.withValues(alpha: 0.30)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          nextIsOverdue
+                              ? Icons.warning_amber_rounded
+                              : Icons.pending_actions_rounded,
+                          size: 15,
+                          color: nextColor,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          nextIsOverdue
+                              ? 'قسط متأخر: '
+                              : 'القسط القادم: ',
+                          style: TextStyle(
+                            color: nextColor.withValues(alpha: 0.80),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          PriceFormatter.formatString(
+                            nextInst!.amount,
+                            languageCode: lang,
+                          ),
+                          style: TextStyle(
+                            color: nextColor,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 3,
+                          height: 3,
+                          decoration: BoxDecoration(
+                            color: nextColor.withValues(alpha: 0.5),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          DateFormatter.mediumDate(
+                            nextInst!.dueDate,
+                            languageCode: lang,
+                          ),
+                          style: TextStyle(
+                            color: nextColor.withValues(alpha: 0.85),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -449,7 +510,8 @@ class _SmallChip extends StatelessWidget {
             Container(
               width: 5,
               height: 5,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              decoration:
+                  BoxDecoration(color: color, shape: BoxShape.circle),
             ),
             const SizedBox(width: 4),
           ],
@@ -472,8 +534,8 @@ class _SmallChip extends StatelessWidget {
 
 class _PillTabBar extends StatelessWidget {
   const _PillTabBar({required this.controller, required this.colors});
-  final TabController controller;
-  final AppColorsExt colors;
+  final TabController  controller;
+  final AppColorsExt   colors;
 
   @override
   Widget build(BuildContext context) {
@@ -513,14 +575,9 @@ class _PillTabBar extends StatelessWidget {
         dividerColor: Colors.transparent,
         labelColor: Colors.white,
         unselectedLabelColor: colors.inkMuted,
-        labelStyle: const TextStyle(
-          fontWeight: FontWeight.w700,
-          fontSize: 13.5,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.w500,
-          fontSize: 13.5,
-        ),
+        labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+        unselectedLabelStyle:
+            const TextStyle(fontWeight: FontWeight.w500, fontSize: 13.5),
         tabs: const [
           Tab(text: 'الأقساط'),
           Tab(text: 'الملخص'),
@@ -545,11 +602,12 @@ class _InstallmentsTab extends StatelessWidget {
     required this.lang,
     required this.l10n,
   });
-  final InstallmentsState state;
-  final List<Installment> displayed;
-  final List<Installment> all;
-  final _Filter filter;
-  final ValueChanged<_Filter> onFilterChanged;
+
+  final InstallmentsState      state;
+  final List<Installment>      displayed;
+  final List<Installment>      all;
+  final _Filter                filter;
+  final ValueChanged<_Filter>  onFilterChanged;
   final int paidCount;
   final int pendingCount;
   final int overdueCount;
@@ -563,32 +621,31 @@ class _InstallmentsTab extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.xs,
         AppSpacing.lg,
-        AppSpacing.xl + MediaQuery.of(context).padding.bottom,
+        96 + MediaQuery.of(context).padding.bottom,
       ),
       children: [
-        // Filter chips
         if (all.isNotEmpty) ...[
           _FilterBar(
-            filter: filter,
-            onChanged: onFilterChanged,
-            paid: paidCount,
-            pending: pendingCount,
-            overdue: overdueCount,
-            l10n: l10n,
+            filter:          filter,
+            onChanged:       onFilterChanged,
+            paid:            paidCount,
+            pending:         pendingCount,
+            overdue:         overdueCount,
+            total:           all.length,
+            l10n:            l10n,
           ),
           const SizedBox(height: AppSpacing.md),
         ],
-        // Table or state
         if (state.status == DataStatus.initial ||
             state.status == DataStatus.loading)
           const _Skeleton()
         else if (displayed.isEmpty)
           _EmptyState(l10n: l10n)
         else
-          _InstallmentTable(
+          _InstallmentCards(
             installments: displayed,
-            lang: lang,
-            l10n: l10n,
+            lang:         lang,
+            l10n:         l10n,
           ),
       ],
     );
@@ -604,96 +661,113 @@ class _FilterBar extends StatelessWidget {
     required this.paid,
     required this.pending,
     required this.overdue,
+    required this.total,
     required this.l10n,
   });
-  final _Filter filter;
+
+  final _Filter            filter;
   final ValueChanged<_Filter> onChanged;
   final int paid;
   final int pending;
   final int overdue;
+  final int total;
   final AppLocalizations l10n;
+
+  static const _dotColors = {
+    _Filter.all:     Colors.white,
+    _Filter.overdue: Color(0xFFEF4444),
+    _Filter.pending: Color(0xFFF59E0B),
+    _Filter.paid:    Color(0xFF34C77B),
+  };
 
   @override
   Widget build(BuildContext context) {
-    final chips = <({String label, _Filter value, int? count, Color? dot})>[
-      (label: 'الكل', value: _Filter.all, count: null, dot: null),
-      (
-        label: l10n.installmentStatusOverdue,
-        value: _Filter.overdue,
-        count: overdue,
-        dot: const Color(0xFFFF6B6B),
-      ),
-      (
-        label: l10n.installmentStatusPending,
-        value: _Filter.pending,
-        count: pending,
-        dot: Colors.amber,
-      ),
-      (
-        label: l10n.installmentStatusPaid,
-        value: _Filter.paid,
-        count: paid,
-        dot: Colors.greenAccent,
-      ),
+    final items = <({String label, _Filter value, int count})>[
+      (label: 'الكل', value: _Filter.all, count: total),
+      (label: l10n.installmentStatusOverdue, value: _Filter.overdue, count: overdue),
+      (label: l10n.installmentStatusPending, value: _Filter.pending, count: pending),
+      (label: l10n.installmentStatusPaid,    value: _Filter.paid,    count: paid),
     ];
 
     return SizedBox(
-      height: 34,
+      height: 38,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        children: chips.map((chip) {
-          final selected = filter == chip.value;
-          final colors = context.appColors;
+        children: items.map((item) {
+          final selected = filter == item.value;
+          final dot      = _dotColors[item.value]!;
           return Padding(
             padding: const EdgeInsetsDirectional.only(end: 8),
             child: GestureDetector(
-              onTap: () => onChanged(chip.value),
+              onTap: () => onChanged(item.value),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 160),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: selected ? _navy : colors.surface,
-                  borderRadius: BorderRadius.circular(999),
+                  color: selected ? _navyCard : Colors.white,
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: selected
-                        ? _navy
-                        : colors.hairline.withValues(alpha: 0.7),
+                    color: selected ? _navyCard : const Color(0xFFE5E7EB),
                   ),
                   boxShadow: selected
                       ? [
                           BoxShadow(
-                            color: _navy.withValues(alpha: 0.28),
+                            color: _navyCard.withValues(alpha: 0.18),
                             blurRadius: 8,
                             offset: const Offset(0, 2),
-                          ),
+                          )
                         ]
                       : null,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (chip.dot != null) ...[
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: chip.dot,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                    ],
-                    Text(
-                      chip.count != null
-                          ? '${chip.label} (${chip.count})'
-                          : chip.label,
-                      style: TextStyle(
-                        color: selected ? Colors.white : colors.inkMuted,
-                        fontSize: 13,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w500,
+                    Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? dot
+                            : dot.withValues(alpha: 0.45),
+                        shape: BoxShape.circle,
                       ),
                     ),
+                    const SizedBox(width: 7),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        color: selected
+                            ? Colors.white
+                            : const Color(0xFF6B7280),
+                        fontSize: 13,
+                        fontWeight: selected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                    if (item.count > 0) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? dot.withValues(alpha: 0.22)
+                              : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '${item.count}',
+                          style: TextStyle(
+                            color: selected
+                                ? dot
+                                : const Color(0xFF9CA3AF),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -705,274 +779,121 @@ class _FilterBar extends StatelessWidget {
   }
 }
 
-// ── Installment table ─────────────────────────────────────────────────────────
+// ── Installment cards ─────────────────────────────────────────────────────────
 
-class _InstallmentTable extends StatelessWidget {
-  const _InstallmentTable({
+class _InstallmentCards extends StatelessWidget {
+  const _InstallmentCards({
     required this.installments,
     required this.lang,
     required this.l10n,
   });
-  final List<Installment> installments;
-  final String lang;
-  final AppLocalizations l10n;
+
+  final List<Installment>  installments;
+  final String             lang;
+  final AppLocalizations   l10n;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 18,
-            offset: const Offset(0, 5),
+    return Column(
+      children: installments.asMap().entries.map((e) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _InstallmentCard(
+            installment: e.value,
+            rowIndex:    e.key,
+            lang:        lang,
+            l10n:        l10n,
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // ── Header ────────────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.md,
-              12,
-              AppSpacing.md,
-              12,
-            ),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [_navyAccent, _navyCard, _navy],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: Stack(
-              children: [
-                const Positioned.fill(
-                  child: IgnorePointer(child: _DotTexture()),
-                ),
-                Row(
-                  children: [
-                    // Amount (rightmost in RTL)
-                    SizedBox(
-                      width: 116,
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.payments_rounded,
-                            size: 12,
-                            color: AppPalette.gold300.withValues(alpha: 0.80),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            'المبلغ',
-                            style: TextStyle(
-                              color: AppPalette.gold300.withValues(alpha: 0.95),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Date (center)
-                    Expanded(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.event_rounded,
-                            size: 11,
-                            color: Colors.white.withValues(alpha: 0.50),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            'الاستحقاق',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.60),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Status (leftmost in RTL)
-                    SizedBox(
-                      width: 92,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Icon(
-                            Icons.radio_button_checked_rounded,
-                            size: 11,
-                            color: Colors.white.withValues(alpha: 0.50),
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            'الحالة',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.60),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // ── Data rows ─────────────────────────────────────────────
-          ...installments.asMap().entries.map((e) {
-            final rowIndex = e.key;
-            final inst = e.value;
-            return Column(
-              children: [
-                if (rowIndex > 0)
-                  Container(
-                    height: 1,
-                    color: colors.hairline.withValues(alpha: 0.7),
-                  ),
-                _TableRow(
-                  installment: inst,
-                  rowIndex: rowIndex,
-                  lang: lang,
-                  l10n: l10n,
-                  colors: colors,
-                ),
-              ],
-            );
-          }),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 }
 
-class _TableRow extends StatelessWidget {
-  const _TableRow({
+class _InstallmentCard extends StatelessWidget {
+  const _InstallmentCard({
     required this.installment,
     required this.rowIndex,
     required this.lang,
     required this.l10n,
-    required this.colors,
   });
-  final Installment installment;
-  final int rowIndex;
-  final String lang;
+
+  final Installment      installment;
+  final int              rowIndex;
+  final String           lang;
   final AppLocalizations l10n;
-  final AppColorsExt colors;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final status = installment.status;
+    final inst = installment;
+    final (statusColor, statusLabel) =
+        _statusStyle(inst.status, l10n);
 
-    final (statusColor, statusLabel) = switch (status) {
-      InstallmentStatus.paid => (
-          const Color(0xFF34C77B),
-          l10n.installmentStatusPaid,
-        ),
-      InstallmentStatus.overdue => (
-          const Color(0xFFEF4444),
-          l10n.installmentStatusOverdue,
-        ),
-      _ => (const Color(0xFFF59E0B), l10n.installmentStatusPending),
-    };
-
-    // Alternating row stripe
-    final stripe = rowIndex.isOdd
-        ? colors.surfaceSoft.withValues(alpha: 0.55)
-        : Colors.transparent;
-
-    final typeLabel = switch (installment.type) {
-      InstallmentPaymentType.downPayment => 'دفعة مقدمة',
+    final typeLabel = switch (inst.type) {
+      InstallmentPaymentType.downPayment  => 'دفعة مقدمة',
       InstallmentPaymentType.finalPayment => 'دفعة أخيرة',
-      _ => null,
+      _                                   => null,
     };
-
     final rowNum = (rowIndex + 1).toString().padLeft(2, '0');
 
+    final proof         = inst.latestProof;
+    final proofPending  = proof?.reviewStatus == PaymentProofStatus.pendingReview;
+    final proofRejected = proof?.reviewStatus == PaymentProofStatus.rejected;
+
     return InkWell(
-      onTap: installment.canSubmitProof
+      onTap: inst.canSubmitProof
           ? () => context.push(
-                '/account/installments/${installment.id}/submit-proof',
-                extra: installment,
+                '/account/installments/${inst.id}/submit-proof',
+                extra: inst,
               )
           : null,
+      borderRadius: BorderRadius.circular(16),
       splashColor: AppPalette.gold400.withValues(alpha: 0.05),
       highlightColor: AppPalette.gold400.withValues(alpha: 0.03),
       child: Container(
         decoration: BoxDecoration(
-          color: stripe,
-          // Status indicator bar on visual-left side
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
           border: Border(
-            left: BorderSide(
-              color: statusColor.withValues(alpha: 0.55),
-              width: 3,
+            right: BorderSide(
+              color: statusColor.withValues(alpha: 0.6),
+              width: 3.5,
             ),
           ),
         ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: 13,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // ── Amount column (rightmost in RTL) ──────────────────
-            SizedBox(
-              width: 116,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top row: number + type badge + status badge ──────────
+              Row(
                 children: [
-                  // Row number
                   Text(
                     '#$rowNum',
                     style: TextStyle(
-                      color: colors.inkMuted.withValues(alpha: 0.55),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF9CA3AF),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
-                      height: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  // Amount
-                  Text(
-                    PriceFormatter.formatString(
-                      installment.amount,
-                      languageCode: lang,
-                    ),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.inkStrong,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13.5,
-                      letterSpacing: -0.3,
-                      height: 1.1,
                     ),
                   ),
                   if (typeLabel != null) ...[
-                    const SizedBox(height: 2),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
-                        vertical: 1,
-                      ),
+                          horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                         color: AppPalette.gold400.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(6),
                         border: Border.all(
                           color: AppPalette.gold400.withValues(alpha: 0.30),
                         ),
@@ -983,59 +904,20 @@ class _TableRow extends StatelessWidget {
                           color: AppPalette.gold500,
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: 0.1,
                         ),
                       ),
                     ),
                   ],
-                ],
-              ),
-            ),
-            // ── Date column (center) ───────────────────────────────
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.event_rounded,
-                    size: 13,
-                    color: colors.inkMuted.withValues(alpha: 0.65),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    DateFormatter.mediumDate(
-                      installment.dueDate,
-                      languageCode: lang,
-                    ),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: colors.inkMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      height: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // ── Status column (leftmost in RTL) ───────────────────
-            SizedBox(
-              width: 92,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+                  const Spacer(),
                   // Status badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 5,
-                    ),
+                        horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: statusColor.withValues(alpha: 0.30),
+                        color: statusColor.withValues(alpha: 0.28),
                       ),
                     ),
                     child: Row(
@@ -1061,58 +943,281 @@ class _TableRow extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Submit action (when payable)
-                  if (installment.canSubmitProof) ...[
-                    const SizedBox(height: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFFD4A843),
-                            AppPalette.gold500,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // ── Amount + due date row ────────────────────────────────
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'المبلغ',
+                          style: TextStyle(
+                            color: const Color(0xFF9CA3AF),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        borderRadius: BorderRadius.circular(6),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppPalette.gold400.withValues(alpha: 0.28),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
+                        const SizedBox(height: 2),
+                        Text(
+                          PriceFormatter.formatString(
+                            inst.amount,
+                            languageCode: lang,
                           ),
-                        ],
+                          style: const TextStyle(
+                            color: Color(0xFF1A1A2E),
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        'تاريخ الاستحقاق',
+                        style: TextStyle(
+                          color: const Color(0xFF9CA3AF),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                      const SizedBox(height: 2),
+                      Row(
                         children: [
-                          const Icon(
-                            Icons.upload_rounded,
-                            size: 11,
-                            color: _navy,
+                          Icon(
+                            Icons.event_rounded,
+                            size: 13,
+                            color: const Color(0xFF9CA3AF),
                           ),
-                          const SizedBox(width: 3),
+                          const SizedBox(width: 4),
                           Text(
-                            installment.isResubmit ? 'إعادة إرسال' : 'إرسال',
+                            DateFormatter.mediumDate(
+                              inst.dueDate,
+                              languageCode: lang,
+                            ),
                             style: const TextStyle(
-                              color: _navy,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF374151),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ],
               ),
-            ),
-          ],
+
+              // ── Proof / action area ──────────────────────────────────
+              if (inst.status == InstallmentStatus.paid && inst.paidAt != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E7EB),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF34C77B).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_rounded,
+                        size: 15,
+                        color: Color(0xFF34C77B),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'تم الدفع بتاريخ ${DateFormatter.mediumDate(inst.paidAt!, languageCode: lang)}',
+                      style: const TextStyle(
+                        color: Color(0xFF34C77B),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (proof?.paymentMethod != null &&
+                        proof!.paymentMethod != PaymentMethod.unknown) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF34C77B).withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          _paymentMethodLabel(proof.paymentMethod),
+                          style: TextStyle(
+                            color: const Color(0xFF34C77B).withValues(alpha: 0.80),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ] else if (proofPending) ...[
+                const SizedBox(height: 10),
+                Container(
+                  height: 0.5,
+                  color: const Color(0xFFE5E7EB),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.hourglass_top_rounded,
+                        size: 14,
+                        color: Color(0xFFF59E0B),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'الإيصال قيد المراجعة',
+                          style: TextStyle(
+                            color: Color(0xFFF59E0B),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        if (proof?.submittedAt != null)
+                          Text(
+                            'تم الإرسال ${DateFormatter.mediumDate(proof!.submittedAt!, languageCode: lang)}',
+                            style: TextStyle(
+                              color: const Color(0xFF9CA3AF),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ] else if (proofRejected) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFFEF4444).withValues(alpha: 0.20),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline_rounded,
+                        size: 15,
+                        color: Color(0xFFEF4444),
+                      ),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          proof?.rejectionReason?.isNotEmpty == true
+                              ? proof!.rejectionReason!
+                              : 'تم رفض الإيصال · يرجى إعادة الإرسال',
+                          style: const TextStyle(
+                            color: Color(0xFFEF4444),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _SubmitButton(
+                  label: 'إعادة إرسال الإيصال',
+                  isResubmit: true,
+                ),
+              ] else if (inst.canSubmitProof) ...[
+                const SizedBox(height: 10),
+                _SubmitButton(
+                  label: 'إرسال إيصال الدفع',
+                  isResubmit: false,
+                ),
+              ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+class _SubmitButton extends StatelessWidget {
+  const _SubmitButton({required this.label, required this.isResubmit});
+  final String label;
+  final bool   isResubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isResubmit
+              ? [const Color(0xFFD97706), const Color(0xFFB45309)]
+              : [const Color(0xFFD4A843), AppPalette.gold500],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(11),
+        boxShadow: [
+          BoxShadow(
+            color: AppPalette.gold400.withValues(alpha: 0.25),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            isResubmit ? Icons.refresh_rounded : Icons.upload_rounded,
+            size: 16,
+            color: _navy,
+          ),
+          const SizedBox(width: 7),
+          Text(
+            label,
+            style: const TextStyle(
+              color: _navy,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1129,14 +1234,17 @@ class _SummaryTab extends StatelessWidget {
     required this.paid,
     required this.pending,
     required this.overdue,
+    required this.nextInst,
   });
-  final Property property;
-  final String lang;
+
+  final Property      property;
+  final String        lang;
   final AppLocalizations l10n;
-  final int total;
-  final int paid;
-  final int pending;
-  final int overdue;
+  final int           total;
+  final int           paid;
+  final int           pending;
+  final int           overdue;
+  final Installment?  nextInst;
 
   @override
   Widget build(BuildContext context) {
@@ -1145,22 +1253,21 @@ class _SummaryTab extends StatelessWidget {
         AppSpacing.lg,
         AppSpacing.xs,
         AppSpacing.lg,
-        AppSpacing.xl + MediaQuery.of(context).padding.bottom,
+        96 + MediaQuery.of(context).padding.bottom,
       ),
       children: [
-        // Financial overview card
         if (property.hasInstallmentPlan) ...[
           _FinancialCard(
             property: property,
-            lang: lang,
-            total: total,
-            paid: paid,
-            pending: pending,
-            overdue: overdue,
+            lang:     lang,
+            total:    total,
+            paid:     paid,
+            pending:  pending,
+            overdue:  overdue,
+            nextInst: nextInst,
           ),
           const SizedBox(height: AppSpacing.lg),
         ],
-        // Contract details card
         _ContractCard(property: property, lang: lang, l10n: l10n),
       ],
     );
@@ -1177,13 +1284,16 @@ class _FinancialCard extends StatelessWidget {
     required this.paid,
     required this.pending,
     required this.overdue,
+    required this.nextInst,
   });
-  final Property property;
-  final String lang;
-  final int total;
-  final int paid;
-  final int pending;
-  final int overdue;
+
+  final Property     property;
+  final String       lang;
+  final int          total;
+  final int          paid;
+  final int          pending;
+  final int          overdue;
+  final Installment? nextInst;
 
   @override
   Widget build(BuildContext context) {
@@ -1215,8 +1325,7 @@ class _FinancialCard extends StatelessWidget {
       child: Stack(
         children: [
           const Positioned.fill(
-            child: IgnorePointer(child: _DotTexture()),
-          ),
+              child: IgnorePointer(child: _DotTexture())),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1236,9 +1345,7 @@ class _FinancialCard extends StatelessWidget {
                   if (property.totalMonths != null)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 3,
-                      ),
+                          horizontal: 9, vertical: 3),
                       decoration: BoxDecoration(
                         color: AppPalette.gold400.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(999),
@@ -1258,6 +1365,8 @@ class _FinancialCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
+
+              // Main row: donut + amount + stats
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1316,7 +1425,7 @@ class _FinancialCard extends StatelessWidget {
                           ),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 22,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.5,
                             height: 1.1,
@@ -1328,22 +1437,20 @@ class _FinancialCard extends StatelessWidget {
                             _MiniStat(
                               label: 'مسددة',
                               value: '$paid',
-                              color: Colors.greenAccent,
+                              color: const Color(0xFF4ADE80),
                             ),
                             const SizedBox(width: 6),
                             _MiniStat(
                               label: 'معلقة',
                               value: '$pending',
-                              color: Colors.amber,
+                              color: const Color(0xFFF59E0B),
                             ),
-                            if (overdue > 0) ...[
-                              const SizedBox(width: 6),
-                              _MiniStat(
-                                label: 'متأخرة',
-                                value: '$overdue',
-                                color: const Color(0xFFFF6B6B),
-                              ),
-                            ],
+                            const SizedBox(width: 6),
+                            _MiniStat(
+                              label: 'متأخرة',
+                              value: '$overdue',
+                              color: const Color(0xFFEF4444),
+                            ),
                           ],
                         ),
                       ],
@@ -1351,10 +1458,175 @@ class _FinancialCard extends StatelessWidget {
                   ),
                 ],
               ),
+
+              // Progress bar
+              if (total > 0) ...[
+                const SizedBox(height: AppSpacing.lg),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'نسبة السداد',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.45),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      '${(progress * 100).round()}%',
+                      style: const TextStyle(
+                        color: AppPalette.gold300,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Container(
+                    height: 6,
+                    color: Colors.white.withValues(alpha: 0.10),
+                    child: FractionallySizedBox(
+                      widthFactor: 1,
+                      child: LayoutBuilder(
+                        builder: (_, constraints) => Stack(
+                          children: [
+                            Positioned.fill(
+                              child: Container(
+                                color: Colors.white
+                                    .withValues(alpha: 0.10),
+                              ),
+                            ),
+                            Positioned(
+                              left: 0,
+                              top: 0,
+                              bottom: 0,
+                              width: constraints.maxWidth * progress,
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Color(0xFFCFAA52),
+                                      AppPalette.gold400,
+                                    ],
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color:
+                                          Color(0x44D4A843),
+                                      blurRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+
+              // ── Next installment highlight ─────────────────────────────
+              if (nextInst != null) ...[
+                const SizedBox(height: 14),
+                Container(
+                  height: 0.5,
+                  color: Colors.white.withValues(alpha: 0.12),
+                ),
+                const SizedBox(height: 14),
+                _NextInstallmentRow(
+                  installment: nextInst!,
+                  lang: lang,
+                ),
+              ],
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NextInstallmentRow extends StatelessWidget {
+  const _NextInstallmentRow({
+    required this.installment,
+    required this.lang,
+  });
+
+  final Installment installment;
+  final String      lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final isOverdue = installment.status == InstallmentStatus.overdue;
+    final color     = isOverdue
+        ? const Color(0xFFEF4444)
+        : AppPalette.gold300;
+
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withValues(alpha: 0.30)),
+          ),
+          child: Icon(
+            isOverdue
+                ? Icons.warning_amber_rounded
+                : Icons.event_rounded,
+            color: color,
+            size: 18,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isOverdue ? 'قسط متأخر' : 'القسط القادم',
+                style: TextStyle(
+                  color: color.withValues(alpha: 0.75),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                DateFormatter.mediumDate(
+                  installment.dueDate,
+                  languageCode: lang,
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Text(
+          PriceFormatter.formatString(
+            installment.amount,
+            languageCode: lang,
+          ),
+          style: TextStyle(
+            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+            letterSpacing: -0.3,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1367,7 +1639,7 @@ class _MiniStat extends StatelessWidget {
   });
   final String label;
   final String value;
-  final Color color;
+  final Color  color;
 
   @override
   Widget build(BuildContext context) {
@@ -1405,7 +1677,7 @@ class _MiniStat extends StatelessWidget {
   }
 }
 
-// ── Contract card (summary tab) ───────────────────────────────────────────────
+// ── Contract card ─────────────────────────────────────────────────────────────
 
 class _ContractCard extends StatelessWidget {
   const _ContractCard({
@@ -1413,24 +1685,23 @@ class _ContractCard extends StatelessWidget {
     required this.lang,
     required this.l10n,
   });
-  final Property property;
-  final String lang;
+  final Property      property;
+  final String        lang;
   final AppLocalizations l10n;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final theme = Theme.of(context);
 
-    final cells = <_Cell>[
+    final rows = <({IconData icon, String label, String value})>[
       if (property.contractNumber != null)
-        _Cell(
+        (
           icon: AppIcons.contract,
           label: l10n.myPropertyContractNumber,
           value: property.contractNumber!,
         ),
       if (property.signedAt != null)
-        _Cell(
+        (
           icon: AppIcons.calendar,
           label: l10n.myPropertySignedDate,
           value: DateFormatter.mediumDate(
@@ -1439,20 +1710,20 @@ class _ContractCard extends StatelessWidget {
           ),
         ),
       if (property.reservationNumber != null)
-        _Cell(
+        (
           icon: Icons.confirmation_number_rounded,
           label: l10n.myPropertyReservationNumber,
           value: property.reservationNumber!,
         ),
       if (property.totalMonths != null)
-        _Cell(
+        (
           icon: Icons.calendar_month_rounded,
           label: 'مدة التقسيط',
           value: '${property.totalMonths} شهرًا',
         ),
     ];
 
-    if (cells.isEmpty) return const SizedBox.shrink();
+    if (rows.isEmpty) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(
@@ -1471,7 +1742,7 @@ class _ContractCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Strip header
+          // Header strip
           Container(
             height: 56,
             decoration: const BoxDecoration(
@@ -1495,9 +1766,7 @@ class _ContractCard extends StatelessWidget {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                   child: Row(
                     children: [
                       Container(
@@ -1531,22 +1800,33 @@ class _ContractCard extends StatelessWidget {
               ],
             ),
           ),
-          // 2-col grid
+          // Info rows
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
-            child: GridView.count(
-              shrinkWrap: true,
-              crossAxisCount: 2,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 2.4,
-              crossAxisSpacing: AppSpacing.sm,
-              mainAxisSpacing: AppSpacing.sm,
-              children: cells
-                  .map(
-                    (c) =>
-                        _CellWidget(cell: c, colors: colors, theme: theme),
-                  )
-                  .toList(),
+            child: Column(
+              children: rows.asMap().entries.map((e) {
+                final item = e.value;
+                final isLast = e.key == rows.length - 1;
+                return Column(
+                  children: [
+                    _ContractInfoRow(
+                      icon:   item.icon,
+                      label:  item.label,
+                      value:  item.value,
+                      colors: colors,
+                    ),
+                    if (!isLast) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        height: 0.5,
+                        color: colors.hairline.withValues(alpha: 0.6),
+                        margin: const EdgeInsets.only(right: 44),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  ],
+                );
+              }).toList(),
             ),
           ),
         ],
@@ -1555,69 +1835,62 @@ class _ContractCard extends StatelessWidget {
   }
 }
 
-class _Cell {
-  const _Cell({
+class _ContractInfoRow extends StatelessWidget {
+  const _ContractInfoRow({
     required this.icon,
     required this.label,
     required this.value,
-  });
-  final IconData icon;
-  final String label;
-  final String value;
-}
-
-class _CellWidget extends StatelessWidget {
-  const _CellWidget({
-    required this.cell,
     required this.colors,
-    required this.theme,
   });
-  final _Cell cell;
+
+  final IconData     icon;
+  final String       label;
+  final String       value;
   final AppColorsExt colors;
-  final ThemeData theme;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm + 2,
-        vertical: AppSpacing.xs + 2,
-      ),
-      decoration: BoxDecoration(
-        color: colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.55)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(cell.icon, size: 12, color: colors.inkMuted),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  cell.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall?.copyWith(
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: _navyCard.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: _navyCard.withValues(alpha: 0.12),
+              ),
+            ),
+            child: Icon(icon, size: 16, color: _navyCard),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
                     color: colors.inkMuted,
-                    fontSize: 12,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            cell.value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colors.inkStrong,
-              fontWeight: FontWeight.w800,
-              fontSize: 13.5,
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: colors.inkStrong,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
         ],
@@ -1645,18 +1918,14 @@ class _EmptyState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.calendar_today_outlined,
-            size: 36,
-            color: colors.inkMuted,
-          ),
+          Icon(Icons.calendar_today_outlined, size: 36, color: colors.inkMuted),
           const SizedBox(height: AppSpacing.sm),
           Text(
             l10n.installmentsEmptyTitle,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colors.inkMuted,
-              fontWeight: FontWeight.w600,
-            ),
+                  color: colors.inkMuted,
+                  fontWeight: FontWeight.w600,
+                ),
           ),
         ],
       ),
@@ -1691,9 +1960,9 @@ class _DonutPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 5;
-    final rect = Rect.fromCircle(center: center, radius: radius);
+    final center    = Offset(size.width / 2, size.height / 2);
+    final radius    = math.min(size.width, size.height) / 2 - 5;
+    final rect      = Rect.fromCircle(center: center, radius: radius);
     const startAngle = -math.pi / 2;
 
     final trackPaint = Paint()
@@ -1710,8 +1979,7 @@ class _DonutPainter extends CustomPainter {
       ..strokeWidth = 9
       ..strokeCap = StrokeCap.round
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-    canvas.drawArc(
-        rect, startAngle, math.pi * 2 * progress, false, glowPaint);
+    canvas.drawArc(rect, startAngle, math.pi * 2 * progress, false, glowPaint);
 
     final solidPaint = Paint()
       ..shader = const LinearGradient(
@@ -1720,15 +1988,14 @@ class _DonutPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
-    canvas.drawArc(
-        rect, startAngle, math.pi * 2 * progress, false, solidPaint);
+    canvas.drawArc(rect, startAngle, math.pi * 2 * progress, false, solidPaint);
   }
 
   @override
   bool shouldRepaint(_DonutPainter old) => old.progress != progress;
 }
 
-// ── Shared ────────────────────────────────────────────────────────────────────
+// ── Shared chrome ─────────────────────────────────────────────────────────────
 
 class _BackBtn extends StatelessWidget {
   @override
@@ -1741,9 +2008,7 @@ class _BackBtn extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.10),
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.18),
-          ),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
         ),
         child: const Icon(
           Icons.arrow_back_ios_new_rounded,
