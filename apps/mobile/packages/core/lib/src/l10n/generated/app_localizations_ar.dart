@@ -246,7 +246,7 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get homeOwnerRole => 'عميل · مالك وحدة';
+  String get homeOwnerRole => 'مالك وحدة';
 
   @override
   String get homeAfterSales => 'خدمات ما بعد الشراء';
@@ -257,6 +257,18 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String homeInstallmentsRemaining(int count) {
     return '$count أقساط متبقية';
+  }
+
+  @override
+  String get homeInstallmentsRemainingLabel => 'متبقية';
+
+
+  @override
+  String get homeLastPaymentLabel => 'آخر دفعة';
+
+  @override
+  String homePlanMonthsSuffix(int months) {
+    return '/ شهرًا · $months شهرًا';
   }
 
   @override
@@ -855,7 +867,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get financeContractsDesc => 'العقود الموقّعة والمستندات';
 
   @override
-  String get dashboardWelcome => 'مرحبًا بعودتك';
+  String get dashboardWelcome => 'أهلًا بعودتك';
 
   @override
   String get dashboardQuickActions => 'إجراءات سريعة';

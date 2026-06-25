@@ -86,7 +86,7 @@
   "homeGuestSubtitle": "اكتشف أفضل المشاريع والوحدات",
   "homeGreeting": "مرحبًا، {name}",
   "@homeGreeting": { "placeholders": { "name": { "type": "String" } } },
-  "homeOwnerRole": "عميل · مالك وحدة",
+  "homeOwnerRole": "مالك وحدة",
   "homeAfterSales": "خدمات ما بعد الشراء",
   "homeNextInstallment": "القسط القادم",
   "homeInstallmentsRemaining": "{count} أقساط متبقية",
@@ -304,7 +304,7 @@
   "financeDepositsDesc": "إيصالات الحجز والدفعة المقدمة",
   "financeContractsDesc": "العقود الموقّعة والمستندات",
 
-  "dashboardWelcome": "مرحبًا بعودتك",
+  "dashboardWelcome": "أهلًا بعودتك",
   "dashboardQuickActions": "إجراءات سريعة",
   "dashboardOverview": "نظرة عامة",
   "accountSectionServices": "خدمات العميل",
@@ -682,5 +682,9 @@
   "paymentMethodCash": "نقدًا",
   "paymentMethodBankTransfer": "تحويل بنكي",
   "paymentMethodCheque": "شيك",
-  "paymentMethodOther": "أخرى"
+  "paymentMethodOther": "أخرى",
+  "homeInstallmentsRemainingLabel": "متبقية",
+  "homeLastPaymentLabel": "آخر دفعة",
+  "homePlanMonthsSuffix": "/ شهرًا · {months} شهرًا",
+  "@homePlanMonthsSuffix": { "placeholders": { "months": { "type": "int" } } }
 }

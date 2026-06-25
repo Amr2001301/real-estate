@@ -584,6 +584,24 @@ abstract class AppLocalizations {
   /// **'{count} installments remaining'**
   String homeInstallmentsRemaining(int count);
 
+  /// No description provided for @homeInstallmentsRemainingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get homeInstallmentsRemainingLabel;
+
+  /// No description provided for @homeLastPaymentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last payment'**
+  String get homeLastPaymentLabel;
+
+  /// No description provided for @homePlanMonthsSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'/ mo · {months} months'**
+  String homePlanMonthsSuffix(int months);
+
   /// No description provided for @homeNoDuePayments.
   ///
   /// In en, this message translates to:

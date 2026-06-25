@@ -22,8 +22,6 @@ import '../widgets/unit_status_chip.dart';
 import 'customer_home_dashboard.dart';
 import 'home_cubit.dart';
 
-/// Bottom clearance for the shell's floating assistant FAB.
-const double _fabClearance = 72;
 
 /// Navy depth gradient stops shared by the hero and CTA band.
 const Color _webNavyLight = Color(0xFF24426A);
@@ -52,14 +50,14 @@ class HomeScreen extends StatelessWidget {
         }
       },
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.only(
-          bottom:
-              (context.isApplePlatform
-                  ? MediaQuery.of(context).padding.bottom + 32
-                  : AppSpacing.lg) +
-              (comparing
-                  ? (context.isApplePlatform ? 112 : 84)
-                  : _fabClearance),
+          // Nav bar reserves its own space (extendBody: false), so no safe-area
+          // math needed here. Just clear the compare-bar overlay when active,
+          // or leave comfortable breathing room at rest.
+          bottom: comparing
+              ? (context.isApplePlatform ? 112 : 84)
+              : AppSpacing.xl,
         ),
         children: [
           if (isCustomer)

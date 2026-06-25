@@ -179,21 +179,26 @@ class CustomerHomeHeader extends StatelessWidget {
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: AppPalette.gold300,
                                 fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
+                                fontSize: 13,
+                                letterSpacing: 0.4,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 5),
-                        Text(
-                          name ?? l10n.accountRoleCustomer,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.05,
-                            letterSpacing: -0.3,
+                        Directionality(
+                          textDirection: TextDirection.ltr,
+                          child: Text(
+                            name ?? l10n.accountRoleCustomer,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.headlineSmall?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 26,
+                              height: 1.05,
+                              letterSpacing: -0.3,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -314,9 +319,9 @@ class _StatusBadge extends StatelessWidget {
             label,
             style: const TextStyle(
               color: _navy,
-              fontSize: 10.5,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
-              letterSpacing: 0.2,
+              letterSpacing: 0.1,
             ),
           ),
         ],

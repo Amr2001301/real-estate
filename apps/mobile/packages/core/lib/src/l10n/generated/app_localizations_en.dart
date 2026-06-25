@@ -249,7 +249,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeOwnerRole => 'Customer · Unit owner';
+  String get homeOwnerRole => 'Unit owner';
 
   @override
   String get homeAfterSales => 'After-sales services';
@@ -260,6 +260,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String homeInstallmentsRemaining(int count) {
     return '$count installments remaining';
+  }
+
+  @override
+  String get homeInstallmentsRemainingLabel => 'Remaining';
+
+  @override
+  String get homeLastPaymentLabel => 'Last payment';
+
+  @override
+  String homePlanMonthsSuffix(int months) {
+    return '/ mo · $months months';
   }
 
   @override

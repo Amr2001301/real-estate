@@ -89,7 +89,7 @@
   "homeGuestSubtitle": "Discover the best projects and units",
   "homeGreeting": "Hi, {name}",
   "@homeGreeting": { "placeholders": { "name": { "type": "String" } } },
-  "homeOwnerRole": "Customer · Unit owner",
+  "homeOwnerRole": "Unit owner",
   "homeAfterSales": "After-sales services",
   "homeNextInstallment": "Next installment",
   "homeInstallmentsRemaining": "{count} installments remaining",
@@ -685,5 +685,9 @@
   "paymentMethodCash": "Cash",
   "paymentMethodBankTransfer": "Bank transfer",
   "paymentMethodCheque": "Cheque",
-  "paymentMethodOther": "Other"
+  "paymentMethodOther": "Other",
+  "homeInstallmentsRemainingLabel": "Remaining",
+  "homeLastPaymentLabel": "Last payment",
+  "homePlanMonthsSuffix": "/ mo · {months} months",
+  "@homePlanMonthsSuffix": { "placeholders": { "months": { "type": "int" } } }
 }

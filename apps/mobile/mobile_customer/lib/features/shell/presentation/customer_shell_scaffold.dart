@@ -96,8 +96,9 @@ class CustomerShellScaffold extends StatelessWidget {
 
     final branchOrder = shellBranchOrder(isCustomer: isCustomer);
 
-    // Native, always-bundled glyphs (no broken boxes): thin CupertinoIcons on
-    // iOS, outlined Material on Android (per AppBottomNav's adaptive rendering).
+    // Native, always-bundled glyphs (no broken boxes): Material icons used on
+    // all platforms in the unified nav design; cupertinoIcon field kept for
+    // API compatibility only.
     final navItems = isCustomer
         ? [
             AppBottomNavItem(
@@ -172,10 +173,11 @@ class CustomerShellScaffold extends StatelessWidget {
         current != _Branch.maintenance;
 
     return Scaffold(
-      // iOS: let body content scroll behind the floating glass tab bar (real
-      // glass). Tab scrollables add MediaQuery.padding.bottom so nothing hides.
-      // Android keeps the in-slot Material bar (no overlap).
-      extendBody: context.isApplePlatform,
+      // extendBody is false: the bottomNavigationBar reserves its own layout
+      // space so the body area never extends behind the nav bar. The floating
+      // look (rounded pill, horizontal margins, shadow) is achieved entirely
+      // inside AppBottomNav itself and is unaffected by this setting.
+      extendBody: false,
       appBar: showShellAppBar
           ? AdaptiveAppBar(
               title: Text(titles[current] ?? l10n.navHome),
@@ -186,14 +188,9 @@ class CustomerShellScaffold extends StatelessWidget {
                   : null,
             )
           : null,
-      // iOS: a subtle cream fade sits behind the floating dock so content
-      // scrolling under it dissolves into the canvas instead of butting up hard
-      // against the bar — content stays fully readable (the fade is transparent
-      // across its top). Android's in-slot bar needs no fade.
       body: Stack(
         children: [
           navigationShell,
-          if (context.isApplePlatform) const _BottomNavScrim(),
           if (showCompareBar)
             Positioned(
               left: 0,
@@ -207,8 +204,7 @@ class CustomerShellScaffold extends StatelessWidget {
       ),
       // Floating assistant — only on Home for GUESTS (avoids cluttering the
       // authenticated customer dashboard and the maintenance tab's FAB).
-      // On iOS lift it clear of the floating glass dock so it never sits on the
-      // bar; Android's in-slot bar needs no extra lift.
+      // Small upward lift on iOS for visual breathing room above the nav bar.
       floatingActionButton: current == _Branch.home && compareCount == 0 && !isCustomer
           ? Padding(
               padding: EdgeInsets.only(
@@ -251,41 +247,6 @@ class CustomerShellScaffold extends StatelessWidget {
   }
 }
 
-/// A subtle bottom fade painted behind the floating iOS dock: transparent
-/// across its top, softly resolving into the app canvas near the bottom. Just
-/// enough to separate the dock from scrolling content without dimming it.
-/// Non-interactive; iOS-only (the shell only mounts it when [extendBody] is on).
-class _BottomNavScrim extends StatelessWidget {
-  const _BottomNavScrim();
-
-  @override
-  Widget build(BuildContext context) {
-    final canvas = context.appColors.canvas;
-    final inset = MediaQuery.paddingOf(context).bottom;
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      height: inset + 60,
-      child: IgnorePointer(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                canvas.withValues(alpha: 0.0),
-                canvas.withValues(alpha: 0.0),
-                canvas.withValues(alpha: 0.9),
-              ],
-              stops: const [0.0, 0.35, 1.0],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 /// Premium AI assistant FAB: a compact navy circle with a gold ring and a gold
 /// sparkle glyph — refined and warm-luxe, not a plain gold square.

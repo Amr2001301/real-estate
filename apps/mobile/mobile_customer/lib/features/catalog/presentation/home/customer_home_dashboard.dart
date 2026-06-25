@@ -184,7 +184,7 @@ class _SectionRow extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(9),
           ),
-          child: Icon(icon, size: 16, color: AppPalette.gold300),
+          child: Icon(icon, size: 18, color: AppPalette.gold300),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -192,10 +192,9 @@ class _SectionRow extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: theme.textTheme.titleSmall?.copyWith(
+                style: theme.textTheme.titleMedium?.copyWith(
                   color: colors.inkStrong,
                   fontWeight: FontWeight.w800,
-                  fontSize: 20,
                 ),
               ),
               if (countBadge != null) ...[
@@ -241,12 +240,18 @@ class _Link extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: Padding(
         padding: const EdgeInsetsDirectional.only(start: AppSpacing.sm),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: context.appColors.brandGold,
-            fontWeight: FontWeight.w700,
-            fontSize: 13,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+          child: Align(
+            alignment: AlignmentDirectional.centerEnd,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: context.appColors.brandGold,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
+              ),
+            ),
           ),
         ),
       ),
@@ -422,7 +427,7 @@ class _ActionCard extends StatelessWidget {
                             children: [
                               Icon(
                                 AppIcons.calendar,
-                                size: 10,
+                                size: 12,
                                 color: Colors.white.withValues(alpha: 0.32),
                               ),
                               const SizedBox(width: 3),
@@ -433,7 +438,7 @@ class _ActionCard extends StatelessWidget {
                                 ),
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: Colors.white.withValues(alpha: 0.38),
-                                  fontSize: 10.5,
+                                  fontSize: 13,
                                 ),
                               ),
                             ],
@@ -500,32 +505,44 @@ class _CtaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: 40,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppPalette.gold300, AppPalette.gold500],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(AppRadii.lg),
-          boxShadow: [
-            BoxShadow(
-              color: AppPalette.gold400.withValues(alpha: 0.32),
-              blurRadius: 12,
-              offset: const Offset(0, 3),
+          child: Ink(
+            height: 40,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppPalette.gold300, AppPalette.gold500],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(AppRadii.lg),
+              boxShadow: [
+                BoxShadow(
+                  color: AppPalette.gold400.withValues(alpha: 0.32),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: _navy,
-            fontWeight: FontWeight.w800,
-            fontSize: 13,
+            child: Align(
+              alignment: Alignment.center,
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: _navy,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -560,7 +577,7 @@ class _PropertyUnit extends StatelessWidget {
 
     final stats = <_Stat>[
       if (property.contractNumber != null)
-        _Stat(l10n.myPropertyContractNumber, property.contractNumber!),
+        _Stat(l10n.myPropertyContractNumber, property.contractNumber!, ltr: true),
       if (property.signedAt != null)
         _Stat(
           l10n.myPropertySignedDate,
@@ -644,7 +661,7 @@ class _CardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dotColor = owned ? Colors.greenAccent : Colors.amber;
+    final dotColor = owned ? const Color(0xFF34C77B) : AppPalette.gold400;
     return SizedBox(
       height: 88,
       child: Stack(
@@ -754,7 +771,7 @@ class _CardHeader extends StatelessWidget {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: (owned ? Colors.green : Colors.amber).withValues(
+                    color: (owned ? const Color(0xFF34C77B) : AppPalette.gold400).withValues(
                       alpha: 0.14,
                     ),
                     borderRadius: BorderRadius.circular(999),
@@ -797,9 +814,10 @@ class _CardHeader extends StatelessWidget {
 }
 
 class _Stat {
-  const _Stat(this.label, this.value);
+  const _Stat(this.label, this.value, {this.ltr = false});
   final String label;
   final String value;
+  final bool ltr;
 }
 
 class _StatsBlock extends StatelessWidget {
@@ -830,11 +848,16 @@ class _StatsBlock extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Text(
-                    stats[i].value,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.inkStrong,
-                      fontWeight: FontWeight.w800,
+                  Directionality(
+                    textDirection: stats[i].ltr
+                        ? TextDirection.ltr
+                        : Directionality.of(context),
+                    child: Text(
+                      stats[i].value,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colors.inkStrong,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ],
@@ -926,16 +949,16 @@ class _PlanBanner extends StatelessWidget {
                 formatted,
                 style: const TextStyle(
                   color: AppPalette.gold500,
-                  fontSize: 13,
+                  fontSize: 22,
                   fontWeight: FontWeight.w900,
                   height: 1.1,
                 ),
               ),
               Text(
-                '/ شهرًا · $totalMonths شهرًا',
+                l10n.homePlanMonthsSuffix(totalMonths),
                 style: TextStyle(
                   color: AppPalette.gold500.withValues(alpha: 0.65),
-                  fontSize: 10,
+                  fontSize: 13,
                   fontWeight: FontWeight.w600,
                   height: 1.2,
                 ),
@@ -999,7 +1022,7 @@ class _QuickActionsFooter extends StatelessWidget {
     ];
 
     return Container(
-      height: 64,
+      height: 72,
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(color: colors.hairline.withValues(alpha: 0.60)),
@@ -1011,7 +1034,7 @@ class _QuickActionsFooter extends StatelessWidget {
             if (i > 0)
               SizedBox(
                 width: 1,
-                height: 64,
+                height: 72,
                 child: ColoredBox(
                   color: colors.hairline.withValues(alpha: 0.60),
                 ),
@@ -1049,33 +1072,37 @@ class _QItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Expanded(
-      child: Material(
-        color: highlight ? _navy : colors.surface,
-        child: InkWell(
-          onTap: onTap,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: highlight
-                    ? AppPalette.gold300
-                    : _navy.withValues(alpha: 0.65),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                label,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: highlight ? Colors.white : colors.inkMuted,
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  height: 1.2,
+      child: Semantics(
+        button: true,
+        label: label,
+        child: Material(
+          color: colors.surface,
+          child: InkWell(
+            onTap: onTap,
+            splashColor: AppPalette.gold400.withValues(alpha: 0.08),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: AppPalette.gold500.withValues(alpha: 0.80),
                 ),
-              ),
-            ],
+                const SizedBox(height: 3),
+                Text(
+                  label,
+                  maxLines: 1,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colors.inkMuted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1199,10 +1226,6 @@ class _FinancialCard extends StatelessWidget {
       return _FinancialEmpty(l10n: l10n, theme: theme, colors: colors);
     }
 
-    final progress = installments.totalCount > 0
-        ? (installments.paidCount / installments.totalCount).clamp(0.0, 1.0)
-        : 0.0;
-
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -1258,7 +1281,7 @@ class _FinancialCard extends StatelessWidget {
                               color: nextDue.isOverdue
                                   ? const Color(0xFFEF4444)
                                   : colors.inkStrong,
-                              fontSize: 22,
+                              fontSize: 32,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -0.3,
                               height: 1.05,
@@ -1279,7 +1302,7 @@ class _FinancialCard extends StatelessWidget {
                           children: [
                             Icon(
                               AppIcons.calendar,
-                              size: 10,
+                              size: 12,
                               color: colors.inkMuted,
                             ),
                             const SizedBox(width: 3),
@@ -1290,7 +1313,7 @@ class _FinancialCard extends StatelessWidget {
                               ),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: colors.inkMuted,
-                                fontSize: 10.5,
+                                fontSize: 14,
                               ),
                             ),
                           ],
@@ -1342,45 +1365,12 @@ class _FinancialCard extends StatelessWidget {
           ),
           Divider(height: 1, color: colors.hairline),
 
-          // Progress bar + stats
+          // Stats row
           Padding(
             padding: const EdgeInsets.all(AppSpacing.md),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (installments.totalCount > 0) ...[
-                  Row(
-                    children: [
-                      Text(
-                        '${installments.paidCount} / ${installments.totalCount}',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colors.inkMuted,
-                          fontSize: 10.5,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        '${(progress * 100).round()}%',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colors.brandGold,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 10.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
-                    child: LinearProgressIndicator(
-                      value: progress,
-                      minHeight: 5,
-                      backgroundColor: colors.surfaceSoft,
-                      valueColor: AlwaysStoppedAnimation(colors.brandGold),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
                 IntrinsicHeight(
                   child: Row(
                     children: [
@@ -1391,13 +1381,13 @@ class _FinancialCard extends StatelessWidget {
                       ),
                       _VLine(colors: colors),
                       _FStat(
-                        label: 'متبقية',
+                        label: l10n.homeInstallmentsRemainingLabel,
                         value: '${installments.remainingCount}',
                       ),
                       if (installments.lastPaidAt != null) ...[
                         _VLine(colors: colors),
                         _FStat(
-                          label: 'آخر دفعة',
+                          label: l10n.homeLastPaymentLabel,
                           value: DateFormatter.mediumDate(
                             installments.lastPaidAt!,
                             languageCode: lang,
@@ -1502,7 +1492,7 @@ class _FStat extends StatelessWidget {
             textAlign: TextAlign.center,
             style: theme.textTheme.labelSmall?.copyWith(
               color: colors.inkMuted,
-              fontSize: 10,
+              fontSize: 13,
             ),
           ),
           const SizedBox(height: 3),
@@ -1513,7 +1503,7 @@ class _FStat extends StatelessWidget {
             style: theme.textTheme.bodySmall?.copyWith(
               color: valueColor ?? colors.inkStrong,
               fontWeight: FontWeight.w800,
-              fontSize: compact ? 10.5 : 13,
+              fontSize: compact ? 13 : 20,
               height: 1.2,
             ),
           ),
@@ -1705,7 +1695,7 @@ class _MRow extends StatelessWidget {
                       languageCode: lang,
                     ),
                     style: theme.textTheme.bodySmall
-                        ?.copyWith(color: colors.inkMuted, fontSize: 14),
+                        ?.copyWith(color: colors.inkMuted, fontSize: 13),
                   ),
                 ],
               ),
