@@ -15,21 +15,18 @@ class AppBottomNavItem {
   });
 
   final IconData icon;
-
-  /// Optional distinct glyph for the active state; falls back to [icon].
   final IconData? activeIcon;
-
-  /// Kept for API compatibility; not used in the current unified design.
-  final IconData? cupertinoIcon;
-
+  final IconData? cupertinoIcon; // kept for API compat
   final String label;
 }
 
-/// Selects the tap interaction style.
 enum AppBottomNavStyle { adaptive, material, cupertino }
 
-/// Compact premium bottom navigation bar — warm surface, gold underline
-/// indicator on the active tab. Sits as a normal Scaffold.bottomNavigationBar.
+/// Premium bottom navigation bar for the Warm-Luxe real-estate design system.
+///
+/// Selected state: animated icon chip (gold tint, expands on selection) with
+/// gold label below — no heavy capsule around the full item.
+/// Sits as a normal Scaffold.bottomNavigationBar; never overlays content.
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({
     super.key,
@@ -55,67 +52,108 @@ class AppBottomNav extends StatelessWidget {
     final colors = context.appColors;
     final cupertino = _useCupertino(context);
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: colors.canvas,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(16),
-          topRight: Radius.circular(16),
-        ),
-        border: Border(
-          top: BorderSide(
-            color: colors.hairline.withValues(alpha: 0.75),
-            width: 0.75,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      // Manual bottom-inset handling: total height = 60px content + device inset.
-      // SafeArea wrapping would add the inset ON TOP of the SizedBox height,
-      // creating excessive blank space at the bottom.
-      child: Builder(
-        builder: (ctx) {
-          final bottomInset = MediaQuery.paddingOf(ctx).bottom;
-          return SizedBox(
-            height: 60 + bottomInset,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: bottomInset),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 390),
-                  child: Row(
-                    children: [
-                      for (var i = 0; i < items.length; i++)
-                        _NavItemView(
-                          item: items[i],
-                          selected: i == currentIndex,
-                          cupertino: cupertino,
-                          colors: colors,
-                          onTap: () {
-                            HapticFeedback.selectionClick();
-                            onSelect(i);
-                          },
-                        ),
-                    ],
-                  ),
+    return _NavShell(
+      colors: colors,
+      child: Builder(builder: (ctx) {
+        final bottomInset = MediaQuery.paddingOf(ctx).bottom;
+        return SizedBox(
+          height: 62 + bottomInset,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: bottomInset),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 400),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < items.length; i++)
+                      _NavItem(
+                        item: items[i],
+                        selected: i == currentIndex,
+                        cupertino: cupertino,
+                        colors: colors,
+                        onTap: () {
+                          HapticFeedback.selectionClick();
+                          onSelect(i);
+                        },
+                      ),
+                  ],
                 ),
               ),
             ),
-          );
-        },
-      ),
+          ),
+        );
+      }),
     );
   }
 }
 
-class _NavItemView extends StatelessWidget {
-  const _NavItemView({
+// ── Shell ─────────────────────────────────────────────────────────────────────
+
+class _NavShell extends StatelessWidget {
+  const _NavShell({required this.colors, required this.child});
+
+  final AppColorsExt colors;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // Main surface
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: colors.canvas,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(18),
+              topRight: Radius.circular(18),
+            ),
+            boxShadow: [
+              // Deep lift shadow
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.09),
+                blurRadius: 20,
+                offset: const Offset(0, -6),
+              ),
+              // Gold warmth bloom
+              BoxShadow(
+                color: AppPalette.gold400.withValues(alpha: 0.07),
+                blurRadius: 12,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: child,
+        ),
+        // Gold shimmer accent line across the top edge
+        Positioned(
+          top: 0,
+          left: 32,
+          right: 32,
+          child: Container(
+            height: 1.5,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  AppPalette.gold400.withValues(alpha: 0.55),
+                  AppPalette.gold400.withValues(alpha: 0.55),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.25, 0.75, 1.0],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Item ──────────────────────────────────────────────────────────────────────
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
     required this.item,
     required this.selected,
     required this.cupertino,
@@ -137,33 +175,44 @@ class _NavItemView extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          iconData,
-          size: 22,
-          color: selected ? AppPalette.gold500 : colors.inkMuted,
+        // ── Icon chip — expands and fills with gold tint on selection ────
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          width: selected ? 48 : 30,
+          height: 30,
+          decoration: BoxDecoration(
+            color: selected
+                ? AppPalette.gold400.withValues(alpha: 0.13)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: selected
+                ? Border.all(
+                    color: AppPalette.gold400.withValues(alpha: 0.28),
+                    width: 0.75,
+                  )
+                : null,
+          ),
+          child: Center(
+            child: Icon(
+              iconData,
+              size: 21,
+              color: selected ? AppPalette.gold500 : colors.inkMuted,
+            ),
+          ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 4),
+        // ── Label — gold weight shift, no background ─────────────────────
         Text(
           item.label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
             fontSize: 11.5,
-            height: 1.05,
+            height: 1.0,
             fontWeight: selected ? FontWeight.w800 : FontWeight.w500,
             color: selected ? AppPalette.gold600 : colors.inkMuted,
-          ),
-        ),
-        const SizedBox(height: 4),
-        // Animated gold underline — expands on selection, invisible otherwise.
-        AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-          width: selected ? 20 : 0,
-          height: 3,
-          decoration: BoxDecoration(
-            color: AppPalette.gold500,
-            borderRadius: BorderRadius.circular(99),
+            letterSpacing: selected ? 0.1 : 0,
           ),
         ),
       ],
@@ -185,8 +234,9 @@ class _NavItemView extends StatelessWidget {
               )
             : InkWell(
                 onTap: onTap,
-                splashColor: AppPalette.gold400.withValues(alpha: 0.07),
-                highlightColor: AppPalette.gold400.withValues(alpha: 0.04),
+                splashColor: AppPalette.gold400.withValues(alpha: 0.06),
+                highlightColor: AppPalette.gold400.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(12),
                 child: Center(child: _content(context)),
               ),
       ),
