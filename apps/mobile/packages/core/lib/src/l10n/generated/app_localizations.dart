@@ -563,7 +563,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeOwnerRole.
   ///
   /// In en, this message translates to:
-  /// **'Customer · Unit owner'**
+  /// **'Unit owner'**
   String get homeOwnerRole;
 
   /// No description provided for @homeAfterSales.
@@ -583,24 +583,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} installments remaining'**
   String homeInstallmentsRemaining(int count);
-
-  /// No description provided for @homeInstallmentsRemainingLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Remaining'**
-  String get homeInstallmentsRemainingLabel;
-
-  /// No description provided for @homeLastPaymentLabel.
-  ///
-  /// In en, this message translates to:
-  /// **'Last payment'**
-  String get homeLastPaymentLabel;
-
-  /// No description provided for @homePlanMonthsSuffix.
-  ///
-  /// In en, this message translates to:
-  /// **'/ mo · {months} months'**
-  String homePlanMonthsSuffix(int months);
 
   /// No description provided for @homeNoDuePayments.
   ///
@@ -3697,6 +3679,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Other'**
   String get paymentMethodOther;
+
+  /// No description provided for @homeInstallmentsRemainingLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining'**
+  String get homeInstallmentsRemainingLabel;
+
+  /// No description provided for @homeLastPaymentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Last payment'**
+  String get homeLastPaymentLabel;
+
+  /// No description provided for @homePlanMonthsSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'/ mo · {months} months'**
+  String homePlanMonthsSuffix(int months);
+
+  /// No description provided for @supervisorMaintenanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance Requests'**
+  String get supervisorMaintenanceTitle;
+
+  /// No description provided for @supervisorNoAssignedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No assigned requests'**
+  String get supervisorNoAssignedTitle;
+
+  /// No description provided for @supervisorNoAssignedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance requests assigned to you will appear here once approved.'**
+  String get supervisorNoAssignedMessage;
+
+  /// No description provided for @maintenanceOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get maintenanceOverdue;
+
+  /// No description provided for @maintenanceComplaint.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaint'**
+  String get maintenanceComplaint;
+
+  /// No description provided for @maintenanceUnresolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Unresolved'**
+  String get maintenanceUnresolved;
+
+  /// No description provided for @maintenanceFallbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance request'**
+  String get maintenanceFallbackTitle;
 }
 
 class _AppLocalizationsDelegate

@@ -79,6 +79,9 @@ export 'src/auth/session_cubit.dart';
 export 'src/auth/token_storage.dart';
 
 // Widgets
+export 'src/widgets/app_nav_header.dart';
+export 'src/widgets/auth_widgets.dart';
+export 'src/widgets/brand_mark.dart';
 export 'src/widgets/adaptive_app_bar.dart';
 export 'src/widgets/adaptive_dialog.dart';
 export 'src/widgets/adaptive_icon_button.dart';

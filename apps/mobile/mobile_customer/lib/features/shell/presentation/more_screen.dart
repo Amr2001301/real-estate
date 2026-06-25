@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../common/brand_mark.dart';
-
 // Navy depth tokens — shared design language with projects/units/compare.
 const _navyDeep = Color(0xFF0B1726);
 const _navyMid = Color(0xFF14273F);

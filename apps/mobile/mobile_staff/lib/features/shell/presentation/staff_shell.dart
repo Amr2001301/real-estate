@@ -29,9 +29,8 @@ import '../../profile/domain/usecases/get_staff_profile.dart';
 import '../../profile/presentation/cubit/staff_profile_cubit.dart';
 import '../../profile/presentation/screens/staff_profile_screen.dart';
 
-/// The authenticated Sales workspace: a 5-tab bottom-nav shell. Each tab owns
-/// its cubit (built from the repositories provided by StaffApp). Detail screens
-/// are pushed as full pages from within each tab.
+/// The authenticated Sales workspace: a 5-tab bottom-nav shell using the
+/// shared premium [AppBottomNav] from core.
 class StaffShell extends StatefulWidget {
   const StaffShell({super.key});
 
@@ -46,14 +45,16 @@ class _StaffShellState extends State<StaffShell> {
     MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (ctx) => DashboardCubit(GetSalesDashboard(ctx.read<DashboardRepository>())),
-        ),
-        BlocProvider(
-          create: (ctx) => BonusSummaryCubit(GetBonusEntries(ctx.read<BonusRepository>())),
+          create: (ctx) =>
+              DashboardCubit(GetSalesDashboard(ctx.read<DashboardRepository>())),
         ),
         BlocProvider(
           create: (ctx) =>
-              TargetSummaryCubit(GetSalesPerformance(ctx.read<PerformanceRepository>())),
+              BonusSummaryCubit(GetBonusEntries(ctx.read<BonusRepository>())),
+        ),
+        BlocProvider(
+          create: (ctx) => TargetSummaryCubit(
+              GetSalesPerformance(ctx.read<PerformanceRepository>())),
         ),
       ],
       child: const DashboardScreen(),
@@ -63,7 +64,8 @@ class _StaffShellState extends State<StaffShell> {
       child: const LeadsScreen(),
     ),
     BlocProvider(
-      create: (ctx) => ClientsCubit(GetMyClients(ctx.read<ClientsRepository>())),
+      create: (ctx) =>
+          ClientsCubit(GetMyClients(ctx.read<ClientsRepository>())),
       child: const ClientsScreen(),
     ),
     BlocProvider(
@@ -74,14 +76,16 @@ class _StaffShellState extends State<StaffShell> {
     MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (ctx) => StaffProfileCubit(GetStaffProfile(ctx.read<StaffProfileRepository>())),
+          create: (ctx) =>
+              StaffProfileCubit(GetStaffProfile(ctx.read<StaffProfileRepository>())),
+        ),
+        BlocProvider(
+          create: (ctx) => TargetSummaryCubit(
+              GetSalesPerformance(ctx.read<PerformanceRepository>())),
         ),
         BlocProvider(
           create: (ctx) =>
-              TargetSummaryCubit(GetSalesPerformance(ctx.read<PerformanceRepository>())),
-        ),
-        BlocProvider(
-          create: (ctx) => BonusSummaryCubit(GetBonusEntries(ctx.read<BonusRepository>())),
+              BonusSummaryCubit(GetBonusEntries(ctx.read<BonusRepository>())),
         ),
       ],
       child: const StaffProfileScreen(),
@@ -93,33 +97,33 @@ class _StaffShellState extends State<StaffShell> {
     final l10n = context.l10n;
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.dashboard_outlined),
-            selectedIcon: const Icon(Icons.dashboard_rounded),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: _index,
+        onSelect: (i) => setState(() => _index = i),
+        items: [
+          AppBottomNavItem(
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard_rounded,
             label: l10n.navDashboard,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.people_alt_outlined),
-            selectedIcon: const Icon(Icons.people_alt_rounded),
+          AppBottomNavItem(
+            icon: Icons.people_alt_outlined,
+            activeIcon: Icons.people_alt_rounded,
             label: l10n.navLeads,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.contacts_outlined),
-            selectedIcon: const Icon(Icons.contacts_rounded),
+          AppBottomNavItem(
+            icon: Icons.contacts_outlined,
+            activeIcon: Icons.contacts_rounded,
             label: l10n.navClients,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.apartment_outlined),
-            selectedIcon: const Icon(Icons.apartment_rounded),
+          AppBottomNavItem(
+            icon: Icons.apartment_outlined,
+            activeIcon: Icons.apartment_rounded,
             label: l10n.navProjects,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
+          AppBottomNavItem(
+            icon: Icons.person_outline_rounded,
+            activeIcon: Icons.person_rounded,
             label: l10n.navProfile,
           ),
         ],

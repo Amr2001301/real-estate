@@ -263,17 +263,6 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get homeInstallmentsRemainingLabel => 'Remaining';
-
-  @override
-  String get homeLastPaymentLabel => 'Last payment';
-
-  @override
-  String homePlanMonthsSuffix(int months) {
-    return '/ mo · $months months';
-  }
-
-  @override
   String get homeNoDuePayments => 'No payments due';
 
   @override
@@ -1940,4 +1929,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get paymentMethodOther => 'Other';
+
+  @override
+  String get homeInstallmentsRemainingLabel => 'Remaining';
+
+  @override
+  String get homeLastPaymentLabel => 'Last payment';
+
+  @override
+  String homePlanMonthsSuffix(int months) {
+    return '/ mo · $months months';
+  }
+
+  @override
+  String get supervisorMaintenanceTitle => 'Maintenance Requests';
+
+  @override
+  String get supervisorNoAssignedTitle => 'No assigned requests';
+
+  @override
+  String get supervisorNoAssignedMessage =>
+      'Maintenance requests assigned to you will appear here once approved.';
+
+  @override
+  String get maintenanceOverdue => 'Overdue';
+
+  @override
+  String get maintenanceComplaint => 'Complaint';
+
+  @override
+  String get maintenanceUnresolved => 'Unresolved';
+
+  @override
+  String get maintenanceFallbackTitle => 'Maintenance request';
 }

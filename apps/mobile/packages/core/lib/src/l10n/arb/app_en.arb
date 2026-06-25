@@ -689,5 +689,13 @@
   "homeInstallmentsRemainingLabel": "Remaining",
   "homeLastPaymentLabel": "Last payment",
   "homePlanMonthsSuffix": "/ mo · {months} months",
-  "@homePlanMonthsSuffix": { "placeholders": { "months": { "type": "int" } } }
+  "@homePlanMonthsSuffix": { "placeholders": { "months": { "type": "int" } } },
+
+  "supervisorMaintenanceTitle": "Maintenance Requests",
+  "supervisorNoAssignedTitle": "No assigned requests",
+  "supervisorNoAssignedMessage": "Maintenance requests assigned to you will appear here once approved.",
+  "maintenanceOverdue": "Overdue",
+  "maintenanceComplaint": "Complaint",
+  "maintenanceUnresolved": "Unresolved",
+  "maintenanceFallbackTitle": "Maintenance request"
 }

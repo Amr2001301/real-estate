@@ -27,9 +27,10 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final title = widget.fallback?.categoryName?.resolve(Localizations.localeOf(context).languageCode);
     return Scaffold(
-      appBar: AppBar(title: Text(title?.isNotEmpty == true ? title! : 'طلب صيانة')),
+      appBar: AppBar(title: Text(title?.isNotEmpty == true ? title! : l10n.maintenanceFallbackTitle)),
       body: BlocConsumer<MaintenanceDetailCubit, MaintenanceDetailState>(
         listenWhen: (a, b) => a.actionFailure != b.actionFailure && b.actionFailure != null,
         listener: (context, state) => showFailureSnackBar(context, state.actionFailure!),

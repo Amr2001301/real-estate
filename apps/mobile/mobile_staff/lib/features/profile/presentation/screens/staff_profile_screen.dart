@@ -10,7 +10,8 @@ import '../../../performance/presentation/cubit/target_summary_cubit.dart';
 import '../../../performance/presentation/widgets/target_progress_card.dart';
 import '../cubit/staff_profile_cubit.dart';
 
-/// Staff profile: identity + role, language/theme controls, and logout.
+/// Staff profile: premium navy header + identity, role, performance,
+/// language/theme controls, and logout.
 class StaffProfileScreen extends StatefulWidget {
   const StaffProfileScreen({super.key});
 
@@ -36,94 +37,142 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
         role == AppRole.admin || role == AppRole.salesManager;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navProfile)),
-      body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+      body: Column(
         children: [
+          // Premium navy header with gradient avatar
           BlocBuilder<StaffProfileCubit, StaffProfileState>(
             builder: (context, state) {
-              switch (state.status) {
-                case DataStatus.initial:
-                case DataStatus.loading:
-                  return const _ProfileHeaderSkeleton();
-                case DataStatus.failure:
-                  return ErrorState(
-                    failure: state.failure,
-                    onRetry: () => context.read<StaffProfileCubit>().load(),
-                  );
-                case DataStatus.empty:
-                case DataStatus.success:
-                  final colors = context.appColors;
-                  final p = state.data;
-                  final session = context
-                      .read<SessionCubit>()
-                      .state
-                      .sessionOrNull;
-                  final name = p?.fullName ?? session?.displayName ?? '—';
-                  final email = p?.email ?? session?.email;
-                  final role = p?.role ?? session?.role ?? AppRole.sales;
-                  return PremiumCard(
-                    glow: true,
-                    child: Row(
-                      children: [
-                        GradientAvatar(name: name, size: 56),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+              final session = context.read<SessionCubit>().state.sessionOrNull;
+              final name = (state.status == DataStatus.success
+                      ? state.data?.fullName
+                      : null) ??
+                  session?.displayName ??
+                  '';
+              final roleVal = (state.status == DataStatus.success
+                      ? state.data?.role
+                      : null) ??
+                  session?.role ??
+                  AppRole.sales;
+
+              return AppNavHeader(
+                title: l10n.navProfile,
+                subtitle: roleLabel(l10n, roleVal),
+                avatarWidget: GradientAvatar(name: name, size: 48),
+                actions: [
+                  NavHeaderAction(
+                    icon: Icons.logout_rounded,
+                    tooltip: l10n.actionLogout,
+                    onTap: () async {
+                      final ok = await showAdaptiveConfirm(
+                        context,
+                        title: l10n.actionLogout,
+                        message: l10n.logoutConfirmMessage,
+                        confirmLabel: l10n.actionLogout,
+                        cancelLabel: l10n.actionCancel,
+                        destructive: true,
+                      );
+                      if (ok && context.mounted) {
+                        context.read<StaffAuthCubit>().logout();
+                      }
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+          // Body
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              children: [
+                // Identity card
+                BlocBuilder<StaffProfileCubit, StaffProfileState>(
+                  builder: (context, state) {
+                    switch (state.status) {
+                      case DataStatus.initial:
+                      case DataStatus.loading:
+                        return const _ProfileCardSkeleton();
+                      case DataStatus.failure:
+                        return ErrorState(
+                          failure: state.failure,
+                          onRetry: () =>
+                              context.read<StaffProfileCubit>().load(),
+                        );
+                      case DataStatus.empty:
+                      case DataStatus.success:
+                        final colors = context.appColors;
+                        final p = state.data;
+                        final session = context
+                            .read<SessionCubit>()
+                            .state
+                            .sessionOrNull;
+                        final name =
+                            p?.fullName ?? session?.displayName ?? '—';
+                        final email = p?.email ?? session?.email;
+                        final roleVal =
+                            p?.role ?? session?.role ?? AppRole.sales;
+                        return PremiumCard(
+                          glow: true,
+                          child: Row(
                             children: [
-                              Text(
-                                name,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              if (email != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  email,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(color: colors.inkMuted),
+                              GradientAvatar(name: name, size: 56),
+                              const SizedBox(width: AppSpacing.md),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    if (email != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        email,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                                color: colors.inkMuted),
+                                      ),
+                                    ],
+                                    const SizedBox(height: AppSpacing.xs),
+                                    StatusBadge(
+                                      label: roleLabel(l10n, roleVal),
+                                      tone: BadgeTone.navy,
+                                    ),
+                                  ],
                                 ),
-                              ],
-                              const SizedBox(height: AppSpacing.xs),
-                              StatusBadge(
-                                label: roleLabel(l10n, role),
-                                tone: BadgeTone.navy,
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-              }
-            },
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          const _PerformanceSection(),
-          if (canReviewPayments)
-            _SettingTile(
-              icon: Icons.receipt_long_rounded,
-              label: l10n.paymentReviewTitle,
-              onTap: () => context.push('/payments-review'),
+                        );
+                    }
+                  },
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                const _PerformanceSection(),
+                if (canReviewPayments)
+                  _SettingTile(
+                    icon: Icons.receipt_long_rounded,
+                    label: l10n.paymentReviewTitle,
+                    onTap: () => context.push('/payments-review'),
+                  ),
+                _SettingTile(
+                  icon: Icons.translate_rounded,
+                  label: l10n.settingsLanguage,
+                  trailing: Text(l10n.languageName),
+                  onTap: () => context.read<LocaleCubit>().toggle(),
+                ),
+                _SettingTile(
+                  icon: Icons.brightness_6_outlined,
+                  label: l10n.settingsTheme,
+                  onTap: () => context.read<ThemeCubit>().cycle(),
+                ),
+              ],
             ),
-          _SettingTile(
-            icon: Icons.translate_rounded,
-            label: l10n.settingsLanguage,
-            trailing: Text(l10n.languageName),
-            onTap: () => context.read<LocaleCubit>().toggle(),
-          ),
-          _SettingTile(
-            icon: Icons.brightness_6_outlined,
-            label: l10n.settingsTheme,
-            onTap: () => context.read<ThemeCubit>().cycle(),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          AppButton(
-            label: l10n.actionLogout,
-            icon: Icons.logout_rounded,
-            variant: AppButtonVariant.outline,
-            expand: true,
-            onPressed: () => context.read<StaffAuthCubit>().logout(),
           ),
         ],
       ),
@@ -131,9 +180,6 @@ class _StaffProfileScreenState extends State<StaffProfileScreen> {
   }
 }
 
-/// Best-effort performance section: target progress + a compact activity row +
-/// a bonus mini-line. Hidden entirely when both summaries are unavailable
-/// (e.g. the rep lacks targets/bonus permissions).
 class _PerformanceSection extends StatelessWidget {
   const _PerformanceSection();
 
@@ -204,7 +250,9 @@ class _PerformanceSection extends StatelessWidget {
                         ),
                         Text(
                           '${l10n.bonusPaid}: ${PriceFormatter.format(bonus.overview!.paidTotal, languageCode: lang)}',
-                          style: Theme.of(context).textTheme.bodySmall
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodySmall
                               ?.copyWith(color: colors.inkMuted),
                         ),
                       ],
@@ -238,9 +286,10 @@ class _Stat extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: Theme.of(
-            context,
-          ).textTheme.labelSmall?.copyWith(color: colors.inkMuted),
+          style: Theme.of(context)
+              .textTheme
+              .labelSmall
+              ?.copyWith(color: colors.inkMuted),
         ),
       ],
     );
@@ -282,8 +331,8 @@ class _SettingTile extends StatelessWidget {
   }
 }
 
-class _ProfileHeaderSkeleton extends StatelessWidget {
-  const _ProfileHeaderSkeleton();
+class _ProfileCardSkeleton extends StatelessWidget {
+  const _ProfileCardSkeleton();
 
   @override
   Widget build(BuildContext context) {

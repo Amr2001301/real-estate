@@ -7,7 +7,6 @@ import '../../../router/auth_navigation.dart';
 import 'auth_cubit.dart';
 import 'auth_state.dart';
 import 'auth_validators.dart';
-import 'widgets/auth_widgets.dart';
 
 /// Customer email/password login. Links to register and phone (OTP) login.
 class LoginScreen extends StatefulWidget {

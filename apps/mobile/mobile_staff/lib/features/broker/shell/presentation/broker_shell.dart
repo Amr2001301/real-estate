@@ -21,10 +21,10 @@ import '../../reservations/domain/usecases/broker_reservation_use_cases.dart';
 import '../../reservations/presentation/cubit/broker_reservations_cubit.dart';
 import '../../reservations/presentation/screens/broker_reservations_screen.dart';
 
-/// The authenticated Broker workspace: a 5-tab bottom-nav shell. The
-/// [BrokerProfileCubit] is hosted here so both Dashboard and Profile can read
-/// the broker's `canViewCommissions` flag. Commissions are reached from the
-/// Dashboard card / Profile entry (not a bottom tab).
+/// The authenticated Broker workspace: a 5-tab bottom-nav shell using the
+/// shared premium [AppBottomNav] from core. The [BrokerProfileCubit] is hosted
+/// here so both Dashboard and Profile can read the broker's `canViewCommissions`
+/// flag. Commissions are reached from the Dashboard card / Profile entry.
 class BrokerShell extends StatefulWidget {
   const BrokerShell({super.key});
 
@@ -37,20 +37,23 @@ class _BrokerShellState extends State<BrokerShell> {
 
   late final List<Widget> _tabs = [
     BlocProvider(
-      create: (ctx) => BrokerDashboardCubit(GetBrokerDashboard(ctx.read<BrokerDashboardRepository>())),
+      create: (ctx) => BrokerDashboardCubit(
+          GetBrokerDashboard(ctx.read<BrokerDashboardRepository>())),
       child: const BrokerDashboardScreen(),
     ),
     BlocProvider(
-      create: (ctx) => BrokerProjectsCubit(GetBrokerProjects(ctx.read<BrokerCatalogRepository>())),
+      create: (ctx) => BrokerProjectsCubit(
+          GetBrokerProjects(ctx.read<BrokerCatalogRepository>())),
       child: const BrokerProjectsScreen(),
     ),
     BlocProvider(
-      create: (ctx) => BrokerLeadsCubit(GetBrokerLeads(ctx.read<BrokerLeadsRepository>())),
+      create: (ctx) =>
+          BrokerLeadsCubit(GetBrokerLeads(ctx.read<BrokerLeadsRepository>())),
       child: const BrokerLeadsScreen(),
     ),
     BlocProvider(
-      create: (ctx) =>
-          BrokerReservationsCubit(GetBrokerReservations(ctx.read<BrokerReservationsRepository>())),
+      create: (ctx) => BrokerReservationsCubit(
+          GetBrokerReservations(ctx.read<BrokerReservationsRepository>())),
       child: const BrokerReservationsScreen(),
     ),
     const BrokerProfileScreen(),
@@ -61,33 +64,33 @@ class _BrokerShellState extends State<BrokerShell> {
     final l10n = context.l10n;
     return Scaffold(
       body: IndexedStack(index: _index, children: _tabs),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (i) => setState(() => _index = i),
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.dashboard_outlined),
-            selectedIcon: const Icon(Icons.dashboard_rounded),
+      bottomNavigationBar: AppBottomNav(
+        currentIndex: _index,
+        onSelect: (i) => setState(() => _index = i),
+        items: [
+          AppBottomNavItem(
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard_rounded,
             label: l10n.navDashboard,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.apartment_outlined),
-            selectedIcon: const Icon(Icons.apartment_rounded),
+          AppBottomNavItem(
+            icon: Icons.apartment_outlined,
+            activeIcon: Icons.apartment_rounded,
             label: l10n.navProjects,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.people_alt_outlined),
-            selectedIcon: const Icon(Icons.people_alt_rounded),
+          AppBottomNavItem(
+            icon: Icons.people_alt_outlined,
+            activeIcon: Icons.people_alt_rounded,
             label: l10n.navLeads,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.bookmark_border_rounded),
-            selectedIcon: const Icon(Icons.bookmark_rounded),
+          AppBottomNavItem(
+            icon: Icons.bookmark_border_rounded,
+            activeIcon: Icons.bookmark_rounded,
             label: l10n.navReservations,
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline_rounded),
-            selectedIcon: const Icon(Icons.person_rounded),
+          AppBottomNavItem(
+            icon: Icons.person_outline_rounded,
+            activeIcon: Icons.person_rounded,
             label: l10n.navProfile,
           ),
         ],

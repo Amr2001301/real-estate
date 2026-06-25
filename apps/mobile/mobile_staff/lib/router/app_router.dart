@@ -501,7 +501,8 @@ GoRouter createStaffRouter(
         },
       ),
 
-      GoRoute(path: '/gallery', builder: (_, _) => const ComponentGalleryScreen()),
+      if (kDebugMode)
+        GoRoute(path: '/gallery', builder: (_, _) => const ComponentGalleryScreen()),
 
       // ── Notifications inbox (shared by Sales / Manager / Admin / Broker /
       // Maintenance Supervisor — backend scopes results to the signed-in user)

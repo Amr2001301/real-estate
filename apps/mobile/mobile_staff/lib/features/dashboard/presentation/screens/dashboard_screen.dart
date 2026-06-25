@@ -12,8 +12,8 @@ import '../cubit/dashboard_cubit.dart';
 import '../widgets/dashboard_summary_cards.dart';
 import '../widgets/kpi_card.dart';
 
-/// Sales dashboard: headline KPI cards + pipeline breakdown. Skeleton loading,
-/// error retry, pull to refresh.
+/// Sales dashboard: premium navy header + KPI cards + pipeline breakdown.
+/// Skeleton loading, error retry, pull-to-refresh.
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -39,30 +39,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final session = context.read<SessionCubit>().state.sessionOrNull;
+    final name = session?.displayName;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.navDashboard),
-        actions: const [NotificationsBell()],
-      ),
-      body: BlocBuilder<DashboardCubit, DashboardState>(
-        builder: (context, state) {
-          switch (state.status) {
-            case DataStatus.initial:
-            case DataStatus.loading:
-              return const _DashboardSkeleton();
-            case DataStatus.failure:
-              return ErrorState(
-                failure: state.failure,
-                onRetry: () => context.read<DashboardCubit>().load(),
-              );
-            case DataStatus.empty:
-            case DataStatus.success:
-              return RefreshIndicator(
-                onRefresh: _refresh,
-                child: _DashboardBody(data: state.data!),
-              );
-          }
-        },
+      body: Column(
+        children: [
+          // Premium navy header — mirrors the Customer app's screen headers
+          AppNavHeader(
+            title: l10n.navDashboard,
+            subtitle: name != null ? '${l10n.dashboardWelcome}, $name' : null,
+            actions: [const NotificationsBell()],
+          ),
+          // Body
+          Expanded(
+            child: BlocBuilder<DashboardCubit, DashboardState>(
+              builder: (context, state) {
+                switch (state.status) {
+                  case DataStatus.initial:
+                  case DataStatus.loading:
+                    return const _DashboardSkeleton();
+                  case DataStatus.failure:
+                    return ErrorState(
+                      failure: state.failure,
+                      onRetry: () => context.read<DashboardCubit>().load(),
+                    );
+                  case DataStatus.empty:
+                  case DataStatus.success:
+                    return RefreshIndicator(
+                      onRefresh: _refresh,
+                      child: _DashboardBody(data: state.data!),
+                    );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

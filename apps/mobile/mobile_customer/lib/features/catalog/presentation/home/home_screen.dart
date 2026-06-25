@@ -13,7 +13,6 @@ import '../../domain/entities/project.dart';
 import '../../domain/entities/unit.dart';
 import '../../domain/repositories/catalog_repository.dart';
 import '../../domain/usecases/get_units.dart';
-import '../../../../common/brand_mark.dart';
 import '../compare/compare_cubit.dart';
 import '../widgets/glass.dart';
 import '../widgets/price_text.dart';

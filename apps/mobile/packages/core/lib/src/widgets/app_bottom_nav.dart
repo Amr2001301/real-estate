@@ -232,11 +232,13 @@ class _NavItem extends StatelessWidget {
                 onTap: onTap,
                 child: Center(child: _content(context)),
               )
-            : InkWell(
+            : InkResponse(
                 onTap: onTap,
+                containedInkWell: true,
+                highlightShape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(12),
                 splashColor: AppPalette.gold400.withValues(alpha: 0.06),
                 highlightColor: AppPalette.gold400.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(12),
                 child: Center(child: _content(context)),
               ),
       ),

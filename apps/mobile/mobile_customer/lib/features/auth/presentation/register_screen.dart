@@ -8,7 +8,6 @@ import '../domain/repositories/auth_repository.dart';
 import 'auth_cubit.dart';
 import 'auth_state.dart';
 import 'auth_validators.dart';
-import 'widgets/auth_widgets.dart';
 
 /// Customer registration (email + password).
 class RegisterScreen extends StatefulWidget {

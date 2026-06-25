@@ -260,18 +260,6 @@ class AppLocalizationsAr extends AppLocalizations {
   }
 
   @override
-  String get homeInstallmentsRemainingLabel => 'متبقية';
-
-
-  @override
-  String get homeLastPaymentLabel => 'آخر دفعة';
-
-  @override
-  String homePlanMonthsSuffix(int months) {
-    return '/ شهرًا · $months شهرًا';
-  }
-
-  @override
   String get homeNoDuePayments => 'لا أقساط مستحقة';
 
   @override
@@ -1921,4 +1909,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get paymentMethodOther => 'أخرى';
+
+  @override
+  String get homeInstallmentsRemainingLabel => 'متبقية';
+
+  @override
+  String get homeLastPaymentLabel => 'آخر دفعة';
+
+  @override
+  String homePlanMonthsSuffix(int months) {
+    return '/ شهرًا · $months شهرًا';
+  }
+
+  @override
+  String get supervisorMaintenanceTitle => 'طلبات الصيانة';
+
+  @override
+  String get supervisorNoAssignedTitle => 'لا توجد طلبات مُسندة';
+
+  @override
+  String get supervisorNoAssignedMessage =>
+      'ستظهر هنا طلبات الصيانة المُسندة إليك بعد اعتمادها.';
+
+  @override
+  String get maintenanceOverdue => 'متأخر';
+
+  @override
+  String get maintenanceComplaint => 'شكوى';
+
+  @override
+  String get maintenanceUnresolved => 'لم تُحل';
+
+  @override
+  String get maintenanceFallbackTitle => 'طلب صيانة';
 }

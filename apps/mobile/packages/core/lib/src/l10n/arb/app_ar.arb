@@ -686,5 +686,13 @@
   "homeInstallmentsRemainingLabel": "متبقية",
   "homeLastPaymentLabel": "آخر دفعة",
   "homePlanMonthsSuffix": "/ شهرًا · {months} شهرًا",
-  "@homePlanMonthsSuffix": { "placeholders": { "months": { "type": "int" } } }
+  "@homePlanMonthsSuffix": { "placeholders": { "months": { "type": "int" } } },
+
+  "supervisorMaintenanceTitle": "طلبات الصيانة",
+  "supervisorNoAssignedTitle": "لا توجد طلبات مُسندة",
+  "supervisorNoAssignedMessage": "ستظهر هنا طلبات الصيانة المُسندة إليك بعد اعتمادها.",
+  "maintenanceOverdue": "متأخر",
+  "maintenanceComplaint": "شكوى",
+  "maintenanceUnresolved": "لم تُحل",
+  "maintenanceFallbackTitle": "طلب صيانة"
 }
