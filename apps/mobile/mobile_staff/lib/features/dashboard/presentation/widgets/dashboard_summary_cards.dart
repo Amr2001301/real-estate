@@ -44,9 +44,10 @@ class DashboardBonusCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final chevron =
-        isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded;
+    // Use locale rather than Directionality to avoid widget-tree lookup issues.
+    final chevron = lang == 'ar'
+        ? Icons.chevron_left_rounded
+        : Icons.chevron_right_rounded;
 
     return BlocBuilder<BonusSummaryCubit, BonusSummaryState>(
       builder: (context, state) {
@@ -107,7 +108,7 @@ class DashboardBonusCard extends StatelessWidget {
                       ),
                       Container(
                         width: 1,
-                        height: 36,
+                        height: 48,
                         color: colors.hairline,
                       ),
                       Expanded(
@@ -181,16 +182,21 @@ class _Metric extends StatelessWidget {
       children: [
         Text(
           value,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(color: color),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: color,
+            height: 1.2,
+          ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         Text(
           label,
-          style: Theme.of(
-            context,
-          ).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+          style: TextStyle(
+            fontSize: 13,
+            color: colors.inkMuted,
+            height: 1.3,
+          ),
         ),
       ],
     );

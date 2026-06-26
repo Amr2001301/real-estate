@@ -66,7 +66,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   case DataStatus.success:
                     return RefreshIndicator(
                       onRefresh: _refresh,
-                      child: _DashboardBody(data: state.data!, bottomPad: bottomPad),
+                      child: _DashboardBody(
+                        data: state.data!,
+                        bottomPad: bottomPad,
+                      ),
                     );
                 }
               },
@@ -155,10 +158,10 @@ class _DashboardHeader extends StatelessWidget {
             // Content: single row with title column + bell
             Padding(
               padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                topPad + AppSpacing.md,
-                AppSpacing.lg,
                 AppSpacing.md,
+                topPad + AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.sm,
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,29 +177,29 @@ class _DashboardHeader extends StatelessWidget {
                           l10n.navDashboard,
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 22,
+                            fontSize: 24,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.3,
                             height: 1.2,
                           ),
                         ),
                         if (name != null) ...[
-                          const SizedBox(height: 3),
+                          const SizedBox(height: 2),
                           Text(
                             l10n.dashboardWelcomeUser(name!),
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.70),
-                              fontSize: 13,
+                              fontSize: 14,
                               height: 1.3,
                             ),
                           ),
                         ],
-                        const SizedBox(height: AppSpacing.sm),
+                        const SizedBox(height: 8),
                         _RoleChip(label: l10n.salesRoleChip),
                       ],
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
+                  const SizedBox(width: AppSpacing.sm),
                   // Notification bell — in RTL this lands on the LEFT (last = trailing).
                   const Padding(
                     padding: EdgeInsets.only(top: 2),
@@ -230,7 +233,7 @@ class _RoleChip extends StatelessWidget {
         label,
         style: const TextStyle(
           color: AppPalette.gold300,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -261,19 +264,20 @@ class _DashboardBody extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
-        AppSpacing.sm,
+        AppSpacing.xs, // tight gap below header
         AppSpacing.md,
-        bottomPad + 80, // clear bottom nav + safe area
+        bottomPad + 48, // clear bottom nav + safe area
       ),
       children: [
         // ── 1. KPI cards ─────────────────────────────────────────────────
         GridView.count(
+          padding: EdgeInsets.only(top: AppSpacing.xs),
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.sm,
           crossAxisSpacing: AppSpacing.sm,
-          childAspectRatio: 1.65,
+          childAspectRatio: 1.9,
           children: [
             KpiCard(
               icon: Icons.people_alt_outlined,
@@ -408,11 +412,11 @@ class _PipelineRow extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 68,
+            width: 72,
             child: Text(
               leadStageLabel(l10n, stage),
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: toneColor,
               ),
@@ -426,20 +430,17 @@ class _PipelineRow extends StatelessWidget {
                 value: progress,
                 backgroundColor: toneColor.withValues(alpha: 0.12),
                 valueColor: AlwaysStoppedAnimation<Color>(toneColor),
-                minHeight: 6,
+                minHeight: 7,
               ),
             ),
           ),
           const SizedBox(width: 10),
           SizedBox(
-            width: 28,
+            width: 32,
             child: Text(
               '$count',
               textAlign: TextAlign.end,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: colors.inkStrong,
-              ),
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -482,12 +483,12 @@ class _QuickActionPill extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: colors.brandGold),
+            Icon(icon, size: 17, color: colors.brandGold),
             const SizedBox(width: 7),
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: colors.inkStrong,
               ),
@@ -511,14 +512,14 @@ class _DashboardSkeleton extends StatelessWidget {
       child: GridView.count(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
-          AppSpacing.sm,
+          AppSpacing.xs,
           AppSpacing.md,
-          bottomPad + 80,
+          bottomPad + 48,
         ),
         crossAxisCount: 2,
         mainAxisSpacing: AppSpacing.sm,
         crossAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 1.65,
+        childAspectRatio: 1.9,
         children: const [
           KpiCard(icon: Icons.people_alt_outlined, label: 'Leads', value: '00'),
           KpiCard(

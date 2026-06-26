@@ -35,15 +35,16 @@ class KpiCard extends StatelessWidget {
     final colors = context.appColors;
     return PremiumCard(
       elevation: AppCardElevation.soft,
-      padding: const EdgeInsets.all(AppSpacing.sm),
+      padding: const EdgeInsets.all(10),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.max,
         children: [
           // Value + icon on the same row — in RTL: value on RIGHT, icon on LEFT.
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Text(
@@ -52,7 +53,7 @@ class KpiCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: colors.inkStrong,
-                    fontSize: 26,
+                    fontSize: 28,
                     fontWeight: FontWeight.w800,
                     height: 1.1,
                   ),
@@ -66,14 +67,14 @@ class KpiCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           Text(
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: colors.inkMuted,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w500,
               height: 1.3,
             ),
