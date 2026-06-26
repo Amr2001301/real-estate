@@ -2147,4 +2147,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get maintenanceNoPreviewAvailable =>
       'Preview is not available for this attachment';
+
+  @override
+  String get maintenanceProblemSolved => 'Problem Solved';
+
+  @override
+  String get maintenanceOpenDirections => 'Open Directions';
+
+  @override
+  String get maintenanceLocationPreview => 'Unit Location';
+
+  @override
+  String get maintenanceMapPreviewUnavailable => 'Map preview not available';
+
+  @override
+  String get maintenanceActionHintInProgress =>
+      'After resolving the issue, update the status to confirm resolution.';
+
+  @override
+  String get maintenanceCompactDetailTitle => 'Maintenance Request Details';
 }

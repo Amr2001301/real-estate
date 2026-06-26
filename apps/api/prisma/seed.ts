@@ -136,6 +136,9 @@ type UnitSeed = {
   price: number;
   status?: UnitStatus;
   media?: string[];
+  latitude?: number;
+  longitude?: number;
+  address?: string;
 };
 
 /**
@@ -153,12 +156,17 @@ async function ensureUnitMedia(unitId: string, urls: string[]) {
 
 async function ensureUnits(buildingId: string, units: UnitSeed[]) {
   for (const u of units) {
-    const { media, ...data } = u;
+    const { media, latitude, longitude, address, ...data } = u;
     const unit = await prisma.unit.upsert({
       where: { buildingId_code: { buildingId, code: u.code } },
-      create: { buildingId, ...data },
-      // Don't overwrite admin-edited unit state on re-seed.
-      update: {},
+      create: { buildingId, ...data, latitude, longitude, address },
+      // Don't overwrite admin-edited unit state on re-seed, but backfill
+      // location if it was never set (migration added nullable columns).
+      update: {
+        ...(latitude != null ? { latitude } : {}),
+        ...(longitude != null ? { longitude } : {}),
+        ...(address != null ? { address } : {}),
+      },
     });
     if (media && media.length) await ensureUnitMedia(unit.id, media);
   }
@@ -217,13 +225,13 @@ async function seedPublicDemo() {
   const ncTowerA = await ensureBuilding(ncPhase.id, 'Nile Tower A', 20, 0);
   const ncTowerB = await ensureBuilding(ncPhase.id, 'Nile Tower B', 18, 1);
   await ensureUnits(ncTowerA.id, [
-    { code: 'NC-A-101', type: 'studio', area: 80, bedrooms: 1, bathrooms: 1, floor: 1, price: 1200000, media: [DEMO_IMG.interior1] },
-    { code: 'NC-A-102', type: '1BR', area: 95, bedrooms: 1, bathrooms: 1, floor: 1, price: 1450000, media: [DEMO_IMG.apartment2] },
-    { code: 'NC-A-201', type: '2BR', area: 130, bedrooms: 2, bathrooms: 2, floor: 2, price: 2100000, media: [DEMO_IMG.apartment1, DEMO_IMG.interior1] },
-    { code: 'NC-A-305', type: '3BR', area: 180, bedrooms: 3, bathrooms: 3, floor: 3, price: 3200000, media: [DEMO_IMG.apartment1] },
+    { code: 'NC-A-101', type: 'studio', area: 80, bedrooms: 1, bathrooms: 1, floor: 1, price: 1200000, media: [DEMO_IMG.interior1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
+    { code: 'NC-A-102', type: '1BR', area: 95, bedrooms: 1, bathrooms: 1, floor: 1, price: 1450000, media: [DEMO_IMG.apartment2], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
+    { code: 'NC-A-201', type: '2BR', area: 130, bedrooms: 2, bathrooms: 2, floor: 2, price: 2100000, media: [DEMO_IMG.apartment1, DEMO_IMG.interior1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
+    { code: 'NC-A-305', type: '3BR', area: 180, bedrooms: 3, bathrooms: 3, floor: 3, price: 3200000, media: [DEMO_IMG.apartment1], latitude: 21.5433, longitude: 39.1728, address: 'Nile Tower A، شارع الأمير محمد بن عبدالعزيز، جدة' },
   ]);
   await ensureUnits(ncTowerB.id, [
-    { code: 'NC-B-210', type: '2BR', area: 125, bedrooms: 2, bathrooms: 2, floor: 2, price: 2050000, status: UnitStatus.RESERVED, media: [DEMO_IMG.apartment2] },
+    { code: 'NC-B-210', type: '2BR', area: 125, bedrooms: 2, bathrooms: 2, floor: 2, price: 2050000, status: UnitStatus.RESERVED, media: [DEMO_IMG.apartment2], latitude: 21.5434, longitude: 39.1730, address: 'Nile Tower B، شارع الأمير محمد بن عبدالعزيز، جدة' },
   ]);
 
   // ── 2) Palm District — villas & townhouses (الرياض, featured) ──
@@ -250,10 +258,10 @@ async function seedPublicDemo() {
   const palmPhase = await ensurePhase(palm.id, 'المرحلة الأولى', 'Phase 1', 0);
   const palmCluster = await ensureBuilding(palmPhase.id, 'Palm Cluster A', 2, 0);
   await ensureUnits(palmCluster.id, [
-    { code: 'PD-V-01', type: 'villa', area: 420, bedrooms: 5, bathrooms: 5, floor: 0, price: 6500000, media: [DEMO_IMG.villa1, DEMO_IMG.villa2] },
-    { code: 'PD-V-02', type: 'villa', area: 380, bedrooms: 4, bathrooms: 4, floor: 0, price: 5800000, media: [DEMO_IMG.villa2] },
-    { code: 'PD-T-01', type: 'townhouse', area: 260, bedrooms: 4, bathrooms: 3, floor: 0, price: 3900000, media: [DEMO_IMG.modernHouse] },
-    { code: 'PD-T-02', type: 'townhouse', area: 240, bedrooms: 3, bathrooms: 3, floor: 0, price: 3600000, status: UnitStatus.SOLD, media: [DEMO_IMG.modernHouse] },
+    { code: 'PD-V-01', type: 'villa', area: 420, bedrooms: 5, bathrooms: 5, floor: 0, price: 6500000, media: [DEMO_IMG.villa1, DEMO_IMG.villa2], latitude: 24.7136, longitude: 46.6753, address: 'Palm Cluster A، حي النرجس، الرياض' },
+    { code: 'PD-V-02', type: 'villa', area: 380, bedrooms: 4, bathrooms: 4, floor: 0, price: 5800000, media: [DEMO_IMG.villa2], latitude: 24.7138, longitude: 46.6755, address: 'Palm Cluster A، حي النرجس، الرياض' },
+    { code: 'PD-T-01', type: 'townhouse', area: 260, bedrooms: 4, bathrooms: 3, floor: 0, price: 3900000, media: [DEMO_IMG.modernHouse], latitude: 24.7140, longitude: 46.6757, address: 'Palm Cluster A، حي النرجس، الرياض' },
+    { code: 'PD-T-02', type: 'townhouse', area: 240, bedrooms: 3, bathrooms: 3, floor: 0, price: 3600000, status: UnitStatus.SOLD, media: [DEMO_IMG.modernHouse], latitude: 24.7142, longitude: 46.6759, address: 'Palm Cluster A، حي النرجس، الرياض' },
   ]);
 
   // ── 3) The Avenue Business Hub — commercial / offices (الدمام) ──
@@ -280,10 +288,10 @@ async function seedPublicDemo() {
   const avPhase = await ensurePhase(avenue.id, 'المرحلة الأولى', 'Phase 1', 0);
   const avTower = await ensureBuilding(avPhase.id, 'Business Tower', 24, 0);
   await ensureUnits(avTower.id, [
-    { code: 'AV-O-101', type: 'office', area: 120, bedrooms: 0, bathrooms: 1, floor: 1, price: 1900000, media: [DEMO_IMG.officeInt] },
-    { code: 'AV-O-205', type: 'office', area: 180, bedrooms: 0, bathrooms: 2, floor: 2, price: 2800000, media: [DEMO_IMG.officeInt, DEMO_IMG.officeExt] },
-    { code: 'AV-R-001', type: 'retail', area: 90, bedrooms: 0, bathrooms: 1, floor: 0, price: 1600000, media: [DEMO_IMG.officeExt] },
-    { code: 'AV-O-310', type: 'office', area: 250, bedrooms: 0, bathrooms: 2, floor: 3, price: 3500000, media: [DEMO_IMG.officeInt] },
+    { code: 'AV-O-101', type: 'office', area: 120, bedrooms: 0, bathrooms: 1, floor: 1, price: 1900000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-205', type: 'office', area: 180, bedrooms: 0, bathrooms: 2, floor: 2, price: 2800000, media: [DEMO_IMG.officeInt, DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-R-001', type: 'retail', area: 90, bedrooms: 0, bathrooms: 1, floor: 0, price: 1600000, media: [DEMO_IMG.officeExt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
+    { code: 'AV-O-310', type: 'office', area: 250, bedrooms: 0, bathrooms: 2, floor: 3, price: 3500000, media: [DEMO_IMG.officeInt], latitude: 26.4207, longitude: 50.0888, address: 'Business Tower، شارع الأمير محمد بن فهد، الدمام' },
   ]);
 
   // ── 4) Solara Heights — modern high-rise apartments (مكة المكرمة) ──
@@ -310,11 +318,11 @@ async function seedPublicDemo() {
   const solPhase = await ensurePhase(solara.id, 'المرحلة الأولى', 'Phase 1', 0);
   const solTower = await ensureBuilding(solPhase.id, 'Solara Tower One', 30, 0);
   await ensureUnits(solTower.id, [
-    { code: 'SH-101', type: '1BR', area: 90, bedrooms: 1, bathrooms: 1, floor: 1, price: 1300000, media: [DEMO_IMG.interior1] },
-    { code: 'SH-205', type: '2BR', area: 120, bedrooms: 2, bathrooms: 2, floor: 2, price: 1950000, media: [DEMO_IMG.apartment1] },
-    { code: 'SH-310', type: '2BR', area: 135, bedrooms: 2, bathrooms: 2, floor: 3, price: 2150000, media: [DEMO_IMG.apartment2] },
-    { code: 'SH-1201', type: '3BR', area: 175, bedrooms: 3, bathrooms: 3, floor: 12, price: 3400000, media: [DEMO_IMG.apartment1, DEMO_IMG.highrise] },
-    { code: 'SH-1505', type: 'studio', area: 70, bedrooms: 1, bathrooms: 1, floor: 15, price: 1100000, media: [DEMO_IMG.interior1] },
+    { code: 'SH-101', type: '1BR', area: 90, bedrooms: 1, bathrooms: 1, floor: 1, price: 1300000, media: [DEMO_IMG.interior1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
+    { code: 'SH-205', type: '2BR', area: 120, bedrooms: 2, bathrooms: 2, floor: 2, price: 1950000, media: [DEMO_IMG.apartment1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
+    { code: 'SH-310', type: '2BR', area: 135, bedrooms: 2, bathrooms: 2, floor: 3, price: 2150000, media: [DEMO_IMG.apartment2], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
+    { code: 'SH-1201', type: '3BR', area: 175, bedrooms: 3, bathrooms: 3, floor: 12, price: 3400000, media: [DEMO_IMG.apartment1, DEMO_IMG.highrise], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
+    { code: 'SH-1505', type: 'studio', area: 70, bedrooms: 1, bathrooms: 1, floor: 15, price: 1100000, media: [DEMO_IMG.interior1], latitude: 21.3891, longitude: 39.8579, address: 'Solara Tower One، شارع إبراهيم الخليل، مكة المكرمة' },
   ]);
 
   console.log('🏙️  Public demo data ready: 4 projects · 18 units.');
@@ -444,14 +452,14 @@ async function main() {
   const buildingB = await ensureBuilding(phase1.id, 'Building B', 4, 1);
 
   await ensureUnits(buildingA.id, [
-    { code: 'A-101', type: '1BR', area: 75, bedrooms: 1, bathrooms: 1, floor: 1, price: 850000 },
-    { code: 'A-102', type: '2BR', area: 110, bedrooms: 2, bathrooms: 2, floor: 1, price: 1250000 },
-    { code: 'A-201', type: '2BR', area: 115, bedrooms: 2, bathrooms: 2, floor: 2, price: 1300000, status: UnitStatus.RESERVED },
-    { code: 'A-301', type: '3BR', area: 165, bedrooms: 3, bathrooms: 2, floor: 3, price: 1850000 },
+    { code: 'A-101', type: '1BR', area: 75, bedrooms: 1, bathrooms: 1, floor: 1, price: 850000, latitude: 24.7136, longitude: 46.6753, address: 'Building A، كمبوند الرياض الجديدة، الرياض' },
+    { code: 'A-102', type: '2BR', area: 110, bedrooms: 2, bathrooms: 2, floor: 1, price: 1250000, latitude: 24.7136, longitude: 46.6753, address: 'Building A، كمبوند الرياض الجديدة، الرياض' },
+    { code: 'A-201', type: '2BR', area: 115, bedrooms: 2, bathrooms: 2, floor: 2, price: 1300000, status: UnitStatus.RESERVED, latitude: 24.7136, longitude: 46.6753, address: 'Building A، كمبوند الرياض الجديدة، الرياض' },
+    { code: 'A-301', type: '3BR', area: 165, bedrooms: 3, bathrooms: 2, floor: 3, price: 1850000, latitude: 24.7136, longitude: 46.6753, address: 'Building A، كمبوند الرياض الجديدة، الرياض' },
   ]);
   await ensureUnits(buildingB.id, [
-    { code: 'B-101', type: '2BR', area: 105, bedrooms: 2, bathrooms: 2, floor: 1, price: 1180000 },
-    { code: 'B-102', type: '3BR', area: 160, bedrooms: 3, bathrooms: 3, floor: 1, price: 1750000 },
+    { code: 'B-101', type: '2BR', area: 105, bedrooms: 2, bathrooms: 2, floor: 1, price: 1180000, latitude: 24.7138, longitude: 46.6755, address: 'Building B، كمبوند الرياض الجديدة، الرياض' },
+    { code: 'B-102', type: '3BR', area: 160, bedrooms: 3, bathrooms: 3, floor: 1, price: 1750000, latitude: 24.7138, longitude: 46.6755, address: 'Building B، كمبوند الرياض الجديدة، الرياض' },
   ]);
 
   // ---- Demo project 2 (draft) ----

@@ -261,6 +261,9 @@ model Unit {
   price                Decimal    @db.Decimal(14, 2)
   status               UnitStatus @default(AVAILABLE)
   reservationExpiresAt DateTime?
+  latitude             Float?
+  longitude            Float?
+  address              String?
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
 

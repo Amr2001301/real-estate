@@ -85,14 +85,12 @@ class MaintenanceRequestDto {
       customerPhone: customer?['phone'] as String?,
       customerEmail: customer?['email'] as String?,
       unitCode: unit?['code'] as String?,
-      // TODO(backend): unit currently only returns 'code'; lat/lng/address are
-      // null until the backend includes location data in the response.
-      unitLat: (unit?['lat'] as num?)?.toDouble() ??
-          (unit?['latitude'] as num?)?.toDouble() ??
+      unitLat: (unit?['latitude'] as num?)?.toDouble() ??
+          (unit?['lat'] as num?)?.toDouble() ??
           (_asMap(unit?['location'])?['lat'] as num?)?.toDouble() ??
           (_asMap(unit?['location'])?['latitude'] as num?)?.toDouble(),
-      unitLng: (unit?['lng'] as num?)?.toDouble() ??
-          (unit?['longitude'] as num?)?.toDouble() ??
+      unitLng: (unit?['longitude'] as num?)?.toDouble() ??
+          (unit?['lng'] as num?)?.toDouble() ??
           (_asMap(unit?['location'])?['lng'] as num?)?.toDouble() ??
           (_asMap(unit?['location'])?['longitude'] as num?)?.toDouble(),
       unitAddress: unit?['address'] as String? ?? unit?['fullAddress'] as String?,
@@ -134,10 +132,9 @@ class MaintenanceDocDto {
         id: json['id'] as String,
         title: json['title'] as String?,
         fileName: json['fileName'] as String?,
-        // Try all common field names for pre-signed / public attachment URLs.
-        // TODO(backend): documents[] currently has no download URL field.
-        // Remove this comment once the backend returns url/signedUrl/downloadUrl.
-        url: (json['url'] ?? json['signedUrl'] ?? json['downloadUrl'] ?? json['fileUrl']) as String?,
+        // Backend returns 'fileUrl' (permanent storage URL) for supervisor role.
+        // Fallbacks cover other field names used by other endpoints.
+        url: (json['fileUrl'] ?? json['url'] ?? json['signedUrl'] ?? json['downloadUrl']) as String?,
         mimeType: json['mimeType'] as String?,
       );
 }

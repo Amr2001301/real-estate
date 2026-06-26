@@ -756,5 +756,11 @@
   "maintenanceActionUnavailable": "No action available",
   "maintenanceClosedState": "Request Closed",
   "maintenanceOpenAttachment": "Open attachment",
-  "maintenanceNoPreviewAvailable": "Preview is not available for this attachment"
+  "maintenanceNoPreviewAvailable": "Preview is not available for this attachment",
+  "maintenanceProblemSolved": "Problem Solved",
+  "maintenanceOpenDirections": "Open Directions",
+  "maintenanceLocationPreview": "Unit Location",
+  "maintenanceMapPreviewUnavailable": "Map preview not available",
+  "maintenanceActionHintInProgress": "After resolving the issue, update the status to confirm resolution.",
+  "maintenanceCompactDetailTitle": "Maintenance Request Details"
 }

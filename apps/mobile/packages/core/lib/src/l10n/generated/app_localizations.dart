@@ -4087,6 +4087,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preview is not available for this attachment'**
   String get maintenanceNoPreviewAvailable;
+
+  /// No description provided for @maintenanceProblemSolved.
+  ///
+  /// In en, this message translates to:
+  /// **'Problem Solved'**
+  String get maintenanceProblemSolved;
+
+  /// No description provided for @maintenanceOpenDirections.
+  ///
+  /// In en, this message translates to:
+  /// **'Open Directions'**
+  String get maintenanceOpenDirections;
+
+  /// No description provided for @maintenanceLocationPreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit Location'**
+  String get maintenanceLocationPreview;
+
+  /// No description provided for @maintenanceMapPreviewUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Map preview not available'**
+  String get maintenanceMapPreviewUnavailable;
+
+  /// No description provided for @maintenanceActionHintInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'After resolving the issue, update the status to confirm resolution.'**
+  String get maintenanceActionHintInProgress;
+
+  /// No description provided for @maintenanceCompactDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance Request Details'**
+  String get maintenanceCompactDetailTitle;
 }
 
 class _AppLocalizationsDelegate

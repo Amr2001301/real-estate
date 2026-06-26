@@ -1,4 +1,5 @@
 import 'package:core/core.dart';
+import 'package:flutter/material.dart';
 
 import '../domain/entities/maintenance_request.dart';
 
@@ -41,9 +42,15 @@ BadgeTone maintenancePriorityTone(MaintenancePriority p) => switch (p) {
     };
 
 String maintenanceTransitionLabel(MaintenanceTransition t) => switch (t) {
-      MaintenanceTransition.start => 'بدء التنفيذ',
-      MaintenanceTransition.resolve => 'تم الحل',
-      MaintenanceTransition.reopen => 'إعادة الفتح',
+      MaintenanceTransition.start   => 'بدء التنفيذ',
+      MaintenanceTransition.resolve => 'تم حل المشكلة',
+      MaintenanceTransition.reopen  => 'إعادة الفتح',
+    };
+
+IconData maintenanceTransitionIcon(MaintenanceTransition t) => switch (t) {
+      MaintenanceTransition.start   => Icons.play_arrow_rounded,
+      MaintenanceTransition.resolve => Icons.check_rounded,
+      MaintenanceTransition.reopen  => Icons.refresh_rounded,
     };
 
 String maintenanceResolvedByLabel(MaintenanceResolvedBy? by) => switch (by) {

@@ -77,8 +77,9 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
+    final l10n       = context.l10n;
+    final lang       = Localizations.localeOf(context).languageCode;
+    final statusBarH = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light
@@ -98,13 +99,15 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
 
             return CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(
-                  child: _DetailHeader(
+                // Pinned collapsible header — stays visible while scrolling.
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _DetailHeaderDelegate(
+                    statusBarH: statusBarH,
                     l10n: l10n,
                     status: status,
-                    priority: r?.priority,
-                    accent: accent,
                     gradient: gradient,
+                    accent: accent,
                   ),
                 ),
                 SliverPadding(
@@ -164,34 +167,39 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
         r: r, l10n: l10n, lang: lang,
         gradient: gradient, accent: accent, icon: icon,
       ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 12),
 
-      // 2. Customer / unit info (with phone tap + map CTA)
+      // 2. Customer / unit info
       if (r.customerName != null ||
           r.customerPhone != null ||
           r.unitCode != null) ...[
         _CustomerInfoCard(r: r, l10n: l10n),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
       ],
 
-      // 3. Workflow / SLA card
-      _WorkflowCard(r: r, l10n: l10n, fmtDate: fmtDate),
-      const SizedBox(height: 16),
+      // 3. Unit location card (shown whenever there's a unit code)
+      if (r.unitCode != null) ...[
+        _LocationCard(r: r, l10n: l10n),
+        const SizedBox(height: 12),
+      ],
 
-      // 4. Unified action card (replaces both _ActionsCard and
-      //    _SupervisorConfirmCard — no "locked" state shown separately)
+      // 4. Workflow / SLA card
+      _WorkflowCard(r: r, l10n: l10n, fmtDate: fmtDate),
+      const SizedBox(height: 12),
+
+      // 5. Unified action card
       _WorkflowActionCard(r: r, l10n: l10n, state: state, fmtDate: fmtDate),
 
-      // 5. Customer feedback (read-only)
+      // 6. Customer feedback (read-only)
       if (r.customerConfirmedResolutionAt != null ||
           r.customerRating != null) ...[
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _FeedbackCard(r: r, l10n: l10n, fmtDate: fmtDate),
       ],
 
-      // 6. Attachments
+      // 7. Attachments
       if (detail.documents.isNotEmpty) ...[
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         _AttachmentsCard(
           documents: detail.documents,
           l10n: l10n,
@@ -202,27 +210,42 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
   }
 }
 
-// ── Compact detail header ─────────────────────────────────────────────────────
-class _DetailHeader extends StatelessWidget {
-  const _DetailHeader({
+// ── Pinned collapsible header delegate ───────────────────────────────────────
+// Expanded: shows subtitle + large title + status badge.
+// Collapsed (pinned): compact title + status badge always visible.
+class _DetailHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _DetailHeaderDelegate({
+    required this.statusBarH,
     required this.l10n,
     required this.gradient,
     required this.accent,
     this.status,
-    this.priority,
   });
-  final AppLocalizations     l10n;
-  final List<Color>          gradient;
-  final Color                accent;
-  final MaintenanceStatus?   status;
-  final MaintenancePriority? priority;
+
+  final double             statusBarH;
+  final AppLocalizations   l10n;
+  final List<Color>        gradient;
+  final Color              accent;
+  final MaintenanceStatus? status;
+
+  static const double _expandedContent = 90.0;
+  static const double _compactContent  = 56.0;
 
   @override
-  Widget build(BuildContext context) {
+  double get minExtent => statusBarH + _compactContent;
+
+  @override
+  double get maxExtent => statusBarH + _expandedContent;
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final t = (shrinkOffset / (_expandedContent - _compactContent))
+        .clamp(0.0, 1.0);
     final statusLabel =
         status != null ? maintenanceStatusLabel(status!) : null;
 
-    return Container(
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topRight,
@@ -231,31 +254,44 @@ class _DetailHeader extends StatelessWidget {
         ),
       ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          const Positioned.fill(
-              child: IgnorePointer(child: _DotTexture())),
+          // Subtle dot texture
+          const IgnorePointer(child: _DotTexture()),
+          // Gold corner glow
           PositionedDirectional(
             end: 0,
             top: 0,
-            child: Container(
-              width: 160,
-              height: 110,
-              decoration: BoxDecoration(
-                gradient: RadialGradient(
-                  center: Alignment.topRight,
-                  radius: 1.0,
-                  colors: [
-                    AppPalette.gold400.withValues(alpha: 0.08),
-                    AppPalette.gold400.withValues(alpha: 0.0),
-                  ],
+            child: SizedBox(
+              width: 140,
+              height: statusBarH + _expandedContent,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.topRight,
+                    radius: 1.0,
+                    colors: [
+                      AppPalette.gold400.withValues(alpha: 0.08),
+                      AppPalette.gold400.withValues(alpha: 0.0),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
-          SafeArea(
-            bottom: false,
+          // Content — below status bar
+          Positioned(
+            top: statusBarH,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12.0 - (t * 4.0), // 12 → 8 when collapsed
+                16,
+                16.0 - (t * 8.0), // 16 → 8 when collapsed
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -264,31 +300,44 @@ class _DetailHeader extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          l10n.maintenanceDetailSubtitle,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.60),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                        // Subtitle fades out as header collapses
+                        if (t < 0.85)
+                          Opacity(
+                            opacity: (1.0 - t / 0.65).clamp(0.0, 1.0),
+                            child: Text(
+                              l10n.maintenanceDetailSubtitle,
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.60),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 3),
+                        const SizedBox(height: 2),
+                        // Title: 20px → 16px as it collapses
                         Text(
-                          l10n.supervisorDetailTitle,
-                          style: const TextStyle(
+                          l10n.maintenanceCompactDetailTitle,
+                          style: TextStyle(
                             color: Colors.white,
-                            fontSize: 20,
+                            fontSize: 20.0 - (t * 4.0),
                             fontWeight: FontWeight.w800,
                             height: 1.15,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
-                  if (statusLabel != null)
+                  if (statusLabel != null) ...[
+                    const SizedBox(width: 8),
                     _GlassBadge(label: statusLabel, accent: accent),
+                  ],
                 ],
               ),
             ),
@@ -297,6 +346,13 @@ class _DetailHeader extends StatelessWidget {
       ),
     );
   }
+
+  @override
+  bool shouldRebuild(_DetailHeaderDelegate old) =>
+      old.status != status ||
+      old.accent != accent ||
+      old.statusBarH != statusBarH ||
+      old.gradient != gradient;
 }
 
 // ── Issue overview card ───────────────────────────────────────────────────────
@@ -332,7 +388,7 @@ class _IssueCard extends StatelessWidget {
         children: [
           // Gradient strip
           Container(
-            height: 100,
+            height: 88,
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
@@ -345,19 +401,19 @@ class _IssueCard extends StatelessWidget {
                 const Positioned.fill(child: _DotTexture()),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 16),
+                      horizontal: 16, vertical: 14),
                   child: Row(
                     children: [
                       Container(
-                        width: 52,
-                        height: 52,
+                        width: 48,
+                        height: 48,
                         decoration: BoxDecoration(
                           color: accent.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
                               color: accent.withValues(alpha: 0.35)),
                         ),
-                        child: Icon(icon, color: accent, size: 26),
+                        child: Icon(icon, color: accent, size: 24),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -371,7 +427,7 @@ class _IssueCard extends StatelessWidget {
                                   : l10n.maintenanceFallbackTitle,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
+                                fontSize: 17,
                                 fontWeight: FontWeight.w800,
                                 height: 1.2,
                               ),
@@ -399,34 +455,34 @@ class _IssueCard extends StatelessWidget {
           // White body
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   l10n.maintenanceIssueDescription,
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF9CA3AF),
                     letterSpacing: 0.4,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   r.description.isNotEmpty
                       ? r.description
                       : l10n.supervisorNoDescription,
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w500,
                     color: Color(0xFF1A1A2E),
-                    height: 1.6,
+                    height: 1.55,
                   ),
-                  maxLines: 3,
+                  maxLines: 4,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     if (r.priority != MaintenancePriority.unknown) ...[
@@ -449,12 +505,12 @@ class _IssueCard extends StatelessWidget {
                     const Spacer(),
                     if (date != null) ...[
                       Icon(Icons.calendar_today_rounded,
-                          size: 13,
-                          color: Colors.black.withValues(alpha: 0.30)),
+                          size: 12,
+                          color: Colors.black.withValues(alpha: 0.28)),
                       const SizedBox(width: 4),
                       Text(date,
                           style: TextStyle(
-                              color: Colors.black.withValues(alpha: 0.45),
+                              color: Colors.black.withValues(alpha: 0.40),
                               fontSize: 12,
                               fontWeight: FontWeight.w500)),
                     ],
@@ -470,6 +526,7 @@ class _IssueCard extends StatelessWidget {
 }
 
 // ── Customer / unit info card ─────────────────────────────────────────────────
+// Directions CTA moved to _LocationCard below.
 class _CustomerInfoCard extends StatelessWidget {
   const _CustomerInfoCard({required this.r, required this.l10n});
   final MaintenanceRequest r;
@@ -486,18 +543,76 @@ class _CustomerInfoCard extends StatelessWidget {
     }
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        color: Colors.white,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _CardHeader(
+              icon: Icons.person_rounded,
+              title: l10n.maintenanceCustomerInfo,
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+              child: Column(
+                children: [
+                  if (r.customerName != null)
+                    _InfoRow(
+                      icon: Icons.person_outline_rounded,
+                      label: l10n.supervisorDetailCustomerLabel,
+                      value: r.customerName!,
+                    ),
+                  if (r.customerPhone != null)
+                    _InfoRow(
+                      icon: Icons.phone_outlined,
+                      label: l10n.supervisorDetailPhoneLabel,
+                      value: r.customerPhone!,
+                      valueDirection: TextDirection.ltr,
+                      actionIcon: Icons.call_rounded,
+                      actionColor: const Color(0xFF4ADE80),
+                      onTap: () => _callPhone(context),
+                    ),
+                  if (r.unitCode != null)
+                    _InfoRow(
+                      icon: Icons.apartment_rounded,
+                      label: l10n.supervisorDetailUnitLabel,
+                      value: r.unitCode!,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Unit location card ────────────────────────────────────────────────────────
+// Shows address + coordinates and opens Google Maps externally.
+// Embedded map preview deferred until google_maps_flutter API keys are set up.
+class _LocationCard extends StatelessWidget {
+  const _LocationCard({required this.r, required this.l10n});
+  final MaintenanceRequest r;
+  final AppLocalizations   l10n;
+
+  bool get _hasLocation =>
+      (r.unitLat != null && r.unitLng != null) || r.unitAddress != null;
+
   Future<void> _openDirections(BuildContext context) async {
     final lat = r.unitLat;
     final lng = r.unitLng;
     final address = r.unitAddress;
-
     bool ok;
     if (lat != null && lng != null) {
-      final uri = Uri.parse(
+      ok = await ContactActions.openExternal(
         'https://www.google.com/maps/dir/?api=1'
         '&destination=$lat,$lng&travelmode=driving',
       );
-      ok = await ContactActions.openExternal(uri.toString());
     } else if (address != null) {
       final dest = Uri.encodeComponent(address);
       ok = await ContactActions.openExternal(
@@ -514,11 +629,11 @@ class _CustomerInfoCard extends StatelessWidget {
     }
   }
 
-  bool get _hasLocation =>
-      (r.unitLat != null && r.unitLng != null) || r.unitAddress != null;
-
   @override
   Widget build(BuildContext context) {
+    final hasCoords = r.unitLat != null && r.unitLng != null;
+    final address   = r.unitAddress;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Container(
@@ -526,71 +641,143 @@ class _CustomerInfoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _CardHeader(
-              icon: Icons.person_rounded,
-              title: l10n.maintenanceCustomerInfo,
-            ),
+            // Section header — lighter than _CardHeader to reduce visual weight
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-              child: Column(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+              child: Row(
                 children: [
-                  if (r.customerName != null)
-                    _InfoRowNew(
-                      icon: Icons.person_outline_rounded,
-                      label: l10n.supervisorDetailCustomerLabel,
-                      value: r.customerName!,
+                  Icon(
+                    Icons.location_on_rounded,
+                    color: _hasLocation
+                        ? const Color(0xFF1A73E8)
+                        : const Color(0xFF9CA3AF),
+                    size: 17,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.maintenanceLocationPreview,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
                     ),
-                  // Phone row — tappable
-                  if (r.customerPhone != null)
-                    _InfoRowNew(
-                      icon: Icons.phone_outlined,
-                      label: l10n.supervisorDetailPhoneLabel,
-                      value: r.customerPhone!,
-                      valueDirection: TextDirection.ltr,
-                      actionIcon: Icons.call_rounded,
-                      actionColor: const Color(0xFF4ADE80),
-                      onTap: () => _callPhone(context),
-                    ),
-                  if (r.unitCode != null)
-                    _InfoRowNew(
-                      icon: Icons.apartment_rounded,
-                      label: l10n.supervisorDetailUnitLabel,
-                      value: r.unitCode!,
-                    ),
+                  ),
                 ],
               ),
             ),
-            // Directions CTA — always shown; disabled (grey) when backend has
-            // not yet provided unit.lat / unit.lng / unit.address.
-            // TODO(backend): enable once unit location fields are returned.
+
+            if (_hasLocation) ...[
+              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+
+              // Address line
+              if (address != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 2),
+                  child: Text(
+                    address,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF374151),
+                      height: 1.5,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+
+              // Coordinates
+              if (hasCoords)
+                Padding(
+                  padding: EdgeInsets.fromLTRB(
+                      16, address != null ? 2 : 10, 16, 0),
+                  child: Text(
+                    '${r.unitLat!.toStringAsFixed(5)}, '
+                    '${r.unitLng!.toStringAsFixed(5)}',
+                    textDirection: TextDirection.ltr,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ),
+
+              // Map placeholder (replace with google_maps_flutter once keys ready)
+              // TODO: swap this Container for GoogleMap widget with single marker,
+              //   zoomGesturesEnabled: false, scrollGesturesEnabled: false.
+              Container(
+                margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                height: 96,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F4F8),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE5E7EB)),
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.map_rounded,
+                            color: Color(0xFFB8C4D0), size: 28),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.maintenanceMapPreviewUnavailable,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Color(0xFFB8C4D0),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+            ] else ...[
+              // No location data yet
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
+                child: Text(
+                  l10n.maintenanceLocationUnavailable,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
+              ),
+            ],
+
+            // Directions CTA
             const Divider(height: 1, indent: 16, endIndent: 16),
             InkWell(
               onTap: _hasLocation ? () => _openDirections(context) : null,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                padding: const EdgeInsets.fromLTRB(16, 11, 16, 13),
                 child: Row(
                   children: [
                     Container(
-                      width: 34,
-                      height: 34,
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
                         color: _hasLocation
                             ? const Color(0xFF1A73E8).withValues(alpha: 0.12)
                             : const Color(0xFF9CA3AF).withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(9),
                       ),
                       child: Icon(
                         Icons.directions_rounded,
                         color: _hasLocation
                             ? const Color(0xFF1A73E8)
                             : const Color(0xFF9CA3AF),
-                        size: 18,
+                        size: 17,
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Text(
                       _hasLocation
-                          ? l10n.maintenanceDirectionsToUnit
+                          ? l10n.maintenanceOpenDirections
                           : l10n.maintenanceLocationUnavailable,
                       style: TextStyle(
                         fontSize: 14,
@@ -603,13 +790,12 @@ class _CustomerInfoCard extends StatelessWidget {
                     if (_hasLocation) ...[
                       const Spacer(),
                       const Icon(Icons.arrow_forward_ios_rounded,
-                          size: 14, color: Color(0xFF1A73E8)),
+                          size: 13, color: Color(0xFF1A73E8)),
                     ],
                   ],
                 ),
               ),
             ),
-            const SizedBox(height: 4),
           ],
         ),
       ),
@@ -642,7 +828,7 @@ class _WorkflowCard extends StatelessWidget {
               title: l10n.maintenanceWorkflow,
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -671,13 +857,13 @@ class _WorkflowCard extends StatelessWidget {
                         ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  _InfoRowNew(
+                  const SizedBox(height: 12),
+                  _InfoRow(
                     icon: Icons.event_rounded,
                     label: l10n.supervisorDetailAssignedDateLabel,
                     value: fmtDate(r.assignedAt),
                   ),
-                  _InfoRowNew(
+                  _InfoRow(
                     icon: Icons.schedule_rounded,
                     label: l10n.supervisorDetailDueDateLabel,
                     value: r.dueAt != null
@@ -685,7 +871,7 @@ class _WorkflowCard extends StatelessWidget {
                         : l10n.maintenanceNoTargetDate,
                   ),
                   if (r.complaintAt != null)
-                    _InfoRowNew(
+                    _InfoRow(
                       icon: Icons.report_rounded,
                       label: l10n.supervisorDetailComplaintDateLabel,
                       value: fmtDate(r.complaintAt),
@@ -701,8 +887,6 @@ class _WorkflowCard extends StatelessWidget {
 }
 
 // ── Unified workflow action card ──────────────────────────────────────────────
-// Consolidates status transitions + supervisor confirmation into ONE card.
-// The "locked/unavailable" text is never shown as a separate full card.
 class _WorkflowActionCard extends StatelessWidget {
   const _WorkflowActionCard({
     required this.r,
@@ -715,7 +899,6 @@ class _WorkflowActionCard extends StatelessWidget {
   final MaintenanceDetailState      state;
   final String Function(DateTime?) fmtDate;
 
-  // Active transitions excluding reopen (handled as edge case separately)
   List<MaintenanceTransition> get _transitions => r.allowedTransitions
       .where((t) => t != MaintenanceTransition.reopen)
       .toList();
@@ -727,12 +910,10 @@ class _WorkflowActionCard extends StatelessWidget {
     final isClosed   = r.status == MaintenanceStatus.closed;
     final hasAction  = _transitions.isNotEmpty;
 
-    // Nothing to show for open/unknown states the supervisor can't act on
     if (!confirmed && !canConfirm && !hasAction && !isClosed) {
       return const SizedBox.shrink();
     }
 
-    // Header style varies by state
     final Color? accentColor = confirmed || isClosed
         ? const Color(0xFF4ADE80)
         : canConfirm
@@ -761,7 +942,7 @@ class _WorkflowActionCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               decoration: BoxDecoration(
                 color: accentColor?.withValues(alpha: 0.07),
                 border: const Border(
@@ -770,22 +951,22 @@ class _WorkflowActionCard extends StatelessWidget {
               child: Row(
                 children: [
                   Container(
-                    width: 34,
-                    height: 34,
+                    width: 32,
+                    height: 32,
                     decoration: BoxDecoration(
                       color: accentColor != null
                           ? accentColor.withValues(alpha: 0.15)
                           : _navyCard,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(9),
                     ),
                     child: Icon(headerIcon,
-                        color: accentColor ?? Colors.white, size: 18),
+                        color: accentColor ?? Colors.white, size: 17),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Text(
                     headerTitle,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w700,
                       color: Color(0xFF1A1A2E),
                     ),
@@ -794,7 +975,7 @@ class _WorkflowActionCard extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: _body(context, confirmed, canConfirm, isClosed),
             ),
           ],
@@ -809,7 +990,7 @@ class _WorkflowActionCard extends StatelessWidget {
     bool canConfirm,
     bool isClosed,
   ) {
-    // 1. Already confirmed by supervisor
+    // 1. Already confirmed
     if (confirmed) {
       return Row(
         children: [
@@ -831,7 +1012,7 @@ class _WorkflowActionCard extends StatelessWidget {
       );
     }
 
-    // 2. Supervisor can confirm (resolved, not yet confirmed)
+    // 2. Can confirm (resolved, not yet confirmed)
     if (canConfirm) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -839,16 +1020,17 @@ class _WorkflowActionCard extends StatelessWidget {
           Text(
             l10n.supervisorDetailConfirmInstruction,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               color: Color(0xFF6B7280),
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
             child: AppButton(
               label: l10n.maintenanceApproveSolution,
+              icon: Icons.verified_rounded,
               size: AppButtonSize.medium,
               variant: AppButtonVariant.gold,
               isLoading: state.working,
@@ -862,11 +1044,26 @@ class _WorkflowActionCard extends StatelessWidget {
       );
     }
 
-    // 3. Active transitions (start / resolve)
+    // 3. Active transitions
     final transitions = _transitions;
     if (transitions.isNotEmpty) {
+      final hasResolve =
+          transitions.any((t) => t == MaintenanceTransition.resolve);
       return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Hint text for the in-progress resolve action
+          if (hasResolve) ...[
+            Text(
+              l10n.maintenanceActionHintInProgress,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF6B7280),
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           for (final t in transitions)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -874,6 +1071,7 @@ class _WorkflowActionCard extends StatelessWidget {
                 width: double.infinity,
                 child: AppButton(
                   label: maintenanceTransitionLabel(t),
+                  icon: maintenanceTransitionIcon(t),
                   size: AppButtonSize.medium,
                   variant: t == MaintenanceTransition.resolve
                       ? AppButtonVariant.gold
@@ -947,7 +1145,7 @@ class _FeedbackCard extends StatelessWidget {
               title: l10n.supervisorDetailFeedbackTitle,
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -978,18 +1176,8 @@ class _FeedbackCard extends StatelessWidget {
 }
 
 // ── Attachments card ──────────────────────────────────────────────────────────
-// Image docs → 2-col thumbnail grid (with authenticated fetch when url == null).
-// Non-image docs → compact file tile.
-//
-// Why image docs are shown even when doc.url == null:
-//   The backend /me/maintenance-requests/{id} currently returns documents with
-//   only id/title/fileName — no url, signedUrl, downloadUrl, or fileUrl.
-//   _ImageThumbnail handles this by fetching bytes via the authenticated Dio
-//   client using a guessed REST endpoint. Once the backend starts returning
-//   signed URLs, doc.url will be non-null and Image.network will be used instead.
-//
-// Missing backend field: documents[].url (or signedUrl/downloadUrl/fileUrl).
-// Missing location fields: unit.lat / unit.lng / unit.address.
+// Uses a lighter inline header (no heavy navy icon square) to reduce the gap
+// between the section label and the image grid.
 class _AttachmentsCard extends StatelessWidget {
   const _AttachmentsCard({
     required this.documents,
@@ -1002,7 +1190,6 @@ class _AttachmentsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // All image docs go to the grid; _ImageThumbnail handles url vs. auth-fetch.
     final imageDocs = documents.where((d) => d.isImage).toList();
     final fileDocs  = documents.where((d) => !d.isImage).toList();
 
@@ -1013,15 +1200,41 @@ class _AttachmentsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _CardHeader(
-              icon: Icons.attach_file_rounded,
-              title: l10n.maintenanceAttachments,
+            // Lightweight header — smaller vertical padding than _CardHeader
+            // so the image grid starts close under the section label.
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: Row(
+                children: [
+                  Icon(Icons.attach_file_rounded,
+                      color: _navyCard.withValues(alpha: 0.7), size: 17),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.maintenanceAttachments,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '${documents.length}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            const Divider(height: 1, color: Color(0xFFF0F0F0)),
 
             // Image thumbnail grid
             if (imageDocs.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
                 child: GridView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -1045,7 +1258,7 @@ class _AttachmentsCard extends StatelessWidget {
             for (final d in fileDocs)
               _FileTile(doc: d, l10n: l10n),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
           ],
         ),
       ),
@@ -1053,16 +1266,7 @@ class _AttachmentsCard extends StatelessWidget {
   }
 }
 
-// ── Image thumbnail (handles both public URL and authenticated byte fetch) ────
-//
-// If doc.url != null  → Image.network (backend returned a public/signed URL).
-// If doc.url == null  → fetch bytes via the authenticated Dio client using a
-//   guessed REST path. This avoids exposing bearer tokens in URLs and works
-//   with the current backend that does not yet return download links.
-//
-// TODO(backend): confirm the attachment download endpoint path.
-//   Current guess: GET /me/maintenance-requests/{requestId}/documents/{docId}/download
-//   Adjust the path in _fetchBytes() once the API contract is finalised.
+// ── Image thumbnail (handles public URL or authenticated byte fetch) ───────────
 class _ImageThumbnail extends StatefulWidget {
   const _ImageThumbnail({
     required this.doc,
@@ -1085,7 +1289,6 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
   @override
   void initState() {
     super.initState();
-    // Only fetch via Dio when the backend has not provided a direct URL.
     if (widget.doc.url == null) _fetchBytes();
   }
 
@@ -1101,8 +1304,10 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
       final data = res.data;
       if (!mounted) return;
       setState(() {
-        _loading  = false;
-        _bytes    = (data != null && data.isNotEmpty) ? Uint8List.fromList(data) : null;
+        _loading    = false;
+        _bytes      = (data != null && data.isNotEmpty)
+            ? Uint8List.fromList(data)
+            : null;
         _fetchError = _bytes == null;
       });
     } catch (_) {
@@ -1125,18 +1330,17 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
 
   @override
   Widget build(BuildContext context) {
-    // ── Loading state ────────────────────────────────────────────────────────
     if (_loading) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: Container(
           color: const Color(0xFFF0F0F0),
-          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2)),
         ),
       );
     }
 
-    // ── Error / no usable bytes ──────────────────────────────────────────────
     if (_fetchError || (widget.doc.url == null && _bytes == null)) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(12),
@@ -1150,7 +1354,6 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
       );
     }
 
-    // ── Actual image (network URL or memory bytes) ───────────────────────────
     final imageWidget = widget.doc.url != null
         ? Image.network(
             widget.doc.url!,
@@ -1208,7 +1411,6 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
 }
 
 // ── Fullscreen image viewer ───────────────────────────────────────────────────
-// Accepts either a public URL (Image.network) or pre-fetched bytes (Image.memory).
 class _ImageViewerDialog extends StatelessWidget {
   const _ImageViewerDialog({this.url, this.bytes, required this.l10n})
       : assert(url != null || bytes != null,
@@ -1311,26 +1513,28 @@ class _FileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title    = doc.title ?? doc.fileName ?? l10n.supervisorDetailAttachmentFallback;
+    final title = doc.title ??
+        doc.fileName ??
+        l10n.supervisorDetailAttachmentFallback;
     final subTitle = (doc.fileName != null && doc.fileName != doc.title)
         ? doc.fileName
         : null;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: Color(0xFFF0F0F0))),
       ),
       child: Row(
         children: [
           Container(
-            width: 38,
-            height: 38,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: _isPdf
                   ? const Color(0xFFEF4444).withValues(alpha: 0.10)
                   : _navyCard.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(
               _isPdf
@@ -1339,7 +1543,7 @@ class _FileTile extends StatelessWidget {
               color: _isPdf
                   ? const Color(0xFFEF4444)
                   : const Color(0xFF6B7280),
-              size: 20,
+              size: 19,
             ),
           ),
           const SizedBox(width: 12),
@@ -1351,7 +1555,7 @@ class _FileTile extends StatelessWidget {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1A1A2E),
                   ),
@@ -1369,7 +1573,7 @@ class _FileTile extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           const Icon(Icons.attach_file_rounded,
-              color: Color(0xFFD1D5DB), size: 18),
+              color: Color(0xFFD1D5DB), size: 17),
         ],
       ),
     );
@@ -1385,26 +1589,26 @@ class _CardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
       ),
       child: Row(
         children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: _navyCard,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon, color: Colors.white, size: 18),
+            child: Icon(icon, color: Colors.white, size: 17),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Text(
             title,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
               color: Color(0xFF1A1A2E),
             ),
@@ -1415,9 +1619,9 @@ class _CardHeader extends StatelessWidget {
   }
 }
 
-// ── Info row (navy icon + label above + value, optional tap + action) ─────────
-class _InfoRowNew extends StatelessWidget {
-  const _InfoRowNew({
+// ── Info row (lighter icon, label + value) ────────────────────────────────────
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
     required this.icon,
     required this.label,
     required this.value,
@@ -1437,21 +1641,21 @@ class _InfoRowNew extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget content = Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Light icon container — less visually heavy than full navy
           Container(
-            width: 34,
-            height: 34,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: _navyCard,
-              borderRadius: BorderRadius.circular(10),
+              color: _navyCard.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon,
-                color: Colors.white.withValues(alpha: 0.85), size: 17),
+            child: Icon(icon, color: _navyCard, size: 16),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1467,10 +1671,11 @@ class _InfoRowNew extends StatelessWidget {
                   value,
                   textDirection: valueDirection,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: Color(0xFF1A1A2E),
                   ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -1514,8 +1719,7 @@ class _StatusPill extends StatelessWidget {
           Container(
             width: 5,
             height: 5,
-            decoration:
-                BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(label,
@@ -1550,8 +1754,7 @@ class _GlassBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration:
-                BoxDecoration(color: accent, shape: BoxShape.circle),
+            decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(label,
@@ -1572,16 +1775,15 @@ class _BackBtn extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.of(context).pop(),
       child: Container(
-        width: 40,
-        height: 40,
+        width: 38,
+        height: 38,
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(12),
-          border:
-              Border.all(color: Colors.white.withValues(alpha: 0.15)),
+          borderRadius: BorderRadius.circular(11),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
         child: const Icon(Icons.arrow_back_ios_new_rounded,
-            color: Colors.white, size: 18),
+            color: Colors.white, size: 17),
       ),
     );
   }

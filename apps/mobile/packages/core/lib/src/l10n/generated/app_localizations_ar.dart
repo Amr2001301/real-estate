@@ -2123,4 +2123,23 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maintenanceNoPreviewAvailable => 'لا تتوفر معاينة لهذا المرفق';
+
+  @override
+  String get maintenanceProblemSolved => 'تم حل المشكلة';
+
+  @override
+  String get maintenanceOpenDirections => 'فتح الاتجاهات';
+
+  @override
+  String get maintenanceLocationPreview => 'موقع الوحدة';
+
+  @override
+  String get maintenanceMapPreviewUnavailable => 'معاينة الخريطة غير متاحة';
+
+  @override
+  String get maintenanceActionHintInProgress =>
+      'بعد حل المشكلة، حدّث الحالة ليتم اعتمادها.';
+
+  @override
+  String get maintenanceCompactDetailTitle => 'تفاصيل طلب الصيانة';
 }

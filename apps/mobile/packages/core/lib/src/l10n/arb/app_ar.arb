@@ -753,5 +753,11 @@
   "maintenanceActionUnavailable": "لا يوجد إجراء متاح حاليًا",
   "maintenanceClosedState": "تم إغلاق الطلب",
   "maintenanceOpenAttachment": "فتح المرفق",
-  "maintenanceNoPreviewAvailable": "لا تتوفر معاينة لهذا المرفق"
+  "maintenanceNoPreviewAvailable": "لا تتوفر معاينة لهذا المرفق",
+  "maintenanceProblemSolved": "تم حل المشكلة",
+  "maintenanceOpenDirections": "فتح الاتجاهات",
+  "maintenanceLocationPreview": "موقع الوحدة",
+  "maintenanceMapPreviewUnavailable": "معاينة الخريطة غير متاحة",
+  "maintenanceActionHintInProgress": "بعد حل المشكلة، حدّث الحالة ليتم اعتمادها.",
+  "maintenanceCompactDetailTitle": "تفاصيل طلب الصيانة"
 }
