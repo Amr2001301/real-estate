@@ -11,50 +11,49 @@ import '../cubit/maintenance_detail_cubit.dart';
 import '../maintenance_format.dart';
 
 // ── Palette ───────────────────────────────────────────────────────────────────
-const _navyDeep  = Color(0xFF0B1726);
-const _navyCard  = Color(0xFF1A3352);
+const _navyDeep = Color(0xFF0B1726);
+const _navyCard = Color(0xFF1A3352);
 const _navyLight = Color(0xFF243F62);
 
 List<Color> _statusGradient(MaintenanceStatus s) => switch (s) {
-      MaintenanceStatus.open ||
-      MaintenanceStatus.assigned =>
-        [_navyLight, _navyDeep],
-      MaintenanceStatus.inProgress =>
-        [const Color(0xFF0F3460), const Color(0xFF061830)],
-      _ => [const Color(0xFF1B5E3F), const Color(0xFF0D3826)],
-    };
+  MaintenanceStatus.open ||
+  MaintenanceStatus.assigned => [_navyLight, _navyDeep],
+  MaintenanceStatus.inProgress => [
+    const Color(0xFF0F3460),
+    const Color(0xFF061830),
+  ],
+  _ => [const Color(0xFF1B5E3F), const Color(0xFF0D3826)],
+};
 
 Color _statusAccent(MaintenanceStatus s) => switch (s) {
-      MaintenanceStatus.open ||
-      MaintenanceStatus.assigned => AppPalette.gold300,
-      MaintenanceStatus.inProgress => const Color(0xFF60A5FA),
-      _ => const Color(0xFF4ADE80),
-    };
+  MaintenanceStatus.open || MaintenanceStatus.assigned => AppPalette.gold300,
+  MaintenanceStatus.inProgress => const Color(0xFF60A5FA),
+  _ => const Color(0xFF4ADE80),
+};
 
 IconData _statusIcon(MaintenanceStatus s) => switch (s) {
-      MaintenanceStatus.open       => Icons.inbox_rounded,
-      MaintenanceStatus.assigned   => Icons.person_pin_rounded,
-      MaintenanceStatus.inProgress => Icons.engineering_rounded,
-      MaintenanceStatus.resolved   => Icons.check_circle_rounded,
-      MaintenanceStatus.closed     => Icons.lock_rounded,
-      _                            => Icons.build_rounded,
-    };
+  MaintenanceStatus.open => Icons.inbox_rounded,
+  MaintenanceStatus.assigned => Icons.person_pin_rounded,
+  MaintenanceStatus.inProgress => Icons.engineering_rounded,
+  MaintenanceStatus.resolved => Icons.check_circle_rounded,
+  MaintenanceStatus.closed => Icons.lock_rounded,
+  _ => Icons.build_rounded,
+};
 
 Color _priorityColor(MaintenancePriority p) => switch (p) {
-      MaintenancePriority.low    => const Color(0xFF6B7280),
-      MaintenancePriority.medium => AppPalette.gold300,
-      MaintenancePriority.high   => const Color(0xFFF97316),
-      MaintenancePriority.urgent => const Color(0xFFEF4444),
-      _                          => const Color(0xFF6B7280),
-    };
+  MaintenancePriority.low => const Color(0xFF6B7280),
+  MaintenancePriority.medium => AppPalette.gold300,
+  MaintenancePriority.high => const Color(0xFFF97316),
+  MaintenancePriority.urgent => const Color(0xFFEF4444),
+  _ => const Color(0xFF6B7280),
+};
 
 Color _resolvedByColor(MaintenanceResolvedBy? by) => switch (by) {
-      MaintenanceResolvedBy.both => const Color(0xFF4ADE80),
-      MaintenanceResolvedBy.customer ||
-      MaintenanceResolvedBy.supervisor =>
-        AppPalette.gold300,
-      null => const Color(0xFF9CA3AF),
-    };
+  MaintenanceResolvedBy.both => const Color(0xFF4ADE80),
+  MaintenanceResolvedBy.customer ||
+  MaintenanceResolvedBy.supervisor => AppPalette.gold300,
+  null => const Color(0xFF9CA3AF),
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screen
@@ -77,13 +76,14 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n       = context.l10n;
-    final lang       = Localizations.localeOf(context).languageCode;
+    final l10n = context.l10n;
+    final lang = Localizations.localeOf(context).languageCode;
     final statusBarH = MediaQuery.of(context).padding.top;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light
-          .copyWith(statusBarColor: Colors.transparent),
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+      ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF5F7FA),
         body: BlocConsumer<MaintenanceDetailCubit, MaintenanceDetailState>(
@@ -92,10 +92,12 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
           listener: (context, state) =>
               showFailureSnackBar(context, state.actionFailure!),
           builder: (context, state) {
-            final r        = state.detail?.request ?? widget.fallback;
-            final status   = r?.status;
-            final gradient = _statusGradient(status ?? MaintenanceStatus.unknown);
-            final accent   = _statusAccent(status ?? MaintenanceStatus.unknown);
+            final r = state.detail?.request ?? widget.fallback;
+            final status = r?.status;
+            final gradient = _statusGradient(
+              status ?? MaintenanceStatus.unknown,
+            );
+            final accent = _statusAccent(status ?? MaintenanceStatus.unknown);
 
             return CustomScrollView(
               slivers: [
@@ -114,27 +116,30 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
                   padding: const EdgeInsets.fromLTRB(16, 20, 16, 40),
                   sliver: switch (state.status) {
                     DataStatus.initial ||
-                    DataStatus.loading =>
-                      const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
+                    DataStatus.loading => const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
                     DataStatus.failure => SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: ErrorState(
-                          failure: state.failure,
-                          onRetry: () =>
-                              context.read<MaintenanceDetailCubit>().load(),
+                      hasScrollBody: false,
+                      child: ErrorState(
+                        failure: state.failure,
+                        onRetry: () =>
+                            context.read<MaintenanceDetailCubit>().load(),
+                      ),
+                    ),
+                    DataStatus.empty || DataStatus.success => SliverList(
+                      delegate: SliverChildListDelegate(
+                        _buildCards(
+                          context,
+                          state,
+                          l10n,
+                          lang,
+                          gradient,
+                          accent,
                         ),
                       ),
-                    DataStatus.empty ||
-                    DataStatus.success =>
-                      SliverList(
-                        delegate: SliverChildListDelegate(
-                          _buildCards(
-                              context, state, l10n, lang, gradient, accent),
-                        ),
-                      ),
+                    ),
                   },
                 ),
               ],
@@ -155,7 +160,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
   ) {
     final detail = state.detail;
     if (detail == null) return [];
-    final r    = detail.request;
+    final r = detail.request;
     final icon = _statusIcon(r.status);
 
     String fmtDate(DateTime? d) =>
@@ -164,8 +169,12 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
     return [
       // 1. Issue overview card
       _IssueCard(
-        r: r, l10n: l10n, lang: lang,
-        gradient: gradient, accent: accent, icon: icon,
+        r: r,
+        l10n: l10n,
+        lang: lang,
+        gradient: gradient,
+        accent: accent,
+        icon: icon,
       ),
       const SizedBox(height: 12),
 
@@ -222,14 +231,14 @@ class _DetailHeaderDelegate extends SliverPersistentHeaderDelegate {
     this.status,
   });
 
-  final double             statusBarH;
-  final AppLocalizations   l10n;
-  final List<Color>        gradient;
-  final Color              accent;
+  final double statusBarH;
+  final AppLocalizations l10n;
+  final List<Color> gradient;
+  final Color accent;
   final MaintenanceStatus? status;
 
   static const double _expandedContent = 90.0;
-  static const double _compactContent  = 56.0;
+  static const double _compactContent = 56.0;
 
   @override
   double get minExtent => statusBarH + _compactContent;
@@ -239,11 +248,15 @@ class _DetailHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    final t = (shrinkOffset / (_expandedContent - _compactContent))
-        .clamp(0.0, 1.0);
-    final statusLabel =
-        status != null ? maintenanceStatusLabel(status!) : null;
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    final t = (shrinkOffset / (_expandedContent - _compactContent)).clamp(
+      0.0,
+      1.0,
+    );
+    final statusLabel = status != null ? maintenanceStatusLabel(status!) : null;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -366,11 +379,11 @@ class _IssueCard extends StatelessWidget {
     required this.icon,
   });
   final MaintenanceRequest r;
-  final AppLocalizations   l10n;
-  final String             lang;
-  final List<Color>        gradient;
-  final Color              accent;
-  final IconData           icon;
+  final AppLocalizations l10n;
+  final String lang;
+  final List<Color> gradient;
+  final Color accent;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -401,7 +414,9 @@ class _IssueCard extends StatelessWidget {
                 const Positioned.fill(child: _DotTexture()),
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   child: Row(
                     children: [
                       Container(
@@ -411,7 +426,8 @@ class _IssueCard extends StatelessWidget {
                           color: accent.withValues(alpha: 0.18),
                           borderRadius: BorderRadius.circular(14),
                           border: Border.all(
-                              color: accent.withValues(alpha: 0.35)),
+                            color: accent.withValues(alpha: 0.35),
+                          ),
                         ),
                         child: Icon(icon, color: accent, size: 24),
                       ),
@@ -488,31 +504,42 @@ class _IssueCard extends StatelessWidget {
                     if (r.priority != MaintenancePriority.unknown) ...[
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: pColor.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                              color: pColor.withValues(alpha: 0.35)),
+                            color: pColor.withValues(alpha: 0.35),
+                          ),
                         ),
-                        child: Text(pLabel,
-                            style: TextStyle(
-                                color: pColor,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700)),
+                        child: Text(
+                          pLabel,
+                          style: TextStyle(
+                            color: pColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ],
                     const Spacer(),
                     if (date != null) ...[
-                      Icon(Icons.calendar_today_rounded,
-                          size: 12,
-                          color: Colors.black.withValues(alpha: 0.28)),
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 12,
+                        color: Colors.black.withValues(alpha: 0.28),
+                      ),
                       const SizedBox(width: 4),
-                      Text(date,
-                          style: TextStyle(
-                              color: Colors.black.withValues(alpha: 0.40),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500)),
+                      Text(
+                        date,
+                        style: TextStyle(
+                          color: Colors.black.withValues(alpha: 0.40),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -530,16 +557,16 @@ class _IssueCard extends StatelessWidget {
 class _CustomerInfoCard extends StatelessWidget {
   const _CustomerInfoCard({required this.r, required this.l10n});
   final MaintenanceRequest r;
-  final AppLocalizations   l10n;
+  final AppLocalizations l10n;
 
   Future<void> _callPhone(BuildContext context) async {
     final phone = r.customerPhone;
     if (phone == null) return;
     final ok = await ContactActions.call(phone);
     if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.maintenanceCallCustomer)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.maintenanceCallCustomer)));
     }
   }
 
@@ -598,7 +625,7 @@ class _CustomerInfoCard extends StatelessWidget {
 class _LocationCard extends StatelessWidget {
   const _LocationCard({required this.r, required this.l10n});
   final MaintenanceRequest r;
-  final AppLocalizations   l10n;
+  final AppLocalizations l10n;
 
   bool get _hasLocation =>
       (r.unitLat != null && r.unitLng != null) || r.unitAddress != null;
@@ -632,7 +659,7 @@ class _LocationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasCoords = r.unitLat != null && r.unitLng != null;
-    final address   = r.unitAddress;
+    final address = r.unitAddress;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -690,7 +717,11 @@ class _LocationCard extends StatelessWidget {
               if (hasCoords)
                 Padding(
                   padding: EdgeInsets.fromLTRB(
-                      16, address != null ? 2 : 10, 16, 0),
+                    16,
+                    address != null ? 2 : 10,
+                    16,
+                    0,
+                  ),
                   child: Text(
                     '${r.unitLat!.toStringAsFixed(5)}, '
                     '${r.unitLng!.toStringAsFixed(5)}',
@@ -719,8 +750,11 @@ class _LocationCard extends StatelessWidget {
                     Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.map_rounded,
-                            color: Color(0xFFB8C4D0), size: 28),
+                        const Icon(
+                          Icons.map_rounded,
+                          color: Color(0xFFB8C4D0),
+                          size: 28,
+                        ),
                         const SizedBox(height: 4),
                         Text(
                           l10n.maintenanceMapPreviewUnavailable,
@@ -789,8 +823,11 @@ class _LocationCard extends StatelessWidget {
                     ),
                     if (_hasLocation) ...[
                       const Spacer(),
-                      const Icon(Icons.arrow_forward_ios_rounded,
-                          size: 13, color: Color(0xFF1A73E8)),
+                      const Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        size: 13,
+                        color: Color(0xFF1A73E8),
+                      ),
                     ],
                   ],
                 ),
@@ -810,8 +847,8 @@ class _WorkflowCard extends StatelessWidget {
     required this.l10n,
     required this.fmtDate,
   });
-  final MaintenanceRequest          r;
-  final AppLocalizations            l10n;
+  final MaintenanceRequest r;
+  final AppLocalizations l10n;
   final String Function(DateTime?) fmtDate;
 
   @override
@@ -894,9 +931,9 @@ class _WorkflowActionCard extends StatelessWidget {
     required this.state,
     required this.fmtDate,
   });
-  final MaintenanceRequest          r;
-  final AppLocalizations            l10n;
-  final MaintenanceDetailState      state;
+  final MaintenanceRequest r;
+  final AppLocalizations l10n;
+  final MaintenanceDetailState state;
   final String Function(DateTime?) fmtDate;
 
   List<MaintenanceTransition> get _transitions => r.allowedTransitions
@@ -905,10 +942,10 @@ class _WorkflowActionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final confirmed  = r.supervisorHasConfirmed;
+    final confirmed = r.supervisorHasConfirmed;
     final canConfirm = r.canSupervisorConfirm;
-    final isClosed   = r.status == MaintenanceStatus.closed;
-    final hasAction  = _transitions.isNotEmpty;
+    final isClosed = r.status == MaintenanceStatus.closed;
+    final hasAction = _transitions.isNotEmpty;
 
     if (!confirmed && !canConfirm && !hasAction && !isClosed) {
       return const SizedBox.shrink();
@@ -917,22 +954,22 @@ class _WorkflowActionCard extends StatelessWidget {
     final Color? accentColor = confirmed || isClosed
         ? const Color(0xFF4ADE80)
         : canConfirm
-            ? AppPalette.gold400
-            : null;
+        ? AppPalette.gold400
+        : null;
 
     final IconData headerIcon = confirmed || isClosed
         ? Icons.verified_rounded
         : canConfirm
-            ? Icons.admin_panel_settings_rounded
-            : Icons.update_rounded;
+        ? Icons.admin_panel_settings_rounded
+        : Icons.update_rounded;
 
     final String headerTitle = (confirmed || isClosed)
         ? (isClosed && !confirmed
-            ? l10n.maintenanceClosedState
-            : l10n.supervisorDetailConfirmTitle)
+              ? l10n.maintenanceClosedState
+              : l10n.supervisorDetailConfirmTitle)
         : canConfirm
-            ? l10n.supervisorDetailConfirmTitle
-            : l10n.maintenanceUpdateStatus;
+        ? l10n.supervisorDetailConfirmTitle
+        : l10n.maintenanceUpdateStatus;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -946,7 +983,8 @@ class _WorkflowActionCard extends StatelessWidget {
               decoration: BoxDecoration(
                 color: accentColor?.withValues(alpha: 0.07),
                 border: const Border(
-                    bottom: BorderSide(color: Color(0xFFF0F0F0))),
+                  bottom: BorderSide(color: Color(0xFFF0F0F0)),
+                ),
               ),
               child: Row(
                 children: [
@@ -959,8 +997,11 @@ class _WorkflowActionCard extends StatelessWidget {
                           : _navyCard,
                       borderRadius: BorderRadius.circular(9),
                     ),
-                    child: Icon(headerIcon,
-                        color: accentColor ?? Colors.white, size: 17),
+                    child: Icon(
+                      headerIcon,
+                      color: accentColor ?? Colors.white,
+                      size: 17,
+                    ),
                   ),
                   const SizedBox(width: 10),
                   Text(
@@ -994,8 +1035,11 @@ class _WorkflowActionCard extends StatelessWidget {
     if (confirmed) {
       return Row(
         children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Color(0xFF4ADE80), size: 20),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: Color(0xFF4ADE80),
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -1036,8 +1080,9 @@ class _WorkflowActionCard extends StatelessWidget {
               isLoading: state.working,
               onPressed: state.working
                   ? null
-                  : () =>
-                      context.read<MaintenanceDetailCubit>().confirmResolution(),
+                  : () => context
+                        .read<MaintenanceDetailCubit>()
+                        .confirmResolution(),
             ),
           ),
         ],
@@ -1047,8 +1092,9 @@ class _WorkflowActionCard extends StatelessWidget {
     // 3. Active transitions
     final transitions = _transitions;
     if (transitions.isNotEmpty) {
-      final hasResolve =
-          transitions.any((t) => t == MaintenanceTransition.resolve);
+      final hasResolve = transitions.any(
+        (t) => t == MaintenanceTransition.resolve,
+      );
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1080,8 +1126,8 @@ class _WorkflowActionCard extends StatelessWidget {
                   onPressed: state.working
                       ? null
                       : () => context
-                          .read<MaintenanceDetailCubit>()
-                          .applyTransition(t),
+                            .read<MaintenanceDetailCubit>()
+                            .applyTransition(t),
                 ),
               ),
             ),
@@ -1093,8 +1139,11 @@ class _WorkflowActionCard extends StatelessWidget {
     if (isClosed) {
       return Row(
         children: [
-          const Icon(Icons.check_circle_rounded,
-              color: Color(0xFF4ADE80), size: 20),
+          const Icon(
+            Icons.check_circle_rounded,
+            color: Color(0xFF4ADE80),
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -1124,13 +1173,13 @@ class _FeedbackCard extends StatelessWidget {
     required this.l10n,
     required this.fmtDate,
   });
-  final MaintenanceRequest          r;
-  final AppLocalizations            l10n;
+  final MaintenanceRequest r;
+  final AppLocalizations l10n;
   final String Function(DateTime?) fmtDate;
 
   @override
   Widget build(BuildContext context) {
-    final theme  = Theme.of(context);
+    final theme = Theme.of(context);
     final colors = context.appColors;
 
     return ClipRRect(
@@ -1153,16 +1202,19 @@ class _FeedbackCard extends StatelessWidget {
                     _Stars(value: r.customerRating!),
                   if (r.customerRatingText?.isNotEmpty == true) ...[
                     const SizedBox(height: AppSpacing.xs),
-                    Text(r.customerRatingText!,
-                        style: theme.textTheme.bodyMedium),
+                    Text(
+                      r.customerRatingText!,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                   ],
                   if (r.customerConfirmedResolutionAt != null) ...[
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       '${l10n.supervisorDetailCustomerConfirmedAtPrefix} '
                       '${fmtDate(r.customerConfirmedResolutionAt)}',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: colors.inkMuted),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.inkMuted,
+                      ),
                     ),
                   ],
                 ],
@@ -1185,13 +1237,13 @@ class _AttachmentsCard extends StatelessWidget {
     required this.requestId,
   });
   final List<MaintenanceDoc> documents;
-  final AppLocalizations     l10n;
-  final String               requestId;
+  final AppLocalizations l10n;
+  final String requestId;
 
   @override
   Widget build(BuildContext context) {
     final imageDocs = documents.where((d) => d.isImage).toList();
-    final fileDocs  = documents.where((d) => !d.isImage).toList();
+    final fileDocs = documents.where((d) => !d.isImage).toList();
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
@@ -1206,8 +1258,11 @@ class _AttachmentsCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
               child: Row(
                 children: [
-                  Icon(Icons.attach_file_rounded,
-                      color: _navyCard.withValues(alpha: 0.7), size: 17),
+                  Icon(
+                    Icons.attach_file_rounded,
+                    color: _navyCard.withValues(alpha: 0.7),
+                    size: 17,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     l10n.maintenanceAttachments,
@@ -1236,10 +1291,10 @@ class _AttachmentsCard extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.fromLTRB(10, 8, 10, 4),
                 child: GridView.builder(
+                  padding: EdgeInsets.all(8),
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
                     crossAxisSpacing: 8,
                     mainAxisSpacing: 8,
@@ -1255,8 +1310,7 @@ class _AttachmentsCard extends StatelessWidget {
               ),
 
             // Non-image file tiles
-            for (final d in fileDocs)
-              _FileTile(doc: d, l10n: l10n),
+            for (final d in fileDocs) _FileTile(doc: d, l10n: l10n),
 
             const SizedBox(height: 6),
           ],
@@ -1273,8 +1327,8 @@ class _ImageThumbnail extends StatefulWidget {
     required this.requestId,
     required this.l10n,
   });
-  final MaintenanceDoc   doc;
-  final String           requestId;
+  final MaintenanceDoc doc;
+  final String requestId;
   final AppLocalizations l10n;
 
   @override
@@ -1304,15 +1358,18 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
       final data = res.data;
       if (!mounted) return;
       setState(() {
-        _loading    = false;
-        _bytes      = (data != null && data.isNotEmpty)
+        _loading = false;
+        _bytes = (data != null && data.isNotEmpty)
             ? Uint8List.fromList(data)
             : null;
         _fetchError = _bytes == null;
       });
     } catch (_) {
       if (!mounted) return;
-      setState(() { _loading = false; _fetchError = true; });
+      setState(() {
+        _loading = false;
+        _fetchError = true;
+      });
     }
   }
 
@@ -1335,8 +1392,7 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
         borderRadius: BorderRadius.circular(12),
         child: Container(
           color: const Color(0xFFF0F0F0),
-          child: const Center(
-              child: CircularProgressIndicator(strokeWidth: 2)),
+          child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
         ),
       );
     }
@@ -1347,8 +1403,11 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
         child: Container(
           color: const Color(0xFFF0F0F0),
           child: const Center(
-            child: Icon(Icons.broken_image_rounded,
-                color: Color(0xFF9CA3AF), size: 32),
+            child: Icon(
+              Icons.broken_image_rounded,
+              color: Color(0xFF9CA3AF),
+              size: 32,
+            ),
           ),
         ),
       );
@@ -1363,13 +1422,17 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
               return Container(
                 color: const Color(0xFFF0F0F0),
                 child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2)),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               );
             },
             errorBuilder: (ctx, err, stack) => Container(
               color: const Color(0xFFF0F0F0),
-              child: const Icon(Icons.broken_image_rounded,
-                  color: Color(0xFF9CA3AF), size: 32),
+              child: const Icon(
+                Icons.broken_image_rounded,
+                color: Color(0xFF9CA3AF),
+                size: 32,
+              ),
             ),
           )
         : Image.memory(
@@ -1377,8 +1440,11 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
             fit: BoxFit.cover,
             errorBuilder: (ctx, err, stack) => Container(
               color: const Color(0xFFF0F0F0),
-              child: const Icon(Icons.broken_image_rounded,
-                  color: Color(0xFF9CA3AF), size: 32),
+              child: const Icon(
+                Icons.broken_image_rounded,
+                color: Color(0xFF9CA3AF),
+                size: 32,
+              ),
             ),
           );
 
@@ -1399,8 +1465,11 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
                   color: Colors.black.withValues(alpha: 0.45),
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: const Icon(Icons.zoom_in_rounded,
-                    color: Colors.white, size: 14),
+                child: const Icon(
+                  Icons.zoom_in_rounded,
+                  color: Colors.white,
+                  size: 14,
+                ),
               ),
             ),
           ],
@@ -1413,10 +1482,12 @@ class _ImageThumbnailState extends State<_ImageThumbnail> {
 // ── Fullscreen image viewer ───────────────────────────────────────────────────
 class _ImageViewerDialog extends StatelessWidget {
   const _ImageViewerDialog({this.url, this.bytes, required this.l10n})
-      : assert(url != null || bytes != null,
-            '_ImageViewerDialog requires url or bytes');
-  final String?          url;
-  final Uint8List?       bytes;
+    : assert(
+        url != null || bytes != null,
+        '_ImageViewerDialog requires url or bytes',
+      );
+  final String? url;
+  final Uint8List? bytes;
   final AppLocalizations l10n;
 
   @override
@@ -1428,8 +1499,11 @@ class _ImageViewerDialog extends StatelessWidget {
             loadingBuilder: (ctx, child, progress) {
               if (progress == null) return child;
               return const Center(
-                  child: CircularProgressIndicator(
-                      color: Colors.white, strokeWidth: 2));
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              );
             },
             errorBuilder: (ctx, err, stack) => _brokenImage(l10n),
           )
@@ -1464,15 +1538,16 @@ class _ImageViewerDialog extends StatelessWidget {
   }
 
   static Widget _brokenImage(AppLocalizations l10n) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.broken_image_rounded,
-              color: Colors.white54, size: 48),
-          const SizedBox(height: 8),
-          Text(l10n.maintenanceNoPreviewAvailable,
-              style: const TextStyle(color: Colors.white54)),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const Icon(Icons.broken_image_rounded, color: Colors.white54, size: 48),
+      const SizedBox(height: 8),
+      Text(
+        l10n.maintenanceNoPreviewAvailable,
+        style: const TextStyle(color: Colors.white54),
+      ),
+    ],
+  );
 }
 
 class _CloseButton extends StatelessWidget {
@@ -1491,11 +1566,9 @@ class _CloseButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.15),
             shape: BoxShape.circle,
-            border: Border.all(
-                color: Colors.white.withValues(alpha: 0.25)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.25)),
           ),
-          child: const Icon(Icons.close_rounded,
-              color: Colors.white, size: 20),
+          child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
         ),
       ),
     );
@@ -1504,7 +1577,7 @@ class _CloseButton extends StatelessWidget {
 
 class _FileTile extends StatelessWidget {
   const _FileTile({required this.doc, required this.l10n});
-  final MaintenanceDoc   doc;
+  final MaintenanceDoc doc;
   final AppLocalizations l10n;
 
   bool get _isPdf =>
@@ -1513,9 +1586,8 @@ class _FileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = doc.title ??
-        doc.fileName ??
-        l10n.supervisorDetailAttachmentFallback;
+    final title =
+        doc.title ?? doc.fileName ?? l10n.supervisorDetailAttachmentFallback;
     final subTitle = (doc.fileName != null && doc.fileName != doc.title)
         ? doc.fileName
         : null;
@@ -1540,9 +1612,7 @@ class _FileTile extends StatelessWidget {
               _isPdf
                   ? Icons.picture_as_pdf_rounded
                   : Icons.insert_drive_file_outlined,
-              color: _isPdf
-                  ? const Color(0xFFEF4444)
-                  : const Color(0xFF6B7280),
+              color: _isPdf ? const Color(0xFFEF4444) : const Color(0xFF6B7280),
               size: 19,
             ),
           ),
@@ -1563,17 +1633,24 @@ class _FileTile extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (subTitle != null)
-                  Text(subTitle,
-                      style: const TextStyle(
-                          fontSize: 11, color: Color(0xFF9CA3AF)),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    subTitle,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Color(0xFF9CA3AF),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),
           const SizedBox(width: 8),
-          const Icon(Icons.attach_file_rounded,
-              color: Color(0xFFD1D5DB), size: 17),
+          const Icon(
+            Icons.attach_file_rounded,
+            color: Color(0xFFD1D5DB),
+            size: 17,
+          ),
         ],
       ),
     );
@@ -1584,7 +1661,7 @@ class _FileTile extends StatelessWidget {
 class _CardHeader extends StatelessWidget {
   const _CardHeader({required this.icon, required this.title});
   final IconData icon;
-  final String   title;
+  final String title;
 
   @override
   Widget build(BuildContext context) {
@@ -1630,13 +1707,13 @@ class _InfoRow extends StatelessWidget {
     this.actionIcon,
     this.actionColor,
   });
-  final IconData       icon;
-  final String         label;
-  final String         value;
+  final IconData icon;
+  final String label;
+  final String value;
   final TextDirection? valueDirection;
-  final VoidCallback?  onTap;
-  final IconData?      actionIcon;
-  final Color?         actionColor;
+  final VoidCallback? onTap;
+  final IconData? actionIcon;
+  final Color? actionColor;
 
   @override
   Widget build(BuildContext context) {
@@ -1661,11 +1738,14 @@ class _InfoRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF9CA3AF))),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF9CA3AF),
+                  ),
+                ),
                 const SizedBox(height: 1),
                 Text(
                   value,
@@ -1683,9 +1763,11 @@ class _InfoRow extends StatelessWidget {
           ),
           if (actionIcon != null) ...[
             const SizedBox(width: 8),
-            Icon(actionIcon,
-                size: 18,
-                color: actionColor ?? const Color(0xFF4ADE80)),
+            Icon(
+              actionIcon,
+              size: 18,
+              color: actionColor ?? const Color(0xFF4ADE80),
+            ),
           ],
         ],
       ),
@@ -1702,7 +1784,7 @@ class _InfoRow extends StatelessWidget {
 class _StatusPill extends StatelessWidget {
   const _StatusPill({required this.label, required this.color});
   final String label;
-  final Color  color;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
@@ -1722,11 +1804,14 @@ class _StatusPill extends StatelessWidget {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
-          Text(label,
-              style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -1737,7 +1822,7 @@ class _StatusPill extends StatelessWidget {
 class _GlassBadge extends StatelessWidget {
   const _GlassBadge({required this.label, required this.accent});
   final String label;
-  final Color  accent;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
@@ -1757,11 +1842,14 @@ class _GlassBadge extends StatelessWidget {
             decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
-          Text(label,
-              style: TextStyle(
-                  color: accent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700)),
+          Text(
+            label,
+            style: TextStyle(
+              color: accent,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ],
       ),
     );
@@ -1782,8 +1870,11 @@ class _BackBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(11),
           border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
         ),
-        child: const Icon(Icons.arrow_back_ios_new_rounded,
-            color: Colors.white, size: 17),
+        child: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: Colors.white,
+          size: 17,
+        ),
       ),
     );
   }
