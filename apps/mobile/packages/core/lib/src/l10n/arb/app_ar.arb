@@ -759,5 +759,13 @@
   "maintenanceLocationPreview": "موقع الوحدة",
   "maintenanceMapPreviewUnavailable": "معاينة الخريطة غير متاحة",
   "maintenanceActionHintInProgress": "بعد حل المشكلة، حدّث الحالة ليتم اعتمادها.",
-  "maintenanceCompactDetailTitle": "تفاصيل طلب الصيانة"
+  "maintenanceCompactDetailTitle": "تفاصيل طلب الصيانة",
+
+  "salesRoleChip": "مستشار مبيعات",
+  "dashboardWelcomeUser": "أهلاً بعودتك، {name}",
+  "@dashboardWelcomeUser": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  }
 }

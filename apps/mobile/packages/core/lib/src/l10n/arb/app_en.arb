@@ -762,5 +762,13 @@
   "maintenanceLocationPreview": "Unit Location",
   "maintenanceMapPreviewUnavailable": "Map preview not available",
   "maintenanceActionHintInProgress": "After resolving the issue, update the status to confirm resolution.",
-  "maintenanceCompactDetailTitle": "Maintenance Request Details"
+  "maintenanceCompactDetailTitle": "Maintenance Request Details",
+
+  "salesRoleChip": "Sales Advisor",
+  "dashboardWelcomeUser": "Welcome back, {name}",
+  "@dashboardWelcomeUser": {
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  }
 }

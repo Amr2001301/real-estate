@@ -2166,4 +2166,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get maintenanceCompactDetailTitle => 'Maintenance Request Details';
+
+  @override
+  String get salesRoleChip => 'Sales Advisor';
+
+  @override
+  String dashboardWelcomeUser(String name) {
+    return 'Welcome back, $name';
+  }
 }

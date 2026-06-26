@@ -2142,4 +2142,12 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maintenanceCompactDetailTitle => 'تفاصيل طلب الصيانة';
+
+  @override
+  String get salesRoleChip => 'مستشار مبيعات';
+
+  @override
+  String dashboardWelcomeUser(String name) {
+    return 'أهلاً بعودتك، $name';
+  }
 }

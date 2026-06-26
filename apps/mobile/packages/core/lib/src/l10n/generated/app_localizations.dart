@@ -4123,6 +4123,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Maintenance Request Details'**
   String get maintenanceCompactDetailTitle;
+
+  /// No description provided for @salesRoleChip.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales Advisor'**
+  String get salesRoleChip;
+
+  /// No description provided for @dashboardWelcomeUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back, {name}'**
+  String dashboardWelcomeUser(String name);
 }
 
 class _AppLocalizationsDelegate

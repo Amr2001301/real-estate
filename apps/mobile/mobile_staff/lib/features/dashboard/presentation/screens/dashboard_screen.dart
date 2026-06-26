@@ -45,13 +45,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Premium navy header — mirrors the Customer app's screen headers
           AppNavHeader(
             title: l10n.navDashboard,
-            subtitle: name != null ? '${l10n.dashboardWelcome}, $name' : null,
+            subtitle: name != null ? l10n.dashboardWelcomeUser(name) : null,
             actions: [const NotificationsBell()],
+            bottom: _RoleChip(label: l10n.salesRoleChip),
           ),
-          // Body
           Expanded(
             child: BlocBuilder<DashboardCubit, DashboardState>(
               builder: (context, state) {
@@ -80,6 +79,37 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+/// Gold role chip shown at the bottom of the header.
+class _RoleChip extends StatelessWidget {
+  const _RoleChip({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: AppPalette.gold400.withValues(alpha: 0.15),
+          border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.40)),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            color: AppPalette.gold300,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _DashboardBody extends StatelessWidget {
   const _DashboardBody({required this.data});
   final SalesDashboard data;
@@ -87,20 +117,33 @@ class _DashboardBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    // P11.6 — payment review is viewable by ADMIN + SALES_MANAGER (matches
-    // GET /deposits/review-queue). Hidden for SALES/BROKER, who would 403.
+    // P11.6 — payment review viewable by ADMIN + SALES_MANAGER only.
     final role = context.read<SessionCubit>().state.role;
     final canReviewPayments =
         role == AppRole.admin || role == AppRole.salesManager;
+
+    // Max pipeline count drives relative progress bar widths.
+    final maxCount = kLeadStages
+        .map((s) => data.pipeline[s] ?? 0)
+        .fold<int>(1, (m, v) => v > m ? v : m);
+
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      // Reduced top padding (was AppSpacing.lg = 20) — eliminates the large
+      // empty gap that appeared between the rounded header bottom and the KPIs.
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xxxl,
+      ),
       children: [
+        // ── 1. KPI cards ─────────────────────────────────────────────────
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: AppSpacing.md,
-          crossAxisSpacing: AppSpacing.md,
+          mainAxisSpacing: AppSpacing.sm,
+          crossAxisSpacing: AppSpacing.sm,
           childAspectRatio: 1.45,
           children: [
             KpiCard(
@@ -117,105 +160,217 @@ class _DashboardBody extends StatelessWidget {
               onTap: () => context.push('/visits?today=1'),
             ),
             KpiCard(
-              icon: Icons.calendar_month_outlined,
-              label: l10n.dashboardScheduledVisits,
-              value: '${data.scheduledVisits}',
-              tone: BadgeTone.info,
-              onTap: () => context.push('/visits'),
-            ),
-            KpiCard(
               icon: Icons.bookmark_added_outlined,
               label: l10n.dashboardReservations,
               value: '${data.reservations}',
               tone: BadgeTone.success,
               onTap: () => context.push('/reservations'),
             ),
+            KpiCard(
+              icon: Icons.calendar_month_outlined,
+              label: l10n.dashboardScheduledVisits,
+              value: '${data.scheduledVisits}',
+              tone: BadgeTone.info,
+              onTap: () => context.push('/visits'),
+            ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
-        const DashboardTargetCard(),
         const SizedBox(height: AppSpacing.md),
-        const DashboardBonusCard(),
-        const SizedBox(height: AppSpacing.lg),
+
+        // ── 2. Quick actions ─────────────────────────────────────────────
         AppSectionHeader(title: l10n.dashboardQuickActions),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
         Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
           children: [
-            ActionChip(
-              avatar: const Icon(Icons.event_outlined, size: 18),
-              label: Text(l10n.visitNew),
-              onPressed: () => context.push('/visits/new'),
+            _QuickActionPill(
+              icon: Icons.event_outlined,
+              label: l10n.visitNew,
+              onTap: () => context.push('/visits/new'),
             ),
-            ActionChip(
-              avatar: const Icon(Icons.bookmark_add_outlined, size: 18),
-              label: Text(l10n.reservationNew),
-              onPressed: () => context.push('/reservations/new'),
+            _QuickActionPill(
+              icon: Icons.bookmark_add_outlined,
+              label: l10n.reservationNew,
+              onTap: () => context.push('/reservations/new'),
             ),
-            ActionChip(
-              avatar: const Icon(Icons.calculate_outlined, size: 18),
-              label: Text(l10n.calculatorTitle),
-              onPressed: () => context.push('/calculator'),
+            _QuickActionPill(
+              icon: Icons.calculate_outlined,
+              label: l10n.calculatorTitle,
+              onTap: () => context.push('/calculator'),
             ),
-            ActionChip(
-              avatar: const Icon(Icons.track_changes_outlined, size: 18),
-              label: Text(l10n.targetsTitle),
-              onPressed: () => context.push('/targets'),
+            _QuickActionPill(
+              icon: Icons.track_changes_outlined,
+              label: l10n.targetsTitle,
+              onTap: () => context.push('/targets'),
             ),
-            ActionChip(
-              avatar: const Icon(Icons.payments_outlined, size: 18),
-              label: Text(l10n.bonusTitle),
-              onPressed: () => context.push('/bonus'),
+            _QuickActionPill(
+              icon: Icons.payments_outlined,
+              label: l10n.bonusTitle,
+              onTap: () => context.push('/bonus'),
             ),
             if (canReviewPayments)
-              ActionChip(
-                avatar: const Icon(Icons.receipt_long_outlined, size: 18),
-                label: Text(l10n.paymentReviewTitle),
-                onPressed: () => context.push('/payments-review'),
+              _QuickActionPill(
+                icon: Icons.receipt_long_outlined,
+                label: l10n.paymentReviewTitle,
+                onTap: () => context.push('/payments-review'),
               ),
           ],
         ),
-        const SizedBox(height: AppSpacing.lg),
+        const SizedBox(height: AppSpacing.md),
+
+        // ── 3. Sales pipeline ─────────────────────────────────────────────
         AppSectionHeader(title: l10n.dashboardPipeline),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.xs),
         AppCard(
           child: Column(
             children: [
               for (final stage in kLeadStages)
-                _PipelineRow(stage: stage, count: data.pipeline[stage] ?? 0),
+                _PipelineRow(
+                  stage: stage,
+                  count: data.pipeline[stage] ?? 0,
+                  maxCount: maxCount,
+                ),
             ],
           ),
         ),
+        const SizedBox(height: AppSpacing.md),
+
+        // ── 4. Targets ────────────────────────────────────────────────────
+        const DashboardTargetCard(),
+        const SizedBox(height: AppSpacing.sm),
+
+        // ── 5. Bonus ──────────────────────────────────────────────────────
+        const DashboardBonusCard(),
       ],
     );
   }
 }
 
+// ── Pipeline row with relative progress bar ───────────────────────────────────
 class _PipelineRow extends StatelessWidget {
-  const _PipelineRow({required this.stage, required this.count});
+  const _PipelineRow({
+    required this.stage,
+    required this.count,
+    required this.maxCount,
+  });
   final String stage;
   final int count;
+  final int maxCount;
+
+  static Color _color(BadgeTone tone, AppColorsExt c) => switch (tone) {
+    BadgeTone.gold => c.brandGold,
+    BadgeTone.success => c.success,
+    BadgeTone.info => c.info,
+    BadgeTone.warning => c.warning,
+    BadgeTone.error => c.error,
+    _ => c.inkMuted,
+  };
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final colors = context.appColors;
+    final toneColor = _color(leadStageTone(stage), colors);
+    final progress = count / maxCount;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          StatusBadge(
-            label: leadStageLabel(l10n, stage),
-            tone: leadStageTone(stage),
+          SizedBox(
+            width: 68,
+            child: Text(
+              leadStageLabel(l10n, stage),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: toneColor,
+              ),
+            ),
           ),
-          const Spacer(),
-          Text('$count', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(width: 10),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadii.xs),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: toneColor.withValues(alpha: 0.12),
+                valueColor: AlwaysStoppedAnimation<Color>(toneColor),
+                minHeight: 6,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 28,
+            child: Text(
+              '$count',
+              textAlign: TextAlign.end,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: colors.inkStrong,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
+// ── Quick action pill ─────────────────────────────────────────────────────────
+class _QuickActionPill extends StatelessWidget {
+  const _QuickActionPill({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppRadii.pill),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border.all(color: colors.hairline),
+          borderRadius: BorderRadius.circular(AppRadii.pill),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: colors.brandGold),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: colors.inkStrong,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Loading skeleton ───────────────────────────────────────────────────────────
 class _DashboardSkeleton extends StatelessWidget {
   const _DashboardSkeleton();
 
@@ -224,10 +379,15 @@ class _DashboardSkeleton extends StatelessWidget {
     return AppSkeletonizer(
       enabled: true,
       child: GridView.count(
-        padding: const EdgeInsets.all(AppSpacing.lg),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.sm,
+          AppSpacing.md,
+          AppSpacing.lg,
+        ),
         crossAxisCount: 2,
-        mainAxisSpacing: AppSpacing.md,
-        crossAxisSpacing: AppSpacing.md,
+        mainAxisSpacing: AppSpacing.sm,
+        crossAxisSpacing: AppSpacing.sm,
         childAspectRatio: 1.45,
         children: const [
           KpiCard(icon: Icons.people_alt_outlined, label: 'Leads', value: '00'),
@@ -237,13 +397,13 @@ class _DashboardSkeleton extends StatelessWidget {
             value: '00',
           ),
           KpiCard(
-            icon: Icons.calendar_month_outlined,
-            label: 'Scheduled',
+            icon: Icons.bookmark_added_outlined,
+            label: 'Reservations',
             value: '00',
           ),
           KpiCard(
-            icon: Icons.bookmark_added_outlined,
-            label: 'Reservations',
+            icon: Icons.calendar_month_outlined,
+            label: 'Scheduled',
             value: '00',
           ),
         ],
