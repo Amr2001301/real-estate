@@ -1,9 +1,11 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 
-/// A compact KPI tile: a tone-filled [IconChip], a big value, and a label,
-/// wrapped in a [PremiumCard] — mirroring the Guest dashboard's [SummaryTile]
-/// look so staff dashboards read as the same product. Used on the dashboards.
+/// A compact KPI tile used on the sales dashboard.
+///
+/// Layout: large value + icon chip on the top row, label below.
+/// Uses a reduced internal padding (AppSpacing.sm) to avoid the visual gap
+/// that `spaceBetween` created when the card height exceeded content height.
 class KpiCard extends StatelessWidget {
   const KpiCard({
     super.key,
@@ -20,8 +22,6 @@ class KpiCard extends StatelessWidget {
   final BadgeTone tone;
   final VoidCallback? onTap;
 
-  /// Maps the badge tone onto the premium accent-tone language used by the
-  /// Guest [IconChip] / [PremiumCard] widgets.
   AppTone get _accent => switch (tone) {
     BadgeTone.gold => AppTone.gold,
     BadgeTone.success => AppTone.success,
@@ -35,39 +35,48 @@ class KpiCard extends StatelessWidget {
     final colors = context.appColors;
     return PremiumCard(
       elevation: AppCardElevation.soft,
+      padding: const EdgeInsets.all(AppSpacing.sm),
       onTap: onTap,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.max,
         children: [
-          IconChip(
-            icon: icon,
-            tone: _accent,
-            size: IconChipSize.sm,
-            filled: _accent == AppTone.gold,
-          ),
-          Column(
+          // Value + icon on the same row — in RTL: value on RIGHT, icon on LEFT.
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: colors.inkStrong,
-                  fontWeight: FontWeight.w800,
+              Expanded(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.inkStrong,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    height: 1.1,
+                  ),
                 ),
               ),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+              IconChip(
+                icon: icon,
+                tone: _accent,
+                size: IconChipSize.sm,
+                filled: _accent == AppTone.gold,
               ),
             ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: colors.inkMuted,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              height: 1.3,
+            ),
           ),
         ],
       ),

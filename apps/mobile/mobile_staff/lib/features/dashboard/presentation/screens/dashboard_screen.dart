@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -41,23 +42,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final l10n = context.l10n;
     final session = context.read<SessionCubit>().state.sessionOrNull;
     final name = session?.displayName;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
 
     return Scaffold(
       body: Column(
         children: [
-          AppNavHeader(
-            title: l10n.navDashboard,
-            subtitle: name != null ? l10n.dashboardWelcomeUser(name) : null,
-            actions: [const NotificationsBell()],
-            bottom: _RoleChip(label: l10n.salesRoleChip),
-          ),
+          // Custom header: title + bell on the same row (fixes disconnected bell
+          // that AppNavHeader's separate actions-row created in RTL layout).
+          _DashboardHeader(name: name, l10n: l10n),
           Expanded(
             child: BlocBuilder<DashboardCubit, DashboardState>(
               builder: (context, state) {
                 switch (state.status) {
                   case DataStatus.initial:
                   case DataStatus.loading:
-                    return const _DashboardSkeleton();
+                    return _DashboardSkeleton(bottomPad: bottomPad);
                   case DataStatus.failure:
                     return ErrorState(
                       failure: state.failure,
@@ -67,7 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   case DataStatus.success:
                     return RefreshIndicator(
                       onRefresh: _refresh,
-                      child: _DashboardBody(data: state.data!),
+                      child: _DashboardBody(data: state.data!, bottomPad: bottomPad),
                     );
                 }
               },
@@ -79,29 +78,160 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-/// Gold role chip shown at the bottom of the header.
+// ── Custom dashboard header ───────────────────────────────────────────────────
+// Replicates AppNavHeader's visual (gradient, radius, shadow, bloom, hairline)
+// but puts title + notification bell in a SINGLE row so they feel connected.
+// In RTL: Row renders [title column] on the RIGHT and [bell] on the LEFT.
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader({required this.name, required this.l10n});
+  final String? name;
+  final AppLocalizations l10n;
+
+  static const _navyDeep = Color(0xFF0B1726);
+  static const _navyMid = Color(0xFF14273F);
+  static const _navyLight = Color(0xFF243F62);
+
+  @override
+  Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_navyLight, _navyMid, _navyDeep],
+            stops: [0.0, 0.45, 1.0],
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(AppRadii.xl + 4),
+            bottomRight: Radius.circular(AppRadii.xl + 4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 22,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Subtle gold radial bloom at the trailing corner
+            PositionedDirectional(
+              top: 0,
+              end: -30,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
+                  ),
+                ),
+              ),
+            ),
+            // Gold shimmer hairline at bottom edge
+            Positioned(
+              bottom: 0,
+              left: 40,
+              right: 40,
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      AppPalette.gold400.withValues(alpha: 0.50),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Content: single row with title column + bell
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                topPad + AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title + subtitle + role chip.
+                  // In RTL this Expanded is on the RIGHT (first = leading in RTL).
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.navDashboard,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                            height: 1.2,
+                          ),
+                        ),
+                        if (name != null) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            l10n.dashboardWelcomeUser(name!),
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.70),
+                              fontSize: 13,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: AppSpacing.sm),
+                        _RoleChip(label: l10n.salesRoleChip),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  // Notification bell — in RTL this lands on the LEFT (last = trailing).
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: NotificationsBell(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Gold role chip shown below the header subtitle.
 class _RoleChip extends StatelessWidget {
   const _RoleChip({required this.label});
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: AppPalette.gold400.withValues(alpha: 0.15),
-          border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.40)),
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            color: AppPalette.gold300,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-          ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppPalette.gold400.withValues(alpha: 0.15),
+        border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.40)),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: AppPalette.gold300,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
@@ -111,8 +241,9 @@ class _RoleChip extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.data});
+  const _DashboardBody({required this.data, required this.bottomPad});
   final SalesDashboard data;
+  final double bottomPad;
 
   @override
   Widget build(BuildContext context) {
@@ -128,13 +259,11 @@ class _DashboardBody extends StatelessWidget {
         .fold<int>(1, (m, v) => v > m ? v : m);
 
     return ListView(
-      // Reduced top padding (was AppSpacing.lg = 20) — eliminates the large
-      // empty gap that appeared between the rounded header bottom and the KPIs.
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.sm,
         AppSpacing.md,
-        AppSpacing.xxxl,
+        bottomPad + 80, // clear bottom nav + safe area
       ),
       children: [
         // ── 1. KPI cards ─────────────────────────────────────────────────
@@ -144,7 +273,7 @@ class _DashboardBody extends StatelessWidget {
           physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: AppSpacing.sm,
           crossAxisSpacing: AppSpacing.sm,
-          childAspectRatio: 1.45,
+          childAspectRatio: 1.65,
           children: [
             KpiCard(
               icon: Icons.people_alt_outlined,
@@ -337,7 +466,7 @@ class _QuickActionPill extends StatelessWidget {
       borderRadius: BorderRadius.circular(AppRadii.pill),
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         decoration: BoxDecoration(
           color: colors.surface,
           border: Border.all(color: colors.hairline),
@@ -354,11 +483,11 @@ class _QuickActionPill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 16, color: colors.brandGold),
-            const SizedBox(width: 6),
+            const SizedBox(width: 7),
             Text(
               label,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: colors.inkStrong,
               ),
@@ -372,23 +501,24 @@ class _QuickActionPill extends StatelessWidget {
 
 // ── Loading skeleton ───────────────────────────────────────────────────────────
 class _DashboardSkeleton extends StatelessWidget {
-  const _DashboardSkeleton();
+  const _DashboardSkeleton({required this.bottomPad});
+  final double bottomPad;
 
   @override
   Widget build(BuildContext context) {
     return AppSkeletonizer(
       enabled: true,
       child: GridView.count(
-        padding: const EdgeInsets.fromLTRB(
+        padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
           AppSpacing.sm,
           AppSpacing.md,
-          AppSpacing.lg,
+          bottomPad + 80,
         ),
         crossAxisCount: 2,
         mainAxisSpacing: AppSpacing.sm,
         crossAxisSpacing: AppSpacing.sm,
-        childAspectRatio: 1.45,
+        childAspectRatio: 1.65,
         children: const [
           KpiCard(icon: Icons.people_alt_outlined, label: 'Leads', value: '00'),
           KpiCard(

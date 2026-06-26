@@ -34,11 +34,20 @@ class DashboardTargetCard extends StatelessWidget {
 class DashboardBonusCard extends StatelessWidget {
   const DashboardBonusCard({super.key});
 
+  static String _periodLabel(DateTime now) {
+    final m = now.month.toString().padLeft(2, '0');
+    return '${now.year}-$m';
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final chevron =
+        isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded;
+
     return BlocBuilder<BonusSummaryCubit, BonusSummaryState>(
       builder: (context, state) {
         switch (state.status) {
@@ -58,12 +67,14 @@ class DashboardBonusCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Header: icon + title + period chip + chevron
                   Row(
                     children: [
                       const IconChip(
                         icon: Icons.payments_rounded,
                         tone: AppTone.gold,
                         size: IconChipSize.sm,
+                        filled: true,
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       Expanded(
@@ -72,10 +83,16 @@ class DashboardBonusCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                       ),
-                      Icon(Icons.chevron_right_rounded, color: colors.inkMuted),
+                      _PeriodChip(label: _periodLabel(DateTime.now())),
+                      const SizedBox(width: AppSpacing.xs),
+                      Icon(chevron, size: 20, color: colors.inkMuted),
                     ],
                   ),
-                  const SizedBox(height: AppSpacing.md),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Hairline divider
+                  Divider(height: 1, thickness: 1, color: colors.hairline),
+                  const SizedBox(height: AppSpacing.sm),
+                  // Paid / Pending metrics
                   Row(
                     children: [
                       Expanded(
@@ -88,14 +105,24 @@ class DashboardBonusCard extends StatelessWidget {
                           color: colors.success,
                         ),
                       ),
+                      Container(
+                        width: 1,
+                        height: 36,
+                        color: colors.hairline,
+                      ),
                       Expanded(
-                        child: _Metric(
-                          label: l10n.bonusPending,
-                          value: PriceFormatter.format(
-                            o.pendingTotal,
-                            languageCode: lang,
+                        child: Padding(
+                          padding: const EdgeInsetsDirectional.only(
+                            start: AppSpacing.sm,
                           ),
-                          color: colors.warning,
+                          child: _Metric(
+                            label: l10n.bonusPending,
+                            value: PriceFormatter.format(
+                              o.pendingTotal,
+                              languageCode: lang,
+                            ),
+                            color: colors.warning,
+                          ),
                         ),
                       ),
                     ],
@@ -105,6 +132,33 @@ class DashboardBonusCard extends StatelessWidget {
             );
         }
       },
+    );
+  }
+}
+
+/// Small pill chip showing the current period (e.g. "2026-06").
+class _PeriodChip extends StatelessWidget {
+  const _PeriodChip({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border.all(color: colors.hairline),
+        borderRadius: BorderRadius.circular(AppRadii.pill),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          color: colors.inkMuted,
+        ),
+      ),
     );
   }
 }
