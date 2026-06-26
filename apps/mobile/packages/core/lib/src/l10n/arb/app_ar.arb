@@ -495,11 +495,16 @@
   "leadActivityNote": "أُضيفت ملاحظة",
   "leadActivityReservation": "حجز",
 
+  "clientsSubtitle": "تابع بيانات العملاء وفرصهم الحالية",
+  "leadsSubtitle": "تابع مراحل البيع والتواصل مع العملاء",
   "clientsSearchHint": "ابحث عن عميل",
   "clientsEmptyTitle": "لا يوجد عملاء",
   "clientsEmptyMessage": "سيظهر هنا العملاء من قائمتك.",
   "clientsLeadCount": "{count, plural, =1{عميل محتمل واحد} other{{count} عملاء محتملون}}",
   "@clientsLeadCount": { "placeholders": { "count": { "type": "int" } } },
+  "salesOpportunityCount": "{count, plural, =1{فرصة واحدة} other{{count} فرص بيع}}",
+  "@salesOpportunityCount": { "placeholders": { "count": { "type": "int" } } },
+  "callClient": "الاتصال بالعميل",
   "clientLeads": "العملاء المحتملون",
 
   "projectsEmptyTitle": "لا توجد مشاريع",

@@ -35,25 +35,20 @@ class _ClientsScreenState extends State<ClientsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit = context.read<ClientsCubit>();
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navClients)),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),
-            child: TextField(
-              controller: _search,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: l10n.clientsSearchHint,
-                prefixIcon: const Icon(Icons.search_rounded),
-                isDense: true,
-              ),
-              onSubmitted: cubit.setSearch,
-            ),
+          AppNavHeader(
+            title: l10n.navClients,
+            subtitle: l10n.clientsSubtitle,
           ),
-          const SizedBox(height: AppSpacing.sm),
+          _SearchBar(
+            controller: _search,
+            hint: l10n.clientsSearchHint,
+            onSubmitted: cubit.setSearch,
+          ),
           Expanded(
             child: BlocBuilder<ClientsCubit, ClientsListState>(
               builder: (context, state) {
@@ -62,7 +57,10 @@ class _ClientsScreenState extends State<ClientsScreen> {
                   case DataStatus.loading:
                     return const StaffListSkeleton();
                   case DataStatus.failure:
-                    return ErrorState(failure: state.failure, onRetry: cubit.load);
+                    return ErrorState(
+                      failure: state.failure,
+                      onRetry: cubit.load,
+                    );
                   case DataStatus.empty:
                     return EmptyState(
                       icon: Icons.contacts_outlined,
@@ -73,10 +71,17 @@ class _ClientsScreenState extends State<ClientsScreen> {
                     return RefreshIndicator(
                       onRefresh: cubit.load,
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        padding: EdgeInsets.fromLTRB(
+                          AppSpacing.md,
+                          AppSpacing.sm,
+                          AppSpacing.md,
+                          bottomPad + 80,
+                        ),
                         itemCount: state.clients.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) => _ClientTile(client: state.clients[i]),
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, i) =>
+                            _ClientTile(client: state.clients[i]),
                       ),
                     );
                 }
@@ -89,6 +94,7 @@ class _ClientsScreenState extends State<ClientsScreen> {
   }
 }
 
+// ── Client card ───────────────────────────────────────────────────────────────
 class _ClientTile extends StatelessWidget {
   const _ClientTile({required this.client});
   final StaffClient client;
@@ -97,37 +103,184 @@ class _ClientTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
+    final initials =
+        client.fullName.isNotEmpty ? client.fullName.characters.first : '?';
+
     return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md),
       onTap: () => context.push('/clients/${client.clientId}', extra: client),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          CircleAvatar(
-            backgroundColor: colors.brandGoldSoft,
+          // Avatar
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: colors.brandGoldSoft,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
             child: Text(
-              client.fullName.isNotEmpty ? client.fullName.characters.first : '?',
-              style: TextStyle(color: colors.brandGold),
+              initials,
+              style: TextStyle(
+                color: colors.brandGold,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.md),
+          // Name + phone + opportunity count
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(client.fullName, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 2),
                 Text(
-                  l10n.clientsLeadCount(client.leadCount),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
+                  client.fullName,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colors.inkStrong,
+                    height: 1.25,
+                  ),
+                ),
+                if (client.phone != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    client.phone!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: colors.inkMuted,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 5),
+                Text(
+                  l10n.salesOpportunityCount(client.leadCount),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colors.inkMuted,
+                    height: 1.3,
+                  ),
                 ),
               ],
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
-          StatusBadge(
-            label: leadStageLabel(l10n, client.latestStage),
-            tone: leadStageTone(client.latestStage),
+          // Stage badge + optional call icon
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StatusBadge(
+                label: leadStageLabel(l10n, client.latestStage),
+                tone: leadStageTone(client.latestStage),
+              ),
+              if (client.phone != null) ...[
+                const SizedBox(height: AppSpacing.xs),
+                _ActionIcon(
+                  icon: Icons.call_rounded,
+                  tooltip: l10n.callClient,
+                  color: colors.success,
+                  onTap: () => ContactActions.call(client.phone!),
+                ),
+              ],
+            ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Leads screen ─────────────────────────────────────────────────────────────
+
+// ── Shared search bar ─────────────────────────────────────────────────────────
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.hint,
+    required this.onSubmitted,
+  });
+  final TextEditingController controller;
+  final String hint;
+  final ValueChanged<String> onSubmitted;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        AppSpacing.xs,
+      ),
+      child: TextField(
+        controller: controller,
+        textInputAction: TextInputAction.search,
+        onSubmitted: onSubmitted,
+        style: TextStyle(fontSize: 15, color: colors.inkStrong),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: TextStyle(fontSize: 15, color: colors.inkMuted),
+          prefixIcon: Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: 12,
+          ),
+          isDense: true,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            borderSide: BorderSide(color: colors.hairline),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            borderSide: BorderSide(color: colors.hairline),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(AppRadii.pill),
+            borderSide: BorderSide(color: colors.brandGold, width: 1.5),
+          ),
+          filled: true,
+          fillColor: colors.surface,
+        ),
+      ),
+    );
+  }
+}
+
+// ── Tiny icon action ──────────────────────────────────────────────────────────
+class _ActionIcon extends StatelessWidget {
+  const _ActionIcon({
+    required this.icon,
+    required this.tooltip,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String tooltip;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Tooltip(
+        message: tooltip,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.10),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 16, color: color),
+        ),
       ),
     );
   }

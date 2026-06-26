@@ -1383,6 +1383,12 @@ class AppLocalizationsAr extends AppLocalizations {
   String get leadActivityReservation => 'حجز';
 
   @override
+  String get clientsSubtitle => 'تابع بيانات العملاء وفرصهم الحالية';
+
+  @override
+  String get leadsSubtitle => 'تابع مراحل البيع والتواصل مع العملاء';
+
+  @override
   String get clientsSearchHint => 'ابحث عن عميل';
 
   @override
@@ -1401,6 +1407,20 @@ class AppLocalizationsAr extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String salesOpportunityCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count فرص بيع',
+      one: 'فرصة واحدة',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get callClient => 'الاتصال بالعميل';
 
   @override
   String get clientLeads => 'العملاء المحتملون';

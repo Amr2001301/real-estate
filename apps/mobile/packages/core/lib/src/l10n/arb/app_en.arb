@@ -498,11 +498,16 @@
   "leadActivityNote": "Note added",
   "leadActivityReservation": "Reservation",
 
+  "clientsSubtitle": "Track your clients and their current opportunities",
+  "leadsSubtitle": "Track sales stages and communicate with your leads",
   "clientsSearchHint": "Search clients",
   "clientsEmptyTitle": "No clients",
   "clientsEmptyMessage": "Clients from your leads will appear here.",
   "clientsLeadCount": "{count, plural, =1{1 lead} other{{count} leads}}",
   "@clientsLeadCount": { "placeholders": { "count": { "type": "int" } } },
+  "salesOpportunityCount": "{count, plural, =1{1 opportunity} other{{count} opportunities}}",
+  "@salesOpportunityCount": { "placeholders": { "count": { "type": "int" } } },
+  "callClient": "Call client",
   "clientLeads": "Leads",
 
   "projectsEmptyTitle": "No projects",

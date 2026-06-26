@@ -1397,6 +1397,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leadActivityReservation => 'Reservation';
 
   @override
+  String get clientsSubtitle =>
+      'Track your clients and their current opportunities';
+
+  @override
+  String get leadsSubtitle =>
+      'Track sales stages and communicate with your leads';
+
+  @override
   String get clientsSearchHint => 'Search clients';
 
   @override
@@ -1415,6 +1423,20 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String salesOpportunityCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count opportunities',
+      one: '1 opportunity',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get callClient => 'Call client';
 
   @override
   String get clientLeads => 'Leads';

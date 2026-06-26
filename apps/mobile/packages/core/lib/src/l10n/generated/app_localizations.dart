@@ -2678,6 +2678,18 @@ abstract class AppLocalizations {
   /// **'Reservation'**
   String get leadActivityReservation;
 
+  /// No description provided for @clientsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your clients and their current opportunities'**
+  String get clientsSubtitle;
+
+  /// No description provided for @leadsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track sales stages and communicate with your leads'**
+  String get leadsSubtitle;
+
   /// No description provided for @clientsSearchHint.
   ///
   /// In en, this message translates to:
@@ -2701,6 +2713,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{1 lead} other{{count} leads}}'**
   String clientsLeadCount(int count);
+
+  /// No description provided for @salesOpportunityCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 opportunity} other{{count} opportunities}}'**
+  String salesOpportunityCount(int count);
+
+  /// No description provided for @callClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Call client'**
+  String get callClient;
 
   /// No description provided for @clientLeads.
   ///
