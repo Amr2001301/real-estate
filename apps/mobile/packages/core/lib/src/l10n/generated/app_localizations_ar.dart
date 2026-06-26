@@ -1925,11 +1925,136 @@ class AppLocalizationsAr extends AppLocalizations {
   String get supervisorMaintenanceTitle => 'طلبات الصيانة';
 
   @override
-  String get supervisorNoAssignedTitle => 'لا توجد طلبات مُسندة';
+  String get supervisorDashboardTitle => 'مشرف الصيانة';
+
+  @override
+  String get supervisorDashboardSubtitle =>
+      'متابعة الطلبات المسندة واعتماد التنفيذ';
+
+  @override
+  String get supervisorRoleBadge => 'مشرف صيانة';
+
+  @override
+  String maintenanceWelcomeUser(String name) {
+    return 'أهلاً، $name';
+  }
+
+  @override
+  String get maintenanceWelcomeFallback => 'أهلاً بك';
+
+  @override
+  String get maintenanceSupervisorRole => 'مشرف صيانة';
+
+  @override
+  String get maintenanceAssignedSubtitle => 'طلباتك المسندة واعتماد التنفيذ';
+
+  @override
+  String get supervisorStatTotal => 'الإجمالي';
+
+  @override
+  String get supervisorStatAssigned => 'مُسند';
+
+  @override
+  String get supervisorStatInProgress => 'قيد التنفيذ';
+
+  @override
+  String get supervisorStatClosed => 'مغلق';
+
+  @override
+  String get supervisorFilterAll => 'الكل';
+
+  @override
+  String get supervisorFilterActive => 'نشطة';
+
+  @override
+  String get supervisorFilterClosed => 'مغلقة';
+
+  @override
+  String get supervisorSummaryTotalLabel => 'إجمالي الطلبات';
+
+  @override
+  String get supervisorNoDescription => 'لا يوجد وصف';
+
+  @override
+  String get supervisorViewDetails => 'عرض التفاصيل';
+
+  @override
+  String get supervisorDetailTitle => 'تفاصيل طلب الصيانة';
+
+  @override
+  String get supervisorNoAssignedTitle => 'لا توجد طلبات مسندة حاليًا';
 
   @override
   String get supervisorNoAssignedMessage =>
-      'ستظهر هنا طلبات الصيانة المُسندة إليك بعد اعتمادها.';
+      'ستظهر هنا طلبات الصيانة بعد إسنادها إليك من الإدارة.';
+
+  @override
+  String get supervisorFilterEmptyTitle => 'لا توجد طلبات بهذه الحالة';
+
+  @override
+  String get supervisorFilterEmptyMessage => 'جرّب اختيار تصفية مختلفة.';
+
+  @override
+  String get supervisorDetailCustomerLabel => 'العميل';
+
+  @override
+  String get supervisorDetailPhoneLabel => 'الهاتف';
+
+  @override
+  String get supervisorDetailUnitLabel => 'الوحدة';
+
+  @override
+  String get supervisorDetailSlaTitle => 'المهلة والمتابعة';
+
+  @override
+  String get supervisorDetailOverdueLabel => 'متأخر عن الموعد';
+
+  @override
+  String get supervisorDetailComplaintLabel => 'تم تقديم شكوى';
+
+  @override
+  String get supervisorDetailUnresolvedLabel => 'لم تُحل';
+
+  @override
+  String get supervisorDetailDueDateLabel => 'الموعد المستهدف';
+
+  @override
+  String get supervisorDetailAssignedDateLabel => 'تاريخ الإسناد';
+
+  @override
+  String get supervisorDetailComplaintDateLabel => 'تاريخ الشكوى';
+
+  @override
+  String get supervisorDetailStatusTitle => 'تحديث الحالة';
+
+  @override
+  String get supervisorDetailConfirmTitle => 'تأكيد المشرف للحل';
+
+  @override
+  String get supervisorDetailConfirmInstruction =>
+      'بعد إتمام الإصلاح، أكّد حل المشكلة.';
+
+  @override
+  String get supervisorDetailConfirmLocked =>
+      'يتاح التأكيد بعد وضع الطلب كمُنجز.';
+
+  @override
+  String get supervisorDetailConfirmAction => 'تأكيد حل المشكلة';
+
+  @override
+  String get supervisorDetailConfirmedAtPrefix => 'أكدت الحل في';
+
+  @override
+  String get supervisorDetailFeedbackTitle => 'تقييم العميل';
+
+  @override
+  String get supervisorDetailCustomerConfirmedAtPrefix => 'أكد العميل الحل في';
+
+  @override
+  String get supervisorDetailAttachmentsTitle => 'المرفقات';
+
+  @override
+  String get supervisorDetailAttachmentFallback => 'مرفق';
 
   @override
   String get maintenanceOverdue => 'متأخر';
@@ -1942,4 +2067,60 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get maintenanceFallbackTitle => 'طلب صيانة';
+
+  @override
+  String get maintenanceDetailSubtitle =>
+      'راجع بيانات الطلب وحدّث حالة التنفيذ';
+
+  @override
+  String get maintenanceIssueDescription => 'وصف المشكلة';
+
+  @override
+  String get maintenanceCustomerInfo => 'بيانات العميل والوحدة';
+
+  @override
+  String get maintenanceWorkflow => 'المرحلة والمتابعة';
+
+  @override
+  String get maintenanceUpdateStatus => 'تحديث الحالة';
+
+  @override
+  String get maintenanceApproveSolution => 'اعتماد الحل';
+
+  @override
+  String get maintenanceConfirmationUnavailable =>
+      'يتاح التأكيد بعد وضع الطلب كمُنجز.';
+
+  @override
+  String get maintenanceAttachments => 'المرفقات';
+
+  @override
+  String get maintenanceNoTargetDate => 'لا يوجد موعد محدد';
+
+  @override
+  String get maintenanceCallCustomer => 'الاتصال بالعميل';
+
+  @override
+  String get maintenanceDirectionsToUnit => 'الاتجاهات للوحدة';
+
+  @override
+  String get maintenanceLocationUnavailable => 'موقع الوحدة غير متاح';
+
+  @override
+  String get maintenanceImagePreview => 'معاينة الصورة';
+
+  @override
+  String get maintenanceClosePreview => 'إغلاق المعاينة';
+
+  @override
+  String get maintenanceActionUnavailable => 'لا يوجد إجراء متاح حاليًا';
+
+  @override
+  String get maintenanceClosedState => 'تم إغلاق الطلب';
+
+  @override
+  String get maintenanceOpenAttachment => 'فتح المرفق';
+
+  @override
+  String get maintenanceNoPreviewAvailable => 'لا تتوفر معاينة لهذا المرفق';
 }

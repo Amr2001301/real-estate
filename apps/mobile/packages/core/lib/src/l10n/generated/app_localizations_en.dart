@@ -1945,11 +1945,139 @@ class AppLocalizationsEn extends AppLocalizations {
   String get supervisorMaintenanceTitle => 'Maintenance Requests';
 
   @override
-  String get supervisorNoAssignedTitle => 'No assigned requests';
+  String get supervisorDashboardTitle => 'Maintenance Supervisor';
+
+  @override
+  String get supervisorDashboardSubtitle =>
+      'Track assigned requests and confirm resolution status';
+
+  @override
+  String get supervisorRoleBadge => 'Maintenance Supervisor';
+
+  @override
+  String maintenanceWelcomeUser(String name) {
+    return 'Hello, $name';
+  }
+
+  @override
+  String get maintenanceWelcomeFallback => 'Welcome';
+
+  @override
+  String get maintenanceSupervisorRole => 'Maintenance Supervisor';
+
+  @override
+  String get maintenanceAssignedSubtitle =>
+      'Your assigned requests and resolution approvals';
+
+  @override
+  String get supervisorStatTotal => 'Total';
+
+  @override
+  String get supervisorStatAssigned => 'Assigned';
+
+  @override
+  String get supervisorStatInProgress => 'In Progress';
+
+  @override
+  String get supervisorStatClosed => 'Closed';
+
+  @override
+  String get supervisorFilterAll => 'All';
+
+  @override
+  String get supervisorFilterActive => 'Active';
+
+  @override
+  String get supervisorFilterClosed => 'Closed';
+
+  @override
+  String get supervisorSummaryTotalLabel => 'Total Requests';
+
+  @override
+  String get supervisorNoDescription => 'No description';
+
+  @override
+  String get supervisorViewDetails => 'View Details';
+
+  @override
+  String get supervisorDetailTitle => 'Request Details';
+
+  @override
+  String get supervisorNoAssignedTitle => 'No assigned requests yet';
 
   @override
   String get supervisorNoAssignedMessage =>
-      'Maintenance requests assigned to you will appear here once approved.';
+      'Maintenance requests will appear here once assigned to you by management.';
+
+  @override
+  String get supervisorFilterEmptyTitle => 'No requests with this filter';
+
+  @override
+  String get supervisorFilterEmptyMessage =>
+      'Try selecting a different filter.';
+
+  @override
+  String get supervisorDetailCustomerLabel => 'Customer';
+
+  @override
+  String get supervisorDetailPhoneLabel => 'Phone';
+
+  @override
+  String get supervisorDetailUnitLabel => 'Unit';
+
+  @override
+  String get supervisorDetailSlaTitle => 'Timeline & Tracking';
+
+  @override
+  String get supervisorDetailOverdueLabel => 'Overdue';
+
+  @override
+  String get supervisorDetailComplaintLabel => 'Complaint filed';
+
+  @override
+  String get supervisorDetailUnresolvedLabel => 'Unresolved';
+
+  @override
+  String get supervisorDetailDueDateLabel => 'Target date';
+
+  @override
+  String get supervisorDetailAssignedDateLabel => 'Assigned date';
+
+  @override
+  String get supervisorDetailComplaintDateLabel => 'Complaint date';
+
+  @override
+  String get supervisorDetailStatusTitle => 'Update Status';
+
+  @override
+  String get supervisorDetailConfirmTitle => 'Supervisor Confirmation';
+
+  @override
+  String get supervisorDetailConfirmInstruction =>
+      'After completing the repair, confirm that the issue is resolved.';
+
+  @override
+  String get supervisorDetailConfirmLocked =>
+      'Confirmation is available once the request is marked as resolved.';
+
+  @override
+  String get supervisorDetailConfirmAction => 'Confirm Resolution';
+
+  @override
+  String get supervisorDetailConfirmedAtPrefix => 'You confirmed resolution on';
+
+  @override
+  String get supervisorDetailFeedbackTitle => 'Customer Feedback';
+
+  @override
+  String get supervisorDetailCustomerConfirmedAtPrefix =>
+      'Customer confirmed resolution on';
+
+  @override
+  String get supervisorDetailAttachmentsTitle => 'Attachments';
+
+  @override
+  String get supervisorDetailAttachmentFallback => 'Attachment';
 
   @override
   String get maintenanceOverdue => 'Overdue';
@@ -1962,4 +2090,61 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get maintenanceFallbackTitle => 'Maintenance request';
+
+  @override
+  String get maintenanceDetailSubtitle =>
+      'Review the request and update execution status';
+
+  @override
+  String get maintenanceIssueDescription => 'Issue Description';
+
+  @override
+  String get maintenanceCustomerInfo => 'Customer & Unit Info';
+
+  @override
+  String get maintenanceWorkflow => 'Stage & Follow-up';
+
+  @override
+  String get maintenanceUpdateStatus => 'Update Status';
+
+  @override
+  String get maintenanceApproveSolution => 'Approve Solution';
+
+  @override
+  String get maintenanceConfirmationUnavailable =>
+      'Confirmation is available after marking the request as resolved.';
+
+  @override
+  String get maintenanceAttachments => 'Attachments';
+
+  @override
+  String get maintenanceNoTargetDate => 'No target date';
+
+  @override
+  String get maintenanceCallCustomer => 'Call Customer';
+
+  @override
+  String get maintenanceDirectionsToUnit => 'Directions to Unit';
+
+  @override
+  String get maintenanceLocationUnavailable => 'Unit location unavailable';
+
+  @override
+  String get maintenanceImagePreview => 'Image Preview';
+
+  @override
+  String get maintenanceClosePreview => 'Close Preview';
+
+  @override
+  String get maintenanceActionUnavailable => 'No action available';
+
+  @override
+  String get maintenanceClosedState => 'Request Closed';
+
+  @override
+  String get maintenanceOpenAttachment => 'Open attachment';
+
+  @override
+  String get maintenanceNoPreviewAvailable =>
+      'Preview is not available for this attachment';
 }

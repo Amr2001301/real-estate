@@ -71,6 +71,9 @@ class MaintenanceRequest extends Equatable {
     this.customerPhone,
     this.customerEmail,
     this.unitCode,
+    this.unitLat,
+    this.unitLng,
+    this.unitAddress,
     this.categoryName,
     this.createdAt,
     this.approvedAt,
@@ -97,6 +100,9 @@ class MaintenanceRequest extends Equatable {
   final String? customerPhone;
   final String? customerEmail;
   final String? unitCode;
+  final double? unitLat;
+  final double? unitLng;
+  final String? unitAddress;
   final Translatable? categoryName;
   final DateTime? createdAt;
   final DateTime? approvedAt;
@@ -151,13 +157,30 @@ class MaintenanceRequest extends Equatable {
 
 /// A read-only attachment summary on the detail response.
 class MaintenanceDoc extends Equatable {
-  const MaintenanceDoc({required this.id, this.title, this.fileName});
+  const MaintenanceDoc({
+    required this.id,
+    this.title,
+    this.fileName,
+    this.url,
+    this.mimeType,
+  });
   final String id;
   final String? title;
   final String? fileName;
+  // TODO(backend): populate once the staff detail endpoint returns signed URLs.
+  final String? url;
+  final String? mimeType;
+
+  bool get isImage {
+    if (mimeType?.startsWith('image/') == true) return true;
+    final name = (fileName ?? '').toLowerCase();
+    return name.endsWith('.jpg') || name.endsWith('.jpeg') ||
+        name.endsWith('.png') || name.endsWith('.webp') ||
+        name.endsWith('.gif');
+  }
 
   @override
-  List<Object?> get props => [id, title, fileName];
+  List<Object?> get props => [id, title, fileName, url, mimeType];
 }
 
 /// Detail = the request + its attachments.

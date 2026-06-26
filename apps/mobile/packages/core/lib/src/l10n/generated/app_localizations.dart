@@ -3704,17 +3704,257 @@ abstract class AppLocalizations {
   /// **'Maintenance Requests'**
   String get supervisorMaintenanceTitle;
 
+  /// No description provided for @supervisorDashboardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance Supervisor'**
+  String get supervisorDashboardTitle;
+
+  /// No description provided for @supervisorDashboardSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track assigned requests and confirm resolution status'**
+  String get supervisorDashboardSubtitle;
+
+  /// No description provided for @supervisorRoleBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance Supervisor'**
+  String get supervisorRoleBadge;
+
+  /// No description provided for @maintenanceWelcomeUser.
+  ///
+  /// In en, this message translates to:
+  /// **'Hello, {name}'**
+  String maintenanceWelcomeUser(String name);
+
+  /// No description provided for @maintenanceWelcomeFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get maintenanceWelcomeFallback;
+
+  /// No description provided for @maintenanceSupervisorRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Maintenance Supervisor'**
+  String get maintenanceSupervisorRole;
+
+  /// No description provided for @maintenanceAssignedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your assigned requests and resolution approvals'**
+  String get maintenanceAssignedSubtitle;
+
+  /// No description provided for @supervisorStatTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get supervisorStatTotal;
+
+  /// No description provided for @supervisorStatAssigned.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned'**
+  String get supervisorStatAssigned;
+
+  /// No description provided for @supervisorStatInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get supervisorStatInProgress;
+
+  /// No description provided for @supervisorStatClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get supervisorStatClosed;
+
+  /// No description provided for @supervisorFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get supervisorFilterAll;
+
+  /// No description provided for @supervisorFilterActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get supervisorFilterActive;
+
+  /// No description provided for @supervisorFilterClosed.
+  ///
+  /// In en, this message translates to:
+  /// **'Closed'**
+  String get supervisorFilterClosed;
+
+  /// No description provided for @supervisorSummaryTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Requests'**
+  String get supervisorSummaryTotalLabel;
+
+  /// No description provided for @supervisorNoDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No description'**
+  String get supervisorNoDescription;
+
+  /// No description provided for @supervisorViewDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'View Details'**
+  String get supervisorViewDetails;
+
+  /// No description provided for @supervisorDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Details'**
+  String get supervisorDetailTitle;
+
   /// No description provided for @supervisorNoAssignedTitle.
   ///
   /// In en, this message translates to:
-  /// **'No assigned requests'**
+  /// **'No assigned requests yet'**
   String get supervisorNoAssignedTitle;
 
   /// No description provided for @supervisorNoAssignedMessage.
   ///
   /// In en, this message translates to:
-  /// **'Maintenance requests assigned to you will appear here once approved.'**
+  /// **'Maintenance requests will appear here once assigned to you by management.'**
   String get supervisorNoAssignedMessage;
+
+  /// No description provided for @supervisorFilterEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests with this filter'**
+  String get supervisorFilterEmptyTitle;
+
+  /// No description provided for @supervisorFilterEmptyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Try selecting a different filter.'**
+  String get supervisorFilterEmptyMessage;
+
+  /// No description provided for @supervisorDetailCustomerLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get supervisorDetailCustomerLabel;
+
+  /// No description provided for @supervisorDetailPhoneLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get supervisorDetailPhoneLabel;
+
+  /// No description provided for @supervisorDetailUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get supervisorDetailUnitLabel;
+
+  /// No description provided for @supervisorDetailSlaTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Timeline & Tracking'**
+  String get supervisorDetailSlaTitle;
+
+  /// No description provided for @supervisorDetailOverdueLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue'**
+  String get supervisorDetailOverdueLabel;
+
+  /// No description provided for @supervisorDetailComplaintLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaint filed'**
+  String get supervisorDetailComplaintLabel;
+
+  /// No description provided for @supervisorDetailUnresolvedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Unresolved'**
+  String get supervisorDetailUnresolvedLabel;
+
+  /// No description provided for @supervisorDetailDueDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Target date'**
+  String get supervisorDetailDueDateLabel;
+
+  /// No description provided for @supervisorDetailAssignedDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Assigned date'**
+  String get supervisorDetailAssignedDateLabel;
+
+  /// No description provided for @supervisorDetailComplaintDateLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Complaint date'**
+  String get supervisorDetailComplaintDateLabel;
+
+  /// No description provided for @supervisorDetailStatusTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Status'**
+  String get supervisorDetailStatusTitle;
+
+  /// No description provided for @supervisorDetailConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Supervisor Confirmation'**
+  String get supervisorDetailConfirmTitle;
+
+  /// No description provided for @supervisorDetailConfirmInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'After completing the repair, confirm that the issue is resolved.'**
+  String get supervisorDetailConfirmInstruction;
+
+  /// No description provided for @supervisorDetailConfirmLocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation is available once the request is marked as resolved.'**
+  String get supervisorDetailConfirmLocked;
+
+  /// No description provided for @supervisorDetailConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Resolution'**
+  String get supervisorDetailConfirmAction;
+
+  /// No description provided for @supervisorDetailConfirmedAtPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'You confirmed resolution on'**
+  String get supervisorDetailConfirmedAtPrefix;
+
+  /// No description provided for @supervisorDetailFeedbackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Feedback'**
+  String get supervisorDetailFeedbackTitle;
+
+  /// No description provided for @supervisorDetailCustomerConfirmedAtPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer confirmed resolution on'**
+  String get supervisorDetailCustomerConfirmedAtPrefix;
+
+  /// No description provided for @supervisorDetailAttachmentsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get supervisorDetailAttachmentsTitle;
+
+  /// No description provided for @supervisorDetailAttachmentFallback.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachment'**
+  String get supervisorDetailAttachmentFallback;
 
   /// No description provided for @maintenanceOverdue.
   ///
@@ -3739,6 +3979,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Maintenance request'**
   String get maintenanceFallbackTitle;
+
+  /// No description provided for @maintenanceDetailSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Review the request and update execution status'**
+  String get maintenanceDetailSubtitle;
+
+  /// No description provided for @maintenanceIssueDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue Description'**
+  String get maintenanceIssueDescription;
+
+  /// No description provided for @maintenanceCustomerInfo.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer & Unit Info'**
+  String get maintenanceCustomerInfo;
+
+  /// No description provided for @maintenanceWorkflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage & Follow-up'**
+  String get maintenanceWorkflow;
+
+  /// No description provided for @maintenanceUpdateStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Status'**
+  String get maintenanceUpdateStatus;
+
+  /// No description provided for @maintenanceApproveSolution.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve Solution'**
+  String get maintenanceApproveSolution;
+
+  /// No description provided for @maintenanceConfirmationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmation is available after marking the request as resolved.'**
+  String get maintenanceConfirmationUnavailable;
+
+  /// No description provided for @maintenanceAttachments.
+  ///
+  /// In en, this message translates to:
+  /// **'Attachments'**
+  String get maintenanceAttachments;
+
+  /// No description provided for @maintenanceNoTargetDate.
+  ///
+  /// In en, this message translates to:
+  /// **'No target date'**
+  String get maintenanceNoTargetDate;
+
+  /// No description provided for @maintenanceCallCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Call Customer'**
+  String get maintenanceCallCustomer;
+
+  /// No description provided for @maintenanceDirectionsToUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Directions to Unit'**
+  String get maintenanceDirectionsToUnit;
+
+  /// No description provided for @maintenanceLocationUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit location unavailable'**
+  String get maintenanceLocationUnavailable;
+
+  /// No description provided for @maintenanceImagePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Image Preview'**
+  String get maintenanceImagePreview;
+
+  /// No description provided for @maintenanceClosePreview.
+  ///
+  /// In en, this message translates to:
+  /// **'Close Preview'**
+  String get maintenanceClosePreview;
+
+  /// No description provided for @maintenanceActionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No action available'**
+  String get maintenanceActionUnavailable;
+
+  /// No description provided for @maintenanceClosedState.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Closed'**
+  String get maintenanceClosedState;
+
+  /// No description provided for @maintenanceOpenAttachment.
+  ///
+  /// In en, this message translates to:
+  /// **'Open attachment'**
+  String get maintenanceOpenAttachment;
+
+  /// No description provided for @maintenanceNoPreviewAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Preview is not available for this attachment'**
+  String get maintenanceNoPreviewAvailable;
 }
 
 class _AppLocalizationsDelegate

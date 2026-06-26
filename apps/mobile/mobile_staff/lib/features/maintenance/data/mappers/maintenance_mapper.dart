@@ -16,6 +16,9 @@ extension MaintenanceRequestDtoMapper on MaintenanceRequestDto {
         customerPhone: customerPhone,
         customerEmail: customerEmail,
         unitCode: unitCode,
+        unitLat: unitLat,
+        unitLng: unitLng,
+        unitAddress: unitAddress,
         categoryName: (categoryNameAr != null || categoryNameEn != null)
             ? Translatable(ar: categoryNameAr ?? '', en: categoryNameEn ?? '')
             : null,
@@ -41,7 +44,13 @@ extension MaintenanceDetailDtoMapper on MaintenanceDetailDto {
         request: request.toEntity(),
         documents: [
           for (final d in documents)
-            MaintenanceDoc(id: d.id, title: d.title, fileName: d.fileName),
+            MaintenanceDoc(
+              id: d.id,
+              title: d.title,
+              fileName: d.fileName,
+              url: d.url,
+              mimeType: d.mimeType,
+            ),
         ],
       );
 }

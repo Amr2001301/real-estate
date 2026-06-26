@@ -12,6 +12,9 @@ class MaintenanceRequestDto {
     this.customerPhone,
     this.customerEmail,
     this.unitCode,
+    this.unitLat,
+    this.unitLng,
+    this.unitAddress,
     this.categoryNameAr,
     this.categoryNameEn,
     this.createdAt,
@@ -39,6 +42,9 @@ class MaintenanceRequestDto {
   final String? customerPhone;
   final String? customerEmail;
   final String? unitCode;
+  final double? unitLat;
+  final double? unitLng;
+  final String? unitAddress;
   final String? categoryNameAr;
   final String? categoryNameEn;
   final String? createdAt;
@@ -79,6 +85,17 @@ class MaintenanceRequestDto {
       customerPhone: customer?['phone'] as String?,
       customerEmail: customer?['email'] as String?,
       unitCode: unit?['code'] as String?,
+      // TODO(backend): unit currently only returns 'code'; lat/lng/address are
+      // null until the backend includes location data in the response.
+      unitLat: (unit?['lat'] as num?)?.toDouble() ??
+          (unit?['latitude'] as num?)?.toDouble() ??
+          (_asMap(unit?['location'])?['lat'] as num?)?.toDouble() ??
+          (_asMap(unit?['location'])?['latitude'] as num?)?.toDouble(),
+      unitLng: (unit?['lng'] as num?)?.toDouble() ??
+          (unit?['longitude'] as num?)?.toDouble() ??
+          (_asMap(unit?['location'])?['lng'] as num?)?.toDouble() ??
+          (_asMap(unit?['location'])?['longitude'] as num?)?.toDouble(),
+      unitAddress: unit?['address'] as String? ?? unit?['fullAddress'] as String?,
       categoryNameAr: categoryName?['ar'] as String?,
       categoryNameEn: categoryName?['en'] as String?,
       createdAt: json['createdAt'] as String?,
@@ -100,15 +117,28 @@ class MaintenanceRequestDto {
 }
 
 class MaintenanceDocDto {
-  const MaintenanceDocDto({required this.id, this.title, this.fileName});
+  const MaintenanceDocDto({
+    required this.id,
+    this.title,
+    this.fileName,
+    this.url,
+    this.mimeType,
+  });
   final String id;
   final String? title;
   final String? fileName;
+  final String? url;
+  final String? mimeType;
 
   factory MaintenanceDocDto.fromJson(Map<String, dynamic> json) => MaintenanceDocDto(
         id: json['id'] as String,
         title: json['title'] as String?,
         fileName: json['fileName'] as String?,
+        // Try all common field names for pre-signed / public attachment URLs.
+        // TODO(backend): documents[] currently has no download URL field.
+        // Remove this comment once the backend returns url/signedUrl/downloadUrl.
+        url: (json['url'] ?? json['signedUrl'] ?? json['downloadUrl'] ?? json['fileUrl']) as String?,
+        mimeType: json['mimeType'] as String?,
       );
 }
 
