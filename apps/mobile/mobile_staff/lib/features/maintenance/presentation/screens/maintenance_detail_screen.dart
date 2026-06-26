@@ -733,42 +733,7 @@ class _LocationCard extends StatelessWidget {
                   ),
                 ),
 
-              // Map placeholder (replace with google_maps_flutter once keys ready)
-              // TODO: swap this Container for GoogleMap widget with single marker,
-              //   zoomGesturesEnabled: false, scrollGesturesEnabled: false.
-              Container(
-                margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
-                height: 96,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F4F8),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5E7EB)),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.map_rounded,
-                          color: Color(0xFFB8C4D0),
-                          size: 28,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.maintenanceMapPreviewUnavailable,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xFFB8C4D0),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 10),
             ] else ...[
               // No location data yet
               Padding(
