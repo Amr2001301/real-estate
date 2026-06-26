@@ -22,20 +22,35 @@ class StaffProjectDto {
   final String? coverImageUrl;
 
   factory StaffProjectDto.fromJson(Map<String, dynamic> json) {
-    final name = json['name'] as Map<String, dynamic>?;
-    final description = json['description'] as Map<String, dynamic>?;
-    final media = (json['media'] as List?)?.whereType<Map<String, dynamic>>().toList();
+    // The backend LocaleInterceptor may flatten {ar, en} → String when
+    // Accept-Language is set. Handle both Map and String defensively.
+    final (nameAr, nameEn) = _parseTranslatable(json['name']);
+    final (descAr, descEn) = _parseTranslatable(json['description']);
+    final media =
+        (json['media'] as List?)?.whereType<Map<String, dynamic>>().toList();
     return StaffProjectDto(
       id: json['id'] as String,
       status: json['status'] as String? ?? 'DRAFT',
-      nameAr: name?['ar'] as String?,
-      nameEn: name?['en'] as String?,
-      descriptionAr: description?['ar'] as String?,
-      descriptionEn: description?['en'] as String?,
+      nameAr: nameAr,
+      nameEn: nameEn,
+      descriptionAr: descAr,
+      descriptionEn: descEn,
       city: json['city'] as String?,
       coverImageUrl:
           (media != null && media.isNotEmpty) ? media.first['url'] as String? : null,
     );
+  }
+
+  /// Returns `(ar, en)` from a translatable field that is either:
+  ///   • `Map<String, dynamic>` → `{"ar": "...", "en": "..."}`
+  ///   • `String` → already flattened by the locale interceptor (both slots)
+  ///   • `null` → `(null, null)`
+  static (String?, String?) _parseTranslatable(Object? raw) {
+    if (raw is Map<String, dynamic>) {
+      return (raw['ar'] as String?, raw['en'] as String?);
+    }
+    if (raw is String) return (raw, raw);
+    return (null, null);
   }
 }
 

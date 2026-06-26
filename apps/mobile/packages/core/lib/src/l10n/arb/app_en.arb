@@ -111,6 +111,7 @@
   "viewDetails": "View details",
 
   "projectsTitle": "Projects",
+  "projectsSubtitle": "Browse projects and available units",
   "projectsSearchHint": "Search projects",
   "unitsSearchHint": "Search by code, type, project…",
   "unitsTitle": "Units",

@@ -309,7 +309,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get projectsTitle => 'المشاريع';
 
   @override
-  String get projectsSearchHint => 'ابحث عن مشاريع';
+  String get projectsSubtitle => 'استعرض المشاريع والوحدات المتاحة';
+
+  @override
+  String get projectsSearchHint => 'ابحث عن مشروع';
 
   @override
   String get unitsSearchHint => 'ابحث بالرمز أو النوع أو المشروع…';

@@ -680,6 +680,12 @@ abstract class AppLocalizations {
   /// **'Projects'**
   String get projectsTitle;
 
+  /// No description provided for @projectsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse projects and available units'**
+  String get projectsSubtitle;
+
   /// No description provided for @projectsSearchHint.
   ///
   /// In en, this message translates to:

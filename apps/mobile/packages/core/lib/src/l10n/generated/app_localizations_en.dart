@@ -312,6 +312,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectsTitle => 'Projects';
 
   @override
+  String get projectsSubtitle => 'Browse projects and available units';
+
+  @override
   String get projectsSearchHint => 'Search projects';
 
   @override

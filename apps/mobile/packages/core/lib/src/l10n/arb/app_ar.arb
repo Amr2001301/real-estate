@@ -108,7 +108,8 @@
   "viewDetails": "عرض التفاصيل",
 
   "projectsTitle": "المشاريع",
-  "projectsSearchHint": "ابحث عن مشاريع",
+  "projectsSubtitle": "استعرض المشاريع والوحدات المتاحة",
+  "projectsSearchHint": "ابحث عن مشروع",
   "unitsSearchHint": "ابحث بالرمز أو النوع أو المشروع…",
   "unitsTitle": "الوحدات",
   "filtersTitle": "التصفية",
