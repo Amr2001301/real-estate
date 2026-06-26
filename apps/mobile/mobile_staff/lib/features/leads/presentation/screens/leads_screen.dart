@@ -1,5 +1,6 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,7 +9,12 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/leads_cubit.dart';
 
-/// Leads list with search, stage filter chips, and a "my leads" toggle.
+// Navy palette — same constants as AppNavHeader / _DashboardHeader.
+const _navyDeep = Color(0xFF0B1726);
+const _navyMid = Color(0xFF14273F);
+const _navyLight = Color(0xFF243F62);
+
+/// Leads list with search, stage filter pills, and a "my leads" toggle.
 class LeadsScreen extends StatefulWidget {
   const LeadsScreen({super.key});
 
@@ -40,32 +46,42 @@ class _LeadsScreenState extends State<LeadsScreen> {
     return Scaffold(
       body: Column(
         children: [
-          // Premium header — "my leads" toggle is a glass action button
+          // ── Header: title+subtitle on the RIGHT, toggle on the LEFT (RTL) ──
+          // Uses a single Row so the action is visually anchored to the title
+          // block. AppNavHeader's separate actions-row disconnects them in RTL.
           BlocBuilder<LeadsCubit, LeadsListState>(
             buildWhen: (a, b) => a.mine != b.mine,
-            builder: (context, state) => AppNavHeader(
-              title: l10n.navLeads,
-              subtitle: l10n.leadsSubtitle,
-              actions: [
-                NavHeaderAction(
-                  icon: state.mine
-                      ? Icons.person_rounded
-                      : Icons.person_outline_rounded,
-                  tooltip: l10n.leadsMine,
-                  onTap: cubit.toggleMine,
-                ),
-              ],
+            builder: (context, state) => _LeadsHeader(
+              l10n: l10n,
+              mineActive: state.mine,
+              onToggleMine: cubit.toggleMine,
             ),
           ),
-          // Search
+          // ── Search ──────────────────────────────────────────────────────────
           _SearchBar(
             controller: _search,
             hint: l10n.leadsSearchHint,
             onSubmitted: cubit.setSearch,
           ),
-          // Stage filter chips — RTL-safe horizontal scroll via Row
-          _StageFilter(),
-          // List
+          // ── Stage filter pills ───────────────────────────────────────────────
+          BlocBuilder<LeadsCubit, LeadsListState>(
+            buildWhen: (a, b) => a.stage != b.stage,
+            builder: (context, state) => AppFilterPills<String>(
+              allLabel: l10n.leadsFilterAll,
+              selected: state.stage,
+              onSelected: cubit.setStage,
+              options: kLeadStages
+                  .map(
+                    (s) => FilterPillOption(
+                      value: s,
+                      label: leadStageLabel(l10n, s),
+                      tone: leadStageTone(s),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          // ── List ─────────────────────────────────────────────────────────────
           Expanded(
             child: BlocBuilder<LeadsCubit, LeadsListState>(
               builder: (context, state) {
@@ -111,115 +127,133 @@ class _LeadsScreenState extends State<LeadsScreen> {
   }
 }
 
-// ── Stage filter chips ────────────────────────────────────────────────────────
-// Uses SingleChildScrollView > Row so RTL layout is correct:
-// in RTL, Row renders first child at the RIGHT, which is the "الكل" chip —
-// exactly where the leading filter should appear.
-class _StageFilter extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<LeadsCubit>();
-    final colors = context.appColors;
-
-    return BlocBuilder<LeadsCubit, LeadsListState>(
-      buildWhen: (a, b) => a.stage != b.stage,
-      builder: (context, state) {
-        return SizedBox(
-          height: 46,
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            // DirectionalityAware padding so leading edge has full indent
-            padding: const EdgeInsetsDirectional.fromSTEB(
-              AppSpacing.md,
-              4,
-              AppSpacing.md,
-              4,
-            ),
-            child: Row(
-              children: [
-                _FilterChip(
-                  label: l10n.leadsFilterAll,
-                  selected: state.stage == null,
-                  colors: colors,
-                  onTap: () => cubit.setStage(null),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                for (final stage in kLeadStages) ...[
-                  _FilterChip(
-                    label: leadStageLabel(l10n, stage),
-                    selected: state.stage == stage,
-                    colors: colors,
-                    onTap: () => cubit.setStage(stage),
-                    tone: leadStageTone(stage),
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                ],
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.colors,
-    required this.onTap,
-    this.tone,
+// ── Custom leads header ───────────────────────────────────────────────────────
+// Single-Row layout: [Expanded(title+subtitle), toggle] so the action is
+// always visually aligned with the title block.
+// In RTL: title block on the RIGHT, toggle button on the LEFT.
+class _LeadsHeader extends StatelessWidget {
+  const _LeadsHeader({
+    required this.l10n,
+    required this.mineActive,
+    required this.onToggleMine,
   });
-  final String label;
-  final bool selected;
-  final AppColorsExt colors;
-  final VoidCallback onTap;
-  final BadgeTone? tone;
 
-  Color get _selectedBg => switch (tone) {
-    BadgeTone.gold => colors.brandGold,
-    BadgeTone.success => colors.success,
-    BadgeTone.warning => colors.warning,
-    BadgeTone.error => colors.error,
-    BadgeTone.info => colors.info,
-    _ => colors.brandGold,
-  };
+  final AppLocalizations l10n;
+  final bool mineActive;
+  final VoidCallback onToggleMine;
 
   @override
   Widget build(BuildContext context) {
-    final bg = selected ? _selectedBg : colors.surface;
-    final fg = selected ? Colors.white : colors.inkStrong;
-    final border = selected ? _selectedBg : colors.hairline;
+    final topPad = MediaQuery.of(context).padding.top;
+    final theme = Theme.of(context);
 
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border.all(color: border),
-          borderRadius: BorderRadius.circular(AppRadii.pill),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: _selectedBg.withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: fg,
-            height: 1.2,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_navyLight, _navyMid, _navyDeep],
+            stops: [0.0, 0.45, 1.0],
           ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(AppRadii.xl + 4),
+            bottomRight: Radius.circular(AppRadii.xl + 4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x33000000),
+              blurRadius: 22,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Gold radial bloom — trailing corner
+            PositionedDirectional(
+              top: 0,
+              end: -30,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [Color(0x1EC8A24B), Color(0x00C8A24B)],
+                  ),
+                ),
+              ),
+            ),
+            // Gold shimmer hairline at bottom edge
+            Positioned(
+              bottom: 0,
+              left: 40,
+              right: 40,
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      AppPalette.gold400.withValues(alpha: 0.50),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            // Content: title + toggle in ONE row (no separate actions row)
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                topPad + AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.sm,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Title + subtitle — in RTL this Expanded sits on the RIGHT.
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          l10n.navLeads,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          l10n.leadsSubtitle,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.65),
+                            fontSize: 13,
+                            height: 1.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  // "My leads" toggle — in RTL this sits on the LEFT side.
+                  NavHeaderAction(
+                    icon: mineActive
+                        ? Icons.person_rounded
+                        : Icons.person_outline_rounded,
+                    tooltip: l10n.leadsMine,
+                    onTap: onToggleMine,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -227,18 +261,11 @@ class _FilterChip extends StatelessWidget {
 }
 
 // ── Lead card ─────────────────────────────────────────────────────────────────
+// Date is intentionally excluded from the list view — it clutters the card.
+// It remains on the Lead domain entity and is shown on the detail screen.
 class _LeadTile extends StatelessWidget {
   const _LeadTile({required this.lead});
   final Lead lead;
-
-  static String _shortDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt).inDays;
-    if (diff == 0) return 'اليوم';
-    if (diff == 1) return 'أمس';
-    if (diff < 7) return '$diff أيام';
-    return '${dt.day}/${dt.month}/${dt.year}';
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -272,7 +299,7 @@ class _LeadTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          // Name + project + date
+          // Name + project interest
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -287,7 +314,7 @@ class _LeadTile extends StatelessWidget {
                   ),
                 ),
                 if (lead.projectInterest != null) ...[
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
                   Row(
                     children: [
                       Icon(
@@ -309,17 +336,6 @@ class _LeadTile extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                ],
-                if (lead.createdAt != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    _shortDate(lead.createdAt!),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.inkMuted,
-                      height: 1.3,
-                    ),
                   ),
                 ],
               ],
@@ -352,7 +368,7 @@ class _LeadTile extends StatelessWidget {
   }
 }
 
-// ── Shared search bar ─────────────────────────────────────────────────────────
+// ── Search bar ────────────────────────────────────────────────────────────────
 class _SearchBar extends StatelessWidget {
   const _SearchBar({
     required this.controller,
@@ -411,7 +427,7 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-// ── Tiny icon action ──────────────────────────────────────────────────────────
+// ── Tiny circular action icon ─────────────────────────────────────────────────
 class _ActionIcon extends StatelessWidget {
   const _ActionIcon({
     required this.icon,

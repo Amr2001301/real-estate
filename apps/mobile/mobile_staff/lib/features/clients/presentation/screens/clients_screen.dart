@@ -40,6 +40,8 @@ class _ClientsScreenState extends State<ClientsScreen> {
     return Scaffold(
       body: Column(
         children: [
+          // Clients has no action in the header — AppNavHeader works correctly
+          // here (no separate actions row is rendered when actions is empty).
           AppNavHeader(
             title: l10n.navClients,
             subtitle: l10n.clientsSubtitle,
@@ -95,6 +97,11 @@ class _ClientsScreenState extends State<ClientsScreen> {
 }
 
 // ── Client card ───────────────────────────────────────────────────────────────
+// Layout:
+//   Row 1: [avatar] [name + phone?] [stage badge]
+//   Row 2:          [opportunity count]    [call button if phone]
+// This separates identity/status (row 1) from metadata/actions (row 2) and
+// avoids stacking the call button below the badge in a disconnected column.
 class _ClientTile extends StatelessWidget {
   const _ClientTile({required this.client});
   final StaffClient client;
@@ -109,84 +116,88 @@ class _ClientTile extends StatelessWidget {
     return AppCard(
       padding: const EdgeInsets.all(AppSpacing.md),
       onTap: () => context.push('/clients/${client.clientId}', extra: client),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: colors.brandGoldSoft,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              initials,
-              style: TextStyle(
-                color: colors.brandGold,
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          // Name + phone + opportunity count
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  client.fullName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: colors.inkStrong,
-                    height: 1.25,
-                  ),
-                ),
-                if (client.phone != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    client.phone!,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colors.inkMuted,
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 5),
-                Text(
-                  l10n.salesOpportunityCount(client.leadCount),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colors.inkMuted,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          // Stage badge + optional call icon
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
+          // ── Row 1: avatar + name + stage badge ──────────────────────────────
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Avatar
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: colors.brandGoldSoft,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  initials,
+                  style: TextStyle(
+                    color: colors.brandGold,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              // Name (+ optional phone)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      client.fullName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: colors.inkStrong,
+                        height: 1.25,
+                      ),
+                    ),
+                    if (client.phone != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        client.phone!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colors.inkMuted,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              // Stage badge
               StatusBadge(
                 label: leadStageLabel(l10n, client.latestStage),
                 tone: leadStageTone(client.latestStage),
               ),
-              if (client.phone != null) ...[
-                const SizedBox(height: AppSpacing.xs),
+            ],
+          ),
+          // ── Row 2: opportunity count + call button ───────────────────────────
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                l10n.salesOpportunityCount(client.leadCount),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: colors.inkMuted,
+                  height: 1.3,
+                ),
+              ),
+              const Spacer(),
+              if (client.phone != null)
                 _ActionIcon(
                   icon: Icons.call_rounded,
                   tooltip: l10n.callClient,
                   color: colors.success,
                   onTap: () => ContactActions.call(client.phone!),
                 ),
-              ],
             ],
           ),
         ],
@@ -195,9 +206,7 @@ class _ClientTile extends StatelessWidget {
   }
 }
 
-// ── Leads screen ─────────────────────────────────────────────────────────────
-
-// ── Shared search bar ─────────────────────────────────────────────────────────
+// ── Search bar ────────────────────────────────────────────────────────────────
 class _SearchBar extends StatelessWidget {
   const _SearchBar({
     required this.controller,
@@ -226,7 +235,11 @@ class _SearchBar extends StatelessWidget {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: TextStyle(fontSize: 15, color: colors.inkMuted),
-          prefixIcon: Icon(Icons.search_rounded, size: 20, color: colors.inkMuted),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            size: 20,
+            color: colors.inkMuted,
+          ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
             vertical: 12,
@@ -252,7 +265,7 @@ class _SearchBar extends StatelessWidget {
   }
 }
 
-// ── Tiny icon action ──────────────────────────────────────────────────────────
+// ── Tiny circular action icon ─────────────────────────────────────────────────
 class _ActionIcon extends StatelessWidget {
   const _ActionIcon({
     required this.icon,

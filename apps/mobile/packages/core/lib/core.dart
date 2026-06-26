@@ -88,6 +88,7 @@ export 'src/widgets/adaptive_icon_button.dart';
 export 'src/widgets/app_bottom_nav.dart';
 export 'src/widgets/app_button.dart';
 export 'src/widgets/app_card.dart';
+export 'src/widgets/app_filter_pills.dart';
 export 'src/widgets/app_network_image.dart';
 export 'src/widgets/app_skeleton.dart';
 export 'src/widgets/app_text_field.dart';
