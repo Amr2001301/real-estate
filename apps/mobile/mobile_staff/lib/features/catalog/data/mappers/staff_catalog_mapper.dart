@@ -10,6 +10,7 @@ extension StaffProjectDtoMapper on StaffProjectDto {
         status: status,
         city: city,
         coverImageUrl: coverImageUrl,
+        mediaUrls: mediaUrls,
         availableUnitsCount: availableUnitsCount,
         totalUnitsCount: totalUnitsCount,
         soldUnitsCount: soldUnitsCount,
@@ -32,5 +33,15 @@ extension StaffUnitDtoMapper on StaffUnitDto {
         price: price,
         area: area,
         bedrooms: bedrooms,
+        bathrooms: bathrooms,
+        floor: floor,
+        coverImage: coverImage,
+        mediaUrls: mediaUrls,
+        projectId: projectId,
+        projectName: (projectNameAr != null || projectNameEn != null)
+            ? Translatable(ar: projectNameAr ?? '', en: projectNameEn ?? '')
+            : null,
+        projectCity: projectCity,
+        projectCoverImageUrl: projectCoverImageUrl,
       );
 }

@@ -146,7 +146,20 @@ export class UnitsService {
       where: { id },
       include: {
         media: { orderBy: { order: 'asc' } },
-        building: { include: { phase: { include: { project: true } } } },
+        building: {
+          include: {
+            phase: {
+              include: {
+                project: {
+                  include: {
+                    // First project image for use as hero fallback on unit detail.
+                    media: { orderBy: { order: 'asc' }, take: 1 },
+                  },
+                },
+              },
+            },
+          },
+        },
         // History carries actor + reason and is admin-only; skip for public.
         ...(publicOnly ? {} : { history: { orderBy: { changedAt: 'desc' }, take: 10 } }),
       },

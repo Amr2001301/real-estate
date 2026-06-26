@@ -2852,6 +2852,48 @@ abstract class AppLocalizations {
   /// **'Sold'**
   String get unitStatusSold;
 
+  /// No description provided for @showMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get showMore;
+
+  /// No description provided for @showLess.
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get showLess;
+
+  /// No description provided for @viewUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'View unit'**
+  String get viewUnit;
+
+  /// No description provided for @unitFloor.
+  ///
+  /// In en, this message translates to:
+  /// **'Floor'**
+  String get unitFloor;
+
+  /// No description provided for @unitBathrooms.
+  ///
+  /// In en, this message translates to:
+  /// **'Bathrooms'**
+  String get unitBathrooms;
+
+  /// No description provided for @unitDetails.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit details'**
+  String get unitDetails;
+
+  /// No description provided for @pricePerMeter.
+  ///
+  /// In en, this message translates to:
+  /// **'Price per m²'**
+  String get pricePerMeter;
+
   /// No description provided for @navVisits.
   ///
   /// In en, this message translates to:

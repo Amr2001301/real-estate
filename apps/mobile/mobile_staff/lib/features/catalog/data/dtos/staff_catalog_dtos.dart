@@ -10,6 +10,7 @@ class StaffProjectDto {
     this.descriptionEn,
     this.city,
     this.coverImageUrl,
+    this.mediaUrls = const [],
     this.availableUnitsCount,
     this.totalUnitsCount,
     this.soldUnitsCount,
@@ -25,20 +26,24 @@ class StaffProjectDto {
   final String? descriptionEn;
   final String? city;
   final String? coverImageUrl;
+  /// All media URLs from the project's media array (ordered by `order`).
+  final List<String> mediaUrls;
   final int? availableUnitsCount;
   final int? totalUnitsCount;
   final int? soldUnitsCount;
-  // Decimal from the backend arrives as a JSON number; keep as double.
   final double? startingPrice;
   final List<String> unitTypes;
 
   factory StaffProjectDto.fromJson(Map<String, dynamic> json) {
-    // The backend LocaleInterceptor may flatten {ar, en} → String when
-    // Accept-Language is set. Handle both Map and String defensively.
     final (nameAr, nameEn) = _parseTranslatable(json['name']);
     final (descAr, descEn) = _parseTranslatable(json['description']);
     final media =
         (json['media'] as List?)?.whereType<Map<String, dynamic>>().toList();
+    final urls = media
+            ?.map((m) => m['url'] as String? ?? '')
+            .where((u) => u.isNotEmpty)
+            .toList() ??
+        const <String>[];
     return StaffProjectDto(
       id: json['id'] as String,
       status: json['status'] as String? ?? 'DRAFT',
@@ -47,12 +52,9 @@ class StaffProjectDto {
       descriptionAr: descAr,
       descriptionEn: descEn,
       city: json['city'] as String?,
-      // Backend now returns a flat `coverImageUrl` field; fall back to
-      // reading media[0].url for backward compatibility.
       coverImageUrl: json['coverImageUrl'] as String? ??
-          (media != null && media.isNotEmpty
-              ? media.first['url'] as String?
-              : null),
+          (urls.isNotEmpty ? urls.first : null),
+      mediaUrls: urls,
       availableUnitsCount: (json['availableUnitsCount'] as num?)?.toInt(),
       totalUnitsCount: (json['totalUnitsCount'] as num?)?.toInt(),
       soldUnitsCount: (json['soldUnitsCount'] as num?)?.toInt(),
@@ -62,10 +64,6 @@ class StaffProjectDto {
     );
   }
 
-  /// Returns `(ar, en)` from a translatable field that is either:
-  ///   • `Map<String, dynamic>` → `{"ar": "...", "en": "..."}`
-  ///   • `String` → already flattened by the locale interceptor (both slots)
-  ///   • `null` → `(null, null)`
   static (String?, String?) _parseTranslatable(Object? raw) {
     if (raw is Map<String, dynamic>) {
       return (raw['ar'] as String?, raw['en'] as String?);
@@ -84,6 +82,15 @@ class StaffUnitDto {
     this.price,
     this.area,
     this.bedrooms,
+    this.bathrooms,
+    this.floor,
+    this.coverImage,
+    this.mediaUrls = const [],
+    this.projectId,
+    this.projectNameAr,
+    this.projectNameEn,
+    this.projectCity,
+    this.projectCoverImageUrl,
   });
 
   final String id;
@@ -93,14 +100,69 @@ class StaffUnitDto {
   final String? price;
   final String? area;
   final int? bedrooms;
+  final int? bathrooms;
+  final int? floor;
+  final String? coverImage;
+  final List<String> mediaUrls;
+  final String? projectId;
+  final String? projectNameAr;
+  final String? projectNameEn;
+  final String? projectCity;
+  final String? projectCoverImageUrl;
 
-  factory StaffUnitDto.fromJson(Map<String, dynamic> json) => StaffUnitDto(
-        id: json['id'] as String,
-        code: json['code'] as String? ?? '',
-        status: json['status'] as String? ?? 'AVAILABLE',
-        type: json['type'] as String?,
-        price: json['price']?.toString(),
-        area: json['area']?.toString(),
-        bedrooms: (json['bedrooms'] as num?)?.toInt(),
-      );
+  factory StaffUnitDto.fromJson(Map<String, dynamic> json) {
+    final media = (json['media'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        const [];
+    final mediaUrls = media
+        .map((m) => m['url'] as String? ?? '')
+        .where((u) => u.isNotEmpty)
+        .toList();
+
+    // Navigate raw Prisma nesting: building → phase → project
+    final building = json['building'] as Map<String, dynamic>?;
+    final phase = building?['phase'] as Map<String, dynamic>?;
+    final project = phase?['project'] as Map<String, dynamic>?;
+
+    final (projNameAr, projNameEn) =
+        project != null ? _parseTranslatable(project['name']) : (null, null);
+
+    // Project cover image comes from the first project media entry (added via
+    // enhanced findOne include). Falls back to null if not included (list path).
+    final projectMedia = (project?['media'] as List?)
+            ?.whereType<Map<String, dynamic>>()
+            .toList() ??
+        const [];
+    final projectCoverImageUrl = projectMedia.isNotEmpty
+        ? projectMedia.first['url'] as String?
+        : null;
+
+    return StaffUnitDto(
+      id: json['id'] as String,
+      code: json['code'] as String? ?? '',
+      status: json['status'] as String? ?? 'AVAILABLE',
+      type: json['type'] as String?,
+      price: json['price']?.toString(),
+      area: json['area']?.toString(),
+      bedrooms: (json['bedrooms'] as num?)?.toInt(),
+      bathrooms: (json['bathrooms'] as num?)?.toInt(),
+      floor: (json['floor'] as num?)?.toInt(),
+      coverImage: mediaUrls.isNotEmpty ? mediaUrls.first : null,
+      mediaUrls: mediaUrls,
+      projectId: project?['id'] as String?,
+      projectNameAr: projNameAr,
+      projectNameEn: projNameEn,
+      projectCity: project?['city'] as String?,
+      projectCoverImageUrl: projectCoverImageUrl,
+    );
+  }
+
+  static (String?, String?) _parseTranslatable(Object? raw) {
+    if (raw is Map<String, dynamic>) {
+      return (raw['ar'] as String?, raw['en'] as String?);
+    }
+    if (raw is String) return (raw, raw);
+    return (null, null);
+  }
 }

@@ -1502,6 +1502,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unitStatusSold => 'Sold';
 
   @override
+  String get showMore => 'Show more';
+
+  @override
+  String get showLess => 'Show less';
+
+  @override
+  String get viewUnit => 'View unit';
+
+  @override
+  String get unitFloor => 'Floor';
+
+  @override
+  String get unitBathrooms => 'Bathrooms';
+
+  @override
+  String get unitDetails => 'Unit details';
+
+  @override
+  String get pricePerMeter => 'Price per m²';
+
+  @override
   String get navVisits => 'Visits';
 
   @override

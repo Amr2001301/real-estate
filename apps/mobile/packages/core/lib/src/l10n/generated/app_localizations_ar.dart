@@ -1486,6 +1486,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get unitStatusSold => 'مباعة';
 
   @override
+  String get showMore => 'عرض المزيد';
+
+  @override
+  String get showLess => 'عرض أقل';
+
+  @override
+  String get viewUnit => 'عرض الوحدة';
+
+  @override
+  String get unitFloor => 'الطابق';
+
+  @override
+  String get unitBathrooms => 'الحمامات';
+
+  @override
+  String get unitDetails => 'تفاصيل الوحدة';
+
+  @override
+  String get pricePerMeter => 'السعر للمتر';
+
+  @override
   String get navVisits => 'الزيارات';
 
   @override

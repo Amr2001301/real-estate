@@ -527,6 +527,13 @@
   "unitStatusAvailable": "متاحة",
   "unitStatusReserved": "محجوزة",
   "unitStatusSold": "مباعة",
+  "showMore": "عرض المزيد",
+  "showLess": "عرض أقل",
+  "viewUnit": "عرض الوحدة",
+  "unitFloor": "الطابق",
+  "unitBathrooms": "الحمامات",
+  "unitDetails": "تفاصيل الوحدة",
+  "pricePerMeter": "السعر للمتر",
 
   "navVisits": "الزيارات",
   "navReservations": "الحجوزات",

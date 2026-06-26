@@ -412,7 +412,7 @@ class _MetricCell extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Unit type chips row
+// Unit types — inline text row, no pills (Wrap has RTL float issues with few items)
 // ═══════════════════════════════════════════════════════════════════════════════
 class _UnitTypeRow extends StatelessWidget {
   const _UnitTypeRow({required this.types});
@@ -420,30 +420,32 @@ class _UnitTypeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final colors = context.appColors;
-    return Wrap(
-      spacing: 6,
-      runSpacing: 6,
-      children: types.take(5).map((t) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-          decoration: BoxDecoration(
-            color: colors.brandGoldSoft,
-            borderRadius: BorderRadius.circular(AppRadii.pill),
-            border: Border.all(
-              color: colors.brandGold.withValues(alpha: 0.35),
-            ),
+    return Row(
+      children: [
+        Icon(Icons.category_outlined, size: 14, color: colors.brandGold),
+        const SizedBox(width: 5),
+        Text(
+          '${l10n.projectUnitTypes}: ',
+          style: TextStyle(
+            fontSize: 12,
+            color: colors.inkMuted,
+            fontWeight: FontWeight.w500,
           ),
+        ),
+        Expanded(
           child: Text(
-            t,
+            types.take(5).join(' • '),
             style: TextStyle(
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: colors.brandGold,
+              color: colors.ink,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
-        );
-      }).toList(),
+        ),
+      ],
     );
   }
 }

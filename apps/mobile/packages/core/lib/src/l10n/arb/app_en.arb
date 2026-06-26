@@ -530,6 +530,13 @@
   "unitStatusAvailable": "Available",
   "unitStatusReserved": "Reserved",
   "unitStatusSold": "Sold",
+  "showMore": "Show more",
+  "showLess": "Show less",
+  "viewUnit": "View unit",
+  "unitFloor": "Floor",
+  "unitBathrooms": "Bathrooms",
+  "unitDetails": "Unit details",
+  "pricePerMeter": "Price per m²",
 
   "navVisits": "Visits",
   "navReservations": "Reservations",
