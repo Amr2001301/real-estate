@@ -9,6 +9,17 @@ import type { Project, ProjectMedia } from '@prisma/client';
 
 type MediaLike = Pick<ProjectMedia, 'url' | 'type' | 'order'>;
 
+/** Aggregated unit statistics computed by ProjectsService for staff list. */
+export interface StaffProjectSummary {
+  totalUnitsCount: number;
+  availableUnitsCount: number;
+  soldUnitsCount: number;
+  /** Min price (as JS number) of all AVAILABLE units, or null if no units. */
+  startingPrice: number | null;
+  /** Distinct unit type strings across all units in the project. */
+  unitTypes: Set<string>;
+}
+
 interface ProjectListInput extends Pick<
   Project,
   'id' | 'name' | 'description' | 'city' | 'lat' | 'lng' | 'services' | 'featured' | 'status'
@@ -41,6 +52,35 @@ export function serializePublicProjectListItem(
     status: project.status,
     coverImage: media[0]?.url ?? null,
     availableUnitsCount,
+  };
+}
+
+/**
+ * Staff list shape: richer than the public shape (includes unit aggregates and
+ * all statuses), but still whitelisted — no leads, brokerCommissions, etc.
+ *
+ * Fields deliberately omitted (not in schema):
+ *   • currency       — no column exists
+ *   • deliveryDate   — no column on Project or Phase
+ *   • address        — exists on Unit, not on Project
+ */
+export function serializeStaffProjectListItem(
+  project: ProjectListInput,
+  summary?: StaffProjectSummary,
+) {
+  const media = serializeMedia(project.media);
+  return {
+    id: project.id,
+    name: project.name,
+    city: project.city,
+    status: project.status,
+    media,
+    coverImageUrl: media[0]?.url ?? null,
+    availableUnitsCount: summary?.availableUnitsCount ?? null,
+    totalUnitsCount: summary?.totalUnitsCount ?? null,
+    soldUnitsCount: summary?.soldUnitsCount ?? null,
+    startingPrice: summary?.startingPrice ?? null,
+    unitTypes: summary ? [...summary.unitTypes] : [],
   };
 }
 

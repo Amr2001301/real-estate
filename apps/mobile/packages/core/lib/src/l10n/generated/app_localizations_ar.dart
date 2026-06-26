@@ -1444,6 +1444,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get projectStatusArchived => 'مؤرشف';
 
   @override
+  String get projectAvailableLabel => 'متاح';
+
+  @override
+  String get projectTotalLabel => 'الإجمالي';
+
+  @override
+  String get projectSoldLabel => 'مباع';
+
+  @override
+  String get projectStartingFrom => 'يبدأ من';
+
+  @override
+  String get priceOnRequest => 'السعر عند الطلب';
+
+  @override
+  String get projectUnitTypes => 'الأنواع';
+
+  @override
   String get unitsEmptyMessage => 'لا توجد وحدات في هذا المشروع بعد.';
 
   @override

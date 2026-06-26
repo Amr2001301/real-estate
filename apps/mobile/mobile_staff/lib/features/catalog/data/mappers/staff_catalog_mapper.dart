@@ -10,6 +10,11 @@ extension StaffProjectDtoMapper on StaffProjectDto {
         status: status,
         city: city,
         coverImageUrl: coverImageUrl,
+        availableUnitsCount: availableUnitsCount,
+        totalUnitsCount: totalUnitsCount,
+        soldUnitsCount: soldUnitsCount,
+        startingPrice: startingPrice,
+        unitTypes: unitTypes,
       );
 
   Translatable? get descriptionTranslatable =>

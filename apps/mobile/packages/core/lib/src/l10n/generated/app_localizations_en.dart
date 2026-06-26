@@ -1460,6 +1460,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get projectStatusArchived => 'Archived';
 
   @override
+  String get projectAvailableLabel => 'Available';
+
+  @override
+  String get projectTotalLabel => 'Total';
+
+  @override
+  String get projectSoldLabel => 'Sold';
+
+  @override
+  String get projectStartingFrom => 'From';
+
+  @override
+  String get priceOnRequest => 'Price on request';
+
+  @override
+  String get projectUnitTypes => 'Types';
+
+  @override
   String get unitsEmptyMessage => 'No units in this project yet.';
 
   @override

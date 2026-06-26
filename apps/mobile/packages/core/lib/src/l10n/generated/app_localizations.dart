@@ -2768,6 +2768,42 @@ abstract class AppLocalizations {
   /// **'Archived'**
   String get projectStatusArchived;
 
+  /// No description provided for @projectAvailableLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Available'**
+  String get projectAvailableLabel;
+
+  /// No description provided for @projectTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Total'**
+  String get projectTotalLabel;
+
+  /// No description provided for @projectSoldLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Sold'**
+  String get projectSoldLabel;
+
+  /// No description provided for @projectStartingFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get projectStartingFrom;
+
+  /// No description provided for @priceOnRequest.
+  ///
+  /// In en, this message translates to:
+  /// **'Price on request'**
+  String get priceOnRequest;
+
+  /// No description provided for @projectUnitTypes.
+  ///
+  /// In en, this message translates to:
+  /// **'Types'**
+  String get projectUnitTypes;
+
   /// No description provided for @unitsEmptyMessage.
   ///
   /// In en, this message translates to:

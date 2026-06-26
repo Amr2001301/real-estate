@@ -6,6 +6,8 @@ import { paginate, takeSkip } from '../../common/utils/pagination';
 import {
   serializePublicProjectDetail,
   serializePublicProjectListItem,
+  serializeStaffProjectListItem,
+  type StaffProjectSummary,
 } from './public-project.serializer';
 
 @Injectable()
@@ -77,7 +79,62 @@ export class ProjectsService {
       return paginate(serialized, total, { page, pageSize });
     }
 
-    return paginate(data, total, { page, pageSize });
+    // Staff path: enrich with unit aggregates in a single extra query.
+    const summaries = await this.staffProjectSummaries(data.map((p) => p.id));
+    const serialized = data.map((p) =>
+      serializeStaffProjectListItem(p, summaries.get(p.id)),
+    );
+    return paginate(serialized, total, { page, pageSize });
+  }
+
+  /**
+   * Compute rich unit stats per project for the staff list in a single query.
+   * Uses the same building→phase→projectId walk as availableUnitCounts.
+   * Returns an empty map for an empty input (no query issued).
+   */
+  private async staffProjectSummaries(
+    projectIds: string[],
+  ): Promise<Map<string, StaffProjectSummary>> {
+    const summaries = new Map<string, StaffProjectSummary>();
+    if (projectIds.length === 0) return summaries;
+
+    const units = await this.prisma.unit.findMany({
+      where: { building: { phase: { projectId: { in: projectIds } } } },
+      select: {
+        status: true,
+        price: true,
+        type: true,
+        building: { select: { phase: { select: { projectId: true } } } },
+      },
+    });
+
+    for (const u of units) {
+      const pid = u.building.phase.projectId;
+      if (!summaries.has(pid)) {
+        summaries.set(pid, {
+          totalUnitsCount: 0,
+          availableUnitsCount: 0,
+          soldUnitsCount: 0,
+          startingPrice: null,
+          unitTypes: new Set(),
+        });
+      }
+      const s = summaries.get(pid)!;
+      s.totalUnitsCount++;
+      if (u.type) s.unitTypes.add(u.type);
+
+      if (u.status === 'AVAILABLE') {
+        s.availableUnitsCount++;
+        const p = Number(u.price);
+        if (!isNaN(p) && (s.startingPrice === null || p < s.startingPrice)) {
+          s.startingPrice = p;
+        }
+      } else if (u.status === 'SOLD') {
+        s.soldUnitsCount++;
+      }
+    }
+
+    return summaries;
   }
 
   /**

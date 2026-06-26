@@ -10,6 +10,11 @@ class StaffProjectDto {
     this.descriptionEn,
     this.city,
     this.coverImageUrl,
+    this.availableUnitsCount,
+    this.totalUnitsCount,
+    this.soldUnitsCount,
+    this.startingPrice,
+    this.unitTypes = const [],
   });
 
   final String id;
@@ -20,6 +25,12 @@ class StaffProjectDto {
   final String? descriptionEn;
   final String? city;
   final String? coverImageUrl;
+  final int? availableUnitsCount;
+  final int? totalUnitsCount;
+  final int? soldUnitsCount;
+  // Decimal from the backend arrives as a JSON number; keep as double.
+  final double? startingPrice;
+  final List<String> unitTypes;
 
   factory StaffProjectDto.fromJson(Map<String, dynamic> json) {
     // The backend LocaleInterceptor may flatten {ar, en} → String when
@@ -36,8 +47,18 @@ class StaffProjectDto {
       descriptionAr: descAr,
       descriptionEn: descEn,
       city: json['city'] as String?,
-      coverImageUrl:
-          (media != null && media.isNotEmpty) ? media.first['url'] as String? : null,
+      // Backend now returns a flat `coverImageUrl` field; fall back to
+      // reading media[0].url for backward compatibility.
+      coverImageUrl: json['coverImageUrl'] as String? ??
+          (media != null && media.isNotEmpty
+              ? media.first['url'] as String?
+              : null),
+      availableUnitsCount: (json['availableUnitsCount'] as num?)?.toInt(),
+      totalUnitsCount: (json['totalUnitsCount'] as num?)?.toInt(),
+      soldUnitsCount: (json['soldUnitsCount'] as num?)?.toInt(),
+      startingPrice: (json['startingPrice'] as num?)?.toDouble(),
+      unitTypes: (json['unitTypes'] as List?)?.whereType<String>().toList() ??
+          const [],
     );
   }
 
