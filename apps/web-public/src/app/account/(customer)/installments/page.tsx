@@ -12,8 +12,8 @@ import type { MeInstallment, MeInstallmentsResponse } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
+import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
-import { AccountCard, type AccountCardAccent } from '@/components/account/AccountCard';
 import { UnitFilter, type UnitOption } from '@/components/account/UnitFilter';
 import { cn } from '@/lib/cn';
 
@@ -30,13 +30,12 @@ const STATUS_LABELS: Record<MeInstallment['status'], { label: string; tone: 'suc
 };
 
 const STATUS_TONE_CLS: Record<'success' | 'accent' | 'muted' | 'error', string> = {
-  success: 'bg-success/10 text-success ring-1 ring-success/20',
+  success: 'bg-success/10 text-success',
   accent: 'bg-gold-100 text-gold-600 ring-1 ring-gold-200/70',
   muted: 'bg-surface-soft text-ink-muted',
   error: 'bg-error/10 text-error ring-1 ring-error/20',
 };
 
-// Allowed list filters → backend Installment.status (omitted for "all").
 const FILTERS = [
   { key: 'all', label: 'الكل', status: undefined },
   { key: 'PAID', label: 'مدفوع', status: 'PAID' as const },
@@ -59,10 +58,27 @@ function formatDate(iso: string | null): string {
   }
 }
 
+function fmtMonthYear(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Intl.DateTimeFormat('ar', { month: 'long', year: 'numeric' }).format(new Date(iso));
+  } catch {
+    return '—';
+  }
+}
+
 function statusIcon(status: MeInstallment['status']) {
   if (status === 'PAID') return CheckCircle2;
   if (status === 'OVERDUE') return AlertCircle;
-  return Clock;
+  return CalendarClock;
+}
+
+const AMT_FMT = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
+function fmtAmt(s: string | null | undefined): string {
+  if (!s) return '—';
+  const n = Number(s);
+  if (!Number.isFinite(n)) return '—';
+  return AMT_FMT.format(Math.round(n));
 }
 
 export default async function AccountInstallmentsPage({ searchParams }: { searchParams: SearchParams }) {
@@ -82,7 +98,10 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <Header />
+        <AccountPageHeader
+          title="جدول الأقساط"
+          description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع."
+        />
         <ErrorState
           title="تعذّر تحميل الأقساط حاليًا"
           message="يرجى المحاولة مرة أخرى بعد لحظات."
@@ -97,7 +116,6 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
   const contracts = summary?.contracts ?? [];
   const activeFilterKey = activeStatus ?? 'all';
 
-  // Build a filter/contract href that preserves the other dimension.
   const buildHref = (overrides: { status?: string; contractId?: string }): Route => {
     const params = new URLSearchParams();
     const status = 'status' in overrides ? overrides.status : activeStatus;
@@ -108,8 +126,6 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     return (query ? `${routes.accountInstallments}?${query}` : routes.accountInstallments) as Route;
   };
 
-  // Derive unit info from loaded installments (dedup by contractId).
-  // Falls back to contractNumber when unit is missing from this batch.
   const contractUnitMap = new Map<string, { code: string; type: string } | null>();
   for (const inst of installments) {
     const c = inst.plan?.contract;
@@ -127,12 +143,14 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     };
   });
 
-  // Nothing on the whole schedule (not just an empty filter result).
   const scheduleEmpty = (summary?.counts.total ?? installments.length) === 0;
 
   return (
     <div className="space-y-8">
-      <Header />
+      <AccountPageHeader
+        title="جدول الأقساط"
+        description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع للأقساط غير المدفوعة."
+      />
 
       {scheduleEmpty ? (
         <EmptyState
@@ -147,56 +165,49 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
         />
       ) : (
         <>
-          {summary && <SummaryCards summary={summary} />}
+          {summary && <SummaryStrip summary={summary} />}
 
-          {/* Unified filter panel */}
-          <div className="rounded-2xl border border-hairline bg-surface-soft/50 px-5 py-3 shadow-[0_1px_4px_rgb(15,30,51,0.04)]">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-5">
-
-              {/* ── Right group: unit dropdown ────────────────────────────────── */}
-              {contracts.length > 1 ? (
-                <UnitFilter
-                  options={unitOptions}
-                  activeContractId={activeContractId}
-                  activeStatus={activeStatus}
-                />
-              ) : (
-                <span aria-hidden />
-              )}
-
-              {/* ── Left group: payment-status segmented control ──────────────── */}
-              <div className="flex shrink-0 self-start overflow-x-auto rounded-xl border border-hairline/60 bg-surface p-[3px] shadow-[inset_0_1px_2px_rgb(15,30,51,0.04)] lg:self-auto">
-                {FILTERS.map((f) => {
-                  const count =
-                    f.key === 'all'
-                      ? summary?.counts.total
-                      : f.key === 'PAID'
-                        ? summary?.counts.paid
-                        : f.key === 'PENDING'
-                          ? summary?.counts.pending
-                          : summary?.counts.overdue;
-                  const active = activeFilterKey === f.key;
-                  return (
-                    <Link
-                      key={f.key}
-                      href={buildHref({ status: f.status })}
-                      aria-current={active ? 'true' : undefined}
-                      className={cn(
-                        'inline-flex h-[calc(2.25rem-6px)] shrink-0 items-center whitespace-nowrap rounded-[0.5rem] px-3.5 text-xs font-bold transition-all duration-200',
-                        active
-                          ? 'bg-navy text-white shadow-sm'
-                          : 'text-ink-muted hover:text-ink-strong',
-                      )}
-                    >
-                      {f.label}
-                      {typeof count === 'number' && (
-                        <span className="ms-1 tabular-nums opacity-70">({count})</span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-
+          {/* Filter row */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            {contracts.length > 1 && (
+              <UnitFilter
+                options={unitOptions}
+                activeContractId={activeContractId}
+                activeStatus={activeStatus}
+              />
+            )}
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 sm:ms-auto">
+              {FILTERS.map((f) => {
+                const count =
+                  f.key === 'all'
+                    ? summary?.counts.total
+                    : f.key === 'PAID'
+                      ? summary?.counts.paid
+                      : f.key === 'PENDING'
+                        ? summary?.counts.pending
+                        : summary?.counts.overdue;
+                const active = activeFilterKey === f.key;
+                return (
+                  <Link
+                    key={f.key}
+                    href={buildHref({ status: f.status })}
+                    aria-current={active ? 'true' : undefined}
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors',
+                      active
+                        ? 'bg-navy text-white shadow-sm'
+                        : 'border border-hairline bg-surface text-ink-muted hover:border-navy/20 hover:text-ink-strong',
+                    )}
+                  >
+                    {f.label}
+                    {typeof count === 'number' && (
+                      <span className={cn('tabular-nums text-[11px]', active ? 'opacity-70' : 'opacity-50')}>
+                        {count}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
 
@@ -212,9 +223,9 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
               }
             />
           ) : (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-4">
               {installments.map((inst) => (
-                <InstallmentRow key={inst.id} installment={inst} />
+                <InstallmentCard key={inst.id} installment={inst} />
               ))}
             </div>
           )}
@@ -224,135 +235,108 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
   );
 }
 
-function Header() {
+/** Shared data block — label above, content below, hairline separator on start edge at md+. */
+function Block({
+  label,
+  separator,
+  children,
+}: {
+  label: string;
+  separator?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <AccountPageHeader
-      title="جدول الأقساط"
-      description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع للأقساط غير المدفوعة."
-    />
-  );
-}
-
-/**
- * Format an amount string as whole SAR: strips sub-riyal decimal noise so that
- * e.g. "13439000.08" → "١٣،٤٣٩،٠٠٠" instead of the 12-char "١٣،٤٣٩،٠٠٠،٠٨".
- */
-const AMT_FMT = new Intl.NumberFormat('ar-SA', { maximumFractionDigits: 0 });
-function fmtAmt(s: string | null | undefined): string {
-  if (!s) return '—';
-  const n = Number(s);
-  if (!Number.isFinite(n)) return '—';
-  return AMT_FMT.format(Math.round(n));
-}
-
-/** Summary cards — warm-luxe surfaces (NOT admin KPI tiles). Totals describe the
- *  installment schedule only; the note clarifies booking amount is separate. */
-function SummaryCards({ summary }: { summary: NonNullable<MeInstallmentsResponse['summary']> }) {
-  const hasOverdue = Number(summary.overdue) > 0;
-  return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryItem
-          icon={CheckCircle2}
-          chip="bg-emerald-50 text-emerald-600 ring-1 ring-emerald-200/60"
-          label="إجمالي المدفوع من الأقساط"
-          amount={summary.totalPaid}
-          sub={`${summary.counts.paid} قسط مدفوع`}
-        />
-        <SummaryItem
-          icon={Wallet}
-          chip="bg-blue-50 text-blue-600 ring-1 ring-blue-200/60"
-          label="المتبقي من الأقساط"
-          amount={summary.remaining}
-          sub={`${summary.counts.pending + summary.counts.overdue} قسط غير مدفوع`}
-        />
-        <SummaryItem
-          icon={AlertCircle}
-          chip="bg-rose-50 text-rose-600 ring-1 ring-rose-200/60"
-          pulse={hasOverdue}
-          label="المتأخرات"
-          amount={summary.overdue}
-          sub={`${summary.counts.overdue} قسط متأخر`}
-        />
-        <SummaryItem
-          icon={CalendarClock}
-          chip="bg-amber-50 text-amber-600 ring-1 ring-amber-200/60"
-          label="القسط القادم"
-          amount={summary.nextDue?.amount ?? null}
-          sub={summary.nextDue ? `الاستحقاق: ${formatDate(summary.nextDue.dueDate)}` : 'لا يوجد قسط مستحق'}
-        />
-      </div>
+    <div className={cn('min-w-0', separator && 'md:border-s md:border-hairline/70 md:ps-6')}>
+      <div className="mb-1 text-xs font-medium tracking-wide text-ink-muted">{label}</div>
+      {children}
     </div>
   );
 }
 
-function SummaryItem({
+/** One financial metric inside the summary strip. */
+function SummaryBlock({
   icon: Icon,
-  chip,
   label,
-  amount,
+  value,
   sub,
-  pulse,
+  separator,
+  overdue,
 }: {
   icon: typeof CheckCircle2;
-  chip: string;
   label: string;
-  amount: string | null;
+  value: string;
   sub?: string;
-  pulse?: boolean;
+  separator?: boolean;
+  overdue?: boolean;
 }) {
-  const formatted = fmtAmt(amount);
-  const isBlank = formatted === '—';
-
-  // Scale font down for long Arabic-numeral strings to prevent overflow.
-  // After decimal-strip, worst case is ~10 chars (e.g. "١٣،٤٣٩،٠٠٠").
-  const valCls = cn(
-    'font-display font-black leading-none tracking-tight text-ink-strong',
-    !isBlank && formatted.length > 9 ? 'text-[1.25rem]'
-    : !isBlank && formatted.length > 6 ? 'text-[1.5rem]'
-    : 'text-[1.75rem]',
-  );
-
   return (
-    // dir="rtl" explicit so the card is self-contained regardless of parent context
-    <div
-      className="flex flex-col rounded-2xl border border-hairline bg-surface p-5 shadow-[0_1px_6px_rgb(15,30,51,0.05)]"
-      dir="rtl"
-    >
-      {/* Top row: icon badge (RTL start = right) + label/subtitle to its left */}
-      <div className="flex items-center gap-3">
-        <span
-          className={cn(
-            'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
-            chip,
-            pulse && 'animate-pulse',
-          )}
-        >
-          <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1 text-start">
-          <div className="text-[13px] font-bold leading-snug text-ink-strong">{label}</div>
-          {sub && <div className="mt-px text-[11px] font-medium text-ink-muted/65">{sub}</div>}
-        </div>
+    <div className={cn('min-w-0', separator && 'sm:border-s sm:border-hairline/70 sm:ps-8')}>
+      <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-ink-muted">
+        <Icon className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+        {label}
       </div>
-
-      {/* Value — adaptive size prevents overflow; split spans prevent bidi reordering */}
-      <div className="mt-[14px] text-start">
-        {isBlank ? (
-          <span className="font-display text-[1.75rem] font-black leading-none text-ink-muted">—</span>
-        ) : (
-          <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap" dir="rtl">
-            <span className={valCls}>{formatted}</span>
-            <span className="text-[0.8125rem] font-bold text-ink-muted/60">ر.س</span>
-          </span>
+      <div
+        className={cn(
+          'text-xl font-black tracking-tight tabular-nums',
+          overdue ? 'text-error' : 'text-ink-strong',
+        )}
+        dir="auto"
+      >
+        {value}
+        {value !== '—' && (
+          <span className="ms-1.5 text-xs font-semibold text-ink-muted/60">ر.س</span>
         )}
       </div>
+      {sub && <div className="mt-1 text-[11px] text-ink-muted/70">{sub}</div>}
     </div>
   );
 }
 
+/** Single AccountCard containing all four financial KPIs in one horizontal row. */
+function SummaryStrip({ summary }: { summary: NonNullable<MeInstallmentsResponse['summary']> }) {
+  const hasOverdue = Number(summary.overdue) > 0;
+  return (
+    <AccountCard accent="gold" className="p-5 sm:p-7">
+      <div className="grid grid-cols-2 gap-y-6 gap-x-4 sm:grid-cols-4">
+        <SummaryBlock
+          icon={CheckCircle2}
+          label="إجمالي المدفوع"
+          value={fmtAmt(summary.totalPaid)}
+          sub={`${summary.counts.paid} قسط مدفوع`}
+        />
+        <SummaryBlock
+          icon={Wallet}
+          label="المتبقي"
+          value={fmtAmt(summary.remaining)}
+          sub={`${summary.counts.pending + summary.counts.overdue} قسط غير مدفوع`}
+          separator
+        />
+        <SummaryBlock
+          icon={AlertCircle}
+          label="المتأخرات"
+          value={fmtAmt(summary.overdue)}
+          sub={`${summary.counts.overdue} قسط متأخر`}
+          separator
+          overdue={hasOverdue}
+        />
+        <SummaryBlock
+          icon={CalendarClock}
+          label="القسط القادم"
+          value={fmtAmt(summary.nextDue?.amount ?? null)}
+          sub={
+            summary.nextDue
+              ? `الاستحقاق: ${formatDate(summary.nextDue.dueDate)}`
+              : 'لا يوجد مستحق'
+          }
+          separator
+        />
+      </div>
+    </AccountCard>
+  );
+}
 
-function InstallmentRow({ installment }: { installment: MeInstallment }) {
+/** Single installment — mirrors the ReservationCard layout. */
+function InstallmentCard({ installment }: { installment: MeInstallment }) {
   const contract = installment.plan?.contract ?? null;
   const project = contract?.unit?.building?.phase?.project ?? null;
   const projectName = project ? pickAr(project.name) : '';
@@ -367,68 +351,100 @@ function InstallmentRow({ installment }: { installment: MeInstallment }) {
     installment.status === 'PAID' ? 'success' : installment.status === 'OVERDUE' ? 'error' : 'gold';
 
   return (
-    <AccountCard accent={accent} interactive className="flex h-full flex-col p-5">
-      {/* ── Top row: status pill (start) ⟷ contract code tag (end) ── */}
-      <div className="flex items-center justify-between gap-3">
+    <AccountCard accent={accent} className="p-5 sm:p-6">
+      {/* ── Header: icon + title/subtitle + status badge ── */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <AccountCardIcon>
+            <Icon className="h-5 w-5" aria-hidden />
+          </AccountCardIcon>
+          <div className="min-w-0">
+            <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
+              قسط {fmtMonthYear(installment.dueDate)}
+            </h3>
+            {subtitle && (
+              <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
+                {contract?.unit ? (
+                  <Home className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+                ) : (
+                  <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
+                )}
+                <span className="line-clamp-1">{subtitle}</span>
+              </p>
+            )}
+          </div>
+        </div>
         <span
           className={cn(
-            'inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-bold',
+            'inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-medium',
             STATUS_TONE_CLS[tone],
           )}
         >
-          <Icon className="h-3.5 w-3.5" aria-hidden />
           {label}
         </span>
+      </div>
+
+      {/* ── Three balanced data blocks ── */}
+      <div className="mt-5 grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-3 sm:items-center sm:gap-0">
+        <Block label="مبلغ القسط">
+          <div className="text-sm font-semibold text-ink-strong" dir="auto">
+            {formatPrice(installment.amount)}
+          </div>
+        </Block>
+        <Block label="تاريخ الاستحقاق" separator>
+          <div className="text-sm font-semibold text-ink-strong" dir="auto">
+            {formatDate(installment.dueDate)}
+          </div>
+        </Block>
+        <Block label={installment.paidAt ? 'تاريخ السداد' : 'الحالة'} separator>
+          {installment.paidAt ? (
+            <div className="text-sm font-semibold text-ink-strong" dir="auto">
+              {formatDate(installment.paidAt)}
+            </div>
+          ) : (
+            <span
+              className={cn(
+                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium',
+                STATUS_TONE_CLS[tone],
+              )}
+            >
+              {label}
+            </span>
+          )}
+        </Block>
+      </div>
+
+      {/* ── Footer: action or paid confirmation ── */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
+        {canSubmit ? (
+          <Link
+            href={
+              {
+                pathname: routes.accountDeposits,
+                query: {
+                  submit: 'proof',
+                  installmentId: installment.id,
+                  amount: installment.amount,
+                },
+              } as unknown as Route
+            }
+            className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-navy/90 active:scale-95"
+          >
+            <Upload className="h-3.5 w-3.5" aria-hidden />
+            إرسال إثبات الدفع
+          </Link>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+            تم السداد والتحقق
+          </span>
+        )}
         {contract?.contractNumber && (
-          <span className="rounded-md bg-surface-soft px-2 py-0.5 font-mono text-[11px] font-bold text-ink-muted">
+          <span className="rounded-md bg-surface-soft px-2 py-0.5 font-mono text-[11px] font-medium text-ink-muted">
             {contract.contractNumber}
           </span>
         )}
       </div>
-
-      {/* ── Hero centerpiece: amount + property ── */}
-      <div className="my-4 flex flex-col items-center justify-center rounded-xl border border-hairline/70 bg-surface-soft/50 p-4 text-center">
-        <div className="font-display text-xl font-black tracking-tight text-ink-strong" dir="auto">
-          {formatPrice(installment.amount)}
-        </div>
-        <p className="mt-2 flex items-center gap-1.5 text-xs font-bold text-ink">
-          {contract?.unit ? (
-            <Home className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
-          ) : (
-            <Building2 className="h-3.5 w-3.5 shrink-0 text-gold-500" aria-hidden />
-          )}
-          <span className="line-clamp-1">{subtitle || 'وحدة'}</span>
-        </p>
-      </div>
-
-      {/* ── Timeline metadata ── */}
-      <div className="mt-auto grid grid-cols-2 gap-2 border-t border-hairline/70 pt-3 text-[11px] text-ink-muted">
-        <span dir="auto">الاستحقاق: {formatDate(installment.dueDate)}</span>
-        <span className="text-end" dir="auto">
-          {installment.paidAt ? `السداد: ${formatDate(installment.paidAt)}` : 'الحالة: لم يُسدّد'}
-        </span>
-      </div>
-
-      {/* ── Action ── */}
-      {canSubmit ? (
-        <Link
-          href={
-            {
-              pathname: routes.accountDeposits,
-              query: { submit: 'proof', installmentId: installment.id, amount: installment.amount },
-            } as unknown as Route
-          }
-          className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-navy py-2.5 text-xs font-medium text-white transition-all hover:bg-navy-700"
-        >
-          <Upload className="h-3.5 w-3.5" aria-hidden />
-          إرسال إثبات الدفع
-        </Link>
-      ) : (
-        <span className="mt-3 flex w-full items-center justify-center gap-1 rounded-xl bg-success/[0.06] py-2 text-xs font-semibold text-success">
-          <CheckCircle2 className="h-4 w-4" aria-hidden />
-          تم السداد والتحقق
-        </span>
-      )}
     </AccountCard>
   );
 }
