@@ -247,6 +247,34 @@ describe('Leads module · permissions enforcement', () => {
     });
   });
 
+  // ── Pipeline counts scoping ────────────────────────────────────────────
+
+  describe('GET /leads/pipeline', () => {
+    it('ADMIN → count queries have no assignedSalesId restriction', async () => {
+      FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
+      await request(app.getHttpServer()).get('/leads/pipeline').expect(200);
+      const calls = mock.lead.count.mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      for (const [args] of calls) {
+        expect((args as { where?: { assignedSalesId?: unknown } }).where?.assignedSalesId).toBeUndefined();
+      }
+    });
+
+    it('SALES → count queries are scoped to caller own assignedSalesId', async () => {
+      FakeAuthGuard.currentUser = {
+        sub: 'sales-scoped',
+        role: UserRole.SALES,
+        codes: ['leads:read'],
+      };
+      await request(app.getHttpServer()).get('/leads/pipeline').expect(200);
+      const calls = mock.lead.count.mock.calls;
+      expect(calls.length).toBeGreaterThan(0);
+      for (const [args] of calls) {
+        expect((args as { where?: { assignedSalesId?: unknown } }).where?.assignedSalesId).toBe('sales-scoped');
+      }
+    });
+  });
+
   // ── Read routes ────────────────────────────────────────────────────────
 
   describe('GET /leads', () => {

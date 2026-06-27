@@ -52,8 +52,9 @@ export class LeadsController {
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
   @Permissions('leads:read')
   @Get('leads/pipeline')
-  pipeline() {
-    return this.leads.pipelineCounts();
+  async pipeline(@CurrentUser() user: AuthUser) {
+    const scope = await resolveSalesScope(this.prisma, user);
+    return this.leads.pipelineCounts(scope);
   }
 
   // Leads

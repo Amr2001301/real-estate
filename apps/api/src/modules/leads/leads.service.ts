@@ -394,11 +394,17 @@ export class LeadsService {
     return note;
   }
 
-  async pipelineCounts() {
+  async pipelineCounts(opts: { salesId?: string; salesIds?: string[] } = {}) {
+    const scopeWhere: Prisma.LeadWhereInput = opts.salesIds
+      ? { assignedSalesId: { in: opts.salesIds } }
+      : opts.salesId
+        ? { assignedSalesId: opts.salesId }
+        : {};
+
     const stages = Object.values(LeadStage);
     const result: Record<string, number> = {};
     for (const stage of stages) {
-      result[stage] = await this.prisma.lead.count({ where: { stage } });
+      result[stage] = await this.prisma.lead.count({ where: { stage, ...scopeWhere } });
     }
     return result;
   }
