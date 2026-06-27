@@ -1,10 +1,11 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, ArrowRight, Home } from 'lucide-react';
+import { MapPin, ArrowLeft, Home, BadgeCheck, Star } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
-import { pickAr } from '@/lib/format';
+import { pickAr, formatNumber } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { PublicProjectDetail, Paginated, PublicUnit } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
@@ -30,6 +31,42 @@ import { CtaBand } from '@/components/marketing/CtaBand';
 const REVALIDATE = 60;
 
 type Params = Promise<{ id: string }>;
+
+const PROJECT_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'متاح',
+  SOLD_OUT: 'مكتمل البيع',
+  UNDER_CONSTRUCTION: 'قيد الإنشاء',
+  UPCOMING: 'قريبًا',
+  COMPLETED: 'مكتمل',
+};
+
+function projectStatusLabel(status: string): string {
+  return PROJECT_STATUS_LABELS[status] ?? status;
+}
+
+function InfoChip({
+  icon: Icon,
+  children,
+  gold,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  children: React.ReactNode;
+  gold?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm shadow-soft',
+        gold
+          ? 'border-gold-200 bg-gold-50 text-gold-600'
+          : 'border-hairline bg-surface text-ink-strong',
+      )}
+    >
+      <Icon className="h-3.5 w-3.5 text-gold-500" />
+      {children}
+    </span>
+  );
+}
 
 // Generic, process-oriented FAQ — deliberately avoids project-specific claims
 // (prices, guarantees, dates) so nothing is fabricated.
@@ -136,35 +173,75 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
       {/* Cinematic gallery hero */}
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
-          <Link
-            href={routes.projects}
-            className="mb-5 inline-flex items-center gap-1.5 text-sm font-medium text-ink-muted transition-colors hover:text-ink-strong"
-          >
-            <ArrowRight className="h-4 w-4" aria-hidden />
-            العودة إلى المشاريع
-          </Link>
+          <nav aria-label="مسار التنقل" className="mb-5">
+            <ol className="flex items-center gap-1.5 text-sm">
+              <li>
+                <Link
+                  href={routes.projects}
+                  className="text-ink-muted transition-colors hover:text-ink-strong focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
+                >
+                  المشاريع
+                </Link>
+              </li>
+              <li className="select-none text-ink-muted/40" aria-hidden>/</li>
+              <li
+                className="max-w-[10rem] truncate font-medium text-ink-strong sm:max-w-xs"
+                aria-current="page"
+              >
+                {name}
+              </li>
+            </ol>
+          </nav>
+
           <ProjectGallery
             media={project.media}
             alt={name}
             overlay={
               <Reveal>
-                <div className="flex flex-wrap items-center gap-3">
-                  {project.featured && <Badge tone="gold">مشروع مميز</Badge>}
-                  <span className="inline-flex items-center gap-1.5 text-sm text-white/85">
-                    <MapPin className="h-4 w-4 text-gold-200" aria-hidden />
+                {/* Badges row */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {project.featured && (
+                    <Badge
+                      tone="gold"
+                      className="shadow-[0_2px_10px_rgba(200,162,75,0.40)]"
+                    >
+                      <Star className="h-3 w-3" aria-hidden />
+                      مشروع مميز
+                    </Badge>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm">
+                    <MapPin className="h-3.5 w-3.5 text-gold-300" aria-hidden />
                     {project.city}
                   </span>
+                  {project.status && (
+                    <span className="inline-flex items-center rounded-full bg-navy/60 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
+                      {projectStatusLabel(project.status)}
+                    </span>
+                  )}
                 </div>
-                <h1 className="mt-3 text-display-1 text-white">{name}</h1>
+
+                {/* Project name */}
+                <h1
+                  className="mt-3 text-display-1 text-white"
+                  style={{ textShadow: '0 2px 20px rgba(11,23,38,0.45)' }}
+                >
+                  {name}
+                </h1>
+
+                {/* CTAs */}
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <ButtonLink href={`${routes.contact}?projectId=${project.id}` as Route} variant="gold" size="md">
+                  <ButtonLink
+                    href={`${routes.contact}?projectId=${project.id}` as Route}
+                    variant="gold"
+                    size="md"
+                  >
                     طلب معلومات
                   </ButtonLink>
                   <ButtonLink
                     href={`${routes.contact}?type=visit&projectId=${project.id}` as Route}
                     variant="outline"
                     size="md"
-                    className="border-white/30 text-white hover:border-white/60 hover:bg-white/5"
+                    className="border-white/25 text-white backdrop-blur-sm hover:border-white/50 hover:bg-white/10"
                   >
                     طلب زيارة
                   </ButtonLink>
@@ -172,6 +249,18 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
               </Reveal>
             }
           />
+
+          {/* Quick info strip — compact at-a-glance facts right below the gallery */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <InfoChip icon={MapPin}>{project.city}</InfoChip>
+            <InfoChip icon={Home}>
+              <span className="font-semibold">{formatNumber(project.availableUnitsCount)}</span>
+              {' '}وحدة متاحة
+            </InfoChip>
+            <InfoChip icon={BadgeCheck} gold={project.featured}>
+              {project.featured ? 'مشروع مميز' : projectStatusLabel(project.status)}
+            </InfoChip>
+          </div>
         </Container>
       </section>
 
@@ -279,6 +368,9 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           استكشف الوحدات
         </ButtonLink>
       </CtaBand>
+
+      {/* Spacer so the mobile sticky inquiry bar doesn't cover the CTA band */}
+      <div className="h-[72px] lg:hidden" aria-hidden />
     </>
   );
 }
