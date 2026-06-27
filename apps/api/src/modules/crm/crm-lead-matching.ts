@@ -18,14 +18,18 @@ export interface LeadMatchResult {
 }
 
 /**
- * Four-tier CRM opportunity matching for client-owned actions (reservation or visit).
+ * Three-tier CRM opportunity matching for client-owned actions (reservation or visit).
  *
  * Priority:
- *   1. Open opportunity for same clientId + unitInterestId  (unit-specific)
- *   2. Open opportunity for same clientId + projectInterestId  (project-level)
- *   3. Open generic opportunity (projectInterestId = null, unitInterestId = null) →
- *      upgraded in-place with the selected project/unit so the board stays clean
- *   4. None found → create a new scoped opportunity
+ *   1. Open opportunity for same clientId + unitInterestId  (exact unit match)
+ *   2. Open generic opportunity (projectInterestId = null, unitInterestId = null)
+ *      with no committed reservations and no unit-specific appointments →
+ *      upgraded in-place so the pipeline board stays clean
+ *   3. None found → create a new scoped opportunity
+ *
+ * Tier 2 (project-level merge) was intentionally removed: it collapsed
+ * opportunities for different units in the same project into a single lead,
+ * corrupting the per-unit pipeline view.
  *
  * The caller is responsible for logging the domain-specific activity
  * (type='reservation' or type='visit') after receiving the leadId.
@@ -36,7 +40,7 @@ export async function matchOrCreateLeadForClient(
 ): Promise<LeadMatchResult> {
   const { clientId, projectId, unitId, bumpableStages, targetStage } = opts;
 
-  // Tier 1: unit-specific open opportunity
+  // Tier 1: exact unit-specific open opportunity
   const byUnit = unitId
     ? await tx.lead.findFirst({
         where: { clientId, unitInterestId: unitId, stage: { in: bumpableStages } },
@@ -45,32 +49,31 @@ export async function matchOrCreateLeadForClient(
       })
     : null;
 
-  // Tier 2: project-level open opportunity
-  const byProject = byUnit ?? await tx.lead.findFirst({
-    where: { clientId, projectInterestId: projectId, stage: { in: bumpableStages } },
-    orderBy: { updatedAt: 'desc' },
-    select: { id: true, stage: true },
-  });
+  // Tier 2: clean generic opportunity (no project, no unit, no committed activities).
+  // Skip if Tier 1 already found a match.
+  const generic = byUnit
+    ? null
+    : await tx.lead.findFirst({
+        where: {
+          clientId,
+          projectInterestId: null,
+          unitInterestId: null,
+          stage: { in: bumpableStages },
+          reservations: { none: {} },
+          appointments: { none: { unitId: { not: null } } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        select: { id: true, stage: true },
+      });
 
-  // Tier 3: generic open opportunity (no project, no unit) — upgrade it in-place
-  const match = byProject ?? await tx.lead.findFirst({
-    where: {
-      clientId,
-      projectInterestId: null,
-      unitInterestId: null,
-      stage: { in: bumpableStages },
-    },
-    orderBy: { updatedAt: 'desc' },
-    select: { id: true, stage: true },
-  });
+  const match = byUnit ?? generic;
 
   if (match) {
-    const isGenericUpgrade = !byUnit && !byProject;
+    const isGenericUpgrade = !byUnit && !!generic;
     await tx.lead.update({
       where: { id: match.id },
       data: {
         stage: targetStage,
-        // Upgrade generic opportunity to be scoped to this project/unit
         ...(isGenericUpgrade ? { projectInterestId: projectId, unitInterestId: unitId } : {}),
       },
     });
@@ -90,7 +93,7 @@ export async function matchOrCreateLeadForClient(
     return { leadId: match.id, isNew: false };
   }
 
-  // Tier 4: no open opportunity found — create a new scoped one
+  // Tier 3: no open opportunity found — create a new scoped one
   const newLead = await tx.lead.create({
     data: {
       clientId,

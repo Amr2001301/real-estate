@@ -40,19 +40,20 @@ function makeTx(findResults: Array<{ id: string; stage: LeadStage } | null>) {
 }
 
 // ─── Scenario 1 ───────────────────────────────────────────────────────────────
-// Client has a generic open opportunity (no project, no unit).
-// A project-scoped action should UPGRADE the generic one — no duplicate.
-describe('Scenario 1: generic opportunity + project action → upgrades generic, no duplicate', () => {
+// Client has a generic open opportunity (no project, no unit, no reservations,
+// no unit-specific appointments). A project-scoped action should UPGRADE the
+// generic one — no duplicate created.
+describe('Scenario 1: clean generic opportunity + project action → upgrades generic, no duplicate', () => {
   let tx: ReturnType<typeof makeTx>;
 
   beforeEach(async () => {
-    // Tier 1 (unit): null  →  Tier 2 (project): null  →  Tier 3 (generic): found
-    tx = makeTx([null, null, { id: EXISTING_LEAD_ID, stage: LeadStage.NEW }]);
+    // Tier 1 (unit-101): null  →  Tier 2 (clean generic): found
+    tx = makeTx([null, { id: EXISTING_LEAD_ID, stage: LeadStage.NEW }]);
     await matchOrCreateLeadForClient(tx as any, BASE_OPTS);
   });
 
   it('returns the existing lead id', async () => {
-    tx = makeTx([null, null, { id: EXISTING_LEAD_ID, stage: LeadStage.NEW }]);
+    tx = makeTx([null, { id: EXISTING_LEAD_ID, stage: LeadStage.NEW }]);
     const result = await matchOrCreateLeadForClient(tx as any, BASE_OPTS);
     expect(result).toEqual({ leadId: EXISTING_LEAD_ID, isNew: false });
   });
@@ -86,40 +87,82 @@ describe('Scenario 1: generic opportunity + project action → upgrades generic,
   });
 });
 
-// ─── Scenario 2 ───────────────────────────────────────────────────────────────
-// Client already has a Project A opportunity. Same-project action → update it.
-describe('Scenario 2: existing Project A opportunity + Project A action → updates same opportunity', () => {
+// ─── Scenario 1b ──────────────────────────────────────────────────────────────
+// Client has a generic open opportunity BUT it already has a reservation or
+// unit-specific appointment attached. The DB's `reservations: { none: {} }`
+// and `appointments: { none: { unitId: { not: null } } }` guards filter it
+// out (Tier 2 returns null). A fresh unit-scoped opportunity is created instead.
+describe('Scenario 1b: generic lead with committed activity → creates new (safety guard)', () => {
   let tx: ReturnType<typeof makeTx>;
   let result: Awaited<ReturnType<typeof matchOrCreateLeadForClient>>;
 
   beforeEach(async () => {
-    // Tier 1 (unit): null  →  Tier 2 (project A): found
-    tx = makeTx([null, { id: EXISTING_LEAD_ID, stage: LeadStage.INTERESTED }]);
+    // Tier 1 (unit-101): null
+    // Tier 2 (generic): null — DB filters out the generic lead that has a reservation
+    tx = makeTx([null, null]);
     result = await matchOrCreateLeadForClient(tx as any, BASE_OPTS);
   });
 
-  it('returns the existing lead id', () => {
-    expect(result).toEqual({ leadId: EXISTING_LEAD_ID, isNew: false });
+  it('returns a new lead (isNew=true)', () => {
+    expect(result).toEqual({ leadId: NEW_LEAD_ID, isNew: true });
   });
 
-  it('updates the existing lead stage only — no projectInterestId change', () => {
-    expect(tx.lead.update).toHaveBeenCalledWith(
+  it('does NOT update the committed generic lead', () => {
+    expect(tx.lead.update).not.toHaveBeenCalled();
+  });
+
+  it('creates a new unit-scoped opportunity', () => {
+    expect(tx.lead.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: EXISTING_LEAD_ID },
-        data: expect.objectContaining({ stage: LeadStage.NEGOTIATION }),
+        data: expect.objectContaining({
+          clientId: CLIENT_ID,
+          unitInterestId: UNIT_101,
+          projectInterestId: PROJECT_A,
+          stage: LeadStage.NEGOTIATION,
+        }),
       }),
     );
-    const updateCall = tx.lead.update.mock.calls[0][0];
-    expect(updateCall.data).not.toHaveProperty('projectInterestId');
-    expect(updateCall.data).not.toHaveProperty('unitInterestId');
+  });
+});
+
+// ─── Scenario 2 ───────────────────────────────────────────────────────────────
+// Client has a Unit-102 lead in Project A. Action is on Unit-101.
+// The old Tier-2 project-level merge (Bug A) would have incorrectly reused the
+// Unit-102 lead. With Tier 2 removed, a separate opportunity is created for
+// Unit-101 and the Unit-102 lead remains untouched.
+describe('Scenario 2: different unit in same project → creates new opportunity (no cross-unit merge)', () => {
+  let tx: ReturnType<typeof makeTx>;
+  let result: Awaited<ReturnType<typeof matchOrCreateLeadForClient>>;
+
+  beforeEach(async () => {
+    // Tier 1 (unit-101): null — only a unit-102 lead exists
+    // Tier 2 (generic):  null — the unit-102 lead is not generic
+    tx = makeTx([null, null]);
+    result = await matchOrCreateLeadForClient(tx as any, BASE_OPTS);
   });
 
-  it('does NOT create a new lead', () => {
-    expect(tx.lead.create).not.toHaveBeenCalled();
+  it('returns a new lead id (isNew=true)', () => {
+    expect(result).toEqual({ leadId: NEW_LEAD_ID, isNew: true });
   });
 
-  it('does NOT run the tier-3 generic query', () => {
-    // findFirst called at most twice: tier 1 (unit) + tier 2 (project)
+  it('creates a new opportunity for Unit-101 (does not reuse the Unit-102 lead)', () => {
+    expect(tx.lead.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          clientId: CLIENT_ID,
+          projectInterestId: PROJECT_A,
+          unitInterestId: UNIT_101,
+          stage: LeadStage.NEGOTIATION,
+        }),
+      }),
+    );
+  });
+
+  it('does NOT update any existing lead', () => {
+    expect(tx.lead.update).not.toHaveBeenCalled();
+  });
+
+  it('runs exactly Tier 1 + Tier 2 queries (2 findFirst calls)', () => {
     expect(tx.lead.findFirst).toHaveBeenCalledTimes(2);
   });
 });
@@ -132,9 +175,8 @@ describe('Scenario 3: Project B opportunity + Project A action → creates Proje
 
   beforeEach(async () => {
     // Tier 1 (unit-101 in project A): null
-    // Tier 2 (project A): null  — only project B exists, not A
-    // Tier 3 (generic): null
-    tx = makeTx([null, null, null]);
+    // Tier 2 (generic): null — only a Project B lead exists, not generic
+    tx = makeTx([null, null]);
     result = await matchOrCreateLeadForClient(tx as any, {
       ...BASE_OPTS,
       projectId: PROJECT_A,
@@ -198,7 +240,7 @@ describe('Scenario 4: two unit opportunities in same project → updates matchin
     expect(updatedIds).not.toContain('lead-unit-102');
   });
 
-  it('tier-1 match skips tier-2 and tier-3 queries', () => {
+  it('tier-1 match skips tier-2 query', () => {
     // Only one findFirst call (tier 1 found immediately)
     expect(tx101.lead.findFirst).toHaveBeenCalledTimes(1);
     expect(tx102.lead.findFirst).toHaveBeenCalledTimes(1);

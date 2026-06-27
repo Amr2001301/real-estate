@@ -386,6 +386,7 @@ export class ReservationsService {
     let clientFullName = '';
     let clientPhone: string | null = null;
     let clientEmail: string | null = null;
+    let genericLeadId: string | null = null;
     if (dto.clientId) {
       const clientUser = await this.prisma.user.findUnique({
         where: { id: dto.clientId },
@@ -407,10 +408,42 @@ export class ReservationsService {
     } else if (dto.leadId) {
       const lead = await this.prisma.lead.findUnique({
         where: { id: dto.leadId },
-        select: { id: true },
+        select: { id: true, unitInterestId: true, projectInterestId: true, stage: true },
       });
       if (!lead) {
         throw new BadRequestException('Lead not found');
+      }
+      if (lead.stage === LeadStage.WON || lead.stage === LeadStage.LOST) {
+        throw new BadRequestException(
+          `Cannot create a reservation on a ${lead.stage} lead`,
+        );
+      }
+      if (lead.unitInterestId && lead.unitInterestId !== dto.unitId) {
+        throw new BadRequestException(
+          'The selected lead is scoped to a different unit. Create a new opportunity for this unit.',
+        );
+      }
+      if (!lead.unitInterestId && !lead.projectInterestId) {
+        const [conflictReservation, conflictAppointment, linkedContract] = await Promise.all([
+          this.prisma.reservation.findFirst({
+            where: { leadId: dto.leadId, status: { not: ReservationStatus.CANCELLED } },
+            select: { id: true },
+          }),
+          this.prisma.visitAppointment.findFirst({
+            where: { leadId: dto.leadId, unitId: { not: null } },
+            select: { id: true },
+          }),
+          this.prisma.contract.findFirst({
+            where: { reservation: { leadId: dto.leadId } },
+            select: { id: true },
+          }),
+        ]);
+        if (conflictReservation || conflictAppointment || linkedContract) {
+          throw new BadRequestException(
+            'This generic lead already has committed activities. Create a new opportunity for this unit instead.',
+          );
+        }
+        genericLeadId = lead.id;
       }
       // resolvedClientId stays null — lead-path reservations never carry a clientId
     }
@@ -643,7 +676,16 @@ export class ReservationsService {
         if (previousStage && bumpableStages.includes(previousStage.stage)) {
           await tx.lead.update({
             where: { id: dto.leadId },
-            data: { stage: LeadStage.NEGOTIATION },
+            data: {
+              stage: LeadStage.NEGOTIATION,
+              // Upgrade a clean generic lead to be scoped to this project/unit.
+              ...(genericLeadId === dto.leadId
+                ? {
+                    unitInterestId: dto.unitId,
+                    projectInterestId: unit.building.phase.projectId,
+                  }
+                : {}),
+            },
           });
           await tx.leadActivity.create({
             data: {
@@ -653,6 +695,7 @@ export class ReservationsService {
                 from: previousStage.stage,
                 to: LeadStage.NEGOTIATION,
                 reason: `Reservation ${reservation.reservationNumber} created`,
+                ...(genericLeadId === dto.leadId ? { upgraded: 'generic_to_unit' } : {}),
               },
             },
           });
@@ -668,6 +711,12 @@ export class ReservationsService {
           clientPhone: clientPhone ?? '',
           clientEmail,
           assignedSalesId: effectiveSalesId,
+        });
+        // Persist the resolved lead back to the reservation so convertReservation
+        // can reliably find the correct lead via reservation.lead.
+        await tx.reservation.update({
+          where: { id: reservation.id },
+          data: { leadId: targetLeadId },
         });
         await tx.leadActivity.create({
           data: {
@@ -1488,7 +1537,17 @@ export class ReservationsService {
       where: { id },
       include: {
         unit: { include: { building: { include: { phase: { select: { projectId: true } } } } } },
-        lead: { select: { id: true, clientId: true, stage: true } },
+        lead: {
+          select: {
+            id: true,
+            clientId: true,
+            stage: true,
+            unitInterestId: true,
+            fullName: true,
+            phone: true,
+            email: true,
+          },
+        },
         client: { select: { id: true } },
         contract: { select: { id: true } },
       },
@@ -1689,39 +1748,132 @@ export class ReservationsService {
         },
       });
 
-      // 6. Advance lead to WON if the reservation was lead-based.
-      if (reservation.lead) {
-        const bumpableStages: LeadStage[] = [
-          LeadStage.NEW, LeadStage.INTERESTED, LeadStage.VISIT,
-          LeadStage.NEGOTIATION,
-        ];
-        if (bumpableStages.includes(reservation.lead.stage)) {
+      // 6. Advance the correct lead to WON.
+      // Spread into a local variable — never mutate the Prisma result object.
+      let targetLead = reservation.lead ? { ...reservation.lead } : null;
+
+      const wonBumpableStages: LeadStage[] = [
+        LeadStage.NEW, LeadStage.INTERESTED, LeadStage.VISIT, LeadStage.NEGOTIATION,
+      ];
+
+      // Fallback A: legacy client-linked reservation where leadId was not persisted.
+      // Find the most recent open lead for this client on this exact unit.
+      if (!targetLead && customerId) {
+        const found = await tx.lead.findFirst({
+          where: {
+            clientId: customerId,
+            unitInterestId: reservation.unitId,
+            stage: { in: wonBumpableStages },
+          },
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true, stage: true, unitInterestId: true,
+            fullName: true, phone: true, email: true, clientId: true,
+          },
+        });
+        if (found) {
+          await tx.reservation.update({ where: { id }, data: { leadId: found.id } });
+          targetLead = found;
+        }
+      }
+
+      // Fallback B: lead is linked but scoped to a different unit (legacy data).
+      // Find or create the correct unit-specific lead and relink the reservation.
+      if (
+        targetLead &&
+        targetLead.unitInterestId &&
+        targetLead.unitInterestId !== reservation.unitId
+      ) {
+        const staleLeadId = targetLead.id;
+        const leadClientId = targetLead.clientId ?? customerId;
+
+        let correctLead = await tx.lead.findFirst({
+          where: {
+            clientId: leadClientId,
+            unitInterestId: reservation.unitId,
+            stage: { in: wonBumpableStages },
+          },
+          orderBy: { updatedAt: 'desc' },
+          select: {
+            id: true, stage: true, unitInterestId: true,
+            fullName: true, phone: true, email: true, clientId: true,
+          },
+        });
+
+        if (!correctLead) {
+          const created = await tx.lead.create({
+            data: {
+              clientId: leadClientId,
+              fullName: targetLead.fullName,
+              phone: targetLead.phone,
+              email: targetLead.email,
+              projectInterestId: reservation.unit.building.phase.projectId,
+              unitInterestId: reservation.unitId,
+              stage: LeadStage.NEGOTIATION,
+              assignedSalesId: reservation.salesId,
+            },
+            select: {
+              id: true, stage: true, unitInterestId: true,
+              fullName: true, phone: true, email: true, clientId: true,
+            },
+          });
+          await tx.leadActivity.create({
+            data: {
+              leadId: created.id,
+              type: 'created',
+              payload: { reason: 'relinked_from_conversion' },
+            },
+          });
+          correctLead = created;
+        }
+
+        await tx.reservation.update({ where: { id }, data: { leadId: correctLead.id } });
+
+        // Audit trail on both leads so the history is traceable.
+        await tx.leadActivity.create({
+          data: {
+            leadId: staleLeadId,
+            type: 'relinked_away',
+            payload: { toLeadId: correctLead.id, reason: 'unit_mismatch_on_conversion', contractNumber },
+          },
+        });
+        await tx.leadActivity.create({
+          data: {
+            leadId: correctLead.id,
+            type: 'relinked_from',
+            payload: { fromLeadId: staleLeadId, reservationId: id, contractNumber },
+          },
+        });
+
+        targetLead = correctLead;
+      }
+
+      if (targetLead) {
+        if (wonBumpableStages.includes(targetLead.stage)) {
           await tx.lead.update({
-            where: { id: reservation.lead.id },
+            where: { id: targetLead.id },
             data: { stage: LeadStage.WON },
           });
           await tx.leadActivity.create({
             data: {
-              leadId: reservation.lead.id,
+              leadId: targetLead.id,
               type: 'status_change',
-              payload: { from: reservation.lead.stage, to: LeadStage.WON, reason: contractNumber },
+              payload: { from: targetLead.stage, to: LeadStage.WON, reason: contractNumber },
             },
           });
         }
         await tx.leadActivity.create({
           data: {
-            leadId: reservation.lead.id,
+            leadId: targetLead.id,
             type: 'reservation',
             payload: { status: 'CONVERTED', reservationId: id, contractId: contract.id, contractNumber },
           },
         });
-        // Broker portal activity — surfaces as CONTRACT_CREATED in
-        // /portal/activity. Optionally a second row when signedAt is set
-        // at creation time (admins occasionally do both in one shot).
+        // Broker portal activity — surfaces as CONTRACT_CREATED in /portal/activity.
         if (reservation.brokerId) {
           await tx.leadActivity.create({
             data: {
-              leadId: reservation.lead.id,
+              leadId: targetLead.id,
               type: 'broker_contract_created',
               payload: {
                 brokerId: reservation.brokerId,
