@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export interface AssetAction {
@@ -18,57 +18,70 @@ export interface AssetAction {
 interface Props {
   title: string;
   actions: AssetAction[];
+  /** Optional icon shown in the card header. Defaults to LayoutGrid. */
+  icon?: ReactNode;
   className?: string;
 }
 
-export function AssetActionCard({ title, actions, className }: Props) {
+const ROW_CLS =
+  'group flex items-center gap-3 px-5 py-3.5 transition-colors duration-150';
+
+export function AssetActionCard({ title, actions, icon, className }: Props) {
   return (
     <div
       className={cn(
-        'rounded-[20px] bg-sidebar-bg shadow-md overflow-hidden border border-white/[0.06]',
+        'overflow-hidden rounded-[20px] border border-hairline bg-surface shadow-soft',
         className,
       )}
     >
-      {/* Gold accent stripe */}
-      <div className="h-[3px] bg-gradient-to-r from-brand-700/60 via-brand-400/80 to-brand-700/60" />
+      {/* Header band — same as Description / Phases / Map cards on the page */}
+      <div className="flex items-center gap-3 border-b border-hairline bg-canvas/30 px-5 py-4">
+        <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 [&_svg]:h-[15px] [&_svg]:w-[15px] [&_svg]:text-brand-600">
+          {icon ?? <LayoutGrid />}
+        </span>
+        <h3 className="text-[13.5px] font-bold text-navy">{title}</h3>
+      </div>
 
-      <div className="p-4 sm:p-5">
-        <h3 className="text-[12px] font-bold text-white/55 uppercase tracking-[0.12em] px-1 mb-3.5">
-          {title}
-        </h3>
-        <div className="flex flex-col gap-1.5">
-          {actions.map((a) =>
-            a.form ? (
-              <div key={a.key}>{a.form}</div>
-            ) : (
-              <Link
-                key={a.key}
-                href={(a.href ?? '#') as never}
-                target={a.external ? '_blank' : undefined}
-                rel={a.external ? 'noopener noreferrer' : undefined}
+      {/* Action rows — divided list */}
+      <div className="divide-y divide-hairline">
+        {actions.map((a) =>
+          a.form ? (
+            <div key={a.key}>{a.form}</div>
+          ) : (
+            <Link
+              key={a.key}
+              href={(a.href ?? '#') as never}
+              target={a.external ? '_blank' : undefined}
+              rel={a.external ? 'noopener noreferrer' : undefined}
+              className={cn(
+                ROW_CLS,
+                a.tone === 'danger'
+                  ? 'hover:bg-danger-50/40'
+                  : 'hover:bg-canvas/40',
+              )}
+            >
+              <span
                 className={cn(
-                  'group flex items-center gap-3 rounded-xl bg-sidebar-bg-elev/60 hover:bg-sidebar-bg-elev px-3 py-2.5 text-sm transition-colors duration-150',
+                  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[15px] [&_svg]:w-[15px]',
                   a.tone === 'danger'
-                    ? 'text-danger-300 hover:text-danger-200'
-                    : 'text-white/85 hover:text-white',
+                    ? 'bg-danger-50 text-danger-500'
+                    : 'bg-slate-100 text-slate-500',
                 )}
               >
-                <span
-                  className={cn(
-                    'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 [&_svg]:h-4 [&_svg]:w-4',
-                    a.tone === 'danger'
-                      ? 'bg-danger-500/15 text-danger-300'
-                      : 'bg-brand-400/20 text-brand-300',
-                  )}
-                >
-                  {a.icon}
-                </span>
-                <span className="flex-1 font-medium text-[13px]">{a.label}</span>
-                <ChevronLeft className="h-3.5 w-3.5 text-sidebar-text-muted/50 group-hover:text-white/70 transition-colors" />
-              </Link>
-            ),
-          )}
-        </div>
+                {a.icon}
+              </span>
+              <span
+                className={cn(
+                  'flex-1 text-[13px] font-medium',
+                  a.tone === 'danger' ? 'text-danger-600' : 'text-slate-700',
+                )}
+              >
+                {a.label}
+              </span>
+              <ChevronLeft className="h-3.5 w-3.5 text-slate-300 transition-colors group-hover:text-slate-400" />
+            </Link>
+          ),
+        )}
       </div>
     </div>
   );
@@ -91,24 +104,30 @@ export function AssetActionForm({
       <button
         type="submit"
         className={cn(
-          'group w-full flex items-center gap-3 rounded-xl bg-sidebar-bg-elev/60 hover:bg-sidebar-bg-elev px-3 py-2.5 text-sm transition-colors duration-150',
-          tone === 'danger'
-            ? 'text-danger-300 hover:text-danger-200'
-            : 'text-white/85 hover:text-white',
+          ROW_CLS,
+          'w-full',
+          tone === 'danger' ? 'hover:bg-danger-50/40' : 'hover:bg-canvas/40',
         )}
       >
         <span
           className={cn(
-            'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 [&_svg]:h-4 [&_svg]:w-4',
+            'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[15px] [&_svg]:w-[15px]',
             tone === 'danger'
-              ? 'bg-danger-500/15 text-danger-300'
-              : 'bg-brand-400/20 text-brand-300',
+              ? 'bg-danger-50 text-danger-500'
+              : 'bg-slate-100 text-slate-500',
           )}
         >
           {icon}
         </span>
-        <span className="flex-1 font-medium text-[13px] text-start">{label}</span>
-        <ChevronLeft className="h-3.5 w-3.5 text-sidebar-text-muted/50 group-hover:text-white/70 transition-colors" />
+        <span
+          className={cn(
+            'flex-1 text-start text-[13px] font-medium',
+            tone === 'danger' ? 'text-danger-600' : 'text-slate-700',
+          )}
+        >
+          {label}
+        </span>
+        <ChevronLeft className="h-3.5 w-3.5 text-slate-300 transition-colors group-hover:text-slate-400" />
       </button>
     </form>
   );

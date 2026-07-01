@@ -22,10 +22,8 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, OperationsSummary, Paged } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { PremiumMetricStrip } from '@/components/premium';
+import { PremiumMetricStrip, PremiumPageHero } from '@/components/premium';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 
@@ -298,15 +296,14 @@ export default async function OperationsCenterPage() {
   const recentGroups  = groupRecentEvents(recent);
 
   return (
-    <div className="space-y-5">
-      <PageHeader
+    <div className="flex flex-col gap-5 lg:gap-6 pb-2">
+      <PremiumPageHero
         title="مركز العمليات"
         description="نظرة تشغيلية على نشاط النظام — أكثر المناطق استخدامًا، أكثر المستخدمين نشاطًا، وآخر الأحداث."
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'مركز العمليات' },
         ]}
-        meta={<Gauge className="h-4 w-4 text-brand-600" />}
       />
 
       {(summaryRes.error || recentRes.error) && (

@@ -9,8 +9,6 @@ import {
 import { AlertTriangle, ExternalLink, Loader2, MapPin } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
-// Default fallback center: central Cairo. Used when no valid coordinates are
-// supplied (e.g. brand-new project form). Egypt is the primary market.
 const DEFAULT_CENTER = { lat: 30.0444, lng: 31.2357 };
 const DEFAULT_ZOOM_EMPTY = 6;
 const DEFAULT_ZOOM_MARKER = 14;
@@ -24,10 +22,8 @@ const HEIGHT_CLASS = {
 type Height = keyof typeof HEIGHT_CLASS;
 
 interface BaseProps {
-  /** Tailwind height bucket. */
   height?: Height;
   className?: string;
-  /** Optional pill in the top-end corner (e.g. city name). */
   city?: string | null;
 }
 
@@ -42,15 +38,11 @@ interface EditableProps extends BaseProps {
   mode: 'editable';
   lat: number | null | undefined;
   lng: number | null | undefined;
-  /** Fired when user clicks the map or drags the marker. */
   onChange: (lat: number, lng: number) => void;
 }
 
 type Props = DisplayProps | EditableProps;
 
-// Locally-defined structural type for the click/drag event payload, so we
-// don't depend on the ambient `google.maps` namespace from @types/google.maps
-// (which isn't required at lint time).
 type MapMouseEvtLike = {
   latLng?: { lat: () => number; lng: () => number } | null;
 };
@@ -70,12 +62,25 @@ function isValidCoord(lat: unknown, lng: unknown): lat is number {
 
 export function ProjectMap(props: Props) {
   const { mode = 'display', lat, lng, height = 'md', className, city } = props;
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
-  const hasKey = apiKey.length > 0;
   const hasCoords = isValidCoord(lat, lng);
 
-  // Missing API key — render a clean fallback that still surfaces the
-  // coordinates so the page remains useful. Never crash the host page.
+  // Display mode uses an iframe embed — no API key required.
+  if (mode === 'display') {
+    return (
+      <IframeMap
+        lat={hasCoords ? (lat as number) : null}
+        lng={hasCoords ? (lng as number) : null}
+        height={height}
+        className={className}
+        city={city}
+      />
+    );
+  }
+
+  // Editable mode (project edit form) uses the Google Maps JS API.
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
+  const hasKey = apiKey.length > 0;
+
   if (!hasKey) {
     return (
       <MapFallback
@@ -91,20 +96,82 @@ export function ProjectMap(props: Props) {
 
   return (
     <LoadedMap
-      mode={mode}
+      mode="editable"
       lat={lat ?? null}
       lng={lng ?? null}
       height={height}
       className={className}
       city={city}
       apiKey={apiKey}
-      onChange={mode === 'editable' ? props.onChange : undefined}
+      onChange={props.onChange}
     />
   );
 }
 
+// ── Iframe display map (no API key) ──────────────────────────────────────────
+
+function IframeMap({
+  lat,
+  lng,
+  height,
+  className,
+  city,
+}: {
+  lat: number | null;
+  lng: number | null;
+  height: Height;
+  className?: string;
+  city?: string | null;
+}) {
+  const hasCoords = lat !== null && lng !== null;
+
+  return (
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-2xl bg-slate-100 ring-1 ring-inset ring-hairline',
+        HEIGHT_CLASS[height],
+        className,
+      )}
+    >
+      {hasCoords ? (
+        <>
+          <iframe
+            src={`https://maps.google.com/maps?q=${lat},${lng}&z=14&output=embed`}
+            className="absolute inset-0 h-full w-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            title="موقع المشروع على الخريطة"
+          />
+          {city && (
+            <div className="pointer-events-none absolute end-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-2xs font-semibold text-slate-700 shadow-sm backdrop-blur">
+              <MapPin className="h-3 w-3 text-brand-600" />
+              {city}
+            </div>
+          )}
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute bottom-3 start-3 z-10 inline-flex items-center gap-1.5 rounded-xl bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-800 shadow-sm backdrop-blur transition-colors hover:bg-white"
+          >
+            افتح في خرائط جوجل
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </>
+      ) : (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-400">
+          <MapPin className="h-6 w-6" strokeWidth={1.5} />
+          <p className="text-xs">لم يُحدد موقع للمشروع</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Editable map (Google Maps JS API) ────────────────────────────────────────
+
 interface LoadedMapProps {
-  mode: 'display' | 'editable';
+  mode: 'editable';
   lat: number | null;
   lng: number | null;
   height: Height;
@@ -115,7 +182,6 @@ interface LoadedMapProps {
 }
 
 function LoadedMap({
-  mode,
   lat,
   lng,
   height,
@@ -138,26 +204,26 @@ function LoadedMap({
 
   const handleMapClick = useCallback(
     (e: MapMouseEvtLike) => {
-      if (mode !== 'editable' || !onChange) return;
+      if (!onChange) return;
       const nextLat = e.latLng?.lat();
       const nextLng = e.latLng?.lng();
       if (typeof nextLat === 'number' && typeof nextLng === 'number') {
         onChange(nextLat, nextLng);
       }
     },
-    [mode, onChange],
+    [onChange],
   );
 
   const handleMarkerDragEnd = useCallback(
     (e: MapMouseEvtLike) => {
-      if (mode !== 'editable' || !onChange) return;
+      if (!onChange) return;
       const nextLat = e.latLng?.lat();
       const nextLng = e.latLng?.lng();
       if (typeof nextLat === 'number' && typeof nextLng === 'number') {
         onChange(nextLat, nextLng);
       }
     },
-    [mode, onChange],
+    [onChange],
   );
 
   if (loadError) {
@@ -195,46 +261,30 @@ function LoadedMap({
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
-          // The Google Maps SDK respects the host page's `dir` automatically;
-          // keep controls in default positions for RTL/LTR portability.
         }}
       >
         {hasCoords && (
           <Marker
             position={{ lat: lat!, lng: lng! }}
-            draggable={mode === 'editable'}
+            draggable
             onDragEnd={handleMarkerDragEnd}
           />
         )}
       </GoogleMap>
 
       {city && (
-        <div className="absolute top-3 end-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur text-2xs font-semibold text-slate-700 px-2.5 py-1 shadow-sm pointer-events-none">
+        <div className="pointer-events-none absolute end-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-2xs font-semibold text-slate-700 shadow-sm backdrop-blur">
           <MapPin className="h-3 w-3 text-brand-600" />
           {city}
         </div>
       )}
 
-      {mode === 'editable' && (
-        <div className="absolute bottom-3 start-3 inline-flex items-center gap-1.5 rounded-xl bg-white/90 backdrop-blur text-2xs font-medium text-slate-700 px-2.5 py-1.5 shadow-sm pointer-events-none">
-          <MapPin className="h-3 w-3 text-brand-600" />
-          {hasCoords
-            ? 'انقر أو اسحب العلامة لتعديل الموقع'
-            : 'انقر على الخريطة لتحديد الموقع'}
-        </div>
-      )}
-
-      {hasCoords && mode === 'display' && (
-        <a
-          href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="absolute bottom-3 start-3 inline-flex items-center gap-1.5 rounded-xl bg-white/90 backdrop-blur text-xs font-semibold text-slate-800 px-3 py-1.5 shadow-sm hover:bg-white transition-colors"
-        >
-          افتح في خرائط جوجل
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      )}
+      <div className="pointer-events-none absolute bottom-3 start-3 inline-flex items-center gap-1.5 rounded-xl bg-white/90 px-2.5 py-1.5 text-2xs font-medium text-slate-700 shadow-sm backdrop-blur">
+        <MapPin className="h-3 w-3 text-brand-600" />
+        {hasCoords
+          ? 'انقر أو اسحب العلامة لتعديل الموقع'
+          : 'انقر على الخريطة لتحديد الموقع'}
+      </div>
     </MapShell>
   );
 }
@@ -313,7 +363,7 @@ function MapFallback({
             </p>
             {hasCoords && (
               <p className="mt-1 text-slate-600 font-mono" dir="ltr">
-                {lat!.toFixed(5)}, {lng!.toFixed(5)}
+                {(lat as number).toFixed(5)}, {(lng as number).toFixed(5)}
               </p>
             )}
           </div>
