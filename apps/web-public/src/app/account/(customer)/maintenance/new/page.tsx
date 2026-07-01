@@ -29,8 +29,13 @@ function firstStr(v: string | string[] | undefined): string {
 function Header() {
   return (
     <div className="space-y-4">
-      <Link href={routes.accountMaintenance} className="inline-flex items-center gap-1.5 text-sm font-medium text-gold-600 hover:text-gold-500">
-        <ArrowRight className="h-4 w-4" aria-hidden />
+      <Link
+        href={routes.accountMaintenance}
+        className="group inline-flex items-center gap-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink-strong"
+      >
+        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline bg-surface transition-colors group-hover:border-gold-200 group-hover:bg-gold-50 group-hover:text-gold-600">
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+        </span>
         العودة إلى الصيانة
       </Link>
       <AccountPageHeader
