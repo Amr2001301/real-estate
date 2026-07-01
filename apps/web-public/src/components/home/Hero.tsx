@@ -1,8 +1,8 @@
-import { MessageCircle, Building2, Home } from 'lucide-react';
+import Link from 'next/link';
+import { MessageCircle } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { Container } from '@/components/ui/Container';
 import { ButtonLink } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Reveal } from '@/components/motion/Reveal';
 
 interface HeroProps {
@@ -12,8 +12,12 @@ interface HeroProps {
 }
 
 export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
+  const showProjects = projectsCount != null && projectsCount > 0;
+  const showUnits = unitsCount != null && unitsCount > 0;
+  const hasStats = showProjects || showUnits;
+
   return (
-    <section className="relative flex min-h-[560px] items-center overflow-hidden bg-navy sm:min-h-[620px] lg:min-h-[700px]">
+    <section className="relative flex min-h-[480px] items-center overflow-hidden bg-navy sm:min-h-[520px] lg:min-h-[580px]">
       {/* Background photo or radial gradient fallback */}
       {image ? (
         <div
@@ -28,8 +32,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
           aria-hidden
         />
       )}
-
-      {/* Directional wash — heavy on the right behind Arabic text, clear on left */}
+      {/* Directional wash — heavy on the right behind Arabic text */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{ background: 'linear-gradient(to left, rgba(11,23,38,0.96) 0%, rgba(13,26,43,0.85) 28%, rgba(13,26,43,0.44) 62%, rgba(11,23,38,0.08) 100%)' }}
@@ -49,72 +52,102 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
       {/* Bottom fade anchors the SearchPanel */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-navy to-transparent" aria-hidden />
 
-      <Container className="relative pb-20 pt-28 sm:pb-24 lg:pb-28">
-        <div className="max-w-[680px]">
+      <Container className="relative pb-14 pt-24 sm:pb-16 lg:pb-20">
+        <div className="max-w-[660px]">
+
+          {/* Eyebrow — dot + all-caps tracking label */}
           <Reveal>
-            <Badge tone="gold">عقارات مختارة بعناية</Badge>
+            <div className="flex items-center gap-2.5">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-400" aria-hidden />
+              <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-gold-400">
+                عقارات مختارة بعناية
+              </span>
+            </div>
           </Reveal>
 
+          {/* Headline — light supporting line + bold hero line with gradient word */}
           <Reveal delay={80}>
-            <h1 className="mt-5 max-w-[640px] text-[2.1rem] font-bold leading-[1.25] text-white sm:text-4xl lg:text-[3.25rem]">
-              <span className="block">استثمر في عقار</span>
-              <span className="relative inline-block">
-                مختار بعناية
+            <h1 className="mt-7 text-[2.5rem] leading-[1.2] sm:text-5xl lg:text-[3.75rem]">
+              <span className="block font-light tracking-tight text-white/75">
+                استثمر في عقار
+              </span>
+              <span className="block font-extrabold tracking-tight text-white">
+                مختار{' '}
                 <span
-                  aria-hidden
-                  className="absolute inset-x-0 -bottom-1.5 h-2.5 rounded-full bg-gold-400/90 sm:h-3"
-                />
+                  className="bg-clip-text text-transparent"
+                  style={{ backgroundImage: 'linear-gradient(to left, #b8923e, #f0d080, #d4a84b)' }}
+                >
+                  بعناية
+                </span>
               </span>
             </h1>
           </Reveal>
 
+          {/* Thin gold separator — visual chapter break */}
+          <div className="mt-8 h-px w-12 bg-gold-400/40" aria-hidden />
+
+          {/* Description */}
           <Reveal delay={150}>
-            <p className="mt-5 max-w-[520px] text-[17px] leading-[1.85] text-white/80 sm:text-lg">
+            <p className="mt-5 max-w-[480px] text-[16px] leading-[1.9] text-white/55 sm:text-[17px]">
               وحدات ومشاريع سكنية وتجارية مختارة بعناية — تناسب السكن والاستثمار.
             </p>
           </Reveal>
 
-          {/* Live stats chips */}
-          {(projectsCount != null || unitsCount != null) && (
+          {/* Stats — large numeral + small uppercase label, separated by vertical rule */}
+          {hasStats && (
             <Reveal delay={210}>
-              <div className="mt-6 flex flex-wrap gap-3">
-                {projectsCount != null && projectsCount > 0 && (
-                  <span className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white/90 ring-1 ring-white/15 backdrop-blur-sm">
-                    <Building2 className="h-4 w-4 text-gold-300" aria-hidden />
-                    {projectsCount}+ مشروع
-                  </span>
+              <div className="mt-9 flex items-center gap-7">
+                {showProjects && (
+                  <div>
+                    <div className="font-display text-[1.9rem] font-black leading-none text-white">
+                      {projectsCount}+
+                    </div>
+                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                      مشروع
+                    </div>
+                  </div>
                 )}
-                {unitsCount != null && unitsCount > 0 && (
-                  <span className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white/90 ring-1 ring-white/15 backdrop-blur-sm">
-                    <Home className="h-4 w-4 text-gold-300" aria-hidden />
-                    {unitsCount}+ وحدة
-                  </span>
+                {showProjects && showUnits && (
+                  <div className="h-9 w-px bg-white/15" aria-hidden />
+                )}
+                {showUnits && (
+                  <div>
+                    <div className="font-display text-[1.9rem] font-black leading-none text-white">
+                      {unitsCount}+
+                    </div>
+                    <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
+                      وحدة
+                    </div>
+                  </div>
                 )}
               </div>
             </Reveal>
           )}
 
+          {/* CTAs — gold primary + icon-circle text secondary */}
           <Reveal delay={270}>
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-10 flex flex-wrap items-center gap-6">
               <ButtonLink
                 href={routes.units}
                 variant="gold"
                 size="lg"
-                className="shadow-[0_14px_34px_-12px_rgba(200,162,75,0.60)]"
+                className="shadow-[0_16px_40px_-12px_rgba(200,162,75,0.55)]"
               >
                 استكشف الوحدات
               </ButtonLink>
-              <ButtonLink
+
+              <Link
                 href={routes.contact}
-                variant="outline"
-                size="lg"
-                className="border-white/40 bg-white/10 text-white backdrop-blur-sm hover:border-white/60 hover:bg-white/[0.18]"
+                className="group inline-flex items-center gap-3 text-[15px] font-medium text-white/60 transition-colors duration-200 hover:text-white/90"
               >
-                <MessageCircle className="h-5 w-5" aria-hidden />
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] backdrop-blur-sm transition-all duration-200 group-hover:border-white/40 group-hover:bg-white/[0.14]">
+                  <MessageCircle className="h-[18px] w-[18px]" aria-hidden />
+                </span>
                 تحدث مع مستشار
-              </ButtonLink>
+              </Link>
             </div>
           </Reveal>
+
         </div>
       </Container>
     </section>
