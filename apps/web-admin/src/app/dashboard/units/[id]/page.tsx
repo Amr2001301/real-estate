@@ -126,66 +126,51 @@ export default async function UnitDetailPage({
         }
       />
 
-      {/* Media / price band */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-        <div className="relative grid grid-cols-1 lg:grid-cols-[1.5fr_1fr]">
-          {/* Image / placeholder */}
-          <div className="relative h-48 sm:h-56 lg:h-64 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 lg:rounded-s-[19px] overflow-hidden">
-            {cover ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={cover}
-                alt={unit.code}
-                className="absolute inset-0 h-full w-full object-cover opacity-90"
-              />
-            ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-slate-400">
-                <Building2 className="h-12 w-12 opacity-40" />
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-slate-950/10 to-transparent" />
-            <div className="absolute bottom-4 start-4 end-4 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-xs text-white/70">السعر الإجمالي</p>
-                <p className="mt-0.5 text-2xl sm:text-3xl font-bold text-white tabular-nums">
-                  {formatCurrency(unit.price)}
-                </p>
-              </div>
-              <UnitStatusBadge status={unit.status} />
+      {/* Cover image — only when media exists */}
+      {cover && (
+        <div className="relative h-48 sm:h-52 overflow-hidden rounded-[20px] border border-hairline shadow-soft">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={cover} alt={unit.code} className="h-full w-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
+          <div className="absolute bottom-4 start-5 end-5 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] text-white/60">السعر الإجمالي</p>
+              <p className="mt-0.5 text-xl font-bold text-white tabular-nums">{formatCurrency(unit.price)}</p>
             </div>
-          </div>
-          {/* Quick stats */}
-          <div className="grid grid-cols-2 gap-px bg-hairline">
-            <QuickStat
-              label="المساحة"
-              value={`${unit.area} م²`}
-              icon={<Ruler className="h-4 w-4" />}
-            />
-            <QuickStat
-              label="الغرف"
-              value={unit.bedrooms}
-              icon={<BedDouble className="h-4 w-4" />}
-            />
-            <QuickStat
-              label="دورات المياه"
-              value={unit.bathrooms}
-              icon={<Bath className="h-4 w-4" />}
-            />
-            <QuickStat
-              label="الطابق"
-              value={unit.floor === 0 ? 'أرضي' : unit.floor}
-              icon={<Layers className="h-4 w-4" />}
-            />
+            <UnitStatusBadge status={unit.status} />
           </div>
         </div>
+      )}
+
+      {/* Metric cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'المساحة',      value: `${unit.area} م²`,                    icon: <Ruler /> },
+          { label: 'الغرف',        value: unit.bedrooms,                         icon: <BedDouble /> },
+          { label: 'دورات المياه', value: unit.bathrooms,                        icon: <Bath /> },
+          { label: 'الطابق',       value: unit.floor === 0 ? 'أرضي' : unit.floor, icon: <Layers /> },
+        ].map(({ label, value, icon }) => (
+          <div key={label} className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs">
+            <div className="h-[3px] w-full" style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }} />
+            <div className="px-5 py-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                  {icon}
+                </span>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-[0.12em] text-end">{label}</p>
+              </div>
+              <p className="mt-3 text-[26px] font-black tabular-nums leading-none text-slate-900">{value}</p>
+            </div>
+          </div>
+        ))}
       </div>
 
       <PremiumDetailLayout
         main={
           <>
             {/* Specifications */}
-            <PremiumSectionCard title="المواصفات الفنية">
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4">
+            <PremiumSectionCard title="المواصفات الفنية" icon={<Ruler />}>
+              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <KV label="كود الوحدة" value={<span className="font-mono">{unit.code}</span>} />
                 <KV label="النوع" value={unit.type} />
                 <KV label="الطابق" value={unit.floor === 0 ? 'أرضي' : unit.floor} />
@@ -448,9 +433,11 @@ export default async function UnitDetailPage({
 
 function KV({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-2xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="mt-1 text-sm font-medium text-slate-900 truncate">{value}</dd>
+    <div className="min-w-0 rounded-xl bg-canvas/50 px-4 py-3.5 ring-1 ring-inset ring-hairline">
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 leading-none">
+        {label}
+      </dt>
+      <dd className="mt-2 text-[15px] font-bold text-slate-900">{value}</dd>
     </div>
   );
 }
@@ -465,32 +452,16 @@ function Stat({
   value: React.ReactNode;
 }) {
   return (
-    <div className="rounded-xl bg-canvas/60 p-3 ring-1 ring-inset ring-hairline">
-      <div className="flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-slate-500">
-        <span className="text-slate-400">{icon}</span>
-        {label}
+    <div className="flex flex-col gap-3 rounded-xl bg-canvas/50 p-4 ring-1 ring-inset ring-hairline">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+        {icon}
+      </span>
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 leading-none">
+          {label}
+        </p>
+        <div className="mt-1.5 text-sm font-semibold text-slate-900">{value}</div>
       </div>
-      <div className="mt-1.5 text-sm font-semibold text-slate-900">{value}</div>
-    </div>
-  );
-}
-
-function QuickStat({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: React.ReactNode;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="bg-surface p-4 sm:p-5">
-      <div className="text-2xs font-medium uppercase tracking-wide text-slate-500 inline-flex items-center gap-1.5">
-        <span className="text-slate-400">{icon}</span>
-        {label}
-      </div>
-      <p className="mt-1.5 text-lg sm:text-xl font-bold text-slate-900 tabular-nums">{value}</p>
     </div>
   );
 }
