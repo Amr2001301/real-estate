@@ -19,7 +19,6 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react';
-import { cn } from '@/lib/cn';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { getSession } from '@/lib/session';
@@ -101,50 +100,41 @@ interface MetricTile {
   currency?: string;
   hint:      string;
   href:      string;
-  chipCls:   string;
-  glowCls:   string;
 }
 
-function HeroMetric({ icon: Icon, label, value, currency, hint, href, chipCls, glowCls }: MetricTile) {
+function HeroMetric({ icon: Icon, label, value, currency, hint, href }: MetricTile) {
   return (
     <Link
       href={href as Route}
-      className="group relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface p-5 shadow-[0_1px_6px_rgb(15,30,51,0.05)] transition-all duration-300 ease-smooth hover:-translate-y-0.5 hover:border-gold-300/70 hover:shadow-[0_0_0_2px_rgba(200,162,75,0.11),0_10px_28px_-6px_rgba(15,30,51,0.16)]"
+      className="group relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-soft transition-all duration-300 ease-smooth hover:-translate-y-1 hover:border-gold-200 hover:shadow-[0_0_0_2px_rgba(200,162,75,0.10),0_12px_32px_-8px_rgba(15,30,51,0.18)]"
     >
-      {/* hover glow overlay */}
-      <span
-        className={cn(
-          'pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100',
-          glowCls,
-        )}
+      {/* Thin gold accent bar — same language as InquiryCard / ProjectFacts */}
+      <div
+        className="h-0.5 w-full"
+        style={{ background: 'linear-gradient(to left, transparent, rgba(200,162,75,0.55), transparent)' }}
         aria-hidden
       />
 
-      {/* Top row: icon badge + label/subtitle — one connected visual block */}
-      <div className="relative flex items-center gap-3">
-        <span
-          className={cn(
-            'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ring-1 transition-all duration-300 group-hover:scale-105',
-            chipCls,
-          )}
-        >
-          <Icon className="h-[1.1rem] w-[1.1rem]" aria-hidden />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-[13.5px] font-bold leading-snug text-ink-strong">{label}</div>
-          <div className="mt-px text-[11px] font-medium text-ink-muted/65">{hint}</div>
+      <div className="flex flex-col gap-4 p-5">
+        {/* Top row: label + hint on the right (RTL start), icon on the left (RTL end) */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[13px] font-bold leading-snug text-ink-strong">{label}</div>
+            <div className="mt-0.5 text-[11px] font-medium text-ink-muted/65">{hint}</div>
+          </div>
+          {/* Unified gold icon tile — same treatment as UnitSpecs / ProjectFacts */}
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-white shadow-[0_1px_4px_-1px_rgba(200,162,75,0.18)] ring-1 ring-gold-100/80 transition-all duration-300 group-hover:from-gold-100 group-hover:ring-gold-200/80">
+            <Icon className="h-[18px] w-[18px] text-gold-600" aria-hidden />
+          </span>
         </div>
-      </div>
 
-      {/* Value — prominent, sits 14px below the label row */}
-      <div className="relative mt-[14px]">
+        {/* Value — the primary payload, reads large and immediate */}
         {currency ? (
-          /* Money: separate spans + whitespace-nowrap prevents clipping */
           <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap" dir="rtl">
-            <span className="font-display text-[1.625rem] font-black leading-none tracking-tight text-ink-strong">
+            <span className="font-display text-[1.75rem] font-black leading-none tracking-tight text-ink-strong">
               {value}
             </span>
-            <span className="text-[0.8125rem] font-bold text-ink-muted/60">{currency}</span>
+            <span className="text-[0.8rem] font-bold text-ink-muted/55">{currency}</span>
           </span>
         ) : (
           <div className="font-display text-[2rem] font-black leading-none tracking-tight text-ink-strong">
@@ -377,73 +367,57 @@ export default async function AccountPage() {
           currency: depositsAmountText ? 'ر.س' : undefined,
           hint:     'إجمالي محصّل',
           href:     routes.accountDeposits,
-          chipCls:  'bg-emerald-50 text-emerald-600 ring-emerald-200/60 group-hover:bg-emerald-100',
-          glowCls:  'bg-[radial-gradient(circle_at_80%_10%,rgba(16,185,129,0.08),transparent_55%)]',
         },
         {
-          icon:    FileText,
-          label:   'العقود النشطة',
-          value:   fmt(contractsCount),
-          hint:    'عقود موثّقة',
-          href:    routes.accountContracts,
-          chipCls: 'bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-gold-200/70 group-hover:from-gold-200 group-hover:to-gold-400',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(200,162,75,0.10),transparent_55%)]',
+          icon:  FileText,
+          label: 'العقود النشطة',
+          value: fmt(contractsCount),
+          hint:  'عقود موثّقة',
+          href:  routes.accountContracts,
         },
         {
-          icon:    Wrench,
-          label:   'الصيانة والزيارات',
-          value:   sum(maintenanceCount, visitsCount),
-          hint:    'قيد المتابعة',
-          href:    routes.accountMaintenance,
-          chipCls: 'bg-amber-50 text-amber-600 ring-amber-200/60 group-hover:bg-amber-100',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(245,158,11,0.08),transparent_55%)]',
+          icon:  Wrench,
+          label: 'الصيانة والزيارات',
+          value: sum(maintenanceCount, visitsCount),
+          hint:  'قيد المتابعة',
+          href:  routes.accountMaintenance,
         },
         {
-          icon:    Heart,
-          label:   'المفضلة',
-          value:   fmt(favoritesCount),
-          hint:    'عناصر محفوظة',
-          href:    routes.accountFavorites,
-          chipCls: 'bg-rose-50 text-rose-500 ring-rose-200/60 group-hover:bg-rose-100',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(244,63,94,0.07),transparent_55%)]',
+          icon:  Heart,
+          label: 'المفضلة',
+          value: fmt(favoritesCount),
+          hint:  'عناصر محفوظة',
+          href:  routes.accountFavorites,
         },
       ]
     : [
         {
-          icon:    Heart,
-          label:   'المفضلة',
-          value:   fmt(favoritesCount),
-          hint:    'عناصر محفوظة',
-          href:    routes.accountFavorites,
-          chipCls: 'bg-rose-50 text-rose-500 ring-rose-200/60 group-hover:bg-rose-100',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(244,63,94,0.07),transparent_55%)]',
+          icon:  Heart,
+          label: 'المفضلة',
+          value: fmt(favoritesCount),
+          hint:  'عناصر محفوظة',
+          href:  routes.accountFavorites,
         },
         {
-          icon:    CalendarClock,
-          label:   'طلبات الزيارة',
-          value:   fmt(visitsCount),
-          hint:    'مجدولة',
-          href:    routes.accountVisits,
-          chipCls: 'bg-gradient-to-br from-gold-100 to-gold-200 text-gold-600 ring-gold-200/70 group-hover:from-gold-200 group-hover:to-gold-400',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(200,162,75,0.10),transparent_55%)]',
+          icon:  CalendarClock,
+          label: 'طلبات الزيارة',
+          value: fmt(visitsCount),
+          hint:  'مجدولة',
+          href:  routes.accountVisits,
         },
         {
-          icon:    MessageSquareText,
-          label:   'الاستفسارات',
-          value:   fmt(requestsCount),
-          hint:    'قيد المعالجة',
-          href:    routes.accountRequests,
-          chipCls: 'bg-amber-50 text-amber-600 ring-amber-200/60 group-hover:bg-amber-100',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(245,158,11,0.08),transparent_55%)]',
+          icon:  MessageSquareText,
+          label: 'الاستفسارات',
+          value: fmt(requestsCount),
+          hint:  'قيد المعالجة',
+          href:  routes.accountRequests,
         },
         {
-          icon:    BookmarkCheck,
-          label:   'الحجوزات',
-          value:   fmt(reservationsCount),
-          hint:    'نشطة',
-          href:    routes.accountReservations,
-          chipCls: 'bg-emerald-50 text-emerald-600 ring-emerald-200/60 group-hover:bg-emerald-100',
-          glowCls: 'bg-[radial-gradient(circle_at_80%_10%,rgba(16,185,129,0.08),transparent_55%)]',
+          icon:  BookmarkCheck,
+          label: 'الحجوزات',
+          value: fmt(reservationsCount),
+          hint:  'نشطة',
+          href:  routes.accountReservations,
         },
       ];
 

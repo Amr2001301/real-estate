@@ -244,14 +244,20 @@ export function CompareView({ units }: { units: PublicUnit[] }) {
       </div>
 
       <div className="mt-10 flex flex-wrap items-center gap-4">
-        <ButtonLink href={addMoreHref} variant="outline" size="md">
+        <ButtonLink href={addMoreHref} variant="primary" size="md">
           <Plus className="h-4 w-4" aria-hidden />
           أضف وحدات أخرى
         </ButtonLink>
-        <ButtonLink href={routes.units} variant="ghost" size="md">
+        {/* Premium text-link — same arrow-circle pattern as project page */}
+        <Link
+          href={routes.units}
+          className="group flex items-center gap-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink-strong"
+        >
           العودة إلى الوحدات
-          <ArrowLeft className="h-4 w-4" aria-hidden />
-        </ButtonLink>
+          <span className="flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-surface transition-colors group-hover:border-gold-200 group-hover:bg-gold-50 group-hover:text-gold-600">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
+          </span>
+        </Link>
       </div>
     </div>
   );
