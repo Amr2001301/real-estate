@@ -175,8 +175,6 @@ interface CommandTile {
   delta?:    string;
   deltaCls?: string;
   icon:      ReactNode;
-  iconCls:   string;
-  featured?: boolean;
 }
 
 function RevenueCommandStrip({
@@ -219,9 +217,7 @@ function RevenueCommandStrip({
       value:    hasFin ? formatCompact(total) : '—',
       sub:      'القيمة الكلية للعقود النشطة',
       valueCls: 'text-slate-900',
-      icon:     <Building2 className="h-4 w-4" />,
-      iconCls:  'bg-brand-100 text-brand-700',
-      featured: true,
+      icon:     <Building2 className="h-[18px] w-[18px]" />,
     },
     {
       label:    'إجمالي المحصّل',
@@ -232,8 +228,7 @@ function RevenueCommandStrip({
       deltaCls: collectionDeltaPct !== null && collectionDeltaPct >= 0
                   ? 'text-success-600'
                   : 'text-danger-600',
-      icon:     <TrendingUp className="h-4 w-4" />,
-      iconCls:  'bg-success-50 text-success-600',
+      icon:     <TrendingUp className="h-[18px] w-[18px]" />,
     },
     {
       label:    'معدل التحصيل',
@@ -243,8 +238,7 @@ function RevenueCommandStrip({
                 rate >= 40     ? 'يحتاج متابعة'              :
                                  'أداء منخفض — تدخل مطلوب',
       valueCls: rateValueCls,
-      icon:     <Activity className="h-4 w-4" />,
-      iconCls:  rateIconCls,
+      icon:     <Activity className="h-[18px] w-[18px]" />,
     },
     {
       label:    'مبالغ متأخرة',
@@ -255,10 +249,7 @@ function RevenueCommandStrip({
                     : 'تجاوزت تاريخ الاستحقاق'
                   : 'لا مبالغ متأخرة',
       valueCls: hasFin && overdue > 0 ? 'text-danger-700' : 'text-slate-400',
-      icon:     <AlertCircle className="h-4 w-4" />,
-      iconCls:  hasFin && overdue > 0
-                  ? 'bg-danger-50 text-danger-500'
-                  : 'bg-slate-100 text-slate-400',
+      icon:     <AlertCircle className="h-[18px] w-[18px]" />,
     },
     {
       label:    'عقود الشهر',
@@ -273,51 +264,50 @@ function RevenueCommandStrip({
       deltaCls: contractsDelta !== null && contractsDelta >= 0
                   ? 'text-success-600'
                   : 'text-danger-600',
-      icon:     <CalendarDays className="h-4 w-4" />,
-      iconCls:  'bg-brand-50 text-brand-600',
+      icon:     <CalendarDays className="h-[18px] w-[18px]" />,
     },
   ];
 
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
-        {tiles.map((tile) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      {tiles.map((tile) => (
+        <div
+          key={tile.label}
+          className="relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs"
+        >
+          {/* Thin top accent — same on every card */}
           <div
-            key={tile.label}
-            className={cn(
-              'flex flex-col px-5 py-5 min-h-[124px]',
-              tile.featured
-                ? 'bg-brand-50/40 border-s-[3px] border-brand-400/70'
-                : 'bg-surface',
-            )}
-          >
-            <div className="flex items-start justify-between gap-2">
-              <span className={cn(
-                'inline-flex h-11 w-11 items-center justify-center rounded-xl shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px]',
-                tile.iconCls,
-              )}>
+            className="h-[3px] w-full shrink-0"
+            style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }}
+          />
+          <div className="flex flex-1 flex-col px-5 py-4">
+            {/* Label + icon row */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
                 {tile.icon}
               </span>
-              <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug">
+              <p className="text-[11px] font-semibold leading-snug text-slate-400">
                 {tile.label}
               </p>
             </div>
+            {/* Value */}
             <p className={cn(
-              'mt-3 tabular-nums leading-none tracking-tight font-black',
-              tile.featured ? 'text-[28px]' : 'text-[26px]',
+              'mt-4 text-[26px] font-black tabular-nums leading-none tracking-tight',
               tile.valueCls,
             )}>
               {tile.value}
             </p>
-            <p className="mt-2 text-[11px] text-slate-400 leading-snug">{tile.sub}</p>
+            {/* Sub-label */}
+            <p className="mt-1.5 text-[11px] leading-snug text-slate-400">{tile.sub}</p>
+            {/* Delta */}
             {tile.delta && (
-              <p className={cn('mt-auto pt-2 text-[10px] font-semibold leading-none', tile.deltaCls)}>
+              <p className={cn('mt-auto pt-3 text-[10px] font-semibold leading-none', tile.deltaCls)}>
                 {tile.delta}
               </p>
             )}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }
