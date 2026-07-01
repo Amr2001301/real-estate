@@ -7,7 +7,6 @@ import {
   Clock,
   ShieldCheck,
   ShieldAlert,
-  ArrowLeft,
   Hash,
   FileText,
   Wrench,
@@ -176,66 +175,61 @@ export default async function CustomerDetailPage({
         main={
           <div className="space-y-5">
             <PremiumSectionCard title="الملف الشخصي">
-              <div className="grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-5">
+              {/* Avatar + name row */}
+              <div className="flex items-center gap-4">
                 <span
                   className={cn(
-                    'inline-flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-bold ring-2 ring-white shadow-sm uppercase tabular-nums',
+                    'inline-flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-2xl text-[26px] font-extrabold ring-4 ring-white shadow uppercase',
                     paletteFor(u.fullName ?? u.id),
                   )}
                   aria-hidden
                 >
                   {initials(u.fullName)}
                 </span>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <h2 className="text-xl font-semibold text-navy tracking-tight truncate">
-                      {u.fullName}
-                    </h2>
-                    <Badge tone="success" variant="soft" size="sm">مالك حالي</Badge>
-                  </div>
-                  <p className="mt-1 text-sm text-slate-500">
-                    عميل أبرم عقداً ويملك وحدات داخل المحفظة.
-                  </p>
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    <ContactCell
-                      icon={<Mail className="h-4 w-4" />}
-                      tone="info"
-                      label="البريد الإلكتروني"
-                      value={u.email}
-                      href={u.email ? `mailto:${u.email}` : undefined}
-                    />
-                    <ContactCell
-                      icon={<Phone className="h-4 w-4" />}
-                      tone="brand"
-                      label="رقم الهاتف"
-                      value={u.phone}
-                      href={u.phone ? `tel:${u.phone}` : undefined}
-                    />
-                    <ContactCell
-                      icon={<Languages className="h-4 w-4" />}
-                      tone="purple"
-                      label="اللغة المفضلة"
-                      value={u.locale === 'en' ? 'الإنجليزية' : 'العربية'}
-                    />
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-[22px] font-bold text-navy tracking-tight truncate leading-tight">
+                    {u.fullName}
+                  </h2>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <Badge tone="success" variant="soft" size="sm" dot>مالك</Badge>
+                    <Badge tone={u.active ? 'success' : 'gray'} variant="soft" size="sm">
+                      {u.active ? 'نشط' : 'موقوف'}
+                    </Badge>
+                    <span className="text-2xs font-mono text-slate-400 ms-1">
+                      عضو منذ {formatDate(u.createdAt)}
+                    </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Contact cells */}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <ContactCell
+                  icon={<Mail className="h-4 w-4" />}
+                  tone="info"
+                  label="البريد الإلكتروني"
+                  value={u.email}
+                  href={u.email ? `mailto:${u.email}` : undefined}
+                />
+                <ContactCell
+                  icon={<Phone className="h-4 w-4" />}
+                  tone="brand"
+                  label="رقم الهاتف"
+                  value={u.phone}
+                  href={u.phone ? `tel:${u.phone}` : undefined}
+                />
+                <ContactCell
+                  icon={<Languages className="h-4 w-4" />}
+                  tone="purple"
+                  label="اللغة المفضلة"
+                  value={u.locale === 'en' ? 'الإنجليزية' : 'العربية'}
+                />
               </div>
             </PremiumSectionCard>
 
             <PremiumSectionCard
               title="العقود"
               icon={<FileText className="h-4 w-4" />}
-              trailing={
-                contracts.length > 0 ? (
-                  <Link
-                    href={`/dashboard/contracts?customerId=${u.id}` as never}
-                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                  >
-                    عرض كل العقود
-                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                  </Link>
-                ) : undefined
-              }
               padded={false}
             >
               {contracts.length === 0 ? (
@@ -254,30 +248,35 @@ export default async function CustomerDetailPage({
                       <li key={c.id}>
                         <Link
                           href={`/dashboard/contracts/${c.id}` as never}
-                          className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
+                          className="group flex items-center gap-3.5 px-5 py-4 hover:bg-canvas/40 transition-colors"
                         >
-                          <span className="font-mono text-2xs text-slate-400 shrink-0">
-                            {c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}
+                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-success-50 text-success-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                            <FileText />
                           </span>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="text-sm font-medium text-slate-900 truncate">
-                                {projectName ? `${projectName} · ` : ''}
-                                وحدة {c.unit?.code ?? '—'}
+                            {/* Top line: project · unit  |  price */}
+                            <div className="flex items-baseline justify-between gap-3">
+                              <p className="text-[13.5px] font-semibold text-slate-900 truncate leading-snug">
+                                {projectName ? `${projectName} · ` : ''}وحدة {c.unit?.code ?? '—'}
+                              </p>
+                              <p className="shrink-0 text-[14px] font-bold text-slate-800 tabular-nums leading-snug">
+                                {formatCurrency(c.totalAmount)}
+                              </p>
+                            </div>
+                            {/* Bottom line: contract# · date  |  signed badge */}
+                            <div className="flex items-center justify-between gap-3 mt-1.5">
+                              <p className="text-2xs text-slate-400 inline-flex items-center gap-1.5 min-w-0 truncate">
+                                <span className="font-mono">{c.contractNumber ?? `#${c.id.slice(0, 8).toUpperCase()}`}</span>
+                                <span className="text-slate-300">·</span>
+                                <span>{formatDate(c.createdAt)}</span>
                               </p>
                               {c.signedAt ? (
                                 <Badge tone="success" variant="soft" size="sm" dot>مُوقَّع</Badge>
                               ) : (
-                                <Badge tone="warning" variant="soft" size="sm" dot>بانتظار التوقيع</Badge>
+                                <Badge tone="warning" variant="soft" size="sm" dot>بانتظار</Badge>
                               )}
                             </div>
-                            <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
-                              <span>قيمة العقد: {formatCurrency(c.totalAmount)}</span>
-                              <span className="text-slate-300">·</span>
-                              <span>{formatDate(c.createdAt)}</span>
-                            </p>
                           </div>
-                          <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
                         </Link>
                       </li>
                     );
@@ -289,17 +288,6 @@ export default async function CustomerDetailPage({
             <PremiumSectionCard
               title="طلبات الصيانة"
               icon={<Wrench className="h-4 w-4" />}
-              trailing={
-                maintenance.length > 0 ? (
-                  <Link
-                    href={`/dashboard/maintenance?customerId=${u.id}` as never}
-                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                  >
-                    عرض كل الطلبات
-                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                  </Link>
-                ) : undefined
-              }
               padded={false}
             >
               {maintenance.length === 0 ? (
@@ -314,27 +302,33 @@ export default async function CustomerDetailPage({
                     <li key={m.id}>
                       <Link
                         href={`/dashboard/maintenance/${m.id}` as never}
-                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
+                        className="group flex items-center gap-3.5 px-5 py-4 hover:bg-canvas/40 transition-colors"
                       >
-                        <span className="font-mono text-2xs text-slate-400 shrink-0">
-                          #{m.id.slice(0, 8).toUpperCase()}
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                          <Wrench />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-sm font-medium text-slate-900 truncate">
+                          {/* Top line: category · unit  |  status badge */}
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="text-[13.5px] font-semibold text-slate-900 truncate leading-snug">
                               {m.category ? tx(m.category.name) : 'طلب صيانة'}
                               {m.unit ? ` · وحدة ${m.unit.code}` : ''}
                             </p>
                             <MaintenanceStatusBadge status={m.status} />
                           </div>
-                          <p className="text-2xs text-slate-500 mt-0.5 truncate">
-                            {m.description}
-                          </p>
-                          <p className="text-2xs text-slate-400 mt-0.5">
-                            {formatDate(m.createdAt)}
+                          {/* Description: 1 line clamp */}
+                          {m.description && (
+                            <p className="text-2xs text-slate-500 mt-1 line-clamp-1 leading-relaxed">
+                              {m.description}
+                            </p>
+                          )}
+                          {/* Bottom line: mono ID · date */}
+                          <p className="text-2xs text-slate-400 mt-1 inline-flex items-center gap-1.5">
+                            <span className="font-mono">#{m.id.slice(0, 8).toUpperCase()}</span>
+                            <span className="text-slate-300">·</span>
+                            <span>{formatDate(m.createdAt)}</span>
                           </p>
                         </div>
-                        <ArrowLeft className="h-4 w-4 text-slate-300 rtl:rotate-180" />
                       </Link>
                     </li>
                   ))}
@@ -345,17 +339,6 @@ export default async function CustomerDetailPage({
             <PremiumSectionCard
               title="المستندات"
               icon={<Files className="h-4 w-4" />}
-              trailing={
-                documents.length > 0 ? (
-                  <Link
-                    href={`/dashboard/documents?ownerType=USER&ownerId=${u.id}` as never}
-                    className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
-                  >
-                    عرض كل المستندات
-                    <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                  </Link>
-                ) : undefined
-              }
               padded={false}
             >
               {documents.length === 0 ? (
@@ -372,15 +355,16 @@ export default async function CustomerDetailPage({
                         href={d.fileUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
+                        className="group flex items-center gap-3.5 px-5 py-4 hover:bg-canvas/40 transition-colors"
                       >
-                        <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-info-50 text-info-600 shrink-0">
-                          <Files className="h-4 w-4" />
+                        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-info-50 text-info-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                          <Files />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-slate-900 truncate">{d.title}</p>
-                          <p className="text-2xs text-slate-500 mt-0.5 inline-flex items-center gap-2 flex-wrap">
+                          <p className="text-[13.5px] font-semibold text-slate-900 truncate">{d.title}</p>
+                          <p className="text-2xs text-slate-400 mt-1 inline-flex items-center gap-2 flex-wrap">
                             <Badge tone="info" variant="soft" size="sm">{d.category}</Badge>
+                            <span className="text-slate-300">·</span>
                             <span>{formatDate(d.createdAt)}</span>
                             {d.uploadedBy?.fullName && (
                               <>
@@ -390,7 +374,7 @@ export default async function CustomerDetailPage({
                             )}
                           </p>
                         </div>
-                        <Download className="h-4 w-4 text-slate-300" />
+                        <Download className="h-4 w-4 shrink-0 text-slate-300 group-hover:text-slate-400 transition-colors" />
                       </a>
                     </li>
                   ))}
@@ -420,8 +404,8 @@ export default async function CustomerDetailPage({
               </Link>
             </PremiumCommandPanel>
 
-            <PremiumSectionCard title="معلومات الحساب">
-              <dl className="flex flex-col gap-3 text-sm">
+            <PremiumSectionCard title="معلومات الحساب" padded={false}>
+              <dl className="flex flex-col divide-y divide-hairline">
                 <Row label="حالة الحساب" icon={<ShieldCheck className="h-3.5 w-3.5" />}>
                   {u.active ? (
                     <Badge tone="success" variant="soft" dot size="sm">نشط</Badge>
@@ -433,11 +417,11 @@ export default async function CustomerDetailPage({
                   <Badge tone="success" variant="soft" size="sm">مالك</Badge>
                 </Row>
                 <Row label="تاريخ التسجيل" icon={<Calendar className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700">{formatDate(u.createdAt)}</span>
+                  <span className="text-[13px] font-medium text-slate-700">{formatDate(u.createdAt)}</span>
                 </Row>
                 <Row label="آخر دخول" icon={<Clock className="h-3.5 w-3.5" />}>
-                  <span className="text-slate-700">
-                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : '— لم يدخل بعد —'}
+                  <span className="text-[13px] font-medium text-slate-700">
+                    {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : <span className="text-slate-400">لم يدخل بعد</span>}
                   </span>
                 </Row>
                 <Row label="معرّف العميل" icon={<Hash className="h-3.5 w-3.5" />}>
@@ -475,12 +459,12 @@ function Row({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <dt className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-wide text-slate-500 font-semibold">
-        <span className="text-slate-400">{icon}</span>
+    <div className="flex items-center justify-between gap-3 px-5 py-3">
+      <dt className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-wide text-slate-400 font-semibold shrink-0">
+        <span className="text-slate-300">{icon}</span>
         {label}
       </dt>
-      <dd className="text-end">{children}</dd>
+      <dd className="text-end min-w-0">{children}</dd>
     </div>
   );
 }
