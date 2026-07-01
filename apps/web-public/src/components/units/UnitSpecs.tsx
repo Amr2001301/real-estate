@@ -1,7 +1,6 @@
 import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck } from 'lucide-react';
 import { formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit } from '@/lib/api-types';
-import { IconCircle } from '@/components/ui/IconCircle';
 
 const STATUS_LABEL: Record<string, string> = {
   AVAILABLE: 'متاحة',
@@ -15,32 +14,32 @@ interface Spec {
   value: string;
 }
 
-/**
- * Public-safe spec tiles. Price is intentionally omitted here — it's shown
- * prominently in the hero and the inquiry card. Missing fields are skipped.
- */
 export function UnitSpecs({ unit }: { unit: PublicUnit }) {
   const specs: Spec[] = [];
-  if (Number.isFinite(unit.area) && unit.area > 0) specs.push({ icon: Maximize, label: 'المساحة', value: formatArea(unit.area) });
-  specs.push({ icon: BedDouble, label: 'غرف النوم', value: formatNumber(unit.bedrooms) });
-  specs.push({ icon: Bath, label: 'دورات المياه', value: formatNumber(unit.bathrooms) });
-  specs.push({ icon: Building2, label: 'الطابق', value: formatNumber(unit.floor) });
-  if (unit.type) specs.push({ icon: Home, label: 'نوع الوحدة', value: unitTypeLabel(unit.type) });
-  specs.push({ icon: BadgeCheck, label: 'الحالة', value: STATUS_LABEL[unit.status] ?? unit.status });
+  if (Number.isFinite(unit.area) && unit.area > 0)
+    specs.push({ icon: Maximize,   label: 'المساحة',      value: formatArea(unit.area) });
+  specs.push({ icon: BedDouble,  label: 'غرف النوم',    value: formatNumber(unit.bedrooms) });
+  specs.push({ icon: Bath,       label: 'دورات المياه', value: formatNumber(unit.bathrooms) });
+  specs.push({ icon: Building2,  label: 'الطابق',       value: formatNumber(unit.floor) });
+  if (unit.type)
+    specs.push({ icon: Home,     label: 'نوع الوحدة',   value: unitTypeLabel(unit.type) });
+  specs.push({ icon: BadgeCheck, label: 'الحالة',       value: STATUS_LABEL[unit.status] ?? unit.status });
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:gap-4">
+    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
       {specs.map(({ icon: Icon, label, value }) => (
         <div
           key={label}
-          className="flex items-center gap-3 rounded-2xl border border-hairline bg-surface p-4 shadow-soft"
+          className="flex flex-col gap-3 rounded-2xl border border-hairline bg-surface p-5 shadow-soft"
         >
-          <IconCircle tone="gold" className="h-11 w-11 shrink-0">
-            <Icon className="h-5 w-5" />
-          </IconCircle>
-          <div className="min-w-0">
-            <div className="text-xs text-ink-muted">{label}</div>
-            <div className="mt-0.5 truncate font-display text-base text-ink-strong sm:text-lg">{value}</div>
+          {/* Gold gradient icon tile — matches ProjectFacts/InquiryCard language */}
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-white shadow-[0_1px_4px_-1px_rgba(200,162,75,0.18)] ring-1 ring-gold-100/80">
+            <Icon className="h-[18px] w-[18px] text-gold-600" aria-hidden />
+          </span>
+
+          <div>
+            <div className="text-[11px] font-medium text-ink-muted/70">{label}</div>
+            <div className="mt-0.5 text-sm font-bold text-ink-strong">{value}</div>
           </div>
         </div>
       ))}

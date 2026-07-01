@@ -1,13 +1,11 @@
 import type { Route } from 'next';
-import { MessageCircle, CalendarDays, Headset, ShieldCheck, Phone } from 'lucide-react';
+import { MessageCircle, CalendarDays, ShieldCheck, Phone, Users, Building2 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { formatPrice } from '@/lib/format';
 import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
 import { ButtonLink } from '@/components/ui/Button';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
-// Official WhatsApp brand icon (Simple Icons path, CC0).
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -22,10 +20,6 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-/**
- * Premium inquiry card for a unit. The info/visit CTAs deep-link to /contact;
- * the Call and WhatsApp CTAs use env-configured numbers and hide when unset.
- */
 export function UnitInquiryCard({
   unitId,
   price,
@@ -37,107 +31,160 @@ export function UnitInquiryCard({
   unitCode?: string;
   projectName?: string;
 }) {
-  const info = `${routes.contact}?unitId=${unitId}` as Route;
+  const info  = `${routes.contact}?unitId=${unitId}` as Route;
   const visit = `${routes.contact}?type=visit&unitId=${unitId}` as Route;
 
-  const contactPhone = getContactPhone();
+  const contactPhone  = getContactPhone();
   const whatsappPhone = getWhatsappPhone();
-  const subject = unitCode ? `بالوحدة رقم ${unitCode}` : 'بهذه الوحدة';
+  const subject  = unitCode ? `بالوحدة رقم ${unitCode}` : 'بهذه الوحدة';
   const waMessage = `مرحبًا، أنا مهتم ${subject}${projectName ? ` في مشروع ${projectName}` : ''}. أرجو تزويدي بالتفاصيل.`;
 
   return (
-    <PremiumCard className="overflow-hidden p-0">
-      {/* ── Price header — dark navy band with gold bottom rule ── */}
-      <div className="relative flex items-center justify-between bg-navy px-7 py-5">
-        {/* Gold hairline along the bottom edge of the header */}
+    <>
+      {/* ══════════════════════════════════════════
+          Desktop / scroll card  — mirrors InquiryCard
+          ══════════════════════════════════════════ */}
+      <div className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-[0_8px_40px_-8px_rgba(11,23,38,0.16)]">
+
+        {/* Thin gold gradient accent stripe */}
         <div
-          className="absolute inset-x-0 bottom-0 h-px"
-          style={{
-            background:
-              'linear-gradient(to left, transparent, rgba(200,162,75,0.50), transparent)',
-          }}
+          className="h-1.5 w-full"
+          style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }}
           aria-hidden
         />
 
-        {/* Headset icon — frosted on the navy background */}
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white/[0.09] text-white ring-1 ring-white/[0.12]">
-          <Headset className="h-5 w-5" aria-hidden />
-        </span>
+        {/* ── Unit context header ────────────────────
+            Price is the headline fact — shown large and
+            gold. Unit code + project name give context.
+        ────────────────────────────────────────────── */}
+        <div className="border-b border-gold-100/60 bg-gradient-to-br from-gold-50/70 to-gold-50/10 px-5 py-5">
+          <div className="flex items-start gap-3">
+            {/* Icon tile */}
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-[0_2px_10px_-2px_rgba(200,162,75,0.24)] ring-1 ring-gold-200/70">
+              <Building2 className="h-5 w-5 text-gold-600" aria-hidden />
+            </span>
 
-        {/* Price — start-aligned (right in RTL) */}
-        <div className="text-end">
-          <p className="text-[10px] font-medium tracking-[0.10em] text-white/45">السعر</p>
-          <p className="mt-0.5 font-display text-3xl font-bold text-white">
-            {formatPrice(price)}
-          </p>
+            <div className="min-w-0 flex-1">
+              {unitCode && (
+                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500">
+                  رمز: {unitCode}
+                </p>
+              )}
+              {/* Price — the primary fact in the sidebar */}
+              <p className="mt-0.5 font-display text-2xl font-bold leading-snug text-ink-strong">
+                {formatPrice(price)}
+              </p>
+              {projectName && (
+                <p className="mt-1 truncate text-[11px] text-ink-muted">
+                  {projectName}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* ── Card body ── */}
-      <div className="px-7 py-6">
-        <h3 className="text-xl font-semibold text-ink-strong">مهتم بهذه الوحدة؟</h3>
-        <p className="mt-2 text-sm leading-relaxed text-ink-muted">
-          تواصل معنا للحصول على مزيد من التفاصيل أو لحجز معاينة، وسيسعد أحد مستشارينا بمساعدتك.
-        </p>
-
-        {/* Primary CTAs */}
-        <div className="mt-5 flex flex-col gap-3">
-          <ButtonLink href={info} variant="primary" size="md" className="w-full">
-            <MessageCircle className="h-5 w-5" aria-hidden />
+        {/* ── Primary CTAs ────────────────────────────
+            size="lg" (h-14) for the lead action creates
+            clear visual dominance over the gold secondary.
+        ────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-2.5 px-5 py-5">
+          <ButtonLink
+            href={info}
+            variant="primary"
+            size="lg"
+            className="w-full shadow-[0_4px_20px_-6px_rgba(11,23,38,0.35)]"
+          >
+            <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
             طلب معلومات
           </ButtonLink>
+
           <ButtonLink href={visit} variant="gold" size="md" className="w-full">
-            <CalendarDays className="h-5 w-5" aria-hidden />
-            طلب زيارة
+            <CalendarDays className="h-5 w-5 shrink-0" aria-hidden />
+            طلب زيارة ميدانية
           </ButtonLink>
-          <ButtonLink href={routes.contact} variant="outline" size="md" className="w-full">
-            تحدث مع مستشار
-          </ButtonLink>
-          <FavoriteButton kind="unit" id={unitId} variant="inline" />
         </div>
 
-        {/* Contact channels — only rendered when at least one number is configured */}
-        {(contactPhone || whatsappPhone) && (
-          <>
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-hairline" />
-              <span className="text-xs text-ink-muted/70">أو تواصل مباشرةً</span>
-              <div className="h-px flex-1 bg-hairline" />
-            </div>
+        {/* ── Utility actions ─────────────────────────
+            Row 1: مستشار (flex-1) + phone/WA icon pills
+            Row 2: FavoriteButton — full-width, no wrapping
+        ────────────────────────────────────────────── */}
+        <div className="border-t border-hairline px-5 pb-5 pt-4">
+          <div className="flex items-center gap-2">
+            <ButtonLink
+              href={routes.contact}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Users className="h-4 w-4 shrink-0" aria-hidden />
+              تحدث مع مستشار
+            </ButtonLink>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {contactPhone && (
-                <ButtonLink
-                  href={telHref(contactPhone)}
-                  variant="outline"
-                  size="md"
-                  className="w-full"
-                >
-                  <Phone className="h-5 w-5" aria-hidden />
-                  اتصل بنا
-                </ButtonLink>
-              )}
-              {whatsappPhone && (
-                <ButtonLink
-                  href={whatsappHref(whatsappPhone, waMessage)}
-                  variant="outline"
-                  size="md"
-                  className="w-full border-[#25D366]/25 hover:border-[#25D366]/50 hover:bg-[#25D366]/[0.06]"
-                >
-                  <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />
-                  واتساب
-                </ButtonLink>
-              )}
-            </div>
-          </>
-        )}
+            {contactPhone && (
+              <a
+                href={telHref(contactPhone)}
+                aria-label="اتصل بنا"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline bg-transparent text-ink-muted transition-colors duration-200 hover:border-gold-300 hover:bg-gold-50 hover:text-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50"
+              >
+                <Phone className="h-[18px] w-[18px]" aria-hidden />
+              </a>
+            )}
 
-        {/* Security notice */}
-        <div className="mt-6 flex items-center gap-2 border-t border-hairline pt-5 text-xs text-ink-muted">
-          <ShieldCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
+            {whatsappPhone && (
+              <a
+                href={whatsappHref(whatsappPhone, waMessage)}
+                aria-label="تواصل عبر واتساب"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#25D366]/30 bg-transparent transition-colors duration-200 hover:border-[#25D366]/60 hover:bg-[#25D366]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/30"
+              >
+                <WhatsAppIcon className="h-[18px] w-[18px] text-[#25D366]" />
+              </a>
+            )}
+          </div>
+
+          {/* Favorite — own full-width row so it never wraps */}
+          <div className="mt-2">
+            <FavoriteButton kind="unit" id={unitId} variant="inline" />
+          </div>
+        </div>
+
+        {/* ── Trust footer ── */}
+        <div className="mx-5 flex items-center gap-2 border-t border-hairline py-3.5 text-xs text-ink-muted/65">
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
           بياناتك آمنة ولن تُستخدم إلا للتواصل معك.
         </div>
       </div>
-    </PremiumCard>
+
+      {/* ══════════════════════════════════════════
+          Mobile sticky bottom action bar
+          Hidden on lg+ where the sidebar card is visible.
+          ══════════════════════════════════════════ */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-surface/95 px-4 py-3 shadow-[0_-4px_24px_-4px_rgba(11,23,38,0.12)] backdrop-blur-lg lg:hidden"
+        role="region"
+        aria-label="خيارات التواصل السريع"
+      >
+        <div className="mx-auto flex max-w-md items-center gap-2">
+          <ButtonLink href={info} variant="primary" size="md" className="min-w-0 flex-1 truncate">
+            <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
+            طلب معلومات
+          </ButtonLink>
+
+          <ButtonLink href={visit} variant="gold" size="md" className="min-w-0 flex-1 truncate">
+            <CalendarDays className="h-5 w-5 shrink-0" aria-hidden />
+            طلب زيارة
+          </ButtonLink>
+
+          {whatsappPhone && (
+            <a
+              href={whatsappHref(whatsappPhone, waMessage)}
+              aria-label="تواصل عبر واتساب"
+              className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#25D366]/30 bg-transparent transition-all duration-200 hover:border-[#25D366]/60 hover:bg-[#25D366]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
+            >
+              <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />
+            </a>
+          )}
+        </div>
+      </div>
+    </>
   );
 }
