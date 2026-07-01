@@ -63,7 +63,7 @@ export function MaintenanceRequestCard({ request }: { request: MeMaintenanceRequ
 
   return (
     <Link href={`${routes.accountMaintenance}/${request.id}` as Route} className="block">
-      <AccountCard accent={accent} interactive className="p-5">
+      <AccountCard accent={accent} className="p-5">
         <div className="grid w-full grid-cols-1 items-center gap-4 md:grid-cols-12">
           {/* Col 1 — identity (far right) */}
           <div className="flex items-center gap-3 md:col-span-3">
