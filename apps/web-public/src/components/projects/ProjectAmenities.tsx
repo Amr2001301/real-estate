@@ -21,19 +21,18 @@ export function ProjectAmenities({ services }: { services: Translatable[] }) {
         </h2>
       </div>
 
-      {/* Feature tiles — vertical layout with gold gradient background */}
-      <Stagger className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" step={60}>
+      {/* Feature tiles — horizontal: icon anchored, text flows beside it.
+          Height is content-driven, never stretched by the grid row. */}
+      <Stagger className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" step={60}>
         {items.map((item, i) => (
           <div
             key={`${item}-${i}`}
-            className="flex flex-col gap-3.5 rounded-2xl border border-gold-100/80 bg-gradient-to-br from-gold-50/70 to-white p-5 shadow-soft transition-shadow duration-200 hover:shadow-card"
+            className="flex items-center gap-4 rounded-2xl border border-hairline bg-surface px-4 py-4 shadow-soft transition-shadow duration-200 hover:shadow-card"
           >
-            {/* Gold check icon at top */}
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-gold-100 text-gold-600">
-              <Check className="h-5 w-5 stroke-[2.5]" aria-hidden />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-white shadow-[0_1px_4px_-1px_rgba(200,162,75,0.18)] ring-1 ring-gold-100/80">
+              <Check className="h-4 w-4 stroke-[2.5] text-gold-600" aria-hidden />
             </span>
-            {/* Feature label */}
-            <span className="font-medium leading-snug text-ink-strong">{item}</span>
+            <span className="text-sm font-medium leading-snug text-ink-strong">{item}</span>
           </div>
         ))}
       </Stagger>
