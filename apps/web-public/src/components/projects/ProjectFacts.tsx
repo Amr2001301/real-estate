@@ -14,19 +14,12 @@ interface ProjectFactsProps {
   hasCoords: boolean;
 }
 
-/**
- * Premium project snapshot card.
- *
- * Each row uses a two-line layout — small muted label on top, bold value below —
- * so the values read immediately on scan without the eye having to match
- * a left-column label to a right-column value.
- */
 export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }: ProjectFactsProps) {
   const facts: Fact[] = [];
-  if (city) facts.push({ icon: MapPin, label: 'المدينة', value: city });
-  facts.push({ icon: Home, label: 'الوحدات المتاحة', value: `${formatNumber(availableUnitsCount)} وحدة` });
-  facts.push({ icon: BadgeCheck, label: 'الحالة', value: featured ? 'مشروع مميز' : 'متاح' });
-  if (hasCoords) facts.push({ icon: Compass, label: 'الموقع', value: 'متوفر على الخريطة' });
+  if (city) facts.push({ icon: MapPin,    label: 'المدينة',          value: city });
+  facts.push({           icon: Home,       label: 'الوحدات المتاحة', value: `${formatNumber(availableUnitsCount)} وحدة` });
+  facts.push({           icon: BadgeCheck, label: 'الحالة',           value: featured ? 'مشروع مميز' : 'متاح' });
+  if (hasCoords) facts.push({ icon: Compass, label: 'الموقع',        value: 'متوفر على الخريطة' });
 
   return (
     <div className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card">
@@ -44,12 +37,10 @@ export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }:
             key={label}
             className="flex items-center gap-4 border-b border-hairline/50 px-5 py-4 last:border-0"
           >
-            {/* Gradient icon container */}
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-white shadow-[0_1px_4px_-1px_rgba(200,162,75,0.18)] ring-1 ring-gold-100/80">
               <Icon className="h-[18px] w-[18px] text-gold-600" aria-hidden />
             </span>
 
-            {/* Label on top, value below */}
             <div className="min-w-0 flex-1">
               <dt className="text-[11px] font-medium text-ink-muted/70">{label}</dt>
               <dd className="mt-0.5 text-sm font-bold text-ink-strong">{value}</dd>
