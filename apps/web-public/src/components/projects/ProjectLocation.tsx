@@ -1,5 +1,4 @@
 import { MapPin, ExternalLink } from 'lucide-react';
-import { SectionHeading } from '@/components/ui/Section';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ButtonLink } from '@/components/ui/Button';
 
@@ -15,17 +14,25 @@ function hasCoords(lat: number | null, lng: number | null): lat is number {
 
 export function ProjectLocation({ city, lat, lng }: ProjectLocationProps) {
   const coords = hasCoords(lat, lng);
-  // Keyless Google Maps embed (interactive) + a deep link to the full app.
   const embedUrl = coords ? `https://maps.google.com/maps?q=${lat},${lng}&z=15&hl=ar&output=embed` : null;
   const mapsUrl = coords ? `https://www.google.com/maps?q=${lat},${lng}` : null;
 
   return (
     <div>
-      <SectionHeading
-        eyebrow="الموقع"
-        title="موقع المشروع"
-        description={city ? `يقع المشروع في ${city}.` : undefined}
-      />
+      {/* Section heading — inline pattern, small label + strong title */}
+      <div>
+        <div className="mb-3 h-0.5 w-10 rounded-full bg-gold-400" />
+        <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-500">
+          الموقع
+        </span>
+        <h2 className="mt-1.5 text-[1.65rem] font-bold leading-tight text-ink-strong sm:text-3xl">
+          موقع المشروع
+        </h2>
+        {city && (
+          <p className="mt-2 text-sm leading-relaxed text-ink-muted">يقع المشروع في {city}.</p>
+        )}
+      </div>
+
       <PremiumCard className="mt-8 overflow-hidden">
         {embedUrl ? (
           <iframe

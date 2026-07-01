@@ -1,7 +1,7 @@
 import type { Route } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, ArrowLeft, Home, BadgeCheck, Star } from 'lucide-react';
+import { MapPin, ArrowLeft, Home, Star } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
@@ -9,7 +9,7 @@ import { pickAr, formatNumber } from '@/lib/format';
 import { routes } from '@/lib/routes';
 import type { PublicProjectDetail, Paginated, PublicUnit } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
-import { Section, SectionHeading } from '@/components/ui/Section';
+import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { ErrorState } from '@/components/states/ErrorState';
@@ -34,6 +34,7 @@ type Params = Promise<{ id: string }>;
 
 const PROJECT_STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'متاح',
+  PUBLISHED: 'متاح',
   SOLD_OUT: 'مكتمل البيع',
   UNDER_CONSTRUCTION: 'قيد الإنشاء',
   UPCOMING: 'قريبًا',
@@ -44,27 +45,34 @@ function projectStatusLabel(status: string): string {
   return PROJECT_STATUS_LABELS[status] ?? status;
 }
 
-function InfoChip({
-  icon: Icon,
-  children,
-  gold,
+/**
+ * Premium section heading system for the project detail page.
+ * Uses a small gold accent bar + tiny label + strong title.
+ * Keeps a clear visual hierarchy — the label reads as a category tag,
+ * never as a second heading.
+ */
+function SectionHead({
+  label,
+  title,
+  description,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
-  gold?: boolean;
+  label: string;
+  title: string;
+  description?: string;
 }) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm shadow-soft',
-        gold
-          ? 'border-gold-200 bg-gold-50 text-gold-600'
-          : 'border-hairline bg-surface text-ink-strong',
+    <div>
+      <div className="mb-3 h-0.5 w-10 rounded-full bg-gold-400" />
+      <span className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-gold-500">
+        {label}
+      </span>
+      <h2 className="mt-1.5 text-[1.65rem] font-bold leading-tight text-ink-strong sm:text-3xl">
+        {title}
+      </h2>
+      {description && (
+        <p className="mt-2 text-sm leading-relaxed text-ink-muted">{description}</p>
       )}
-    >
-      <Icon className="h-3.5 w-3.5 text-gold-500" />
-      {children}
-    </span>
+    </div>
   );
 }
 
@@ -170,9 +178,11 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           path: `/projects/${project.id}`,
         })}
       />
-      {/* Cinematic gallery hero */}
+
+      {/* ── Cinematic gallery hero ── */}
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
+          {/* Breadcrumb */}
           <nav aria-label="مسار التنقل" className="mb-5">
             <ol className="flex items-center gap-1.5 text-sm">
               <li>
@@ -193,14 +203,15 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
             </ol>
           </nav>
 
+          {/* Gallery — metadata lives solely inside the overlay, not repeated below. */}
           <ProjectGallery
             media={project.media}
             alt={name}
             overlay={
               <Reveal>
-                {/* Badges row */}
-                <div className="flex flex-wrap items-center gap-2">
-                  {project.featured && (
+                {/* Featured badge — shown alone so it doesn't compete with the title */}
+                {project.featured && (
+                  <div className="mb-3">
                     <Badge
                       tone="gold"
                       className="shadow-[0_2px_10px_rgba(200,162,75,0.40)]"
@@ -208,25 +219,32 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                       <Star className="h-3 w-3" aria-hidden />
                       مشروع مميز
                     </Badge>
-                  )}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-sm">
-                    <MapPin className="h-3.5 w-3.5 text-gold-300" aria-hidden />
-                    {project.city}
-                  </span>
-                  {project.status && (
-                    <span className="inline-flex items-center rounded-full bg-navy/60 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-sm">
-                      {projectStatusLabel(project.status)}
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
 
-                {/* Project name */}
+                {/* Project name — the dominant visual element */}
                 <h1
-                  className="mt-3 text-display-1 text-white"
-                  style={{ textShadow: '0 2px 20px rgba(11,23,38,0.45)' }}
+                  className="text-display-1 text-white"
+                  style={{ textShadow: '0 2px 24px rgba(11,23,38,0.55)' }}
                 >
                   {name}
                 </h1>
+
+                {/* Metadata chips — placed BELOW the title so they give context
+                    after the main identity, never competing with it. */}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {project.city && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/90 backdrop-blur-md ring-1 ring-white/10">
+                      <MapPin className="h-3 w-3 text-gold-300" aria-hidden />
+                      {project.city}
+                    </span>
+                  )}
+                  {project.status && PROJECT_STATUS_LABELS[project.status] && (
+                    <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
+                      {PROJECT_STATUS_LABELS[project.status]}
+                    </span>
+                  )}
+                </div>
 
                 {/* CTAs */}
                 <div className="mt-5 flex flex-wrap gap-3">
@@ -249,55 +267,111 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
               </Reveal>
             }
           />
-
-          {/* Quick info strip — compact at-a-glance facts right below the gallery */}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <InfoChip icon={MapPin}>{project.city}</InfoChip>
-            <InfoChip icon={Home}>
-              <span className="font-semibold">{formatNumber(project.availableUnitsCount)}</span>
-              {' '}وحدة متاحة
-            </InfoChip>
-            <InfoChip icon={BadgeCheck} gold={project.featured}>
-              {project.featured ? 'مشروع مميز' : projectStatusLabel(project.status)}
-            </InfoChip>
-          </div>
+          {/* No chips strip — all meta is in the hero overlay above. */}
         </Container>
       </section>
 
-      {/* Body: overview + amenities + location, with a sticky inquiry/details aside */}
+      {/* ── Body: main content + sticky sidebar ── */}
       <Section tone="canvas" className="pt-10 sm:pt-12 lg:pt-14">
         <div className="grid gap-8 lg:grid-cols-3 lg:gap-10">
-          <div className="space-y-10 lg:col-span-2 lg:space-y-12">
-            {/* Overview */}
+
+          {/* ── Main content column ── */}
+          <div className="space-y-14 lg:col-span-2">
+
+            {/* About */}
             <div>
-              <SectionHeading eyebrow="نظرة عامة" title="عن المشروع" />
+              <SectionHead label="نظرة عامة" title="عن المشروع" />
               {description ? (
-                <p className="mt-5 text-lg leading-loose text-ink-muted">{description}</p>
+                <p className="mt-6 text-lg leading-loose text-ink-muted">{description}</p>
               ) : (
-                <p className="mt-5 text-ink-muted">سيتم إضافة وصف تفصيلي لهذا المشروع قريبًا.</p>
+                <p className="mt-6 text-ink-muted">سيتم إضافة وصف تفصيلي لهذا المشروع قريبًا.</p>
               )}
             </div>
 
+            {/* Features / Amenities */}
             <ProjectAmenities services={project.services} />
 
+            {/* Available units — inside the main column so the sidebar stays
+                sticky and visible while the buyer browses units. */}
+            <div>
+              <div className="flex flex-wrap items-end justify-between gap-4">
+                <SectionHead label="وحدات المشروع" title="الوحدات المتاحة" />
+
+                {/* Premium text-link style — not a plain outline button */}
+                <Link
+                  href={`${routes.units}?projectId=${project.id}` as Route}
+                  className="group mb-0.5 flex shrink-0 items-center gap-2 text-sm font-medium text-gold-600 transition-colors hover:text-gold-700"
+                >
+                  عرض كل الوحدات
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gold-200 bg-gold-50 transition-colors group-hover:border-gold-300 group-hover:bg-gold-100">
+                    <ArrowLeft className="h-3.5 w-3.5" />
+                  </span>
+                </Link>
+              </div>
+
+              {!unitsResult.ok ? (
+                <div className="mt-8">
+                  <InlineNotice tone="warning">
+                    تعذر تحميل وحدات المشروع حاليًا، يمكنك استعراضها من صفحة الوحدات.
+                  </InlineNotice>
+                </div>
+              ) : previewUnits.length === 0 ? (
+                <div className="mt-8 flex flex-col items-center gap-5 rounded-3xl border border-hairline bg-surface p-6 text-center shadow-soft sm:flex-row sm:justify-between sm:text-start">
+                  <div className="flex items-center gap-4">
+                    <IconCircle tone="gold" className="h-12 w-12 shrink-0">
+                      <Home className="h-6 w-6" aria-hidden />
+                    </IconCircle>
+                    <div>
+                      <h3 className="text-base font-semibold text-ink-strong">لا توجد وحدات متاحة لهذا المشروع حاليًا</h3>
+                      <p className="mt-1 text-sm text-ink-muted">تواصل مع مستشار لمعرفة أحدث الإتاحات.</p>
+                    </div>
+                  </div>
+                  <ButtonLink
+                    href={`${routes.contact}?projectId=${project.id}` as Route}
+                    variant="primary"
+                    size="md"
+                    className="w-full shrink-0 sm:w-auto"
+                  >
+                    تواصل مع مستشار
+                  </ButtonLink>
+                </div>
+              ) : (
+                <Stagger
+                  className={cn(
+                    'mt-8 grid gap-7',
+                    previewUnits.length === 1
+                      ? 'grid-cols-1'
+                      : 'grid-cols-1 sm:grid-cols-2',
+                  )}
+                  childClassName="h-full"
+                  step={80}
+                >
+                  {previewUnits.map((unit) => (
+                    <UnitCard key={unit.id} unit={unit} />
+                  ))}
+                </Stagger>
+              )}
+            </div>
+
+            {/* Location */}
             <ProjectLocation
               city={project.city}
               lat={hasCoords ? project.lat : null}
               lng={hasCoords ? project.lng : null}
             />
 
-            {/* FAQ — under the map, same column width, scrolls with the content */}
+            {/* FAQ */}
             <div>
-              <SectionHeading eyebrow="الأسئلة الشائعة" title="إجابات سريعة قد تهمّك" />
+              <SectionHead label="الأسئلة الشائعة" title="إجابات سريعة قد تهمّك" />
               <div className="mt-8">
                 <Accordion items={projectFaq(name)} defaultOpenFirst />
               </div>
             </div>
           </div>
 
-          {/* Sticky aside: inquiry CTA + quick facts */}
+          {/* ── Sticky aside: inquiry + facts ── */}
           <aside className="lg:col-span-1">
-            <div className="space-y-5 lg:sticky lg:top-28">
+            <div className="space-y-4 lg:sticky lg:top-28">
               <InquiryCard projectId={project.id} projectName={name} />
               <ProjectFacts
                 city={project.city}
@@ -308,51 +382,6 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
             </div>
           </aside>
         </div>
-      </Section>
-
-      {/* Available units — full-width so cards breathe */}
-      <Section tone="soft">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">الوحدات المتاحة</h2>
-          <ButtonLink href={`${routes.units}?projectId=${project.id}` as Route} variant="outline" size="sm">
-            عرض كل الوحدات
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-          </ButtonLink>
-        </div>
-
-        {!unitsResult.ok ? (
-          <div className="mt-8">
-            <InlineNotice tone="warning">
-              تعذر تحميل وحدات المشروع حاليًا، يمكنك استعراضها من صفحة الوحدات.
-            </InlineNotice>
-          </div>
-        ) : previewUnits.length === 0 ? (
-          <div className="mt-8 flex flex-col items-center gap-5 rounded-3xl border border-hairline bg-surface p-6 text-center shadow-soft sm:flex-row sm:justify-between sm:text-start">
-            <div className="flex items-center gap-4">
-              <IconCircle tone="gold" className="h-12 w-12 shrink-0">
-                <Home className="h-6 w-6" aria-hidden />
-              </IconCircle>
-              <div>
-                <h3 className="text-base font-semibold text-ink-strong">لا توجد وحدات متاحة لهذا المشروع حاليًا</h3>
-                <p className="mt-1 text-sm text-ink-muted">تواصل مع مستشار لمعرفة أحدث الإتاحات.</p>
-              </div>
-            </div>
-            <ButtonLink
-              href={`${routes.contact}?projectId=${project.id}` as Route}
-              variant="primary"
-              size="md"
-              className="w-full shrink-0 sm:w-auto"
-            >
-              تواصل مع مستشار
-            </ButtonLink>
-          </div>
-        ) : (
-          <Stagger className="mt-8 grid gap-7 sm:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
-            {previewUnits.map((unit) => (
-              <UnitCard key={unit.id} unit={unit} />
-            ))}
-          </Stagger>
-        )}
       </Section>
 
       <CtaBand eyebrow="خطوتك التالية" title="هل ترغب في معرفة المزيد عن هذا المشروع؟">

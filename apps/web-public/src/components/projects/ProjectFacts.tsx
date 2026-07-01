@@ -1,7 +1,5 @@
 import { MapPin, Home, BadgeCheck, Compass } from 'lucide-react';
 import { formatNumber } from '@/lib/format';
-import { IconCircle } from '@/components/ui/IconCircle';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 
 interface Fact {
   icon: React.ComponentType<{ className?: string }>;
@@ -16,7 +14,13 @@ interface ProjectFactsProps {
   hasCoords: boolean;
 }
 
-/** Quick-facts card for the inquiry sidebar. Irrelevant facts are skipped defensively. */
+/**
+ * Premium project snapshot card.
+ *
+ * Each row uses a two-line layout — small muted label on top, bold value below —
+ * so the values read immediately on scan without the eye having to match
+ * a left-column label to a right-column value.
+ */
 export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }: ProjectFactsProps) {
   const facts: Fact[] = [];
   if (city) facts.push({ icon: MapPin, label: 'المدينة', value: city });
@@ -25,19 +29,34 @@ export function ProjectFacts({ city, availableUnitsCount, featured, hasCoords }:
   if (hasCoords) facts.push({ icon: Compass, label: 'الموقع', value: 'متوفر على الخريطة' });
 
   return (
-    <PremiumCard className="p-6">
-      <h3 className="text-base font-semibold text-ink-strong">تفاصيل المشروع</h3>
-      <dl className="mt-4 divide-y divide-hairline">
+    <div className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card">
+
+      {/* Card header */}
+      <div className="flex items-center gap-2.5 border-b border-hairline px-5 py-4">
+        <span className="h-1.5 w-1.5 rounded-full bg-gold-400" aria-hidden />
+        <h3 className="text-[13px] font-semibold text-ink-strong">تفاصيل المشروع</h3>
+      </div>
+
+      {/* Fact rows — 2-line layout: muted label / bold value */}
+      <dl>
         {facts.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-            <IconCircle tone="gold" className="h-10 w-10 shrink-0">
-              <Icon className="h-5 w-5" />
-            </IconCircle>
-            <dt className="text-sm text-ink-muted">{label}</dt>
-            <dd className="ms-auto text-end font-display text-ink-strong">{value}</dd>
+          <div
+            key={label}
+            className="flex items-center gap-4 border-b border-hairline/50 px-5 py-4 last:border-0"
+          >
+            {/* Gradient icon container */}
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-gold-50 to-white shadow-[0_1px_4px_-1px_rgba(200,162,75,0.18)] ring-1 ring-gold-100/80">
+              <Icon className="h-[18px] w-[18px] text-gold-600" aria-hidden />
+            </span>
+
+            {/* Label on top, value below */}
+            <div className="min-w-0 flex-1">
+              <dt className="text-[11px] font-medium text-ink-muted/70">{label}</dt>
+              <dd className="mt-0.5 text-sm font-bold text-ink-strong">{value}</dd>
+            </div>
           </div>
         ))}
       </dl>
-    </PremiumCard>
+    </div>
   );
 }

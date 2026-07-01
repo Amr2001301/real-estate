@@ -1,13 +1,11 @@
 import type { Route } from 'next';
 import Link from 'next/link';
-import { MessageCircle, CalendarDays, Headset, ShieldCheck, Phone } from 'lucide-react';
+import { MessageCircle, CalendarDays, ShieldCheck, Phone, Users, Building2 } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { getContactPhone, getWhatsappPhone, telHref, whatsappHref } from '@/lib/contact';
 import { ButtonLink } from '@/components/ui/Button';
-import { PremiumCard } from '@/components/ui/PremiumCard';
 import { FavoriteButton } from '@/components/favorites/FavoriteButton';
 
-// Official WhatsApp brand icon (Simple Icons path, CC0).
 function WhatsAppIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -22,125 +20,132 @@ function WhatsAppIcon({ className }: { className?: string }) {
   );
 }
 
-/**
- * Premium inquiry card for a project.
- *
- * Desktop — sticky side card (stickiness is applied by the parent aside wrapper).
- * Mobile  — a compact fixed bottom action bar with primary CTAs sits at the
- *           viewport bottom, while the full card remains reachable by scrolling.
- */
 export function InquiryCard({ projectId, projectName }: { projectId: string; projectName: string }) {
-  const info = `${routes.contact}?projectId=${projectId}` as Route;
+  const info  = `${routes.contact}?projectId=${projectId}` as Route;
   const visit = `${routes.contact}?type=visit&projectId=${projectId}` as Route;
 
-  const contactPhone = getContactPhone();
+  const contactPhone  = getContactPhone();
   const whatsappPhone = getWhatsappPhone();
-  const waMessage = `مرحبًا، أنا مهتم بمشروع ${projectName}. أرجو تزويدي بمزيد من التفاصيل.`;
+  const waMessage     = `مرحبًا، أنا مهتم بمشروع ${projectName}. أرجو تزويدي بمزيد من التفاصيل.`;
 
   return (
     <>
       {/* ══════════════════════════════════════════
           Desktop / scroll card
           ══════════════════════════════════════════ */}
-      <PremiumCard className="overflow-hidden p-0">
+      <div className="overflow-hidden rounded-3xl border border-hairline bg-surface shadow-[0_8px_40px_-8px_rgba(11,23,38,0.16)]">
 
-        {/* ── Header band ── */}
-        <div className="relative flex items-start gap-4 bg-navy px-6 py-5">
-          {/* Gold hairline along the bottom edge */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-px"
-            style={{
-              background:
-                'linear-gradient(to left, transparent, rgba(200,162,75,0.50), transparent)',
-            }}
-            aria-hidden
-          />
+        {/* Thin gold gradient accent stripe */}
+        <div
+          className="h-1.5 w-full"
+          style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }}
+          aria-hidden
+        />
 
-          {/* Headset icon — frosted glass on dark navy */}
-          <span className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.09] text-white ring-1 ring-white/[0.12]">
-            <Headset className="h-5 w-5" aria-hidden />
-          </span>
+        {/* ── Project context header ──────────────────
+            Shows which project this card belongs to +
+            a live-availability signal to build urgency.
+        ────────────────────────────────────────────── */}
+        <div className="border-b border-gold-100/60 bg-gradient-to-br from-gold-50/70 to-gold-50/10 px-5 py-5">
+          <div className="flex items-start gap-3">
+            {/* Project icon */}
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-[0_2px_10px_-2px_rgba(200,162,75,0.24)] ring-1 ring-gold-200/70">
+              <Building2 className="h-5 w-5 text-gold-600" aria-hidden />
+            </span>
 
-          <div className="min-w-0">
-            <h3 className="text-base font-semibold text-white">هل أنت مهتم؟</h3>
-            <p className="mt-0.5 text-xs leading-relaxed text-white/55">
-              تواصل معنا للحصول على تفاصيل{' '}
-              <span className="font-medium text-white/80">{projectName}</span>{' '}
-              أو لحجز زيارة.
-            </p>
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gold-500">
+                استفسر عن المشروع
+              </p>
+              <p className="mt-0.5 truncate text-[15px] font-bold leading-snug text-ink-strong">
+                {projectName}
+              </p>
+              {/* Availability dot */}
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+                <span className="text-[11px] text-ink-muted">فريق المبيعات متاح</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* ── Body ── */}
-        <div className="px-6 py-5">
+        {/* ── Primary CTAs ────────────────────────────
+            size="lg" for the lead action (h-14) makes it
+            visually dominant; gold secondary at size="md" (h-12)
+            creates clear tier separation.
+        ────────────────────────────────────────────── */}
+        <div className="flex flex-col gap-2.5 px-5 py-5">
+          <ButtonLink
+            href={info}
+            variant="primary"
+            size="lg"
+            className="w-full shadow-[0_4px_20px_-6px_rgba(11,23,38,0.35)]"
+          >
+            <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
+            طلب معلومات مجانية
+          </ButtonLink>
 
-          {/* Primary CTAs */}
-          <div className="flex flex-col gap-2.5">
-            <ButtonLink href={info} variant="primary" size="md" className="w-full">
-              <MessageCircle className="h-5 w-5" aria-hidden />
-              طلب معلومات
-            </ButtonLink>
+          <ButtonLink href={visit} variant="gold" size="md" className="w-full">
+            <CalendarDays className="h-5 w-5 shrink-0" aria-hidden />
+            طلب زيارة ميدانية
+          </ButtonLink>
+        </div>
 
-            <ButtonLink href={visit} variant="gold" size="md" className="w-full">
-              <CalendarDays className="h-5 w-5" aria-hidden />
-              طلب زيارة
-            </ButtonLink>
-
-            <ButtonLink href={routes.contact} variant="outline" size="md" className="w-full">
+        {/* ── Utility actions ─────────────────────────
+            Row 1: text-labeled مستشار (flex-1) +
+                   icon-only phone/WA pills (shrink-0, h-10)
+            Row 2: FavoriteButton full-width (always h-12,
+                   never squeezed into a half-column).
+        ────────────────────────────────────────────── */}
+        <div className="border-t border-hairline px-5 pb-5 pt-4">
+          <div className="flex items-center gap-2">
+            <ButtonLink
+              href={routes.contact}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Users className="h-4 w-4 shrink-0" aria-hidden />
               تحدث مع مستشار
             </ButtonLink>
 
+            {contactPhone && (
+              <a
+                href={telHref(contactPhone)}
+                aria-label="اتصل بنا"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline bg-transparent text-ink-muted transition-colors duration-200 hover:border-gold-300 hover:bg-gold-50 hover:text-gold-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50"
+              >
+                <Phone className="h-[18px] w-[18px]" aria-hidden />
+              </a>
+            )}
+
+            {whatsappPhone && (
+              <a
+                href={whatsappHref(whatsappPhone, waMessage)}
+                aria-label="تواصل عبر واتساب"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#25D366]/30 bg-transparent transition-colors duration-200 hover:border-[#25D366]/60 hover:bg-[#25D366]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366]/30"
+              >
+                <WhatsAppIcon className="h-[18px] w-[18px] text-[#25D366]" />
+              </a>
+            )}
+          </div>
+
+          {/* Favorite on its own row — guaranteed full-width, no wrapping */}
+          <div className="mt-2">
             <FavoriteButton kind="project" id={projectId} variant="inline" />
           </div>
-
-          {/* Contact channels — only when at least one number is configured */}
-          {(contactPhone || whatsappPhone) && (
-            <>
-              <div className="my-4 flex items-center gap-3">
-                <div className="h-px flex-1 bg-hairline" />
-                <span className="text-[11px] text-ink-muted/70">أو تواصل مباشرةً</span>
-                <div className="h-px flex-1 bg-hairline" />
-              </div>
-
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                {contactPhone && (
-                  <ButtonLink
-                    href={telHref(contactPhone)}
-                    variant="outline"
-                    size="md"
-                    className="w-full"
-                  >
-                    <Phone className="h-5 w-5" aria-hidden />
-                    اتصل بنا
-                  </ButtonLink>
-                )}
-                {whatsappPhone && (
-                  <ButtonLink
-                    href={whatsappHref(whatsappPhone, waMessage)}
-                    variant="outline"
-                    size="md"
-                    className="w-full border-[#25D366]/25 hover:border-[#25D366]/50 hover:bg-[#25D366]/[0.06]"
-                  >
-                    <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />
-                    واتساب
-                  </ButtonLink>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* Trust / privacy notice */}
-          <div className="mt-5 flex items-center gap-2 border-t border-hairline pt-4 text-xs text-ink-muted">
-            <ShieldCheck className="h-4 w-4 shrink-0 text-success" aria-hidden />
-            بياناتك آمنة ولن تُستخدم إلا للتواصل معك.
-          </div>
         </div>
-      </PremiumCard>
+
+        {/* ── Trust footer ── */}
+        <div className="mx-5 flex items-center gap-2 border-t border-hairline py-3.5 text-xs text-ink-muted/65">
+          <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-success" aria-hidden />
+          بياناتك آمنة ولن تُستخدم إلا للتواصل معك.
+        </div>
+      </div>
 
       {/* ══════════════════════════════════════════
           Mobile sticky bottom action bar
-          Fixed to the viewport; hidden on lg+ where the side card is visible.
-          z-40 keeps it below the z-50 navbar.
+          Hidden on lg+ where the sidebar is visible.
           ══════════════════════════════════════════ */}
       <div
         className="fixed inset-x-0 bottom-0 z-40 border-t border-hairline bg-surface/95 px-4 py-3 shadow-[0_-4px_24px_-4px_rgba(11,23,38,0.12)] backdrop-blur-lg lg:hidden"
@@ -148,27 +153,24 @@ export function InquiryCard({ projectId, projectName }: { projectId: string; pro
         aria-label="خيارات التواصل السريع"
       >
         <div className="mx-auto flex max-w-md items-center gap-2">
-          {/* Primary — navy */}
           <ButtonLink href={info} variant="primary" size="md" className="min-w-0 flex-1 truncate">
             <MessageCircle className="h-5 w-5 shrink-0" aria-hidden />
             طلب معلومات
           </ButtonLink>
 
-          {/* Secondary — gold */}
           <ButtonLink href={visit} variant="gold" size="md" className="min-w-0 flex-1 truncate">
             <CalendarDays className="h-5 w-5 shrink-0" aria-hidden />
             طلب زيارة
           </ButtonLink>
 
-          {/* WhatsApp icon-only — uses a direct Link to control padding precisely */}
           {whatsappPhone && (
-            <Link
+            <a
               href={whatsappHref(whatsappPhone, waMessage)}
               aria-label="تواصل عبر واتساب"
               className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#25D366]/30 bg-transparent transition-all duration-200 ease-smooth hover:border-[#25D366]/60 hover:bg-[#25D366]/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
             >
               <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />
-            </Link>
+            </a>
           )}
         </div>
       </div>
