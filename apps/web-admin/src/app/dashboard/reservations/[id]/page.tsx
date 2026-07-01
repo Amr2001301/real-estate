@@ -34,9 +34,9 @@ import {
 export const dynamic = 'force-dynamic';
 
 const CMD_LINK =
-  'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-white/75 hover:bg-white/[0.07] hover:text-white/95 transition-colors';
+  'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
 const CMD_ICON =
-  'h-8 w-8 inline-flex items-center justify-center rounded-lg bg-white/[0.08] text-brand-300 shrink-0 [&_svg]:h-4 [&_svg]:w-4';
+  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
 
 export default async function ReservationDetailPage({
   params,
@@ -423,7 +423,6 @@ export default async function ReservationDetailPage({
           <>
             {/* Quick navigation */}
             <PremiumCommandPanel title="إجراءات سريعة">
-              <div className="flex flex-col gap-0.5">
                 {reservation.unit && (
                   <Link
                     href={`/dashboard/units/${reservation.unitId}` as never}
@@ -469,8 +468,7 @@ export default async function ReservationDetailPage({
                     <span>عرض العقد</span>
                   </Link>
                 )}
-              </div>
-            </PremiumCommandPanel>
+              </PremiumCommandPanel>
 
             {/* Linked contract — shown when CONVERTED */}
             {reservation.status === 'CONVERTED' && reservation.contract && (
