@@ -2,17 +2,10 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Card } from './card';
 
+/** Kept for API compatibility — no longer affects icon or card background. */
 type Tone = 'brand' | 'success' | 'warning' | 'danger' | 'info' | 'accent' | 'neutral';
 
-const TONE_ICON: Record<Tone, string> = {
-  brand: 'bg-brand-50 text-brand-600 ring-brand-100',
-  success: 'bg-success-50 text-success-700 ring-success-100',
-  warning: 'bg-warning-50 text-warning-700 ring-warning-100',
-  danger: 'bg-danger-50 text-danger-700 ring-danger-100',
-  info: 'bg-info-50 text-info-700 ring-info-100',
-  accent: 'bg-accent-50 text-accent-700 ring-accent-100',
-  neutral: 'bg-slate-100 text-slate-700 ring-slate-200',
-};
+const GOLD_BAR = { background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' } as const;
 
 export interface KpiCardProps {
   label: string;
@@ -24,62 +17,46 @@ export interface KpiCardProps {
   className?: string;
 }
 
-export function KpiCard({
-  label,
-  value,
-  sub,
-  icon,
-  tone = 'brand',
-  delta,
-  className,
-}: KpiCardProps) {
+export function KpiCard({ label, value, sub, icon, delta, className }: KpiCardProps) {
   return (
-    <Card className={cn('p-5', className)}>
-      {icon && (
-        <div className="flex items-start justify-between gap-3 mb-3">
-          <div
-            className={cn(
-              'inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-inset shrink-0',
-              '[&_svg]:h-[18px] [&_svg]:w-[18px]',
-              TONE_ICON[tone],
-            )}
-          >
-            {icon}
+    <div className={cn('relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs', className)}>
+      {/* Gold accent bar */}
+      <div className="h-[3px] w-full shrink-0" style={GOLD_BAR} />
+
+      <div className="px-5 py-4">
+        {icon && (
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[18px] [&_svg]:w-[18px]">
+              {icon}
+            </div>
+            {delta && <DeltaPill {...delta} />}
           </div>
-          {delta && <DeltaPill {...delta} />}
-        </div>
-      )}
-      <p className="text-[13px] font-medium text-slate-500 leading-tight">
-        {label}
-      </p>
-      <p className="mt-1.5 text-[28px] leading-none font-bold tracking-tight text-slate-900 tabular-nums">
-        {value}
-      </p>
-      {sub && !delta && (
-        <p className="mt-2 text-xs text-slate-500">{sub}</p>
-      )}
-      {sub && delta && !icon && (
-        <p className="mt-2 text-xs text-slate-500">{sub}</p>
-      )}
-      {delta && !icon && (
-        <div className="mt-2">
-          <DeltaPill {...delta} />
-        </div>
-      )}
-    </Card>
+        )}
+        <p className="text-[13px] font-medium leading-tight text-slate-500">{label}</p>
+        <p className="mt-1.5 text-[28px] font-bold leading-none tracking-tight tabular-nums text-slate-900">
+          {value}
+        </p>
+        {sub && (
+          <p className="mt-2 text-xs text-slate-400">{sub}</p>
+        )}
+        {delta && !icon && (
+          <div className="mt-2">
+            <DeltaPill {...delta} />
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 function DeltaPill({ value, direction }: { value: string; direction: 'up' | 'down' | 'flat' }) {
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-0.5 rounded-full px-1.5 h-5 text-2xs font-semibold',
-        direction === 'up' && 'bg-success-50 text-success-700',
-        direction === 'down' && 'bg-danger-50 text-danger-700',
-        direction === 'flat' && 'bg-slate-100 text-slate-600',
-      )}
-    >
+    <span className={cn(
+      'inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-2xs font-semibold',
+      direction === 'up'   && 'bg-success-50 text-success-700',
+      direction === 'down' && 'bg-danger-50 text-danger-700',
+      direction === 'flat' && 'bg-slate-100 text-slate-600',
+    )}>
       <span aria-hidden className="text-[10px]">
         {direction === 'up' ? '▲' : direction === 'down' ? '▼' : '•'}
       </span>

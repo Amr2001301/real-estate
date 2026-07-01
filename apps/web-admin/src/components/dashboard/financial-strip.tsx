@@ -11,13 +11,14 @@ interface Props {
 }
 
 interface FinKpiCard {
-  label:       string;
-  value:       string;
-  sub?:        string;
-  icon:        React.ReactNode;
-  iconBg:      string;
-  valueCn:     string;
+  label:   string;
+  value:   string;
+  sub?:    string;
+  icon:    React.ReactNode;
+  valueCn: string;
 }
+
+const GOLD_BAR = { background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' } as const;
 
 export function FinancialStrip({
   totalContractValue,
@@ -39,7 +40,6 @@ export function FinancialStrip({
       value:   formatCurrency(totalContractValue),
       sub:     'قيمة جميع العقود المُبرمة',
       icon:    <TrendingUp />,
-      iconBg:  'bg-brand-50 text-brand-600',
       valueCn: 'text-slate-900',
     },
     {
@@ -47,7 +47,6 @@ export function FinancialStrip({
       value:   formatCurrency(totalCollectedVerified),
       sub:     collectionRate !== null ? `معدل التحصيل ${collectionRate}%` : 'مدفوعات محققة',
       icon:    <BadgeCheck />,
-      iconBg:  'bg-success-50 text-success-600',
       valueCn: 'text-success-700',
     },
     {
@@ -55,45 +54,38 @@ export function FinancialStrip({
       value:   formatCurrency(overdueTotal),
       sub:     overdueTotal > 0 ? 'أقساط تجاوزت تاريخ الاستحقاق' : 'لا مبالغ متأخرة',
       icon:    <AlertTriangle />,
-      iconBg:  overdueTotal > 0 ? 'bg-danger-50 text-danger-600'  : 'bg-slate-50 text-slate-400',
-      valueCn: overdueTotal > 0 ? 'text-danger-700' : 'text-slate-500',
+      valueCn: overdueTotal > 0 ? 'text-danger-700' : 'text-slate-400',
     },
     {
       label:   'التزامات معلقة',
       value:   formatCurrency(pendingLiabilities),
       sub:     'عمولات وسطاء + مكافآت فريق',
       icon:    <Coins />,
-      iconBg:  pendingLiabilities > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400',
-      valueCn: pendingLiabilities > 0 ? 'text-amber-700' : 'text-slate-500',
+      valueCn: pendingLiabilities > 0 ? 'text-amber-700' : 'text-slate-400',
     },
   ];
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {cards.map((card) => (
-        <div
-          key={card.label}
-          className="flex flex-col rounded-2xl border border-hairline bg-white px-4 pt-3.5 pb-3 shadow-xs"
-        >
-          <div className="flex items-center justify-between gap-2 mb-2.5">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-snug">
-              {card.label}
+        <div key={card.label} className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs">
+          <div className="h-[3px] w-full shrink-0" style={GOLD_BAR} />
+          <div className="px-4 py-4 pt-3.5">
+            <div className="mb-2.5 flex items-center justify-between gap-2">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                {card.icon}
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-wide leading-snug text-slate-400">
+                {card.label}
+              </span>
+            </div>
+            <span className={cn('text-lg font-bold tabular-nums leading-none', card.valueCn)}>
+              {card.value}
             </span>
-            <span
-              className={cn(
-                'inline-flex h-6 w-6 items-center justify-center rounded-lg [&_svg]:h-3.5 [&_svg]:w-3.5 shrink-0',
-                card.iconBg,
-              )}
-            >
-              {card.icon}
-            </span>
+            {card.sub && (
+              <p className="mt-1 text-[10px] leading-snug text-slate-400">{card.sub}</p>
+            )}
           </div>
-          <span className={cn('text-lg font-bold tabular-nums leading-none', card.valueCn)}>
-            {card.value}
-          </span>
-          {card.sub && (
-            <p className="text-[10px] text-slate-400 mt-1 leading-snug">{card.sub}</p>
-          )}
         </div>
       ))}
     </div>
