@@ -78,9 +78,9 @@ export async function OwnerDocumentsCard({ ownerType, ownerId, legacy, title = '
           {items.map((d) => (
             <li key={d.id} className="px-5 py-2.5 flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <Link href={`/dashboard/documents/${d.id}`} className="text-sm font-medium text-slate-900 hover:text-brand-700 truncate block max-w-xs">
+                <p className="text-sm font-medium text-slate-900 truncate max-w-xs">
                   {d.title}
-                </Link>
+                </p>
                 <p className="text-2xs text-slate-500 mt-0.5">
                   {CATEGORY_LABEL[d.category]} • {formatFileSize(d.sizeBytes)} • {formatDateTime(d.createdAt)}
                 </p>

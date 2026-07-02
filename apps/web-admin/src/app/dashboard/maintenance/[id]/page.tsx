@@ -629,20 +629,15 @@ export default async function MaintenanceDetailPage({
                 </div>
               </PremiumSectionCard>
             )}
+
+            <OwnerDocumentsCard
+              ownerType="MAINTENANCE_REQUEST"
+              ownerId={m.id}
+              title="مستندات وصور الصيانة"
+            />
           </div>
         }
       />
-
-      <div className="space-y-1.5">
-        <p className="text-[11px] text-slate-400 px-1">
-          يمكن إرفاق صور قبل وبعد الصيانة أو فواتير الإصلاح.
-        </p>
-        <OwnerDocumentsCard
-          ownerType="MAINTENANCE_REQUEST"
-          ownerId={m.id}
-          title="مستندات وصور الصيانة"
-        />
-      </div>
 
     </div>
   );
