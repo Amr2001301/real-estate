@@ -58,15 +58,19 @@ export function DurationSelector({
 
   return (
     <div className="space-y-4">
+      {/* Duration picker */}
       <div className="flex items-center gap-3 flex-wrap">
-        <label className="text-sm font-medium text-slate-700" htmlFor="duration-select">
-          اختر المدة:
+        <label
+          className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400"
+          htmlFor="duration-select"
+        >
+          اختر المدة
         </label>
         <select
           id="duration-select"
           value={selected?.id ?? ''}
           onChange={(e) => setSelectedId(e.target.value)}
-          className="rounded-xl border border-hairline bg-surface px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+          className="rounded-xl border border-hairline bg-surface px-3 py-2 text-[13px] font-medium text-slate-800 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
         >
           {sorted.map((o) => (
             <option key={o.id} value={o.id}>
@@ -76,66 +80,99 @@ export function DurationSelector({
         </select>
       </div>
 
+      {/* Calculation card */}
       {selected && (
-        <div className="rounded-2xl border border-hairline bg-surface p-4">
-          <h3 className="text-sm font-semibold text-slate-900 mb-3">تفاصيل الحساب</h3>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <dt className="text-slate-500">سعر الوحدة</dt>
-              <dd className="font-medium tabular-nums">{fmt(totalPrice)}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-slate-500">دفعة الحجز</dt>
-              <dd className="font-medium tabular-nums text-amber-700">
-                − {fmt(reservationAmount)}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-slate-500">الدفعة الأولى</dt>
-              <dd className="font-medium tabular-nums text-amber-700">
-                − {fmt(downPaymentAmount)}
-              </dd>
-            </div>
-            <div className="flex items-center justify-between border-t border-hairline pt-2 mt-1">
-              <dt className="text-slate-500">المتبقي</dt>
-              <dd className="font-bold tabular-nums">{fmt(selected.calculated.remainingAmount)}</dd>
-            </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-slate-500">
+        <div className="rounded-2xl bg-canvas/50 border border-hairline p-5 space-y-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+            تفاصيل الحساب
+          </p>
+
+          {/* Breakdown rows */}
+          <div className="space-y-2.5">
+            <CalcRow label="سعر الوحدة" value={fmt(totalPrice)} />
+            <CalcRow
+              label="دفعة الحجز"
+              value={`− ${fmt(reservationAmount)}`}
+              valueClass="text-amber-700"
+            />
+            <CalcRow
+              label="الدفعة الأولى"
+              value={`− ${fmt(downPaymentAmount)}`}
+              valueClass="text-amber-700"
+            />
+            <div className="h-px bg-hairline" />
+            <CalcRow
+              label="المتبقي"
+              value={fmt(selected.calculated.remainingAmount)}
+              valueClass="font-bold text-slate-900"
+            />
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[12px] text-slate-500 shrink-0">
                 نسبة الزيادة
-                <span className="text-xs text-slate-400 mr-1">(محددة من الإدارة)</span>
-              </dt>
-              <dd className="font-medium tabular-nums">{Number(selected.increasePercentage)}%</dd>
+                <span className="text-[10px] text-slate-400 ms-1">(من الإدارة)</span>
+              </span>
+              <span className="text-[13px] font-semibold tabular-nums text-slate-800">
+                {Number(selected.increasePercentage)}%
+              </span>
             </div>
-            <div className="flex items-center justify-between">
-              <dt className="text-slate-500">المبلغ المُمول</dt>
-              <dd className="font-medium tabular-nums">{fmt(selected.calculated.financedAmount)}</dd>
-            </div>
-            <div className="flex items-center justify-between sm:col-span-2 border-t border-hairline pt-2 mt-1">
-              <dt className="text-slate-700 font-medium">القسط الشهري</dt>
-              <dd className="font-bold tabular-nums text-brand-700 text-base">
+            <CalcRow label="المبلغ المُمول" value={fmt(selected.calculated.financedAmount)} />
+          </div>
+
+          {/* Gold accent separator */}
+          <div
+            className="h-[2px] rounded-full"
+            style={{
+              background:
+                'linear-gradient(to left, transparent, #e6c46a 30%, #b8923e 50%, #e6c46a 70%, transparent)',
+            }}
+          />
+
+          {/* Key totals */}
+          <div className="grid grid-cols-2 gap-x-6">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">
+                القسط الشهري
+              </p>
+              <p className="text-[20px] font-black tabular-nums leading-none text-brand-700">
                 {fmt(selected.calculated.monthlyInstallment)}
-              </dd>
+              </p>
             </div>
-            <div className="flex items-center justify-between sm:col-span-2">
-              <dt className="text-slate-700 font-medium">إجمالي السداد</dt>
-              <dd className="font-bold tabular-nums">{fmt(selected.calculated.totalPayable)}</dd>
+            <div className="text-end">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">
+                إجمالي السداد
+              </p>
+              <p className="text-[16px] font-bold tabular-nums leading-none text-slate-900">
+                {fmt(selected.calculated.totalPayable)}
+              </p>
             </div>
-          </dl>
+          </div>
         </div>
       )}
 
+      {/* Comparison table */}
       <div>
-        <h4 className="text-sm font-semibold text-slate-900 mb-2">جميع الخيارات المتاحة</h4>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2.5">
+          جميع الخيارات المتاحة
+        </p>
         <div className="overflow-x-auto rounded-2xl border border-hairline">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-hairline">
+            <thead className="bg-canvas/50 border-b border-hairline">
               <tr>
-                <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">المدة</th>
-                <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">الزيادة</th>
-                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">القسط الشهري</th>
-                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">المبلغ المُمول</th>
-                <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">إجمالي السداد</th>
+                <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
+                  المدة
+                </th>
+                <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
+                  الزيادة
+                </th>
+                <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
+                  القسط الشهري
+                </th>
+                <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
+                  المبلغ المُمول
+                </th>
+                <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
+                  إجمالي السداد
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
@@ -145,19 +182,23 @@ export function DurationSelector({
                   <tr
                     key={o.id}
                     onClick={() => setSelectedId(o.id)}
-                    className={`cursor-pointer transition-colors ${
-                      isSelected ? 'bg-brand-50' : 'hover:bg-slate-50'
+                    className={`cursor-pointer transition-colors duration-100 ${
+                      isSelected ? 'bg-brand-50' : 'hover:bg-canvas/40'
                     }`}
                   >
-                    <td className="px-3 py-2 font-medium">{o.durationMonths} شهر</td>
-                    <td className="px-3 py-2 tabular-nums">{Number(o.increasePercentage)}%</td>
-                    <td className="px-3 py-2 text-end tabular-nums font-medium">
+                    <td className="px-4 py-3 text-[13px] font-semibold text-slate-900">
+                      {o.durationMonths} شهر
+                    </td>
+                    <td className="px-4 py-3 text-[13px] tabular-nums text-slate-600">
+                      {Number(o.increasePercentage)}%
+                    </td>
+                    <td className="px-4 py-3 text-end text-[13px] font-bold tabular-nums text-brand-700">
                       {fmt(o.calculated.monthlyInstallment)}
                     </td>
-                    <td className="px-3 py-2 text-end tabular-nums text-slate-700">
+                    <td className="px-4 py-3 text-end text-[12px] tabular-nums text-slate-600">
                       {fmt(o.calculated.financedAmount)}
                     </td>
-                    <td className="px-3 py-2 text-end tabular-nums text-slate-700">
+                    <td className="px-4 py-3 text-end text-[12px] tabular-nums text-slate-600">
                       {fmt(o.calculated.totalPayable)}
                     </td>
                   </tr>
@@ -166,10 +207,29 @@ export function DurationSelector({
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-slate-400 mt-2">
+        <p className="text-[11px] text-slate-400 mt-2">
           نسبة الزيادة للعرض فقط ويتم تحديدها بواسطة الإدارة. لا يمكن للمبيعات تعديلها.
         </p>
       </div>
+    </div>
+  );
+}
+
+function CalcRow({
+  label,
+  value,
+  valueClass = '',
+}: {
+  label: string;
+  value: string;
+  valueClass?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-[12px] text-slate-500 shrink-0">{label}</span>
+      <span className={`text-[13px] font-semibold tabular-nums text-slate-800 ${valueClass}`}>
+        {value}
+      </span>
     </div>
   );
 }

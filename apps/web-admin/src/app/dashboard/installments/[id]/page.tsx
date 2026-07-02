@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { Pencil, Building2, Home, Calendar, User, ChevronLeft } from 'lucide-react';
+import { Pencil, Building2, Home, ChevronLeft } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { InstallmentPlanTemplate, PlanPaymentType } from '@/lib/types';
@@ -99,83 +99,85 @@ export default async function InstallmentPlanDetailPage({
       <PremiumDetailLayout
         main={
           <div className="space-y-5">
+            {/* Plan details */}
             <PremiumSectionCard title="تفاصيل الخطة">
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-                <div>
-                  <dt className="text-slate-500 mb-0.5">صافي السعر</dt>
-                  <dd className="font-bold text-slate-900 text-base">{formatCurrency(plan.netPrice)}</dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500 mb-0.5">السعر الإجمالي</dt>
-                  <dd className="font-medium">{formatCurrency(plan.totalPrice)}</dd>
-                </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+                <Field label="صافي السعر">
+                  <span className="text-[15px] font-bold tabular-nums text-slate-900">
+                    {formatCurrency(plan.netPrice)}
+                  </span>
+                </Field>
+                <Field label="السعر الإجمالي">
+                  <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                    {formatCurrency(plan.totalPrice)}
+                  </span>
+                </Field>
                 {Number(plan.discountAmount) > 0 && (
-                  <div>
-                    <dt className="text-slate-500 mb-0.5">الخصم</dt>
-                    <dd className="font-medium text-green-700">- {formatCurrency(plan.discountAmount)}</dd>
-                  </div>
+                  <Field label="الخصم">
+                    <span className="text-[14px] font-bold tabular-nums text-success-700">
+                      − {formatCurrency(plan.discountAmount)}
+                    </span>
+                  </Field>
                 )}
-                <div>
-                  <dt className="text-slate-500 mb-0.5">دفعة الحجز</dt>
-                  <dd
-                    className={
-                      Number(plan.reservationAmount) > 0
-                        ? 'font-medium'
-                        : 'font-medium text-warning-700'
-                    }
-                  >
-                    {formatCurrency(plan.reservationAmount)}
+                <Field label="دفعة الحجز">
+                  <div>
+                    <span className={`text-[14px] font-bold tabular-nums ${Number(plan.reservationAmount) > 0 ? 'text-slate-900' : 'text-warning-600'}`}>
+                      {formatCurrency(plan.reservationAmount)}
+                    </span>
                     {Number(plan.reservationAmount) <= 0 && (
-                      <span className="text-xs text-warning-700 ms-2">
-                        ⚠ يجب تحديد دفعة الحجز قبل استخدام الخطة لإنشاء حجز
-                      </span>
+                      <p className="text-[10px] text-warning-700 mt-0.5">
+                        يجب تحديد دفعة الحجز قبل استخدام الخطة
+                      </p>
                     )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500 mb-0.5">الدفعة الأولى</dt>
-                  <dd className="font-medium">
+                  </div>
+                </Field>
+                <Field label="الدفعة الأولى">
+                  <span className="text-[14px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(plan.downPaymentAmount)}
                     {plan.downPaymentType === 'PERCENTAGE' && (
-                      <span className="text-xs text-slate-500 ms-1">
+                      <span className="text-[12px] font-semibold text-slate-400 ms-1.5">
                         ({Number(plan.downPaymentValue)}%)
                       </span>
                     )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500 mb-0.5">{hasDurationOptions ? 'خيارات المدة' : 'عدد الأقساط'}</dt>
-                  <dd className="font-medium">
+                  </span>
+                </Field>
+                <Field label={hasDurationOptions ? 'خيارات المدة' : 'عدد الأقساط'}>
+                  <span className="text-[14px] font-bold text-slate-900">
                     {hasDurationOptions
                       ? `${durationOptions.length} خيار`
                       : plan.installmentsCount != null
                         ? `${plan.installmentsCount} قسط`
                         : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500 mb-0.5">تكرار القسط</dt>
-                  <dd className="font-medium">{FREQUENCY_LABELS[plan.frequency] ?? plan.frequency}</dd>
-                </div>
-                <div>
-                  <dt className="text-slate-500 mb-0.5">قاعدة البدء</dt>
-                  <dd className="font-medium">{START_DATE_RULE_LABELS[plan.startDateRule] ?? plan.startDateRule}</dd>
-                </div>
+                  </span>
+                </Field>
+                <Field label="تكرار القسط">
+                  <span className="text-[14px] font-bold text-slate-900">
+                    {FREQUENCY_LABELS[plan.frequency] ?? plan.frequency}
+                  </span>
+                </Field>
+                <Field label="قاعدة البدء">
+                  <span className="text-[14px] font-bold text-slate-900">
+                    {START_DATE_RULE_LABELS[plan.startDateRule] ?? plan.startDateRule}
+                  </span>
+                </Field>
                 {plan.manualStartDate && (
-                  <div>
-                    <dt className="text-slate-500 mb-0.5">تاريخ البدء</dt>
-                    <dd className="font-medium">{formatDate(plan.manualStartDate)}</dd>
-                  </div>
+                  <Field label="تاريخ البدء">
+                    <span className="text-[14px] font-bold text-slate-900">
+                      {formatDate(plan.manualStartDate)}
+                    </span>
+                  </Field>
                 )}
                 {plan.finalPaymentAmount && Number(plan.finalPaymentAmount) > 0 && (
-                  <div>
-                    <dt className="text-slate-500 mb-0.5">الدفعة الأخيرة</dt>
-                    <dd className="font-medium">{formatCurrency(plan.finalPaymentAmount)}</dd>
-                  </div>
+                  <Field label="الدفعة الأخيرة">
+                    <span className="text-[14px] font-bold tabular-nums text-slate-900">
+                      {formatCurrency(plan.finalPaymentAmount)}
+                    </span>
+                  </Field>
                 )}
-              </dl>
+              </div>
             </PremiumSectionCard>
 
+            {/* Duration options or schedule table */}
             {hasDurationOptions ? (
               <PremiumSectionCard title={`خيارات مدة التقسيط (${durationOptions.length})`}>
                 <DurationSelector
@@ -196,44 +198,44 @@ export default async function InstallmentPlanDetailPage({
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
-                      <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                      <thead className="bg-canvas/50 border-b border-hairline">
                         <tr>
-                          <th className="px-4 py-3 text-start">#</th>
-                          <th className="px-4 py-3 text-start">نوع الدفعة</th>
-                          <th className="px-4 py-3 text-start">تاريخ الاستحقاق</th>
-                          <th className="px-4 py-3 text-end">المبلغ</th>
-                          <th className="px-4 py-3 text-end">الرصيد المتبقي</th>
+                          <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">#</th>
+                          <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">نوع الدفعة</th>
+                          <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">تاريخ الاستحقاق</th>
+                          <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">المبلغ</th>
+                          <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الرصيد المتبقي</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-hairline">
                         {scheduleItems.map((item) => (
                           <tr key={item.id} className="hover:bg-canvas/40 transition-colors duration-100">
-                            <td className="px-4 py-3 text-slate-500 tabular-nums">{item.paymentNumber}</td>
+                            <td className="px-4 py-3 text-[12px] text-slate-400 tabular-nums font-mono">
+                              {item.paymentNumber}
+                            </td>
                             <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PAYMENT_TYPE_BADGE[item.paymentType]}`}
-                              >
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PAYMENT_TYPE_BADGE[item.paymentType]}`}>
                                 {PAYMENT_TYPE_LABELS[item.paymentType]}
                               </span>
                             </td>
-                            <td className="px-4 py-3 text-slate-600 text-xs">
+                            <td className="px-4 py-3 text-[12px] text-slate-600">
                               {item.dueDate ? formatDate(item.dueDate) : '—'}
                             </td>
-                            <td className="px-4 py-3 text-end font-medium tabular-nums">
+                            <td className="px-4 py-3 text-end text-[13px] font-bold tabular-nums text-slate-900">
                               {formatCurrency(item.amount)}
                             </td>
-                            <td className="px-4 py-3 text-end text-slate-500 tabular-nums text-xs">
+                            <td className="px-4 py-3 text-end text-[12px] text-slate-400 tabular-nums">
                               {formatCurrency(item.remainingBalance)}
                             </td>
                           </tr>
                         ))}
                       </tbody>
-                      <tfoot className="bg-canvas/40 border-t-2 border-hairline">
+                      <tfoot className="bg-canvas/50 border-t-2 border-hairline">
                         <tr>
-                          <td colSpan={3} className="px-4 py-3 text-sm font-semibold text-slate-700">
+                          <td colSpan={3} className="px-4 py-3 text-[13px] font-bold text-slate-700">
                             الإجمالي
                           </td>
-                          <td className="px-4 py-3 text-end font-bold text-slate-900 tabular-nums">
+                          <td className="px-4 py-3 text-end text-[13px] font-bold text-slate-900 tabular-nums">
                             {formatCurrency(
                               scheduleItems.reduce((s, i) => s + Number(i.amount), 0),
                             )}
@@ -282,77 +284,98 @@ export default async function InstallmentPlanDetailPage({
               </PremiumCommandPanel>
             )}
 
-            <PremiumSectionCard title="الحالة والصلاحية">
-              <div className="flex flex-col gap-3 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">الحالة</span>
+            {/* Status and scope */}
+            <PremiumSectionCard title="الحالة والصلاحية" padded={false}>
+              <div className="divide-y divide-hairline">
+                <SideRow label="الحالة">
                   <PlanTemplateStatusBadge status={plan.status} />
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-slate-500">الصلاحية</span>
-                  <span className="text-xs font-medium bg-canvas text-slate-600 rounded-full px-2 py-0.5 border border-hairline">
+                </SideRow>
+                <SideRow label="الصلاحية">
+                  <span className="text-[11px] font-semibold bg-canvas text-slate-600 rounded-full px-2.5 py-0.5 border border-hairline">
                     مبيعات فقط
                   </span>
-                </div>
+                </SideRow>
               </div>
             </PremiumSectionCard>
 
+            {/* Project and unit */}
             <PremiumSectionCard title="المشروع والوحدة">
-              <div className="flex flex-col gap-3 text-sm">
+              <div className="space-y-4">
                 {plan.project && (
-                  <div className="flex items-start gap-2">
-                    <Building2 className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-slate-500 text-xs">المشروع</p>
-                      <p className="font-medium">{tx(plan.project.name)}</p>
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                      <Building2 />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">المشروع</p>
+                      <p className="text-[13.5px] font-bold text-slate-900 truncate">{tx(plan.project.name)}</p>
                     </div>
                   </div>
                 )}
                 {plan.unit ? (
-                  <div className="flex items-start gap-2">
-                    <Home className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-slate-500 text-xs">الوحدة</p>
-                      <p className="font-medium">{plan.unit.code}</p>
-                      {plan.unit.type && <p className="text-xs text-slate-500">{plan.unit.type}</p>}
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                      <Home />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">الوحدة</p>
+                      <p className="text-[13.5px] font-bold text-slate-900">{plan.unit.code}</p>
+                      {plan.unit.type && (
+                        <p className="text-[11px] text-slate-400 mt-0.5">{plan.unit.type}</p>
+                      )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-400">تنطبق على كامل المشروع</p>
+                  <p className="text-[12px] text-slate-400">تنطبق على كامل المشروع</p>
                 )}
               </div>
             </PremiumSectionCard>
 
-            <PremiumSectionCard title="معلومات الإنشاء">
-              <div className="flex flex-col gap-3 text-sm">
+            {/* Creation info */}
+            <PremiumSectionCard title="معلومات الإنشاء" padded={false}>
+              <div className="divide-y divide-hairline">
                 {plan.createdBy && (
-                  <div className="flex items-start gap-2">
-                    <User className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                    <div>
-                      <p className="text-slate-500 text-xs">أنشئ بواسطة</p>
-                      <p className="font-medium">{plan.createdBy.fullName}</p>
-                    </div>
-                  </div>
+                  <SideRow label="أنشئ بواسطة">
+                    <span className="text-[12px] font-semibold text-slate-800">{plan.createdBy.fullName}</span>
+                  </SideRow>
                 )}
-                <div className="flex items-start gap-2">
-                  <Calendar className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-slate-500 text-xs">تاريخ الإنشاء</p>
-                    <p className="font-medium">{formatDateTime(plan.createdAt)}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Calendar className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-slate-500 text-xs">آخر تعديل</p>
-                    <p className="font-medium">{formatDateTime(plan.updatedAt)}</p>
-                  </div>
-                </div>
+                <SideRow label="تاريخ الإنشاء">
+                  <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.createdAt)}</span>
+                </SideRow>
+                <SideRow label="آخر تعديل">
+                  <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.updatedAt)}</span>
+                </SideRow>
               </div>
             </PremiumSectionCard>
           </div>
         }
       />
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">{label}</p>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function SideRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-5 py-3">
+      <p className="text-[12px] font-medium text-slate-500 shrink-0">{label}</p>
+      <div className="text-end shrink-0">{children}</div>
     </div>
   );
 }
