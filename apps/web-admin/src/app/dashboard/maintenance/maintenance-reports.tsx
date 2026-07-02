@@ -2,8 +2,7 @@ import { BarChart3, Users2, ClipboardClock, AlarmClock, Loader2, CheckCircle2 } 
 import { api, safe } from '@/lib/api';
 import type { MaintenanceReportSummary } from '@/lib/types';
 import { tx } from '@/lib/format';
-import { PremiumMetricStrip } from '@/components/premium';
-import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
+import { PremiumMetricStrip, PremiumSectionCard } from '@/components/premium';
 
 interface Filters {
   status?: string;
@@ -33,15 +32,13 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
   }
 
   const r = res.data;
-  // Arabic-Indic zero "٠" renders as a small dot in most web fonts at display size;
-  // use Latin '0' for that case so the value is always clearly readable.
-  const num = (n: number) => n === 0 ? '0' : n.toLocaleString('ar-EG');
+  const num = (n: number) => (n === 0 ? '0' : n.toLocaleString('ar-EG'));
   const maxCategoryCount = r.byCategory[0]?.count ?? 1;
   const maxAssigneeCount = r.byAssignee[0]?.count ?? 1;
 
   return (
     <div className="space-y-4">
-      {/* KPI cards */}
+      {/* KPI strip */}
       <PremiumMetricStrip
         variant="compact"
         cols={4}
@@ -53,118 +50,114 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
         ]}
       />
 
-      {/* Analytics panels — items-start prevents the shorter card from stretching */}
+      {/* Analytics panels */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Top requested categories */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle>التصنيفات الأكثر طلبًا</CardTitle>
-            </div>
-            {r.byCategory.length > 0 && (
+        <PremiumSectionCard
+          title="التصنيفات الأكثر طلباً"
+          icon={<BarChart3 />}
+          trailing={
+            r.byCategory.length > 0 ? (
               <span className="text-xs text-slate-400 tabular-nums">
                 أعلى {Math.min(5, r.byCategory.length)}
               </span>
-            )}
-          </CardHeader>
-          <CardBody className="p-0">
-            {r.byCategory.length === 0 ? (
-              <div className="py-10 flex flex-col items-center gap-2">
-                <BarChart3 className="h-8 w-8 text-slate-200" />
-                <p className="text-xs text-slate-400">لا توجد بيانات</p>
-              </div>
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {r.byCategory.slice(0, 5).map((c, i) => (
-                  <li key={c.categoryId} className="px-5 py-3 hover:bg-brand-50/20 transition-colors">
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <span className="w-6 h-6 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-600 shrink-0 tabular-nums">
-                        {i + 1}
+            ) : undefined
+          }
+          padded={false}
+        >
+          {r.byCategory.length === 0 ? (
+            <div className="py-10 flex flex-col items-center gap-2">
+              <BarChart3 className="h-8 w-8 text-slate-200" />
+              <p className="text-xs text-slate-400">لا توجد بيانات</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {r.byCategory.slice(0, 5).map((c, i) => (
+                <li key={c.categoryId} className="px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 border border-brand-100 text-[10px] font-bold text-brand-600 tabular-nums">
+                      {i + 1}
+                    </span>
+                    <span className="flex-1 text-[13px] font-semibold text-slate-800 truncate">
+                      {tx(c.categoryName)}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-canvas border border-hairline text-slate-600 text-[11px] font-semibold tabular-nums">
+                        {num(c.count)} طلب
                       </span>
-                      <span className="flex-1 text-sm font-medium text-slate-700 truncate">
-                        {tx(c.categoryName)}
-                      </span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-surface-muted text-slate-500 text-[10px] font-semibold tabular-nums">
-                          {num(c.count)} طلب
+                      {c.overdueCount > 0 && (
+                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-danger-50 text-danger-600 text-[11px] font-semibold tabular-nums">
+                          {num(c.overdueCount)} متأخر
                         </span>
-                        {c.overdueCount > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-danger-50 text-danger-600 text-[10px] font-semibold tabular-nums">
-                            {num(c.overdueCount)} متأخر
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
-                    {/* Progress bar — dir=ltr so fill grows left-to-right universally */}
-                    <div className="ms-9 h-0.5 bg-surface-muted rounded-full overflow-hidden" dir="ltr">
-                      <div
-                        className="h-full bg-brand-500/25 rounded-full"
-                        style={{ width: `${Math.round((c.count / maxCategoryCount) * 100)}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
+                  </div>
+                  <div className="ms-9 h-1 bg-slate-100 rounded-full overflow-hidden" dir="ltr">
+                    <div
+                      className="h-full bg-brand-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.round((c.count / maxCategoryCount) * 100)}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PremiumSectionCard>
 
         {/* Supervisor workload */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Users2 className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle>الأعباء على مشرفي الصيانة</CardTitle>
-            </div>
-            {r.byAssignee.length > 0 && (
+        <PremiumSectionCard
+          title="الأعباء على مشرفي الصيانة"
+          icon={<Users2 />}
+          trailing={
+            r.byAssignee.length > 0 ? (
               <span className="text-xs text-slate-400 tabular-nums">{r.byAssignee.length} مشرف</span>
-            )}
-          </CardHeader>
-          <CardBody className="p-0">
-            {r.byAssignee.length === 0 ? (
-              <div className="py-10 flex flex-col items-center gap-2">
-                <Users2 className="h-8 w-8 text-slate-200" />
-                <p className="text-xs text-slate-400">لا توجد طلبات مُسندة</p>
-              </div>
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {r.byAssignee.slice(0, 5).map((a, i) => (
-                  <li key={a.userId} className="px-5 py-3 hover:bg-brand-50/20 transition-colors">
-                    <div className="flex items-center gap-3 mb-1.5">
-                      <span className="w-6 h-6 rounded-full bg-brand-50 border border-brand-100 flex items-center justify-center text-[10px] font-bold text-brand-600 shrink-0 tabular-nums">
-                        {i + 1}
+            ) : undefined
+          }
+          padded={false}
+        >
+          {r.byAssignee.length === 0 ? (
+            <div className="py-10 flex flex-col items-center gap-2">
+              <Users2 className="h-8 w-8 text-slate-200" />
+              <p className="text-xs text-slate-400">لا توجد طلبات مُسندة</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-hairline">
+              {r.byAssignee.slice(0, 5).map((a, i) => (
+                <li key={a.userId} className="px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-50 border border-brand-100 text-[10px] font-bold text-brand-600 tabular-nums">
+                      {i + 1}
+                    </span>
+                    <span className="flex-1 text-[13px] font-semibold text-slate-800 truncate">
+                      {a.name}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-canvas border border-hairline text-slate-600 text-[11px] font-semibold tabular-nums">
+                        {num(a.count)} طلب
                       </span>
-                      <span className="flex-1 text-sm font-medium text-slate-700 truncate">{a.name}</span>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-surface-muted text-slate-500 text-[10px] font-semibold tabular-nums">
-                          {num(a.count)} طلب
+                      {a.inProgressCount > 0 && (
+                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-info-50 text-info-600 text-[11px] font-semibold tabular-nums">
+                          {num(a.inProgressCount)} جارٍ
                         </span>
-                        {a.inProgressCount > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-info-50 text-info-600 text-[10px] font-semibold tabular-nums">
-                            {num(a.inProgressCount)} جارٍ
-                          </span>
-                        )}
-                        {a.overdueCount > 0 && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-md bg-danger-50 text-danger-600 text-[10px] font-semibold tabular-nums">
-                            {num(a.overdueCount)} متأخر
-                          </span>
-                        )}
-                      </div>
+                      )}
+                      {a.overdueCount > 0 && (
+                        <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-danger-50 text-danger-600 text-[11px] font-semibold tabular-nums">
+                          {num(a.overdueCount)} متأخر
+                        </span>
+                      )}
                     </div>
-                    {/* Progress bar — dir=ltr so fill grows left-to-right universally */}
-                    <div className="ms-9 h-0.5 bg-surface-muted rounded-full overflow-hidden" dir="ltr">
-                      <div
-                        className="h-full bg-brand-500/25 rounded-full"
-                        style={{ width: `${Math.round((a.count / maxAssigneeCount) * 100)}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardBody>
-        </Card>
+                  </div>
+                  <div className="ms-9 h-1 bg-slate-100 rounded-full overflow-hidden" dir="ltr">
+                    <div
+                      className="h-full bg-brand-400 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.round((a.count / maxAssigneeCount) * 100)}%` }}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </PremiumSectionCard>
       </div>
     </div>
   );

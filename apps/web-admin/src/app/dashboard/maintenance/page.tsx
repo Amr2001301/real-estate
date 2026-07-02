@@ -282,83 +282,92 @@ export default async function MaintenancePage({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[1020px]">
-              <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+              <thead className="bg-canvas/50 border-b border-hairline sticky top-0 backdrop-blur-sm">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">العميل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">التصنيف</th>
-                  <th className="text-start py-3 px-4">الوصف</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الأولوية</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المراجعة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الموعد المستهدف</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">التاريخ</th>
-                  <th className="py-3 ps-4 pe-5" />
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">العميل</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الوحدة</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">التصنيف</th>
+                  <th className="text-start py-3 px-5 text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الوصف</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الأولوية</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">المراجعة</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الحالة</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الموعد المستهدف</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">التاريخ</th>
+                  <th className="py-3 px-5" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-hairline">
                 {rows.map((m) => {
                   const overdue = isOverdue(m);
                   return (
                     <tr
                       key={m.id}
                       className={cn(
-                        'group border-t border-hairline transition-colors',
-                        overdue ? 'bg-danger-50/20' : 'hover:bg-canvas/40',
+                        'group transition-colors duration-100',
+                        overdue ? 'bg-danger-50/30' : 'hover:bg-canvas/40',
                       )}
                     >
-                      <td className="px-5 py-3 font-medium text-slate-800 whitespace-nowrap">
-                        {m.customer?.fullName ?? '—'}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className="text-[13px] font-semibold text-slate-900">
+                          {m.customer?.fullName ?? '—'}
+                        </span>
                       </td>
-                      <td className="px-5 py-3 font-mono text-xs text-slate-500 whitespace-nowrap">
-                        {m.unit?.code ?? '—'}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className="font-mono text-[12px] font-semibold text-brand-700">
+                          {m.unit?.code ?? <span className="text-slate-300">—</span>}
+                        </span>
                       </td>
-                      <td className="px-5 py-3 text-slate-600 whitespace-nowrap">
-                        {m.category ? tx(m.category.name) : '—'}
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className="text-[12px] text-slate-600">
+                          {m.category ? tx(m.category.name) : <span className="text-slate-300">—</span>}
+                        </span>
                       </td>
                       <td
-                        className="px-5 py-3 text-slate-600 max-w-[200px] truncate"
+                        className="px-5 py-3.5 text-[12px] text-slate-500 max-w-[200px] truncate"
                         title={m.description}
                       >
                         {m.description}
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         {m.priority ? (
                           <MaintenancePriorityBadge priority={m.priority} />
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         <MaintenanceReviewStatusBadge status={m.reviewStatus} />
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         <div className="flex flex-wrap items-center gap-1">
                           <MaintenanceStatusBadge status={m.status} />
                           {m.unresolvedAt ? (
-                            <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2 py-0.5 text-[10px] font-medium">
+                            <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2 py-0.5 text-[10px] font-semibold">
                               لم تُحل
                             </span>
                           ) : m.complaintAt ? (
-                            <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-medium">
+                            <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-semibold">
                               شكوى
                             </span>
                           ) : null}
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-xs tabular-nums whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         {isApproved(m) && m.dueAt ? (
-                          <span className={overdue ? 'text-danger-600 font-semibold' : 'text-slate-500'}>
+                          <span className={cn(
+                            'text-[12px] tabular-nums',
+                            overdue ? 'text-danger-600 font-semibold' : 'text-slate-500',
+                          )}>
                             {formatDate(m.dueAt)}{overdue ? ' · متأخر' : ''}
                           </span>
                         ) : (
-                          <span className="text-slate-300">—</span>
+                          <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-5 py-3 text-xs text-slate-500 tabular-nums whitespace-nowrap">
+                      <td className="px-5 py-3.5 text-[12px] text-slate-400 tabular-nums whitespace-nowrap">
                         {formatDate(m.createdAt)}
                       </td>
-                      <td className="px-5 py-3 whitespace-nowrap">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
                         <Link href={`/dashboard/maintenance/${m.id}`}>
                           <IconButton label="عرض تفاصيل الطلب" variant="outline" size="sm">
                             <Eye />
@@ -384,27 +393,27 @@ export default async function MaintenancePage({
         padded={false}
       >
         {cats.length > 0 && (
-          <div className="px-5 pt-4 pb-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="px-5 pt-5 pb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {cats.map((c) => {
               const sla = maintenanceSlaLabel(c.slaDurationMinutes);
               const warranty = warrantyMonthsLabel(c.warrantyDurationMonths);
               return (
                 <div
                   key={c.id}
-                  className="group flex overflow-hidden rounded-xl border border-hairline bg-white shadow-xs hover:shadow-soft transition-all duration-150"
+                  className="group flex overflow-hidden rounded-xl border border-hairline bg-surface shadow-soft hover:shadow-md transition-all duration-150"
                 >
-                  <div className={cn('w-1 shrink-0', PRIORITY_DOT[c.priority] ?? 'bg-slate-400')} />
-                  <div className="flex-1 px-4 py-3.5">
+                  <div className={cn('w-1.5 shrink-0 rounded-s-xl', PRIORITY_DOT[c.priority] ?? 'bg-slate-400')} />
+                  <div className="flex-1 px-4 py-3.5 min-w-0">
                     <div className="flex items-start justify-between gap-2 mb-3">
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900 leading-tight">{tx(c.name)}</p>
+                        <p className="text-[13.5px] font-bold text-slate-900 leading-tight">{tx(c.name)}</p>
                         {c.name.en && (
                           <p className="text-[11px] text-slate-400 mt-0.5 leading-tight">{c.name.en}</p>
                         )}
                       </div>
                       <span
                         className={cn(
-                          'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold shrink-0',
+                          'inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0',
                           PRIORITY_BADGE[c.priority] ?? 'bg-slate-100 text-slate-600',
                         )}
                       >
@@ -412,20 +421,20 @@ export default async function MaintenancePage({
                       </span>
                     </div>
                     <div className="space-y-1.5">
-                      {sla ? (
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      {sla && (
+                        <div className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                          <span>معالجة خلال {sla}</span>
+                          <span className="text-[12px] text-slate-500">معالجة خلال {sla}</span>
                         </div>
-                      ) : null}
-                      {warranty ? (
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                      )}
+                      {warranty && (
+                        <div className="flex items-center gap-1.5">
                           <Shield className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                          <span>ضمان {warranty}</span>
+                          <span className="text-[12px] text-slate-500">ضمان {warranty}</span>
                         </div>
-                      ) : null}
+                      )}
                       {!sla && !warranty && (
-                        <p className="text-[11px] text-slate-300">بدون مدد محددة</p>
+                        <p className="text-[11px] text-slate-400">بدون مدد محددة</p>
                       )}
                     </div>
                   </div>
@@ -436,19 +445,16 @@ export default async function MaintenancePage({
         )}
 
         {/* Add category form */}
-        <div className="border-t border-hairline bg-surface-muted/40 px-5 py-4">
+        <div className="border-t border-hairline bg-canvas/30 px-5 py-4">
           {sp.catErr && (
-            <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 px-3 py-2 text-xs mb-3">
+            <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-3 py-2 text-xs mb-3">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <p>تعذّر إضافة التصنيف: {sp.catErr}</p>
             </div>
           )}
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-5 h-5 rounded-full bg-brand-100 flex items-center justify-center shrink-0">
-              <Plus className="h-3 w-3 text-brand-700" />
-            </div>
-            <p className="text-xs font-semibold text-slate-700">إضافة تصنيف جديد</p>
-          </div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-3">
+            إضافة تصنيف جديد
+          </p>
           <form action={createCategoryAction}>
             <div className="flex flex-wrap items-center gap-2">
               <Input name="ar" required dir="rtl" placeholder="بالعربية" inputSize="sm" className="w-32" />
@@ -470,11 +476,11 @@ export default async function MaintenancePage({
                 <option value="MONTHS">شهور</option>
                 <option value="YEARS">سنوات</option>
               </Select>
-              <Button type="submit" variant="outline" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
+              <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
                 إضافة
               </Button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2">
+            <p className="text-[11px] text-slate-400 mt-2.5">
               مدة المعالجة تحدد الموعد المستهدف بعد اعتماد الطلب. مدة الضمان تُحتسب تلقائياً للوحدة عند توقيع عقد البيع.
             </p>
           </form>
