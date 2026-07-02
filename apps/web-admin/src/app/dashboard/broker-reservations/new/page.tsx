@@ -1,5 +1,4 @@
-import Link from 'next/link';
-import { ChevronLeft, BookmarkCheck } from 'lucide-react';
+import { BookmarkCheck } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
   AdminBrokerLead,
@@ -11,9 +10,7 @@ import type {
   UnitStatus,
 } from '@/lib/types';
 import { tx } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { PremiumPageHero } from '@/components/premium';
 import { AdminBrokerReservationForm } from './_form';
 
 export const dynamic = 'force-dynamic';
@@ -25,17 +22,6 @@ interface Search {
   projectId?: string;
 }
 
-/**
- * Server component — pre-loads the dropdown data the form needs:
- *  - active brokers
- *  - active broker users for the selected broker (after first submit)
- *  - approved + sales-assigned leads for the selected broker
- *  - projects (small list) so the user can pick before the unit dropdown
- *  - AVAILABLE units inside the selected project
- *
- * Each cascading step lives in the URL so admins can deep-link straight into
- * the right state and so the page stays as a server component.
- */
 export default async function NewAdminBrokerReservationPage({
   searchParams,
 }: {
@@ -51,7 +37,6 @@ export default async function NewAdminBrokerReservationPage({
   const brokers = (brokersRes.data?.data ?? []).filter((b) => b.status === 'ACTIVE');
   const projects = projectsRes.data?.data ?? [];
 
-  // Only load broker-scoped resources after the admin picks a broker.
   const brokerAgents = sp.brokerId
     ? ((await safe(api.get<BrokerUser[]>(`/brokers/${sp.brokerId}/users`))).data ?? [])
         .filter((u) => u.status === 'ACTIVE')
@@ -79,7 +64,7 @@ export default async function NewAdminBrokerReservationPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title="إنشاء حجز نيابة عن وسيط"
         description="استخدم هذا النموذج عندما يطلب الوسيط الحجز عبر الهاتف أو الواتساب. ستظهر الحجز في بوابة الوسيط كأنه أنشأه بنفسه."
         breadcrumbs={[
@@ -87,53 +72,49 @@ export default async function NewAdminBrokerReservationPage({
           { label: 'حجوزات من الوسطاء', href: '/dashboard/broker-reservations' },
           { label: 'حجز جديد' },
         ]}
-        meta={<BookmarkCheck className="h-4 w-4 text-brand-600" />}
-        actions={
-          <Link href="/dashboard/broker-reservations">
-            <Button variant="ghost" size="md" leftIcon={<ChevronLeft className="h-4 w-4" />}>
-              العودة للقائمة
-            </Button>
-          </Link>
+        meta={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
+            <BookmarkCheck className="h-3.5 w-3.5" />
+            حجز جديد
+          </span>
         }
       />
 
-      <Card className="p-5">
-        <AdminBrokerReservationForm
-          brokers={brokers.map((b) => ({
-            id: b.id,
-            companyName: b.companyName,
-            code: b.code,
-            defaultCommissionPct: Number(b.defaultCommissionPct ?? 0),
-          }))}
-          selectedBrokerId={sp.brokerId ?? ''}
-          brokerAgents={brokerAgents.map((a) => ({
-            id: a.id,
-            fullName: a.user.fullName,
-            email: a.user.email,
-          }))}
-          selectedBrokerAgentId={sp.brokerAgentId ?? ''}
-          approvedLeads={approvedLeads.map((l) => ({
-            id: l.id,
-            fullName: l.fullName,
-            phone: l.phone,
-            projectInterestId: l.projectInterestId ?? null,
-            projectInterestName: l.projectInterest ? tx(l.projectInterest.name) : null,
-          }))}
-          projects={projects.map((p) => ({
-            id: p.id,
-            name: tx(p.name),
-            city: p.city,
-          }))}
-          selectedProjectId={sp.projectId ?? ''}
-          units={units.map((u) => ({
-            id: u.id,
-            code: u.code,
-            type: u.type,
-            price: u.price,
-            buildingName: u.building?.name ?? null,
-          }))}
-        />
-      </Card>
+      <AdminBrokerReservationForm
+        brokers={brokers.map((b) => ({
+          id: b.id,
+          companyName: b.companyName,
+          code: b.code,
+          defaultCommissionPct: Number(b.defaultCommissionPct ?? 0),
+        }))}
+        selectedBrokerId={sp.brokerId ?? ''}
+        brokerAgents={brokerAgents.map((a) => ({
+          id: a.id,
+          fullName: a.user.fullName,
+          email: a.user.email,
+        }))}
+        selectedBrokerAgentId={sp.brokerAgentId ?? ''}
+        approvedLeads={approvedLeads.map((l) => ({
+          id: l.id,
+          fullName: l.fullName,
+          phone: l.phone,
+          projectInterestId: l.projectInterestId ?? null,
+          projectInterestName: l.projectInterest ? tx(l.projectInterest.name) : null,
+        }))}
+        projects={projects.map((p) => ({
+          id: p.id,
+          name: tx(p.name),
+          city: p.city,
+        }))}
+        selectedProjectId={sp.projectId ?? ''}
+        units={units.map((u) => ({
+          id: u.id,
+          code: u.code,
+          type: u.type,
+          price: u.price,
+          buildingName: u.building?.name ?? null,
+        }))}
+      />
     </div>
   );
 }
