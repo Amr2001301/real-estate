@@ -4,10 +4,8 @@ import {
   BarChart3,
   Briefcase,
   CircleDollarSign,
-  FileText,
   Trophy,
   TrendingUp,
-  Users,
   Wallet,
 } from 'lucide-react';
 import { BrokerTrendChart } from './_components/broker-trend-chart';
@@ -33,6 +31,7 @@ import {
   PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
+  PremiumSectionCard,
 } from '@/components/premium';
 
 export const dynamic    = 'force-dynamic';
@@ -165,7 +164,7 @@ export default async function AdminBrokerReportsPage({
           { label: 'تقارير الوسطاء' },
         ]}
         actions={
-          <div className="flex items-center gap-1 rounded-xl border border-hairline bg-surface shadow-xs px-1.5 py-1.5">
+          <div className="flex items-center gap-2">
             <ExportMenu
               label="تصدير الملخص"
               xlsxPath="/broker-reports/export/summary.xlsx"
@@ -293,28 +292,23 @@ export default async function AdminBrokerReportsPage({
           ════════════════════════════════════════════════════════════════ */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
-            {/* Monthly commissions trend — Recharts grouped bars */}
-            <div className="lg:col-span-3 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-              <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-hairline">
-                <div className="flex items-center gap-2.5">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 [&_svg]:h-4 [&_svg]:w-4">
-                    <BarChart3 />
-                  </span>
-                  <div>
-                    <p className="text-[13px] font-bold text-slate-800">الاتجاه الشهري للعمولات</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">العمولات المعتمدة مقابل المدفوع آخر 6 أشهر</p>
+            {/* Monthly commissions trend */}
+            <div className="lg:col-span-3">
+              <PremiumSectionCard
+                title="الاتجاه الشهري للعمولات"
+                description="العمولات المعتمدة مقابل المدفوع آخر 6 أشهر"
+                icon={<BarChart3 />}
+                trailing={
+                  <div className="text-end">
+                    <p className="text-[13px] font-black tabular-nums text-slate-900 leading-none">
+                      {totalTrendContracts.toLocaleString('ar-EG')} عقد
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
+                      {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0))}
+                    </p>
                   </div>
-                </div>
-                <div className="text-end shrink-0">
-                  <p className="text-sm font-black tabular-nums text-slate-900 leading-none">
-                    {totalTrendContracts.toLocaleString('ar-EG')} عقد
-                  </p>
-                  <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
-                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0))}
-                  </p>
-                </div>
-              </div>
-              <div className="px-4 pt-3 pb-3">
+                }
+              >
                 <div className="h-[220px]">
                   <BrokerTrendChart
                     data={trend.map((b) => ({
@@ -326,8 +320,7 @@ export default async function AdminBrokerReportsPage({
                     height={220}
                   />
                 </div>
-                {/* Legend */}
-                <div className="flex items-center gap-5 mt-2 px-1">
+                <div className="flex items-center gap-5 mt-3 pt-3 border-t border-hairline">
                   <div className="flex items-center gap-1.5">
                     <span className="h-2.5 w-5 rounded-sm bg-amber-300 inline-block" />
                     <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
@@ -338,25 +331,18 @@ export default async function AdminBrokerReportsPage({
                   </div>
                   <span className="text-[10px] text-slate-300 ms-auto">الأرقام = عقود موقّعة</span>
                 </div>
-              </div>
+              </PremiumSectionCard>
             </div>
 
-            {/* Conversion Funnel — client component */}
-            <div className="lg:col-span-2 bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden">
-              <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline">
-                <div className="flex items-center gap-2.5">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
-                    <TrendingUp />
-                  </span>
-                  <div>
-                    <p className="text-[13px] font-bold text-slate-800">قمع التحويل</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">من الفرصة إلى الدفعة المُنجزة</p>
-                  </div>
-                </div>
-              </div>
-              <div className="px-5 py-4">
+            {/* Conversion Funnel */}
+            <div className="lg:col-span-2">
+              <PremiumSectionCard
+                title="قمع التحويل"
+                description="من الفرصة إلى الدفعة المُنجزة"
+                icon={<TrendingUp />}
+              >
                 <BrokerFunnelChart stages={funnelStages} overallConv={overallConv} />
-              </div>
+              </PremiumSectionCard>
             </div>
 
           </div>
@@ -370,61 +356,56 @@ export default async function AdminBrokerReportsPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Top Brokers */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-amber-50 text-amber-600 [&_svg]:h-4 [&_svg]:w-4">
-                <TrendingUp />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">أعلى الوسطاء أداءً</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  مرتبون حسب: {METRIC_LABEL[sp.metric ?? 'salesGross']}
-                </p>
-              </div>
-            </div>
-            {(top?.data.length ?? 0) > 0 && (
-              <span className="text-xs text-slate-400 tabular-nums shrink-0">
+        <PremiumSectionCard
+          title="أعلى الوسطاء أداءً"
+          description={`مرتبون حسب: ${METRIC_LABEL[sp.metric ?? 'salesGross']}`}
+          icon={<TrendingUp />}
+          trailing={
+            (top?.data.length ?? 0) > 0 ? (
+              <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
                 {top?.data.length} وسيط
               </span>
-            )}
-          </div>
-
+            ) : undefined
+          }
+          padded={false}
+        >
           {(top?.data ?? []).length === 0 ? (
-            <EmptyState icon={<Briefcase />} title="لا توجد بيانات" description="لا توجد عمولات في النطاق المختار." />
+            <div className="p-6">
+              <EmptyState icon={<Briefcase />} title="لا توجد بيانات" description="لا توجد عمولات في النطاق المختار." />
+            </div>
           ) : (
-            <div className="divide-y divide-hairline flex-1">
+            <div className="divide-y divide-hairline">
               {(top?.data ?? []).map((r, idx) => {
                 const maxSales = Number(top?.data?.[0]?.salesGross ?? 1);
                 const barW     = maxSales > 0 ? (Number(r.salesGross) / maxSales) * 100 : 0;
                 return (
-                  <div key={r.brokerId} className={cn('flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors', idx === 0 && 'bg-amber-50/30')}>
+                  <div key={r.brokerId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
                     <RankBadge rank={idx + 1} />
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/dashboard/brokers/${r.brokerId}/performance` as never}
-                        className="text-sm font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                        className="text-[13px] font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
                       >
                         {r.companyName}
                       </Link>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex-1 max-w-[90px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
                           <div
-                            className={cn('h-full rounded-full', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                            className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
                             style={{ width: `${barW}%` }}
                           />
                         </div>
                         <span className="text-[10px] text-slate-400">{r.contractsSigned} عقد</span>
-                        <span className="text-[10px] font-bold font-mono text-slate-400 bg-slate-100 px-1 rounded" dir="ltr">
+                        <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md" dir="ltr">
                           {r.code}
                         </span>
                       </div>
                     </div>
                     <div className="text-end shrink-0">
-                      <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
+                      <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
                         {formatCurrency(r.salesGross)}
                       </p>
-                      <p className="text-[10px] text-slate-400 whitespace-nowrap" dir="ltr">
+                      <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
                         عمولة: {formatCurrency(r.commissionNet)}
                       </p>
                     </div>
@@ -433,61 +414,60 @@ export default async function AdminBrokerReportsPage({
               })}
             </div>
           )}
-        </div>
+        </PremiumSectionCard>
 
         {/* Project Performance */}
-        <div className="bg-surface rounded-2xl border border-hairline shadow-xs overflow-hidden flex flex-col">
-          <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-hairline">
-            <div className="flex items-center gap-2.5">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
-                <BarChart3 />
-              </span>
-              <div>
-                <p className="text-[13px] font-bold text-slate-800">أداء المشاريع</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">مرتبة حسب إجمالي المبيعات</p>
-              </div>
-            </div>
-            {projects.length > 0 && (
-              <span className="text-xs text-slate-400 tabular-nums shrink-0">
+        <PremiumSectionCard
+          title="أداء المشاريع"
+          description="مرتبة حسب إجمالي المبيعات"
+          icon={<BarChart3 />}
+          trailing={
+            projects.length > 0 ? (
+              <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
                 {projects.length} مشروع
               </span>
-            )}
-          </div>
-
+            ) : undefined
+          }
+          padded={false}
+        >
           {projects.length === 0 ? (
-            <EmptyState icon={<BarChart3 />} title="لا توجد بيانات" description="ستظهر هنا عند وجود عمولات على أي مشروع." />
+            <div className="p-6">
+              <EmptyState icon={<BarChart3 />} title="لا توجد بيانات" description="ستظهر هنا عند وجود عمولات على أي مشروع." />
+            </div>
           ) : (
-            <div className="divide-y divide-hairline flex-1">
+            <div className="divide-y divide-hairline">
               {projects.map((p, idx) => {
                 const maxProjSales = Number(projects[0]?.salesGross ?? 1);
                 const barW         = maxProjSales > 0 ? (Number(p.salesGross) / maxProjSales) * 100 : 0;
                 const projName     = p.projectName ? tx(p.projectName) : '—';
                 return (
-                  <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors', idx === 0 && 'bg-amber-50/30')}>
+                  <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
                     <RankBadge rank={idx + 1} />
                     <div className="min-w-0 flex-1">
                       <Link
                         href={`/dashboard/projects/${p.projectId}` as never}
-                        className="text-sm font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                        className="text-[13px] font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
                       >
                         {projName}
                       </Link>
-                      <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex-1 max-w-[90px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
                           <div
-                            className={cn('h-full rounded-full', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                            className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
                             style={{ width: `${barW}%` }}
                           />
                         </div>
                         <span className="text-[10px] text-slate-400">{p.contractsSigned}/{p.contracts} عقد</span>
-                        {p.city && <span className="text-[10px] text-slate-400">{p.city}</span>}
+                        {p.city && (
+                          <span className="text-[10px] text-slate-400 truncate max-w-[60px]">{p.city}</span>
+                        )}
                       </div>
                     </div>
                     <div className="text-end shrink-0">
-                      <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
+                      <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
                         {formatCurrency(p.salesGross)}
                       </p>
-                      <p className="text-[10px] text-slate-400 whitespace-nowrap" dir="ltr">
+                      <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
                         عمولة: {formatCurrency(p.commissionNet)}
                       </p>
                     </div>
@@ -496,7 +476,7 @@ export default async function AdminBrokerReportsPage({
               })}
             </div>
           )}
-        </div>
+        </PremiumSectionCard>
 
       </div>
 
