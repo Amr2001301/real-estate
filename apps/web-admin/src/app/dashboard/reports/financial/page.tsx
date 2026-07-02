@@ -341,46 +341,49 @@ export default async function FinancialReportsPage({
           description="محصّل · متأخر · متبقي"
           padded={false}
         >
-          <div className="flex flex-col gap-4 px-5 py-5">
-            {contractVal > 0 && (
-              /* Stacked bar */
-              <div className="h-4 rounded-full bg-slate-100 overflow-hidden flex">
-                <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(collectedVerif / contractVal) * 100}%` }} />
-                <div className="h-full bg-danger-400 transition-all" style={{ width: `${(overdueAmt / contractVal) * 100}%` }} />
-              </div>
-            )}
-
-            <div className="space-y-3">
-              {((): { label: string; amount: number; pct: string; dot: string; textCls: string }[] => {
-                const base = contractVal > 0 ? contractVal : 1;
-                return [
-                  { label: 'إجمالي قيمة العقود',  amount: contractVal,    pct: '100%',                          dot: 'bg-slate-300',   textCls: 'text-slate-900' },
-                  { label: 'المحصّل المؤكد',        amount: collectedVerif, pct: `${collectionRate}%`,            dot: 'bg-emerald-500', textCls: 'text-emerald-700' },
-                  { label: 'المتأخر',               amount: overdueAmt,     pct: `${((overdueAmt/base)*100).toFixed(1)}%`,  dot: 'bg-danger-500',  textCls: 'text-danger-700' },
-                  { label: 'المتبقي للتحصيل',       amount: outstanding,    pct: `${((outstanding/base)*100).toFixed(1)}%`, dot: 'bg-slate-200',   textCls: 'text-slate-700' },
-                ];
-              })().map((r) => (
-                <div key={r.label} className="flex items-center gap-3">
-                  <span className={cn('h-2.5 w-2.5 rounded-full shrink-0', r.dot)} />
-                  <span className="flex-1 text-xs text-slate-600 min-w-0">{r.label}</span>
-                  <span className="text-[11px] font-medium text-slate-400 tabular-nums shrink-0 w-8 text-start">{r.pct}</span>
-                  <span className={cn('text-xs font-bold tabular-nums whitespace-nowrap shrink-0', r.textCls)} dir="ltr">
-                    {formatCurrency(r.amount)}
-                  </span>
-                </div>
-              ))}
+          {/* Stacked bar */}
+          <div className="px-5 pt-4 pb-2">
+            <div className="h-3 rounded-full bg-slate-100 overflow-hidden flex">
+              {contractVal > 0 && (
+                <>
+                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(collectedVerif / contractVal) * 100}%` }} />
+                  <div className="h-full bg-danger-400 transition-all" style={{ width: `${(overdueAmt / contractVal) * 100}%` }} />
+                </>
+              )}
             </div>
+          </div>
 
-            {/* Month comparison */}
-            <div className="mt-auto pt-4 border-t border-hairline grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">محصّل هذا الشهر</p>
-                <p className="text-base font-black tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(collectedMonth)}</p>
+          {/* Legend rows */}
+          <div className="divide-y divide-hairline">
+            {((): { label: string; amount: number; pct: string; dot: string; valCls: string }[] => {
+              const base = contractVal > 0 ? contractVal : 1;
+              return [
+                { label: 'إجمالي قيمة العقود',  amount: contractVal,    pct: '100%',                                          dot: 'bg-slate-300',   valCls: 'text-slate-900' },
+                { label: 'المحصّل المؤكد',        amount: collectedVerif, pct: `${collectionRate}%`,                            dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
+                { label: 'المتأخر',               amount: overdueAmt,     pct: `${((overdueAmt / base) * 100).toFixed(1)}%`,   dot: 'bg-danger-500',  valCls: 'text-danger-700' },
+                { label: 'المتبقي للتحصيل',       amount: outstanding,    pct: `${((outstanding  / base) * 100).toFixed(1)}%`, dot: 'bg-slate-200',   valCls: 'text-slate-700' },
+              ];
+            })().map((r) => (
+              <div key={r.label} className="flex items-center gap-3 px-5 py-3.5">
+                <span className={cn('h-3 w-3 rounded-full shrink-0', r.dot)} />
+                <span className="flex-1 text-[13px] text-slate-600">{r.label}</span>
+                <span className="text-[11px] font-semibold tabular-nums text-slate-400 w-14 text-right shrink-0" dir="ltr">{r.pct}</span>
+                <span className={cn('text-[13px] font-bold tabular-nums whitespace-nowrap shrink-0', r.valCls)} dir="ltr">
+                  {formatCurrency(r.amount)}
+                </span>
               </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">مستحق هذا الشهر</p>
-                <p className="text-base font-black tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(dueMonth)}</p>
-              </div>
+            ))}
+          </div>
+
+          {/* Month footer */}
+          <div className="grid grid-cols-2 gap-px bg-hairline border-t border-hairline mt-1">
+            <div className="bg-surface px-5 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">محصّل هذا الشهر</p>
+              <p className="text-[15px] font-black tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(collectedMonth)}</p>
+            </div>
+            <div className="bg-surface px-5 py-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">مستحق هذا الشهر</p>
+              <p className="text-[15px] font-black tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(dueMonth)}</p>
             </div>
           </div>
         </PremiumSectionCard>
@@ -398,9 +401,9 @@ export default async function FinancialReportsPage({
         >
           <div className="grid grid-cols-3 gap-px bg-hairline">
             {[
-              { label: 'خلال 30 يومًا',  amount: forecast.next30,   pctCls: 'bg-brand-500',  valCls: 'text-brand-700',  bg: 'bg-brand-50/60' },
-              { label: '31 – 60 يومًا',  amount: forecast.next3160, pctCls: 'bg-amber-400',  valCls: 'text-amber-700',  bg: 'bg-amber-50/60' },
-              { label: '61 – 90 يومًا',  amount: forecast.next6190, pctCls: 'bg-violet-400', valCls: 'text-violet-700', bg: 'bg-violet-50/60' },
+              { label: 'خلال 30 يومًا',  amount: forecast.next30,   pctCls: 'bg-brand-500',  valCls: 'text-brand-700',  bg: 'bg-surface' },
+              { label: '31 – 60 يومًا',  amount: forecast.next3160, pctCls: 'bg-amber-400',  valCls: 'text-amber-700',  bg: 'bg-surface' },
+              { label: '61 – 90 يومًا',  amount: forecast.next6190, pctCls: 'bg-violet-400', valCls: 'text-violet-700', bg: 'bg-surface' },
             ].map((b) => {
               const total = forecast.next30 + forecast.next3160 + forecast.next6190;
               const pct   = total > 0 ? Math.round((b.amount / total) * 100) : 0;
@@ -511,7 +514,7 @@ export default async function FinancialReportsPage({
                   <th className="text-start py-2.5 px-4 whitespace-nowrap">الوحدة</th>
                   <th className="text-start py-2.5 px-4 whitespace-nowrap">النوع</th>
                   <th className="text-start py-2.5 px-4 whitespace-nowrap">الاستحقاق</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">المبلغ</th>
+                  <th className="text-right py-2.5 px-4 whitespace-nowrap">المبلغ</th>
                   <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">التأخر</th>
                 </tr>
               </thead>
@@ -534,7 +537,7 @@ export default async function FinancialReportsPage({
                         </span>
                       </td>
                       <td className="py-3 px-4 text-xs text-slate-400 whitespace-nowrap tabular-nums">{formatDate(row.dueDate)}</td>
-                      <td className="py-3 px-4 whitespace-nowrap font-bold tabular-nums text-slate-900" dir="ltr">{formatCurrency(row.amount)}</td>
+                      <td className="py-3 px-4 whitespace-nowrap font-bold tabular-nums text-slate-900 text-right" dir="ltr">{formatCurrency(row.amount)}</td>
                       <td className="py-3 ps-4 pe-5 whitespace-nowrap">
                         <span className={cn(
                           'inline-block px-2 py-0.5 rounded-full text-[11px] font-bold',
@@ -610,33 +613,27 @@ export default async function FinancialReportsPage({
           description="توزيع الدفعات المسجلة والمؤكدة"
           padded={false}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[520px]">
-              <thead className="bg-surface-muted/60 text-[10px] font-bold tracking-wide text-slate-500 border-b border-hairline">
-                <tr>
-                  <th className="text-start py-2.5 ps-5 pe-4">نوع الدفعة</th>
-                  <th className="text-start py-2.5 px-4">العدد</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">إجمالي مسجل</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">مؤكد</th>
-                  <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">غير مؤكد</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-hairline">
-                {(dash?.collectionByType ?? []).map((c) => (
-                  <tr key={c.type} className="hover:bg-surface-muted/40 transition-colors align-middle">
-                    <td className="py-2.5 ps-5 pe-4">
-                      <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium', DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600')}>
-                        {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
-                      </span>
-                    </td>
-                    <td className="py-2.5 px-4 tabular-nums text-slate-600">{c.count.toLocaleString('ar-EG')}</td>
-                    <td className="py-2.5 px-4 font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll)}</td>
-                    <td className="py-2.5 px-4 tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified)}</td>
-                    <td className="py-2.5 ps-4 pe-5 tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalUnverified)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Header */}
+          <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-2.5 bg-canvas/50 border-b border-hairline">
+            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">نوع الدفعة</span>
+            <span className="w-36 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">إجمالي مسجل</span>
+            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">مؤكد</span>
+            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">غير مؤكد</span>
+          </div>
+          <div className="divide-y divide-hairline">
+            {(dash?.collectionByType ?? []).map((c) => (
+              <div key={c.type} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 items-center px-5 py-3.5 hover:bg-canvas/40 transition-colors">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className={cn('inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0', DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600')}>
+                    {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
+                  </span>
+                  <span className="text-[11px] text-slate-400 tabular-nums">{c.count.toLocaleString('ar-EG')} دفعة</span>
+                </div>
+                <p className="w-36 text-right text-[13px] font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll)}</p>
+                <p className="w-32 text-right text-[13px] tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified)}</p>
+                <p className="w-32 text-right text-[13px] tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalUnverified)}</p>
+              </div>
+            ))}
           </div>
         </PremiumSectionCard>
       )}
