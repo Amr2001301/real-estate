@@ -9,11 +9,15 @@ import {
   CalendarDays,
   CreditCard,
   AlertCircle,
+  Phone,
+  Mail,
+  ExternalLink,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Contract } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { ContractPdfPanel } from './pdf-panel';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
@@ -76,6 +80,7 @@ export default async function ContractDetailPage({
   const projectName =
     tx(contract.unit?.building?.phase?.project?.name) || '—';
   const displayNumber = contract.contractNumber ?? contract.id.slice(0, 8);
+  const customerEmail = (contract.customer as { email?: string | null } | undefined)?.email;
 
   return (
     <div className="space-y-5 pb-2">
@@ -107,105 +112,102 @@ export default async function ContractDetailPage({
           <>
             {/* Contract key info */}
             <PremiumSectionCard title="بيانات العقد" icon={<FileText />}>
-              <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 text-sm">
-                <div>
-                  <dt className="text-xs text-slate-500 mb-0.5">رقم العقد</dt>
-                  <dd className="font-mono font-semibold text-brand-700">{displayNumber}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-500 mb-0.5">إجمالي العقد</dt>
-                  <dd className="font-semibold">{formatCurrency(contract.totalAmount)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-500 mb-0.5">الدفعة المقدمة</dt>
-                  <dd className="font-semibold">{formatCurrency(contract.downPayment)}</dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-500 mb-0.5">تاريخ التوقيع</dt>
-                  <dd>
-                    {contract.signedAt ? (
-                      formatDateTime(contract.signedAt)
-                    ) : (
-                      <span className="text-slate-400">غير موقّع</span>
-                    )}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-slate-500 mb-0.5">تاريخ الإنشاء</dt>
-                  <dd>{formatDateTime(contract.createdAt)}</dd>
-                </div>
-              </dl>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
+                <Field label="رقم العقد">
+                  <span className="font-mono text-[15px] font-bold text-brand-700">{displayNumber}</span>
+                </Field>
+                <Field label="إجمالي العقد">
+                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.totalAmount)}</span>
+                </Field>
+                <Field label="الدفعة المقدمة">
+                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.downPayment)}</span>
+                </Field>
+                <Field label="تاريخ التوقيع">
+                  {contract.signedAt ? (
+                    <span className="text-[13px] font-semibold text-success-700">{formatDateTime(contract.signedAt)}</span>
+                  ) : (
+                    <span className="text-[13px] text-slate-400">غير موقّع</span>
+                  )}
+                </Field>
+                <Field label="تاريخ الإنشاء">
+                  <span className="text-[13px] font-semibold text-slate-800">{formatDateTime(contract.createdAt)}</span>
+                </Field>
+              </div>
             </PremiumSectionCard>
 
             {/* Source reservation */}
             {contract.reservation && (
               <PremiumSectionCard title="محوّل من حجز" icon={<Link2 />}>
-                <div className="space-y-2">
-                  <p className="text-sm text-slate-600">
-                    هذا العقد تم إنشاؤه تلقائياً من تحويل حجز.
-                  </p>
-                  <Link
-                    href={`/dashboard/reservations/${contract.reservation.id}`}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-indigo-700 hover:underline"
-                  >
-                    <Link2 className="h-4 w-4" />
-                    {contract.reservation.reservationNumber ??
-                      contract.reservation.id.slice(0, 8)}
-                  </Link>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 [&_svg]:h-5 [&_svg]:w-5">
+                    <Link2 />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-slate-400 mb-1">
+                      تم إنشاء هذا العقد تلقائياً من تحويل حجز
+                    </p>
+                    <Link
+                      href={`/dashboard/reservations/${contract.reservation.id}`}
+                      className="font-mono text-[14px] font-bold text-indigo-700 hover:underline"
+                    >
+                      {contract.reservation.reservationNumber ??
+                        contract.reservation.id.slice(0, 8)}
+                    </Link>
+                  </div>
                 </div>
               </PremiumSectionCard>
             )}
 
             {/* Broker attribution */}
             {contract.broker && (
-              <PremiumSectionCard title="الوسيط">
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-500">شركة الوساطة</p>
+              <PremiumSectionCard title="الوسيط" icon={<Building2 />}>
+                <div className="space-y-5">
+                  <Field label="شركة الوساطة">
                     <Link
                       href={`/dashboard/brokers/${contract.broker.id}`}
-                      className="text-sm font-semibold text-slate-900 hover:text-brand-700"
+                      className="text-[13.5px] font-bold text-brand-700 hover:underline"
                     >
                       {contract.broker.companyName}
-                      {contract.broker.commercialName && (
-                        <span className="text-slate-500 font-normal">
-                          {' '}— {contract.broker.commercialName}
-                        </span>
-                      )}
                     </Link>
-                    <p className="text-2xs text-slate-500 font-mono mt-0.5" dir="ltr">
+                    {contract.broker.commercialName && (
+                      <p className="text-[11px] text-slate-400 mt-0.5">{contract.broker.commercialName}</p>
+                    )}
+                    <p className="text-[11px] font-mono text-slate-400 mt-0.5" dir="ltr">
                       {contract.broker.code}
                     </p>
-                  </div>
+                  </Field>
                   {contract.brokerAgent && (
-                    <div>
-                      <p className="text-xs text-slate-500">جهة الاتصال</p>
-                      <p className="text-sm text-slate-800">{contract.brokerAgent.fullName}</p>
-                      <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">
+                    <Field label="جهة الاتصال">
+                      <p className="text-[13px] font-semibold text-slate-800">{contract.brokerAgent.fullName}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
                         {contract.brokerAgent.email ?? contract.brokerAgent.phone ?? '—'}
                       </p>
-                    </div>
+                    </Field>
                   )}
                   {contract.reservation &&
                     (contract.reservation.commissionLockedPct !== null ||
                       contract.reservation.commissionLockedAmount !== null) && (
-                      <div className="rounded-xl bg-canvas/60 px-3 py-2.5 text-xs text-slate-700">
-                        <p className="text-2xs text-slate-500 mb-1">
+                      <div className="rounded-xl bg-canvas/60 border border-hairline px-4 py-3 text-xs text-slate-700 space-y-1">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">
                           لقطة العمولة (من الحجز)
                         </p>
                         {contract.reservation.commissionLockedPct !== null &&
                           contract.reservation.commissionLockedPct !== undefined && (
-                            <p>
-                              النسبة:{' '}
-                              {Number(contract.reservation.commissionLockedPct).toFixed(2)}%
-                            </p>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">النسبة</span>
+                              <span className="font-semibold tabular-nums">
+                                {Number(contract.reservation.commissionLockedPct).toFixed(2)}%
+                              </span>
+                            </div>
                           )}
                         {contract.reservation.commissionLockedAmount !== null &&
                           contract.reservation.commissionLockedAmount !== undefined && (
-                            <p className="mt-0.5">
-                              المبلغ:{' '}
-                              {String(contract.reservation.commissionLockedAmount)}
-                            </p>
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">المبلغ</span>
+                              <span className="font-semibold tabular-nums">
+                                {String(contract.reservation.commissionLockedAmount)}
+                              </span>
+                            </div>
                           )}
                       </div>
                     )}
@@ -222,44 +224,34 @@ export default async function ContractDetailPage({
               {plan ? (
                 <div>
                   {/* Summary bar */}
-                  <div className="px-5 sm:px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-4 border-b border-hairline text-sm">
-                    <div>
-                      <p className="text-xs text-slate-500 mb-0.5">عدد الأقساط</p>
-                      <p className="font-semibold">{plan.totalMonths} شهر</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-0.5">القسط الشهري</p>
-                      <p className="font-semibold">{formatCurrency(plan.monthlyAmount)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-0.5">تاريخ البدء</p>
-                      <p className="font-semibold">{formatDate(plan.startsAt)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-0.5">التكرار</p>
-                      <p className="font-semibold">
-                        {FREQ_LABELS[plan.frequency] ?? plan.frequency}
-                      </p>
-                    </div>
+                  <div className="px-5 sm:px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 border-b border-hairline">
+                    <Field label="عدد الأقساط">
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{plan.totalMonths} شهر</span>
+                    </Field>
+                    <Field label="القسط الشهري">
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{formatCurrency(plan.monthlyAmount)}</span>
+                    </Field>
+                    <Field label="تاريخ البدء">
+                      <span className="text-[14px] font-bold text-slate-900">{formatDate(plan.startsAt)}</span>
+                    </Field>
+                    <Field label="التكرار">
+                      <span className="text-[14px] font-bold text-slate-900">{FREQ_LABELS[plan.frequency] ?? plan.frequency}</span>
+                    </Field>
                   </div>
 
                   {/* Installments table */}
                   {plan.installments && plan.installments.length > 0 && (
-                    <div className="overflow-auto max-h-96">
+                    <div className="overflow-auto max-h-[420px]">
                       <table className="w-full text-sm">
-                        <thead className="sticky top-0 bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                        <thead className="sticky top-0 bg-canvas/60 backdrop-blur-sm border-b border-hairline">
                           <tr>
-                            <th className="px-5 py-2.5 text-start">#</th>
-                            <th className="px-4 py-2.5 text-start">النوع</th>
-                            <th className="px-4 py-2.5 text-start whitespace-nowrap">
-                              تاريخ الاستحقاق
-                            </th>
-                            <th className="px-4 py-2.5 text-start">المبلغ</th>
-                            <th className="px-4 py-2.5 text-start">الحالة</th>
-                            <th className="px-4 py-2.5 text-start whitespace-nowrap">
-                              تاريخ الدفع
-                            </th>
-                            <th className="px-4 py-2.5 text-start" />
+                            <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">#</th>
+                            <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">النوع</th>
+                            <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">تاريخ الاستحقاق</th>
+                            <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">المبلغ</th>
+                            <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الحالة</th>
+                            <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">تاريخ الدفع</th>
+                            <th className="px-4 py-3" />
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-hairline">
@@ -282,29 +274,27 @@ export default async function ContractDetailPage({
                                   key={inst.id}
                                   className="hover:bg-canvas/40 transition-colors duration-100"
                                 >
-                                  <td className="px-5 py-2.5 text-slate-500 font-mono text-xs">
+                                  <td className="px-5 py-3 text-slate-400 font-mono text-xs">
                                     {isInstallment ? rowLabel : '—'}
                                   </td>
-                                  <td className="px-4 py-2.5 text-xs text-slate-600">
+                                  <td className="px-4 py-3 text-[12px] font-medium text-slate-600">
                                     {PAYMENT_TYPE_LABELS[inst.type] ?? 'قسط'}
                                   </td>
-                                  <td className="px-4 py-2.5">
+                                  <td className="px-4 py-3 text-[13px] text-slate-700">
                                     {formatDate(inst.dueDate)}
                                   </td>
-                                  <td className="px-4 py-2.5 font-semibold tabular-nums">
+                                  <td className="px-4 py-3 text-[13px] font-bold tabular-nums text-slate-900">
                                     {formatCurrency(inst.amount)}
                                   </td>
-                                  <td className="px-4 py-2.5">
-                                    <span
-                                      className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}
-                                    >
+                                  <td className="px-4 py-3">
+                                    <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold', s.cls)}>
                                       {s.label}
                                     </span>
                                   </td>
-                                  <td className="px-4 py-2.5 text-slate-400 text-xs">
+                                  <td className="px-4 py-3 text-[12px] text-slate-400">
                                     {inst.paidAt ? formatDate(inst.paidAt) : '—'}
                                   </td>
-                                  <td className="px-4 py-2.5">
+                                  <td className="px-4 py-3">
                                     {canPay && (
                                       <RecordPaymentButton
                                         contractId={contract.id}
@@ -353,7 +343,7 @@ export default async function ContractDetailPage({
                           max={360}
                           placeholder="عدد الأشهر"
                           required
-                          className="rounded-lg border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
+                          className="rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
                         />
                         <input
                           name="monthlyAmount"
@@ -362,13 +352,13 @@ export default async function ContractDetailPage({
                           min={0}
                           placeholder="القسط الشهري"
                           required
-                          className="rounded-lg border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
+                          className="rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
                         />
                         <input
                           name="startsAt"
                           type="date"
                           required
-                          className="rounded-lg border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
+                          className="rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-300 bg-surface"
                         />
                       </div>
                       <Button type="submit" variant="primary" size="sm">
@@ -387,8 +377,8 @@ export default async function ContractDetailPage({
               trailing={
                 isAdmin ? (
                   <Link href={`/dashboard/deposits/new?contractId=${contract.id}`}>
-                    <Button variant="secondary" size="sm" type="button">
-                      + تسجيل دفعة
+                    <Button variant="secondary" size="sm" type="button" leftIcon={<CreditCard className="h-3.5 w-3.5" />}>
+                      تسجيل دفعة
                     </Button>
                   </Link>
                 ) : undefined
@@ -396,42 +386,45 @@ export default async function ContractDetailPage({
               padded={false}
             >
               {contract.deposits && contract.deposits.length > 0 ? (
-                <ul className="divide-y divide-hairline text-sm">
+                <ul className="divide-y divide-hairline">
                   {contract.deposits.map((d) => (
                     <li
                       key={d.id}
-                      className="px-5 sm:px-6 py-3 flex justify-between items-center hover:bg-canvas/40 transition-colors duration-100"
+                      className="px-5 sm:px-6 py-3.5 flex items-center gap-3 hover:bg-canvas/40 transition-colors duration-100"
                     >
-                      {isAdmin ? (
-                        <Link
-                          href={`/dashboard/deposits/${d.id}`}
-                          className="font-semibold tabular-nums text-brand-700 hover:text-brand-800"
-                        >
-                          {formatCurrency(d.amount)}
-                        </Link>
-                      ) : (
-                        <span className="font-semibold tabular-nums">
-                          {formatCurrency(d.amount)}
-                        </span>
-                      )}
-                      <div className="flex items-center gap-3">
-                        <span className="text-slate-400 text-xs">{formatDate(d.paidAt)}</span>
+                      <div className="min-w-0 flex-1">
+                        {isAdmin ? (
+                          <Link
+                            href={`/dashboard/deposits/${d.id}`}
+                            className="text-[15px] font-bold tabular-nums text-brand-700 hover:underline"
+                          >
+                            {formatCurrency(d.amount)}
+                          </Link>
+                        ) : (
+                          <span className="text-[15px] font-bold tabular-nums text-slate-900">
+                            {formatCurrency(d.amount)}
+                          </span>
+                        )}
+                        <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(d.paidAt)}</p>
+                      </div>
+                      <div className="flex items-center gap-2.5 shrink-0">
                         {d.receiptUrl && (
                           <a
                             href={d.receiptUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-brand-600 hover:underline text-xs"
+                            className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1"
                           >
-                            إيصال
+                            <ExternalLink className="h-3 w-3" /> إيصال
                           </a>
                         )}
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          className={cn(
+                            'text-[11px] font-semibold px-2.5 py-0.5 rounded-full',
                             d.verified
-                              ? 'bg-success-100 text-success-700'
-                              : 'bg-amber-100 text-amber-700'
-                          }`}
+                              ? 'bg-success-50 text-success-700'
+                              : 'bg-amber-50 text-amber-700',
+                          )}
                         >
                           {d.verified ? 'متحقق' : 'غير متحقق'}
                         </span>
@@ -440,7 +433,7 @@ export default async function ContractDetailPage({
                   ))}
                 </ul>
               ) : (
-                <div className="px-6 py-10 text-center text-sm text-slate-400">
+                <div className="py-10 text-center text-sm text-slate-400">
                   لا توجد دفعات مسجلة
                 </div>
               )}
@@ -451,64 +444,72 @@ export default async function ContractDetailPage({
           <>
             {/* Quick navigation */}
             <PremiumCommandPanel title="إجراءات سريعة">
-                {contract.customer && (
-                  <Link
-                    href={`/dashboard/customers/${contract.customer.id}`}
-                    className={CMD_LINK}
-                  >
-                    <span className={CMD_ICON}><User /></span>
-                    <span>عرض العميل</span>
-                  </Link>
-                )}
-                {contract.unit && (
-                  <Link
-                    href={`/dashboard/units/${contract.unit.id}`}
-                    className={CMD_LINK}
-                  >
-                    <span className={CMD_ICON}><Building2 /></span>
-                    <span>عرض الوحدة</span>
-                  </Link>
-                )}
-                {contract.reservation && (
-                  <Link
-                    href={`/dashboard/reservations/${contract.reservation.id}`}
-                    className={CMD_LINK}
-                  >
-                    <span className={CMD_ICON}><Link2 /></span>
-                    <span>الحجز المرتبط</span>
-                  </Link>
-                )}
-                {isAdmin && (
-                  <Link
-                    href={`/dashboard/deposits/new?contractId=${contract.id}`}
-                    className={CMD_LINK}
-                  >
-                    <span className={CMD_ICON}><CreditCard /></span>
-                    <span>تسجيل دفعة</span>
-                  </Link>
-                )}
-              </PremiumCommandPanel>
+              {contract.customer && (
+                <Link href={`/dashboard/customers/${contract.customer.id}`} className={CMD_LINK}>
+                  <span className={CMD_ICON}><User /></span>
+                  <span>عرض العميل</span>
+                </Link>
+              )}
+              {contract.unit && (
+                <Link href={`/dashboard/units/${contract.unit.id}`} className={CMD_LINK}>
+                  <span className={CMD_ICON}><Building2 /></span>
+                  <span>عرض الوحدة</span>
+                </Link>
+              )}
+              {contract.reservation && (
+                <Link href={`/dashboard/reservations/${contract.reservation.id}`} className={CMD_LINK}>
+                  <span className={CMD_ICON}><Link2 /></span>
+                  <span>الحجز المرتبط</span>
+                </Link>
+              )}
+              {isAdmin && (
+                <Link href={`/dashboard/deposits/new?contractId=${contract.id}`} className={CMD_LINK}>
+                  <span className={CMD_ICON}><CreditCard /></span>
+                  <span>تسجيل دفعة</span>
+                </Link>
+              )}
+            </PremiumCommandPanel>
 
             {/* Customer */}
             <PremiumSectionCard title="العميل" icon={<User />}>
               {contract.customer ? (
-                <div className="space-y-1.5 text-sm">
+                <div className="space-y-2.5">
+                  <p className="text-[15px] font-bold text-slate-900">
+                    {contract.customer.fullName}
+                  </p>
+                  {contract.customer.phone && (
+                    <a
+                      href={`tel:${contract.customer.phone}`}
+                      className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors"
+                    >
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                        <Phone />
+                      </span>
+                      <span className="text-sm font-medium text-slate-700" dir="ltr">
+                        {contract.customer.phone}
+                      </span>
+                    </a>
+                  )}
+                  {customerEmail && (
+                    <a
+                      href={`mailto:${customerEmail}`}
+                      className="flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors"
+                    >
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-info-50 text-info-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                        <Mail />
+                      </span>
+                      <span className="text-sm font-medium text-slate-700 truncate" dir="ltr">
+                        {customerEmail}
+                      </span>
+                    </a>
+                  )}
                   <Link
                     href={`/dashboard/customers/${contract.customer.id}`}
-                    className="font-semibold text-brand-700 hover:underline"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
                   >
-                    {contract.customer.fullName}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    عرض ملف العميل
                   </Link>
-                  {contract.customer.phone && (
-                    <p className="text-slate-500 text-xs" dir="ltr">
-                      {contract.customer.phone}
-                    </p>
-                  )}
-                  {(contract.customer as { email?: string | null }).email && (
-                    <p className="text-slate-500 text-xs">
-                      {(contract.customer as { email?: string | null }).email}
-                    </p>
-                  )}
                 </div>
               ) : (
                 <p className="text-sm text-slate-400">—</p>
@@ -518,15 +519,21 @@ export default async function ContractDetailPage({
             {/* Unit */}
             <PremiumSectionCard title="الوحدة" icon={<Building2 />}>
               {contract.unit ? (
-                <div className="space-y-1 text-sm">
-                  <Link
-                    href={`/dashboard/units/${contract.unit.id}`}
-                    className="font-semibold text-brand-700 hover:underline"
-                  >
-                    {contract.unit.code}
-                  </Link>
-                  <p className="text-slate-500 text-xs">{contract.unit.type}</p>
-                  <p className="text-slate-500 text-xs">{projectName}</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      href={`/dashboard/units/${contract.unit.id}`}
+                      className="text-[16px] font-bold text-brand-700 hover:underline"
+                    >
+                      {contract.unit.code}
+                    </Link>
+                    {contract.unit.type && (
+                      <span className="text-[11px] font-semibold text-slate-500 bg-canvas px-2 py-0.5 rounded-lg border border-hairline">
+                        {contract.unit.type}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[13px] text-slate-500">{projectName}</p>
                 </div>
               ) : (
                 <p className="text-slate-400 text-sm">—</p>
@@ -534,45 +541,45 @@ export default async function ContractDetailPage({
             </PremiumSectionCard>
 
             {/* Financial summary */}
-            <PremiumSectionCard title="ملخص مالي">
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-slate-500">الإجمالي</span>
-                  <span className="font-semibold tabular-nums">
+            <PremiumSectionCard title="ملخص مالي" padded={false}>
+              <div className="divide-y divide-hairline">
+                <SideRow label="الإجمالي">
+                  <span className="text-[14px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(contract.totalAmount)}
                   </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-500">الدفعة المقدمة</span>
-                  <span className="tabular-nums">
+                </SideRow>
+                <SideRow label="الدفعة المقدمة">
+                  <span className="text-[13px] font-semibold tabular-nums text-slate-700">
                     {formatCurrency(contract.downPayment)}
                   </span>
-                </div>
+                </SideRow>
                 {plan && (
                   <>
-                    <div className="border-t border-hairline pt-2 flex justify-between">
-                      <span className="text-slate-500">عدد الأقساط</span>
-                      <span className="tabular-nums">{plan.totalMonths}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">القسط الشهري</span>
-                      <span className="tabular-nums">
+                    <SideRow label="عدد الأقساط">
+                      <span className="text-[13px] font-semibold tabular-nums text-slate-700">
+                        {plan.totalMonths} شهر
+                      </span>
+                    </SideRow>
+                    <SideRow label="القسط الشهري">
+                      <span className="text-[13px] font-semibold tabular-nums text-slate-700">
                         {formatCurrency(plan.monthlyAmount)}
                       </span>
-                    </div>
+                    </SideRow>
                   </>
                 )}
-                {contract.signedAt ? (
-                  <div className="flex items-center gap-1.5 text-success-700 text-xs pt-1">
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    موقّع {formatDate(contract.signedAt)}
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1.5 text-slate-400 text-xs pt-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    في انتظار التوقيع
-                  </div>
-                )}
+                <SideRow label="حالة التوقيع">
+                  {contract.signedAt ? (
+                    <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-success-700">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      موقّع {formatDate(contract.signedAt)}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[12px] text-slate-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      في انتظار التوقيع
+                    </span>
+                  )}
+                </SideRow>
               </div>
             </PremiumSectionCard>
 
@@ -604,6 +611,32 @@ export default async function ContractDetailPage({
           </>
         }
       />
+    </div>
+  );
+}
+
+function Field({
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">{label}</p>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function SideRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-5 py-3">
+      <p className="text-[12px] font-medium text-slate-500 shrink-0">{label}</p>
+      <div className="text-end">{children}</div>
     </div>
   );
 }
