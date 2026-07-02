@@ -255,14 +255,10 @@ export default async function InstallmentPlanDetailPage({
             {isAdmin && (
               <PremiumCommandPanel title="إجراءات">
                 {plan.status !== 'ACTIVE' && (
-                  <div className="px-1">
-                    <PlanDetailActions planId={plan.id} action="activate" />
-                  </div>
+                  <PlanDetailActions planId={plan.id} action="activate" commandRow />
                 )}
                 {plan.status === 'ACTIVE' && (
-                  <div className="px-1">
-                    <PlanDetailActions planId={plan.id} action="deactivate" />
-                  </div>
+                  <PlanDetailActions planId={plan.id} action="deactivate" commandRow />
                 )}
                 <Link href={`/dashboard/installments/${id}/edit`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Pencil /></span>
