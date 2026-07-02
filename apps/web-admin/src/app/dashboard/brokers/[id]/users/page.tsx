@@ -155,18 +155,18 @@ export default async function BrokerUsersPage({
                       </td>
 
                       {/* التواصل */}
-                      <td className="px-5 py-3.5" dir="ltr">
+                      <td className="px-5 py-3.5 max-w-[200px]">
                         <div className="space-y-1">
                           {u.email && (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
                               <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                              <span className="text-[12px] text-slate-700">{u.email}</span>
+                              <span className="text-[12px] text-slate-700 truncate min-w-0" dir="ltr">{u.email}</span>
                             </div>
                           )}
                           {u.phone && (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
                               <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                              <span className="text-[12px] text-slate-700">{u.phone}</span>
+                              <span className="text-[12px] text-slate-700 truncate min-w-0" dir="ltr">{u.phone}</span>
                             </div>
                           )}
                           {!u.email && !u.phone && <span className="text-[12px] text-slate-300">—</span>}
@@ -257,9 +257,9 @@ export default async function BrokerUsersPage({
               const u = bu.user;
               return (
                 <details key={bu.id} className="group">
-                  <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none hover:bg-canvas/40 transition-colors duration-100">
-                    {/* Identity */}
-                    <div className="flex items-center gap-3 min-w-0">
+                  <summary className="flex items-center gap-5 px-5 py-4 cursor-pointer list-none hover:bg-canvas/40 transition-colors duration-100">
+                    {/* Avatar + Name */}
+                    <div className="flex items-center gap-3 w-[200px] shrink-0 min-w-0">
                       <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 border border-brand-100 text-brand-700 text-[13px] font-bold">
                         {u.fullName.charAt(0)}
                       </div>
@@ -268,16 +268,24 @@ export default async function BrokerUsersPage({
                           {bu.isPrimaryContact && <Star className="h-3.5 w-3.5 text-amber-500 fill-current shrink-0" />}
                           <p className="text-[13px] font-semibold text-slate-900 truncate">{u.fullName}</p>
                         </div>
-                        <p className="text-[11px] text-slate-400 truncate" dir="ltr">
-                          {u.email ?? u.phone ?? '—'}
-                        </p>
+                        {bu.jobTitle && <p className="text-[11px] text-slate-400 truncate">{bu.jobTitle}</p>}
                       </div>
                     </div>
-                    {/* Meta + toggle */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      {bu.jobTitle && (
-                        <span className="text-[12px] text-slate-500 hidden sm:block">{bu.jobTitle}</span>
+
+                    {/* التواصل — labeled column */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 mb-0.5">التواصل</p>
+                      {u.email && (
+                        <p className="text-[12px] font-medium text-slate-700 truncate" dir="ltr">{u.email}</p>
                       )}
+                      {u.phone && (
+                        <p className="text-[12px] font-medium text-slate-700 truncate" dir="ltr">{u.phone}</p>
+                      )}
+                      {!u.email && !u.phone && <p className="text-[12px] text-slate-300">—</p>}
+                    </div>
+
+                    {/* Status + toggle */}
+                    <div className="flex items-center gap-2.5 shrink-0">
                       <BrokerUserStatusBadge status={bu.status} />
                       <span className="inline-flex items-center rounded-lg bg-brand-50 border border-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 group-open:hidden">
                         تعديل
@@ -303,20 +311,20 @@ export default async function BrokerUsersPage({
                           <Input id={`phone-${bu.id}`} name="phone" dir="ltr" defaultValue={u.phone ?? ''} />
                         </FormField>
                       </div>
-                      <div className="pt-4 border-t border-hairline">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-3">الصلاحيات</p>
-                        <div className="flex flex-wrap items-center gap-5">
-                          <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
-                            <Checkbox name="canManageBrokerUsers" defaultChecked={bu.canManageBrokerUsers} />
-                            <span>صلاحية إدارة الموظفين</span>
-                          </label>
-                          <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
-                            <Checkbox name="canViewCommissions" defaultChecked={bu.canViewCommissions} />
-                            <span>عرض العمولات</span>
-                          </label>
+                      <div className="flex flex-wrap items-end justify-between gap-4 pt-4 border-t border-hairline">
+                        <div className="flex flex-col gap-2.5">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">الصلاحيات</p>
+                          <div className="flex flex-wrap items-center gap-5">
+                            <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
+                              <Checkbox name="canManageBrokerUsers" defaultChecked={bu.canManageBrokerUsers} />
+                              <span>صلاحية إدارة الموظفين</span>
+                            </label>
+                            <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
+                              <Checkbox name="canViewCommissions" defaultChecked={bu.canViewCommissions} />
+                              <span>عرض العمولات</span>
+                            </label>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex justify-end">
                         <Button type="submit" variant="primary" size="sm">حفظ التعديلات</Button>
                       </div>
                     </form>
