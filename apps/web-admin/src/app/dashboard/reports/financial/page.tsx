@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
 import {
   AlertTriangle,
@@ -36,7 +35,7 @@ import {
   type CompareMode,
   type PeriodMode,
 } from '@/lib/report-filter';
-import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
+import { PremiumPageHero, PremiumSectionCard, PremiumMetricStrip } from '@/components/premium';
 import { ExportMenu } from '@/components/export-menu';
 import { ReportsTabs } from '../_components/reports-tabs';
 import { FinancialFilterBar } from './_components/financial-filter-bar';
@@ -170,7 +169,7 @@ export default async function FinancialReportsPage({
           { label: 'المالي' },
         ]}
         actions={
-          <div className="inline-flex items-center gap-1 rounded-xl border border-hairline bg-surface shadow-xs px-1.5 py-1.5">
+          <div className="flex items-center gap-2">
             <ExportMenu
               label="تصدير"
               xlsxPath="/reports/financial-dashboard/export.xlsx"
@@ -205,145 +204,82 @@ export default async function FinancialReportsPage({
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
-          ROW 1 — 4 Primary KPI Cards
+          ROW 1 — Primary KPI Strip
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <PremiumMetricStrip
+        variant="dashboard"
+        cols={4}
+        metrics={[
+          {
+            label:     'إجمالي قيمة العقود',
+            icon:      <FileText />,
+            value:     formatCurrency(contractVal),
+            tone:      'neutral',
+            valueSize: 'compact',
+            sub:       `${contractCount} عقد · ${depositCount} دفعة`,
+            trend:     contractDelta ? `${contractDelta.direction === 'up' ? '▲' : contractDelta.direction === 'down' ? '▼' : '•'} ${contractDelta.value}` : undefined,
+            trendCls:  contractDelta?.direction === 'up' ? 'text-success-600' : contractDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+          },
+          {
+            label:     'المحصّل المؤكد',
+            icon:      <DollarSign />,
+            value:     formatCurrency(collectedVerif),
+            tone:      'success',
+            valueSize: 'compact',
+            sub:       `${collectionRate}% محصّل · إجمالي: ${formatCurrency(collectedAll)}`,
+            trend:     collectedDelta ? `${collectedDelta.direction === 'up' ? '▲' : collectedDelta.direction === 'down' ? '▼' : '•'} ${collectedDelta.value}` : undefined,
+            trendCls:  collectedDelta?.direction === 'up' ? 'text-success-600' : collectedDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+          },
+          {
+            label:     'المتبقي للتحصيل',
+            icon:      <Clock />,
+            value:     formatCurrency(outstanding),
+            tone:      'neutral',
+            valueSize: 'compact',
+            sub:       `مستحق خلال 7 أيام: ${formatCurrency(dueSoon)}`,
+            trend:     outstandDelta ? `${outstandDelta.direction === 'up' ? '▲' : outstandDelta.direction === 'down' ? '▼' : '•'} ${outstandDelta.value}` : undefined,
+            trendCls:  outstandDelta?.direction === 'up' ? 'text-danger-600' : outstandDelta?.direction === 'down' ? 'text-success-600' : undefined,
+          },
+          {
+            label:     'المتأخر المحسوب',
+            icon:      <AlertTriangle />,
+            value:     formatCurrency(overdueAmt),
+            tone:      overdueAmt > 0 ? 'danger' : 'neutral',
+            valueSize: 'compact',
+            sub:       `${overdueCount} قسط متأخر · ${overdueRate}%`,
+            trend:     overdueDelta ? `${overdueDelta.direction === 'up' ? '▲' : overdueDelta.direction === 'down' ? '▼' : '•'} ${overdueDelta.value}` : undefined,
+            trendCls:  overdueDelta?.direction === 'up' ? 'text-danger-600' : overdueDelta?.direction === 'down' ? 'text-success-600' : undefined,
+          },
+        ]}
+      />
 
-        {/* Contract value */}
-        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
-          <div className="h-[3px] bg-amber-400" />
-          <div className="p-5 flex flex-col gap-4 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 ring-1 ring-inset ring-amber-100 shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px] text-amber-600">
-                <FileText />
-              </span>
-              {contractDelta && <Delta delta={contractDelta} />}
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">إجمالي قيمة العقود</p>
-              <p className="mt-1.5 text-[22px] lg:text-[26px] font-black tabular-nums leading-none tracking-tight text-slate-900 whitespace-nowrap" dir="ltr">
-                {formatCurrency(contractVal)}
-              </p>
-              <p className="mt-2 text-xs text-slate-400">{contractCount} عقد · {depositCount} دفعة</p>
-            </div>
-          </div>
-        </div>
+      <PremiumMetricStrip
+        variant="compact"
+        cols={5}
+        metrics={[
+          { label: 'المحصّل هذا الشهر', icon: <TrendingUp />,    value: formatCurrency(collectedMonth),                  tone: 'success' },
+          { label: 'المستحق هذا الشهر', icon: <CalendarDays />,  value: formatCurrency(dueMonth),                        tone: 'warning' },
+          { label: 'عدد العقود',        icon: <FileText />,      value: contractCount.toLocaleString('ar-EG'),           tone: 'neutral' },
+          { label: 'عدد الدفعات',       icon: <Receipt />,       value: depositCount.toLocaleString('ar-EG'),            tone: 'neutral' },
+          { label: 'أقساط متأخرة',     icon: <AlertTriangle />, value: overdueCount.toLocaleString('ar-EG'), tone: overdueCount > 0 ? 'danger' : 'neutral' },
+        ]}
+      />
 
-        {/* Collected + rate */}
-        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
-          <div className="h-[3px] bg-emerald-400" />
-          <div className="p-5 flex flex-col gap-4 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 ring-1 ring-inset ring-emerald-100 shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px] text-emerald-600">
-                <DollarSign />
-              </span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {collectedDelta && <Delta delta={collectedDelta} />}
-                <span className={cn(
-                  'inline-flex items-center h-5 px-2 rounded-full text-[11px] font-black',
-                  collectionRate >= 75 ? 'bg-emerald-100 text-emerald-700' : collectionRate >= 40 ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600',
-                )}>
-                  {collectionRate}%
-                </span>
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">المحصّل المؤكد</p>
-              <p className="mt-1.5 text-[22px] lg:text-[26px] font-black tabular-nums leading-none tracking-tight text-emerald-700 whitespace-nowrap" dir="ltr">
-                {formatCurrency(collectedVerif)}
-              </p>
-              <p className="mt-2 text-xs text-slate-400 whitespace-nowrap">إجمالي مسجل: {formatCurrency(collectedAll)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Outstanding */}
-        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
-          <div className="h-[3px] bg-slate-300" />
-          <div className="p-5 flex flex-col gap-4 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 ring-1 ring-inset ring-slate-200 shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px] text-slate-600">
-                <Clock />
-              </span>
-              {outstandDelta && <Delta delta={outstandDelta} invert />}
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">المتبقي للتحصيل</p>
-              <p className="mt-1.5 text-[22px] lg:text-[26px] font-black tabular-nums leading-none tracking-tight text-slate-900 whitespace-nowrap" dir="ltr">
-                {formatCurrency(outstanding)}
-              </p>
-              <p className="mt-2 text-xs text-slate-400">مستحق خلال 7 أيام: {formatCurrency(dueSoon)}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Overdue */}
-        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden flex flex-col">
-          <div className="h-[3px] bg-danger-500" />
-          <div className="p-5 flex flex-col gap-4 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-danger-50 ring-1 ring-inset ring-danger-100 shrink-0 [&_svg]:h-[18px] [&_svg]:w-[18px] text-danger-600">
-                <AlertTriangle />
-              </span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {overdueDelta && <Delta delta={overdueDelta} invert />}
-                {overdueRate > 0 && (
-                  <span className="inline-flex items-center h-5 px-2 rounded-full text-[11px] font-black bg-danger-100 text-danger-700">
-                    {overdueRate}%
-                  </span>
-                )}
-              </div>
-            </div>
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">المتأخر المحسوب</p>
-              <p className="mt-1.5 text-[22px] lg:text-[26px] font-black tabular-nums leading-none tracking-tight text-danger-700 whitespace-nowrap" dir="ltr">
-                {formatCurrency(overdueAmt)}
-              </p>
-              <p className="mt-2 text-xs text-slate-400">{overdueCount} قسط متأخر</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Secondary stats strip */}
-      <div className="bg-surface rounded-[20px] border border-hairline shadow-soft overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
-          {[
-            { label: 'المحصّل هذا الشهر',       value: formatCurrency(collectedMonth), cls: 'text-success-700', ltr: true },
-            { label: 'المستحق هذا الشهر',        value: formatCurrency(dueMonth),       cls: 'text-amber-600',  ltr: true },
-            { label: 'عدد العقود',               value: contractCount.toLocaleString('ar-EG'),  cls: 'text-slate-900', ltr: false },
-            { label: 'عدد الدفعات',              value: depositCount.toLocaleString('ar-EG'),   cls: 'text-slate-900', ltr: false },
-            { label: 'أقساط متأخرة',             value: overdueCount.toLocaleString('ar-EG'),   cls: overdueCount > 0 ? 'text-danger-700' : 'text-slate-900', ltr: false },
-          ].map((item) => (
-            <div key={item.label} className="bg-surface px-4 py-3.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1 leading-tight">{item.label}</p>
-              <p className={cn('text-base font-bold tabular-nums leading-tight whitespace-nowrap', item.cls)} dir={item.ltr ? 'ltr' : undefined}>
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Collection efficiency bar */}
       {contractVal > 0 && (
-        <div className="bg-surface rounded-[20px] border border-hairline shadow-soft px-5 py-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
-                <TrendingUp />
-              </span>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">كفاءة التحصيل</p>
-                <p className={cn(
-                  'text-2xl font-black tabular-nums leading-none mt-0.5',
-                  collectionRate >= 75 ? 'text-emerald-700' : collectionRate >= 40 ? 'text-amber-700' : 'text-danger-700',
-                )}>
-                  {collectionRate}%
-                </p>
-              </div>
-            </div>
-            <div className="flex-1 min-w-[100px]">
+        <PremiumSectionCard
+          icon={<TrendingUp />}
+          title="كفاءة التحصيل"
+          trailing={
+            <span className={cn(
+              'text-[22px] font-black tabular-nums',
+              collectionRate >= 75 ? 'text-emerald-700' : collectionRate >= 40 ? 'text-amber-700' : 'text-danger-700',
+            )}>
+              {collectionRate}%
+            </span>
+          }
+        >
+          <div className="flex items-center gap-5 flex-wrap">
+            <div className="flex-1 min-w-[120px]">
               <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
                   className={cn(
@@ -354,19 +290,19 @@ export default async function FinancialReportsPage({
                 />
               </div>
             </div>
-            <div className="flex items-center gap-6 shrink-0 text-end">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">متأخر</p>
-                <p className={cn('text-base font-black tabular-nums', overdueRate > 0 ? 'text-danger-700' : 'text-slate-300')}>{overdueRate}%</p>
+            <div className="flex items-center gap-6 shrink-0">
+              <div className="text-end">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">متأخر</p>
+                <p className={cn('text-[18px] font-black tabular-nums', overdueRate > 0 ? 'text-danger-700' : 'text-slate-300')}>{overdueRate}%</p>
               </div>
-              <div className="w-px h-7 bg-hairline" />
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-widest text-slate-400">متبقي</p>
-                <p className="text-base font-black tabular-nums text-slate-700">{contractVal > 0 ? (100 - collectionRate) : 0}%</p>
+              <div className="w-px h-8 bg-hairline" />
+              <div className="text-end">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">متبقي</p>
+                <p className="text-[18px] font-black tabular-nums text-slate-700">{contractVal > 0 ? (100 - collectionRate) : 0}%</p>
               </div>
             </div>
           </div>
-        </div>
+        </PremiumSectionCard>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -840,21 +776,3 @@ export default async function FinancialReportsPage({
   );
 }
 
-// ── Delta chip ─────────────────────────────────────────────────────────────────
-function Delta({ delta, invert }: { delta: { value: string; direction: 'up' | 'down' | 'flat' }; invert?: boolean }) {
-  const up   = delta.direction === 'up';
-  const down = delta.direction === 'down';
-  const good = invert ? down : up;
-  const bad  = invert ? up   : down;
-  return (
-    <span className={cn(
-      'inline-flex items-center gap-0.5 rounded-full px-1.5 h-5 text-[10px] font-bold shrink-0',
-      good && 'bg-success-50 text-success-700',
-      bad  && 'bg-danger-50 text-danger-700',
-      delta.direction === 'flat' && 'bg-slate-100 text-slate-500',
-    )}>
-      <span aria-hidden>{up ? '▲' : down ? '▼' : '•'}</span>
-      {delta.value}
-    </span>
-  );
-}

@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import {
   BarChart3,
   BookmarkCheck,
@@ -25,7 +24,7 @@ import {
   type CompareMode,
   type PeriodMode,
 } from '@/lib/report-filter';
-import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
+import { PremiumPageHero, PremiumSectionCard, PremiumMetricStrip } from '@/components/premium';
 import { Badge, type BadgeTone } from '@/components/ui/badge';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ExportMenu } from '@/components/export-menu';
@@ -207,7 +206,7 @@ export default async function ReportsPage({
           { label: 'التقارير' },
         ]}
         actions={
-          <div className="inline-flex items-center gap-1 rounded-xl border border-hairline bg-surface shadow-xs px-1.5 py-1.5">
+          <div className="flex items-center gap-2">
             <ExportMenu label="تصدير المبيعات"   xlsxPath="/reports/sales/export.xlsx"       csvPath="/reports/sales/export.csv"       filenameBase="sales-report"       params={exportParams} />
             <ExportMenu label="تصدير المالية"    xlsxPath="/reports/financial/export.xlsx"   csvPath="/reports/financial/export.csv"   filenameBase="financial-report"   params={exportParams} />
             <ExportMenu label="تصدير التشغيلي"  xlsxPath="/reports/operational/export.xlsx" csvPath="/reports/operational/export.csv" filenameBase="operational-report" />
@@ -232,93 +231,57 @@ export default async function ReportsPage({
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
-          METRIC STRIP — one unified card, 5 metrics inline
+          METRIC STRIP
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="rounded-[20px] overflow-hidden shadow-soft">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px bg-hairline">
-
-          {/* Total Sales */}
-          <MetricCell
-            label="إجمالي المبيعات"
-            icon={<Wallet className="h-4 w-4" />}
-            iconClass="bg-amber-50 text-amber-600"
-            accentClass="bg-amber-400"
-            primary
-          >
-            <span dir="ltr" className="text-[22px] lg:text-[26px] font-black tabular-nums leading-none tracking-tight text-slate-900 whitespace-nowrap">
-              {formatCurrency(salesTotal)}
-            </span>
-            {salesDelta && <Delta delta={salesDelta} />}
-          </MetricCell>
-
-          {/* Contracts */}
-          <MetricCell
-            label="العقود المبرمة"
-            icon={<FileText className="h-4 w-4" />}
-            iconClass="bg-slate-100 text-slate-600"
-            accentClass="bg-slate-300"
-          >
-            <div className="flex items-baseline gap-2">
-              <span className="text-[26px] font-black tabular-nums leading-none text-slate-900">
-                {contractsCount.toLocaleString('ar-EG')}
-              </span>
-              {contractsDelta && <Delta delta={contractsDelta} />}
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1" dir="ltr">متوسط {formatCurrency(avgContract)}</p>
-          </MetricCell>
-
-          {/* Collected */}
-          <MetricCell
-            label="الدفعات المحصّلة"
-            icon={<CircleDollarSign className="h-4 w-4" />}
-            iconClass="bg-emerald-50 text-emerald-600"
-            accentClass="bg-emerald-400"
-          >
-            <span dir="ltr" className="text-[22px] font-black tabular-nums leading-none tracking-tight text-emerald-700 whitespace-nowrap">
-              {formatCurrency(financialTotal)}
-            </span>
-            {financialDelta && <Delta delta={financialDelta} />}
-            <p className="text-[11px] text-slate-400 mt-1">{depositsCount} دفعة · {verifiedCount} مؤكدة</p>
-          </MetricCell>
-
-          {/* Conversion Rate */}
-          <MetricCell
-            label="معدل التحويل"
-            icon={<TrendingUp className="h-4 w-4" />}
-            iconClass="bg-violet-50 text-violet-600"
-            accentClass="bg-violet-400"
-          >
-            <div className="flex items-baseline gap-2">
-              <span className={cn(
-                'text-[26px] font-black tabular-nums leading-none',
-                overallConvRate >= 50 ? 'text-emerald-700' : overallConvRate >= 25 ? 'text-amber-700' : 'text-violet-700',
-              )}>
-                {overallConvStr ?? '—'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1">فرصة → عقد</p>
-          </MetricCell>
-
-          {/* Best project / insights */}
-          <MetricCell
-            label="أفضل مشروع"
-            icon={<Trophy className="h-4 w-4" />}
-            iconClass="bg-amber-50 text-amber-600"
-            accentClass="bg-amber-300"
-            className="hidden lg:flex"
-          >
-            <p className="text-sm font-bold text-slate-900 leading-snug truncate max-w-[140px]">
-              {topProject?.name ?? '—'}
-            </p>
-            {topProject && (
-              <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap" dir="ltr">
-                {formatCurrency(topProject.total)} · {topProject.count} عقد
-              </p>
-            )}
-          </MetricCell>
-
-        </div>
-      </div>
+      <PremiumMetricStrip
+        variant="dashboard"
+        cols={5}
+        metrics={[
+          {
+            label:     'إجمالي المبيعات',
+            icon:      <Wallet />,
+            value:     formatCurrency(salesTotal),
+            tone:      'neutral',
+            valueSize: 'compact',
+            sub:       `${contractsCount} عقد`,
+            trend:     salesDelta ? `${salesDelta.direction === 'up' ? '▲' : salesDelta.direction === 'down' ? '▼' : '•'} ${salesDelta.value} مقارنة بالسابق` : undefined,
+            trendCls:  salesDelta?.direction === 'up' ? 'text-success-600' : salesDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+          },
+          {
+            label:    'العقود المبرمة',
+            icon:     <FileText />,
+            value:    contractsCount.toLocaleString('ar-EG'),
+            tone:     'neutral',
+            sub:      `متوسط ${formatCurrency(avgContract)}`,
+            trend:    contractsDelta ? `${contractsDelta.direction === 'up' ? '▲' : contractsDelta.direction === 'down' ? '▼' : '•'} ${contractsDelta.value}` : undefined,
+            trendCls: contractsDelta?.direction === 'up' ? 'text-success-600' : contractsDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+          },
+          {
+            label:     'الدفعات المحصّلة',
+            icon:      <CircleDollarSign />,
+            value:     formatCurrency(financialTotal),
+            tone:      'success',
+            valueSize: 'compact',
+            sub:       `${depositsCount} دفعة · ${verifiedCount} مؤكدة`,
+            trend:     financialDelta ? `${financialDelta.direction === 'up' ? '▲' : financialDelta.direction === 'down' ? '▼' : '•'} ${financialDelta.value}` : undefined,
+            trendCls:  financialDelta?.direction === 'up' ? 'text-success-600' : financialDelta?.direction === 'down' ? 'text-danger-600' : undefined,
+          },
+          {
+            label: 'معدل التحويل',
+            icon:  <TrendingUp />,
+            value: overallConvStr ?? '—',
+            tone:  overallConvRate >= 50 ? 'success' : overallConvRate >= 25 ? 'warning' : 'purple',
+            sub:   'فرصة → عقد',
+          },
+          {
+            label: 'أفضل مشروع',
+            icon:  <Trophy />,
+            value: topProject?.name ?? '—',
+            tone:  'neutral',
+            sub:   topProject ? `${topProject.count} عقد · ${formatCurrency(topProject.total)}` : undefined,
+          },
+        ]}
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════
           ROW 2 — Monthly Trend (3/5) | Conversion Funnel (2/5)
@@ -645,44 +608,6 @@ export default async function ReportsPage({
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function MetricCell({
-  label,
-  icon,
-  iconClass,
-  accentClass,
-  children,
-  primary,
-  className,
-}: {
-  label: string;
-  icon: ReactNode;
-  iconClass: string;
-  accentClass: string;
-  children: ReactNode;
-  primary?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={cn('relative flex flex-col gap-3 px-5 py-4 bg-surface', className)}>
-      <div className={cn('absolute top-0 start-0 end-0 h-[3px] rounded-t-2xl', accentClass)} />
-      <div className="flex items-center justify-between gap-2">
-        <span className={cn('inline-flex h-8 w-8 items-center justify-center rounded-xl', iconClass)}>
-          {icon}
-        </span>
-        <p className={cn(
-          'text-[9px] font-bold uppercase tracking-[0.13em] leading-none text-end',
-          primary ? 'text-slate-500' : 'text-slate-400',
-        )}>
-          {label}
-        </p>
-      </div>
-      <div className="flex flex-col gap-0.5">
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function RankBadge({ rank }: { rank: number }) {
   const medals: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
   const medal = medals[rank];
@@ -699,16 +624,3 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function Delta({ delta }: { delta: { value: string; direction: 'up' | 'down' | 'flat' } }) {
-  return (
-    <span className={cn(
-      'inline-flex items-center gap-0.5 rounded-full px-1.5 h-5 text-[10px] font-bold shrink-0',
-      delta.direction === 'up'   && 'bg-success-50 text-success-700',
-      delta.direction === 'down' && 'bg-danger-50 text-danger-700',
-      delta.direction === 'flat' && 'bg-slate-100 text-slate-500',
-    )}>
-      <span aria-hidden>{delta.direction === 'up' ? '▲' : delta.direction === 'down' ? '▼' : '•'}</span>
-      {delta.value}
-    </span>
-  );
-}
