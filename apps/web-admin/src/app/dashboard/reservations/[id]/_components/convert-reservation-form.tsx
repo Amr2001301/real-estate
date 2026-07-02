@@ -93,7 +93,7 @@ export function ConvertReservationForm({ reservation }: Props) {
       {!open ? (
         <Button
           type="button"
-          variant="primary"
+          variant="outline"
           size="md"
           className="w-full"
           onClick={() => setOpen(true)}
