@@ -93,13 +93,13 @@ export function ConvertReservationForm({ reservation }: Props) {
       {!open ? (
         <Button
           type="button"
-          variant="outline"
+          variant="primary"
           size="md"
           className="w-full"
           onClick={() => setOpen(true)}
           disabled={paymentBlocking}
+          leftIcon={<ArrowLeftRight className="h-4 w-4" />}
         >
-          <ArrowLeftRight className="h-4 w-4 ml-2" />
           تحويل إلى عقد
         </Button>
       ) : null}
