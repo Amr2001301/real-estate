@@ -10,13 +10,19 @@ import {
   FileText,
   CalendarRange,
   AlertTriangle,
+  CheckCircle2,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AdminBrokerCommission } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import {
+  PremiumPageHero,
+  PremiumDetailLayout,
+  PremiumSectionCard,
+} from '@/components/premium';
 import {
   BrokerCommissionStatusBadge,
   BrokerStatusBadge,
@@ -26,30 +32,52 @@ import {
   RejectCommissionForm,
   CancelCommissionForm,
 } from './_review-forms';
+import { cn } from '@/lib/cn';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-function InfoRow({
-  icon,
+const SIDE_ROW = 'flex items-center justify-between gap-3 px-5 py-3 border-b border-hairline last:border-b-0';
+const TILE_BASE = 'flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline min-w-0';
+const TILE_ICON = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[15px] [&_svg]:w-[15px]';
+
+function SideRow({
   label,
   value,
-  dir,
+  valueClass,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: React.ReactNode;
-  dir?: 'ltr' | 'rtl';
+  valueClass?: string;
 }) {
   return (
-    <div className="flex items-start gap-3 py-2">
-      <span className="mt-0.5 text-slate-400 [&_svg]:h-4 [&_svg]:w-4">{icon}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-slate-500">{label}</p>
-        <p className="text-sm text-slate-800 mt-0.5" dir={dir}>
-          {value ?? '—'}
-        </p>
+    <div className={SIDE_ROW}>
+      <p className="text-[11px] font-semibold text-slate-400 shrink-0">{label}</p>
+      <div className={cn('text-[13px] font-semibold text-slate-800 text-end truncate max-w-[60%]', valueClass)}>
+        {value ?? '—'}
       </div>
+    </div>
+  );
+}
+
+function MetricCell({
+  label,
+  value,
+  sub,
+  highlight,
+}: {
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  highlight?: boolean;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5 px-5 py-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</p>
+      <p className={cn('text-[15px] font-bold tabular-nums leading-snug', highlight ? 'text-success-700' : 'text-slate-900')}>
+        {value}
+      </p>
+      {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
     </div>
   );
 }
@@ -67,10 +95,19 @@ export default async function AdminBrokerCommissionDetailPage({
   const canApprove = c.status === 'PENDING' || c.status === 'REJECTED';
   const canReject = c.status === 'PENDING' || c.status === 'APPROVED';
   const canCancel = c.status !== 'CANCELLED';
+  const showReview = (canApprove || canReject || canCancel) && c.status !== 'CANCELLED';
+
+  const reviewCount = [canApprove, canReject, canCancel].filter(Boolean).length;
+  const reviewGridCols =
+    reviewCount === 1 ? 'lg:grid-cols-1' : reviewCount === 2 ? 'lg:grid-cols-2' : 'lg:grid-cols-3';
+
+  const brokerContact = c.brokerAgent
+    ? (c.brokerAgent.email ?? c.brokerAgent.phone ?? null)
+    : null;
 
   return (
     <div className="space-y-5">
-      <PageHeader
+      <PremiumPageHero
         title={c.commissionNumber}
         description={`عمولة العقد ${c.contract?.contractNumber ?? '—'}`}
         breadcrumbs={[
@@ -82,226 +119,224 @@ export default async function AdminBrokerCommissionDetailPage({
         meta={<BrokerCommissionStatusBadge status={c.status} />}
         actions={
           <Link href="/dashboard/broker-commissions">
-            <Button variant="ghost" size="md" leftIcon={<ChevronLeft className="h-4 w-4" />}>
+            <Button variant="outline" size="sm" leftIcon={<ChevronLeft className="h-4 w-4" />}>
               العودة للقائمة
             </Button>
           </Link>
         }
       />
 
+      {/* Rejection banner */}
       {c.status === 'REJECTED' && c.rejectionReason && (
-        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
+        <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-5">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">سبب الرفض</p>
-            <p className="mt-1 leading-relaxed">{c.rejectionReason}</p>
+            <p className="font-semibold text-sm">سبب الرفض</p>
+            <p className="mt-1 text-sm leading-relaxed">{c.rejectionReason}</p>
             {c.rejectedBy && (
-              <p className="text-2xs text-slate-500 mt-1">
-                بواسطة {c.rejectedBy.fullName} • {formatDateTime(c.rejectedAt)}
+              <p className="text-[11px] text-danger-500 mt-1.5">
+                بواسطة {c.rejectedBy.fullName} · {formatDateTime(c.rejectedAt)}
               </p>
             )}
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-brand-600" />
-            الوسيط
-          </h2>
-          {c.broker ? (
-            <>
-              <Link
-                href={`/dashboard/brokers/${c.broker.id}` as never}
-                className="font-semibold text-slate-900 hover:text-brand-700"
-              >
-                {c.broker.companyName}
-              </Link>
-              <div className="flex items-center gap-2 mt-1">
-                <BrokerStatusBadge status={c.broker.status} />
-                <span className="font-mono text-2xs text-slate-500" dir="ltr">
-                  {c.broker.code}
-                </span>
-              </div>
-            </>
-          ) : (
-            <p className="text-sm text-slate-500">—</p>
-          )}
-          {c.brokerAgent && (
-            <div className="mt-3 pt-3 border-t border-hairline">
-              <p className="text-xs text-slate-500">جهة الاتصال</p>
-              <p className="text-sm text-slate-800 mt-0.5">{c.brokerAgent.fullName}</p>
-              <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">
-                {c.brokerAgent.email ?? c.brokerAgent.phone ?? '—'}
-              </p>
-            </div>
-          )}
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">العقد والحجز</h2>
-          <InfoRow
-            icon={<FileText />}
-            label="رقم العقد"
-            value={
-              c.contract ? (
-                <Link
-                  href={`/dashboard/contracts/${c.contract.id}` as never}
-                  className="font-mono text-brand-700 hover:text-brand-800"
-                  dir="ltr"
-                >
-                  {c.contract.contractNumber ?? '—'}
-                </Link>
-              ) : (
-                '—'
-              )
-            }
-          />
-          <InfoRow
-            icon={<FileText />}
-            label="رقم الحجز"
-            value={
-              c.reservation ? (
-                <Link
-                  href={`/dashboard/reservations/${c.reservation.id}` as never}
-                  className="font-mono text-brand-700 hover:text-brand-800"
-                  dir="ltr"
-                >
-                  {c.reservation.reservationNumber ?? '—'}
-                </Link>
-              ) : (
-                '—'
-              )
-            }
-          />
-          <InfoRow
-            icon={<UserCircle />}
-            label="العميل"
-            value={c.contract?.customer?.fullName ?? c.reservation?.lead?.fullName}
-          />
-          <InfoRow
-            icon={<UserCircle />}
-            label="المندوب الداخلي"
-            value={c.reservation?.sales?.fullName ?? '—'}
-          />
-        </Card>
-
-        <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">الوحدة والمشروع</h2>
-          <InfoRow
-            icon={<Building2 />}
-            label="المشروع"
-            value={c.project ? tx(c.project.name) : '—'}
-          />
-          <InfoRow
-            icon={<Home />}
-            label="الوحدة"
-            value={
-              c.unit ? (
-                <span className="font-mono" dir="ltr">
-                  {c.unit.code} • {c.unit.type}
-                </span>
-              ) : (
-                '—'
-              )
-            }
-          />
-          <InfoRow
-            icon={<CalendarRange />}
-            label="تاريخ الاستحقاق"
-            value={formatDate(c.earnedAt)}
-          />
-        </Card>
-      </div>
-
-      <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-          <Banknote className="h-4 w-4 text-brand-600" />
-          الحساب
-        </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 text-sm">
-          <div className="rounded-xl border border-hairline px-3 py-3">
-            <p className="text-xs text-slate-500">قيمة الأساس</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
-              {formatCurrency(c.basisAmount)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-hairline px-3 py-3">
-            <p className="text-xs text-slate-500">النسبة</p>
-            <p className="font-medium mt-1 text-slate-900">
-              {c.commissionPct !== null && c.commissionPct !== undefined
-                ? `${Number(c.commissionPct).toFixed(2)}%`
-                : '—'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-hairline px-3 py-3">
-            <p className="text-xs text-slate-500">الإجمالي قبل الخصم</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
-              {formatCurrency(c.grossAmount)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-hairline px-3 py-3">
-            <p className="text-xs text-slate-500">الضريبة</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
-              {Number(c.taxPct).toFixed(2)}% • {formatCurrency(c.taxAmount)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-hairline px-3 py-3">
-            <p className="text-xs text-slate-500">حجز ضريبي</p>
-            <p className="font-medium mt-1 text-slate-900 tabular-nums">
-              {Number(c.withholdingPct).toFixed(2)}% •{' '}
-              {formatCurrency(c.withholdingAmount)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-hairline px-3 py-3 lg:col-span-2 bg-emerald-50/30">
-            <p className="text-xs text-slate-500">الصافي المستحق</p>
-            <p className="font-semibold mt-1 text-emerald-700 tabular-nums">
-              {formatCurrency(c.netAmount)}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {(canApprove || canReject || canCancel) && c.status !== 'CANCELLED' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {canApprove && (
-            <Card className="p-5">
-              <h3 className="text-sm font-semibold text-slate-900 mb-3">اعتماد</h3>
-              <ApproveCommissionForm id={c.id} />
-            </Card>
-          )}
-          {canReject && (
-            <Card className="p-5">
-              <h3 className="text-sm font-semibold text-slate-900 mb-3">رفض</h3>
-              <RejectCommissionForm id={c.id} />
-            </Card>
-          )}
-          {canCancel && (
-            <Card className="p-5">
-              <h3 className="text-sm font-semibold text-slate-900 mb-3">إلغاء</h3>
-              <CancelCommissionForm id={c.id} />
-            </Card>
-          )}
-        </div>
-      )}
-
-      {c.notes && (
-        <Card className="p-5">
-          <h2 className="text-sm font-semibold text-slate-900 mb-3">الملاحظات</h2>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
-            {c.notes}
-          </p>
-        </Card>
-      )}
-
+      {/* Approval confirmation */}
       {c.approvedBy && c.status === 'APPROVED' && (
-        <Card className="p-5 bg-green-50/40 border-green-100">
-          <p className="text-sm text-green-700">
-            معتمدة بواسطة {c.approvedBy.fullName} •{' '}
-            {formatDateTime(c.approvedAt)}
-          </p>
-        </Card>
+        <div className="flex items-start gap-3 rounded-2xl bg-success-50 border border-success-100 text-success-700 p-5">
+          <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-sm">تم اعتماد العمولة</p>
+            <p className="text-[11px] text-success-600 mt-1">
+              بواسطة {c.approvedBy.fullName} · {formatDateTime(c.approvedAt)}
+            </p>
+          </div>
+        </div>
+      )}
+
+      <PremiumDetailLayout
+        main={
+          <>
+            {/* Contract + Reservation */}
+            <PremiumSectionCard title="العقد والحجز" icon={<FileText />} padded={false}>
+              <SideRow
+                label="رقم العقد"
+                value={
+                  c.contract ? (
+                    <Link
+                      href={`/dashboard/contracts/${c.contract.id}` as never}
+                      className="font-mono text-brand-700 hover:underline"
+                      dir="ltr"
+                    >
+                      {c.contract.contractNumber ?? '—'}
+                    </Link>
+                  ) : '—'
+                }
+              />
+              <SideRow
+                label="رقم الحجز"
+                value={
+                  c.reservation ? (
+                    <Link
+                      href={`/dashboard/broker-reservations/${c.reservation.id}` as never}
+                      className="font-mono text-brand-700 hover:underline"
+                      dir="ltr"
+                    >
+                      {c.reservation.reservationNumber ?? '—'}
+                    </Link>
+                  ) : '—'
+                }
+              />
+              <SideRow
+                label="العميل"
+                value={c.contract?.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—'}
+              />
+              <SideRow
+                label="المندوب الداخلي"
+                value={c.reservation?.sales?.fullName ?? '—'}
+              />
+            </PremiumSectionCard>
+
+            {/* Unit + Project */}
+            <PremiumSectionCard title="الوحدة والمشروع" icon={<Building2 />} padded={false}>
+              <SideRow label="المشروع" value={c.project ? tx(c.project.name) : '—'} />
+              <SideRow
+                label="الوحدة"
+                value={
+                  c.unit ? (
+                    <span dir="ltr" className="font-mono">
+                      {c.unit.code} · {c.unit.type}
+                    </span>
+                  ) : '—'
+                }
+              />
+              <SideRow label="تاريخ الاستحقاق" value={formatDate(c.earnedAt)} />
+            </PremiumSectionCard>
+
+            {/* Financials */}
+            <PremiumSectionCard title="الحساب" icon={<Banknote />} padded={false}>
+              <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline border-b border-hairline">
+                <MetricCell label="قيمة الأساس" value={formatCurrency(c.basisAmount)} />
+                <MetricCell
+                  label="النسبة"
+                  value={
+                    c.commissionPct != null
+                      ? `${Number(c.commissionPct).toFixed(2)}%`
+                      : '—'
+                  }
+                />
+                <MetricCell label="الإجمالي قبل الخصم" value={formatCurrency(c.grossAmount)} />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline">
+                <MetricCell
+                  label="الضريبة"
+                  value={`${Number(c.taxPct).toFixed(2)}%`}
+                  sub={formatCurrency(c.taxAmount)}
+                />
+                <MetricCell
+                  label="حجز ضريبي"
+                  value={`${Number(c.withholdingPct).toFixed(2)}%`}
+                  sub={formatCurrency(c.withholdingAmount)}
+                />
+                <MetricCell
+                  label="الصافي المستحق"
+                  value={formatCurrency(c.netAmount)}
+                  highlight
+                />
+              </div>
+            </PremiumSectionCard>
+          </>
+        }
+        side={
+          <>
+            {/* Broker card */}
+            <PremiumSectionCard title="الوسيط" icon={<Briefcase />}>
+              {c.broker ? (
+                <div className="space-y-3">
+                  <div>
+                    <Link
+                      href={`/dashboard/brokers/${c.broker.id}` as never}
+                      className="text-[15px] font-bold text-slate-900 hover:text-brand-700 transition-colors"
+                    >
+                      {c.broker.companyName}
+                    </Link>
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <BrokerStatusBadge status={c.broker.status} />
+                      <span className="font-mono text-[11px] text-slate-400" dir="ltr">
+                        {c.broker.code}
+                      </span>
+                    </div>
+                  </div>
+
+                  {c.brokerAgent && (
+                    <div className="pt-3 border-t border-hairline space-y-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                        جهة الاتصال
+                      </p>
+                      <p className="text-[13.5px] font-semibold text-slate-800">
+                        {c.brokerAgent.fullName}
+                      </p>
+                      {brokerContact && (
+                        <div className={TILE_BASE}>
+                          <span className={cn(TILE_ICON, 'bg-brand-50 text-brand-600')}>
+                            {brokerContact.includes('@') ? <Mail /> : <Phone />}
+                          </span>
+                          <span className="text-[12.5px] font-medium text-slate-700 truncate" dir="ltr">
+                            {brokerContact}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">—</p>
+              )}
+            </PremiumSectionCard>
+
+            {/* Notes (if any) */}
+            {c.notes && (
+              <PremiumSectionCard title="الملاحظات">
+                <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {c.notes}
+                </p>
+              </PremiumSectionCard>
+            )}
+          </>
+        }
+      />
+
+      {/* Review forms */}
+      {showReview && (
+        <PremiumSectionCard title="مراجعة العمولة" padded={false}>
+          <div className={cn('grid grid-cols-1 gap-0 divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-hairline', reviewGridCols)}>
+            {canApprove && (
+              <div className="flex flex-col p-5 sm:p-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-success-600 mb-4">
+                  اعتماد
+                </p>
+                <ApproveCommissionForm id={c.id} />
+              </div>
+            )}
+            {canReject && (
+              <div className="flex flex-col p-5 sm:p-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-danger-600 mb-4">
+                  رفض
+                </p>
+                <RejectCommissionForm id={c.id} />
+              </div>
+            )}
+            {canCancel && (
+              <div className="flex flex-col p-5 sm:p-6">
+                <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400 mb-4">
+                  إلغاء
+                </p>
+                <CancelCommissionForm id={c.id} />
+              </div>
+            )}
+          </div>
+        </PremiumSectionCard>
       )}
     </div>
   );
