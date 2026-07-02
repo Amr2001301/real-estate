@@ -269,31 +269,33 @@ export default async function BonusPage({
             يلزم وجود قاعدة عمولة ومندوب مبيعات واحد على الأقل قبل إنشاء مستحق.
           </p>
         ) : (
-          <form action={createEntryAction} className="flex flex-wrap items-end gap-3">
+          <form action={createEntryAction}>
             <input type="hidden" name="returnTo" value={returnTo} />
-            <FormField label="المندوب">
-              <Select id="be-salesId" name="salesId" inputSize="sm" required className="w-48 shrink-0">
-                {salesUsers.map((u) => (
-                  <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="القاعدة">
-              <Select id="be-ruleId" name="ruleId" inputSize="sm" required className="w-40 shrink-0">
-                {rules.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </Select>
-            </FormField>
-            <FormField label="المبلغ">
-              <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-32 shrink-0" placeholder="0" />
-            </FormField>
-            <FormField label="شهر الاستحقاق">
-              <Input id="be-period" name="period" type="month" required inputSize="sm" className="w-40 shrink-0" />
-            </FormField>
-            <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} className="self-end mb-px">
-              إضافة المستحق
-            </Button>
+            <div className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-end">
+              <FormField label="المندوب">
+                <Select id="be-salesId" name="salesId" inputSize="sm" required className="w-full">
+                  {salesUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="القاعدة">
+                <Select id="be-ruleId" name="ruleId" inputSize="sm" required className="w-full">
+                  {rules.map((r) => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField label="المبلغ (ر.س.)">
+                <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-full" placeholder="0" />
+              </FormField>
+              <FormField label="شهر الاستحقاق">
+                <Input id="be-period" name="period" type="month" required inputSize="sm" className="w-full" />
+              </FormField>
+              <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} className="shrink-0">
+                إضافة المستحق
+              </Button>
+            </div>
           </form>
         )}
       </PremiumSectionCard>

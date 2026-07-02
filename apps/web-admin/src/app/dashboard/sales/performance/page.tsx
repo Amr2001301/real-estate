@@ -12,9 +12,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
-import { formatCurrency, formatCompact } from '@/lib/format';
-import { PremiumPageHero, PremiumMetricStrip, PremiumSectionCard, PremiumFilterBar, PremiumFilterField } from '@/components/premium';
-import { EmptyState } from '@/components/ui/empty-state';
+import { formatCurrency } from '@/lib/format';
+import { PremiumPageHero, PremiumMetricStrip, PremiumSectionCard, PremiumFilterBar, PremiumFilterField, PremiumEmptyState } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -167,7 +166,7 @@ export default async function SalesPerformancePage({
   const hasFilter = !!(sp.period || sp.salesId);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <PremiumPageHero
@@ -269,7 +268,7 @@ export default async function SalesPerformancePage({
           PERFORMANCE TABLE — enterprise-grade data table
       ════════════════════════════════════════════════════════════════════ */}
       {rows.length === 0 ? (
-        <EmptyState
+        <PremiumEmptyState
           icon={<Users />}
           title="لا توجد بيانات لهذه الفترة"
           description="تأكد من وجود مندوبين لديهم نشاط أو أهداف في هذه الفترة."
@@ -292,13 +291,25 @@ export default async function SalesPerformancePage({
           {/* Column headers */}
           <div className="hidden lg:grid grid-cols-[48px_1fr_130px_190px_56px_56px_56px_56px] items-center gap-2 px-5 py-3 bg-canvas/50 border-b border-hairline">
             <div />
-            <p className="text-[10.5px] font-bold text-slate-500">المندوب</p>
-            <p className="text-[10.5px] font-bold text-slate-500 text-center">الإنجاز</p>
-            <p className="text-[10.5px] font-bold text-slate-500">المحقق / الهدف</p>
-            <div className="flex flex-col items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-sky-400" /><span className="text-[9px] font-bold text-sky-600">فرص</span></div>
-            <div className="flex flex-col items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-violet-400" /><span className="text-[9px] font-bold text-violet-600">زيارات</span></div>
-            <div className="flex flex-col items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-amber-400" /><span className="text-[9px] font-bold text-amber-600">حجوزات</span></div>
-            <div className="flex flex-col items-center gap-0.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /><span className="text-[9px] font-bold text-emerald-600">عقود</span></div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">المندوب</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 text-center">الإنجاز</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">المحقق / الهدف</p>
+            <div className="flex flex-col items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-sky-400" />
+              <span className="text-[9.5px] font-bold text-sky-600">فرص</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-violet-400" />
+              <span className="text-[9.5px] font-bold text-violet-600">زيارات</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-amber-400" />
+              <span className="text-[9.5px] font-bold text-amber-600">حجوزات</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" />
+              <span className="text-[9.5px] font-bold text-emerald-600">عقود</span>
+            </div>
           </div>
 
           {/* Data rows */}
@@ -312,7 +323,7 @@ export default async function SalesPerformancePage({
                 <div
                   key={row.salesId}
                   className={cn(
-                    'group grid grid-cols-1 lg:grid-cols-[48px_1fr_130px_190px_56px_56px_56px_56px] items-center gap-2 px-5 py-4 hover:bg-canvas/50 transition-colors',
+                    'group grid grid-cols-1 lg:grid-cols-[48px_1fr_130px_190px_56px_56px_56px_56px] items-center gap-2 px-5 py-4 hover:bg-canvas/40 transition-colors duration-100',
                     idx === 0 && pct !== null && pct >= 80 && 'bg-emerald-50/20',
                   )}
                 >
@@ -357,19 +368,23 @@ export default async function SalesPerformancePage({
                   </div>
 
                   {/* Amount vs target — desktop */}
-                  <div className="hidden lg:block min-w-0">
-                    <p dir="ltr" className="text-[13px] font-black tabular-nums text-slate-900 leading-tight truncate">
-                      {formatCompact(row.achievedAmount)}
-                    </p>
-                    {row.targetAmount !== null ? (
-                      <p dir="ltr" className="text-[10.5px] text-slate-400 mt-0.5 truncate">
-                        / {formatCompact(row.targetAmount)}
-                      </p>
-                    ) : (
-                      <p className="text-[10.5px] text-slate-400 mt-0.5">بدون هدف محدد</p>
-                    )}
+                  <div className="hidden lg:block min-w-0 space-y-1">
+                    {/* Achieved / target on one line */}
+                    <div className="flex items-baseline gap-1 flex-wrap">
+                      <span className="text-[13px] font-black tabular-nums text-slate-900">
+                        {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount) : '—'}
+                      </span>
+                      {row.targetAmount !== null ? (
+                        <span className="text-[12px] font-medium tabular-nums text-slate-400">
+                          / {formatCurrency(row.targetAmount)}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-slate-300">بدون هدف</span>
+                      )}
+                    </div>
+                    {/* Units */}
                     {row.targetUnits !== null && (
-                      <p className="text-[9.5px] text-slate-400 mt-0.5">
+                      <p className="text-[13px] font-semibold tabular-nums text-slate-500">
                         {row.achievedUnits} / {row.targetUnits} وحدة
                       </p>
                     )}
@@ -383,10 +398,10 @@ export default async function SalesPerformancePage({
 
                   {/* Mobile: amount + pipeline */}
                   <div className="lg:hidden flex items-center justify-between gap-3 pt-2 mt-2 border-t border-hairline/60">
-                    <p dir="ltr" className="text-[13px] font-black tabular-nums text-slate-900">
-                      {formatCurrency(row.achievedAmount)}
+                    <p className="text-[13px] font-black tabular-nums text-slate-900">
+                      {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount) : '—'}
                       {row.targetAmount !== null && (
-                        <span dir="ltr" className="text-[10px] text-slate-400 font-normal"> / {formatCurrency(row.targetAmount)}</span>
+                        <span className="text-[10px] text-slate-400 font-normal"> / {formatCurrency(row.targetAmount)}</span>
                       )}
                     </p>
                     <div className="flex items-center gap-3">
@@ -402,17 +417,17 @@ export default async function SalesPerformancePage({
           </div>
 
           {/* Totals row */}
-          <div className="grid grid-cols-1 lg:grid-cols-[48px_1fr_130px_190px_56px_56px_56px_56px] items-center gap-2 px-5 py-4 bg-canvas/60 border-t-2 border-hairline">
+          <div className="grid grid-cols-1 lg:grid-cols-[48px_1fr_130px_190px_56px_56px_56px_56px] items-center gap-2 px-5 py-4 bg-canvas/50 border-t-2 border-hairline/60">
             <div className="hidden lg:block" />
-            <p className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">الإجمالي</p>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-[0.06em]">الإجمالي</p>
             <div className="hidden lg:flex justify-center">
-              <span className={cn('text-[13px] font-black tabular-nums', teamTheme.text)}>
+              <span className={cn('text-[14px] font-black tabular-nums', teamTheme.text)}>
                 {avgAttainment !== null ? `${avgAttainment.toFixed(1)}%` : '—'}
               </span>
             </div>
             <div className="hidden lg:block">
-              <span dir="ltr" className="text-[13px] font-bold tabular-nums text-slate-800">
-                {formatCurrency(totalAchieved)}
+              <span className="text-[13px] font-bold tabular-nums text-slate-800">
+                {totalAchieved > 0 ? formatCurrency(totalAchieved) : '—'}
               </span>
             </div>
             <CountCell value={totalLeads}     color="text-sky-600"     bold />
@@ -427,7 +442,7 @@ export default async function SalesPerformancePage({
           BOTTOM ROW — Pipeline + Bonus
       ════════════════════════════════════════════════════════════════════ */}
       {rows.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
           {/* Pipeline summary */}
           <PremiumSectionCard
@@ -466,7 +481,7 @@ export default async function SalesPerformancePage({
                     <div className={cn('h-3 w-3 rounded-full shrink-0', stage.dot)} />
 
                     {/* Label */}
-                    <span className="text-[11px] font-semibold text-slate-600 w-24 shrink-0">{stage.label}</span>
+                    <span className="text-[12px] font-semibold text-slate-700 w-28 shrink-0">{stage.label}</span>
 
                     {/* Proportional bar */}
                     <div className="flex-1 h-2 rounded-full bg-slate-100 overflow-hidden">
@@ -487,9 +502,9 @@ export default async function SalesPerformancePage({
 
               {/* Overall conversion footer */}
               {pipelineOverallConv !== null && (
-                <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-slate-400">معدل التحويل الإجمالي</span>
-                  <span className="text-[11px] font-black tabular-nums text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full">
+                <div className="mt-4 pt-4 border-t border-hairline flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-medium text-slate-500">معدل التحويل الإجمالي</span>
+                  <span className="text-[12px] font-black tabular-nums text-slate-700 bg-canvas border border-hairline px-2.5 py-1 rounded-full">
                     {(pipelineOverallConv * 100).toFixed(1)}%
                   </span>
                 </div>
@@ -511,9 +526,11 @@ export default async function SalesPerformancePage({
             padded={false}
           >
             {bonus.length === 0 ? (
-              <div className="flex items-center justify-center py-10 text-sm text-slate-400">
-                لا توجد مكافآت في هذه الفترة
-              </div>
+              <PremiumEmptyState
+                icon={<BadgePercent />}
+                title="لا توجد مكافآت"
+                description="لم يتم إنشاء أي مكافآت أو عمولات في هذه الفترة"
+              />
             ) : (
               <>
                 <div className="divide-y divide-hairline">
@@ -525,16 +542,16 @@ export default async function SalesPerformancePage({
                     } as const;
                     const s = S[entry.status] ?? S.PENDING;
                     return (
-                      <div key={entry.id} className="flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors">
+                      <div key={entry.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100">
                         <div className="flex-1 min-w-0">
                           <p className="text-[13px] font-semibold text-slate-900 truncate">{entry.sales?.fullName ?? '—'}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
+                          <p className="text-[11px] text-slate-400 mt-0.5">
                             {entry.rule?.name ?? (entry.source === 'CONTRACT_AUTO' ? 'عمولة عقد تلقائية' : 'يدوي')}
                             {entry.commissionPct ? ` · ${entry.commissionPct}%` : ''}
                             {entry.basisAmount ? ` على ${formatCurrency(Number(entry.basisAmount))}` : ''}
                           </p>
                         </div>
-                        <span className={cn('text-[10px] font-bold px-2.5 py-0.5 rounded-full shrink-0', s.cls)}>
+                        <span className={cn('text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0', s.cls)}>
                           {s.label}
                         </span>
                         <p dir="ltr" className="text-[13px] font-black tabular-nums text-slate-900 shrink-0 whitespace-nowrap">
@@ -544,16 +561,21 @@ export default async function SalesPerformancePage({
                     );
                   })}
                 </div>
-                <div className="flex items-center justify-between px-5 py-3 bg-slate-50/60 border-t border-hairline">
-                  <div className="flex items-center gap-4">
+                <div className="flex items-center justify-between px-5 py-3 bg-canvas/30 border-t border-hairline">
+                  <div className="flex items-center gap-3">
                     {(['PENDING', 'APPROVED', 'PAID'] as const).map((st) => {
                       const count = bonus.filter((b) => b.status === st).length;
                       if (!count) return null;
                       const L = { PENDING: 'انتظار', APPROVED: 'معتمد', PAID: 'مدفوع' };
-                      return <span key={st} className="text-[10px] text-slate-400">{count} {L[st]}</span>;
+                      const cls = { PENDING: 'bg-slate-100 text-slate-600', APPROVED: 'bg-amber-50 text-amber-700', PAID: 'bg-emerald-50 text-emerald-700' };
+                      return (
+                        <span key={st} className={cn('text-[10px] font-bold px-2 py-0.5 rounded-full', cls[st])}>
+                          {count} {L[st]}
+                        </span>
+                      );
                     })}
                   </div>
-                  <p dir="ltr" className="text-[13px] font-black tabular-nums text-slate-900">
+                  <p dir="ltr" className="text-[14px] font-black tabular-nums text-slate-900">
                     {formatCurrency(totalBonusAmt)}
                   </p>
                 </div>
