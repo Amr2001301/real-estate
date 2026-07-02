@@ -236,247 +236,241 @@ export default async function AdminBrokerReportsPage({
       </PremiumFilterBar>
 
       {s && (
-        <>
-          {/* ═══════════════════════════════════════════════════════════════
-              METRIC STRIP
-          ════════════════════════════════════════════════════════════════ */}
-          <PremiumMetricStrip
-            variant="compact"
-            cols={5}
-            metrics={[
-              {
-                label:     'إجمالي المبيعات',
-                value:     formatCurrency(s.salesGross),
-                icon:      <Wallet />,
-                tone:      'brand',
-                primary:   true,
-                sub:       `${s.contractsSigned} عقد موقّع`,
-                valueSize: 'compact',
-              },
-              {
-                label:     'صافي العمولات',
-                value:     formatCurrency(s.commissionsNet),
-                icon:      <BadgePercent />,
-                tone:      'success',
-                sub:       `${s.commissionsApproved} عمولة معتمدة`,
-                valueSize: 'compact',
-              },
-              {
-                label:     'المدفوع للوسطاء',
-                value:     formatCurrency(s.payoutsTotalNet),
-                icon:      <CircleDollarSign />,
-                tone:      'purple',
-                sub:       `${s.payoutsPaid} دفعة مكتملة`,
-                valueSize: 'compact',
-              },
-              {
-                label:     'قيد الصرف',
-                value:     pendingPayout > 0 ? formatCurrency(pendingPayout) : '—',
-                icon:      <TrendingUp />,
-                tone:      pendingPayout > 0 ? 'warning' : 'neutral',
-                sub:       `${(realizationRate * 100).toFixed(0)}% محصّل`,
-                valueSize: 'compact',
-              },
-              {
-                label:     'أعلى وسيط',
-                value:     topBroker?.companyName ?? '—',
-                icon:      <Trophy />,
-                tone:      'neutral',
-                sub:       topBroker ? formatCurrency(Number(topBroker.salesGross)) : undefined,
-              },
-            ]}
-          />
-
-          {/* ═══════════════════════════════════════════════════════════════
-              ROW 2 — Monthly Trend (3/5) | Conversion Funnel (2/5)
-          ════════════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-
-            {/* Monthly commissions trend */}
-            <div className="lg:col-span-3">
-              <PremiumSectionCard
-                title="الاتجاه الشهري للعمولات"
-                description="العمولات المعتمدة مقابل المدفوع آخر 6 أشهر"
-                icon={<BarChart3 />}
-                trailing={
-                  <div className="text-end">
-                    <p className="text-[13px] font-black tabular-nums text-slate-900 leading-none">
-                      {totalTrendContracts.toLocaleString('ar-EG')} عقد
-                    </p>
-                    <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
-                      {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0))}
-                    </p>
-                  </div>
-                }
-              >
-                <div className="h-[220px]">
-                  <BrokerTrendChart
-                    data={trend.map((b) => ({
-                      label: shortMonth(b.label),
-                      commissionsNet: Number(b.commissionsNet),
-                      payoutsNet: Number(b.payoutsNet),
-                      contractsSigned: b.contractsSigned,
-                    }))}
-                    height={220}
-                  />
-                </div>
-                <div className="flex items-center gap-5 mt-3 pt-3 border-t border-hairline">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-5 rounded-sm bg-amber-300 inline-block" />
-                    <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-5 rounded-sm bg-emerald-400 inline-block" />
-                    <span className="text-[10px] text-slate-400">المدفوع للوسطاء</span>
-                  </div>
-                  <span className="text-[10px] text-slate-300 ms-auto">الأرقام = عقود موقّعة</span>
-                </div>
-              </PremiumSectionCard>
-            </div>
-
-            {/* Conversion Funnel */}
-            <div className="lg:col-span-2">
-              <PremiumSectionCard
-                title="قمع التحويل"
-                description="من الفرصة إلى الدفعة المُنجزة"
-                icon={<TrendingUp />}
-              >
-                <BrokerFunnelChart stages={funnelStages} overallConv={overallConv} />
-              </PremiumSectionCard>
-            </div>
-
-          </div>
-
-        </>
+        <PremiumMetricStrip
+          variant="compact"
+          cols={5}
+          metrics={[
+            {
+              label:     'إجمالي المبيعات',
+              value:     formatCurrency(s.salesGross),
+              icon:      <Wallet />,
+              tone:      'brand',
+              primary:   true,
+              sub:       `${s.contractsSigned} عقد موقّع`,
+              valueSize: 'compact',
+            },
+            {
+              label:     'صافي العمولات',
+              value:     formatCurrency(s.commissionsNet),
+              icon:      <BadgePercent />,
+              tone:      'success',
+              sub:       `${s.commissionsApproved} عمولة معتمدة`,
+              valueSize: 'compact',
+            },
+            {
+              label:     'المدفوع للوسطاء',
+              value:     formatCurrency(s.payoutsTotalNet),
+              icon:      <CircleDollarSign />,
+              tone:      'purple',
+              sub:       `${s.payoutsPaid} دفعة مكتملة`,
+              valueSize: 'compact',
+            },
+            {
+              label:     'قيد الصرف',
+              value:     pendingPayout > 0 ? formatCurrency(pendingPayout) : '—',
+              icon:      <TrendingUp />,
+              tone:      pendingPayout > 0 ? 'warning' : 'neutral',
+              sub:       `${(realizationRate * 100).toFixed(0)}% محصّل`,
+              valueSize: 'compact',
+            },
+            {
+              label:     'أعلى وسيط',
+              value:     topBroker?.companyName ?? '—',
+              icon:      <Trophy />,
+              tone:      'neutral',
+              sub:       topBroker ? formatCurrency(Number(topBroker.salesGross)) : undefined,
+            },
+          ]}
+        />
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════
-          ROW 4 — Top Brokers + Project Performance (side by side)
+          MAIN GRID — Charts (RIGHT) | Rankings sticky (LEFT)
+          RTL: DOM first = visual right, DOM second = visual left
       ════════════════════════════════════════════════════════════════════ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
 
-        {/* Top Brokers */}
-        <PremiumSectionCard
-          title="أعلى الوسطاء أداءً"
-          description={`مرتبون حسب: ${METRIC_LABEL[sp.metric ?? 'salesGross']}`}
-          icon={<TrendingUp />}
-          trailing={
-            (top?.data.length ?? 0) > 0 ? (
-              <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
-                {top?.data.length} وسيط
-              </span>
-            ) : undefined
-          }
-          padded={false}
-        >
-          {(top?.data ?? []).length === 0 ? (
-            <div className="p-6">
-              <EmptyState icon={<Briefcase />} title="لا توجد بيانات" description="لا توجد عمولات في النطاق المختار." />
-            </div>
-          ) : (
-            <div className="divide-y divide-hairline">
-              {(top?.data ?? []).map((r, idx) => {
-                const maxSales = Number(top?.data?.[0]?.salesGross ?? 1);
-                const barW     = maxSales > 0 ? (Number(r.salesGross) / maxSales) * 100 : 0;
-                return (
-                  <div key={r.brokerId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
-                    <RankBadge rank={idx + 1} />
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/dashboard/brokers/${r.brokerId}/performance` as never}
-                        className="text-[13px] font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
-                      >
-                        {r.companyName}
-                      </Link>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <div className="flex-1 max-w-[90px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
-                            style={{ width: `${barW}%` }}
-                          />
+        {/* Charts column — visual RIGHT (DOM first in RTL) */}
+        {s ? (
+          <div className="space-y-5">
+            <PremiumSectionCard
+              title="الاتجاه الشهري للعمولات"
+              description="العمولات المعتمدة مقابل المدفوع آخر 6 أشهر"
+              icon={<BarChart3 />}
+              trailing={
+                <div className="text-end">
+                  <p className="text-[13px] font-black tabular-nums text-slate-900 leading-none">
+                    {totalTrendContracts.toLocaleString('ar-EG')} عقد
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
+                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0))}
+                  </p>
+                </div>
+              }
+            >
+              <div className="h-[230px]">
+                <BrokerTrendChart
+                  data={trend.map((b) => ({
+                    label: shortMonth(b.label),
+                    commissionsNet: Number(b.commissionsNet),
+                    payoutsNet: Number(b.payoutsNet),
+                    contractsSigned: b.contractsSigned,
+                  }))}
+                  height={230}
+                />
+              </div>
+              <div className="flex items-center gap-5 mt-3 pt-3 border-t border-hairline">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-5 rounded-sm bg-amber-300 inline-block" />
+                  <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-5 rounded-sm bg-emerald-400 inline-block" />
+                  <span className="text-[10px] text-slate-400">المدفوع للوسطاء</span>
+                </div>
+                <span className="text-[10px] text-slate-300 ms-auto">الأرقام = عقود موقّعة</span>
+              </div>
+            </PremiumSectionCard>
+
+            <PremiumSectionCard
+              title="قمع التحويل"
+              description="من الفرصة إلى الدفعة المُنجزة"
+              icon={<TrendingUp />}
+            >
+              <BrokerFunnelChart stages={funnelStages} overallConv={overallConv} />
+            </PremiumSectionCard>
+          </div>
+        ) : (
+          <div />
+        )}
+
+        {/* Rankings column — visual LEFT (DOM second in RTL), sticky */}
+        <div className="sticky top-5 self-start space-y-5">
+
+          {/* Top Brokers */}
+          <PremiumSectionCard
+            title="أعلى الوسطاء أداءً"
+            description={`مرتبون حسب: ${METRIC_LABEL[sp.metric ?? 'salesGross']}`}
+            icon={<TrendingUp />}
+            trailing={
+              (top?.data.length ?? 0) > 0 ? (
+                <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
+                  {top?.data.length} وسيط
+                </span>
+              ) : undefined
+            }
+            padded={false}
+          >
+            {(top?.data ?? []).length === 0 ? (
+              <div className="p-6">
+                <EmptyState icon={<Briefcase />} title="لا توجد بيانات" description="لا توجد عمولات في النطاق المختار." />
+              </div>
+            ) : (
+              <div className="divide-y divide-hairline">
+                {(top?.data ?? []).map((r, idx) => {
+                  const maxSales = Number(top?.data?.[0]?.salesGross ?? 1);
+                  const barW     = maxSales > 0 ? (Number(r.salesGross) / maxSales) * 100 : 0;
+                  return (
+                    <div key={r.brokerId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
+                      <RankBadge rank={idx + 1} />
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/dashboard/brokers/${r.brokerId}/performance` as never}
+                          className="text-[13px] font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                        >
+                          {r.companyName}
+                        </Link>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                              style={{ width: `${barW}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-slate-400">{r.contractsSigned} عقد</span>
+                          <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md" dir="ltr">
+                            {r.code}
+                          </span>
                         </div>
-                        <span className="text-[10px] text-slate-400">{r.contractsSigned} عقد</span>
-                        <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md" dir="ltr">
-                          {r.code}
-                        </span>
+                      </div>
+                      <div className="text-end shrink-0">
+                        <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
+                          {formatCurrency(r.salesGross)}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
+                          عمولة: {formatCurrency(r.commissionNet)}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-end shrink-0">
-                      <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
-                        {formatCurrency(r.salesGross)}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                        عمولة: {formatCurrency(r.commissionNet)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </PremiumSectionCard>
+                  );
+                })}
+              </div>
+            )}
+          </PremiumSectionCard>
 
-        {/* Project Performance */}
-        <PremiumSectionCard
-          title="أداء المشاريع"
-          description="مرتبة حسب إجمالي المبيعات"
-          icon={<BarChart3 />}
-          trailing={
-            projects.length > 0 ? (
-              <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
-                {projects.length} مشروع
-              </span>
-            ) : undefined
-          }
-          padded={false}
-        >
-          {projects.length === 0 ? (
-            <div className="p-6">
-              <EmptyState icon={<BarChart3 />} title="لا توجد بيانات" description="ستظهر هنا عند وجود عمولات على أي مشروع." />
-            </div>
-          ) : (
-            <div className="divide-y divide-hairline">
-              {projects.map((p, idx) => {
-                const maxProjSales = Number(projects[0]?.salesGross ?? 1);
-                const barW         = maxProjSales > 0 ? (Number(p.salesGross) / maxProjSales) * 100 : 0;
-                const projName     = p.projectName ? tx(p.projectName) : '—';
-                return (
-                  <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
-                    <RankBadge rank={idx + 1} />
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={`/dashboard/projects/${p.projectId}` as never}
-                        className="text-[13px] font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
-                      >
-                        {projName}
-                      </Link>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <div className="flex-1 max-w-[90px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                          <div
-                            className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
-                            style={{ width: `${barW}%` }}
-                          />
+          {/* Project Performance */}
+          <PremiumSectionCard
+            title="أداء المشاريع"
+            description="مرتبة حسب إجمالي المبيعات"
+            icon={<BarChart3 />}
+            trailing={
+              projects.length > 0 ? (
+                <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
+                  {projects.length} مشروع
+                </span>
+              ) : undefined
+            }
+            padded={false}
+          >
+            {projects.length === 0 ? (
+              <div className="p-6">
+                <EmptyState icon={<BarChart3 />} title="لا توجد بيانات" description="ستظهر هنا عند وجود عمولات على أي مشروع." />
+              </div>
+            ) : (
+              <div className="divide-y divide-hairline">
+                {projects.map((p, idx) => {
+                  const maxProjSales = Number(projects[0]?.salesGross ?? 1);
+                  const barW         = maxProjSales > 0 ? (Number(p.salesGross) / maxProjSales) * 100 : 0;
+                  const projName     = p.projectName ? tx(p.projectName) : '—';
+                  return (
+                    <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3.5 hover:bg-canvas/40 transition-colors duration-100', idx === 0 && 'bg-amber-50/20')}>
+                      <RankBadge rank={idx + 1} />
+                      <div className="min-w-0 flex-1">
+                        <Link
+                          href={`/dashboard/projects/${p.projectId}` as never}
+                          className="text-[13px] font-semibold text-slate-900 hover:text-brand-700 transition-colors truncate block"
+                        >
+                          {projName}
+                        </Link>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <div className="flex-1 max-w-[80px] h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                            <div
+                              className={cn('h-full rounded-full transition-all', idx === 0 ? 'bg-amber-400' : 'bg-slate-300')}
+                              style={{ width: `${barW}%` }}
+                            />
+                          </div>
+                          <span className="text-[10px] text-slate-400">{p.contractsSigned}/{p.contracts} عقد</span>
+                          {p.city && (
+                            <span className="text-[10px] text-slate-400 truncate max-w-[50px]">{p.city}</span>
+                          )}
                         </div>
-                        <span className="text-[10px] text-slate-400">{p.contractsSigned}/{p.contracts} عقد</span>
-                        {p.city && (
-                          <span className="text-[10px] text-slate-400 truncate max-w-[60px]">{p.city}</span>
-                        )}
+                      </div>
+                      <div className="text-end shrink-0">
+                        <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
+                          {formatCurrency(p.salesGross)}
+                        </p>
+                        <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
+                          عمولة: {formatCurrency(p.commissionNet)}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-end shrink-0">
-                      <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
-                        {formatCurrency(p.salesGross)}
-                      </p>
-                      <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                        عمولة: {formatCurrency(p.commissionNet)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </PremiumSectionCard>
+                  );
+                })}
+              </div>
+            )}
+          </PremiumSectionCard>
+
+        </div>
 
       </div>
 
