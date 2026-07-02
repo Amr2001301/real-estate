@@ -122,10 +122,18 @@ export function RejectBrokerLeadForm({ leadId }: { leadId: string }) {
   return (
     <form action={formAction} className="flex flex-col flex-1 gap-4">
       <Banner state={state} deniedTitle="تحتاج صلاحية لرفض هذه الفرصة" />
-      <FormField label="سبب الرفض" required>
-        <Textarea id={`reject-${leadId}`} name="reason" rows={4} required />
-      </FormField>
-      <div className="mt-auto pt-4 border-t border-hairline">
+      <div className="flex flex-col flex-1 gap-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          سبب الرفض <span className="text-danger-500 ms-1">*</span>
+        </p>
+        <Textarea
+          id={`reject-${leadId}`}
+          name="reason"
+          required
+          className="flex-1 resize-none"
+        />
+      </div>
+      <div className="pt-4 border-t border-hairline">
         <SubmitButton variant="danger" className="w-full">رفض الفرصة</SubmitButton>
       </div>
     </form>
@@ -142,10 +150,18 @@ export function MarkDuplicateBrokerLeadForm({ leadId }: { leadId: string }) {
   return (
     <form action={formAction} className="flex flex-col flex-1 gap-4">
       <Banner state={state} deniedTitle="تحتاج صلاحية لتعليم هذه الفرصة كمكررة" />
-      <FormField label="ملاحظة على التكرار" hint="اختياري">
-        <Textarea id={`dup-${leadId}`} name="reason" rows={4} />
-      </FormField>
-      <div className="mt-auto pt-4 border-t border-hairline">
+      <div className="flex flex-col flex-1 gap-1.5">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+          ملاحظة على التكرار
+        </p>
+        <p className="text-[11px] text-slate-400 -mt-0.5">اختياري</p>
+        <Textarea
+          id={`dup-${leadId}`}
+          name="reason"
+          className="flex-1 resize-none"
+        />
+      </div>
+      <div className="pt-4 border-t border-hairline">
         <SubmitButton variant="secondary" className="w-full">تعليم كمكرر</SubmitButton>
       </div>
     </form>
