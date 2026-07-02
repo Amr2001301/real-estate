@@ -1,24 +1,34 @@
 import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import { Star, Mail, Phone, UserPlus, ChevronLeft } from 'lucide-react';
+import { Star, Mail, Phone, UserPlus, Users } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Broker, BrokerUser, BrokerUserStatus } from '@/lib/types';
 import { formatDate } from '@/lib/format';
-import { PageHeader } from '@/components/ui/page-header';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Field } from '@/components/form/field';
-import { EmptyState } from '@/components/ui/empty-state';
 import { BrokerUserStatusBadge } from '@/components/badges';
 import { ConfirmingForm } from '@/components/confirming-form';
+import {
+  PremiumPageHero,
+  PremiumSectionCard,
+  PremiumEmptyState,
+} from '@/components/premium';
 import {
   updateBrokerUserAction,
   setBrokerUserPrimaryAction,
   updateBrokerUserStatusAction,
 } from '../../actions';
 import CreateBrokerUserForm from './_create-form';
+
+function FormField({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+      {children}
+      {hint && <p className="text-[11px] text-slate-400 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -38,7 +48,6 @@ export default async function BrokerUsersPage({
   const broker = brokerRes.data;
   const users = usersRes.data ?? [];
 
-  // Bind server actions to use them on the server inline.
   async function updateUser(brokerUserId: string, formData: FormData) {
     'use server';
     await updateBrokerUserAction(id, brokerUserId, formData);
@@ -54,255 +63,270 @@ export default async function BrokerUsersPage({
 
   return (
     <div className="space-y-5">
-      <PageHeader
+
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <PremiumPageHero
         title="موظفو الوسيط"
         description={`إدارة الحسابات المرتبطة بشركة ${broker.companyName}.`}
         breadcrumbs={[
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: broker.companyName, href: `/dashboard/brokers/${id}` },
+          { label: broker.companyName, href: `/dashboard/brokers/${id}` as never },
           { label: 'الموظفون' },
         ]}
-        actions={
-          <Link href={`/dashboard/brokers/${id}` as never}>
-            <Button variant="ghost" size="md" leftIcon={<ChevronLeft className="h-4 w-4" />}>
-              العودة للوسيط
-            </Button>
-          </Link>
-        }
       />
 
+      {/* ── Error ────────────────────────────────────────────────────── */}
       {usersRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           تعذر تحميل قائمة الموظفين: {usersRes.error}
         </div>
       )}
 
-      <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-900 mb-1 flex items-center gap-2">
-          <UserPlus className="h-4 w-4 text-brand-600" />
-          إضافة موظف جديد
-        </h2>
-        <p className="text-xs text-slate-500 mb-4">
-          إذا كان لدى الشخص حساب بدور <span className="font-mono">BROKER</span> فسيتم
-          ربطه بشركة الوساطة. لا يُسمح بتحويل أدوار أخرى تلقائياً.
+      {/* ── Add employee ─────────────────────────────────────────────── */}
+      <PremiumSectionCard title="إضافة موظف جديد" icon={<UserPlus />}>
+        <p className="text-[12px] text-slate-500 mb-5">
+          إذا كان لدى الشخص حساب بدور{' '}
+          <code className="font-mono text-[11px] bg-slate-100 px-1 py-0.5 rounded">BROKER</code>{' '}
+          فسيتم ربطه بشركة الوساطة. لا يُسمح بتحويل أدوار أخرى تلقائياً.
         </p>
         <CreateBrokerUserForm brokerId={id} />
-      </Card>
+      </PremiumSectionCard>
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="text-start font-semibold py-3 ps-5 pe-4">الموظف</th>
-                <th className="text-start font-semibold py-3 px-4">الوظيفة</th>
-                <th className="text-start font-semibold py-3 px-4">التواصل</th>
-                <th className="text-start font-semibold py-3 px-4">الصلاحيات</th>
-                <th className="text-start font-semibold py-3 px-4">الحالة</th>
-                <th className="text-start font-semibold py-3 px-4">آخر دخول</th>
-                <th className="text-start font-semibold py-3 ps-4 pe-5 w-px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.length === 0 && (
+      {/* ── Employees table ──────────────────────────────────────────── */}
+      <PremiumSectionCard
+        title="الموظفون الحاليون"
+        icon={<Users />}
+        trailing={
+          <span className="text-xs text-slate-400 tabular-nums">
+            {users.length} موظف
+          </span>
+        }
+        padded={false}
+      >
+        {users.length === 0 ? (
+          <PremiumEmptyState
+            icon={<UserPlus />}
+            title="لا يوجد موظفون بعد"
+            description="استخدم النموذج أعلاه لدعوة أول موظف لهذا الوسيط."
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[700px]">
+              <thead className="bg-canvas/50 border-b border-hairline">
                 <tr>
-                  <td colSpan={7} className="p-0">
-                    <EmptyState
-                      icon={<UserPlus />}
-                      title="لا يوجد موظفون بعد"
-                      description="استخدم النموذج أعلاه لدعوة أول موظف لهذا الوسيط."
-                    />
-                  </td>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">الموظف</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">الوظيفة</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">التواصل</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">الصلاحيات</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">الحالة</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">آخر دخول</th>
+                  <th className="px-5 py-3 text-start w-px"></th>
                 </tr>
-              )}
-              {users.map((bu) => {
-                const u = bu.user;
-                return (
-                  <tr
-                    key={bu.id}
-                    className="border-t border-hairline align-top hover:bg-surface-muted/40 transition-colors"
-                  >
-                    <td className="py-3 ps-5 pe-4">
-                      <div className="flex items-start gap-2">
-                        {bu.isPrimaryContact && (
-                          <Star
-                            className="h-4 w-4 text-amber-500 fill-current shrink-0 mt-0.5"
-                            aria-label="جهة الاتصال الرئيسية"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-semibold text-slate-900">{u.fullName}</p>
-                          {bu.isPrimaryContact && (
-                            <p className="text-2xs text-amber-600 mt-0.5">
-                              جهة الاتصال الرئيسية
-                            </p>
+              </thead>
+              <tbody className="divide-y divide-hairline">
+                {users.map((bu) => {
+                  const u = bu.user;
+                  return (
+                    <tr
+                      key={bu.id}
+                      className="hover:bg-canvas/40 transition-colors duration-100 align-middle"
+                    >
+                      {/* موظف */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-start gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {bu.isPrimaryContact && (
+                                <Star className="h-3.5 w-3.5 text-amber-500 fill-current shrink-0" />
+                              )}
+                              <p className="text-[13px] font-semibold text-slate-900">{u.fullName}</p>
+                            </div>
+                            {bu.isPrimaryContact && (
+                              <p className="text-[11px] text-amber-600 mt-0.5">جهة الاتصال الرئيسية</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* الوظيفة */}
+                      <td className="px-5 py-3.5">
+                        <span className="text-[12px] text-slate-600">{bu.jobTitle || '—'}</span>
+                      </td>
+
+                      {/* التواصل */}
+                      <td className="px-5 py-3.5" dir="ltr">
+                        <div className="space-y-1">
+                          {u.email && (
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span className="text-[12px] text-slate-700">{u.email}</span>
+                            </div>
+                          )}
+                          {u.phone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                              <span className="text-[12px] text-slate-700">{u.phone}</span>
+                            </div>
+                          )}
+                          {!u.email && !u.phone && <span className="text-[12px] text-slate-300">—</span>}
+                        </div>
+                      </td>
+
+                      {/* الصلاحيات */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-wrap gap-1.5">
+                          {bu.canManageBrokerUsers && (
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                              إدارة الموظفين
+                            </span>
+                          )}
+                          {bu.canViewCommissions && (
+                            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] font-medium text-slate-600">
+                              عرض العمولات
+                            </span>
+                          )}
+                          {!bu.canManageBrokerUsers && !bu.canViewCommissions && (
+                            <span className="text-[12px] text-slate-300">—</span>
                           )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-slate-700">{bu.jobTitle || '—'}</td>
-                    <td className="py-3 px-4 text-xs text-slate-700 space-y-1" dir="ltr">
-                      {u.email && (
-                        <p className="flex items-center gap-1.5">
-                          <Mail className="h-3.5 w-3.5 text-slate-400" />
-                          {u.email}
-                        </p>
-                      )}
-                      {u.phone && (
-                        <p className="flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5 text-slate-400" />
-                          {u.phone}
-                        </p>
-                      )}
-                      {!u.email && !u.phone && <p>—</p>}
-                    </td>
-                    <td className="py-3 px-4 text-2xs text-slate-600 space-y-0.5">
-                      {bu.canManageBrokerUsers && <p>إدارة الموظفين</p>}
-                      {bu.canViewCommissions && <p>عرض العمولات</p>}
-                      {!bu.canManageBrokerUsers && !bu.canViewCommissions && <p>—</p>}
-                    </td>
-                    <td className="py-3 px-4">
-                      <BrokerUserStatusBadge status={bu.status} />
-                    </td>
-                    <td className="py-3 px-4 text-xs text-slate-500">
-                      {formatDate(u.lastLoginAt)}
-                    </td>
-                    <td className="py-3 ps-4 pe-5">
-                      <div className="flex flex-col items-end gap-1.5">
-                        {!bu.isPrimaryContact && bu.status !== 'REMOVED' && (
-                          <form action={makePrimary.bind(null, bu.id)}>
-                            <button
-                              type="submit"
-                              className="text-2xs text-amber-700 hover:underline"
-                            >
-                              تعيين رئيسي
-                            </button>
-                          </form>
-                        )}
-                        {bu.status !== 'ACTIVE' && bu.status !== 'REMOVED' && (
-                          <form action={changeStatus.bind(null, bu.id, 'ACTIVE')}>
-                            <button
-                              type="submit"
-                              className="text-2xs text-green-700 hover:underline"
-                            >
-                              تفعيل
-                            </button>
-                          </form>
-                        )}
-                        {bu.status === 'ACTIVE' && (
-                          <form action={changeStatus.bind(null, bu.id, 'SUSPENDED')}>
-                            <button
-                              type="submit"
-                              className="text-2xs text-amber-700 hover:underline"
-                            >
-                              إيقاف مؤقت
-                            </button>
-                          </form>
-                        )}
-                        {bu.status !== 'REMOVED' && (
-                          <ConfirmingForm
-                            action={changeStatus.bind(null, bu.id, 'REMOVED')}
-                            confirmMessage={`سيتم حذف «${bu.user.fullName}» من قائمة موظفي الوسيط. هل أنت متأكد؟`}
-                          >
-                            <button
-                              type="submit"
-                              className="text-2xs text-red-600 hover:underline"
-                            >
-                              حذف
-                            </button>
-                          </ConfirmingForm>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
 
-        {users.length > 0 && (
-          <div className="border-t border-hairline p-5 space-y-3">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              تعديل بيانات موظف
-            </h3>
+                      {/* الحالة */}
+                      <td className="px-5 py-3.5">
+                        <BrokerUserStatusBadge status={bu.status} />
+                      </td>
+
+                      {/* آخر دخول */}
+                      <td className="px-5 py-3.5">
+                        <span className="text-[12px] text-slate-500 tabular-nums">
+                          {formatDate(u.lastLoginAt) ?? '—'}
+                        </span>
+                      </td>
+
+                      {/* إجراءات */}
+                      <td className="px-5 py-3.5">
+                        <div className="flex flex-col items-end gap-1.5">
+                          {!bu.isPrimaryContact && bu.status !== 'REMOVED' && (
+                            <form action={makePrimary.bind(null, bu.id)}>
+                              <button type="submit" className="text-[11px] font-semibold text-amber-700 hover:underline underline-offset-2 whitespace-nowrap">
+                                تعيين رئيسي
+                              </button>
+                            </form>
+                          )}
+                          {bu.status !== 'ACTIVE' && bu.status !== 'REMOVED' && (
+                            <form action={changeStatus.bind(null, bu.id, 'ACTIVE')}>
+                              <button type="submit" className="text-[11px] font-semibold text-success-700 hover:underline underline-offset-2 whitespace-nowrap">
+                                تفعيل
+                              </button>
+                            </form>
+                          )}
+                          {bu.status === 'ACTIVE' && (
+                            <form action={changeStatus.bind(null, bu.id, 'SUSPENDED')}>
+                              <button type="submit" className="text-[11px] font-semibold text-amber-700 hover:underline underline-offset-2 whitespace-nowrap">
+                                إيقاف مؤقت
+                              </button>
+                            </form>
+                          )}
+                          {bu.status !== 'REMOVED' && (
+                            <ConfirmingForm
+                              action={changeStatus.bind(null, bu.id, 'REMOVED')}
+                              confirmMessage={`سيتم حذف «${bu.user.fullName}» من قائمة موظفي الوسيط. هل أنت متأكد؟`}
+                            >
+                              <button type="submit" className="text-[11px] font-semibold text-danger-600 hover:underline underline-offset-2 whitespace-nowrap">
+                                حذف
+                              </button>
+                            </ConfirmingForm>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </PremiumSectionCard>
+
+      {/* ── Edit employees ───────────────────────────────────────────── */}
+      {users.length > 0 && (
+        <PremiumSectionCard title="تعديل بيانات موظف" padded={false}>
+          <div className="divide-y divide-hairline">
             {users.map((bu) => {
               const u = bu.user;
               return (
-                <details
-                  key={bu.id}
-                  className="rounded-xl border border-hairline bg-surface p-3"
-                >
-                  <summary className="cursor-pointer text-sm font-medium text-slate-700 hover:text-brand-700 flex items-center gap-2">
-                    <span>تعديل: {u.fullName}</span>
-                    <span className="font-mono text-2xs text-slate-400" dir="ltr">
-                      {u.email ?? u.phone ?? '—'}
-                    </span>
+                <details key={bu.id} className="group">
+                  <summary className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none hover:bg-canvas/40 transition-colors duration-100">
+                    {/* Identity */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 border border-brand-100 text-brand-700 text-[13px] font-bold">
+                        {u.fullName.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          {bu.isPrimaryContact && <Star className="h-3.5 w-3.5 text-amber-500 fill-current shrink-0" />}
+                          <p className="text-[13px] font-semibold text-slate-900 truncate">{u.fullName}</p>
+                        </div>
+                        <p className="text-[11px] text-slate-400 truncate" dir="ltr">
+                          {u.email ?? u.phone ?? '—'}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Meta + toggle */}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {bu.jobTitle && (
+                        <span className="text-[12px] text-slate-500 hidden sm:block">{bu.jobTitle}</span>
+                      )}
+                      <BrokerUserStatusBadge status={bu.status} />
+                      <span className="inline-flex items-center rounded-lg bg-brand-50 border border-brand-100 px-2.5 py-1 text-[11px] font-semibold text-brand-700 group-open:hidden">
+                        تعديل
+                      </span>
+                      <span className="inline-flex items-center rounded-lg bg-slate-100 border border-hairline px-2.5 py-1 text-[11px] font-semibold text-slate-500 hidden group-open:inline-flex">
+                        إغلاق
+                      </span>
+                    </div>
                   </summary>
-                  <form
-                    action={updateUser.bind(null, bu.id)}
-                    className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3"
-                  >
-                    <Field label="الاسم الكامل" name={`fullName-${bu.id}`}>
-                      <Input
-                        id={`fullName-${bu.id}`}
-                        name="fullName"
-                        defaultValue={u.fullName}
-                      />
-                    </Field>
-                    <Field label="الوظيفة" name={`jobTitle-${bu.id}`}>
-                      <Input
-                        id={`jobTitle-${bu.id}`}
-                        name="jobTitle"
-                        defaultValue={bu.jobTitle ?? ''}
-                      />
-                    </Field>
-                    <Field label="البريد الإلكتروني" name={`email-${bu.id}`}>
-                      <Input
-                        id={`email-${bu.id}`}
-                        name="email"
-                        type="email"
-                        dir="ltr"
-                        defaultValue={u.email ?? ''}
-                      />
-                    </Field>
-                    <Field label="رقم الجوال" name={`phone-${bu.id}`}>
-                      <Input
-                        id={`phone-${bu.id}`}
-                        name="phone"
-                        dir="ltr"
-                        defaultValue={u.phone ?? ''}
-                      />
-                    </Field>
-                    <div className="md:col-span-2 flex flex-wrap items-center gap-4">
-                      <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                        <Checkbox
-                          name="canManageBrokerUsers"
-                          defaultChecked={bu.canManageBrokerUsers}
-                        />
-                        <span>صلاحية إدارة الموظفين</span>
-                      </label>
-                      <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                        <Checkbox
-                          name="canViewCommissions"
-                          defaultChecked={bu.canViewCommissions}
-                        />
-                        <span>عرض العمولات</span>
-                      </label>
-                    </div>
-                    <div className="md:col-span-2 flex justify-end">
-                      <Button type="submit" variant="primary" size="sm">
-                        حفظ التعديلات
-                      </Button>
-                    </div>
-                  </form>
+                  <div className="px-5 py-5 border-t border-hairline bg-canvas/30">
+                    <form action={updateUser.bind(null, bu.id)} className="flex flex-col gap-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField label="الاسم الكامل">
+                          <Input id={`fullName-${bu.id}`} name="fullName" defaultValue={u.fullName} />
+                        </FormField>
+                        <FormField label="الوظيفة">
+                          <Input id={`jobTitle-${bu.id}`} name="jobTitle" defaultValue={bu.jobTitle ?? ''} />
+                        </FormField>
+                        <FormField label="البريد الإلكتروني">
+                          <Input id={`email-${bu.id}`} name="email" type="email" dir="ltr" defaultValue={u.email ?? ''} />
+                        </FormField>
+                        <FormField label="رقم الجوال">
+                          <Input id={`phone-${bu.id}`} name="phone" dir="ltr" defaultValue={u.phone ?? ''} />
+                        </FormField>
+                      </div>
+                      <div className="pt-4 border-t border-hairline">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-3">الصلاحيات</p>
+                        <div className="flex flex-wrap items-center gap-5">
+                          <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
+                            <Checkbox name="canManageBrokerUsers" defaultChecked={bu.canManageBrokerUsers} />
+                            <span>صلاحية إدارة الموظفين</span>
+                          </label>
+                          <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
+                            <Checkbox name="canViewCommissions" defaultChecked={bu.canViewCommissions} />
+                            <span>عرض العمولات</span>
+                          </label>
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button type="submit" variant="primary" size="sm">حفظ التعديلات</Button>
+                      </div>
+                    </form>
+                  </div>
                 </details>
               );
             })}
           </div>
-        )}
-      </Card>
+        </PremiumSectionCard>
+      )}
 
     </div>
   );
