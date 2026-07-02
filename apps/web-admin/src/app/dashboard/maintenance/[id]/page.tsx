@@ -1,13 +1,23 @@
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { Wrench, User as UserIcon, Home, AlertCircle, UserCog, ArrowLeft, CheckCircle2, XCircle, ClipboardList, Star, ShieldCheck } from 'lucide-react';
+import {
+  Wrench, User as UserIcon, Home, AlertCircle, UserCog, ArrowLeft,
+  CheckCircle2, XCircle, ClipboardList, Star, ShieldCheck, Phone, Mail,
+} from 'lucide-react';
 import { api, safe } from '@/lib/api';
-import type { MaintenancePriority, MaintenanceResolutionConfirmedBy, MaintenanceReviewStatus, MaintenanceStatus, MaintenanceRequestItem, Paged, User } from '@/lib/types';
+import type {
+  MaintenancePriority, MaintenanceResolutionConfirmedBy, MaintenanceReviewStatus,
+  MaintenanceStatus, MaintenanceRequestItem, Paged, User,
+} from '@/lib/types';
 import { formatDateTime, tx, maintenanceSlaLabel, formatDate } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { MaintenanceStatusBadge, MaintenancePriorityBadge, MaintenanceReviewStatusBadge, WarrantyStatusBadge } from '@/components/badges';
+import {
+  MaintenanceStatusBadge, MaintenancePriorityBadge,
+  MaintenanceReviewStatusBadge, WarrantyStatusBadge,
+} from '@/components/badges';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import {
   PremiumPageHero,
@@ -110,6 +120,8 @@ async function rejectAction(id: string) {
 
 const CMD_LINK = 'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
 const CMD_ICON = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
+const CONTACT_TILE = 'flex items-center gap-2.5 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline hover:bg-canvas transition-colors';
+const CONTACT_ICON = 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500 [&_svg]:h-3.5 [&_svg]:w-3.5';
 
 export default async function MaintenanceDetailPage({
   params,
@@ -167,6 +179,16 @@ export default async function MaintenanceDetailPage({
     ? tx(m.category.name)
     : `طلب صيانة #${m.id.slice(0, 8).toUpperCase()}`;
 
+  const resolvedByLabel =
+    m.resolvedBy === 'BOTH' ? 'أكد الطرفان الحل'
+    : m.resolvedBy === 'CUSTOMER' ? 'أكد العميل الحل'
+    : m.resolvedBy === 'SUPERVISOR' ? 'أكد مشرف الصيانة الحل'
+    : 'لم يتم التأكيد بعد';
+  const resolvedByCls =
+    m.resolvedBy === 'BOTH' ? 'bg-success-50 text-success-700'
+    : m.resolvedBy ? 'bg-info-50 text-info-700'
+    : 'bg-canvas border border-hairline text-slate-500';
+
   return (
     <div className="space-y-5">
       <PremiumPageHero
@@ -182,7 +204,7 @@ export default async function MaintenanceDetailPage({
             <MaintenanceReviewStatusBadge status={m.reviewStatus} />
             {approved && <MaintenanceStatusBadge status={m.status} />}
             {overdue && (
-              <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 border border-danger-100 px-2.5 py-0.5 text-xs font-medium">
+              <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 border border-danger-100 px-2.5 py-0.5 text-xs font-semibold">
                 متأخر
               </span>
             )}
@@ -204,64 +226,104 @@ export default async function MaintenanceDetailPage({
         sideSticky={false}
         main={
           <div className="space-y-5">
-            <PremiumSectionCard title="نظرة عامة" icon={<Wrench className="h-4 w-4" />}>
-              <div className="space-y-3 text-sm">
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="التصنيف" value={m.category ? tx(m.category.name) : '—'} />
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-400 mb-0.5">الأولوية</p>
-                    {m.priority ? <MaintenancePriorityBadge priority={m.priority} /> : <p className="text-sm text-slate-700">—</p>}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium text-slate-400 mb-1">الوصف</p>
-                  <p className="text-slate-700 whitespace-pre-wrap">{m.description}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] font-medium text-slate-400 mb-0.5">الموعد المستهدف للمعالجة</p>
-                  {!approved ? (
-                    <p className="text-xs text-slate-500">
-                      {pending ? 'يبدأ احتساب مدة المعالجة بعد اعتماد الطلب.' : 'لا يوجد موعد مستهدف.'}
-                    </p>
-                  ) : m.dueAt ? (
-                    <p className={`text-sm inline-flex items-center gap-1.5 ${overdue ? 'text-danger-600 font-semibold' : 'text-slate-700'}`}>
-                      {formatDateTime(m.dueAt)}
-                      {overdue && <span className="rounded-full bg-danger-50 text-danger-700 text-[11px] px-2 py-0.5">متأخر</span>}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-slate-700">—</p>
-                  )}
-                </div>
-                {slaResult && (
-                  <div>
-                    <p className="text-[11px] font-medium text-slate-400 mb-0.5">نتيجة المدة المستهدفة</p>
-                    {slaResult === 'within' ? (
-                      <span className="inline-block rounded-full bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5">تم الحل ضمن المدة</span>
+            {/* Overview */}
+            <PremiumSectionCard title="نظرة عامة" icon={<Wrench />}>
+              <div className="space-y-5">
+                {/* Key fields — 3 columns */}
+                <div className="grid grid-cols-3 gap-x-6">
+                  <Field label="التصنيف">
+                    <span className="text-[14px] font-bold text-slate-900">
+                      {m.category ? tx(m.category.name) : '—'}
+                    </span>
+                  </Field>
+                  <Field label="الأولوية">
+                    {m.priority
+                      ? <MaintenancePriorityBadge priority={m.priority} />
+                      : <span className="text-[13px] text-slate-400">—</span>}
+                  </Field>
+                  <Field label="الموعد المستهدف">
+                    {!approved ? (
+                      <span className="text-[11px] text-slate-400">
+                        {pending ? 'بعد الاعتماد' : '—'}
+                      </span>
+                    ) : m.dueAt ? (
+                      <span className={cn(
+                        'text-[12px] font-semibold tabular-nums inline-flex items-center gap-1',
+                        overdue ? 'text-danger-600' : 'text-slate-900',
+                      )}>
+                        {formatDate(m.dueAt)}
+                        {overdue && (
+                          <span className="rounded-full bg-danger-50 text-danger-700 text-[10px] font-semibold px-1.5 py-0.5">
+                            متأخر
+                          </span>
+                        )}
+                      </span>
                     ) : (
-                      <span className="inline-block rounded-full bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5">تم الحل بعد الموعد</span>
+                      <span className="text-[13px] text-slate-400">—</span>
+                    )}
+                  </Field>
+                </div>
+
+                {/* Description box */}
+                <div className="rounded-xl bg-canvas/50 border border-hairline px-4 py-3.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">
+                    الوصف
+                  </p>
+                  <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">
+                    {m.description}
+                  </p>
+                </div>
+
+                {/* SLA result — only when resolved */}
+                {slaResult && (
+                  <div className="flex items-center gap-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 shrink-0">
+                      نتيجة المدة المستهدفة
+                    </p>
+                    {slaResult === 'within' ? (
+                      <span className="inline-flex items-center rounded-full bg-success-50 text-success-700 text-[11px] font-semibold px-2.5 py-0.5">
+                        تم الحل ضمن المدة
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 text-[11px] font-semibold px-2.5 py-0.5">
+                        تم الحل بعد الموعد
+                      </span>
                     )}
                   </div>
                 )}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t border-hairline">
-                  <Field label="تاريخ الإنشاء" value={formatDateTime(m.createdAt)} />
-                  <Field label="آخر تحديث" value={formatDateTime(m.updatedAt)} />
-                  {m.approvedAt && <Field label="تاريخ الاعتماد" value={formatDateTime(m.approvedAt)} />}
-                  {m.rejectedAt && <Field label="تاريخ الرفض" value={formatDateTime(m.rejectedAt)} />}
-                  {m.resolvedAt && <Field label="تاريخ الحل" value={formatDateTime(m.resolvedAt)} />}
-                  {m.closedAt && <Field label="تاريخ الإغلاق" value={formatDateTime(m.closedAt)} />}
+
+                {/* Dates — full-width rows, no orphan grid issues */}
+                <div className="rounded-xl border border-hairline overflow-hidden divide-y divide-hairline">
+                  <DateRow label="تاريخ الإنشاء" value={formatDateTime(m.createdAt)} />
+                  <DateRow label="آخر تحديث" value={formatDateTime(m.updatedAt)} />
+                  {m.approvedAt && (
+                    <DateRow label="تاريخ الاعتماد" value={formatDateTime(m.approvedAt)} valueCls="text-success-700" />
+                  )}
+                  {m.rejectedAt && (
+                    <DateRow label="تاريخ الرفض" value={formatDateTime(m.rejectedAt)} valueCls="text-danger-700" />
+                  )}
+                  {m.resolvedAt && (
+                    <DateRow label="تاريخ الحل" value={formatDateTime(m.resolvedAt)} valueCls="text-success-700" />
+                  )}
+                  {m.closedAt && (
+                    <DateRow label="تاريخ الإغلاق" value={formatDateTime(m.closedAt)} />
+                  )}
                 </div>
               </div>
             </PremiumSectionCard>
 
-            <PremiumSectionCard title="المراجعة" icon={<ClipboardList className="h-4 w-4" />}>
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-medium text-slate-400">حالة المراجعة:</span>
+            {/* Review */}
+            <PremiumSectionCard title="المراجعة" icon={<ClipboardList />}>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 shrink-0">
+                    حالة المراجعة
+                  </p>
                   <MaintenanceReviewStatusBadge status={m.reviewStatus} />
                 </div>
                 {pending && (
                   <>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-[12px] text-slate-500">
                       هذا الطلب بانتظار مراجعة المسؤول. يبدأ احتساب مدة المعالجة (الموعد المستهدف) بعد الاعتماد.
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
@@ -279,117 +341,137 @@ export default async function MaintenanceDetailPage({
                   </>
                 )}
                 {rejected && (
-                  <p className="rounded-lg bg-danger-50 border border-danger-100 text-danger-700 px-3 py-2 text-sm">
+                  <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-3 py-2.5 text-[13px]">
                     تم رفض الطلب ولا يمكن تنفيذه.
-                  </p>
+                  </div>
                 )}
                 {approved && (
-                  <p className="text-xs text-slate-500">
+                  <p className="text-[12px] text-slate-500">
                     تم اعتماد الطلب
-                    {m.maxHandlingSlaMinutesSnapshot != null && ` · مدة المعالجة المستهدفة: ${maintenanceSlaLabel(m.maxHandlingSlaMinutesSnapshot)}`}
+                    {m.maxHandlingSlaMinutesSnapshot != null
+                      && ` · مدة المعالجة المستهدفة: ${maintenanceSlaLabel(m.maxHandlingSlaMinutesSnapshot)}`}
                     .
                   </p>
                 )}
               </div>
             </PremiumSectionCard>
 
-            <PremiumSectionCard title="متابعة الحل والتقييم" icon={<ShieldCheck className="h-4 w-4" />}>
-              <div className="space-y-4 text-sm">
+            {/* Resolution & rating */}
+            <PremiumSectionCard title="متابعة الحل والتقييم" icon={<ShieldCheck />}>
+              <div className="space-y-5">
+                {/* Status badges */}
                 <div className="flex flex-wrap items-center gap-2">
-                  {(() => {
-                    const by = m.resolvedBy ?? null;
-                    const label =
-                      by === 'BOTH'
-                        ? 'أكد الطرفان الحل'
-                        : by === 'CUSTOMER'
-                          ? 'أكد العميل الحل'
-                          : by === 'SUPERVISOR'
-                            ? 'أكد مشرف الصيانة الحل'
-                            : 'لم يتم التأكيد بعد';
-                    const cls =
-                      by === 'BOTH'
-                        ? 'bg-green-100 text-green-700'
-                        : by
-                          ? 'bg-blue-100 text-blue-700'
-                          : 'bg-slate-100 text-slate-500';
-                    return (
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${cls}`}>
-                        {label}
-                      </span>
-                    );
-                  })()}
+                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${resolvedByCls}`}>
+                    {resolvedByLabel}
+                  </span>
                   {overdue && (
-                    <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2.5 py-0.5 text-xs font-medium">
+                    <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2.5 py-0.5 text-[11px] font-semibold">
                       متأخر عن SLA
                     </span>
                   )}
                   {m.complaintAt && (
-                    <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2.5 py-0.5 text-xs font-medium">
+                    <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2.5 py-0.5 text-[11px] font-semibold">
                       تم تقديم شكوى
                     </span>
                   )}
                   {m.unresolvedAt && (
-                    <span className="inline-flex items-center rounded-full bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-medium">
+                    <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2.5 py-0.5 text-[11px] font-semibold">
                       لم تُحل
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 border-t border-hairline pt-3 sm:grid-cols-4">
-                  <Field
-                    label="تأكيد العميل"
-                    value={m.customerConfirmedResolutionAt ? formatDateTime(m.customerConfirmedResolutionAt) : 'لم يؤكد بعد'}
-                  />
-                  <Field
-                    label="تأكيد مشرف الصيانة"
-                    value={m.supervisorConfirmedResolutionAt ? formatDateTime(m.supervisorConfirmedResolutionAt) : 'لم يؤكد بعد'}
-                  />
-                  <Field label="تاريخ الشكوى" value={m.complaintAt ? formatDateTime(m.complaintAt) : '—'} />
-                  <Field label="تاريخ عدم الحل" value={m.unresolvedAt ? formatDateTime(m.unresolvedAt) : '—'} />
+                {/* Confirmation dates */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-5 pt-4 border-t border-hairline sm:grid-cols-4">
+                  <Field label="تأكيد العميل">
+                    <span className={cn(
+                      'text-[12px] font-medium tabular-nums',
+                      m.customerConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
+                    )}>
+                      {m.customerConfirmedResolutionAt ? formatDateTime(m.customerConfirmedResolutionAt) : 'لم يؤكد بعد'}
+                    </span>
+                  </Field>
+                  <Field label="تأكيد مشرف الصيانة">
+                    <span className={cn(
+                      'text-[12px] font-medium tabular-nums',
+                      m.supervisorConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
+                    )}>
+                      {m.supervisorConfirmedResolutionAt ? formatDateTime(m.supervisorConfirmedResolutionAt) : 'لم يؤكد بعد'}
+                    </span>
+                  </Field>
+                  <Field label="تاريخ الشكوى">
+                    <span className={cn(
+                      'text-[12px] font-medium tabular-nums',
+                      m.complaintAt ? 'text-warning-700' : 'text-slate-400',
+                    )}>
+                      {m.complaintAt ? formatDateTime(m.complaintAt) : '—'}
+                    </span>
+                  </Field>
+                  <Field label="تاريخ عدم الحل">
+                    <span className={cn(
+                      'text-[12px] font-medium tabular-nums',
+                      m.unresolvedAt ? 'text-danger-700' : 'text-slate-400',
+                    )}>
+                      {m.unresolvedAt ? formatDateTime(m.unresolvedAt) : '—'}
+                    </span>
+                  </Field>
                 </div>
 
-                <div className="border-t border-hairline pt-3">
-                  <p className="text-[11px] font-medium text-slate-400 mb-1">تقييم العميل</p>
-                  {m.customerRating ? (
-                    <div className="space-y-1.5">
-                      <Stars value={m.customerRating} />
-                      {m.customerRatingText && (
-                        <p className="text-slate-700 whitespace-pre-wrap">{m.customerRatingText}</p>
-                      )}
-                      {m.customerRatingSubmittedAt && (
-                        <p className="text-[11px] text-slate-400">
-                          أُرسل في {formatDateTime(m.customerRatingSubmittedAt)}
-                        </p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-slate-400">لم يقم العميل بتقييم الخدمة بعد.</p>
-                  )}
+                {/* Customer rating */}
+                <div className="pt-4 border-t border-hairline">
+                  <Field label="تقييم العميل">
+                    {m.customerRating ? (
+                      <div className="space-y-2 mt-0.5">
+                        <Stars value={m.customerRating} />
+                        {m.customerRatingText && (
+                          <p className="text-[13px] text-slate-700 whitespace-pre-wrap">{m.customerRatingText}</p>
+                        )}
+                        {m.customerRatingSubmittedAt && (
+                          <p className="text-[11px] text-slate-400">
+                            أُرسل في {formatDateTime(m.customerRatingSubmittedAt)}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-[12px] text-slate-400 mt-0.5">لم يقم العميل بتقييم الخدمة بعد.</p>
+                    )}
+                  </Field>
                 </div>
               </div>
             </PremiumSectionCard>
 
+            {/* Items table */}
             {items.length > 0 && (
               <PremiumSectionCard title="العناصر المحددة" padded={false}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm min-w-[640px]">
-                    <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                    <thead className="bg-canvas/50 border-b border-hairline">
                       <tr>
-                        <th className="px-4 py-3 text-start">التصنيف</th>
-                        <th className="px-4 py-3 text-start">الأولوية</th>
-                        <th className="px-4 py-3 text-start">مدة المعالجة</th>
-                        <th className="px-4 py-3 text-start">الضمان</th>
-                        <th className="px-4 py-3 text-start">نهاية الضمان</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">التصنيف</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الأولوية</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">مدة المعالجة</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الضمان</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">نهاية الضمان</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-hairline">
                       {items.map((it) => (
                         <tr key={it.id} className="hover:bg-canvas/40 transition-colors duration-100">
-                          <td className="px-4 py-2.5 font-medium text-slate-800">{it.category ? tx(it.category.name) : '—'}</td>
-                          <td className="px-4 py-2.5"><MaintenancePriorityBadge priority={it.categoryPrioritySnapshot} /></td>
-                          <td className="px-4 py-2.5 text-slate-600">{maintenanceSlaLabel(it.handlingSlaMinutesSnapshot) ?? '—'}</td>
-                          <td className="px-4 py-2.5"><WarrantyStatusBadge status={it.warrantyStatusSnapshot} /></td>
-                          <td className="px-4 py-2.5 text-slate-600 tabular-nums">{it.warrantyEndSnapshot ? formatDate(it.warrantyEndSnapshot) : '—'}</td>
+                          <td className="px-5 py-3 text-[13px] font-semibold text-slate-900">
+                            {it.category ? tx(it.category.name) : '—'}
+                          </td>
+                          <td className="px-5 py-3">
+                            <MaintenancePriorityBadge priority={it.categoryPrioritySnapshot} />
+                          </td>
+                          <td className="px-5 py-3 text-[12px] text-slate-600">
+                            {maintenanceSlaLabel(it.handlingSlaMinutesSnapshot) ?? '—'}
+                          </td>
+                          <td className="px-5 py-3">
+                            <WarrantyStatusBadge status={it.warrantyStatusSnapshot} />
+                          </td>
+                          <td className="px-5 py-3 text-[12px] text-slate-600 tabular-nums">
+                            {it.warrantyEndSnapshot ? formatDate(it.warrantyEndSnapshot) : '—'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -398,13 +480,16 @@ export default async function MaintenanceDetailPage({
               </PremiumSectionCard>
             )}
 
+            {/* Workflow */}
             {approved && (
               <PremiumSectionCard title="سير العمل">
                 {m.status === 'CLOSED' ? (
-                  <p className="text-sm text-slate-500">تم إغلاق الطلب ولا توجد إجراءات متاحة.</p>
+                  <p className="text-[13px] text-slate-500">تم إغلاق الطلب ولا توجد إجراءات متاحة.</p>
                 ) : (
-                  <div className="space-y-2">
-                    <p className="text-[11px] text-slate-400">الإجراءات المتاحة من الحالة الحالية:</p>
+                  <div className="space-y-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
+                      الإجراءات المتاحة من الحالة الحالية
+                    </p>
                     <div className="flex flex-wrap items-center gap-2">
                       {transitions.map((next) => (
                         <form key={next} action={setStatusAction.bind(null, m.id, next)}>
@@ -441,28 +526,94 @@ export default async function MaintenanceDetailPage({
               </Link>
             </PremiumCommandPanel>
 
-            <PremiumSectionCard title="العميل والوحدة" icon={<Home className="h-4 w-4" />}>
-              <div className="space-y-3 text-sm">
-                <Field label="العميل" value={m.customer?.fullName ?? '—'} icon={<UserIcon className="h-3.5 w-3.5" />} />
-                {m.customer?.phone && <Field label="الهاتف" value={m.customer.phone} ltr />}
-                {m.customer?.email && <Field label="البريد" value={m.customer.email} ltr />}
-                <div className="pt-2 border-t border-hairline space-y-3">
-                  <Field label="الوحدة" value={m.unit?.code ?? '—'} ltr />
-                  {m.unit && <Field label="النوع / الطابق" value={`${m.unit.type} · ${m.unit.floor}`} />}
+            {/* Customer and unit */}
+            <PremiumSectionCard title="العميل والوحدة" icon={<Home />}>
+              <div className="space-y-4">
+                {/* Customer */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                      <UserIcon />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">العميل</p>
+                      <p className="text-[13.5px] font-bold text-slate-900 truncate">
+                        {m.customer?.fullName ?? '—'}
+                      </p>
+                    </div>
+                  </div>
+                  {m.customer?.phone && (
+                    <a href={`tel:${m.customer.phone}`} className={CONTACT_TILE}>
+                      <span className={CONTACT_ICON}><Phone /></span>
+                      <span className="text-[13px] font-medium text-slate-700 flex-1 truncate" dir="ltr">
+                        {m.customer.phone}
+                      </span>
+                    </a>
+                  )}
+                  {m.customer?.email && (
+                    <a href={`mailto:${m.customer.email}`} className={CONTACT_TILE}>
+                      <span className={CONTACT_ICON}><Mail /></span>
+                      <span className="text-[13px] font-medium text-slate-700 flex-1 truncate" dir="ltr">
+                        {m.customer.email}
+                      </span>
+                    </a>
+                  )}
+                </div>
+
+                {/* Unit */}
+                <div className="pt-4 border-t border-hairline space-y-1.5">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                      <Home />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">الوحدة</p>
+                      <p className="text-[16px] font-black text-brand-700 font-mono leading-none">
+                        {m.unit?.code ?? '—'}
+                      </p>
+                    </div>
+                  </div>
+                  {m.unit && (
+                    <p className="text-[12px] text-slate-500 ms-12">
+                      {m.unit.type} · الطابق {m.unit.floor}
+                    </p>
+                  )}
                 </div>
               </div>
             </PremiumSectionCard>
 
+            {/* Assignment */}
             {approved && (
-              <PremiumSectionCard title="الإسناد" icon={<UserCog className="h-4 w-4" />}>
-                <div className="space-y-3">
-                  <Field label="المسؤول الحالي" value={m.assignedAdmin?.fullName ?? 'غير مسند'} />
+              <PremiumSectionCard title="الإسناد" icon={<UserCog />}>
+                <div className="space-y-4">
+                  {/* Current assignee */}
+                  {m.assignedAdmin ? (
+                    <div className="flex items-center gap-3 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline">
+                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                        <UserCog />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">المسؤول الحالي</p>
+                        <p className="text-[13px] font-semibold text-slate-900 truncate">{m.assignedAdmin.fullName}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-[12px] text-slate-400">غير مسند بعد.</p>
+                  )}
+
                   {m.status !== 'CLOSED' ? (
-                    <form action={assignAction.bind(null, m.id)} className="space-y-2">
-                      <Select name="assignedAdminId" inputSize="sm" defaultValue={m.assignedAdminId ?? ''} required>
+                    <form action={assignAction.bind(null, m.id)} className="space-y-2.5">
+                      <Select
+                        name="assignedAdminId"
+                        inputSize="sm"
+                        defaultValue={m.assignedAdminId ?? ''}
+                        required
+                      >
                         <option value="">— اختر مسؤولاً —</option>
                         {admins.map((a) => (
-                          <option key={a.id} value={a.id}>{a.fullName} — {assigneeRoleLabel(a.role)}</option>
+                          <option key={a.id} value={a.id}>
+                            {a.fullName} — {assigneeRoleLabel(a.role)}
+                          </option>
                         ))}
                       </Select>
                       {m.status === 'OPEN' && (
@@ -473,7 +624,7 @@ export default async function MaintenanceDetailPage({
                       <Button type="submit" variant="outline" size="sm">حفظ الإسناد</Button>
                     </form>
                   ) : (
-                    <p className="text-xs text-slate-400">الطلب مغلق — لا يمكن تعديل الإسناد.</p>
+                    <p className="text-[12px] text-slate-400">الطلب مغلق — لا يمكن تعديل الإسناد.</p>
                   )}
                 </div>
               </PremiumSectionCard>
@@ -493,13 +644,6 @@ export default async function MaintenanceDetailPage({
         />
       </div>
 
-      <Link
-        href="/dashboard/maintenance"
-        className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
-      >
-        <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-        العودة إلى قائمة الصيانة
-      </Link>
     </div>
   );
 }
@@ -519,20 +663,35 @@ function Stars({ value }: { value: number }) {
 }
 
 function Field({
-  label, value, ltr, icon,
+  label,
+  children,
+  className,
+}: {
+  label: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-1.5">{label}</p>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+function DateRow({
+  label,
+  value,
+  valueCls = 'text-slate-700',
 }: {
   label: string;
   value: string;
-  ltr?: boolean;
-  icon?: React.ReactNode;
+  valueCls?: string;
 }) {
   return (
-    <div>
-      <p className="text-[11px] font-medium text-slate-400 mb-0.5">{label}</p>
-      <p className="text-sm text-slate-700 inline-flex items-center gap-1.5" dir={ltr ? 'ltr' : undefined}>
-        {icon && <span className="text-slate-400">{icon}</span>}
-        {value}
-      </p>
+    <div className="flex items-center justify-between gap-4 px-4 py-2.5">
+      <span className="text-[12px] font-medium text-slate-500 shrink-0">{label}</span>
+      <span className={`text-[12px] font-medium tabular-nums shrink-0 ${valueCls}`}>{value}</span>
     </div>
   );
 }
