@@ -20,27 +20,32 @@ interface Props {
   updatedAt: string;
 }
 
-/* ── Value display — prominent, no input styling ───────────────────────────── */
+/* ── Value display ─────────────────────────────────────────────────────────── */
 
 function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'preview' | 'sensitive'>) {
   if (sensitive) {
     return (
-      <span className="font-mono text-lg text-amber-600 tracking-[0.35em] select-none leading-none">
-        ••••••
-      </span>
+      <div className="flex items-center gap-2">
+        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 shrink-0">
+          <Lock className="h-3.5 w-3.5 text-amber-600" />
+        </span>
+        <span className="font-mono text-base text-amber-500 tracking-[0.3em] select-none">
+          ••••••
+        </span>
+      </div>
     );
   }
 
   if (type === 'منطقي') {
     const on = preview === 'true';
     return on ? (
-      <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold bg-teal-50 text-teal-700 border border-teal-100">
-        <Check className="h-4 w-4 shrink-0" />
+      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[13px] font-semibold bg-teal-50 text-teal-700 border border-teal-100">
+        <Check className="h-3.5 w-3.5 shrink-0" />
         مفعّل
       </span>
     ) : (
-      <span className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-semibold bg-slate-100 text-slate-600 border border-slate-200">
-        <XIcon className="h-4 w-4 shrink-0" />
+      <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[13px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
+        <XIcon className="h-3.5 w-3.5 shrink-0" />
         غير مفعّل
       </span>
     );
@@ -48,7 +53,7 @@ function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'previe
 
   if (type === 'رقم') {
     return (
-      <span className="text-[28px] font-bold text-slate-800 tabular-nums leading-none" dir="ltr">
+      <span className="text-[30px] font-black text-slate-800 tabular-nums leading-none" dir="ltr">
         {preview}
       </span>
     );
@@ -68,9 +73,9 @@ function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'previe
     );
   }
 
-  /* نص — dir="auto" handles Arabic + Latin naturally */
+  /* نص */
   return (
-    <p className="text-sm text-slate-700 leading-relaxed line-clamp-2" dir="auto">
+    <p className="text-[13px] text-slate-700 leading-relaxed line-clamp-2" dir="auto">
       {preview}
     </p>
   );
@@ -124,7 +129,7 @@ function EditInput({ type, preview, sensitive }: Pick<Props, 'type' | 'preview' 
   );
 }
 
-/* ── Setting card — vertical, premium configuration card ───────────────────── */
+/* ── Setting card ──────────────────────────────────────────────────────────── */
 
 export function SettingCard({
   settingKey,
@@ -141,31 +146,37 @@ export function SettingCard({
   return (
     <div
       className={cn(
-        'rounded-2xl border bg-surface flex flex-col min-h-[168px] p-4',
-        'transition-all duration-150',
+        'rounded-2xl border flex flex-col min-h-[176px] p-4 transition-all duration-150',
         editing
-          ? 'border-brand-200 shadow-md'
-          : 'border-hairline shadow-xs hover:shadow-sm hover:border-slate-200',
+          ? 'border-brand-200 bg-surface shadow-md'
+          : sensitive
+            ? 'border-amber-100 bg-amber-50/20 shadow-xs hover:shadow-sm hover:border-amber-200'
+            : 'border-hairline bg-surface shadow-xs hover:shadow-sm hover:border-slate-200',
       )}
     >
-      {/* ── Top: Arabic label + type badge + edit icon ──────────────────── */}
+      {/* ── Top: label + type badge + edit toggle ──────────────────────── */}
       <div className="flex items-start justify-between gap-2">
-        <p className="flex-1 min-w-0 text-sm font-semibold text-slate-900 leading-snug line-clamp-2">
+        <p className="flex-1 min-w-0 text-[13px] font-semibold text-slate-900 leading-snug line-clamp-2">
           {hasLabel ? label : settingKey}
         </p>
 
         <div className="flex items-center gap-1.5 shrink-0 mt-px">
-          <span className={cn('text-[10px] font-semibold px-1.5 py-px rounded', typeCls)}>
+          {/* Type badge */}
+          <span className={cn(
+            'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
+            typeCls,
+          )}>
             {type}
           </span>
-          {/* Icon-only edit/close toggle */}
+
+          {/* Edit / close toggle */}
           <button
             type="button"
             onClick={() => setEditing((e) => !e)}
             aria-label={editing ? 'إلغاء' : 'تعديل الإعداد'}
             title={editing ? 'إلغاء' : 'تعديل'}
             className={cn(
-              'inline-flex items-center justify-center h-6 w-6 rounded-lg transition-colors',
+              'inline-flex items-center justify-center h-6 w-6 rounded-lg transition-colors shrink-0',
               editing
                 ? 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
                 : 'text-slate-400 hover:text-brand-600 hover:bg-brand-50',
@@ -179,7 +190,7 @@ export function SettingCard({
         </div>
       </div>
 
-      {/* ── Middle: value (view) or edit form (edit) ─────────────────────── */}
+      {/* ── Middle: value (view) or edit form ──────────────────────────── */}
       <div className="flex-1 flex items-center py-4">
         {editing ? (
           <form action={patchSettingAction} className="w-full space-y-2.5">
@@ -198,7 +209,7 @@ export function SettingCard({
             )}
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-800 block">القيمة الجديدة</label>
+              <label className="text-[12px] font-semibold text-slate-800 block">القيمة الجديدة</label>
               <EditInput type={type} preview={preview} sensitive={sensitive} />
             </div>
 
@@ -219,13 +230,21 @@ export function SettingCard({
         )}
       </div>
 
-      {/* ── Bottom: technical key + sensitive lock + updated date ───────── */}
+      {/* ── Bottom: technical key + lock + updated date ─────────────────── */}
       <div className="flex items-center justify-between gap-2 pt-3 border-t border-hairline">
-        <p className="font-mono text-[11px] text-slate-400 truncate min-w-0" dir="ltr">
+        <p
+          className="font-mono text-[11px] text-slate-400 truncate min-w-0"
+          dir="ltr"
+          title={settingKey}
+        >
           {settingKey}
         </p>
         <div className="flex items-center gap-1.5 shrink-0">
-          {sensitive && <Lock className="h-3 w-3 text-amber-400" />}
+          {sensitive && (
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded bg-amber-50">
+              <Lock className="h-2.5 w-2.5 text-amber-500" />
+            </span>
+          )}
           <p className="text-[10px] text-slate-400 whitespace-nowrap tabular-nums">{updatedAt}</p>
         </div>
       </div>
