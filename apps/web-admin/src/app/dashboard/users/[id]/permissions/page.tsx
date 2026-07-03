@@ -1,17 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, ShieldCheck, Info } from 'lucide-react';
+import { ChevronLeft, ShieldCheck, Info, Mail, Phone } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { UserPermissionsResponse, UserRole } from '@/lib/types';
-import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
+import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 import { PermissionPicker } from './permission-picker';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-// ── Role display maps ─────────────────────────────────────────────────────────
 
 const ROLE_LABEL: Record<UserRole, string> = {
   ADMIN:                  'مدير النظام',
@@ -56,8 +54,6 @@ function initials(name: string): string {
     .join('');
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────────
-
 export default async function UserPermissionsPage({
   params,
 }: {
@@ -72,7 +68,7 @@ export default async function UserPermissionsPage({
     <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <PageHeader
+      <PremiumPageHero
         title={`صلاحيات: ${user.fullName}`}
         description="إدارة الصلاحيات التفصيلية لهذا المستخدم. لا تغيِّر هذه الصفحة الدور الأساسي."
         breadcrumbs={[
@@ -80,72 +76,84 @@ export default async function UserPermissionsPage({
           { label: 'الصلاحيات', href: '/dashboard/permissions' },
           { label: user.fullName },
         ]}
-        meta={<ShieldCheck className="h-4 w-4 text-brand-600" />}
+        meta={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
+            <ShieldCheck className="h-3.5 w-3.5" />
+            صلاحيات شخصية
+          </span>
+        }
         actions={
           <Link href="/dashboard/permissions">
-            <Button variant="ghost" size="md" leftIcon={<ChevronLeft className="h-4 w-4" />}>
+            <Button variant="outline" size="sm" leftIcon={<ChevronLeft className="h-4 w-4" />}>
               العودة للصلاحيات
             </Button>
           </Link>
         }
       />
 
-      {/* ── Compact user summary ────────────────────────────────────────── */}
-      <div className="flex items-center gap-4 rounded-2xl border border-hairline bg-surface px-5 py-4 shadow-xs">
-        {/* Avatar initials */}
-        <span
-          className={cn(
-            'inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold leading-none',
-            avatarColor(user.id),
-          )}
-          aria-hidden
-        >
-          {initials(user.fullName)}
-        </span>
+      {/* ── User identity card ──────────────────────────────────────────── */}
+      <PremiumSectionCard padded={false}>
+        <div className="flex items-center gap-5 px-6 py-5">
+          {/* Avatar */}
+          <span
+            className={cn(
+              'inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-bold leading-none',
+              avatarColor(user.id),
+            )}
+            aria-hidden
+          >
+            {initials(user.fullName)}
+          </span>
 
-        {/* Identity + contact */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-base font-bold text-slate-900 leading-tight">{user.fullName}</span>
-            <span
-              className={cn(
-                'inline-block px-2 py-0.5 rounded-full text-xs font-medium leading-tight',
-                ROLE_BADGE_CLS[user.role] ?? 'bg-slate-100 text-slate-600',
-              )}
-            >
-              {ROLE_LABEL[user.role] ?? user.role}
-            </span>
-            <span
-              className={cn(
-                'inline-block px-2 py-0.5 rounded-full text-[10px] font-medium leading-tight',
-                user.active
-                  ? 'bg-success-50 text-success-700'
-                  : 'bg-slate-100 text-slate-500',
-              )}
-            >
-              {user.active ? 'نشط' : 'معطّل'}
-            </span>
-          </div>
-
-          {(user.email || user.phone) && (
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              {user.email && (
-                <span className="text-xs text-slate-500 font-mono" dir="ltr">{user.email}</span>
-              )}
-              {user.email && user.phone && (
-                <span className="text-slate-300 text-xs select-none" aria-hidden>·</span>
-              )}
-              {user.phone && (
-                <span className="text-xs text-slate-500 font-mono" dir="ltr">{user.phone}</span>
-              )}
+          {/* Identity */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="text-[17px] font-bold text-slate-900 leading-tight">
+                {user.fullName}
+              </span>
+              <span
+                className={cn(
+                  'inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold leading-tight',
+                  ROLE_BADGE_CLS[user.role] ?? 'bg-slate-100 text-slate-600',
+                )}
+              >
+                {ROLE_LABEL[user.role] ?? user.role}
+              </span>
+              <span
+                className={cn(
+                  'inline-block px-2.5 py-1 rounded-full text-[10px] font-semibold leading-tight',
+                  user.active
+                    ? 'bg-success-50 text-success-700 border border-success-200'
+                    : 'bg-slate-100 text-slate-500',
+                )}
+              >
+                {user.active ? 'نشط' : 'معطّل'}
+              </span>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* ── Info notice (compact single line) ───────────────────────────── */}
-      <div className="flex items-center gap-2 rounded-xl border border-info-100 bg-info-50 px-4 py-2.5 text-xs text-info-800">
-        <Info className="h-3.5 w-3.5 shrink-0 text-info-600" />
+            {(user.email || user.phone) && (
+              <div className="flex items-center gap-4 mt-1.5 flex-wrap">
+                {user.email && (
+                  <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-500">
+                    <Mail className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span className="font-mono" dir="ltr">{user.email}</span>
+                  </span>
+                )}
+                {user.phone && (
+                  <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-500">
+                    <Phone className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span className="font-mono" dir="ltr">{user.phone}</span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </PremiumSectionCard>
+
+      {/* ── Info notice ─────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2.5 rounded-xl border border-brand-100 bg-brand-50/40 px-4 py-3 text-[12px] text-brand-800">
+        <Info className="h-4 w-4 shrink-0 text-brand-600" />
         <span>
           الصلاحيات التفصيلية محفوظة في النظام وقد لا تكون مفعّلة على كل المسارات بعد.
           تغييرها لا يُعدِّل الدور الأساسي لـ {user.fullName}.

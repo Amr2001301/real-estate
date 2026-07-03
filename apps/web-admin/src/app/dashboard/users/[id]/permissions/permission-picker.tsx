@@ -1,15 +1,13 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Search,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  Loader2,
-  CheckCheck,
-  X,
+  Search, ShieldCheck, CheckCircle2, AlertCircle, Loader2,
+  CheckCheck, X, TrendingUp, Calendar, Bookmark, FileText,
+  CreditCard, Wrench, BarChart3, Lock, LayoutGrid, Award,
+  CircleDollarSign, Users as UsersIcon,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -21,6 +19,27 @@ import {
 } from '@/lib/permission-labels';
 import { cn } from '@/lib/cn';
 import { applyUserPermissions } from './actions';
+
+// ── Category icons (matches /dashboard/permissions catalog) ──────────────────
+
+const CATEGORY_ICON: Record<string, ReactNode> = {
+  'المبيعات':                 <TrendingUp />,
+  'الزيارات':                 <Calendar />,
+  'الحجوزات':                 <Bookmark />,
+  'العقود':                   <FileText />,
+  'الدفعات':                  <CreditCard />,
+  'الصيانة':                  <Wrench />,
+  'المستندات':                <FileText />,
+  'الوسطاء':                  <UsersIcon />,
+  'عمولات الوسطاء':           <CircleDollarSign />,
+  'عمولات المبيعات':          <Award />,
+  'التقارير':                 <BarChart3 />,
+  'المستخدمون والصلاحيات':    <ShieldCheck />,
+  'النظام والأمان':           <Lock />,
+  'أخرى':                     <LayoutGrid />,
+};
+
+// ── Types ────────────────────────────────────────────────────────────────────
 
 interface PermissionItem {
   id: string;
@@ -47,22 +66,25 @@ interface Row extends PermissionItem {
   type: PermissionType;
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export function PermissionPicker({ userId, userName, assigned, available }: Props) {
   const router = useRouter();
-  const [query, setQuery] = useState('');
+  const [query, setQuery]       = useState('');
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]       = useState<string | null>(null);
   const [busyCode, setBusyCode] = useState<string | null>(null);
 
   const allRows: Row[] = useMemo(() => {
-    const rows: Row[] = [
+    return [
       ...assigned.map((p) => ({ ...p, assigned: true })),
       ...available.map((p) => ({ ...p, assigned: false })),
-    ].map((p) => {
-      const meta = getPermissionMeta(p.code, p.description);
-      return { ...p, assigned: p.assigned, label: meta.label, desc: meta.description, group: meta.category, type: meta.type };
-    });
-    return rows.sort((a, b) => a.label.localeCompare(b.label, 'ar'));
+    ]
+      .map((p) => {
+        const meta = getPermissionMeta(p.code, p.description);
+        return { ...p, label: meta.label, desc: meta.description, group: meta.category, type: meta.type };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label, 'ar'));
   }, [assigned, available]);
 
   const assignedCount = assigned.length;
@@ -70,12 +92,11 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return allRows;
-    return allRows.filter(
-      (r) =>
-        r.code.toLowerCase().includes(q) ||
-        r.desc.toLowerCase().includes(q) ||
-        r.label.toLowerCase().includes(q) ||
-        r.group.toLowerCase().includes(q),
+    return allRows.filter((r) =>
+      r.code.toLowerCase().includes(q) ||
+      r.desc.toLowerCase().includes(q) ||
+      r.label.toLowerCase().includes(q) ||
+      r.group.toLowerCase().includes(q),
     );
   }, [allRows, query]);
 
@@ -104,46 +125,52 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
 
   function toggle(row: Row) {
     if (row.assigned) run([], [row.code], row.code);
-    else run([row.code], [], row.code);
+    else              run([row.code], [], row.code);
   }
 
   const matchUnassigned = filtered.filter((r) => !r.assigned).map((r) => r.code);
   const matchAssigned   = filtered.filter((r) =>  r.assigned).map((r) => r.code);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
 
       {/* ── Error banner ─────────────────────────────────────────────────── */}
       {error && (
-        <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-sm">
+        <div className="flex items-start gap-2.5 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <p className="font-medium">{error}</p>
         </div>
       )}
 
-      {/* ── Unified toolbar ──────────────────────────────────────────────── */}
-      <div className="rounded-2xl border border-hairline bg-surface shadow-xs overflow-hidden">
+      {/* ── Toolbar card ─────────────────────────────────────────────────── */}
+      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
 
-        {/* Top: count + saving indicator */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-hairline">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-brand-600 shrink-0" />
-            <span className="text-sm text-slate-700">
-              الصلاحيات الممنوحة:
-              <span className="font-bold text-slate-900 tabular-nums mx-1">{assignedCount}</span>
-              <span className="text-slate-400">/ {allRows.length}</span>
+        {/* Count row */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-hairline bg-canvas/40">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-700 shrink-0 [&_svg]:h-4 [&_svg]:w-4">
+              <ShieldCheck />
             </span>
+            <div>
+              <p className="text-[13px] font-semibold text-slate-800">الصلاحيات الممنوحة</p>
+              <p className="text-[11px] text-slate-400 tabular-nums mt-0.5">
+                <span className="font-bold text-brand-700">{assignedCount}</span>
+                {' '}من{' '}
+                <span className="font-medium text-slate-600">{allRows.length}</span>
+                {' '}صلاحية
+              </p>
+            </div>
           </div>
           {pending && (
-            <span className="inline-flex items-center gap-1.5 text-2xs text-slate-500">
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               جارٍ الحفظ…
             </span>
           )}
         </div>
 
-        {/* Bottom: search + bulk actions */}
-        <div className="flex flex-wrap items-center gap-2 px-4 py-2.5 bg-surface-muted/30">
+        {/* Search + bulk actions */}
+        <div className="flex flex-wrap items-center gap-2.5 px-5 py-3">
           <div className="flex-1 min-w-[200px]">
             <Input
               inputSize="sm"
@@ -153,7 +180,7 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
               leftAddon={<Search />}
             />
           </div>
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -180,31 +207,50 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
         </div>
       </div>
 
-      {/* ── Permission groups ─────────────────────────────────────────────── */}
-      <div className="max-h-[560px] overflow-y-auto scrollbar-thin rounded-xl ring-1 ring-inset ring-hairline divide-y divide-hairline">
-        {groups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 gap-2 text-slate-400">
-            <ShieldCheck className="h-8 w-8 opacity-30" />
-            <p className="text-sm font-medium text-slate-500">لا توجد صلاحيات مطابقة</p>
-            {query && (
-              <button
-                type="button"
-                onClick={() => setQuery('')}
-                className="text-xs text-brand-600 hover:underline mt-1"
-              >
-                مسح البحث
-              </button>
-            )}
-          </div>
-        ) : (
-          groups.map(([group, rows]) => {
+      {/* ── Permission group cards ────────────────────────────────────────── */}
+      {groups.length === 0 ? (
+        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft flex flex-col items-center justify-center py-16 gap-2.5">
+          <ShieldCheck className="h-10 w-10 text-slate-200" />
+          <p className="text-[13px] font-semibold text-slate-500">لا توجد صلاحيات مطابقة</p>
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="text-[12px] text-brand-600 hover:underline mt-0.5"
+            >
+              مسح البحث
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {groups.map(([group, rows]) => {
             const grantedInGroup = rows.filter((r) => r.assigned).length;
+            const allGranted     = grantedInGroup === rows.length;
+            const someGranted    = grantedInGroup > 0 && !allGranted;
+            const icon           = CATEGORY_ICON[group] ?? <ShieldCheck />;
+
             return (
-              <div key={group}>
-                {/* Group header */}
-                <div className="sticky top-0 z-10 bg-surface-muted/90 backdrop-blur-sm px-4 py-2 flex items-center justify-between border-b border-hairline">
-                  <span className="text-xs font-semibold text-slate-700">{group}</span>
-                  <span className="text-2xs font-medium text-slate-400 tabular-nums bg-surface rounded-full px-2 py-0.5">
+              <div
+                key={group}
+                className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden"
+              >
+                {/* Group header — same pattern as permissions catalog */}
+                <div className="flex items-center justify-between px-5 py-3 border-b border-hairline bg-surface-muted/40">
+                  <div className="flex items-center gap-2.5">
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-brand-700 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5">
+                      {icon}
+                    </span>
+                    <h3 className="text-[13px] font-semibold text-slate-800">{group}</h3>
+                  </div>
+                  <span
+                    className={cn(
+                      'inline-flex h-5 min-w-[40px] px-2 items-center justify-center rounded-full text-[10px] font-bold tabular-nums',
+                      allGranted  ? 'bg-success-100 text-success-700' :
+                      someGranted ? 'bg-brand-100   text-brand-700'   :
+                                    'bg-slate-100   text-slate-500',
+                    )}
+                  >
                     {grantedInGroup}/{rows.length}
                   </span>
                 </div>
@@ -215,30 +261,21 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
                     <li key={row.id}>
                       <label
                         className={cn(
-                          'flex items-center gap-3 px-4 py-2 cursor-pointer transition-colors',
-                          'hover:bg-slate-50',
-                          row.assigned && 'bg-brand-50/30 hover:bg-brand-50/50',
+                          'flex items-start gap-4 px-5 py-4 cursor-pointer transition-colors',
+                          row.assigned
+                            ? 'bg-success-50/20 hover:bg-success-50/30'
+                            : 'hover:bg-canvas/40',
                         )}
                       >
-                        {/* Checkbox */}
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 shrink-0 rounded border-hairline text-brand-600 focus:ring-2 focus:ring-brand-600/30 disabled:opacity-40 cursor-pointer"
-                          checked={row.assigned}
-                          disabled={pending}
-                          onChange={() => toggle(row)}
-                        />
-
-                        {/* Content */}
+                        {/* Content — takes up the full row */}
                         <div className="min-w-0 flex-1">
-                          {/* Name + type badge + busy spinner */}
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-sm font-semibold text-slate-900 leading-tight">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[13px] font-semibold text-slate-900 leading-tight">
                               {row.label}
                             </span>
                             <span
                               className={cn(
-                                'inline-block px-1.5 py-px rounded-full text-[10px] font-medium leading-tight shrink-0',
+                                'inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold leading-tight shrink-0',
                                 PERMISSION_TYPE_CLS[row.type],
                               )}
                             >
@@ -248,37 +285,46 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
                               <Loader2 className="h-3 w-3 animate-spin text-slate-400 shrink-0" />
                             )}
                           </div>
-
-                          {/* Description */}
-                          <p className="text-2xs text-slate-500 leading-snug mt-px">
-                            {row.desc}
-                          </p>
-
-                          {/* Technical code */}
-                          <p className="font-mono text-2xs text-slate-400 mt-px" dir="ltr">
+                          {row.desc && (
+                            <p className="text-[12px] text-slate-500 mt-0.5 leading-relaxed">
+                              {row.desc}
+                            </p>
+                          )}
+                          <p className="font-mono text-[11px] text-slate-400 mt-1.5 select-all" dir="ltr">
                             {row.code}
                           </p>
                         </div>
 
-                        {/* Granted indicator */}
-                        {row.assigned && busyCode !== row.code && (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-success-500 shrink-0" />
-                        )}
+                        {/* Granted tick OR checkbox */}
+                        <div className="shrink-0 mt-0.5">
+                          {row.assigned && busyCode !== row.code ? (
+                            <CheckCircle2 className="h-5 w-5 text-success-500" />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-hairline text-brand-600 focus:ring-2 focus:ring-brand-600/30 disabled:opacity-40 cursor-pointer mt-0.5"
+                              checked={row.assigned}
+                              disabled={pending}
+                              onChange={() => toggle(row)}
+                            />
+                          )}
+                        </div>
                       </label>
                     </li>
                   ))}
                 </ul>
               </div>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
-      {/* ── Footer note ──────────────────────────────────────────────────── */}
-      <p className="text-2xs text-slate-400 px-1">
+      {/* ── Footer ───────────────────────────────────────────────────────── */}
+      <p className="text-[11px] text-slate-400 px-1">
         التغييرات تُحفظ فوراً عند التحديد أو الإلغاء. لا يؤثر ذلك على دور{' '}
         <span className="font-medium text-slate-500">{userName}</span> الأساسي.
       </p>
+
     </div>
   );
 }
