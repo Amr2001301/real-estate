@@ -132,7 +132,7 @@ export interface Lead {
   projectInterestId: string | null;
   projectInterest?: { id: string; name: Translatable } | null;
   unitInterestId?: string | null;
-  unitInterest?: { id: string; code: string } | null;
+  unitInterest?: { id: string; code: string; type: string } | null;
   assignedSalesId: string | null;
   assignedSales?: { id: string; fullName: string } | null;
   stage: LeadStage;

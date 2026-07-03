@@ -39,6 +39,8 @@ export async function createLeadAction(
     sourceId: (String(formData.get('sourceId') ?? '').trim() || undefined),
     projectInterestId:
       (String(formData.get('projectInterestId') ?? '').trim() || undefined),
+    unitInterestId:
+      (String(formData.get('unitInterestId') ?? '').trim() || undefined),
     assignedSalesId:
       (String(formData.get('assignedSalesId') ?? '').trim() || undefined),
     notes: (String(formData.get('notes') ?? '').trim() || undefined),

@@ -105,12 +105,17 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
 
           {/* Unit row — indented under project */}
           {lead.unitInterest && (
-            <div className="flex items-center gap-1.5 ms-5">
+            <div className="flex items-center gap-1.5 ms-5 flex-wrap">
               <DoorOpen className="h-3 w-3 text-brand-400 shrink-0" />
               <span className="text-[10px] text-slate-400">الوحدة:</span>
               <span className="font-mono text-[10px] font-bold text-brand-700 bg-brand-50 border border-brand-100 px-1.5 py-0.5 rounded">
                 {lead.unitInterest.code}
               </span>
+              {lead.unitInterest.type && (
+                <span className="text-[10px] text-slate-400 bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">
+                  {lead.unitInterest.type}
+                </span>
+              )}
             </div>
           )}
         </div>

@@ -239,7 +239,7 @@ export class LeadsService {
           source: true,
           assignedSales: { select: { id: true, fullName: true } },
           projectInterest: { select: { id: true, name: true } },
-          unitInterest: { select: { id: true, code: true } },
+          unitInterest: { select: { id: true, code: true, type: true } },
           // Broker attribution — present only for broker-origin leads
           // (brokerId != null). Null for direct leads, so behavior is unchanged.
           broker: {

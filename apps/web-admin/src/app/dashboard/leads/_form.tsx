@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { Field } from '@/components/form/field';
 import { SubmitButton } from '@/components/form/submit-button';
@@ -16,6 +16,13 @@ import { tx } from '@/lib/format';
 import { createLeadAction, type LeadFormState } from './actions';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 
+interface SlimUnit {
+  id: string;
+  code: string;
+  type: string;
+  projectId: string;
+}
+
 const NAV_SECTIONS = [
   { id: 'section-client',     num: '01', label: 'العميل المرتبط',     sub: 'ربط الفرصة بعميل قائم أو جديد' },
   { id: 'section-interest',   num: '02', label: 'الاهتمام والمصدر',   sub: 'المشروع ومصدر الفرصة' },
@@ -26,15 +33,19 @@ interface Props {
   projects: Project[];
   sources: LeadSource[];
   sales: User[];
+  units?: SlimUnit[];
   /** Pre-selected client (e.g. when launched from Client Details). */
   initialClient?: User | null;
 }
 
-export default function LeadForm({ projects, sources, sales, initialClient }: Props) {
+export default function LeadForm({ projects, sources, sales, units = [], initialClient }: Props) {
   const [state, formAction] = useActionState<LeadFormState, FormData>(
     createLeadAction,
     {},
   );
+
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const filteredUnits = units.filter((u) => u.projectId === selectedProjectId);
 
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
@@ -77,7 +88,12 @@ export default function LeadForm({ projects, sources, sales, initialClient }: Pr
               </Select>
             </Field>
             <Field label="المشروع المهتم به" name="projectInterestId">
-              <Select id="projectInterestId" name="projectInterestId" defaultValue="">
+              <Select
+                id="projectInterestId"
+                name="projectInterestId"
+                defaultValue=""
+                onChange={(e) => setSelectedProjectId(e.target.value)}
+              >
                 <option value="">— غير محدد —</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -87,6 +103,28 @@ export default function LeadForm({ projects, sources, sales, initialClient }: Pr
               </Select>
             </Field>
           </div>
+
+          {/* Unit picker — appears after project is chosen */}
+          {selectedProjectId && (
+            <Field
+              label="الوحدة المهتم بها"
+              name="unitInterestId"
+              hint="اختياري — حدد الوحدة إن كان العميل مهتماً بوحدة بعينها."
+            >
+              <Select id="unitInterestId" name="unitInterestId" defaultValue="">
+                <option value="">— غير محدد —</option>
+                {filteredUnits.length === 0 ? (
+                  <option disabled value="">لا توجد وحدات متاحة لهذا المشروع</option>
+                ) : (
+                  filteredUnits.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.code}{u.type ? ` · ${u.type}` : ''}
+                    </option>
+                  ))
+                )}
+              </Select>
+            </Field>
+          )}
         </PremiumFormPanel>
 
         <PremiumFormPanel

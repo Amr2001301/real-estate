@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
-import type { Paged, Project, LeadSource, User } from '@/lib/types';
+import type { Paged, Project, LeadSource, User, Unit } from '@/lib/types';
 import LeadForm from '../_form';
 
 export const dynamic = 'force-dynamic';
@@ -13,14 +13,24 @@ export default async function NewLeadPage({
 }) {
   const sp = await searchParams;
 
-  const [projectsRes, sourcesRes, salesRes, clientRes] = await Promise.all([
+  const [projectsRes, sourcesRes, salesRes, clientRes, unitsRes] = await Promise.all([
     safe(api.get<Paged<Project>>('/projects?pageSize=100')),
     safe(api.get<LeadSource[]>('/lead-sources')),
     safe(api.get<Paged<User>>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
     sp.clientId
       ? safe(api.get<User>(`/users/${sp.clientId}`))
       : Promise.resolve({ data: null, error: null } as { data: User | null; error: null }),
+    safe(api.get<Paged<Unit>>('/units?pageSize=500')),
   ]);
+
+  // Slim unit shape for form: only what the picker needs
+  const unitOptions = (unitsRes.data?.data ?? []).map((u) => ({
+    id: u.id,
+    code: u.code,
+    type: u.type,
+    projectId: (u.building as { phase?: { project?: { id?: string } } } | undefined)
+      ?.phase?.project?.id ?? '',
+  }));
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -76,6 +86,7 @@ export default async function NewLeadPage({
         sources={sourcesRes.data ?? []}
         sales={salesRes.data?.data ?? []}
         initialClient={clientRes.data ?? null}
+        units={unitOptions}
       />
     </div>
   );
