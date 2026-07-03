@@ -7,6 +7,7 @@ import {
   GripVertical,
   CalendarClock,
   Briefcase,
+  DoorOpen,
 } from 'lucide-react';
 import type { Lead, LeadStage } from '@/lib/types';
 import { formatDateTime, tx } from '@/lib/format';
@@ -26,11 +27,11 @@ const STAGE_BORDER: Record<LeadStage, string> = {
 // Avatar palette — identity colours, not stage colours
 const AVATAR_PALETTE = [
   'bg-violet-100 text-violet-700',
-  'bg-sky-100 text-sky-700',
+  'bg-sky-100    text-sky-700',
   'bg-emerald-100 text-emerald-700',
-  'bg-rose-100 text-rose-700',
-  'bg-amber-100 text-amber-700',
-  'bg-slate-200 text-slate-600',
+  'bg-rose-100   text-rose-700',
+  'bg-amber-100  text-amber-700',
+  'bg-slate-200  text-slate-600',
 ];
 
 function paletteFor(seed: string): string {
@@ -53,15 +54,15 @@ interface InnerProps {
 }
 
 function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
-  const rawName = (lead.client?.fullName ?? lead.fullName)?.trim() ?? '';
+  const rawName     = (lead.client?.fullName ?? lead.fullName)?.trim() ?? '';
   const displayName = rawName || 'عميل غير مُعرَّف';
-  const isNameless = !rawName;
-  const phone = lead.client?.phone ?? lead.phone;
-  const email = lead.client?.email ?? lead.email;
+  const isNameless  = !rawName;
+  const phone       = lead.client?.phone ?? lead.phone;
+  const email       = lead.client?.email ?? lead.email;
   const isBrokerLead = !!lead.brokerId;
-  const brokerName = lead.broker?.commercialName || lead.broker?.companyName || lead.broker?.code || null;
-  const agentName = lead.brokerAgent?.fullName || null;
-  const avatarSeed = rawName.length > 1 ? rawName : lead.id;
+  const brokerName  = lead.broker?.commercialName || lead.broker?.companyName || lead.broker?.code || null;
+  const agentName   = lead.brokerAgent?.fullName || null;
+  const avatarSeed  = rawName.length > 1 ? rawName : lead.id;
 
   return (
     <div
@@ -75,10 +76,10 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
       )}
     >
       {/* ── Content ──────────────────────────────────────────── */}
-      <div className="px-4 pt-4 pb-3">
+      <div className="px-4 pt-4 pb-3 space-y-3">
 
-        {/* Name + ID */}
-        <div className="flex items-start justify-between gap-2 mb-3">
+        {/* ── Name + ID ──────────────────────────────────────── */}
+        <div className="flex items-start justify-between gap-2">
           <h4
             className={cn(
               'text-[14px] font-bold leading-snug flex-1 min-w-0',
@@ -87,51 +88,70 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
           >
             {displayName}
           </h4>
-          <span className="font-mono text-[10px] text-slate-400 shrink-0 mt-px leading-none whitespace-nowrap bg-slate-50 px-1.5 py-0.5 rounded">
+          <span className="font-mono text-[10px] text-slate-400 shrink-0 mt-px leading-none whitespace-nowrap bg-slate-50 border border-slate-100/80 px-1.5 py-0.5 rounded">
             #{lead.id.slice(0, 4).toUpperCase()}-{lead.id.slice(4, 8).toUpperCase()}
           </span>
         </div>
 
-        {/* Info rows */}
+        {/* ── Project + Unit ─────────────────────────────────── */}
         <div className="space-y-1.5">
-
-          {/* Project */}
+          {/* Project row */}
           <div className="flex items-start gap-2">
             <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-[1px]" />
             <span className="text-[12px] text-slate-600 leading-tight flex-1 truncate">
               {lead.projectInterest ? tx(lead.projectInterest.name) : 'مشروع غير محدد'}
             </span>
-            {lead.unitInterest && (
-              <span className="shrink-0 font-mono text-[10px] text-slate-500 bg-slate-100 border border-slate-200/80 px-1.5 py-0.5 rounded">
-                {lead.unitInterest.code}
-              </span>
-            )}
           </div>
 
-          {/* Broker */}
-          {isBrokerLead && (
-            <div className="flex items-center gap-2">
-              <Briefcase className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="text-[11px] text-slate-500 truncate">
-                {[brokerName, agentName].filter(Boolean).join(' · ') || 'وسيط'}
+          {/* Unit row — indented under project */}
+          {lead.unitInterest && (
+            <div className="flex items-center gap-1.5 ms-5">
+              <DoorOpen className="h-3 w-3 text-brand-400 shrink-0" />
+              <span className="text-[10px] text-slate-400">الوحدة:</span>
+              <span className="font-mono text-[10px] font-bold text-brand-700 bg-brand-50 border border-brand-100 px-1.5 py-0.5 rounded">
+                {lead.unitInterest.code}
               </span>
             </div>
           )}
-
-          {/* Upcoming visit */}
-          {lead.upcomingVisit && (
-            <div className="flex items-center gap-2">
-              <CalendarClock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-              <span className="text-[11px] text-slate-600 truncate flex-1">
-                {formatDateTime(lead.upcomingVisit.scheduledAt)}
-              </span>
-              <span className="text-[10px] text-slate-400 shrink-0">
-                {lead.upcomingVisit.status === 'CONFIRMED' ? 'مؤكدة' : 'مجدولة'}
-              </span>
-            </div>
-          )}
-
         </div>
+
+        {/* ── Broker — highlighted indigo chip ───────────────── */}
+        {isBrokerLead && (
+          <div className="flex items-start gap-2 rounded-lg bg-indigo-50 border border-indigo-100 px-2.5 py-2">
+            <Briefcase className="h-3.5 w-3.5 text-indigo-500 shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="text-[12px] font-semibold text-indigo-800 truncate leading-tight">
+                {brokerName || 'وسيط'}
+              </p>
+              {agentName && (
+                <p className="text-[10px] text-indigo-500 truncate leading-tight mt-0.5">
+                  {agentName}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Upcoming visit ─────────────────────────────────── */}
+        {lead.upcomingVisit && (
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-3.5 w-3.5 text-violet-400 shrink-0" />
+            <span className="text-[11px] text-slate-600 truncate flex-1">
+              {formatDateTime(lead.upcomingVisit.scheduledAt)}
+            </span>
+            <span
+              className={cn(
+                'text-[10px] font-semibold shrink-0 px-1.5 py-0.5 rounded-full whitespace-nowrap',
+                lead.upcomingVisit.status === 'CONFIRMED'
+                  ? 'bg-success-50 text-success-700 border border-success-100'
+                  : 'bg-violet-50  text-violet-700  border border-violet-100',
+              )}
+            >
+              {lead.upcomingVisit.status === 'CONFIRMED' ? 'مؤكدة' : 'مجدولة'}
+            </span>
+          </div>
+        )}
+
       </div>
 
       {/* ── Footer ───────────────────────────────────────────── */}
@@ -152,6 +172,16 @@ function LeadCardBody({ lead, dragging, showGrip }: InnerProps) {
         {lead.client?.hasAccount && (
           <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full ring-1 ring-inset ring-emerald-200 whitespace-nowrap">
             ✓ مسجل
+          </span>
+        )}
+
+        {/* Assigned sales indicator */}
+        {lead.assignedSales && !isBrokerLead && (
+          <span
+            className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full truncate max-w-[70px] whitespace-nowrap"
+            title={lead.assignedSales.fullName}
+          >
+            {lead.assignedSales.fullName.split(' ')[0]}
           </span>
         )}
 

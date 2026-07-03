@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, AlertCircle } from 'lucide-react';
+import { Plus, AlertCircle, Kanban } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, LeadStage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -43,6 +43,12 @@ export default async function LeadsPage({
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'فرص المبيعات' },
         ]}
+        meta={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
+            <Kanban className="h-3.5 w-3.5" />
+            Kanban
+          </span>
+        }
         actions={
           <div className="flex items-center gap-2">
             <LeadsFilterPopover defaultStage={sp.stage} defaultQ={sp.q} />
