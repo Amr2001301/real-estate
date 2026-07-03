@@ -5,6 +5,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { InstallmentPlanTemplate, PlanPaymentType } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { PlanTemplateStatusBadge } from '@/components/badges';
 import { PlanDetailActions } from '../_components/plan-detail-actions';
@@ -52,6 +53,7 @@ export default async function InstallmentPlanDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
 
   const [planRes, session] = await Promise.all([
     safe(api.get<InstallmentPlanTemplate>(`/installment-plan-templates/${id}`)),
@@ -104,25 +106,25 @@ export default async function InstallmentPlanDetailPage({
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
                 <Field label="صافي السعر">
                   <span className="text-[15px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.netPrice)}
+                    {formatCurrency(plan.netPrice, currency)}
                   </span>
                 </Field>
                 <Field label="السعر الإجمالي">
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.totalPrice)}
+                    {formatCurrency(plan.totalPrice, currency)}
                   </span>
                 </Field>
                 {Number(plan.discountAmount) > 0 && (
                   <Field label="الخصم">
                     <span className="text-[14px] font-bold tabular-nums text-success-700">
-                      − {formatCurrency(plan.discountAmount)}
+                      − {formatCurrency(plan.discountAmount, currency)}
                     </span>
                   </Field>
                 )}
                 <Field label="دفعة الحجز">
                   <div>
                     <span className={`text-[14px] font-bold tabular-nums ${Number(plan.reservationAmount) > 0 ? 'text-slate-900' : 'text-warning-600'}`}>
-                      {formatCurrency(plan.reservationAmount)}
+                      {formatCurrency(plan.reservationAmount, currency)}
                     </span>
                     {Number(plan.reservationAmount) <= 0 && (
                       <p className="text-[10px] text-warning-700 mt-0.5">
@@ -133,7 +135,7 @@ export default async function InstallmentPlanDetailPage({
                 </Field>
                 <Field label="الدفعة الأولى">
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(plan.downPaymentAmount)}
+                    {formatCurrency(plan.downPaymentAmount, currency)}
                     {plan.downPaymentType === 'PERCENTAGE' && (
                       <span className="text-[12px] font-semibold text-slate-400 ms-1.5">
                         ({Number(plan.downPaymentValue)}%)
@@ -170,7 +172,7 @@ export default async function InstallmentPlanDetailPage({
                 {plan.finalPaymentAmount && Number(plan.finalPaymentAmount) > 0 && (
                   <Field label="الدفعة الأخيرة">
                     <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                      {formatCurrency(plan.finalPaymentAmount)}
+                      {formatCurrency(plan.finalPaymentAmount, currency)}
                     </span>
                   </Field>
                 )}
@@ -186,6 +188,7 @@ export default async function InstallmentPlanDetailPage({
                   reservationAmount={Number(plan.reservationAmount)}
                   downPaymentAmount={Number(plan.downPaymentAmount)}
                   totalPrice={Number(plan.totalPrice)}
+                  currency={currency}
                 />
               </PremiumSectionCard>
             ) : (
@@ -222,10 +225,10 @@ export default async function InstallmentPlanDetailPage({
                               {item.dueDate ? formatDate(item.dueDate) : '—'}
                             </td>
                             <td className="px-4 py-3 text-end text-[13px] font-bold tabular-nums text-slate-900">
-                              {formatCurrency(item.amount)}
+                              {formatCurrency(item.amount, currency)}
                             </td>
                             <td className="px-4 py-3 text-end text-[12px] text-slate-400 tabular-nums">
-                              {formatCurrency(item.remainingBalance)}
+                              {formatCurrency(item.remainingBalance, currency)}
                             </td>
                           </tr>
                         ))}
@@ -238,6 +241,7 @@ export default async function InstallmentPlanDetailPage({
                           <td className="px-4 py-3 text-end text-[13px] font-bold text-slate-900 tabular-nums">
                             {formatCurrency(
                               scheduleItems.reduce((s, i) => s + Number(i.amount), 0),
+                              currency,
                             )}
                           </td>
                           <td />

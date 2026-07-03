@@ -17,6 +17,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Contract } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { ContractPdfPanel } from './pdf-panel';
@@ -63,6 +64,7 @@ export default async function ContractDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const r = await safe(api.get<Contract>(`/contracts/${id}`));
 
   if (r.error || !r.data) {
@@ -117,10 +119,10 @@ export default async function ContractDetailPage({
                   <span className="font-mono text-[15px] font-bold text-brand-700">{displayNumber}</span>
                 </Field>
                 <Field label="إجمالي العقد">
-                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.totalAmount)}</span>
+                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.totalAmount, currency)}</span>
                 </Field>
                 <Field label="الدفعة المقدمة">
-                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.downPayment)}</span>
+                  <span className="text-[15px] font-bold tabular-nums text-slate-900">{formatCurrency(contract.downPayment, currency)}</span>
                 </Field>
                 <Field label="تاريخ التوقيع">
                   {contract.signedAt ? (
@@ -229,7 +231,7 @@ export default async function ContractDetailPage({
                       <span className="text-[14px] font-bold tabular-nums text-slate-900">{plan.totalMonths} شهر</span>
                     </Field>
                     <Field label="القسط الشهري">
-                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{formatCurrency(plan.monthlyAmount)}</span>
+                      <span className="text-[14px] font-bold tabular-nums text-slate-900">{formatCurrency(plan.monthlyAmount, currency)}</span>
                     </Field>
                     <Field label="تاريخ البدء">
                       <span className="text-[14px] font-bold text-slate-900">{formatDate(plan.startsAt)}</span>
@@ -284,7 +286,7 @@ export default async function ContractDetailPage({
                                     {formatDate(inst.dueDate)}
                                   </td>
                                   <td className="px-4 py-3 text-[13px] font-bold tabular-nums text-slate-900">
-                                    {formatCurrency(inst.amount)}
+                                    {formatCurrency(inst.amount, currency)}
                                   </td>
                                   <td className="px-4 py-3">
                                     <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold', s.cls)}>
@@ -302,6 +304,7 @@ export default async function ContractDetailPage({
                                         amount={inst.amount}
                                         dueDate={inst.dueDate}
                                         installmentType={inst.type}
+                                        currency={currency}
                                       />
                                     )}
                                   </td>
@@ -398,11 +401,11 @@ export default async function ContractDetailPage({
                             href={`/dashboard/deposits/${d.id}`}
                             className="text-[15px] font-bold tabular-nums text-brand-700 hover:underline"
                           >
-                            {formatCurrency(d.amount)}
+                            {formatCurrency(d.amount, currency)}
                           </Link>
                         ) : (
                           <span className="text-[15px] font-bold tabular-nums text-slate-900">
-                            {formatCurrency(d.amount)}
+                            {formatCurrency(d.amount, currency)}
                           </span>
                         )}
                         <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(d.paidAt)}</p>
@@ -545,12 +548,12 @@ export default async function ContractDetailPage({
               <div className="divide-y divide-hairline">
                 <SideRow label="الإجمالي">
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(contract.totalAmount)}
+                    {formatCurrency(contract.totalAmount, currency)}
                   </span>
                 </SideRow>
                 <SideRow label="الدفعة المقدمة">
                   <span className="text-[13px] font-semibold tabular-nums text-slate-700">
-                    {formatCurrency(contract.downPayment)}
+                    {formatCurrency(contract.downPayment, currency)}
                   </span>
                 </SideRow>
                 {plan && (
@@ -562,7 +565,7 @@ export default async function ContractDetailPage({
                     </SideRow>
                     <SideRow label="القسط الشهري">
                       <span className="text-[13px] font-semibold tabular-nums text-slate-700">
-                        {formatCurrency(plan.monthlyAmount)}
+                        {formatCurrency(plan.monthlyAmount, currency)}
                       </span>
                     </SideRow>
                   </>

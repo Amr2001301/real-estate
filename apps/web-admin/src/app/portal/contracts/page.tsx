@@ -13,6 +13,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalContract, PortalProject } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -66,6 +67,7 @@ export default async function PortalContractsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -179,7 +181,7 @@ export default async function PortalContractsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   قيمة الصفحة:{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageValue)}</span>
+                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageValue, currency)}</span>
                 </span>
               </>
             )}
@@ -290,13 +292,13 @@ export default async function PortalContractsPage({
                       )}
                       {c.reservation?.commissionLockedAmount != null && (
                         <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                          {formatCurrency(c.reservation.commissionLockedAmount)}
+                          {formatCurrency(c.reservation.commissionLockedAmount, currency)}
                         </p>
                       )}
                     </td>
 
                     <td className="py-3 px-4 tabular-nums font-semibold text-slate-900 text-xs">
-                      {formatCurrency(c.totalAmount)}
+                      {formatCurrency(c.totalAmount, currency)}
                     </td>
 
                     <td className="py-3 px-4">

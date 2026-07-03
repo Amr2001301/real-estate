@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalLead, PortalUnit } from '@/lib/types';
+import { getReportsCurrency } from '@/lib/currency';
 import PortalReservationForm from '../_form';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
 export default async function NewPortalReservationPage() {
-  const [leadsRes, unitsRes] = await Promise.all([
+  const [leadsRes, unitsRes, currency] = await Promise.all([
     safe(
       api.get<Paged<PortalLead>>(
         '/portal/leads?brokerApprovalStatus=APPROVED&pageSize=200',
@@ -19,6 +20,7 @@ export default async function NewPortalReservationPage() {
     safe(
       api.get<Paged<PortalUnit>>('/portal/units?status=AVAILABLE&pageSize=200'),
     ),
+    getReportsCurrency(),
   ]);
 
   return (
@@ -73,6 +75,7 @@ export default async function NewPortalReservationPage() {
       <PortalReservationForm
         approvedLeads={leadsRes.data?.data ?? []}
         units={unitsRes.data?.data ?? []}
+        currency={currency}
       />
     </div>
   );

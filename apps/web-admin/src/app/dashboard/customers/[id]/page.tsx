@@ -24,6 +24,7 @@ import type {
   Paged,
 } from '@/lib/types';
 import { formatDate, formatDateTime, formatCurrency, tx } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MaintenanceStatusBadge } from '@/components/badges';
@@ -71,6 +72,7 @@ export default async function CustomerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const [userRes, contractsRes, maintenanceRes, documentsRes] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
     safe(api.get<Paged<Contract>>(`/contracts?customerId=${id}&pageSize=20`)),
@@ -260,7 +262,7 @@ export default async function CustomerDetailPage({
                                 {projectName ? `${projectName} · ` : ''}وحدة {c.unit?.code ?? '—'}
                               </p>
                               <p className="shrink-0 text-[14px] font-bold text-slate-800 tabular-nums leading-snug">
-                                {formatCurrency(c.totalAmount)}
+                                {formatCurrency(c.totalAmount, currency)}
                               </p>
                             </div>
                             {/* Bottom line: contract# · date  |  signed badge */}

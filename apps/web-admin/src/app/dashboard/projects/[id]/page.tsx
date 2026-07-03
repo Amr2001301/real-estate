@@ -17,6 +17,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Project, Paged, Unit } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,7 @@ export default async function ProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
 
   const [projectRes, unitsRes] = await Promise.all([
     safe(api.get<Project>(`/projects/${id}`)),
@@ -483,7 +485,7 @@ export default async function ProjectDetailPage({
                           {u.area} م²
                         </td>
                         <td className="py-3.5 px-3 text-[13px] font-semibold text-brand-700 tabular-nums">
-                          {formatCurrency(u.price)}
+                          {formatCurrency(u.price, currency)}
                         </td>
                         <td className="py-3.5 px-3">
                           <UnitStatusBadge status={u.status} />

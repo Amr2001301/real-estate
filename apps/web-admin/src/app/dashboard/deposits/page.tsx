@@ -8,6 +8,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { PagedDeposits, Deposit, DepositType, Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -98,6 +99,7 @@ export default async function DepositsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   // Registering + verifying deposits are admin/finance actions; SALES is read-only.
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
@@ -167,7 +169,7 @@ export default async function DepositsPage({
         metrics={[
           {
             label: 'إجمالي المحصّل',
-            value: totals ? formatCurrency(totals.totalAmount) : '—',
+            value: totals ? formatCurrency(totals.totalAmount, currency) : '—',
             icon: <DollarSign />,
             tone: 'brand',
             primary: true,
@@ -175,13 +177,13 @@ export default async function DepositsPage({
           },
           {
             label: 'مبالغ الحجز',
-            value: totals ? formatCurrency(totals.bookingAmount) : '—',
+            value: totals ? formatCurrency(totals.bookingAmount, currency) : '—',
             icon: <Landmark />,
             tone: 'info',
           },
           {
             label: 'الأقساط الشهرية',
-            value: totals ? formatCurrency(totals.installment) : '—',
+            value: totals ? formatCurrency(totals.installment, currency) : '—',
             icon: <CreditCard />,
             tone: 'neutral',
           },
@@ -432,7 +434,7 @@ export default async function DepositsPage({
                       </td>
 
                       <td className="px-4 py-2.5 font-semibold tabular-nums whitespace-nowrap text-slate-800">
-                        {formatCurrency(d.amount)}
+                        {formatCurrency(d.amount, currency)}
                       </td>
 
                       <td className="px-4 py-2.5 text-xs text-slate-500 whitespace-nowrap tabular-nums">

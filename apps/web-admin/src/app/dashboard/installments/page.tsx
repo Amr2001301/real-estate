@@ -4,6 +4,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { formatDate, formatCurrency, tx } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ export default async function InstallmentPlansPage({
   }>;
 }) {
   const [sp, session] = await Promise.all([searchParams, getSession()]);
+  const currency = await getReportsCurrency();
   const isAdmin = session?.role === 'ADMIN';
   const page = Number(sp.page ?? 1);
   const pageSize = 20;
@@ -225,7 +227,7 @@ export default async function InstallmentPlansPage({
                       </div>
                     </td>
                     <td className="py-3 px-4 tabular-nums font-medium text-slate-800">
-                      {formatCurrency(r.netPrice)}
+                      {formatCurrency(r.netPrice, currency)}
                     </td>
                     <td className="py-3 px-4">
                       {(() => {

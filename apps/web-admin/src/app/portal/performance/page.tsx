@@ -17,6 +17,7 @@ import type {
   PortalProject,
 } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -104,6 +105,7 @@ export default async function PortalPerformancePage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const qs = new URLSearchParams();
   for (const key of ['from', 'to', 'projectId', 'brokerAgentId'] as const) {
     const v = sp[key];
@@ -197,9 +199,9 @@ export default async function PortalPerformancePage({
           { label: 'فرص مُرسلة',     value: summary.leadsSubmitted,     icon: <UserPlus />,      tone: 'brand'   },
           { label: 'حجوزات',          value: summary.reservationsCreated, icon: <BookmarkCheck />, tone: 'info'    },
           { label: 'عقود موقّعة',     value: summary.contractsSigned,     icon: <FileText />,      tone: 'teal'    },
-          { label: 'إجمالي المبيعات', value: formatCurrency(summary.salesGross),        icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
-          { label: 'صافي العمولات',   value: formatCurrency(summary.commissionsNet),    icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
-          { label: 'مدفوع',           value: formatCurrency(summary.payoutsTotalNet),   icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
+          { label: 'إجمالي المبيعات', value: formatCurrency(summary.salesGross, currency),        icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: 'صافي العمولات',   value: formatCurrency(summary.commissionsNet, currency),    icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
+          { label: 'مدفوع',           value: formatCurrency(summary.payoutsTotalNet, currency),   icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
         ]}
       />
 
@@ -249,7 +251,7 @@ export default async function PortalPerformancePage({
             <p className="text-2xs text-slate-500">آخر 6 أشهر أو حسب نطاق التاريخ</p>
           </div>
           <div className="flex-1">
-            <MonthlyTrendChart data={perf.monthlyTrend} />
+            <MonthlyTrendChart data={perf.monthlyTrend} currency={currency} />
           </div>
         </div>
       </div>
@@ -293,16 +295,16 @@ export default async function PortalPerformancePage({
                         <p className="text-2xs text-slate-400 mt-0.5">موقّع / إجمالي</p>
                       </td>
                       <td className="py-3 px-4">
-                        <p className="tabular-nums text-xs font-semibold text-slate-900">{formatCurrency(p.salesGross)}</p>
+                        <p className="tabular-nums text-xs font-semibold text-slate-900">{formatCurrency(p.salesGross, currency)}</p>
                         <div className="mt-1.5 h-1.5 w-24 rounded-full bg-surface-muted overflow-hidden">
                           <div className="h-full bg-brand-400 rounded-full" style={{ width: `${barPct}%` }} />
                         </div>
                       </td>
                       <td className="py-3 px-4 tabular-nums text-xs font-semibold text-slate-900">
-                        {formatCurrency(p.commissionNet)}
+                        {formatCurrency(p.commissionNet, currency)}
                       </td>
                       <td className="py-3 px-4 tabular-nums text-xs text-slate-700">
-                        {formatCurrency(p.payoutNet)}
+                        {formatCurrency(p.payoutNet, currency)}
                       </td>
                     </tr>
                   );
@@ -357,9 +359,9 @@ export default async function PortalPerformancePage({
                     <td className="py-3 px-4 tabular-nums text-slate-700">{a.leadsSubmitted}</td>
                     <td className="py-3 px-4 tabular-nums text-slate-700">{a.reservations}</td>
                     <td className="py-3 px-4 tabular-nums text-slate-700">{a.contractsSigned}</td>
-                    <td className="py-3 px-4 tabular-nums text-xs text-slate-700">{formatCurrency(a.salesGross)}</td>
+                    <td className="py-3 px-4 tabular-nums text-xs text-slate-700">{formatCurrency(a.salesGross, currency)}</td>
                     <td className="py-3 px-4 tabular-nums text-xs font-semibold text-slate-900">
-                      {formatCurrency(a.commissionNet)}
+                      {formatCurrency(a.commissionNet, currency)}
                     </td>
                   </tr>
                 ))}

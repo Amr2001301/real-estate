@@ -12,6 +12,7 @@ import { CodeText } from '@/components/ui/code-text';
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalPayout } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { IconButton } from '@/components/ui/icon-button';
 import { Pagination } from '@/components/ui/pagination';
@@ -51,6 +52,7 @@ export default async function PortalPayoutsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -124,7 +126,7 @@ export default async function PortalPayoutsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   صافي الصفحة:{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageNet)}</span>
+                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageNet, currency)}</span>
                 </span>
               </>
             )}
@@ -133,7 +135,7 @@ export default async function PortalPayoutsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   مدفوع منها:{' '}
-                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(paidNet)}</span>
+                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(paidNet, currency)}</span>
                 </span>
               </>
             )}
@@ -204,7 +206,7 @@ export default async function PortalPayoutsPage({
                               : 'text-slate-900',
                         )}
                       >
-                        {formatCurrency(p.totalNet)}
+                        {formatCurrency(p.totalNet, currency)}
                       </p>
                       {isPaid && (
                         <p className="text-2xs text-success-600 mt-0.5 flex items-center gap-0.5 font-medium">

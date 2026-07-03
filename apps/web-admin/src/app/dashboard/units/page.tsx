@@ -16,6 +16,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged, Unit, Project } from '@/lib/types';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Select } from '@/components/ui/select';
@@ -53,6 +54,7 @@ export default async function UnitsPage({
   searchParams: Promise<Filters>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   // Unit mutations are ADMIN-only — SALES browses read-only.
@@ -142,7 +144,7 @@ export default async function UnitsPage({
         metrics={[
           {
             label:   'القيمة الإجمالية',
-            value:   formatCurrency(all.reduce((s, u) => s + Number(u.price ?? 0), 0)),
+            value:   formatCurrency(all.reduce((s, u) => s + Number(u.price ?? 0), 0), currency),
             icon:    <CircleDollarSign />,
             tone:    'brand',
             primary: true,
@@ -351,7 +353,7 @@ export default async function UnitsPage({
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-semibold text-brand-700 tabular-nums whitespace-nowrap">
-                      {formatCurrency(u.price)}
+                      {formatCurrency(u.price, currency)}
                     </td>
                     <td className="py-3.5 px-4">
                       <UnitStatusBadge status={u.status} />

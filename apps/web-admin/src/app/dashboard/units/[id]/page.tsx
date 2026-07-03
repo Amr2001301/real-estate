@@ -27,6 +27,7 @@ import type {
   UnitStatusHistoryEntry,
 } from '@/lib/types';
 import { tx, formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ReservationStatusBadge, UnitStatusBadge } from '@/components/badges';
@@ -61,6 +62,7 @@ export default async function UnitDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const [unitRes, reservationsRes] = await Promise.all([
     safe(api.get<Unit>(`/units/${id}`)),
     safe(api.get<Paged<Reservation>>(`/reservations?unitId=${id}&pageSize=20`)),
@@ -111,7 +113,7 @@ export default async function UnitDetailPage({
             <UnitStatusBadge status={unit.status} />
             <Badge tone="gray" variant="soft">{unit.type}</Badge>
             <span className="text-sm font-semibold text-navy tabular-nums">
-              {formatCurrency(unit.price)}
+              {formatCurrency(unit.price, currency)}
             </span>
           </>
         }
@@ -135,7 +137,7 @@ export default async function UnitDetailPage({
           <div className="absolute bottom-4 start-5 end-5 flex items-end justify-between gap-3">
             <div>
               <p className="text-[11px] text-white/60">السعر الإجمالي</p>
-              <p className="mt-0.5 text-xl font-bold text-white tabular-nums">{formatCurrency(unit.price)}</p>
+              <p className="mt-0.5 text-xl font-bold text-white tabular-nums">{formatCurrency(unit.price, currency)}</p>
             </div>
             <UnitStatusBadge status={unit.status} />
           </div>

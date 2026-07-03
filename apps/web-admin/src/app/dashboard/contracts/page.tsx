@@ -4,6 +4,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ export default async function ContractsPage({
   }>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Number(sp.page ?? 1);
   const pageSize = 20;
 
@@ -229,9 +231,9 @@ export default async function ContractsPage({
             header: 'الإجمالي / المقدم',
             cell: (c) => (
               <div className="tabular-nums text-sm">
-                <p className="font-semibold">{formatCurrency(c.totalAmount)}</p>
+                <p className="font-semibold">{formatCurrency(c.totalAmount, currency)}</p>
                 {Number(c.downPayment) > 0 && (
-                  <p className="text-xs text-slate-400">مقدم: {formatCurrency(c.downPayment)}</p>
+                  <p className="text-xs text-slate-400">مقدم: {formatCurrency(c.downPayment, currency)}</p>
                 )}
               </div>
             ),

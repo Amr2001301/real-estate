@@ -24,10 +24,11 @@ interface BrokerOption {
 }
 
 interface Props {
-  brokers: BrokerOption[];
-  selectedBrokerId: string;
-  brokerName: string | null;
-  eligible: AdminEligibleCommission[];
+  brokers:           BrokerOption[];
+  selectedBrokerId:  string;
+  brokerName:        string | null;
+  eligible:          AdminEligibleCommission[];
+  currency?:         string;
 }
 
 function FormField({
@@ -60,6 +61,7 @@ export default function CreatePayoutForm({
   selectedBrokerId,
   brokerName,
   eligible,
+  currency = 'SAR',
 }: Props) {
   const router = useRouter();
   const [state, formAction] = useActionState<BrokerPayoutActionState, FormData>(
@@ -215,10 +217,10 @@ export default function CreatePayoutForm({
                           {c.project && <> · {tx(c.project.name)}</>}
                         </p>
                         <p className="text-[11px] text-slate-500 mt-1 tabular-nums">
-                          إجمالي {formatCurrency(c.grossAmount)}
+                          إجمالي {formatCurrency(c.grossAmount, currency)}
                           {' · '}صافي{' '}
                           <span className="font-bold text-success-700">
-                            {formatCurrency(c.netAmount)}
+                            {formatCurrency(c.netAmount, currency)}
                           </span>
                         </p>
                       </div>
@@ -236,7 +238,7 @@ export default function CreatePayoutForm({
                     إجمالي قبل الخصم
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(totals.gross)}
+                    {formatCurrency(totals.gross, currency)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5">
@@ -244,7 +246,7 @@ export default function CreatePayoutForm({
                     الضريبة
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(totals.tax)}
+                    {formatCurrency(totals.tax, currency)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5">
@@ -252,7 +254,7 @@ export default function CreatePayoutForm({
                     حجز ضريبي
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
-                    {formatCurrency(totals.withholding)}
+                    {formatCurrency(totals.withholding, currency)}
                   </p>
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5 bg-success-50/40">
@@ -260,7 +262,7 @@ export default function CreatePayoutForm({
                     الصافي المستحق
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-success-700">
-                    {formatCurrency(totals.net)}
+                    {formatCurrency(totals.net, currency)}
                   </p>
                 </div>
               </div>

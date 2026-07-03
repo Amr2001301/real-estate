@@ -10,6 +10,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalCommission, PortalProject } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { IconButton } from '@/components/ui/icon-button';
 import { CodeText } from '@/components/ui/code-text';
@@ -43,6 +44,7 @@ export default async function PortalCommissionsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -116,12 +118,12 @@ export default async function PortalCommissionsPage({
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   إجمالي:{' '}
-                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageGross)}</span>
+                  <span className="font-semibold text-slate-700 tabular-nums">{formatCurrency(pageGross, currency)}</span>
                 </span>
                 <div className="w-px h-4 bg-hairline" />
                 <span>
                   صافي:{' '}
-                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(pageNet)}</span>
+                  <span className="font-semibold text-success-700 tabular-nums">{formatCurrency(pageNet, currency)}</span>
                 </span>
               </>
             )}
@@ -181,10 +183,10 @@ export default async function PortalCommissionsPage({
 
                     <td className="py-3 px-4">
                       <p className="text-sm font-bold text-slate-900 tabular-nums">
-                        {formatCurrency(c.netAmount)}
+                        {formatCurrency(c.netAmount, currency)}
                       </p>
                       <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
-                        من {formatCurrency(c.grossAmount)}
+                        من {formatCurrency(c.grossAmount, currency)}
                         {deduction > 0.1 && ` · خصم ${deduction.toFixed(1)}%`}
                       </p>
                     </td>

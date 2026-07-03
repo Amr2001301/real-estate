@@ -15,6 +15,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { BrokerDetailReport, Paged, Project } from '@/lib/types';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,6 +58,7 @@ export default async function BrokerPerformancePage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
 
   const qs = new URLSearchParams();
   for (const key of ['from', 'to', 'projectId', 'brokerAgentId'] as const) {
@@ -137,9 +139,9 @@ export default async function BrokerPerformancePage({
           { label: 'فرص مُرسلة',     value: summary.leadsSubmitted,                  icon: <UserPlus />,     tone: 'brand'   },
           { label: 'حجوزات',         value: summary.reservationsCreated,             icon: <BookmarkCheck />, tone: 'info'    },
           { label: 'عقود موقّعة',    value: summary.contractsSigned,                 icon: <FileText />,     tone: 'purple'  },
-          { label: 'إجمالي المبيعات', value: formatCurrency(summary.salesGross),     icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
-          { label: 'صافي العمولات',  value: formatCurrency(summary.commissionsNet),  icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
-          { label: 'مدفوع',          value: formatCurrency(summary.payoutsTotalNet), icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
+          { label: 'إجمالي المبيعات', value: formatCurrency(summary.salesGross, currency),     icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: 'صافي العمولات',  value: formatCurrency(summary.commissionsNet, currency),  icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
+          { label: 'مدفوع',          value: formatCurrency(summary.payoutsTotalNet, currency), icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
         ]}
       />
 
@@ -183,7 +185,7 @@ export default async function BrokerPerformancePage({
           </h2>
           <p className="text-2xs text-slate-500">آخر 6 أشهر (افتراضي) أو حسب نطاق التاريخ</p>
         </div>
-        <MonthlyTrendChart data={report.monthlyTrend} />
+        <MonthlyTrendChart data={report.monthlyTrend} currency={currency} />
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -217,8 +219,8 @@ export default async function BrokerPerformancePage({
                       {p.city && <p className="text-2xs text-slate-500 mt-0.5">{p.city}</p>}
                     </td>
                     <td className="py-3 px-4 tabular-nums">{p.contractsSigned} / {p.contracts}</td>
-                    <td className="py-3 px-4 tabular-nums">{formatCurrency(p.salesGross)}</td>
-                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(p.commissionNet)}</td>
+                    <td className="py-3 px-4 tabular-nums">{formatCurrency(p.salesGross, currency)}</td>
+                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(p.commissionNet, currency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -257,7 +259,7 @@ export default async function BrokerPerformancePage({
                     </td>
                     <td className="py-3 px-4 tabular-nums">{a.leadsSubmitted}</td>
                     <td className="py-3 px-4 tabular-nums">{a.reservations}</td>
-                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(a.commissionNet)}</td>
+                    <td className="py-3 px-4 tabular-nums font-semibold">{formatCurrency(a.commissionNet, currency)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -342,7 +344,7 @@ export default async function BrokerPerformancePage({
                   </p>
                 </div>
                 <span className="text-xs font-semibold tabular-nums">
-                  {formatCurrency(c.totalAmount)}
+                  {formatCurrency(c.totalAmount, currency)}
                 </span>
               </li>
             ))}
@@ -372,7 +374,7 @@ export default async function BrokerPerformancePage({
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <BrokerCommissionStatusBadge status={c.status} />
-                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(c.netAmount)}</span>
+                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(c.netAmount, currency)}</span>
                 </div>
               </li>
             ))}
@@ -386,7 +388,7 @@ export default async function BrokerPerformancePage({
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   <BrokerPayoutStatusBadge status={p.status} />
-                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(p.totalNet)}</span>
+                  <span className="text-xs font-semibold tabular-nums">{formatCurrency(p.totalNet, currency)}</span>
                 </div>
               </li>
             ))}

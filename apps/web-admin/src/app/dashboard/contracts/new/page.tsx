@@ -2,13 +2,15 @@ import Link from 'next/link';
 import { AlertTriangle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Unit, User } from '@/lib/types';
+import { getReportsCurrency } from '@/lib/currency';
 import ContractForm from './form';
 
 export default async function NewContractPage() {
-  const [unitsRes, customersRes, customersRes2] = await Promise.all([
+  const [unitsRes, customersRes, customersRes2, currency] = await Promise.all([
     safe(api.get<Paged<Unit>>('/units?status=AVAILABLE&pageSize=100')),
     safe(api.get<Paged<User>>('/users?role=CLIENT&pageSize=100')),
     safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=100')),
+    getReportsCurrency(),
   ]);
 
   const customers = [
@@ -86,6 +88,7 @@ export default async function NewContractPage() {
       <ContractForm
         units={unitsRes.data?.data ?? []}
         customers={customers}
+        currency={currency}
       />
     </div>
   );

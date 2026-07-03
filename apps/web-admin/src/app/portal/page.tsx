@@ -37,6 +37,7 @@ import type {
   PortalVisitRequest,
 } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCompact } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -130,7 +131,7 @@ function ActivityIcon({ type }: { type: PortalActivityType }) {
 
 // ── Broker KPI Strip ──────────────────────────────────────────────────────────
 
-function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
+function BrokerKpiStrip({ perf, symbol }: { perf: PerfSummary | undefined; symbol?: string }) {
   const submitted      = perf?.leadsSubmitted      ?? 0;
   const approved       = perf?.leadsApproved       ?? 0;
   const reservations   = perf?.reservationsCreated ?? 0;
@@ -168,7 +169,7 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
     },
     {
       label:    'حجم المبيعات',
-      value:    perf ? formatCompact(salesGross) : '—',
+      value:    perf ? formatCompact(salesGross, symbol) : '—',
       sub:      'إجمالي قيمة العقود',
       valueCls: 'text-slate-900',
       icon:     <TrendingUp />,
@@ -177,9 +178,9 @@ function BrokerKpiStrip({ perf }: { perf: PerfSummary | undefined }) {
     },
     {
       label:    'عمولاتي',
-      value:    perf ? formatCompact(commissionsNet) : '—',
+      value:    perf ? formatCompact(commissionsNet, symbol) : '—',
       sub:      payoutRate !== null
-                  ? `${formatCompact(payoutsNet)} مُصرَف · ${payoutRate}%`
+                  ? `${formatCompact(payoutsNet, symbol)} مُصرَف · ${payoutRate}%`
                   : 'لا عمولات بعد',
       valueCls: 'text-amber-700',
       icon:     <BadgePercent />,
@@ -452,6 +453,8 @@ function SalesFunnelCard({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function PortalDashboard() {
+  const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency);
   const [
     meRes, projectsRes, unitsRes, activityRes, perfRes,
     leadsRes, pendingLeadsRes, newVisitsRes, approvedPayoutsRes,
@@ -560,7 +563,7 @@ export default async function PortalDashboard() {
       </div>
 
       {/* ── 2. KPI Strip ─────────────────────────────────────────────────────── */}
-      <BrokerKpiStrip perf={perf} />
+      <BrokerKpiStrip perf={perf} symbol={symbol} />
 
       {/* ── 3. Leads + Sidebar ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 items-start gap-5">

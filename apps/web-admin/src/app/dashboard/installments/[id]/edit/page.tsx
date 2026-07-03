@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { InstallmentPlanTemplate } from '@/lib/types';
+import { getReportsCurrency } from '@/lib/currency';
 import PlanForm from '../../_form';
 
 interface ProjectOption {
@@ -16,9 +17,10 @@ export default async function EditInstallmentPlanPage({
 }) {
   const { id } = await params;
 
-  const [planRes, projectsRes] = await Promise.all([
+  const [planRes, projectsRes, currency] = await Promise.all([
     safe(api.get<InstallmentPlanTemplate>(`/installment-plan-templates/${id}`)),
     safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
+    getReportsCurrency(),
   ]);
 
   if (planRes.error || !planRes.data) notFound();
@@ -52,7 +54,7 @@ export default async function EditInstallmentPlanPage({
           </div>
         </div>
       </div>
-      <PlanForm projects={projects} initialData={plan} mode="edit" />
+      <PlanForm projects={projects} initialData={plan} mode="edit" currency={currency} />
     </div>
   );
 }

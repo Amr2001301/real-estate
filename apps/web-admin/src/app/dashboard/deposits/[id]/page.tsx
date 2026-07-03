@@ -4,6 +4,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Deposit, DepositType } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
@@ -38,6 +39,7 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
 
 export default async function DepositDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
 
@@ -92,7 +94,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
           <CardBody className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3">
               <Field label="النوع" value={DEPOSIT_TYPE_LABELS[d.type] ?? d.type} />
-              <Field label="المبلغ" value={formatCurrency(d.amount)} />
+              <Field label="المبلغ" value={formatCurrency(d.amount, currency)} />
               <Field label="تاريخ الدفع" value={formatDate(d.paidAt)} />
               <Field label="تاريخ التسجيل" value={formatDateTime(d.createdAt)} />
               <Field label="العميل" value={customerName} />

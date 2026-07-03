@@ -11,6 +11,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalUnit } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -51,6 +52,7 @@ export default async function PortalUnitsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -168,7 +170,7 @@ export default async function PortalUnitsPage({
                       {u.area} م² · {u.bedrooms} غرف · {u.bathrooms} حمامات · دور {u.floor}
                     </p>
                     <p className="font-bold text-slate-900 tabular-nums text-sm shrink-0">
-                      {formatCurrency(u.price)}
+                      {formatCurrency(u.price, currency)}
                     </p>
                   </div>
                 </li>
@@ -226,7 +228,7 @@ export default async function PortalUnitsPage({
 
                       <td className="py-3 px-4 whitespace-nowrap">
                         <p className="font-bold text-slate-900 tabular-nums text-sm">
-                          {formatCurrency(u.price)}
+                          {formatCurrency(u.price, currency)}
                         </p>
                       </td>
 

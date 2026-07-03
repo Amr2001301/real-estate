@@ -15,6 +15,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { PortalReservation, ReservationActivityType } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
@@ -52,6 +53,7 @@ export default async function PortalReservationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalReservation>(`/portal/reservations/${id}`));
   if (r.error || !r.data) notFound();
   const res = r.data;
@@ -161,7 +163,7 @@ export default async function PortalReservationDetailPage({
               </div>
               <div className="text-end shrink-0">
                 <p className="text-2xs text-slate-400">سعر الوحدة</p>
-                <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(res.unit.price)}</p>
+                <p className="text-sm font-bold text-slate-900 tabular-nums mt-0.5">{formatCurrency(res.unit.price, currency)}</p>
               </div>
             </div>
           )}
@@ -225,13 +227,13 @@ export default async function PortalReservationDetailPage({
             />
             <MetricTile
               label="المبلغ المُقفل"
-              value={res.commissionLockedAmount != null ? formatCurrency(res.commissionLockedAmount) : '—'}
+              value={res.commissionLockedAmount != null ? formatCurrency(res.commissionLockedAmount, currency) : '—'}
               size="md"
             />
-            <MetricTile label="قيمة الحجز" value={formatCurrency(res.bookingAmount)} size="md" />
+            <MetricTile label="قيمة الحجز" value={formatCurrency(res.bookingAmount, currency)} size="md" />
             <MetricTile
               label="إجمالي الخطة"
-              value={res.snapshotTotalPayable ? formatCurrency(res.snapshotTotalPayable) : '—'}
+              value={res.snapshotTotalPayable ? formatCurrency(res.snapshotTotalPayable, currency) : '—'}
               size="md"
             />
           </MetricGrid>

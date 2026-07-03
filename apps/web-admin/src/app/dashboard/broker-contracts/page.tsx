@@ -9,6 +9,7 @@ import type {
   User,
 } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +46,7 @@ export default async function AdminBrokerContractsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({
@@ -163,7 +165,7 @@ export default async function AdminBrokerContractsPage({
           },
           {
             label: 'إجمالي قيمة العقود',
-            value: totalValue > 0 ? formatCurrency(totalValue) : '—',
+            value: totalValue > 0 ? formatCurrency(totalValue, currency) : '—',
             icon: <FileText />,
             tone: 'neutral',
             sub: 'في هذه الصفحة',
@@ -277,7 +279,7 @@ export default async function AdminBrokerContractsPage({
         trailing={
           totalCommission > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              عمولة مقفلة: {formatCurrency(totalCommission)}
+              عمولة مقفلة: {formatCurrency(totalCommission, currency)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
@@ -399,7 +401,7 @@ export default async function AdminBrokerContractsPage({
                     {/* Contract value */}
                     <td className="py-3.5 px-4">
                       <p className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.totalAmount)}
+                        {formatCurrency(c.totalAmount, currency)}
                       </p>
                     </td>
 
@@ -439,7 +441,7 @@ export default async function AdminBrokerContractsPage({
                           </p>
                           {c.reservation.commissionLockedAmount != null && (
                             <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
-                              {formatCurrency(c.reservation.commissionLockedAmount)}
+                              {formatCurrency(c.reservation.commissionLockedAmount, currency)}
                             </p>
                           )}
                         </>

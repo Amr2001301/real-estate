@@ -42,7 +42,8 @@ interface PlanOption {
 
 interface Props {
   approvedLeads: PortalLead[];
-  units: PortalUnit[];
+  units:         PortalUnit[];
+  currency?:     string;
 }
 
 const NAV_SECTIONS = [
@@ -50,7 +51,7 @@ const NAV_SECTIONS = [
   { id: 'section-notes',     num: '02', label: 'ملاحظات',        sub: 'معلومات إضافية' },
 ];
 
-export default function PortalReservationForm({ approvedLeads, units }: Props) {
+export default function PortalReservationForm({ approvedLeads, units, currency = 'SAR' }: Props) {
   const [state, formAction] = useActionState<PortalReservationFormState, FormData>(
     createPortalReservationAction,
     {},
@@ -241,7 +242,7 @@ export default function PortalReservationForm({ approvedLeads, units }: Props) {
                 visibleUnits.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.code} • {tx(u.building.phase.project.name)} —{' '}
-                    {formatCurrency(u.price)}
+                    {formatCurrency(u.price, currency)}
                   </option>
                 ))
               )}
@@ -328,7 +329,7 @@ export default function PortalReservationForm({ approvedLeads, units }: Props) {
                       </option>
                       {plans.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} — مبلغ الحجز {formatCurrency(p.reservationAmount)}
+                          {p.name} — مبلغ الحجز {formatCurrency(p.reservationAmount, currency)}
                         </option>
                       ))}
                     </Select>
@@ -343,7 +344,7 @@ export default function PortalReservationForm({ approvedLeads, units }: Props) {
                   <div className="flex items-center justify-between rounded-xl bg-white ring-1 ring-inset ring-hairline px-4 py-3">
                     <span className="text-sm text-slate-600">مبلغ الحجز المطلوب</span>
                     <span className="text-base font-bold text-slate-900 tabular-nums">
-                      {formatCurrency(selectedPlan.reservationAmount)}
+                      {formatCurrency(selectedPlan.reservationAmount, currency)}
                     </span>
                   </div>
                 )}

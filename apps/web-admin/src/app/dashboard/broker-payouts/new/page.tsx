@@ -1,6 +1,7 @@
 import { Banknote, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AdminEligibleCommission, Broker, Paged } from '@/lib/types';
+import { getReportsCurrency } from '@/lib/currency';
 import { PremiumPageHero } from '@/components/premium';
 import CreatePayoutForm from './_form';
 
@@ -17,7 +18,10 @@ export default async function NewBrokerPayoutPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
-  const brokersRes = await safe(api.get<Paged<Broker>>('/brokers?pageSize=200'));
+  const [brokersRes, currency] = await Promise.all([
+    safe(api.get<Paged<Broker>>('/brokers?pageSize=200')),
+    getReportsCurrency(),
+  ]);
   const brokers = brokersRes.data?.data ?? [];
 
   let eligible: AdminEligibleCommission[] = [];
@@ -66,6 +70,7 @@ export default async function NewBrokerPayoutPage({
         selectedBrokerId={sp.brokerId ?? ''}
         brokerName={broker?.companyName ?? null}
         eligible={eligible}
+        currency={currency}
       />
     </div>
   );

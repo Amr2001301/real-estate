@@ -13,6 +13,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, PortalProject, PortalReservation } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -66,6 +67,7 @@ export default async function PortalReservationsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -249,7 +251,7 @@ export default async function PortalReservationsPage({
                       )}
                       {r.commissionLockedAmount != null && (
                         <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                          {formatCurrency(r.commissionLockedAmount)}
+                          {formatCurrency(r.commissionLockedAmount, currency)}
                         </p>
                       )}
                     </td>

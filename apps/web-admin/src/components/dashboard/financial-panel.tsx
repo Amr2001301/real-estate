@@ -11,10 +11,11 @@ interface Props {
     pendingBonus:           number;
     pendingBrokerPayouts:   number;
   };
-  className?: string;
+  className?:      string;
+  currencySymbol?: string;
 }
 
-export function FinancialPanel({ financial, className }: Props) {
+export function FinancialPanel({ financial, className, currencySymbol = 'ر.س' }: Props) {
   const { totalContractValue, totalCollectedVerified, overdueTotal, pendingBonus, pendingBrokerPayouts } = financial;
 
   const collectionRate = totalContractValue > 0
@@ -26,7 +27,7 @@ export function FinancialPanel({ financial, className }: Props) {
   const rows = [
     {
       label:   'إجمالي قيمة العقود',
-      value:   formatCompact(totalContractValue),
+      value:   formatCompact(totalContractValue, currencySymbol),
       sub:     'قيمة العقود المُبرمة',
       icon:    <TrendingUp />,
       iconBg:  'bg-brand-50 text-brand-600',
@@ -34,7 +35,7 @@ export function FinancialPanel({ financial, className }: Props) {
     },
     {
       label:   'إجمالي المحصّل المؤكد',
-      value:   formatCompact(totalCollectedVerified),
+      value:   formatCompact(totalCollectedVerified, currencySymbol),
       sub:     collectionRate !== null ? `${collectionRate}% معدل التحصيل` : 'مدفوعات محققة',
       icon:    <BadgeCheck />,
       iconBg:  'bg-success-50 text-success-600',
@@ -42,7 +43,7 @@ export function FinancialPanel({ financial, className }: Props) {
     },
     {
       label:   'مبالغ متأخرة',
-      value:   formatCompact(overdueTotal),
+      value:   formatCompact(overdueTotal, currencySymbol),
       sub:     overdueTotal > 0 ? 'تجاوزت تاريخ الاستحقاق' : 'لا مبالغ متأخرة',
       icon:    <AlertTriangle />,
       iconBg:  overdueTotal > 0 ? 'bg-danger-50 text-danger-600'  : 'bg-slate-50 text-slate-400',
@@ -50,7 +51,7 @@ export function FinancialPanel({ financial, className }: Props) {
     },
     {
       label:   'التزامات معلقة',
-      value:   formatCompact(pendingLiabilities),
+      value:   formatCompact(pendingLiabilities, currencySymbol),
       sub:     'عمولات وسطاء + مكافآت',
       icon:    <Coins />,
       iconBg:  pendingLiabilities > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400',

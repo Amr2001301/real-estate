@@ -3,6 +3,7 @@ import { Wallet, Plus, Eye, Briefcase, AlertCircle, SlidersHorizontal } from 'lu
 import { api, safe } from '@/lib/api';
 import type { AdminBrokerPayout, Broker, Paged } from '@/lib/types';
 import { formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
@@ -39,6 +40,7 @@ export default async function AdminBrokerPayoutsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -142,14 +144,14 @@ export default async function AdminBrokerPayoutsPage({
           },
           {
             label: 'إجمالي المدفوع',
-            value: totalNetPaid > 0 ? formatCurrency(totalNetPaid) : '—',
+            value: totalNetPaid > 0 ? formatCurrency(totalNetPaid, currency) : '—',
             icon: <Wallet />,
             tone: 'neutral',
             sub: 'في هذه الصفحة',
           },
           {
             label: 'قيد الصرف',
-            value: totalNetPending > 0 ? formatCurrency(totalNetPending) : '—',
+            value: totalNetPending > 0 ? formatCurrency(totalNetPending, currency) : '—',
             icon: <Wallet />,
             tone: 'warning',
             sub: 'في هذه الصفحة',
@@ -341,14 +343,14 @@ export default async function AdminBrokerPayoutsPage({
                     {/* Gross amount */}
                     <td className="py-3 px-4">
                       <span className="text-xs font-medium text-slate-700 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.totalGross)}
+                        {formatCurrency(p.totalGross, currency)}
                       </span>
                     </td>
 
                     {/* Net amount — strongest payout figure */}
                     <td className="py-3 px-4">
                       <span className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.totalNet)}
+                        {formatCurrency(p.totalNet, currency)}
                       </span>
                     </td>
 

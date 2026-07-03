@@ -14,14 +14,15 @@ const PAYMENT_TYPE_LABELS: Record<string, string> = {
 };
 
 interface Props {
-  contractId: string;
-  installmentId: string;
-  amount: string | number;
-  dueDate: string;
+  contractId:      string;
+  installmentId:   string;
+  amount:          string | number;
+  dueDate:         string;
   installmentType?: string;
+  currency?:       string;
 }
 
-export function RecordPaymentButton({ contractId, installmentId, amount, dueDate, installmentType }: Props) {
+export function RecordPaymentButton({ contractId, installmentId, amount, dueDate, installmentType, currency = 'SAR' }: Props) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -67,7 +68,7 @@ export function RecordPaymentButton({ contractId, installmentId, amount, dueDate
       <form onSubmit={handleSubmit} className="space-y-3">
         <input type="hidden" name="amount" value={String(amount)} />
         <div className="text-xs text-slate-600">
-          المبلغ: <span className="font-semibold tabular-nums">{formatCurrency(amount)}</span>
+          المبلغ: <span className="font-semibold tabular-nums">{formatCurrency(amount, currency)}</span>
           <span className="text-slate-400 mr-1">(ثابت)</span>
         </div>
 

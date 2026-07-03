@@ -30,9 +30,10 @@ interface TopProject {
 }
 
 interface Props {
-  financial?:   Financial;
-  funnel?:      Funnel;
-  topProjects?: TopProject[];
+  financial?:      Financial;
+  funnel?:         Funnel;
+  topProjects?:    TopProject[];
+  currencySymbol?: string;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -44,7 +45,7 @@ function convPct(num: number, denom: number): string | null {
 
 // ── FinancialStackedBar ───────────────────────────────────────────────────────
 
-function FinancialStackedBar({ financial }: { financial: Financial }) {
+function FinancialStackedBar({ financial, currencySymbol = 'ر.س' }: { financial: Financial; currencySymbol?: string }) {
   const total       = financial.totalContractValue;
   const collected   = financial.totalCollectedVerified;
   const overdue     = financial.overdueTotal;
@@ -59,7 +60,7 @@ function FinancialStackedBar({ financial }: { financial: Financial }) {
   const chips = [
     {
       label:    'محصّل',
-      value:    formatCompact(collected),
+      value:    formatCompact(collected, currencySymbol),
       pct:      Math.round(collectedPct),
       dotCls:   'bg-navy',
       pctCls:   'text-navy',
@@ -67,7 +68,7 @@ function FinancialStackedBar({ financial }: { financial: Financial }) {
     },
     {
       label:    'مستحق',
-      value:    formatCompact(pending),
+      value:    formatCompact(pending, currencySymbol),
       pct:      Math.round(pendingPct),
       dotCls:   'bg-brand-400',
       pctCls:   'text-brand-600',
@@ -75,7 +76,7 @@ function FinancialStackedBar({ financial }: { financial: Financial }) {
     },
     {
       label:    'متأخر',
-      value:    formatCompact(overdue),
+      value:    formatCompact(overdue, currencySymbol),
       pct:      Math.round(overduePct),
       dotCls:   overdue > 0 ? 'bg-danger-700' : 'bg-slate-200',
       pctCls:   overdue > 0 ? 'text-danger-700' : 'text-slate-300',
@@ -91,7 +92,7 @@ function FinancialStackedBar({ financial }: { financial: Financial }) {
         <div className="bg-canvas/70 border border-hairline rounded-[14px] p-3.5">
           <p className="text-[11px] text-slate-400 mb-2">إجمالي التعاقدات</p>
           <p className="text-[22px] font-black text-slate-900 tabular-nums leading-none tracking-tight">
-            {formatCompact(total)}
+            {formatCompact(total, currencySymbol)}
           </p>
         </div>
         <div className="bg-canvas/70 border border-hairline rounded-[14px] p-3.5">
@@ -149,7 +150,7 @@ function FinancialStackedBar({ financial }: { financial: Financial }) {
           <div className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
             <p className="text-[13px] font-bold text-amber-700 tabular-nums">
-              {formatCompact(liabilities)}
+              {formatCompact(liabilities, currencySymbol)}
             </p>
             <p className="text-[11px] text-slate-400">عمولات + مكافآت</p>
           </div>
@@ -233,14 +234,14 @@ function FunnelRows({ funnel }: { funnel: Funnel }) {
 
 // ── Standalone card exports ───────────────────────────────────────────────────
 
-export function FinancialHealthCard({ financial }: { financial: Financial }) {
+export function FinancialHealthCard({ financial, currencySymbol = 'ر.س' }: { financial: Financial; currencySymbol?: string }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] p-[22px] flex flex-col gap-4 h-full shadow-soft">
       <div>
         <h3 className="text-[15px] font-bold text-slate-900 leading-none">الصحة المالية</h3>
         <p className="text-[12px] text-slate-400 mt-1">توزيع قيمة التعاقدات حسب حالة التحصيل</p>
       </div>
-      <FinancialStackedBar financial={financial} />
+      <FinancialStackedBar financial={financial} currencySymbol={currencySymbol} />
     </div>
   );
 }
@@ -260,7 +261,7 @@ export function SalesFunnelCard({ funnel }: { funnel: Funnel }) {
 
 // ── Main Export ───────────────────────────────────────────────────────────────
 
-export function PlatformSummaryCard({ financial, funnel, topProjects }: Props) {
+export function PlatformSummaryCard({ financial, funnel, topProjects, currencySymbol = 'ر.س' }: Props) {
   const hasFin      = financial != null;
   const hasFunnel   = funnel != null && funnel.leads > 0;
   const hasProjects = (topProjects?.length ?? 0) > 0;
@@ -307,7 +308,7 @@ export function PlatformSummaryCard({ financial, funnel, topProjects }: Props) {
                 <h3 className="text-[15px] font-bold text-slate-900 leading-none">الصحة المالية</h3>
                 <p className="text-[12px] text-slate-400 mt-1">توزيع قيمة التعاقدات حسب حالة التحصيل</p>
               </div>
-              <FinancialStackedBar financial={financial} />
+              <FinancialStackedBar financial={financial} currencySymbol={currencySymbol} />
             </div>
           )}
 
@@ -342,7 +343,7 @@ export function PlatformSummaryCard({ financial, funnel, topProjects }: Props) {
                 <p className="text-[11px] font-medium text-slate-400">أفضل مبيعات</p>
                 <p className="text-[14px] font-bold text-slate-900 leading-snug">{bestSales.name}</p>
                 <p className="text-[20px] font-black text-slate-900 tabular-nums leading-none mt-1">
-                  {formatCompact(bestSales.contractValue)}
+                  {formatCompact(bestSales.contractValue, currencySymbol)}
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <span className="h-1.5 w-1.5 rounded-full bg-brand-500 shrink-0" />

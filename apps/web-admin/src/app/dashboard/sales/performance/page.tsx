@@ -13,6 +13,7 @@ import {
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { PremiumPageHero, PremiumMetricStrip, PremiumSectionCard, PremiumFilterBar, PremiumFilterField, PremiumEmptyState } from '@/components/premium';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -99,6 +100,7 @@ export default async function SalesPerformancePage({
   searchParams: Promise<Search>;
 }) {
   const sp     = await searchParams;
+  const currency = await getReportsCurrency();
   const period = sp.period ?? currentPeriod();
 
   const perfQs  = new URLSearchParams({ period });
@@ -240,7 +242,7 @@ export default async function SalesPerformancePage({
           },
           {
             label:     'إجمالي المبيعات',
-            value:     formatCurrency(totalAchieved),
+            value:     formatCurrency(totalAchieved, currency),
             icon:      <Wallet />,
             tone:      'success',
             sub:       `${rows.length} مندوب نشط هذه الفترة`,
@@ -255,7 +257,7 @@ export default async function SalesPerformancePage({
           },
           {
             label:     'مكافآت الفترة',
-            value:     formatCurrency(totalBonusAmt),
+            value:     formatCurrency(totalBonusAmt, currency),
             icon:      <BadgePercent />,
             tone:      'brand',
             sub:       `${bonus.length} إدخال مكافأة`,
@@ -372,11 +374,11 @@ export default async function SalesPerformancePage({
                     {/* Achieved / target on one line */}
                     <div className="flex items-baseline gap-1 flex-wrap">
                       <span className="text-[13px] font-black tabular-nums text-slate-900">
-                        {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount) : '—'}
+                        {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount, currency) : '—'}
                       </span>
                       {row.targetAmount !== null ? (
                         <span className="text-[12px] font-medium tabular-nums text-slate-400">
-                          / {formatCurrency(row.targetAmount)}
+                          / {formatCurrency(row.targetAmount, currency)}
                         </span>
                       ) : (
                         <span className="text-[11px] text-slate-300">بدون هدف</span>
@@ -399,9 +401,9 @@ export default async function SalesPerformancePage({
                   {/* Mobile: amount + pipeline */}
                   <div className="lg:hidden flex items-center justify-between gap-3 pt-2 mt-2 border-t border-hairline/60">
                     <p className="text-[13px] font-black tabular-nums text-slate-900">
-                      {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount) : '—'}
+                      {row.achievedAmount > 0 ? formatCurrency(row.achievedAmount, currency) : '—'}
                       {row.targetAmount !== null && (
-                        <span className="text-[10px] text-slate-400 font-normal"> / {formatCurrency(row.targetAmount)}</span>
+                        <span className="text-[10px] text-slate-400 font-normal"> / {formatCurrency(row.targetAmount, currency)}</span>
                       )}
                     </p>
                     <div className="flex items-center gap-3">
@@ -427,7 +429,7 @@ export default async function SalesPerformancePage({
             </div>
             <div className="hidden lg:block">
               <span className="text-[13px] font-bold tabular-nums text-slate-800">
-                {totalAchieved > 0 ? formatCurrency(totalAchieved) : '—'}
+                {totalAchieved > 0 ? formatCurrency(totalAchieved, currency) : '—'}
               </span>
             </div>
             <CountCell value={totalLeads}     color="text-sky-600"     bold />
@@ -548,14 +550,14 @@ export default async function SalesPerformancePage({
                           <p className="text-[11px] text-slate-400 mt-0.5">
                             {entry.rule?.name ?? (entry.source === 'CONTRACT_AUTO' ? 'عمولة عقد تلقائية' : 'يدوي')}
                             {entry.commissionPct ? ` · ${entry.commissionPct}%` : ''}
-                            {entry.basisAmount ? ` على ${formatCurrency(Number(entry.basisAmount))}` : ''}
+                            {entry.basisAmount ? ` على ${formatCurrency(Number(entry.basisAmount), currency)}` : ''}
                           </p>
                         </div>
                         <span className={cn('text-[11px] font-bold px-2.5 py-0.5 rounded-full shrink-0', s.cls)}>
                           {s.label}
                         </span>
                         <p dir="ltr" className="text-[13px] font-black tabular-nums text-slate-900 shrink-0 whitespace-nowrap">
-                          {formatCurrency(Number(entry.amount))}
+                          {formatCurrency(Number(entry.amount), currency)}
                         </p>
                       </div>
                     );
@@ -576,7 +578,7 @@ export default async function SalesPerformancePage({
                     })}
                   </div>
                   <p dir="ltr" className="text-[14px] font-black tabular-nums text-slate-900">
-                    {formatCurrency(totalBonusAmt)}
+                    {formatCurrency(totalBonusAmt, currency)}
                   </p>
                 </div>
               </>

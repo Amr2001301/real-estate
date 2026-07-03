@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
 import { formatCurrency, tx } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import {
   resolveReportDateRange,
   resolveComparisonDateRange,
@@ -117,6 +118,7 @@ export default async function ReportsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
 
   const resolved = resolveReportDateRange(sp);
   const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
@@ -240,7 +242,7 @@ export default async function ReportsPage({
           {
             label:     'إجمالي المبيعات',
             icon:      <Wallet />,
-            value:     formatCurrency(salesTotal),
+            value:     formatCurrency(salesTotal, currency),
             tone:      'neutral',
             valueSize: 'compact',
             sub:       `${contractsCount} عقد`,
@@ -252,14 +254,14 @@ export default async function ReportsPage({
             icon:     <FileText />,
             value:    contractsCount.toLocaleString('ar-EG'),
             tone:     'neutral',
-            sub:      `متوسط ${formatCurrency(avgContract)}`,
+            sub:      `متوسط ${formatCurrency(avgContract, currency)}`,
             trend:    contractsDelta ? `${contractsDelta.direction === 'up' ? '▲' : contractsDelta.direction === 'down' ? '▼' : '•'} ${contractsDelta.value}` : undefined,
             trendCls: contractsDelta?.direction === 'up' ? 'text-success-600' : contractsDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
             label:     'الدفعات المحصّلة',
             icon:      <CircleDollarSign />,
-            value:     formatCurrency(financialTotal),
+            value:     formatCurrency(financialTotal, currency),
             tone:      'success',
             valueSize: 'compact',
             sub:       `${depositsCount} دفعة · ${verifiedCount} مؤكدة`,
@@ -278,7 +280,7 @@ export default async function ReportsPage({
             icon:  <Trophy />,
             value: topProject?.name ?? '—',
             tone:  'neutral',
-            sub:   topProject ? `${topProject.count} عقد · ${formatCurrency(topProject.total)}` : undefined,
+            sub:   topProject ? `${topProject.count} عقد · ${formatCurrency(topProject.total, currency)}` : undefined,
           },
         ]}
       />
@@ -309,7 +311,7 @@ export default async function ReportsPage({
           padded={false}
         >
           <div className="px-5 py-5">
-            <SalesTrendChart data={trendData} highlightMonths={highlightMonths} />
+            <SalesTrendChart data={trendData} highlightMonths={highlightMonths} currency={currency} />
           </div>
         </PremiumSectionCard>
 
@@ -496,7 +498,7 @@ export default async function ReportsPage({
                     </div>
                     <div className="text-end shrink-0">
                       <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
-                        {formatCurrency(p.total)}
+                        {formatCurrency(p.total, currency)}
                       </p>
                     </div>
                   </div>
@@ -542,7 +544,7 @@ export default async function ReportsPage({
                     </div>
                     <div className="text-end shrink-0">
                       <p className="text-sm font-black tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">
-                        {formatCurrency(b.commissionAmount)}
+                        {formatCurrency(b.commissionAmount, currency)}
                       </p>
                     </div>
                   </div>
@@ -578,7 +580,7 @@ export default async function ReportsPage({
             icon: <Star className="h-3.5 w-3.5" />,
             iconBg: 'bg-violet-50 text-violet-600',
             value: brokers[0]?.brokerName ?? '—',
-            sub:   brokers[0] ? formatCurrency(brokers[0].commissionAmount) : 'لا توجد بيانات',
+            sub:   brokers[0] ? formatCurrency(brokers[0].commissionAmount, currency) : 'لا توجد بيانات',
             subDir: 'ltr' as const,
           },
           {

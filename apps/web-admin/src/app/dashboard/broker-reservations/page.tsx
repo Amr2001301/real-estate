@@ -9,6 +9,7 @@ import type {
   User,
 } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Select } from '@/components/ui/select';
@@ -43,6 +44,7 @@ export default async function AdminBrokerReservationsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({
@@ -264,7 +266,7 @@ export default async function AdminBrokerReservationsPage({
         trailing={
           totalCommission > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              عمولة مقفلة: {formatCurrency(totalCommission)}
+              عمولة مقفلة: {formatCurrency(totalCommission, currency)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
@@ -403,7 +405,7 @@ export default async function AdminBrokerReservationsPage({
                           </p>
                           {r.commissionLockedAmount != null && (
                             <p className="text-2xs text-slate-400 tabular-nums mt-0.5">
-                              {formatCurrency(r.commissionLockedAmount)}
+                              {formatCurrency(r.commissionLockedAmount, currency)}
                             </p>
                           )}
                         </>

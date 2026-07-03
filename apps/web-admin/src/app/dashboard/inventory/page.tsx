@@ -17,6 +17,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged, Unit, Project, UnitStatus } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -65,6 +66,7 @@ export default async function InventoryPage({
   searchParams: Promise<Filters>;
 }) {
   const sp         = await searchParams;
+  const currency   = await getReportsCurrency();
   const session    = await getSession();
   const isAdmin    = session?.role === 'ADMIN';
   const q          = (sp.q ?? '').trim();
@@ -187,7 +189,7 @@ export default async function InventoryPage({
         metrics={[
           {
             label: 'قيمة المخزون الإجمالية',
-            value: formatCurrency(inventoryValue),
+            value: formatCurrency(inventoryValue, currency),
             icon: <CircleDollarSign />,
             tone: 'brand',
             primary: true,
@@ -206,7 +208,7 @@ export default async function InventoryPage({
           },
           {
             label: 'متوسط سعر الوحدة',
-            value: avgPrice > 0 ? formatCurrency(avgPrice) : '—',
+            value: avgPrice > 0 ? formatCurrency(avgPrice, currency) : '—',
             icon: <Calculator />,
             tone: 'success',
           },
@@ -340,7 +342,7 @@ export default async function InventoryPage({
       ) : (
         <div className="flex flex-col gap-4">
           {projectBuckets.map((proj) => (
-            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} />
+            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} currency={currency} />
           ))}
         </div>
       )}
@@ -440,9 +442,11 @@ function AvailBar({ label, count, pct, barClass, dotClass, countClass }: {
 function ProjectMatrixCard({
   proj,
   unitsHref,
+  currency,
 }: {
   proj: ProjectBucket;
   unitsHref: (overrides: Record<string, string | undefined>) => string;
+  currency: string;
 }) {
   const phases = [...proj.phases.values()].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   const av = proj.total > 0 ? (proj.available / proj.total) * 100 : 0;
@@ -474,7 +478,7 @@ function ProjectMatrixCard({
         <div className="shrink-0 flex flex-col items-end gap-1.5">
           {proj.totalValue > 0 && (
             <p dir="rtl" className="text-[14px] font-bold text-slate-800 tabular-nums leading-none">
-              {formatCurrency(proj.totalValue)}
+              {formatCurrency(proj.totalValue, currency)}
             </p>
           )}
           <div className="flex items-center gap-3">
@@ -544,7 +548,7 @@ function ProjectMatrixCard({
           <tbody>
             {phases.map((ph) => {
               const buildings = [...ph.buildings.values()].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} />;
+              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} currency={currency} />;
             })}
           </tbody>
         </table>
@@ -555,7 +559,7 @@ function ProjectMatrixCard({
 
 // ── PhaseRows ─────────────────────────────────────────────────────────────────
 
-function PhaseRows({ ph, buildings }: { ph: PhaseBucket; buildings: BuildingBucket[] }) {
+function PhaseRows({ ph, buildings, currency }: { ph: PhaseBucket; buildings: BuildingBucket[]; currency: string }) {
   return (
     <>
       <tr className="border-t border-hairline bg-canvas/60">
@@ -578,7 +582,7 @@ function PhaseRows({ ph, buildings }: { ph: PhaseBucket; buildings: BuildingBuck
         <td className="py-3 px-3 text-center tabular-nums text-[13px] font-semibold text-slate-500">
           {ph.sold > 0 ? ph.sold : <span className="text-slate-300 font-normal">—</span>}
         </td>
-        <td className="py-3 px-3 tabular-nums text-[12px] text-slate-600 whitespace-nowrap">{formatCurrency(ph.totalValue)}</td>
+        <td className="py-3 px-3 tabular-nums text-[12px] text-slate-600 whitespace-nowrap">{formatCurrency(ph.totalValue, currency)}</td>
         <td className="py-3 ps-3 pe-6">
           <RowAvailBar available={ph.available} reserved={ph.reserved} sold={ph.sold} total={ph.total} />
         </td>
@@ -612,7 +616,7 @@ function PhaseRows({ ph, buildings }: { ph: PhaseBucket; buildings: BuildingBuck
               )
               : <span className="text-slate-300 text-[12px]">—</span>}
           </td>
-          <td className="py-2.5 px-3 tabular-nums text-[11px] text-slate-400 whitespace-nowrap">{formatCurrency(b.totalValue)}</td>
+          <td className="py-2.5 px-3 tabular-nums text-[11px] text-slate-400 whitespace-nowrap">{formatCurrency(b.totalValue, currency)}</td>
           <td className="py-2.5 ps-3 pe-6 min-w-[140px]">
             <RowAvailBar available={b.available} reserved={b.reserved} sold={b.sold} total={b.total} />
           </td>

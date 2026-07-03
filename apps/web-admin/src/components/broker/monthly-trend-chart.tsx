@@ -31,15 +31,6 @@ function fmtAxisMoney(v: number): string {
   return String(v);
 }
 
-function fmtCurrency(v: number): string {
-  return new Intl.NumberFormat('ar-SA', {
-    style: 'currency',
-    currency: 'SAR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(v);
-}
-
 // ── Tooltip ───────────────────────────────────────────────────────────────────
 type TooltipPayloadItem = { name: string; value: number; color: string };
 
@@ -47,10 +38,12 @@ function FinancialTooltip({
   active,
   payload,
   label,
+  fmtCurrency,
 }: {
-  active?: boolean;
-  payload?: TooltipPayloadItem[];
-  label?: string;
+  active?:      boolean;
+  payload?:     TooltipPayloadItem[];
+  label?:       string;
+  fmtCurrency:  (v: number) => string;
 }) {
   if (!active || !payload?.length) return null;
   return (
@@ -121,7 +114,8 @@ const TABS: { key: Mode; label: string }[] = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 interface Props {
-  data: BrokerMonthlyTrendPoint[];
+  data:      BrokerMonthlyTrendPoint[];
+  currency?: string;
 }
 
 function mapPoint(p: BrokerMonthlyTrendPoint) {
@@ -134,7 +128,15 @@ function mapPoint(p: BrokerMonthlyTrendPoint) {
   };
 }
 
-export function MonthlyTrendChart({ data }: Props) {
+export function MonthlyTrendChart({ data, currency = 'SAR' }: Props) {
+  function fmtCurrency(v: number): string {
+    return new Intl.NumberFormat('ar-SA', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(v);
+  }
   const [mode, setMode] = useState<Mode>('financial');
 
   if (data.length === 0) {
@@ -202,7 +204,7 @@ export function MonthlyTrendChart({ data }: Props) {
             />
 
             <Tooltip
-              content={<FinancialTooltip />}
+              content={<FinancialTooltip fmtCurrency={fmtCurrency} />}
               cursor={{ stroke: '#e7dfd3', strokeWidth: 1.5, strokeDasharray: '3 3' }}
             />
 

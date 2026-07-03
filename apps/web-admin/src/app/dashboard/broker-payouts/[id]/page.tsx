@@ -13,6 +13,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { AdminBrokerPayout } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -69,6 +70,7 @@ export default async function AdminBrokerPayoutDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const r = await safe(api.get<AdminBrokerPayout>(`/broker-payouts/${id}`));
   if (r.error || !r.data) notFound();
   const payout = r.data;
@@ -152,19 +154,19 @@ export default async function AdminBrokerPayoutDetailPage({
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">الإجمالي</p>
-              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalGross)}</p>
+              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalGross, currency)}</p>
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">الضريبة</p>
-              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalTax)}</p>
+              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalTax, currency)}</p>
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3">
               <p className="text-xs text-slate-500">حجز ضريبي</p>
-              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalWithholding)}</p>
+              <p className="font-medium mt-1 text-slate-900 tabular-nums">{formatCurrency(payout.totalWithholding, currency)}</p>
             </div>
             <div className="rounded-xl border border-hairline px-3 py-3 bg-emerald-50/30">
               <p className="text-xs text-slate-500">الصافي</p>
-              <p className="font-semibold mt-1 text-emerald-700 tabular-nums">{formatCurrency(payout.totalNet)}</p>
+              <p className="font-semibold mt-1 text-emerald-700 tabular-nums">{formatCurrency(payout.totalNet, currency)}</p>
             </div>
           </div>
         </Card>
@@ -251,8 +253,8 @@ export default async function AdminBrokerPayoutDetailPage({
                       {c.unit.building?.phase?.project ? tx(c.unit.building.phase.project.name) : '—'}
                     </p>
                   </td>
-                  <td className="py-3 px-4 tabular-nums">{formatCurrency(c.grossAmount)}</td>
-                  <td className="py-3 px-4 font-semibold text-slate-900 tabular-nums">{formatCurrency(c.netAmount)}</td>
+                  <td className="py-3 px-4 tabular-nums">{formatCurrency(c.grossAmount, currency)}</td>
+                  <td className="py-3 px-4 font-semibold text-slate-900 tabular-nums">{formatCurrency(c.netAmount, currency)}</td>
                   <td className="py-3 px-4">
                     <BrokerCommissionStatusBadge status={c.status} />
                   </td>

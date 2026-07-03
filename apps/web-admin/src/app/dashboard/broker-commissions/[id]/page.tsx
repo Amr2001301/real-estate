@@ -17,6 +17,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { AdminBrokerCommission } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import {
   PremiumPageHero,
@@ -88,6 +89,7 @@ export default async function AdminBrokerCommissionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const r = await safe(api.get<AdminBrokerCommission>(`/broker-commissions/${id}`));
   if (r.error || !r.data) notFound();
   const c = r.data;
@@ -217,7 +219,7 @@ export default async function AdminBrokerCommissionDetailPage({
             {/* Financials */}
             <PremiumSectionCard title="الحساب" icon={<Banknote />} padded={false}>
               <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline border-b border-hairline">
-                <MetricCell label="قيمة الأساس" value={formatCurrency(c.basisAmount)} />
+                <MetricCell label="قيمة الأساس" value={formatCurrency(c.basisAmount, currency)} />
                 <MetricCell
                   label="النسبة"
                   value={
@@ -226,22 +228,22 @@ export default async function AdminBrokerCommissionDetailPage({
                       : '—'
                   }
                 />
-                <MetricCell label="الإجمالي قبل الخصم" value={formatCurrency(c.grossAmount)} />
+                <MetricCell label="الإجمالي قبل الخصم" value={formatCurrency(c.grossAmount, currency)} />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline">
                 <MetricCell
                   label="الضريبة"
                   value={`${Number(c.taxPct).toFixed(2)}%`}
-                  sub={formatCurrency(c.taxAmount)}
+                  sub={formatCurrency(c.taxAmount, currency)}
                 />
                 <MetricCell
                   label="حجز ضريبي"
                   value={`${Number(c.withholdingPct).toFixed(2)}%`}
-                  sub={formatCurrency(c.withholdingAmount)}
+                  sub={formatCurrency(c.withholdingAmount, currency)}
                 />
                 <MetricCell
                   label="الصافي المستحق"
-                  value={formatCurrency(c.netAmount)}
+                  value={formatCurrency(c.netAmount, currency)}
                   highlight
                 />
               </div>

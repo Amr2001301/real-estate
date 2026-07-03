@@ -18,11 +18,12 @@ const NAV_SECTIONS = [
 ];
 
 interface Props {
-  units: Unit[];
+  units:     Unit[];
   customers: User[];
+  currency?: string;
 }
 
-export default function ContractForm({ units, customers }: Props) {
+export default function ContractForm({ units, customers, currency = 'SAR' }: Props) {
   const [state, formAction] = useActionState<ContractFormState, FormData>(
     createContractAction,
     {},
@@ -65,7 +66,7 @@ export default function ContractForm({ units, customers }: Props) {
                 <option value="" disabled>— اختر —</option>
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.code} · {tx(u.building?.phase?.project?.name)} · {formatCurrency(u.price)}
+                    {u.code} · {tx(u.building?.phase?.project?.name)} · {formatCurrency(u.price, currency)}
                   </option>
                 ))}
               </select>

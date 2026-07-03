@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, Contract } from '@/lib/types';
+import { getReportsCurrency } from '@/lib/currency';
 import RecordDepositForm from './form';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,10 @@ export default async function NewDepositPage({
   searchParams: Promise<{ contractId?: string }>;
 }) {
   const sp = await searchParams;
-  const r = await safe(api.get<Paged<Contract>>('/contracts?pageSize=200'));
+  const [r, currency] = await Promise.all([
+    safe(api.get<Paged<Contract>>('/contracts?pageSize=200')),
+    getReportsCurrency(),
+  ]);
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
@@ -67,7 +71,7 @@ export default async function NewDepositPage({
           <p className="font-medium">{r.error}</p>
         </div>
       ) : (
-        <RecordDepositForm contracts={r.data?.data ?? []} initialContractId={sp.contractId} />
+        <RecordDepositForm contracts={r.data?.data ?? []} initialContractId={sp.contractId} currency={currency} />
       )}
     </div>
   );

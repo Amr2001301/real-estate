@@ -11,6 +11,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { PortalCommission } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import { BrokerCommissionStatusBadge } from '@/components/badges';
@@ -33,6 +34,7 @@ export default async function PortalCommissionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalCommission>(`/portal/commissions/${id}`));
   if (r.error || !r.data) notFound();
   const c = r.data;
@@ -134,7 +136,7 @@ export default async function PortalCommissionDetailPage({
               <CodeText className="text-base font-bold text-slate-800">{c.unit.code}</CodeText>
               <p className="text-xs text-slate-500 mt-1 tabular-nums flex items-center gap-1">
                 <Banknote className="h-3 w-3 text-slate-400 shrink-0" />
-                {formatCurrency(c.unit.price)}
+                {formatCurrency(c.unit.price, currency)}
               </p>
             </div>
           )}
@@ -144,11 +146,11 @@ export default async function PortalCommissionDetailPage({
         <DetailHeroCol position="last">
           <HeroColLabel>الصافي المستحق</HeroColLabel>
           <p className="text-3xl font-bold text-emerald-700 tabular-nums leading-none">
-            {formatCurrency(c.netAmount)}
+            {formatCurrency(c.netAmount, currency)}
           </p>
           <p className="text-xs text-slate-500 mt-1 tabular-nums">
             إجمالي:{' '}
-            <span className="font-semibold text-slate-700">{formatCurrency(c.grossAmount)}</span>
+            <span className="font-semibold text-slate-700">{formatCurrency(c.grossAmount, currency)}</span>
           </p>
           <div className="mt-4 space-y-3">
             <HeroDateRow
@@ -180,7 +182,7 @@ export default async function PortalCommissionDetailPage({
       >
         {/* Row 1: basis → rate → gross */}
         <MetricGrid cols={3}>
-          <MetricTile label="وعاء العمولة" value={formatCurrency(c.basisAmount)} />
+          <MetricTile label="وعاء العمولة" value={formatCurrency(c.basisAmount, currency)} />
           <MetricTile
             label="نسبة العمولة"
             value={
@@ -190,7 +192,7 @@ export default async function PortalCommissionDetailPage({
             }
             variant="accent"
           />
-          <MetricTile label="الإجمالي" value={formatCurrency(c.grossAmount)} />
+          <MetricTile label="الإجمالي" value={formatCurrency(c.grossAmount, currency)} />
         </MetricGrid>
 
         {/* Row 2: deductions → net */}
@@ -198,16 +200,16 @@ export default async function PortalCommissionDetailPage({
           <MetricTile
             label="ضريبة القيمة المضافة"
             value={`${Number(c.taxPct).toFixed(2)}%`}
-            sub={formatCurrency(c.taxAmount)}
+            sub={formatCurrency(c.taxAmount, currency)}
           />
           <MetricTile
             label="الحجز الضريبي"
             value={`${Number(c.withholdingPct).toFixed(2)}%`}
-            sub={formatCurrency(c.withholdingAmount)}
+            sub={formatCurrency(c.withholdingAmount, currency)}
           />
           <MetricTile
             label="الصافي المستحق"
-            value={formatCurrency(c.netAmount)}
+            value={formatCurrency(c.netAmount, currency)}
             variant="highlight"
           />
         </MetricGrid>

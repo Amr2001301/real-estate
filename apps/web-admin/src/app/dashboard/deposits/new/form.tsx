@@ -19,11 +19,12 @@ const NAV_SECTIONS = [
 ];
 
 interface Props {
-  contracts: Contract[];
+  contracts:          Contract[];
   initialContractId?: string;
+  currency?:          string;
 }
 
-export default function RecordDepositForm({ contracts, initialContractId }: Props) {
+export default function RecordDepositForm({ contracts, initialContractId, currency = 'SAR' }: Props) {
   const [state, formAction] = useActionState<DepositFormState, FormData>(
     recordDepositAction,
     {},
@@ -101,7 +102,7 @@ export default function RecordDepositForm({ contracts, initialContractId }: Prop
                 {contracts.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.contractNumber ?? `#${c.id.slice(0, 8)}`} · {c.customer?.fullName ?? '—'} ·{' '}
-                    {formatCurrency(c.totalAmount)}
+                    {formatCurrency(c.totalAmount, currency)}
                   </option>
                 ))}
               </select>
@@ -130,7 +131,7 @@ export default function RecordDepositForm({ contracts, initialContractId }: Prop
                     <option value="" disabled>— اختر القسط —</option>
                     {installments.map((inst) => (
                       <option key={inst.id} value={inst.id}>
-                        {formatDate(inst.dueDate)} — {formatCurrency(inst.amount)} —{' '}
+                        {formatDate(inst.dueDate)} — {formatCurrency(inst.amount, currency)} —{' '}
                         {inst.status === 'OVERDUE' ? 'متأخر' : 'قيد الانتظار'}
                       </option>
                     ))}

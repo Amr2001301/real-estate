@@ -17,6 +17,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { formatCompact, formatDate, formatDateTime, tx } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
 import { Button } from '@/components/ui/button';
@@ -116,6 +117,8 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 export async function SalesManagerDashboard() {
   const nowIso = new Date().toISOString();
   const period = nowIso.slice(0, 7);
+  const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency);
 
   const [perfRes, leadsRes, reservationsRes, visitsRes] = await Promise.all([
     safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${period}`)),
@@ -299,7 +302,7 @@ export async function SalesManagerDashboard() {
           {
             // Primary: most business-critical metric — gets warm gold tint + larger value
             label:     'القيمة المحققة',
-            value:     perfRes.error ? '—' : formatCompact(teamRealized),
+            value:     perfRes.error ? '—' : formatCompact(teamRealized, symbol),
             sub:       `هذا الشهر · ${formatPeriod(period)}`,
             icon:      <Banknote />,
             tone:      'brand',
@@ -331,6 +334,7 @@ export async function SalesManagerDashboard() {
         perfError={perfRes.error}
         repRows={repRows}
         period={period}
+        symbol={symbol}
       />
 
       {/* ── Pipeline + Alerts — side by side ──────────────────────────────── */}
@@ -588,11 +592,13 @@ function TeamPerformanceTable({
   perfError,
   repRows,
   period,
+  symbol,
   className = '',
 }: {
   perfError?: string | null;
   repRows:    PerformanceRow[];
   period:     string;
+  symbol?:    string;
   className?: string;
 }) {
   return (
@@ -689,7 +695,7 @@ function TeamPerformanceTable({
                     <td className="px-3 py-3 tabular-nums text-emerald-700 text-end font-bold">{r.signedContractsCount}</td>
                     <td className="px-4 py-3 tabular-nums font-bold text-slate-900 whitespace-nowrap text-end text-[13px]">
                       {r.achievedAmount > 0 ? (
-                        formatCompact(r.achievedAmount)
+                        formatCompact(r.achievedAmount, symbol)
                       ) : (
                         <span className="text-slate-400 font-normal">—</span>
                       )}

@@ -14,6 +14,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { PortalContract } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
 import {
@@ -37,6 +38,7 @@ export default async function PortalContractDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalContract>(`/portal/contracts/${id}`));
   if (r.error || !r.data) notFound();
   const contract = r.data;
@@ -185,18 +187,18 @@ export default async function PortalContractDetailPage({
         <MetricGrid cols={3}>
           <MetricTile
             label="إجمالي العقد"
-            value={formatCurrency(contract.totalAmount)}
+            value={formatCurrency(contract.totalAmount, currency)}
             variant="accent"
             size="lg"
           />
           <MetricTile
             label="الدفعة المقدمة"
-            value={formatCurrency(contract.downPayment)}
+            value={formatCurrency(contract.downPayment, currency)}
             size="md"
           />
           <MetricTile
             label="المبلغ المتبقي"
-            value={formatCurrency(balance)}
+            value={formatCurrency(balance, currency)}
             variant={balance > 0 ? 'default' : 'highlight'}
             size="md"
           />
@@ -230,7 +232,7 @@ export default async function PortalContractDetailPage({
               value={
                 contract.reservation.commissionLockedAmount !== null &&
                 contract.reservation.commissionLockedAmount !== undefined
-                  ? formatCurrency(contract.reservation.commissionLockedAmount)
+                  ? formatCurrency(contract.reservation.commissionLockedAmount, currency)
                   : '—'
               }
             />
@@ -282,7 +284,7 @@ export default async function PortalContractDetailPage({
             />
             <MetricTile
               label="القسط الشهري"
-              value={formatCurrency(contract.installmentPlan.monthlyAmount)}
+              value={formatCurrency(contract.installmentPlan.monthlyAmount, currency)}
             />
             <MetricTile
               label="تاريخ أول قسط"

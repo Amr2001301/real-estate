@@ -7,15 +7,12 @@ import { computeDurationOption } from '@/lib/installment-calc';
 import type { DurationOptionCalculated, InstallmentPlanDurationOption } from '@/lib/types';
 
 interface Props {
-  options: InstallmentPlanDurationOption[];
-  netPrice: number;
+  options:           InstallmentPlanDurationOption[];
+  netPrice:          number;
   reservationAmount: number;
   downPaymentAmount: number;
-  totalPrice: number;
-}
-
-function fmt(n: number): string {
-  return formatCurrency(n.toFixed(2));
+  totalPrice:        number;
+  currency?:         string;
 }
 
 export function DurationSelector({
@@ -24,7 +21,11 @@ export function DurationSelector({
   reservationAmount,
   downPaymentAmount,
   totalPrice,
+  currency = 'SAR',
 }: Props) {
+  function fmt(n: number): string {
+    return formatCurrency(n.toFixed(2), currency);
+  }
   const sorted = useMemo(
     () =>
       [...options]

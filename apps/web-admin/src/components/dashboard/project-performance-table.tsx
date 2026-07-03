@@ -14,11 +14,12 @@ export interface ProjectRow {
 }
 
 interface Props {
-  projects: ProjectRow[];
-  className?: string;
+  projects:        ProjectRow[];
+  className?:      string;
+  currencySymbol?: string;
 }
 
-export function ProjectPerformanceTable({ projects, className }: Props) {
+export function ProjectPerformanceTable({ projects, className, currencySymbol = 'ر.س' }: Props) {
   if (projects.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
@@ -49,7 +50,7 @@ export function ProjectPerformanceTable({ projects, className }: Props) {
               <div className="flex items-center justify-between gap-2 mb-1">
                 <p className="text-xs font-bold text-slate-900 truncate leading-none">{p.name}</p>
                 <span className="text-xs font-extrabold text-brand-700 tabular-nums shrink-0 leading-none">
-                  {formatCompact(p.contractValue)}
+                  {formatCompact(p.contractValue, currencySymbol)}
                 </span>
               </div>
 

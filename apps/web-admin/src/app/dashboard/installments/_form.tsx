@@ -45,9 +45,10 @@ interface UnitOption {
 }
 
 interface Props {
-  projects: ProjectOption[];
+  projects:     ProjectOption[];
   initialData?: InstallmentPlanTemplate;
-  mode: 'create' | 'edit';
+  mode:         'create' | 'edit';
+  currency?:    string;
 }
 
 function parseNum(val: string): number {
@@ -69,7 +70,7 @@ function safeStr(val: unknown, fallback = ''): string {
 }
 
 
-export default function PlanForm({ projects, initialData, mode }: Props) {
+export default function PlanForm({ projects, initialData, mode, currency = 'SAR' }: Props) {
   const action =
     mode === 'edit' && initialData
       ? updatePlanAction.bind(null, initialData.id)
@@ -424,7 +425,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
                 <option value="">— اختر وحدة —</option>
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.code} — {u.type} — {formatCurrency(u.price)}
+                    {u.code} — {u.type} — {formatCurrency(u.price, currency)}
                   </option>
                 ))}
               </Select>
@@ -537,7 +538,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
                 <p className="text-slate-600 font-medium">
                   {discountType === 'PERCENTAGE' ? 'قيمة الخصم المحتسبة' : 'قيمة الخصم'}
                 </p>
-                <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc)}</p>
+                <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc, currency)}</p>
               </div>
             )}
 
@@ -590,7 +591,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
                 <p className="text-brand-700 font-medium">
                   {reservationAmountType === 'PERCENTAGE' ? 'دفعة الحجز المحتسبة (من صافي السعر)' : 'دفعة الحجز'}
                 </p>
-                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation)}</p>
+                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation, currency)}</p>
                 {reservationAmountType === 'PERCENTAGE' && (
                   <p className="text-brand-700/80 text-xs mt-1">
                     عند إنشاء الحجز ستُحتسب النسبة من سعر الوحدة المختارة.
@@ -602,7 +603,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
             {netPrice > 0 && (
               <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
                 <p className="text-brand-700 font-medium">صافي السعر</p>
-                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(netPrice)}</p>
+                <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(netPrice, currency)}</p>
               </div>
             )}
           </div>
@@ -658,7 +659,7 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
             {dpAmount > 0 && (
               <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-sm">
                 <p className="text-amber-700 font-medium">قيمة المقدم</p>
-                <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount)}</p>
+                <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount, currency)}</p>
               </div>
             )}
           </div>
@@ -759,17 +760,17 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
                         </td>
                         <td className="px-3 py-2 text-end tabular-nums text-slate-700">
                           {row.months > 0 && netPrice > 0
-                            ? formatCurrency(row.financedAmount)
+                            ? formatCurrency(row.financedAmount, currency)
                             : '—'}
                         </td>
                         <td className="px-3 py-2 text-end tabular-nums font-medium">
                           {row.months > 0 && netPrice > 0
-                            ? formatCurrency(row.monthlyInstallment)
+                            ? formatCurrency(row.monthlyInstallment, currency)
                             : '—'}
                         </td>
                         <td className="px-3 py-2 text-end tabular-nums text-slate-700">
                           {row.months > 0 && netPrice > 0
-                            ? formatCurrency(row.totalPayable)
+                            ? formatCurrency(row.totalPayable, currency)
                             : '—'}
                         </td>
                         <td className="px-3 py-2 text-end">
@@ -919,11 +920,11 @@ export default function PlanForm({ projects, initialData, mode }: Props) {
         <section className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm">
           <Calculator className="h-4 w-4 text-brand-600" />
           <span className="text-slate-500">صافي السعر:</span>
-          <span className="font-bold text-slate-900">{formatCurrency(netPrice)}</span>
+          <span className="font-bold text-slate-900">{formatCurrency(netPrice, currency)}</span>
           <span className="text-slate-300 mx-1">|</span>
           <span className="text-slate-500">المتبقي بعد الحجز والدفعة الأولى:</span>
           <span className="font-bold text-slate-900">
-            {formatCurrency(Math.max(0, netPrice - reservation - dpAmount))}
+            {formatCurrency(Math.max(0, netPrice - reservation - dpAmount), currency)}
           </span>
         </section>
       )}

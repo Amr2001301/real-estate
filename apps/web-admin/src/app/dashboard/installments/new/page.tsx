@@ -1,4 +1,5 @@
 import { api, safe } from '@/lib/api';
+import { getReportsCurrency } from '@/lib/currency';
 import { PageHeader } from '@/components/ui/page-header';
 import PlanForm from '../_form';
 
@@ -8,7 +9,10 @@ interface ProjectOption {
 }
 
 export default async function NewInstallmentPlanPage() {
-  const projectsRes = await safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100'));
+  const [projectsRes, currency] = await Promise.all([
+    safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
+    getReportsCurrency(),
+  ]);
   const projects = projectsRes.data?.data ?? [];
 
   return (
@@ -22,7 +26,7 @@ export default async function NewInstallmentPlanPage() {
           { label: 'إنشاء خطة' },
         ]}
       />
-      <PlanForm projects={projects} mode="create" />
+      <PlanForm projects={projects} mode="create" currency={currency} />
     </div>
   );
 }

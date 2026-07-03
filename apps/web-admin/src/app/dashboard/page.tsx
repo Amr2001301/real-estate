@@ -22,6 +22,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import { cn } from '@/lib/cn';
 import { formatCompact } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { ChartPanel } from '@/components/dashboard/chart-panel';
 import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-chart';
@@ -183,9 +184,11 @@ interface CommandTile {
 function RevenueCommandStrip({
   kpis,
   financial,
+  symbol,
 }: {
   kpis:      AdminSummary['kpis'] | undefined | null;
   financial: AdminSummary['financial'] | undefined | null;
+  symbol?:   string;
 }) {
   const hasFin     = financial != null;
   const total      = financial?.totalContractValue     ?? 0;
@@ -217,7 +220,7 @@ function RevenueCommandStrip({
   const tiles: CommandTile[] = [
     {
       label:    'إجمالي التعاقدات',
-      value:    hasFin ? formatCompact(total) : '—',
+      value:    hasFin ? formatCompact(total, symbol) : '—',
       sub:      'القيمة الكلية للعقود النشطة',
       valueCls: 'text-slate-900',
       iconCls:  'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
@@ -225,7 +228,7 @@ function RevenueCommandStrip({
     },
     {
       label:    'إجمالي المحصّل',
-      value:    hasFin ? formatCompact(collected) : '—',
+      value:    hasFin ? formatCompact(collected, symbol) : '—',
       sub:      rate !== null ? `${rate}% من قيمة العقود` : '—',
       valueCls: 'text-success-700',
       iconCls:  'bg-success-50 text-success-600 ring-1 ring-success-100',
@@ -248,7 +251,7 @@ function RevenueCommandStrip({
     },
     {
       label:    'مبالغ متأخرة',
-      value:    hasFin ? formatCompact(overdue) : '—',
+      value:    hasFin ? formatCompact(overdue, symbol) : '—',
       sub:      overdue > 0
                   ? overdueRate !== null
                     ? `${overdueRate}% من إجمالي العقود`
@@ -420,7 +423,7 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function TopSalesCard({ rows }: { rows: PerformanceRow[] }) {
+function TopSalesCard({ rows, symbol }: { rows: PerformanceRow[]; symbol?: string }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
@@ -451,7 +454,7 @@ function TopSalesCard({ rows }: { rows: PerformanceRow[] }) {
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.signedContractsCount} عقد موقّع</p>
               </div>
               <p className="text-xs font-black tabular-nums text-emerald-700 shrink-0">
-                {formatCompact(r.achievedAmount)}
+                {formatCompact(r.achievedAmount, symbol)}
               </p>
             </div>
           ))}
@@ -467,7 +470,7 @@ function TopSalesCard({ rows }: { rows: PerformanceRow[] }) {
 
 // ── Top Brokers Card ──────────────────────────────────────────────────────────
 
-function TopBrokersCard({ rows }: { rows: TopBrokerRow[] }) {
+function TopBrokersCard({ rows, symbol }: { rows: TopBrokerRow[]; symbol?: string }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
@@ -498,7 +501,7 @@ function TopBrokersCard({ rows }: { rows: TopBrokerRow[] }) {
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.contractsSigned} عقد موقّع</p>
               </div>
               <p className="text-xs font-black tabular-nums text-violet-700 shrink-0">
-                {formatCompact(Number(r.salesGross))}
+                {formatCompact(Number(r.salesGross), symbol)}
               </p>
             </div>
           ))}
@@ -517,9 +520,11 @@ function TopBrokersCard({ rows }: { rows: TopBrokerRow[] }) {
 function CashFlowPreviewCard({
   forecast,
   overdueTotal,
+  symbol,
 }: {
   forecast:     NonNullable<AdminSummary['cashflowForecast']>;
   overdueTotal: number;
+  symbol?:      string;
 }) {
   const { next30, next3160, next6190 } = forecast;
   const grandTotal = next30 + next3160 + next6190 + overdueTotal;
@@ -543,7 +548,7 @@ function CashFlowPreviewCard({
             {grandTotal > 0 && (
               <p className="text-[11px] text-slate-400 mt-0.5">
                 الإجمالي:{' '}
-                <span className="font-semibold text-slate-600">{formatCompact(grandTotal)}</span>
+                <span className="font-semibold text-slate-600">{formatCompact(grandTotal, symbol)}</span>
               </p>
             )}
           </div>
@@ -563,7 +568,7 @@ function CashFlowPreviewCard({
             <div key={slot.label} className="bg-surface px-6 py-5 flex flex-col gap-2.5">
               <p className="text-[11px] font-medium text-slate-400 leading-none">{slot.label}</p>
               <p className={cn('text-[24px] font-black tabular-nums leading-none tracking-tight', slot.valueCls)}>
-                {formatCompact(slot.amount)}
+                {formatCompact(slot.amount, symbol)}
               </p>
               <div className="h-1.5 w-full rounded-full bg-surface-muted overflow-hidden">
                 <div className={cn('h-full rounded-full', slot.barCls)} style={{ width: `${pct}%` }} />
@@ -587,6 +592,8 @@ export default async function DashboardHome() {
   if (session?.role === 'SALES')         return <SalesDashboard userId={session.id} />;
   if (session?.role === 'SALES_MANAGER') return <SalesManagerDashboard />;
 
+  const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency);
   const now    = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
@@ -675,7 +682,7 @@ export default async function DashboardHome() {
 
       {/* ── KPI Strip — KEEP EXACTLY ──────────────────────────────────────────── */}
       {summary && (
-        <RevenueCommandStrip kpis={kpis} financial={summary.financial} />
+        <RevenueCommandStrip kpis={kpis} financial={summary.financial} symbol={symbol} />
       )}
 
       {/* ── Compact Action Bar ────────────────────────────────────────────────── */}
@@ -715,8 +722,8 @@ export default async function DashboardHome() {
 
         {/* Top Performers — 1/3 */}
         <div className="space-y-4">
-          <TopSalesCard rows={topSalesRows} />
-          <TopBrokersCard rows={topBrokerRows} />
+          <TopSalesCard rows={topSalesRows} symbol={symbol} />
+          <TopBrokersCard rows={topBrokerRows} symbol={symbol} />
         </div>
       </div>
 
@@ -771,7 +778,7 @@ export default async function DashboardHome() {
               </Link>
             </div>
             <div className="p-5">
-              <ProjectHealthMatrix projects={topProjects} />
+              <ProjectHealthMatrix projects={topProjects} currencySymbol={symbol} />
             </div>
           </div>
         </div>
@@ -811,6 +818,7 @@ export default async function DashboardHome() {
           <CashFlowPreviewCard
             forecast={summary.cashflowForecast}
             overdueTotal={summary.financial?.overdueTotal ?? 0}
+            symbol={symbol}
           />
         </div>
       )}

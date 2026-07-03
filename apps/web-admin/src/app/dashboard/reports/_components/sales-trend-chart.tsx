@@ -9,12 +9,13 @@ export interface SalesTrendPoint {
 }
 
 interface Props {
-  data: SalesTrendPoint[];
+  data:             SalesTrendPoint[];
   highlightMonths?: number[];
-  className?: string;
+  className?:       string;
+  currency?:        string;
 }
 
-export function SalesTrendChart({ data, highlightMonths, className }: Props) {
+export function SalesTrendChart({ data, highlightMonths, className, currency = 'SAR' }: Props) {
   const maxContracts = Math.max(1, ...data.map((d) => d.contracts));
   const allZero = data.every((d) => d.contracts === 0);
   const highlighted = new Set(highlightMonths ?? []);
@@ -42,7 +43,7 @@ export function SalesTrendChart({ data, highlightMonths, className }: Props) {
                 {/* Hover tooltip */}
                 <div className="absolute -top-14 start-1/2 -translate-x-1/2 z-10 min-w-[88px] rounded-lg bg-slate-900 px-2.5 py-1.5 text-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none">
                   <p className="text-2xs font-semibold text-white whitespace-nowrap">{d.contracts} عقد</p>
-                  <p className="text-2xs text-slate-300 whitespace-nowrap mt-0.5" dir="ltr">{formatCurrency(d.total)}</p>
+                  <p className="text-2xs text-slate-300 whitespace-nowrap mt-0.5" dir="ltr">{formatCurrency(d.total, currency)}</p>
                 </div>
                 <div
                   className={cn(

@@ -8,6 +8,7 @@ import type {
   Project,
 } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,7 @@ export default async function AdminBrokerCommissionsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({
@@ -147,7 +149,7 @@ export default async function AdminBrokerCommissionsPage({
           },
           {
             label: 'إجمالي الصافي',
-            value: totalNet > 0 ? formatCurrency(totalNet) : '—',
+            value: totalNet > 0 ? formatCurrency(totalNet, currency) : '—',
             icon: <BadgePercent />,
             tone: 'neutral',
             sub: 'في هذه الصفحة',
@@ -253,7 +255,7 @@ export default async function AdminBrokerCommissionsPage({
         trailing={
           totalGross > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              صافي: {formatCurrency(totalNet)}
+              صافي: {formatCurrency(totalNet, currency)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
@@ -370,7 +372,7 @@ export default async function AdminBrokerCommissionsPage({
                     {/* Basis amount */}
                     <td className="py-3 px-4">
                       <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.basisAmount)}
+                        {formatCurrency(c.basisAmount, currency)}
                       </span>
                     </td>
 
@@ -386,14 +388,14 @@ export default async function AdminBrokerCommissionsPage({
                     {/* Gross amount */}
                     <td className="py-3 px-4">
                       <span className="text-xs font-medium text-slate-700 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.grossAmount)}
+                        {formatCurrency(c.grossAmount, currency)}
                       </span>
                     </td>
 
                     {/* Net amount — strongest, the approval-critical payout figure */}
                     <td className="py-3 px-4">
                       <span className="text-sm font-semibold text-slate-900 tabular-nums whitespace-nowrap" dir="ltr">
-                        {formatCurrency(c.netAmount)}
+                        {formatCurrency(c.netAmount, currency)}
                       </span>
                     </td>
 

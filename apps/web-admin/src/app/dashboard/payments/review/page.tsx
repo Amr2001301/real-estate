@@ -3,6 +3,7 @@ import { AlertCircle, ReceiptText } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { PagedDeposits, Deposit } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { Pagination } from '@/components/ui/pagination';
@@ -30,6 +31,7 @@ function firstStr(v: string | string[] | undefined): string {
 
 export default async function PaymentReviewQueuePage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
   const pageSize = 20;
 
@@ -107,7 +109,7 @@ export default async function PaymentReviewQueuePage({ searchParams }: { searchP
                           {contractNum} <span className="text-slate-400">·</span> {unit}
                         </td>
                         <td className="px-3 py-3 tabular-nums font-semibold text-slate-800">
-                          {formatCurrency(Number(d.amount))}
+                          {formatCurrency(Number(d.amount), currency)}
                         </td>
                         <td className="px-3 py-3 text-slate-600">{method}</td>
                         <td className="px-3 py-3 text-slate-600">{formatDate(d.createdAt ?? d.paidAt)}</td>

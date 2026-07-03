@@ -12,6 +12,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { PortalPayout } from '@/lib/types';
 import { tx, formatDate, formatDateTime, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero } from '@/components/premium';
 import { CodeText } from '@/components/ui/code-text';
@@ -41,6 +42,7 @@ export default async function PortalPayoutDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const currency = await getReportsCurrency();
   const r = await safe(api.get<PortalPayout>(`/portal/payouts/${id}`));
   if (r.error || !r.data) notFound();
   const payout = r.data;
@@ -92,7 +94,7 @@ export default async function PortalPayoutDetailPage({
             'text-4xl font-bold tabular-nums leading-none',
             isPaid ? 'text-emerald-700' : 'text-slate-900',
           )}>
-            {formatCurrency(payout.totalNet)}
+            {formatCurrency(payout.totalNet, currency)}
           </p>
           {payout.period && (
             <p className="text-xs text-slate-500 mt-2">
@@ -104,25 +106,25 @@ export default async function PortalPayoutDetailPage({
             <div className="flex items-center justify-between gap-2">
               <span className="text-2xs text-slate-400">الإجمالي</span>
               <span className="text-2xs font-semibold text-slate-700 tabular-nums">
-                {formatCurrency(payout.totalGross)}
+                {formatCurrency(payout.totalGross, currency)}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-2xs text-slate-400">ضريبة القيمة المضافة</span>
               <span className="text-2xs text-slate-500 tabular-nums">
-                − {formatCurrency(payout.totalTax)}
+                − {formatCurrency(payout.totalTax, currency)}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-2xs text-slate-400">الحجز الضريبي</span>
               <span className="text-2xs text-slate-500 tabular-nums">
-                − {formatCurrency(payout.totalWithholding)}
+                − {formatCurrency(payout.totalWithholding, currency)}
               </span>
             </div>
             <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-hairline">
               <span className="text-xs font-semibold text-slate-600">الصافي</span>
               <span className={cn('text-xs font-bold tabular-nums', isPaid ? 'text-emerald-700' : 'text-slate-900')}>
-                {formatCurrency(payout.totalNet)}
+                {formatCurrency(payout.totalNet, currency)}
               </span>
             </div>
           </div>
@@ -252,10 +254,10 @@ export default async function PortalPayoutDetailPage({
                     </p>
                   </td>
                   <td className="py-3.5 px-4 text-end tabular-nums text-slate-600 text-xs">
-                    {formatCurrency(c.grossAmount)}
+                    {formatCurrency(c.grossAmount, currency)}
                   </td>
                   <td className="py-3.5 px-4 pe-6 text-end font-semibold text-slate-900 tabular-nums text-xs">
-                    {formatCurrency(c.netAmount)}
+                    {formatCurrency(c.netAmount, currency)}
                   </td>
                 </tr>
               ))}

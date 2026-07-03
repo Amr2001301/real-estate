@@ -21,6 +21,7 @@ import type {
   TopBrokersResponse,
 } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
+import { getReportsCurrency } from '@/lib/currency';
 import { ExportMenu } from '@/components/export-menu';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ export default async function AdminBrokerReportsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const currency = await getReportsCurrency();
 
   const summaryQs = new URLSearchParams();
   if (sp.brokerId)  summaryQs.set('brokerId',  sp.brokerId);
@@ -242,7 +244,7 @@ export default async function AdminBrokerReportsPage({
           metrics={[
             {
               label:     'إجمالي المبيعات',
-              value:     formatCurrency(s.salesGross),
+              value:     formatCurrency(s.salesGross, currency),
               icon:      <Wallet />,
               tone:      'brand',
               primary:   true,
@@ -251,7 +253,7 @@ export default async function AdminBrokerReportsPage({
             },
             {
               label:     'صافي العمولات',
-              value:     formatCurrency(s.commissionsNet),
+              value:     formatCurrency(s.commissionsNet, currency),
               icon:      <BadgePercent />,
               tone:      'success',
               sub:       `${s.commissionsApproved} عمولة معتمدة`,
@@ -259,7 +261,7 @@ export default async function AdminBrokerReportsPage({
             },
             {
               label:     'المدفوع للوسطاء',
-              value:     formatCurrency(s.payoutsTotalNet),
+              value:     formatCurrency(s.payoutsTotalNet, currency),
               icon:      <CircleDollarSign />,
               tone:      'purple',
               sub:       `${s.payoutsPaid} دفعة مكتملة`,
@@ -267,7 +269,7 @@ export default async function AdminBrokerReportsPage({
             },
             {
               label:     'قيد الصرف',
-              value:     pendingPayout > 0 ? formatCurrency(pendingPayout) : '—',
+              value:     pendingPayout > 0 ? formatCurrency(pendingPayout, currency) : '—',
               icon:      <TrendingUp />,
               tone:      pendingPayout > 0 ? 'warning' : 'neutral',
               sub:       `${(realizationRate * 100).toFixed(0)}% محصّل`,
@@ -278,7 +280,7 @@ export default async function AdminBrokerReportsPage({
               value:     topBroker?.companyName ?? '—',
               icon:      <Trophy />,
               tone:      'neutral',
-              sub:       topBroker ? formatCurrency(Number(topBroker.salesGross)) : undefined,
+              sub:       topBroker ? formatCurrency(Number(topBroker.salesGross), currency) : undefined,
             },
           ]}
         />
@@ -303,7 +305,7 @@ export default async function AdminBrokerReportsPage({
                     {totalTrendContracts.toLocaleString('ar-EG')} عقد
                   </p>
                   <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
-                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0))}
+                    {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0), currency)}
                   </p>
                 </div>
               }
@@ -317,6 +319,7 @@ export default async function AdminBrokerReportsPage({
                     contractsSigned: b.contractsSigned,
                   }))}
                   height={230}
+                  currency={currency}
                 />
               </div>
               <div className="flex items-center gap-5 mt-3 pt-3 border-t border-hairline">
@@ -395,10 +398,10 @@ export default async function AdminBrokerReportsPage({
                       </div>
                       <div className="text-end shrink-0">
                         <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
-                          {formatCurrency(r.salesGross)}
+                          {formatCurrency(r.salesGross, currency)}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                          عمولة: {formatCurrency(r.commissionNet)}
+                          عمولة: {formatCurrency(r.commissionNet, currency)}
                         </p>
                       </div>
                     </div>
@@ -457,10 +460,10 @@ export default async function AdminBrokerReportsPage({
                       </div>
                       <div className="text-end shrink-0">
                         <p className="text-[13px] font-black tabular-nums text-slate-900" dir="ltr">
-                          {formatCurrency(p.salesGross)}
+                          {formatCurrency(p.salesGross, currency)}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                          عمولة: {formatCurrency(p.commissionNet)}
+                          عمولة: {formatCurrency(p.commissionNet, currency)}
                         </p>
                       </div>
                     </div>

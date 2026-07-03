@@ -18,16 +18,11 @@ function formatK(v: number): string {
   return String(Math.round(v));
 }
 
-function fmt(v: number): string {
-  return new Intl.NumberFormat('ar-SA', {
-    style: 'currency', currency: 'SAR', maximumFractionDigits: 0,
-  }).format(v);
-}
-
-function CustomTooltip({ active, payload, label }: {
-  active?: boolean;
+function CustomTooltip({ active, payload, label, fmt }: {
+  active?:  boolean;
   payload?: { name: string; value: number; color: string }[];
-  label?: string;
+  label?:   string;
+  fmt:      (v: number) => string;
 }) {
   if (!active || !payload?.length) return null;
   const contracts = (payload[0] as { payload?: { contractsSigned: number } })?.payload?.contractsSigned ?? 0;
@@ -60,10 +55,17 @@ function CustomTooltip({ active, payload, label }: {
 export function BrokerTrendChart({
   data,
   height = '100%',
+  currency = 'SAR',
 }: {
-  data: BrokerTrendBucket[];
-  height?: number | `${number}%`;
+  data:      BrokerTrendBucket[];
+  height?:   number | `${number}%`;
+  currency?: string;
 }) {
+  function fmt(v: number): string {
+    return new Intl.NumberFormat('ar-SA', {
+      style: 'currency', currency, maximumFractionDigits: 0,
+    }).format(v);
+  }
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
 
@@ -111,7 +113,7 @@ export function BrokerTrendChart({
           tickLine={false}
           width={32}
         />
-        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', radius: 6 }} />
+        <Tooltip content={<CustomTooltip fmt={fmt} />} cursor={{ fill: '#f8fafc', radius: 6 }} />
 
         {/* Commissions Net — amber */}
         <Bar dataKey="commissionsNet" name="commissionsNet" radius={[6, 6, 0, 0]} maxBarSize={26} minPointSize={3}>
