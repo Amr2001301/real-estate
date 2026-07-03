@@ -14,6 +14,7 @@ import {
   Bell,
   CheckCircle2,
   Award,
+  LayoutDashboard,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import Link from 'next/link';
@@ -29,6 +30,7 @@ import { ActivityTable } from '@/components/dashboard/activity-table';
 import { GenerateReportButton } from '@/components/dashboard/generate-report-button';
 import { FinancialHealthCard, SalesFunnelCard } from '@/components/dashboard/platform-summary';
 import { ProjectHealthMatrix } from '@/components/dashboard/project-health-matrix';
+import { PremiumPageHero } from '@/components/premium';
 import { SalesDashboard } from './_components/sales-home';
 import { SalesManagerDashboard } from './_components/sales-manager-home';
 import type { TopBrokerRow, TopBrokersResponse } from '@/lib/types';
@@ -175,6 +177,7 @@ interface CommandTile {
   delta?:    string;
   deltaCls?: string;
   icon:      ReactNode;
+  iconCls:   string;
 }
 
 function RevenueCommandStrip({
@@ -217,6 +220,7 @@ function RevenueCommandStrip({
       value:    hasFin ? formatCompact(total) : '—',
       sub:      'القيمة الكلية للعقود النشطة',
       valueCls: 'text-slate-900',
+      iconCls:  'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
       icon:     <Building2 className="h-[18px] w-[18px]" />,
     },
     {
@@ -224,6 +228,7 @@ function RevenueCommandStrip({
       value:    hasFin ? formatCompact(collected) : '—',
       sub:      rate !== null ? `${rate}% من قيمة العقود` : '—',
       valueCls: 'text-success-700',
+      iconCls:  'bg-success-50 text-success-600 ring-1 ring-success-100',
       delta:    collectionDeltaPct !== null ? deltaLabel(collectionDeltaPct) : undefined,
       deltaCls: collectionDeltaPct !== null && collectionDeltaPct >= 0
                   ? 'text-success-600'
@@ -238,6 +243,7 @@ function RevenueCommandStrip({
                 rate >= 40     ? 'يحتاج متابعة'              :
                                  'أداء منخفض — تدخل مطلوب',
       valueCls: rateValueCls,
+      iconCls:  rateIconCls,
       icon:     <Activity className="h-[18px] w-[18px]" />,
     },
     {
@@ -249,6 +255,9 @@ function RevenueCommandStrip({
                     : 'تجاوزت تاريخ الاستحقاق'
                   : 'لا مبالغ متأخرة',
       valueCls: hasFin && overdue > 0 ? 'text-danger-700' : 'text-slate-400',
+      iconCls:  hasFin && overdue > 0
+                  ? 'bg-danger-50 text-danger-600 ring-1 ring-danger-100'
+                  : 'bg-slate-100 text-slate-400',
       icon:     <AlertCircle className="h-[18px] w-[18px]" />,
     },
     {
@@ -258,6 +267,7 @@ function RevenueCommandStrip({
                   ? `${kpis.soldUnits} وحدة مباعة · ${kpis.reservedUnits} محجوزة`
                   : '—',
       valueCls: 'text-slate-900',
+      iconCls:  'bg-sky-50 text-sky-600 ring-1 ring-sky-100',
       delta:    contractsDelta !== null
                   ? `${contractsDelta >= 0 ? '+' : ''}${contractsDelta} عن الشهر الماضي`
                   : undefined,
@@ -283,7 +293,7 @@ function RevenueCommandStrip({
           <div className="flex flex-1 flex-col px-5 py-4">
             {/* Label + icon row */}
             <div className="flex items-center justify-between gap-2">
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+              <span className={cn('inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', tile.iconCls)}>
                 {tile.icon}
               </span>
               <p className="text-[11px] font-semibold leading-snug text-slate-400">
@@ -296,6 +306,9 @@ function RevenueCommandStrip({
               tile.valueCls,
             )}>
               {tile.value}
+              {tile.value !== '—' && (tile.label === 'إجمالي التعاقدات' || tile.label === 'إجمالي المحصّل' || tile.label === 'مبالغ متأخرة') && (
+                <span className="ms-1 text-[13px] font-semibold text-slate-400">ر.س</span>
+              )}
             </p>
             {/* Sub-label */}
             <p className="mt-1.5 text-[11px] leading-snug text-slate-400">{tile.sub}</p>
@@ -392,6 +405,24 @@ function CompactActionBar({ alerts }: { alerts: AdminSummary['alerts'] | undefin
 
 // ── Top Sales Card ────────────────────────────────────────────────────────────
 
+const RANK_CLS = [
+  'bg-gradient-to-br from-amber-300 to-amber-500 text-white shadow-sm',
+  'bg-gradient-to-br from-slate-300 to-slate-400 text-white shadow-sm',
+  'bg-gradient-to-br from-amber-600 to-amber-700 text-white shadow-sm',
+];
+
+function RankBadge({ rank }: { rank: number }) {
+  const cls = RANK_CLS[rank] ?? 'bg-slate-100 text-slate-500';
+  return (
+    <span className={cn(
+      'h-6 w-6 rounded-full flex items-center justify-center text-2xs font-black tabular-nums shrink-0',
+      cls,
+    )}>
+      {rank + 1}
+    </span>
+  );
+}
+
 function TopSalesCard({ rows }: { rows: PerformanceRow[] }) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
@@ -417,20 +448,13 @@ function TopSalesCard({ rows }: { rows: PerformanceRow[] }) {
         <div className="divide-y divide-hairline">
           {rows.map((r, i) => (
             <div key={r.salesId} className="flex items-center gap-3 px-5 py-3">
-              <span className={cn(
-                'h-6 w-6 rounded-full flex items-center justify-center text-2xs font-black tabular-nums shrink-0',
-                i === 0 ? 'bg-brand-100 text-brand-700'
-                : i === 1 ? 'bg-slate-100 text-slate-600'
-                :           'bg-amber-50 text-amber-600',
-              )}>
-                {i + 1}
-              </span>
+              <RankBadge rank={i} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-slate-900 truncate">{r.salesName}</p>
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.signedContractsCount} عقد موقّع</p>
               </div>
               <p className="text-xs font-black tabular-nums text-emerald-700 shrink-0">
-                {formatCompact(r.achievedAmount)}
+                {formatCompact(r.achievedAmount)} <span className="font-normal text-slate-400">ر.س</span>
               </p>
             </div>
           ))}
@@ -471,20 +495,13 @@ function TopBrokersCard({ rows }: { rows: TopBrokerRow[] }) {
         <div className="divide-y divide-hairline">
           {rows.map((r, i) => (
             <div key={r.brokerId} className="flex items-center gap-3 px-5 py-3">
-              <span className={cn(
-                'h-6 w-6 rounded-full flex items-center justify-center text-2xs font-black tabular-nums shrink-0',
-                i === 0 ? 'bg-brand-100 text-brand-700'
-                : i === 1 ? 'bg-slate-100 text-slate-600'
-                :           'bg-amber-50 text-amber-600',
-              )}>
-                {i + 1}
-              </span>
+              <RankBadge rank={i} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-slate-900 truncate">{r.companyName}</p>
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.contractsSigned} عقد موقّع</p>
               </div>
               <p className="text-xs font-black tabular-nums text-violet-700 shrink-0">
-                {formatCompact(Number(r.salesGross))}
+                {formatCompact(Number(r.salesGross))} <span className="font-normal text-slate-400">ر.س</span>
               </p>
             </div>
           ))}
@@ -593,10 +610,7 @@ export default async function DashboardHome() {
     color: DONUT_COLORS[i % DONUT_COLORS.length]!,
   }));
   const leadTotal   = leadSlices.reduce((sum, s) => sum + s.value, 0);
-  const topSource   = summary?.leadSources?.[0];
-  const donutCenter = topSource && leadTotal > 0
-    ? `${Math.round((topSource.count / leadTotal) * 100)}%`
-    : undefined;
+  const donutCenter = leadTotal > 0 ? String(leadTotal) : undefined;
 
   const trendData = (summary?.reservationTrend ?? []).map((t) => ({
     month: t.label,
@@ -630,30 +644,26 @@ export default async function DashboardHome() {
     <div className="space-y-5">
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <div className="relative bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
-        <div className="px-7 py-5">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shrink-0 shadow-sm">
-                <Building2 className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-navy leading-tight">لوحة التحكم</h1>
-                <p className="text-xs text-slate-400 mt-0.5">نظرة شاملة على أداء المنصة والإجراءات المعلقة</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <GenerateReportButton />
-              <Link href={'/dashboard/projects/new' as never}>
-                <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                  مشروع جديد
-                </Button>
-              </Link>
-            </div>
+      <PremiumPageHero
+        title="لوحة التحكم"
+        description="نظرة شاملة على أداء المنصة والإجراءات المعلقة"
+        meta={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
+            <LayoutDashboard className="h-3.5 w-3.5" />
+            لوحة تحكم
+          </span>
+        }
+        actions={
+          <div className="flex items-center gap-2">
+            <GenerateReportButton />
+            <Link href={'/dashboard/projects/new' as never}>
+              <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
+                مشروع جديد
+              </Button>
+            </Link>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Error Banner ─────────────────────────────────────────────────────── */}
       {error && (
@@ -675,6 +685,7 @@ export default async function DashboardHome() {
       <CompactActionBar alerts={summary?.alerts} />
 
       {/* ── Activity Feed + Top Performers ────────────────────────────────────── */}
+      <SectionLabel>النشاط والأداء</SectionLabel>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
         {/* Activity Feed — 2/3 */}
@@ -788,7 +799,7 @@ export default async function DashboardHome() {
                 <LeadSourceDonut
                   slices={leadSlices}
                   centerLabel={donutCenter}
-                  centerSub={topSource?.source}
+                  centerSub="إجمالي الفرص"
                 />
               </ChartPanel>
             )}
