@@ -8,7 +8,6 @@ import {
   Clock,
   ExternalLink,
   Eye,
-  Gauge,
   Pencil,
   Plus,
   ScrollText,
@@ -22,8 +21,8 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, OperationsSummary, Paged } from '@/lib/types';
-import { Card } from '@/components/ui/card';
-import { PremiumMetricStrip, PremiumPageHero } from '@/components/premium';
+import { Button } from '@/components/ui/button';
+import { PremiumMetricStrip, PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 import { EmptyState } from '@/components/ui/empty-state';
 import { cn } from '@/lib/cn';
 
@@ -53,7 +52,7 @@ function areaLabel(entityType: string): string {
   if (et.includes('document'))           return 'المستندات';
   if (et.includes('visit'))              return 'الزيارات';
   if (et.includes('notification'))       return 'الإشعارات';
-  if (et.includes('audit'))             return 'سجلات التدقيق';
+  if (et.includes('audit'))              return 'سجلات التدقيق';
   if (et.includes('setting'))            return 'الإعدادات';
   if (et.includes('sales-target'))       return 'أهداف المبيعات';
   if (et.includes('bonus'))              return 'المكافآت';
@@ -137,7 +136,6 @@ function eventLabel(action: string, entityType: string): string {
     if (is(['POST', 'PATCH', 'PUT'])) return 'تعديل إعداد نظام';
     if (is(['DELETE']))               return 'حذف إعداد نظام';
   }
-
   if (is(['POST']))         return 'إنشاء سجل';
   if (is(['PATCH', 'PUT'])) return 'تعديل سجل';
   if (is(['DELETE']))       return 'حذف سجل';
@@ -264,13 +262,13 @@ const QUICK_LINKS: Array<{
   icon: LucideIcon;
   desc: string;
 }> = [
-  { href: '/dashboard/audit-logs',         label: 'سجلات التدقيق',   icon: ScrollText,   desc: 'متابعة جميع أحداث النظام' },
-  { href: '/dashboard/notifications',      label: 'الإشعارات',        icon: Bell,         desc: 'مراجعة الإشعارات والقوالب' },
-  { href: '/dashboard/broker-reports',     label: 'تقارير الوسطاء',   icon: BarChart3,    desc: 'متابعة أداء الوسطاء' },
-  { href: '/dashboard/broker-payouts',     label: 'المدفوعات',        icon: Wallet,       desc: 'مراجعة المدفوعات' },
-  { href: '/dashboard/broker-commissions', label: 'العمولات',         icon: BadgePercent, desc: 'مراجعة العمولات' },
-  { href: '/dashboard/broker-leads',       label: 'فرص الوسطاء',     icon: Briefcase,    desc: 'متابعة فرص الوسطاء' },
-  { href: '/dashboard/settings',           label: 'الإعدادات',        icon: Settings,     desc: 'إدارة إعدادات النظام' },
+  { href: '/dashboard/audit-logs',         label: 'سجلات التدقيق',  icon: ScrollText,   desc: 'متابعة جميع أحداث النظام' },
+  { href: '/dashboard/notifications',      label: 'الإشعارات',       icon: Bell,         desc: 'مراجعة الإشعارات والقوالب' },
+  { href: '/dashboard/broker-reports',     label: 'تقارير الوسطاء',  icon: BarChart3,    desc: 'متابعة أداء الوسطاء' },
+  { href: '/dashboard/broker-payouts',     label: 'المدفوعات',       icon: Wallet,       desc: 'مراجعة المدفوعات' },
+  { href: '/dashboard/broker-commissions', label: 'العمولات',        icon: BadgePercent, desc: 'مراجعة العمولات' },
+  { href: '/dashboard/broker-leads',       label: 'فرص الوسطاء',    icon: Briefcase,    desc: 'متابعة فرص الوسطاء' },
+  { href: '/dashboard/settings',           label: 'الإعدادات',       icon: Settings,     desc: 'إدارة إعدادات النظام' },
 ];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -296,7 +294,9 @@ export default async function OperationsCenterPage() {
   const recentGroups  = groupRecentEvents(recent);
 
   return (
-    <div className="flex flex-col gap-5 lg:gap-6 pb-2">
+    <div className="flex flex-col gap-5 pb-2">
+
+      {/* ── Header ─────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title="مركز العمليات"
         description="نظرة تشغيلية على نشاط النظام — أكثر المناطق استخدامًا، أكثر المستخدمين نشاطًا، وآخر الأحداث."
@@ -304,6 +304,12 @@ export default async function OperationsCenterPage() {
           { label: 'لوحة التحكم', href: '/dashboard' },
           { label: 'مركز العمليات' },
         ]}
+        meta={
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
+            <Activity className="h-3.5 w-3.5" />
+            لحظي
+          </span>
+        }
       />
 
       {(summaryRes.error || recentRes.error) && (
@@ -314,110 +320,103 @@ export default async function OperationsCenterPage() {
 
       {summary && (
         <>
-          {/* ── KPI row ─────────────────────────────────────────────────────── */}
+          {/* ── KPI strip ────────────────────────────────────────────────── */}
+          <PremiumMetricStrip
+            variant="dashboard"
+            cols={4}
+            metrics={[
+              {
+                label: 'أحداث اليوم',
+                value: summary.totals.today.toLocaleString('ar-EG'),
+                icon: <Activity />,
+                tone: 'brand',
+                sub: 'خلال الـ٢٤ ساعة الماضية',
+              },
+              {
+                label: 'أحداث الأسبوع',
+                value: summary.totals.last7Days.toLocaleString('ar-EG'),
+                icon: <TrendingUp />,
+                tone: 'info',
+                sub: 'آخر ٧ أيام',
+              },
+              {
+                label: 'أكثر مستخدم نشاطًا',
+                value: topActor?.fullName ?? '—',
+                icon: <UsersIcon />,
+                tone: 'success',
+                valueSize: 'compact',
+                sub: topActor ? (ROLE_LABEL[topActor.role] ?? topActor.role) : undefined,
+              },
+              {
+                label: 'أكثر مساحة نشاطًا',
+                value: topEntityEntry ? areaLabel(topEntityEntry.entityType) : '—',
+                icon: <Activity />,
+                tone: 'purple',
+                valueSize: 'compact',
+                sub: topEntityEntry ? `${topEntityEntry.count} حدث في ٧ أيام` : undefined,
+              },
+            ]}
+          />
+
+          {/* ── Secondary insights strip ─────────────────────────────────── */}
           <PremiumMetricStrip
             variant="compact"
             cols={4}
             metrics={[
-              { label: 'أحداث اليوم',         value: String(summary.totals.today),                                icon: <Activity />,   tone: 'brand',   sub: 'خلال الـ٢٤ ساعة الماضية' },
-              { label: 'أحداث الأسبوع',       value: String(summary.totals.last7Days),                            icon: <TrendingUp />, tone: 'info',    sub: 'آخر ٧ أيام' },
-              { label: 'أكثر مستخدم نشاطًا',  value: topActor?.fullName ?? '—',                                   icon: <UsersIcon />,  tone: 'success', valueSize: 'compact', sub: topActor ? (ROLE_LABEL[topActor.role] ?? topActor.role) : undefined },
-              { label: 'أكثر مساحة نشاطًا',   value: topEntityEntry ? areaLabel(topEntityEntry.entityType) : '—', icon: <Activity />,   tone: 'purple',  valueSize: 'compact', sub: topEntityEntry ? `${topEntityEntry.count} حدث في ٧ أيام` : undefined },
+              {
+                label: 'أكثر إجراء متكرر',
+                value: topActionEntry
+                  ? `${methodLabel(topActionEntry.action)} · ${topActionEntry.action}`
+                  : '—',
+                icon: <Zap />,
+                tone: 'warning',
+                sub: topActionEntry ? `${topActionEntry.count} مرة` : undefined,
+              },
+              {
+                label: 'آخر نشاط',
+                value: recent[0] ? relativeTime(recent[0].createdAt) : '—',
+                icon: <Clock />,
+                tone: 'brand',
+              },
+              {
+                label: 'إجمالي ٣٠ يومًا',
+                value: summary.totals.last30Days.toLocaleString('ar-EG'),
+                icon: <TrendingUp />,
+                tone: 'success',
+              },
+              {
+                label: 'عمليات الحذف',
+                value: deleteCount === 0 ? 'لا توجد' : deleteCount.toLocaleString('ar-EG'),
+                icon: <Shield />,
+                tone: deleteCount > 0 ? 'danger' : 'neutral',
+              },
             ]}
           />
 
-          {/* ── Insights strip ───────────────────────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 rounded-2xl border border-hairline bg-surface p-4 shadow-xs">
-            {[
-              {
-                icon: <Zap className="h-3.5 w-3.5" />,
-                label: 'أكثر إجراء متكرر',
-                value: topActionEntry ? methodLabel(topActionEntry.action) : '—',
-                sub: topActionEntry ? `${topActionEntry.count} مرة` : null,
-                badge: topActionEntry
-                  ? { text: topActionEntry.action, cls: methodBadgeCls(topActionEntry.action) }
-                  : null,
-                iconCls: 'bg-amber-50 text-amber-600',
-              },
-              {
-                icon: <Clock className="h-3.5 w-3.5" />,
-                label: 'آخر نشاط',
-                value: recent[0] ? relativeTime(recent[0].createdAt) : '—',
-                sub: null,
-                badge: null,
-                iconCls: 'bg-brand-50 text-brand-600',
-              },
-              {
-                icon: <TrendingUp className="h-3.5 w-3.5" />,
-                label: 'إجمالي ٣٠ يومًا',
-                value: String(summary.totals.last30Days),
-                sub: null,
-                badge: null,
-                iconCls: 'bg-success-50 text-success-600',
-              },
-              {
-                icon: <Shield className="h-3.5 w-3.5" />,
-                label: 'عمليات الحذف',
-                value: deleteCount === 0 ? 'لا توجد' : String(deleteCount),
-                sub: null,
-                badge: null,
-                iconCls: deleteCount > 0 ? 'bg-danger-50 text-danger-600' : 'bg-slate-100 text-slate-500',
-              },
-            ].map(({ icon, label, value, sub, badge, iconCls }) => (
-              <div key={label} className="flex items-center gap-2.5">
-                <span className={cn(
-                  'inline-flex h-7 w-7 rounded-lg items-center justify-center shrink-0',
-                  iconCls,
-                )}>
-                  {icon}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest leading-none truncate">
-                    {label}
-                  </p>
-                  <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    <span className="text-xs font-semibold text-slate-800 tabular-nums">{value}</span>
-                    {badge && (
-                      <span className={cn('text-[9px] font-bold font-mono px-1 py-px rounded', badge.cls)} dir="ltr">
-                        {badge.text}
-                      </span>
-                    )}
-                    {sub && (
-                      <span className="text-[10px] text-slate-400">{sub}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {/* ── Main two-column section ────────────────────────────────────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
-          {/* ── Events + side ────────────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:items-start">
-
-            {/* Latest events (2/3) */}
-            <Card className="overflow-hidden lg:col-span-2">
-              {/* Card header */}
-              <div className="flex items-start justify-between gap-3 px-5 pt-5 pb-4">
-                <div>
-                  <h2 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
-                    <ScrollText className="h-4 w-4 text-brand-600" />
-                    أحدث الأحداث
-                  </h2>
-                  <p className="text-2xs text-slate-500 mt-0.5 ms-6">
-                    آخر نشاط تشغيلي مهم داخل النظام
-                  </p>
-                </div>
-                <Link
-                  href="/dashboard/audit-logs"
-                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-hairline px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-surface-muted hover:border-slate-300 transition-all"
-                >
-                  <ExternalLink className="h-3.5 w-3.5 text-brand-600" />
-                  فتح سجل التدقيق
+            {/* ── Latest events (2/3) ──────────────────────────────────────── */}
+            <PremiumSectionCard
+              className="lg:col-span-2"
+              icon={<ScrollText />}
+              title="أحدث الأحداث"
+              description="آخر نشاط تشغيلي مهم داخل النظام"
+              trailing={
+                <Link href="/dashboard/audit-logs">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
+                  >
+                    فتح سجل التدقيق
+                  </Button>
                 </Link>
-              </div>
-
-              {recentGroups.length === 0 && (!summary || summary.topEntities.length === 0) ? (
-                <div className="px-5 pb-5">
+              }
+              padded={false}
+            >
+              {recentGroups.length === 0 && summary.topEntities.length === 0 ? (
+                <div className="py-12">
                   <EmptyState
                     icon={<ScrollText />}
                     title="لا توجد أحداث بعد"
@@ -425,12 +424,11 @@ export default async function OperationsCenterPage() {
                   />
                 </div>
               ) : (
-                <div>
-
+                <>
                   {/* Grouped recent events */}
                   {recentGroups.length > 0 && (
-                    <div>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-5 mb-1">
+                    <>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline bg-canvas/40">
                         آخر النشاط
                       </p>
                       <ul className="divide-y divide-hairline">
@@ -443,48 +441,52 @@ export default async function OperationsCenterPage() {
                             <li key={g.firstId}>
                               <Link
                                 href={href}
-                                aria-label={`عرض تفاصيل: ${eventLabel(g.action, g.entityType)}`}
-                                className="group flex items-center gap-3 px-5 py-3 hover:bg-slate-50 transition-colors"
+                                className="group flex items-center gap-4 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
                               >
+                                {/* Method icon */}
                                 <span className={cn(
-                                  'shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-lg',
+                                  'shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl',
                                   methodIconCls(g.action),
                                 )}>
-                                  <Icon className="h-3.5 w-3.5" />
+                                  <Icon className="h-4 w-4" />
                                 </span>
 
+                                {/* Content */}
                                 <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <p className="text-sm font-semibold text-slate-900 truncate">
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-[13px] font-semibold text-slate-900 truncate">
                                       {eventLabel(g.action, g.entityType)}
                                     </p>
                                     {g.count > 1 && (
-                                      <span className="shrink-0 text-[10px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-px rounded-full tabular-nums">
+                                      <span className="shrink-0 text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full tabular-nums whitespace-nowrap">
                                         {g.count} مرة
                                       </span>
                                     )}
                                   </div>
-                                  <p className="text-2xs text-slate-500 mt-0.5 truncate">
-                                    {'بواسطة '}
-                                    {g.actor?.fullName ?? 'النظام'}
-                                    {' · داخل '}
+                                  <p className="text-[12px] text-slate-500 mt-0.5 truncate">
+                                    بواسطة{' '}
+                                    <span className="font-medium text-slate-700">
+                                      {g.actor?.fullName ?? 'النظام'}
+                                    </span>
+                                    {' · '}
                                     {areaLabel(g.entityType)}
                                     {' · '}
                                     {relativeTime(g.latestAt)}
                                   </p>
                                 </div>
 
-                                <div className="shrink-0 flex items-center gap-1.5">
-                                  <span className={cn(
-                                    'hidden sm:inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold font-mono',
-                                    methodBadgeCls(g.action),
-                                  )} dir="ltr">
+                                {/* Method badge + eye */}
+                                <div className="shrink-0 flex items-center gap-2">
+                                  <span
+                                    className={cn(
+                                      'hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold font-mono',
+                                      methodBadgeCls(g.action),
+                                    )}
+                                    dir="ltr"
+                                  >
                                     {g.action}
                                   </span>
-                                  <span
-                                    className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 group-hover:text-brand-600 group-hover:bg-brand-50 transition-colors"
-                                    aria-hidden="true"
-                                  >
+                                  <span className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 group-hover:text-brand-600 group-hover:bg-brand-50 transition-colors">
                                     <Eye className="h-3.5 w-3.5" />
                                   </span>
                                 </div>
@@ -493,13 +495,16 @@ export default async function OperationsCenterPage() {
                           );
                         })}
                       </ul>
-                    </div>
+                    </>
                   )}
 
-                  {/* Weekly entity activity summaries */}
-                  {summary && summary.topEntities.length > 0 && (
-                    <div className={cn(recentGroups.length > 0 && 'border-t border-hairline mt-2 pt-2')}>
-                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest px-5 mb-1">
+                  {/* Weekly entity activity */}
+                  {summary.topEntities.length > 0 && (
+                    <>
+                      <p className={cn(
+                        'text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline bg-canvas/40',
+                        recentGroups.length > 0 && 'border-t',
+                      )}>
                         نشاط الأسبوع حسب المساحة
                       </p>
                       <ul className="divide-y divide-hairline">
@@ -507,183 +512,176 @@ export default async function OperationsCenterPage() {
                           <li key={e.entityType}>
                             <Link
                               href={`/dashboard/audit-logs?entityType=${encodeURIComponent(e.entityType)}`}
-                              aria-label={`عرض نشاط ${areaLabel(e.entityType)}`}
-                              className="group flex items-center gap-3 px-5 py-2.5 hover:bg-slate-50 transition-colors"
+                              className="group flex items-center gap-4 px-5 py-3.5 hover:bg-canvas/40 transition-colors"
                             >
-                              <span className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-lg bg-brand-50 text-brand-600">
-                                <Activity className="h-3.5 w-3.5" />
+                              <span className="shrink-0 inline-flex items-center justify-center h-9 w-9 rounded-xl bg-brand-50 text-brand-600">
+                                <Activity className="h-4 w-4" />
                               </span>
-
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-slate-900 truncate">
+                                <p className="text-[13px] font-semibold text-slate-900 truncate">
                                   {areaLabel(e.entityType)}
                                 </p>
-                                <p className="text-2xs text-slate-500 mt-0.5">
+                                <p className="text-[12px] text-slate-500 mt-0.5">
                                   {e.count} حدث · آخر ٧ أيام
                                 </p>
                               </div>
-
-                              <span className="shrink-0 text-xs font-bold tabular-nums bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full">
+                              <span className="shrink-0 text-[13px] font-bold tabular-nums bg-slate-100 text-slate-700 px-3 py-1 rounded-full">
                                 {e.count}
                               </span>
-
-                              <span
-                                className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 group-hover:text-brand-600 group-hover:bg-brand-50 transition-colors"
-                                aria-hidden="true"
-                              >
+                              <span className="shrink-0 inline-flex items-center justify-center h-7 w-7 rounded-lg text-slate-300 group-hover:text-brand-600 group-hover:bg-brand-50 transition-colors">
                                 <Eye className="h-3.5 w-3.5" />
                               </span>
                             </Link>
                           </li>
                         ))}
                       </ul>
-                      <div className="h-2" />
-                    </div>
+                    </>
                   )}
-                </div>
+                </>
               )}
-            </Card>
+            </PremiumSectionCard>
 
-            {/* Side column (1/3) */}
-            <div className="flex flex-col gap-4">
+            {/* ── Side column ──────────────────────────────────────────────── */}
+            <div className="flex flex-col gap-5">
 
               {/* Quick links */}
-              <Card className="p-4 flex-1">
-                <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-brand-600" />
-                  روابط سريعة
-                </h2>
-                <div className="grid grid-cols-2 gap-2">
+              <PremiumSectionCard
+                icon={<Zap />}
+                title="روابط سريعة"
+                padded={false}
+              >
+                <div className="grid grid-cols-2 gap-3 p-4">
                   {QUICK_LINKS.map((q) => (
                     <Link key={q.href} href={q.href} className="flex">
-                      <div className="flex flex-col gap-1 p-2.5 rounded-xl border border-hairline hover:border-brand-200 hover:bg-brand-50/40 transition-all duration-150 flex-1">
-                        <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-surface-muted">
-                          <q.icon className="h-3.5 w-3.5 text-brand-600" />
+                      <div className="flex flex-col gap-2 p-3.5 rounded-xl border border-hairline hover:border-brand-200 hover:bg-brand-50/40 transition-all duration-150 flex-1">
+                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-surface-muted text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
+                          <q.icon className="h-4 w-4" />
                         </span>
-                        <p className="text-xs font-semibold text-slate-900 leading-snug mt-0.5">{q.label}</p>
-                        <p className="text-[10px] text-slate-500 leading-relaxed">{q.desc}</p>
+                        <div>
+                          <p className="text-[12px] font-semibold text-slate-900 leading-tight">{q.label}</p>
+                          <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{q.desc}</p>
+                        </div>
                       </div>
                     </Link>
                   ))}
                 </div>
-              </Card>
+              </PremiumSectionCard>
 
-              {/* Sensitive activity */}
-              <Card className="p-4">
-                <h2 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-amber-500" />
-                  نشاط حساس
-                </h2>
-                <ul className="space-y-2.5">
-                  {[
-                    {
-                      label: 'عمليات الحذف',
-                      count: deleteCount,
-                      warn: deleteCount > 0,
-                      icon: <Trash2 className="h-3.5 w-3.5" />,
-                    },
-                    {
-                      label: 'أحداث المصادقة',
-                      count: authCount,
-                      warn: false,
-                      icon: <Shield className="h-3.5 w-3.5" />,
-                    },
-                    {
-                      label: 'تغييرات الصلاحيات',
-                      count: permCount,
-                      warn: permCount > 0,
-                      icon: <UsersIcon className="h-3.5 w-3.5" />,
-                    },
-                  ].map(({ label, count, warn, icon }) => (
-                    <li key={label} className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
-                      <span className={cn(
-                        'inline-flex items-center justify-center h-5 w-5 rounded shrink-0',
-                        warn ? 'bg-danger-50 text-danger-600' : 'bg-slate-100 text-slate-500',
-                      )}>
-                        {icon}
-                      </span>
-                      <span className="text-xs text-slate-700 truncate">{label}</span>
-                      <span className={cn(
-                        'text-xs font-bold tabular-nums px-2.5 py-0.5 rounded-full min-w-[2rem] text-center',
-                        warn ? 'bg-danger-50 text-danger-700' : 'bg-slate-100 text-slate-600',
-                      )}>
-                        {count}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </Card>
             </div>
           </div>
 
-          {/* ── Distribution row ─────────────────────────────────────────────── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* ── Bottom row: sensitive activity + distributions (3-col) ────── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
-            {/* By area */}
-            <Card className="p-5">
-              <h2 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-brand-600" />
-                توزيع حسب المساحة (٧ أيام)
-              </h2>
-              {summary.topEntities.length === 0 ? (
-                <p className="text-2xs text-slate-500">لا توجد بيانات</p>
-              ) : (
-                <ul className="space-y-4">
-                  {summary.topEntities.map((e) => (
-                    <li key={e.entityType} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-slate-700 font-medium truncate">
-                          {areaLabel(e.entityType)}
-                        </span>
-                        <span className="text-sm font-bold tabular-nums text-slate-900 shrink-0">{e.count}</span>
-                      </div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-brand-400 rounded-full transition-all"
-                          style={{ width: `${Math.round((e.count / maxEntity) * 100)}%` }}
-                        />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+            {/* Sensitive activity */}
+            <PremiumSectionCard
+              icon={<Shield />}
+              title="نشاط حساس"
+              tone="warning"
+              padded={false}
+            >
+              <div className="divide-y divide-hairline">
+                {[
+                  { label: 'عمليات الحذف',      count: deleteCount, warn: deleteCount > 0, icon: <Trash2 className="h-4 w-4" /> },
+                  { label: 'أحداث المصادقة',     count: authCount,   warn: false,           icon: <Shield className="h-4 w-4" /> },
+                  { label: 'تغييرات الصلاحيات',  count: permCount,   warn: permCount > 0,   icon: <UsersIcon className="h-4 w-4" /> },
+                ].map(({ label, count, warn, icon }) => (
+                  <div key={label} className="flex items-center gap-3.5 px-5 py-4">
+                    <span className={cn(
+                      'inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0',
+                      warn ? 'bg-danger-50 text-danger-600' : 'bg-slate-100 text-slate-500',
+                    )}>
+                      {icon}
+                    </span>
+                    <span className="flex-1 text-[13px] font-medium text-slate-700">{label}</span>
+                    <span className={cn(
+                      'text-[20px] font-black tabular-nums shrink-0',
+                      warn ? 'text-danger-700' : 'text-slate-400',
+                    )}>
+                      {count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </PremiumSectionCard>
 
             {/* By action */}
-            <Card className="p-5">
-              <h2 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-brand-600" />
-                توزيع حسب الإجراء (٧ أيام)
-              </h2>
+            <PremiumSectionCard
+              icon={<Activity />}
+              title="توزيع حسب الإجراء (٧ أيام)"
+              padded={false}
+            >
               {summary.topActions.length === 0 ? (
-                <p className="text-2xs text-slate-500">لا توجد بيانات</p>
+                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">لا توجد بيانات</p>
               ) : (
-                <ul className="space-y-4">
-                  {summary.topActions.map((a) => (
-                    <li key={a.action} className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm text-slate-700 font-medium">{methodLabel(a.action)}</span>
-                          <span className={cn(
-                            'text-[10px] font-bold font-mono px-1.5 py-px rounded',
-                            methodBadgeCls(a.action),
-                          )} dir="ltr">
+                <div className="divide-y divide-hairline">
+                  {summary.topActions.map((a) => {
+                    const pct = Math.round((a.count / maxAction) * 100);
+                    return (
+                      <div key={a.action} className="flex items-center gap-4 px-5 py-4">
+                        <div className="flex items-center gap-2.5 shrink-0 w-28">
+                          <span className="text-[13px] font-semibold text-slate-800">
+                            {methodLabel(a.action)}
+                          </span>
+                          <span
+                            className={cn(
+                              'text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md',
+                              methodBadgeCls(a.action),
+                            )}
+                            dir="ltr"
+                          >
                             {a.action}
                           </span>
                         </div>
-                        <span className="text-sm font-bold tabular-nums text-slate-900 shrink-0">{a.count}</span>
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className={cn('h-full rounded-full transition-all', methodBarCls(a.action))}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-[13px] font-bold tabular-nums text-slate-900 w-8 text-right shrink-0">
+                          {a.count}
+                        </span>
                       </div>
-                      <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                          className={cn('h-full rounded-full transition-all', methodBarCls(a.action))}
-                          style={{ width: `${Math.round((a.count / maxAction) * 100)}%` }}
-                        />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                    );
+                  })}
+                </div>
               )}
-            </Card>
+            </PremiumSectionCard>
+
+            {/* By area */}
+            <PremiumSectionCard
+              icon={<BarChart3 />}
+              title="توزيع حسب المساحة (٧ أيام)"
+              padded={false}
+            >
+              {summary.topEntities.length === 0 ? (
+                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">لا توجد بيانات</p>
+              ) : (
+                <div className="divide-y divide-hairline">
+                  {summary.topEntities.map((e) => {
+                    const pct = Math.round((e.count / maxEntity) * 100);
+                    return (
+                      <div key={e.entityType} className="flex items-center gap-4 px-5 py-4">
+                        <span className="text-[13px] font-semibold text-slate-800 shrink-0 w-28 truncate">
+                          {areaLabel(e.entityType)}
+                        </span>
+                        <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-brand-400 rounded-full transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <span className="text-[13px] font-bold tabular-nums text-slate-900 w-8 text-right shrink-0">
+                          {e.count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </PremiumSectionCard>
+
           </div>
         </>
       )}
