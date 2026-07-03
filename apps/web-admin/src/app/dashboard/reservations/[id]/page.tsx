@@ -242,7 +242,7 @@ export default async function ReservationDetailPage({
                           <div className="min-w-0 flex-1">
                             <p className="text-[17px] font-bold tabular-nums text-slate-900 leading-snug">
                               {Number(dep.amount).toLocaleString('ar-SA')}{' '}
-                              <span className="text-[13px] font-medium text-slate-400">ر.س</span>
+                              <span className="text-[13px] font-medium text-slate-400">ج.م</span>
                             </p>
                             <p className="text-[12px] text-slate-400 mt-0.5">{formatDate(dep.paidAt)}</p>
                           </div>
@@ -311,21 +311,21 @@ export default async function ReservationDetailPage({
                     {reservation.snapshotDownPaymentAmount != null && (
                       <Field label="الدفعة الأولى">
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} ر.س
+                          {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} ج.م
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotRemainingAmount != null && (
                       <Field label="المبلغ المتبقي">
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotRemainingAmount).toLocaleString('ar-SA')} ر.س
+                          {Number(reservation.snapshotRemainingAmount).toLocaleString('ar-SA')} ج.م
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotFinancedAmount != null && (
                       <Field label="المبلغ الممول">
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
-                          {Number(reservation.snapshotFinancedAmount).toLocaleString('ar-SA')} ر.س
+                          {Number(reservation.snapshotFinancedAmount).toLocaleString('ar-SA')} ج.م
                         </span>
                       </Field>
                     )}
@@ -336,7 +336,7 @@ export default async function ReservationDetailPage({
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                           })}{' '}
-                          ر.س
+                          ج.م
                         </span>
                       </Field>
                     )}
@@ -351,7 +351,7 @@ export default async function ReservationDetailPage({
                         <Field label="إجمالي السداد">
                           <span className="text-[28px] font-black tabular-nums leading-none text-slate-900" dir="ltr">
                             {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')}
-                            <span className="text-[15px] font-semibold text-slate-400 ms-1.5">ر.س</span>
+                            <span className="text-[15px] font-semibold text-slate-400 ms-1.5">ج.م</span>
                           </span>
                         </Field>
                       </div>
@@ -558,7 +558,7 @@ export default async function ReservationDetailPage({
                     </Field>
                     <Field label="السعر">
                       <span className="text-[14px] font-bold text-slate-800 tabular-nums" dir="ltr">
-                        {Number(reservation.unit.price).toLocaleString('ar-SA')} ر.س
+                        {Number(reservation.unit.price).toLocaleString('ar-SA')} ج.م
                       </span>
                     </Field>
                   </div>

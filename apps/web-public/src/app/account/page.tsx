@@ -364,7 +364,7 @@ export default async function AccountPage() {
           icon:     Wallet,
           label:    'إجمالي المدفوعات',
           value:    depositsAmountText ?? '—',
-          currency: depositsAmountText ? 'ر.س' : undefined,
+          currency: depositsAmountText ? 'ج.م' : undefined,
           hint:     'إجمالي محصّل',
           href:     routes.accountDeposits,
         },

@@ -96,7 +96,7 @@ function fmtAmt(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
-  return n.toLocaleString('en-US') + ' ر.س';
+  return n.toLocaleString('en-US') + ' ج.م';
 }
 
 function getPlanDisplay(planName: string | null | undefined, source: EntrySource | undefined): string {

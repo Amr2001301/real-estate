@@ -4,14 +4,14 @@ const NUM = new Intl.NumberFormat('ar-SA');
 
 /**
  * Format a price (number or Decimal-string) as grouped digits + a clean
- * "ر.س" suffix. Avoids the currency style's odd symbol/RLM spacing while
+ * "ج.م" suffix. Avoids the currency style's odd symbol/RLM spacing while
  * keeping Arabic-Indic digits consistent with the rest of the UI.
  */
 export function formatPrice(value: number | string | null | undefined): string {
   if (value === null || value === undefined || value === '') return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (!Number.isFinite(n)) return '—';
-  return `${NUM.format(n)} ر.س`;
+  return `${NUM.format(n)} ج.م`;
 }
 
 export function formatNumber(value: number | string | null | undefined): string {

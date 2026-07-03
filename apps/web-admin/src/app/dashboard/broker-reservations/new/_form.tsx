@@ -262,7 +262,7 @@ export function AdminBrokerReservationForm({
                 <option key={u.id} value={u.id}>
                   {u.code} — {u.type}
                   {u.buildingName ? ` (${u.buildingName})` : ''} —{' '}
-                  {Number(u.price).toLocaleString()} ر.س
+                  {Number(u.price).toLocaleString()} ج.م
                 </option>
               ))}
             </Select>

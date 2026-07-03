@@ -307,7 +307,7 @@ function RevenueCommandStrip({
             )}>
               {tile.value}
               {tile.value !== '—' && (tile.label === 'إجمالي التعاقدات' || tile.label === 'إجمالي المحصّل' || tile.label === 'مبالغ متأخرة') && (
-                <span className="ms-1 text-[13px] font-semibold text-slate-400">ر.س</span>
+                <span className="ms-1 text-[13px] font-semibold text-slate-400">ج.م</span>
               )}
             </p>
             {/* Sub-label */}
@@ -454,7 +454,7 @@ function TopSalesCard({ rows }: { rows: PerformanceRow[] }) {
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.signedContractsCount} عقد موقّع</p>
               </div>
               <p className="text-xs font-black tabular-nums text-emerald-700 shrink-0">
-                {formatCompact(r.achievedAmount)} <span className="font-normal text-slate-400">ر.س</span>
+                {formatCompact(r.achievedAmount)} <span className="font-normal text-slate-400">ج.م</span>
               </p>
             </div>
           ))}
@@ -501,7 +501,7 @@ function TopBrokersCard({ rows }: { rows: TopBrokerRow[] }) {
                 <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.contractsSigned} عقد موقّع</p>
               </div>
               <p className="text-xs font-black tabular-nums text-violet-700 shrink-0">
-                {formatCompact(Number(r.salesGross))} <span className="font-normal text-slate-400">ر.س</span>
+                {formatCompact(Number(r.salesGross))} <span className="font-normal text-slate-400">ج.م</span>
               </p>
             </div>
           ))}
@@ -546,7 +546,7 @@ function CashFlowPreviewCard({
             {grandTotal > 0 && (
               <p className="text-[11px] text-slate-400 mt-0.5">
                 الإجمالي:{' '}
-                <span className="font-semibold text-slate-600">{formatCompact(grandTotal)} ر.س</span>
+                <span className="font-semibold text-slate-600">{formatCompact(grandTotal)} ج.م</span>
               </p>
             )}
           </div>

@@ -284,7 +284,7 @@ function SummaryBlock({
       >
         {value}
         {value !== '—' && (
-          <span className="ms-1.5 text-xs font-semibold text-ink-muted/60">ر.س</span>
+          <span className="ms-1.5 text-xs font-semibold text-ink-muted/60">ج.م</span>
         )}
       </div>
       {sub && <div className="mt-1 text-[11px] text-ink-muted/70">{sub}</div>}

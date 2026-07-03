@@ -1,15 +1,15 @@
-// Compact currency for KPI cards: "1.4م ر.س" / "75ك ر.س" / "500 ر.س"
+// Compact currency for KPI cards: "1.4م ج.م" / "75ك ج.م" / "500 ج.م"
 export function formatCompact(value: number | string | null | undefined): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
   const abs = Math.abs(n);
-  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}م ر.س`;
+  if (abs >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}م ج.م`;
   if (abs >= 1_000) {
     const k = n / 1_000;
-    return `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}ك ر.س`;
+    return `${k % 1 === 0 ? k.toFixed(0) : k.toFixed(1)}ك ج.م`;
   }
-  return `${Math.round(n).toLocaleString('ar-EG')} ر.س`;
+  return `${Math.round(n).toLocaleString('ar-EG')} ج.م`;
 }
 
 export function formatCurrency(value: number | string | null | undefined, currency = 'SAR'): string {

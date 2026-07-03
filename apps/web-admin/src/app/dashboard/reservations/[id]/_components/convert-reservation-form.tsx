@@ -132,7 +132,7 @@ export function ConvertReservationForm({ reservation }: Props) {
               <div className="flex justify-between">
                 <dt className="text-slate-500">مبلغ الحجز</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
-                  {bookingAmount.toLocaleString('ar-SA')} ر.س
+                  {bookingAmount.toLocaleString('ar-SA')} ج.م
                   <span className="mr-1 text-slate-400">({reservation.bookingPaymentStatus})</span>
                 </dd>
               </div>
@@ -141,7 +141,7 @@ export function ConvertReservationForm({ reservation }: Props) {
               <div className="flex justify-between">
                 <dt className="text-slate-500">الدفعة الأولى</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
-                  {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} ر.س
+                  {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} ج.م
                 </dd>
               </div>
             )}
@@ -163,7 +163,7 @@ export function ConvertReservationForm({ reservation }: Props) {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
-                  ر.س
+                  ج.م
                 </dd>
               </div>
             )}
@@ -171,7 +171,7 @@ export function ConvertReservationForm({ reservation }: Props) {
               <div className="flex justify-between border-t border-hairline pt-2 mt-1">
                 <dt className="text-slate-500">إجمالي السداد</dt>
                 <dd className="font-bold tabular-nums text-slate-900" dir="ltr">
-                  {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')} ر.س
+                  {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')} ج.م
                 </dd>
               </div>
             )}

@@ -228,7 +228,7 @@ export function TargetFormDialog({
         {/* هدف القيمة */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-slate-600">
-            هدف القيمة (ر.س) <span className="text-red-400">*</span>
+            هدف القيمة (ج.م) <span className="text-red-400">*</span>
           </label>
           <Input
             type="number"

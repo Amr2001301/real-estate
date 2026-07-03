@@ -219,9 +219,9 @@ export default async function BonusPage({
         variant="compact"
         cols={4}
         metrics={[
-          { label: 'إجمالي المعلق',  value: pendingTotal === 0 ? '0 ر.س.' : formatCurrency(pendingTotal),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
-          { label: 'إجمالي المعتمد', value: approvedTotal === 0 ? '0 ر.س.' : formatCurrency(approvedTotal), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
-          { label: 'إجمالي المدفوع', value: paidTotal === 0 ? '0 ر.س.' : formatCurrency(paidTotal),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: 'إجمالي المعلق',  value: pendingTotal === 0 ? '0 ج.م.' : formatCurrency(pendingTotal),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
+          { label: 'إجمالي المعتمد', value: approvedTotal === 0 ? '0 ج.م.' : formatCurrency(approvedTotal), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
+          { label: 'إجمالي المدفوع', value: paidTotal === 0 ? '0 ج.م.' : formatCurrency(paidTotal),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
           { label: 'عدد المستحقات',  value: entryCount,                                                      icon: <Hash />,         tone: 'brand'   },
         ]}
       />
@@ -286,7 +286,7 @@ export default async function BonusPage({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="المبلغ (ر.س.)">
+              <FormField label="المبلغ (ج.م.)">
                 <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-full" placeholder="0" />
               </FormField>
               <FormField label="شهر الاستحقاق">

@@ -27,7 +27,7 @@ export function ProjectCard({ p }: { p: PortalProject }) {
   const commissionLabel = commissionPct !== null
     ? `${commissionPct.toFixed(2)}%`
     : fixedAmount !== null
-      ? `${fixedAmount.toLocaleString('ar-EG')} ر.س`
+      ? `${fixedAmount.toLocaleString('ar-EG')} ج.م`
       : null;
 
   const description  = tx(p.project.description);

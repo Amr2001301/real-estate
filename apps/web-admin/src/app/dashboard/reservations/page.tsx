@@ -294,7 +294,7 @@ export default async function ReservationsPage({
                 <div className="flex flex-col gap-1">
                   <span className="font-medium text-slate-800" dir="ltr">
                     {Number.isFinite(amount)
-                      ? `${amount.toLocaleString('ar-SA')} ر.س`
+                      ? `${amount.toLocaleString('ar-SA')} ج.م`
                       : '—'}
                   </span>
                   <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} />
