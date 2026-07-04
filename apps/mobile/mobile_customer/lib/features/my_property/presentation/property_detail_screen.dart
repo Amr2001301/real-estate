@@ -790,350 +790,446 @@ class _InstallmentCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inst = installment;
-    final (statusColor, statusLabel) =
-        _statusStyle(inst.status, l10n);
+    final (statusColor, statusLabel) = _statusStyle(inst.status, l10n);
 
     final typeLabel = switch (inst.type) {
       InstallmentPaymentType.downPayment  => 'دفعة مقدمة',
       InstallmentPaymentType.finalPayment => 'دفعة أخيرة',
       _                                   => null,
     };
-    final rowNum = (rowIndex + 1).toString().padLeft(2, '0');
+    final seqNum = (rowIndex + 1).toString().padLeft(2, '0');
 
     final proof         = inst.latestProof;
     final proofPending  = proof?.reviewStatus == PaymentProofStatus.pendingReview;
     final proofRejected = proof?.reviewStatus == PaymentProofStatus.rejected;
+    final isOverdue     = inst.status == InstallmentStatus.overdue;
+    final isPaid        = inst.status == InstallmentStatus.paid;
 
-    return InkWell(
-      onTap: inst.canSubmitProof
-          ? () => context.push(
-                '/account/installments/${inst.id}/submit-proof',
-                extra: inst,
-              )
-          : null,
-      borderRadius: BorderRadius.circular(16),
-      splashColor: AppPalette.gold400.withValues(alpha: 0.05),
-      highlightColor: AppPalette.gold400.withValues(alpha: 0.03),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border(
-            right: BorderSide(
-              color: statusColor.withValues(alpha: 0.6),
-              width: 3.5,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withValues(alpha: isOverdue ? 0.14 : 0.05),
+            blurRadius: isOverdue ? 24 : 14,
+            offset: const Offset(0, 6),
+            spreadRadius: isOverdue ? 1 : 0,
           ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: statusColor.withValues(alpha: isOverdue ? 0.20 : 0.07),
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // ── Top row: number + type badge + status badge ──────────
-              Row(
-                children: [
-                  Text(
-                    '#$rowNum',
-                    style: TextStyle(
-                      color: const Color(0xFF9CA3AF),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  if (typeLabel != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppPalette.gold400.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: AppPalette.gold400.withValues(alpha: 0.30),
-                        ),
-                      ),
-                      child: Text(
-                        typeLabel,
-                        style: const TextStyle(
-                          color: AppPalette.gold500,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+
+            // ── Leading accent bar (renders RIGHT in RTL) ─────────────
+            Container(
+              width: 5,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    statusColor,
+                    statusColor.withValues(alpha: 0.50),
                   ],
-                  const Spacer(),
-                  // Status badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: statusColor.withValues(alpha: 0.28),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          statusLabel,
-                          style: TextStyle(
-                            color: statusColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
+            ),
 
-              const SizedBox(height: 12),
-
-              // ── Amount + due date row ────────────────────────────────
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'المبلغ',
-                          style: TextStyle(
-                            color: const Color(0xFF9CA3AF),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          _compact(inst.amount, lang),
-                          style: TextStyle(
-                            color: inst.status == InstallmentStatus.overdue
-                                ? statusColor
-                                : const Color(0xFF1A1A2E),
-                            fontSize: 22,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.5,
-                            height: 1.1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+            // ── Card content ──────────────────────────────────────────
+            Expanded(
+              child: InkWell(
+                onTap: inst.canSubmitProof
+                    ? () => context.push(
+                          '/account/installments/${inst.id}/submit-proof',
+                          extra: inst,
+                        )
+                    : null,
+                splashColor: statusColor.withValues(alpha: 0.05),
+                highlightColor: statusColor.withValues(alpha: 0.03),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'تاريخ الاستحقاق',
-                        style: TextStyle(
-                          color: const Color(0xFF9CA3AF),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 3),
+
+                      // ── 1. Header row ─────────────────────────────────
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.event_rounded,
-                            size: 14,
-                            color: inst.status == InstallmentStatus.overdue
-                                ? statusColor.withValues(alpha: 0.70)
-                                : const Color(0xFF9CA3AF),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormatter.mediumDate(
-                              inst.dueDate,
-                              languageCode: lang,
+                          // Sequence circle badge
+                          Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.10),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: statusColor.withValues(alpha: 0.22),
+                              ),
                             ),
-                            style: TextStyle(
-                              color: inst.status == InstallmentStatus.overdue
-                                  ? statusColor
-                                  : const Color(0xFF374151),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                            child: Center(
+                              child: Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: Text(
+                                  seqNum,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w900,
+                                    height: 1.0,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (typeLabel != null) ...[
+                            const SizedBox(width: 7),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: AppPalette.gold400
+                                    .withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(7),
+                                border: Border.all(
+                                  color: AppPalette.gold400
+                                      .withValues(alpha: 0.26),
+                                ),
+                              ),
+                              child: Text(
+                                typeLabel,
+                                style: const TextStyle(
+                                  color: AppPalette.gold500,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          // Status pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: statusColor.withValues(alpha: 0.22),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: BoxDecoration(
+                                    color: statusColor,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ],
-              ),
 
-              // ── Proof / action area ──────────────────────────────────
-              if (inst.status == InstallmentStatus.paid && inst.paidAt != null) ...[
-                const SizedBox(height: 10),
-                Container(
-                  height: 0.5,
-                  color: const Color(0xFFE5E7EB),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF34C77B).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.check_circle_rounded,
-                        size: 15,
-                        color: Color(0xFF34C77B),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'تم الدفع بتاريخ ${DateFormatter.mediumDate(inst.paidAt!, languageCode: lang)}',
-                      style: const TextStyle(
-                        color: Color(0xFF34C77B),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (proof?.paymentMethod != null &&
-                        proof!.paymentMethod != PaymentMethod.unknown) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF34C77B).withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          _paymentMethodLabel(proof.paymentMethod),
-                          style: TextStyle(
-                            color: const Color(0xFF34C77B).withValues(alpha: 0.80),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ] else if (proofPending) ...[
-                const SizedBox(height: 10),
-                Container(
-                  height: 0.5,
-                  color: const Color(0xFFE5E7EB),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.hourglass_top_rounded,
-                        size: 14,
-                        color: Color(0xFFF59E0B),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'الإيصال قيد المراجعة',
-                          style: TextStyle(
-                            color: Color(0xFFF59E0B),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        if (proof?.submittedAt != null)
-                          Text(
-                            'تم الإرسال ${DateFormatter.mediumDate(proof!.submittedAt!, languageCode: lang)}',
-                            style: TextStyle(
-                              color: const Color(0xFF9CA3AF),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                      const SizedBox(height: 16),
+
+                      // ── 2. Financial row ──────────────────────────────
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          // Amount column
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'المبلغ المستحق',
+                                  style: const TextStyle(
+                                    color: Color(0xFF94A3B8),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment:
+                                      AlignmentDirectional.centerStart,
+                                  child: Text(
+                                    _compact(inst.amount, lang),
+                                    style: TextStyle(
+                                      color: isOverdue
+                                          ? statusColor
+                                          : const Color(0xFF0F172A),
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -0.5,
+                                      height: 1.0,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                      ],
-                    ),
-                  ],
-                ),
-              ] else if (proofRejected) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444).withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.20),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.error_outline_rounded,
-                        size: 15,
-                        color: Color(0xFFEF4444),
+                          const SizedBox(width: 12),
+                          // Due date chip
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 11, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: isOverdue
+                                  ? statusColor.withValues(alpha: 0.07)
+                                  : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isOverdue
+                                    ? statusColor.withValues(alpha: 0.18)
+                                    : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'الاستحقاق',
+                                  style: TextStyle(
+                                    color: isOverdue
+                                        ? statusColor.withValues(alpha: 0.65)
+                                        : const Color(0xFF94A3B8),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_month_rounded,
+                                      size: 13,
+                                      color: isOverdue
+                                          ? statusColor
+                                          : const Color(0xFF64748B),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      DateFormatter.mediumDate(
+                                        inst.dueDate,
+                                        languageCode: lang,
+                                      ),
+                                      style: TextStyle(
+                                        color: isOverdue
+                                            ? statusColor
+                                            : const Color(0xFF334155),
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 7),
-                      Expanded(
-                        child: Text(
-                          proof?.rejectionReason?.isNotEmpty == true
-                              ? proof!.rejectionReason!
-                              : 'تم رفض الإيصال · يرجى إعادة الإرسال',
-                          style: const TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+
+                      // ── 3. Proof / action area ────────────────────────
+                      if (isPaid && inst.paidAt != null) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                            height: 0.5,
+                            color: const Color(0xFFE2E8F0)),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Container(
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.check_circle_rounded,
+                                size: 15,
+                                color: statusColor,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'تم الدفع · ${DateFormatter.mediumDate(inst.paidAt!, languageCode: lang)}',
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (proof?.paymentMethod != null &&
+                                proof!.paymentMethod !=
+                                    PaymentMethod.unknown)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: statusColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                child: Text(
+                                  _paymentMethodLabel(proof.paymentMethod),
+                                  style: TextStyle(
+                                    color:
+                                        statusColor.withValues(alpha: 0.80),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ] else if (proofPending) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B)
+                                .withValues(alpha: 0.07),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFF59E0B)
+                                  .withValues(alpha: 0.20),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 26,
+                                height: 26,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF59E0B)
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(7),
+                                ),
+                                child: const Icon(
+                                  Icons.hourglass_top_rounded,
+                                  size: 14,
+                                  color: Color(0xFFF59E0B),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'الإيصال قيد المراجعة',
+                                    style: TextStyle(
+                                      color: Color(0xFFF59E0B),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  if (proof?.submittedAt != null)
+                                    Text(
+                                      'أُرسل ${DateFormatter.mediumDate(proof!.submittedAt!, languageCode: lang)}',
+                                      style: const TextStyle(
+                                        color: Color(0xFF9CA3AF),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                      ] else if (proofRejected) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEF4444)
+                                .withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFEF4444)
+                                  .withValues(alpha: 0.18),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.error_outline_rounded,
+                                size: 14,
+                                color: Color(0xFFEF4444),
+                              ),
+                              const SizedBox(width: 7),
+                              Expanded(
+                                child: Text(
+                                  proof?.rejectionReason?.isNotEmpty == true
+                                      ? proof!.rejectionReason!
+                                      : 'تم رفض الإيصال · يرجى إعادة الإرسال',
+                                  style: const TextStyle(
+                                    color: Color(0xFFEF4444),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        _SubmitButton(
+                          label: 'إعادة إرسال الإيصال',
+                          isResubmit: true,
+                        ),
+                      ] else if (inst.canSubmitProof) ...[
+                        const SizedBox(height: 14),
+                        Container(
+                            height: 0.5,
+                            color: const Color(0xFFE2E8F0)),
+                        const SizedBox(height: 12),
+                        _SubmitButton(
+                          label: 'إرسال إيصال الدفع',
+                          isResubmit: false,
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
-                _SubmitButton(
-                  label: 'إعادة إرسال الإيصال',
-                  isResubmit: true,
-                ),
-              ] else if (inst.canSubmitProof) ...[
-                const SizedBox(height: 10),
-                _SubmitButton(
-                  label: 'إرسال إيصال الدفع',
-                  isResubmit: false,
-                ),
-              ],
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1149,39 +1245,48 @@ class _SubmitButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 11),
+      height: 46,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isResubmit
               ? [const Color(0xFFD97706), const Color(0xFFB45309)]
-              : [const Color(0xFFD4A843), AppPalette.gold500],
+              : [AppPalette.gold300, AppPalette.gold500],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(13),
         boxShadow: [
           BoxShadow(
-            color: AppPalette.gold400.withValues(alpha: 0.25),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
+            color: AppPalette.gold400.withValues(alpha: 0.28),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            isResubmit ? Icons.refresh_rounded : Icons.upload_rounded,
-            size: 16,
-            color: _navy,
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: Icon(
+              isResubmit ? Icons.refresh_rounded : Icons.upload_rounded,
+              size: 14,
+              color: _navy,
+            ),
           ),
-          const SizedBox(width: 7),
+          const SizedBox(width: 10),
           Text(
             label,
             style: const TextStyle(
               color: _navy,
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.w800,
+              letterSpacing: 0.2,
             ),
           ),
         ],
