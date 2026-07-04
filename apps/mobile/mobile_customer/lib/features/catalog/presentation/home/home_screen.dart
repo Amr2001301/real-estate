@@ -40,7 +40,16 @@ class HomeScreen extends StatelessWidget {
     final isCustomer = session.isAuthenticated && session.role.isCustomerSide;
     final comparing = context.watch<CompareCubit>().state.isNotEmpty;
 
-    return RefreshIndicator(
+    return BlocListener<SessionCubit, SessionState>(
+      listenWhen: (prev, curr) {
+        final wasCustomer =
+            prev.isAuthenticated && prev.role.isCustomerSide;
+        final nowCustomer =
+            curr.isAuthenticated && curr.role.isCustomerSide;
+        return !wasCustomer && nowCustomer;
+      },
+      listener: (ctx, _) => ctx.read<HomeSummaryCubit>().load(),
+      child: RefreshIndicator(
       onRefresh: () async {
         if (isCustomer) {
           await context.read<HomeSummaryCubit>().load();
@@ -97,6 +106,7 @@ class HomeScreen extends StatelessWidget {
             const _HomeCtaBand(),
           ],
         ],
+      ),
       ),
     );
   }

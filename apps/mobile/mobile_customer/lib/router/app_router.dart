@@ -180,20 +180,32 @@ GoRouter createCustomerRouter(
                   final session = sessionCubit.state;
                   final isCustomer =
                       session.isAuthenticated && session.role.isCustomerSide;
+                  // Both cubits are always provided so StatefulShellBranch
+                  // can survive a guest→customer session transition without
+                  // the branch widget being rebuilt (it isn't — the branch
+                  // keeps its widget tree alive).  HomeScreen adds a
+                  // BlocListener that fires HomeSummaryCubit.load() the
+                  // moment the session flips to a customer.
                   return MultiBlocProvider(
                     providers: [
-                      if (!isCustomer)
-                        BlocProvider(
-                          create: (ctx) => HomeCubit(
+                      BlocProvider(
+                        create: (ctx) {
+                          final cubit = HomeCubit(
                             GetFeaturedProjects(ctx.read<CatalogRepository>()),
-                          )..load(),
-                        ),
-                      if (isCustomer)
-                        BlocProvider(
-                          create: (ctx) => HomeSummaryCubit(
+                          );
+                          if (!isCustomer) cubit.load();
+                          return cubit;
+                        },
+                      ),
+                      BlocProvider(
+                        create: (ctx) {
+                          final cubit = HomeSummaryCubit(
                             ctx.read<HomeSummaryRepository>(),
-                          )..load(),
-                        ),
+                          );
+                          if (isCustomer) cubit.load();
+                          return cubit;
+                        },
+                      ),
                     ],
                     child: const HomeScreen(),
                   );
