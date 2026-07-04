@@ -650,7 +650,10 @@ class _ActionBar extends StatelessWidget {
                   variant: AppButtonVariant.outline,
                   onPressed: () => context.push(
                     '/calculator',
-                    extra: {'price': double.tryParse(unit.price ?? '')},
+                    extra: {
+                      'price': double.tryParse(unit.price ?? ''),
+                      'projectId': unit.projectId,
+                    },
                   ),
                 ),
               ),

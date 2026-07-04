@@ -3,13 +3,13 @@ import 'package:core/core_domain.dart';
 import '../entities/installment.dart';
 import '../repositories/installments_repository.dart';
 
-class GetPlanTemplates implements UseCase<List<InstallmentPlanTemplate>, NoParams> {
+class GetPlanTemplates implements UseCase<List<InstallmentPlanTemplate>, String?> {
   const GetPlanTemplates(this._repo);
   final InstallmentsRepository _repo;
 
   @override
-  Future<Result<List<InstallmentPlanTemplate>>> call(NoParams params) =>
-      _repo.getPlanTemplates();
+  Future<Result<List<InstallmentPlanTemplate>>> call(String? projectId) =>
+      _repo.getPlanTemplates(projectId: projectId);
 }
 
 /// Pure installment calculation.

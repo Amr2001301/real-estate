@@ -61,15 +61,20 @@ class CalculatorState extends Equatable {
 /// Drives the installment calculator. Math is local (pure use case mirroring
 /// the backend formula); plan templates only prefill duration + increase.
 class CalculatorCubit extends Cubit<CalculatorState> {
-  CalculatorCubit(this._getTemplates, this._calculate, {double? initialPrice})
-      : super(CalculatorState(netPrice: initialPrice ?? 0));
+  CalculatorCubit(
+    this._getTemplates,
+    this._calculate, {
+    double? initialPrice,
+    this.projectId,
+  }) : super(CalculatorState(netPrice: initialPrice ?? 0));
 
   final GetPlanTemplates _getTemplates;
   final CalculateInstallment _calculate;
+  final String? projectId;
 
   Future<void> init() async {
     emit(state.copyWith(templatesStatus: DataStatus.loading));
-    final result = await _getTemplates(const NoParams());
+    final result = await _getTemplates(projectId);
     result.when(
       ok: (templates) => emit(state.copyWith(
         templatesStatus: templates.isEmpty ? DataStatus.empty : DataStatus.success,

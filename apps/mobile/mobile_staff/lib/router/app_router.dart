@@ -495,6 +495,7 @@ GoRouter createStaffRouter(
               GetPlanTemplates(ctx.read<InstallmentsRepository>()),
               const CalculateInstallment(),
               initialPrice: args['price'] as double?,
+              projectId: args['projectId'] as String?,
             ),
             child: const CalculatorScreen(),
           );

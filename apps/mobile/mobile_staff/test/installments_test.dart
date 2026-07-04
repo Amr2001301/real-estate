@@ -11,7 +11,7 @@ class _FakeRepo implements InstallmentsRepository {
   _FakeRepo(this._result);
   final Result<List<InstallmentPlanTemplate>> _result;
   @override
-  Future<Result<List<InstallmentPlanTemplate>>> getPlanTemplates() async => _result;
+  Future<Result<List<InstallmentPlanTemplate>>> getPlanTemplates({String? projectId}) async => _result;
 }
 
 void main() {

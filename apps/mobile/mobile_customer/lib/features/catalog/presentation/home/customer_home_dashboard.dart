@@ -1120,61 +1120,143 @@ class _FinancialCard extends StatelessWidget {
   const _FinancialCard({required this.installments});
   final HomeSummaryInstallments installments;
 
+  static const _navyDark = Color(0xFF091524);
+  static const _navyMid  = Color(0xFF0F2137);
+  static const _navyFoot = Color(0xFF0B1D30);
+
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
-    final theme = Theme.of(context);
-    final colors = context.appColors;
+    final l10n    = context.l10n;
+    final lang    = Localizations.localeOf(context).languageCode;
     final nextDue = installments.nextDue;
     final hasData = installments.totalCount > 0 || nextDue != null;
 
-    if (!hasData) {
-      return _FinancialEmpty(l10n: l10n, theme: theme, colors: colors);
-    }
+    if (!hasData) return _FinancialEmpty(l10n: l10n);
+
+    final total     = installments.totalCount;
+    final paid      = installments.paidCount;
+    final overdue   = installments.overdueCount;
+    final remaining = installments.remainingCount;
+    final pending   = (remaining - overdue).clamp(0, remaining);
+    final progress  = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
+    final isOverdue = overdue > 0;
+
+    final mainColor = isOverdue
+        ? const Color(0xFFEF4444)
+        : const Color(0xFF34C77B);
+
+    final amountLabel = isOverdue
+        ? (overdue == 1 ? 'قسط واحد متأخر' : '$overdue أقساط متأخرة')
+        : l10n.homeNextInstallment;
 
     return Container(
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+        gradient: const LinearGradient(
+          colors: [_navyDark, _navyMid],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isOverdue
+              ? const Color(0xFFEF4444).withValues(alpha: 0.20)
+              : Colors.white.withValues(alpha: 0.06),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.30),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+            spreadRadius: -4,
           ),
+          if (isOverdue)
+            BoxShadow(
+              color: const Color(0xFFEF4444).withValues(alpha: 0.16),
+              blurRadius: 40,
+              offset: const Offset(0, 6),
+            ),
         ],
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Next-due header — light tint, not a heavy dark strip
-          Container(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.sm + 2,
-              AppSpacing.lg,
-              AppSpacing.sm,
-            ),
-            color: AppPalette.gold400.withValues(alpha: 0.05),
+
+          // ── Header ────────────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icon + title
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: AppPalette.gold400.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: AppPalette.gold400.withValues(alpha: 0.22),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.account_balance_wallet_rounded,
+                    color: AppPalette.gold400,
+                    size: 17,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'اللوحة المالية',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const Spacer(),
+                // Status badge
+                if (isOverdue)
+                  _HeaderBadge(
+                    icon: Icons.warning_amber_rounded,
+                    label: '$overdue متأخرة',
+                    color: const Color(0xFFEF4444),
+                  )
+                else
+                  _HeaderBadge(
+                    label: 'منتظم',
+                    color: const Color(0xFF34C77B),
+                    dot: true,
+                  ),
+              ],
+            ),
+          ),
+
+          // separator
+          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.07)),
+
+          // ── Main amount ───────────────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 20, 18, 18),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        l10n.homeNextInstallment,
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colors.inkMuted,
+                        amountLabel,
+                        style: TextStyle(
+                          color: isOverdue
+                              ? const Color(0xFFEF4444).withValues(alpha: 0.72)
+                              : Colors.white.withValues(alpha: 0.48),
                           fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 7),
                       if (nextDue != null)
                         FittedBox(
                           fit: BoxFit.scaleDown,
@@ -1185,138 +1267,228 @@ class _FinancialCard extends StatelessWidget {
                               languageCode: lang,
                             ),
                             style: TextStyle(
-                              color: nextDue.isOverdue
+                              color: isOverdue
                                   ? const Color(0xFFEF4444)
-                                  : colors.inkStrong,
-                              fontSize: 32,
+                                  : Colors.white,
+                              fontSize: 38,
                               fontWeight: FontWeight.w900,
-                              letterSpacing: -0.3,
-                              height: 1.05,
+                              letterSpacing: -0.8,
+                              height: 1.0,
                             ),
                           ),
                         )
                       else
                         Text(
                           l10n.homeNoDuePayments,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colors.inkStrong,
-                            fontWeight: FontWeight.w700,
+                          style: const TextStyle(
+                            color: Color(0xFF34C77B),
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
                       if (nextDue != null) ...[
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              AppIcons.calendar,
-                              size: 12,
-                              color: colors.inkMuted,
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isOverdue
+                                ? const Color(0xFFEF4444).withValues(alpha: 0.09)
+                                : Colors.white.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(9),
+                            border: Border.all(
+                              color: isOverdue
+                                  ? const Color(0xFFEF4444).withValues(alpha: 0.22)
+                                  : Colors.white.withValues(alpha: 0.10),
                             ),
-                            const SizedBox(width: 3),
-                            Text(
-                              DateFormatter.mediumDate(
-                                nextDue.dueDate,
-                                languageCode: lang,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                size: 13,
+                                color: isOverdue
+                                    ? const Color(0xFFEF4444).withValues(alpha: 0.65)
+                                    : Colors.white.withValues(alpha: 0.45),
                               ),
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colors.inkMuted,
-                                fontSize: 14,
+                              const SizedBox(width: 5),
+                              Text(
+                                DateFormatter.mediumDate(
+                                  nextDue.dueDate,
+                                  languageCode: lang,
+                                ),
+                                style: TextStyle(
+                                  color: isOverdue
+                                      ? const Color(0xFFEF4444)
+                                      : Colors.white.withValues(alpha: 0.80),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                if (installments.overdueCount > 0) ...[
-                  const SizedBox(width: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                        color: const Color(0xFFEF4444).withValues(alpha: 0.28),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 5,
-                          height: 5,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEF4444),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${installments.overdueCount} متأخرة',
-                          style: const TextStyle(
-                            color: Color(0xFFEF4444),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
+                const SizedBox(width: 14),
+                // Status icon circle
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: mainColor.withValues(alpha: 0.10),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: mainColor.withValues(alpha: 0.24),
+                      width: 1.5,
                     ),
                   ),
-                ],
+                  child: Icon(
+                    isOverdue
+                        ? Icons.warning_amber_rounded
+                        : (nextDue != null
+                            ? Icons.schedule_rounded
+                            : Icons.check_circle_rounded),
+                    color: mainColor,
+                    size: 25,
+                  ),
+                ),
               ],
             ),
           ),
-          if (installments.totalCount > 0)
-            LinearProgressIndicator(
-              value: installments.paidCount / installments.totalCount,
-              backgroundColor: AppPalette.gold400.withValues(alpha: 0.08),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                installments.overdueCount > 0
-                    ? const Color(0xFFEF4444)
-                    : const Color(0xFF34C77B),
-              ),
-              minHeight: 3,
-            ),
-          Divider(height: 1, color: colors.hairline),
 
-          // Stats row
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                IntrinsicHeight(
-                  child: Row(
+          // ── Progress ──────────────────────────────────────────────────
+          if (total > 0) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _FStat(
-                        label: l10n.installmentStatusPaid,
-                        value: '${installments.paidCount}',
-                        valueColor: const Color(0xFF34C77B),
-                      ),
-                      _VLine(colors: colors),
-                      _FStat(
-                        label: l10n.homeInstallmentsRemainingLabel,
-                        value: '${installments.remainingCount}',
-                      ),
-                      if (installments.lastPaidAt != null) ...[
-                        _VLine(colors: colors),
-                        _FStat(
-                          label: l10n.homeLastPaymentLabel,
-                          value: DateFormatter.mediumDate(
-                            installments.lastPaidAt!,
-                            languageCode: lang,
-                          ),
-                          compact: true,
+                      Text(
+                        'تقدم السداد',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.38),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.4,
                         ),
-                      ],
+                      ),
+                      Text(
+                        '$paid / $total  ·  ${(progress * 100).round()}%',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.38),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 7),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: progress,
+                      backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        isOverdue
+                            ? const Color(0xFFEF4444)
+                            : const Color(0xFF34C77B),
+                      ),
+                      minHeight: 5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          // ── Stats footer ──────────────────────────────────────────────
+          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.07)),
+          Container(
+            color: _navyFoot,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            child: IntrinsicHeight(
+              child: Row(
+                children: [
+                  _NStat(
+                    label: 'مدفوع',
+                    value: '$paid',
+                    color: const Color(0xFF34C77B),
+                  ),
+                  _NVLine(),
+                  _NStat(
+                    label: 'متأخر',
+                    value: '$overdue',
+                    color: overdue > 0
+                        ? const Color(0xFFEF4444)
+                        : Colors.white.withValues(alpha: 0.28),
+                  ),
+                  _NVLine(),
+                  _NStat(
+                    label: 'قيد الانتظار',
+                    value: '$pending',
+                    color: AppPalette.gold400,
+                  ),
+                  _NVLine(),
+                  _NStat(
+                    label: 'المتبقي',
+                    value: '$remaining',
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderBadge extends StatelessWidget {
+  const _HeaderBadge({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.dot = false,
+  });
+  final String label;
+  final Color  color;
+  final IconData? icon;
+  final bool dot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 4),
+          ] else if (dot) ...[
+            Container(
+              width: 5, height: 5,
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            ),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              color: color, fontSize: 11, fontWeight: FontWeight.w700,
             ),
           ),
         ],
@@ -1326,55 +1498,68 @@ class _FinancialCard extends StatelessWidget {
 }
 
 class _FinancialEmpty extends StatelessWidget {
-  const _FinancialEmpty({
-    required this.l10n,
-    required this.theme,
-    required this.colors,
-  });
+  const _FinancialEmpty({required this.l10n});
   final AppLocalizations l10n;
-  final ThemeData theme;
-  final AppColorsExt colors;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.hairline.withValues(alpha: 0.45)),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF091524), Color(0xFF0F2137)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: colors.success.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(11),
+              color: const Color(0xFF34C77B).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF34C77B).withValues(alpha: 0.25),
+              ),
             ),
-            child: Icon(
+            child: const Icon(
               Icons.check_circle_rounded,
-              color: colors.success,
-              size: 20,
+              color: Color(0xFF34C77B),
+              size: 22,
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   l10n.homeNoDuePayments,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colors.inkStrong,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: 3),
                 Text(
                   l10n.homeNoDuePaymentsHint,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: colors.inkMuted),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ],
             ),
@@ -1385,44 +1570,40 @@ class _FinancialEmpty extends StatelessWidget {
   }
 }
 
-class _FStat extends StatelessWidget {
-  const _FStat({
+class _NStat extends StatelessWidget {
+  const _NStat({
     required this.label,
     required this.value,
-    this.valueColor,
-    this.compact = false,
+    required this.color,
   });
   final String label;
   final String value;
-  final Color? valueColor;
-  final bool compact;
+  final Color  color;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final theme = Theme.of(context);
     return Expanded(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(
-            label,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: colors.inkMuted,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
             value,
             textAlign: TextAlign.center,
-            maxLines: compact ? 2 : 1,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: valueColor ?? colors.inkStrong,
-              fontWeight: FontWeight.w800,
-              fontSize: compact ? 13 : 20,
-              height: 1.2,
+            style: TextStyle(
+              color: color,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.38),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
@@ -1431,15 +1612,12 @@ class _FStat extends StatelessWidget {
   }
 }
 
-class _VLine extends StatelessWidget {
-  const _VLine({required this.colors});
-  final AppColorsExt colors;
-
+class _NVLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
-        width: 1,
-        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-        color: colors.hairline,
+        width: 0.5,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        color: Colors.white.withValues(alpha: 0.08),
       );
 }
 

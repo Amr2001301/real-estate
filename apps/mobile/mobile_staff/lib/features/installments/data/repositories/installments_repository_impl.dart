@@ -10,9 +10,9 @@ class InstallmentsRepositoryImpl implements InstallmentsRepository {
   final InstallmentsRemoteDataSource _remote;
 
   @override
-  Future<Result<List<InstallmentPlanTemplate>>> getPlanTemplates() {
+  Future<Result<List<InstallmentPlanTemplate>>> getPlanTemplates({String? projectId}) {
     return guardApiCall(() async {
-      final rows = await _remote.listTemplates();
+      final rows = await _remote.listTemplates(projectId: projectId);
       return rows.map((r) => r.toEntity()).toList();
     });
   }
