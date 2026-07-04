@@ -62,11 +62,10 @@ interface ManagerAlert {
 }
 
 const STAGE_META = [
-  { stage: 'NEW',         label: 'جديدة',      barCls: 'bg-slate-300',  dotCls: 'bg-slate-400'  },
-  { stage: 'CONTACTED',   label: 'تم التواصل', barCls: 'bg-brand-200',  dotCls: 'bg-brand-400'  },
-  { stage: 'QUALIFIED',   label: 'مؤهلة',      barCls: 'bg-sky-300',    dotCls: 'bg-sky-500'    },
-  { stage: 'PROPOSAL',    label: 'عرض مقدم',   barCls: 'bg-amber-300',  dotCls: 'bg-amber-500'  },
-  { stage: 'NEGOTIATION', label: 'تفاوض',      barCls: 'bg-brand-500',  dotCls: 'bg-brand-600'  },
+  { stage: 'NEW',         label: 'جديد',   barCls: 'bg-slate-300',  dotCls: 'bg-slate-400' },
+  { stage: 'INTERESTED',  label: 'مهتم',   barCls: 'bg-brand-200',  dotCls: 'bg-brand-400' },
+  { stage: 'VISIT',       label: 'زيارة',  barCls: 'bg-sky-300',    dotCls: 'bg-sky-500'   },
+  { stage: 'NEGOTIATION', label: 'تفاوض',  barCls: 'bg-brand-500',  dotCls: 'bg-brand-600' },
 ] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -911,11 +910,10 @@ function TeamPerformanceTable({
 
 // ── Pipeline Card ─────────────────────────────────────────────────────────────
 const STAGE_TILE: Record<string, { topBar: string; valueCls: string; tileCls: string }> = {
-  NEW:         { topBar: 'from-slate-200 via-slate-300 to-slate-200',  valueCls: 'text-slate-700',  tileCls: 'bg-slate-50/60'   },
-  CONTACTED:   { topBar: 'from-brand-200 via-brand-400 to-brand-200',  valueCls: 'text-brand-700',  tileCls: 'bg-brand-50/60'   },
-  QUALIFIED:   { topBar: 'from-sky-200 via-sky-400 to-sky-200',        valueCls: 'text-sky-700',    tileCls: 'bg-sky-50/60'     },
-  PROPOSAL:    { topBar: 'from-amber-200 via-amber-400 to-amber-200',  valueCls: 'text-amber-700',  tileCls: 'bg-amber-50/60'   },
-  NEGOTIATION: { topBar: 'from-brand-400 via-brand-600 to-brand-400',  valueCls: 'text-brand-800',  tileCls: 'bg-brand-50/80'   },
+  NEW:         { topBar: 'from-slate-200 via-slate-300 to-slate-200',  valueCls: 'text-slate-700',  tileCls: 'bg-slate-50/60'  },
+  INTERESTED:  { topBar: 'from-brand-200 via-brand-400 to-brand-200',  valueCls: 'text-brand-700',  tileCls: 'bg-brand-50/60'  },
+  VISIT:       { topBar: 'from-sky-200 via-sky-400 to-sky-200',        valueCls: 'text-sky-700',    tileCls: 'bg-sky-50/60'    },
+  NEGOTIATION: { topBar: 'from-brand-400 via-brand-600 to-brand-400',  valueCls: 'text-brand-800',  tileCls: 'bg-brand-50/80'  },
 };
 
 function PipelineCard({ stageCount, total }: { stageCount: Record<string, number>; total: number }) {

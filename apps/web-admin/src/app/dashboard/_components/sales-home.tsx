@@ -58,13 +58,12 @@ function leadAgeDays(lead: Lead): number {
 
 // ── Lead stage config ─────────────────────────────────────────────────────────
 const STAGE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  NEW:              { label: 'جديدة',     color: 'text-slate-600',  bg: 'bg-slate-100'   },
-  CONTACTED:        { label: 'تواصل',     color: 'text-blue-700',   bg: 'bg-blue-50'     },
-  VISIT_SCHEDULED:  { label: 'موعد محدد', color: 'text-brand-700',  bg: 'bg-brand-50'    },
-  VISITED:          { label: 'تمت الزيارة',color:'text-violet-700', bg: 'bg-violet-50'   },
-  NEGOTIATING:      { label: 'تفاوض',     color: 'text-amber-700',  bg: 'bg-amber-50'    },
-  WON:              { label: 'فوز',       color: 'text-emerald-700', bg: 'bg-emerald-50' },
-  LOST:             { label: 'خسارة',     color: 'text-red-700',    bg: 'bg-red-50'      },
+  NEW:         { label: 'جديد',   color: 'text-slate-600',  bg: 'bg-slate-100'  },
+  INTERESTED:  { label: 'مهتم',   color: 'text-blue-700',   bg: 'bg-blue-50'    },
+  VISIT:       { label: 'زيارة',  color: 'text-brand-700',  bg: 'bg-brand-50'   },
+  NEGOTIATION: { label: 'تفاوض',  color: 'text-amber-700',  bg: 'bg-amber-50'   },
+  WON:         { label: 'فوز',    color: 'text-emerald-700', bg: 'bg-emerald-50' },
+  LOST:        { label: 'خسارة', color: 'text-red-700',    bg: 'bg-red-50'     },
 };
 
 // ── Design helpers ────────────────────────────────────────────────────────────
@@ -110,18 +109,17 @@ function SalesPipeline({
   stageGroups: Record<string, number>;
 }) {
   const stages = [
-    { label: 'الفرص المفتوحة',  value: openLeads,          icon: <Zap />,           clr: 'brand',   bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
-    { label: 'الزيارات القادمة', value: visitsCount,         icon: <CalendarClock />, clr: 'sky',     bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
-    { label: 'الحجوزات النشطة',  value: reservationsCount,   icon: <BookmarkCheck />, clr: 'emerald', bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
-    { label: 'العقود هذا الشهر', value: contractsCount,      icon: <FileText />,      clr: 'violet',  bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
+    { label: 'فرصي المفتوحة',   value: openLeads,         icon: <Zap />,           clr: 'brand',   bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
+    { label: 'زياراتي القادمة',  value: visitsCount,        icon: <CalendarClock />, clr: 'sky',     bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
+    { label: 'حجوزاتي النشطة',  value: reservationsCount,  icon: <BookmarkCheck />, clr: 'emerald', bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
+    { label: 'عقودي هذا الشهر', value: contractsCount,     icon: <FileText />,      clr: 'violet',  bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
   ] as const;
 
   const pipelineStages = [
-    { key: 'NEW',             label: 'جديدة'       },
-    { key: 'CONTACTED',       label: 'تواصل'       },
-    { key: 'VISIT_SCHEDULED', label: 'موعد محدد'   },
-    { key: 'VISITED',         label: 'تمت الزيارة' },
-    { key: 'NEGOTIATING',     label: 'تفاوض'       },
+    { key: 'NEW',         label: 'جديد'   },
+    { key: 'INTERESTED',  label: 'مهتم'   },
+    { key: 'VISIT',       label: 'زيارة'  },
+    { key: 'NEGOTIATION', label: 'تفاوض'  },
   ];
 
   const maxStage = Math.max(...pipelineStages.map((s) => stageGroups[s.key] ?? 0), 1);
@@ -228,7 +226,10 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   const closedDeals        = signedThisMonth ?? convertedDeals;
   const availableUnits     = unitsRes.data?.meta.total ?? 0;
 
-  const staleLeadsCount    = openLeads.filter((l) => !l.upcomingVisit && leadAgeDays(l) >= 3).length;
+  // Stale = NEW or INTERESTED stage and no activity for 3+ days
+  const staleLeadsCount    = openLeads.filter(
+    (l) => (l.stage === 'NEW' || l.stage === 'INTERESTED') && leadAgeDays(l) >= 3,
+  ).length;
   const expiringWithin7    = reservations.filter((r) => {
     if (r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED') return false;
     const d = daysUntil(r.expiresAt);
