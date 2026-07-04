@@ -109,7 +109,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
-export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
+export function ProjectsPanel({ projects, symbol = 'ج.م' }: { projects: PortalProject[]; symbol?: string }) {
   const [pending,  setPending]  = useState<Filters>(DEFAULT);
   const [applied,  setApplied]  = useState<Filters>(DEFAULT);
 
@@ -281,7 +281,7 @@ export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
           </div>
           <div className="flex flex-col gap-4">
             {filtered.map((p) => (
-              <ProjectCard key={p.project.id} p={p} />
+              <ProjectCard key={p.project.id} p={p} symbol={symbol} />
             ))}
           </div>
         </div>

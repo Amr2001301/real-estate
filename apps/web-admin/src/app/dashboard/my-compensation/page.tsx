@@ -18,6 +18,7 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { formatDate } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { EmptyState } from '@/components/ui/empty-state';
 import {
@@ -92,11 +93,11 @@ const STATUS_CLS: Record<EntryStatus, string> = {
 
 // ── Pure helpers ───────────────────────────────────────────────────────────
 
-function fmtAmt(value: number | string | null | undefined): string {
+function fmtAmt(value: number | string | null | undefined, symbol = 'ج.م'): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
-  return n.toLocaleString('en-US') + ' ج.م';
+  return `${n.toLocaleString('en-US')} ${symbol}`;
 }
 
 function getPlanDisplay(planName: string | null | undefined, source: EntrySource | undefined): string {
@@ -203,7 +204,7 @@ export default async function MyCompensationPage() {
   const selfId = session?.id;
   const selfParam = selfId ? `salesId=${selfId}` : '';
 
-  const [bonusRes, targetsRes, leadsRes, reservationsRes, visitsRes] =
+  const [bonusRes, targetsRes, leadsRes, reservationsRes, visitsRes, currency] =
     await Promise.all([
       safe(api.get<BonusEntry[] | Paged<BonusEntry>>(`/bonus-entries${selfParam ? `?${selfParam}` : ''}`)),
       safe(api.get<SalesTarget[]>(`/sales-targets${selfParam ? `?${selfParam}` : ''}`)),
@@ -216,7 +217,9 @@ export default async function MyCompensationPage() {
             ),
           )
         : Promise.resolve({ data: undefined, error: 'لا توجد جلسة' as string }),
+      getReportsCurrency(),
     ]);
+  const symbol = currencySymbol(currency);
 
   const entries = Array.isArray(bonusRes.data)
     ? bonusRes.data
@@ -311,10 +314,10 @@ export default async function MyCompensationPage() {
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي المستحق', value: fmtAmt(owedTotal),    icon: <Hash />,         tone: 'brand',   sub: owedTotal === 0 ? 'لا توجد مستحقات مستحقة' : 'لم يُصرف بعد'    },
-          { label: 'المدفوع',        value: fmtAmt(paidTotal),    icon: <Banknote />,     tone: 'success', sub: lastPaidAt ? `آخر دفعة: ${formatDate(lastPaidAt)}` : (paidTotal === 0 ? 'لا يوجد صرف بعد' : undefined) },
-          { label: 'المعتمد',        value: fmtAmt(approvedTotal), icon: <CheckCircle2 />, tone: 'info',    sub: approvedTotal === 0 ? 'لا توجد مستحقات معتمدة' : 'معتمد وقيد الصرف' },
-          { label: 'المعلق',         value: fmtAmt(pendingTotal),  icon: <Clock />,        tone: 'warning', sub: pendingTotal === 0 ? 'لا توجد مستحقات معلقة' : 'في انتظار الاعتماد' },
+          { label: 'إجمالي المستحق', value: fmtAmt(owedTotal, symbol),    icon: <Hash />,         tone: 'brand',   sub: owedTotal === 0 ? 'لا توجد مستحقات مستحقة' : 'لم يُصرف بعد'    },
+          { label: 'المدفوع',        value: fmtAmt(paidTotal, symbol),    icon: <Banknote />,     tone: 'success', sub: lastPaidAt ? `آخر دفعة: ${formatDate(lastPaidAt)}` : (paidTotal === 0 ? 'لا يوجد صرف بعد' : undefined) },
+          { label: 'المعتمد',        value: fmtAmt(approvedTotal, symbol), icon: <CheckCircle2 />, tone: 'info',    sub: approvedTotal === 0 ? 'لا توجد مستحقات معتمدة' : 'معتمد وقيد الصرف' },
+          { label: 'المعلق',         value: fmtAmt(pendingTotal, symbol),  icon: <Clock />,        tone: 'warning', sub: pendingTotal === 0 ? 'لا توجد مستحقات معلقة' : 'في انتظار الاعتماد' },
         ]}
       />
 
@@ -359,7 +362,7 @@ export default async function MyCompensationPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-end whitespace-nowrap">
-                      <span className="font-semibold tabular-nums text-slate-800 text-sm">{fmtAmt(e.amount)}</span>
+                      <span className="font-semibold tabular-nums text-slate-800 text-sm">{fmtAmt(e.amount, symbol)}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', STATUS_CLS[e.status])}>
@@ -421,12 +424,12 @@ export default async function MyCompensationPage() {
                         <span className="text-xs font-medium text-slate-700">{periodLabel(t.period)}</span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-end">
-                        <span className="tabular-nums font-semibold text-slate-800 text-sm">{fmtAmt(t.amountTarget)}</span>
+                        <span className="tabular-nums font-semibold text-slate-800 text-sm">{fmtAmt(t.amountTarget, symbol)}</span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-end">
                         {perf ? (
                           <span className={cn('tabular-nums text-sm', perf.achievedAmount > 0 ? 'font-semibold text-success-700' : 'text-slate-400')}>
-                            {fmtAmt(perf.achievedAmount)}
+                            {fmtAmt(perf.achievedAmount, symbol)}
                           </span>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>

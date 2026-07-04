@@ -26,9 +26,10 @@ interface Props {
     clientName: string;
     unitCode: string;
   };
+  symbol?: string;
 }
 
-export function ConvertReservationForm({ reservation }: Props) {
+export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -132,7 +133,7 @@ export function ConvertReservationForm({ reservation }: Props) {
               <div className="flex justify-between">
                 <dt className="text-slate-500">مبلغ الحجز</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
-                  {bookingAmount.toLocaleString('ar-SA')} ج.م
+                  {bookingAmount.toLocaleString('ar-SA')} {symbol}
                   <span className="mr-1 text-slate-400">({reservation.bookingPaymentStatus})</span>
                 </dd>
               </div>
@@ -141,7 +142,7 @@ export function ConvertReservationForm({ reservation }: Props) {
               <div className="flex justify-between">
                 <dt className="text-slate-500">الدفعة الأولى</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
-                  {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} ج.م
+                  {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} {symbol}
                 </dd>
               </div>
             )}
@@ -163,7 +164,7 @@ export function ConvertReservationForm({ reservation }: Props) {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
-                  ج.م
+                  {symbol}
                 </dd>
               </div>
             )}
@@ -171,7 +172,7 @@ export function ConvertReservationForm({ reservation }: Props) {
               <div className="flex justify-between border-t border-hairline pt-2 mt-1">
                 <dt className="text-slate-500">إجمالي السداد</dt>
                 <dd className="font-bold tabular-nums text-slate-900" dir="ltr">
-                  {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')} ج.م
+                  {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')} {symbol}
                 </dd>
               </div>
             )}

@@ -10,6 +10,7 @@ import type {
   UnitStatus,
 } from '@/lib/types';
 import { tx } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { PremiumPageHero } from '@/components/premium';
 import { AdminBrokerReservationForm } from './_form';
 
@@ -29,10 +30,12 @@ export default async function NewAdminBrokerReservationPage({
 }) {
   const sp = await searchParams;
 
-  const [brokersRes, projectsRes] = await Promise.all([
+  const [brokersRes, projectsRes, currency] = await Promise.all([
     safe(api.get<Paged<Broker>>('/brokers?pageSize=200&status=ACTIVE')),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    getReportsCurrency(),
   ]);
+  const symbol = currencySymbol(currency);
 
   const brokers = (brokersRes.data?.data ?? []).filter((b) => b.status === 'ACTIVE');
   const projects = projectsRes.data?.data ?? [];
@@ -114,6 +117,7 @@ export default async function NewAdminBrokerReservationPage({
           price: u.price,
           buildingName: u.building?.name ?? null,
         }))}
+        symbol={symbol}
       />
     </div>
   );

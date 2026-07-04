@@ -6,6 +6,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, Reservation } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -89,12 +90,14 @@ export default async function ReservationsPage({
   if (sp.dateFrom) qs.set('dateFrom', sp.dateFrom);
   if (sp.dateTo) qs.set('dateTo', sp.dateTo);
 
-  const [statsRes, reservationsRes, projectsRes, salesRes] = await Promise.all([
+  const [statsRes, reservationsRes, projectsRes, salesRes, currency] = await Promise.all([
     safe(api.get<Stats>('/reservations/stats')),
     safe(api.get<Paged<Reservation>>(`/reservations?${qs}`)),
     safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
     safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    getReportsCurrency(),
   ]);
+  const symbol = currencySymbol(currency);
 
   const stats = statsRes.data;
   const reservations = reservationsRes.data?.data ?? [];
@@ -294,7 +297,7 @@ export default async function ReservationsPage({
                 <div className="flex flex-col gap-1">
                   <span className="font-medium text-slate-800" dir="ltr">
                     {Number.isFinite(amount)
-                      ? `${amount.toLocaleString('ar-SA')} ج.م`
+                      ? `${amount.toLocaleString('ar-SA')} ${symbol}`
                       : '—'}
                   </span>
                   <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} />

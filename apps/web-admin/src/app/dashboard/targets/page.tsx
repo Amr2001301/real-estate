@@ -14,6 +14,7 @@ import {
   type PerformanceRow,
 } from './targets-management-client';
 import { fmtAmt, num, pctLabel, MONTH_OPTIONS } from './utils';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 
 export const dynamic = 'force-dynamic';
 
@@ -65,10 +66,12 @@ export default async function TargetsPage({
   //   ADMIN → all SALES + SALES_MANAGER users
   //   SALES_MANAGER → self + direct team (via managerScopeIds)
   //   (calling /users directly requires ADMIN role and returns 403 for others)
-  const [targetsRes, salesRes] = await Promise.all([
+  const [targetsRes, salesRes, currency] = await Promise.all([
     safe(api.get<SalesTarget[]>(listUrl)),
     safe(api.get<SalesUser[]>('/sales-targets/actors')),
+    getReportsCurrency(),
   ]);
+  const symbol = currencySymbol(currency);
 
   const allTargets = targetsRes.data ?? [];
   const targets = period
@@ -252,14 +255,14 @@ export default async function TargetsPage({
           },
           {
             label: 'هدف القيمة الإجمالي',
-            value: totalAmountTarget === 0 ? '—' : fmtAmt(totalAmountTarget),
+            value: totalAmountTarget === 0 ? '—' : fmtAmt(totalAmountTarget, symbol),
             icon: <Banknote />,
             tone: 'brand',
             valueSize: 'compact',
           },
           {
             label: 'القيمة المحققة',
-            value: fmtAmt(totalAchievedAmount),
+            value: fmtAmt(totalAchievedAmount, symbol),
             sub: overallPct !== null ? `${overallPct}% من الهدف` : undefined,
             icon: <TrendingUp />,
             tone: totalAchievedAmount > 0 ? 'success' : 'neutral',
@@ -343,6 +346,7 @@ export default async function TargetsPage({
         perfRows={perfRows}
         hasFilters={hasFilters}
         error={targetsRes.error ?? undefined}
+        symbol={symbol}
       />
     </div>
   );

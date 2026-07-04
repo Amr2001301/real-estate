@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { formatCurrency } from '@/lib/format';
+import { currencySymbol } from '@/lib/currency';
 import type {
   InstallmentPlanTemplate,
   DownPaymentType,
@@ -71,6 +72,7 @@ function safeStr(val: unknown, fallback = ''): string {
 
 
 export default function PlanForm({ projects, initialData, mode, currency = 'SAR' }: Props) {
+  const symbol = currencySymbol(currency);
   const action =
     mode === 'edit' && initialData
       ? updatePlanAction.bind(null, initialData.id)
@@ -461,7 +463,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="totalPrice" className="text-sm font-medium text-slate-700">
-                  السعر الإجمالي (ج.م)
+                  السعر الإجمالي ({symbol})
                   <span className="text-danger-600 ms-0.5">*</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -517,7 +519,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             </div>
 
             <Field
-              label={discountType === 'FIXED' ? 'قيمة الخصم (ج.م)' : 'نسبة الخصم (%)'}
+              label={discountType === 'FIXED' ? `قيمة الخصم (${symbol})` : 'نسبة الخصم (%)'}
               name="discountValue"
               hint={
                 discountType === 'PERCENTAGE'
@@ -569,7 +571,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             </div>
 
             <Field
-              label={reservationAmountType === 'FIXED' ? 'قيمة دفعة الحجز (ج.م)' : 'نسبة دفعة الحجز (%)'}
+              label={reservationAmountType === 'FIXED' ? `قيمة دفعة الحجز (${symbol})` : 'نسبة دفعة الحجز (%)'}
               name="reservationAmountValue"
               required
               hint={
@@ -644,7 +646,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             </div>
 
             <Field
-              label={downPaymentType === 'FIXED' ? 'قيمة المقدم (ج.م)' : 'نسبة المقدم (%)'}
+              label={downPaymentType === 'FIXED' ? `قيمة المقدم (${symbol})` : 'نسبة المقدم (%)'}
               name="downPaymentValue"
               required
             >
@@ -847,7 +849,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
               </div>
 
               <Field
-                label="الدفعة الأخيرة (ج.م)"
+                label={`الدفعة الأخيرة (${symbol})`}
                 name="finalPaymentAmount"
                 hint="اتركها فارغة إذا لم تكن هناك دفعة بالون"
               >

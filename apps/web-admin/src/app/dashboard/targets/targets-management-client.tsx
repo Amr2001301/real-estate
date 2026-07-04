@@ -35,6 +35,7 @@ interface Props {
   perfRows: PerformanceRow[];
   hasFilters: boolean;
   error?: string;
+  symbol?: string;
 }
 
 // ── Inline sub-components ──────────────────────────────────────────────────
@@ -109,6 +110,7 @@ export function TargetsManagementClient({
   perfRows,
   hasFilters,
   error,
+  symbol = 'ج.م',
 }: Props) {
   const router = useRouter();
   const toast = useToast();
@@ -243,7 +245,7 @@ export function TargetsManagementClient({
                         {/* هدف القيمة */}
                         <td className="px-4 py-2.5 whitespace-nowrap text-end">
                           <span className="tabular-nums font-semibold text-slate-800 text-xs">
-                            {fmtAmt(t.amountTarget)}
+                            {fmtAmt(t.amountTarget, symbol)}
                           </span>
                         </td>
 
@@ -258,7 +260,7 @@ export function TargetsManagementClient({
                                   : 'text-slate-400',
                               )}
                             >
-                              {fmtAmt(perf.achievedAmount)}
+                              {fmtAmt(perf.achievedAmount, symbol)}
                             </span>
                           ) : (
                             <span className="text-slate-300 text-xs">—</span>
@@ -338,6 +340,7 @@ export function TargetsManagementClient({
           mode={dialog.open ? dialog.mode : 'add'}
           prefillTarget={dialog.open && dialog.mode === 'edit' ? dialog.target : undefined}
           salesUsers={salesUsers}
+          symbol={symbol}
           onClose={closeDialog}
           onSuccess={handleSuccess}
         />

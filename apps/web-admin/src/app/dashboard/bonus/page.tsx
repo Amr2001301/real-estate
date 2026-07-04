@@ -8,7 +8,7 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -155,6 +155,7 @@ export default async function BonusPage({
 }) {
   const sp = await searchParams;
   const currency = await getReportsCurrency();
+  const symbol = currencySymbol(currency);
 
   const [rulesRes, entriesRes, salesRes] = await Promise.all([
     safe(api.get<BonusRule[]>('/bonus-rules')),
@@ -221,9 +222,9 @@ export default async function BonusPage({
         variant="compact"
         cols={4}
         metrics={[
-          { label: 'إجمالي المعلق',  value: pendingTotal === 0 ? '0 ج.م.' : formatCurrency(pendingTotal, currency),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
-          { label: 'إجمالي المعتمد', value: approvedTotal === 0 ? '0 ج.م.' : formatCurrency(approvedTotal, currency), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
-          { label: 'إجمالي المدفوع', value: paidTotal === 0 ? '0 ج.م.' : formatCurrency(paidTotal, currency),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: 'إجمالي المعلق',  value: pendingTotal === 0 ? `0 ${symbol}` : formatCurrency(pendingTotal, currency),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
+          { label: 'إجمالي المعتمد', value: approvedTotal === 0 ? `0 ${symbol}` : formatCurrency(approvedTotal, currency), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
+          { label: 'إجمالي المدفوع', value: paidTotal === 0 ? `0 ${symbol}` : formatCurrency(paidTotal, currency),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
           { label: 'عدد المستحقات',  value: entryCount,                                                      icon: <Hash />,         tone: 'brand'   },
         ]}
       />
@@ -288,7 +289,7 @@ export default async function BonusPage({
                   ))}
                 </Select>
               </FormField>
-              <FormField label="المبلغ (ج.م.)">
+              <FormField label={`المبلغ (${symbol})`}>
                 <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-full" placeholder="0" />
               </FormField>
               <FormField label="شهر الاستحقاق">

@@ -52,6 +52,7 @@ interface Props {
   projects: ProjectOption[];
   selectedProjectId: string;
   units: UnitOption[];
+  symbol?: string;
 }
 
 function FormField({
@@ -92,6 +93,7 @@ export function AdminBrokerReservationForm({
   projects,
   selectedProjectId,
   units,
+  symbol = 'ج.م',
 }: Props) {
   const router = useRouter();
   const [state, formAction] = useActionState<AdminBrokerReservationFormState, FormData>(
@@ -262,7 +264,7 @@ export function AdminBrokerReservationForm({
                 <option key={u.id} value={u.id}>
                   {u.code} — {u.type}
                   {u.buildingName ? ` (${u.buildingName})` : ''} —{' '}
-                  {Number(u.price).toLocaleString()} ج.م
+                  {Number(u.price).toLocaleString()} {symbol}
                 </option>
               ))}
             </Select>

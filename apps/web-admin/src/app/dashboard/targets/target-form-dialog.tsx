@@ -29,6 +29,7 @@ interface Props {
   mode: 'add' | 'edit';
   prefillTarget?: SalesTarget;
   salesUsers: SalesUser[];
+  symbol?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -38,6 +39,7 @@ export function TargetFormDialog({
   mode,
   prefillTarget,
   salesUsers,
+  symbol = 'ج.م',
   onClose,
   onSuccess,
 }: Props) {
@@ -228,7 +230,7 @@ export function TargetFormDialog({
         {/* هدف القيمة */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-slate-600">
-            هدف القيمة (ج.م) <span className="text-red-400">*</span>
+            هدف القيمة ({symbol}) <span className="text-red-400">*</span>
           </label>
           <Input
             type="number"

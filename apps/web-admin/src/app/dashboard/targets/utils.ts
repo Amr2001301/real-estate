@@ -21,13 +21,13 @@ export function periodLabel(period: string): string {
   return `${MONTH_NAMES[Number(month) - 1] ?? ''} ${year}`;
 }
 
-// RTL-safe: "700,000 ج.م" — Latin digits + Arabic suffix
-export function fmtAmt(value: number | string | null | undefined): string {
+// RTL-safe: "700,000 ر.س" — Latin digits + Arabic suffix
+export function fmtAmt(value: number | string | null | undefined, symbol = 'ج.م'): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
-  if (n === 0) return '0 ج.م';
-  return `${n.toLocaleString('en-US')} ج.م`;
+  if (n === 0) return `0 ${symbol}`;
+  return `${n.toLocaleString('en-US')} ${symbol}`;
 }
 
 export function num(n: number): string {

@@ -1,5 +1,5 @@
-// Compact currency for KPI cards: "1.4م ر.س" / "75ك ر.س" / "500 ر.س"
-export function formatCompact(value: number | string | null | undefined, symbol = 'ر.س'): string {
+// Compact currency for KPI cards: "1.4م ج.م" / "75ك ج.م" / "500 ج.م"
+export function formatCompact(value: number | string | null | undefined, symbol = 'ج.م'): string {
   if (value === null || value === undefined) return '—';
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
