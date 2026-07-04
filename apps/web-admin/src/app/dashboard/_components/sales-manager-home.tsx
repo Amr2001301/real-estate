@@ -197,8 +197,11 @@ export async function SalesManagerDashboard() {
   const teamReservations       = sum((r) => r.reservationsCount);
 
   // ── Pipeline distribution ─────────────────────────────────────────────────
-  const openLeads      = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST');
-  const pipelineTotal  = openLeads.length;
+  const openLeads              = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST');
+  const pipelineTotal          = openLeads.length;
+  // Funnel: use direct-fetch counts (not monthly perf which can be 0 mid-month)
+  const funnelReservations     = reservations.filter((r) => r.status === 'PENDING' || r.status === 'APPROVED').length;
+  const funnelContracts        = Math.max(teamSigned, reservations.filter((r) => r.status === 'CONVERTED').length);
   const pipelineStageCount = openLeads.reduce<Record<string, number>>((acc, l) => {
     acc[l.stage] = (acc[l.stage] ?? 0) + 1;
     return acc;
@@ -302,8 +305,8 @@ export async function SalesManagerDashboard() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KpiTile
           label="فرص الفريق"
-          value={leadsRes.error ? '—' : teamLeads}
-          sub={`${teamOpenLeads} مفتوحة`}
+          value={leadsRes.error ? '—' : leads.length}
+          sub={`${openLeads.length} مفتوحة`}
           icon={<Users />}
           topBar="from-brand-300 via-brand-500 to-brand-300"
           iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
@@ -311,8 +314,8 @@ export async function SalesManagerDashboard() {
         />
         <KpiTile
           label="فرص مفتوحة"
-          value={perfRes.error ? '—' : teamOpenLeads}
-          sub={`من أصل ${teamLeads} فرصة`}
+          value={leadsRes.error ? '—' : openLeads.length}
+          sub={`من أصل ${leads.length} فرصة`}
           icon={<Zap />}
           topBar="from-violet-300 via-violet-500 to-violet-300"
           iconCls="bg-violet-50 text-violet-600 ring-1 ring-violet-100"
@@ -320,7 +323,7 @@ export async function SalesManagerDashboard() {
         />
         <KpiTile
           label="زيارات قادمة"
-          value={perfRes.error ? '—' : teamUpcomingVisits}
+          value={visitsRes.error ? '—' : visits.length}
           sub="مجدولة لاحقاً"
           icon={<CalendarClock />}
           topBar="from-sky-300 via-sky-500 to-sky-300"
@@ -329,7 +332,7 @@ export async function SalesManagerDashboard() {
         />
         <KpiTile
           label="حجوزات نشطة"
-          value={perfRes.error ? '—' : teamActiveReservations}
+          value={reservationsRes.error ? '—' : funnelReservations}
           sub={teamExpiringCount > 0 ? `${teamExpiringCount} تنتهي قريباً` : 'لا حجوزات تنتهي'}
           icon={<BookmarkCheck />}
           topBar={teamExpiringCount > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-500 to-emerald-300'}
@@ -399,12 +402,12 @@ export async function SalesManagerDashboard() {
       />
 
       {/* ── Team Conversion Funnel ────────────────────────────────────────── */}
-      {!perfRes.error && perf.length > 0 && (
+      {!leadsRes.error && (
         <TeamFunnel
-          teamLeads={teamLeads}
-          teamVisits={teamVisits}
-          teamReservations={teamReservations}
-          teamContracts={teamSigned}
+          teamLeads={openLeads.length}
+          teamVisits={visits.length}
+          teamReservations={funnelReservations}
+          teamContracts={funnelContracts}
           topPerformer={topPerformer}
           currency={currency}
           symbol={symbol}
@@ -666,9 +669,9 @@ function TeamFunnel({
   symbol:          string;
 }) {
   const stages = [
-    { label: 'الفرص الكلية',    value: teamLeads,        icon: <Zap />,           bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
-    { label: 'الزيارات',        value: teamVisits,        icon: <CalendarClock />, bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
-    { label: 'الحجوزات',        value: teamReservations,  icon: <BookmarkCheck />, bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
+    { label: 'الفرص المفتوحة',   value: teamLeads,        icon: <Zap />,           bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
+    { label: 'الزيارات القادمة', value: teamVisits,        icon: <CalendarClock />, bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
+    { label: 'الحجوزات النشطة',  value: teamReservations,  icon: <BookmarkCheck />, bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
     { label: 'العقود الموقعة',  value: teamContracts,     icon: <FileText />,      bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
   ] as const;
 
