@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsObject, IsOptional, IsString } from 'class-validator';
+import { Allow, IsObject, IsOptional, IsString } from 'class-validator';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -78,9 +78,9 @@ class UpsertSettingDto {
 }
 
 class PatchSettingDto {
-  // New PATCH body. Accepts any JSON value (string/number/bool/array/object)
-  // so the new settings UI can edit primitive values without forcing them
-  // into a wrapper object.
+  // New PATCH body. Accepts any JSON value (string/number/bool/array/object).
+  // @Allow() is required so the global whitelist pipe doesn't strip the field.
+  @Allow()
   value!: unknown;
 }
 
