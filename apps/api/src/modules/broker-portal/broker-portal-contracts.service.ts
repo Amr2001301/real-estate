@@ -47,6 +47,19 @@ const PORTAL_CONTRACT_INCLUDE = {
       lead: { select: { id: true, fullName: true, phone: true } },
     },
   },
+  // The materialized commission record is the authoritative source for signed
+  // contracts — it reflects the actual computed amounts. For unsigned contracts
+  // it will be null and the UI falls back to reservation commissionLockedPct/Amount.
+  brokerCommission: {
+    select: {
+      id: true,
+      commissionNumber: true,
+      commissionPct: true,
+      grossAmount: true,
+      netAmount: true,
+      status: true,
+    },
+  },
   installmentPlan: {
     select: {
       id: true,

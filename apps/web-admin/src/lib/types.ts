@@ -279,6 +279,14 @@ export interface PortalContract {
     sales: { id: string; fullName: string; email: string | null; phone: string | null } | null;
     lead: { id: string; fullName: string; phone: string } | null;
   } | null;
+  brokerCommission?: {
+    id: string;
+    commissionNumber: string;
+    commissionPct: string | number | null;
+    grossAmount: string | number;
+    netAmount: string | number;
+    status: BrokerCommissionStatus;
+  } | null;
   installmentPlan?: ContractInstallmentPlan | null;
   deposits?: Deposit[];
 }

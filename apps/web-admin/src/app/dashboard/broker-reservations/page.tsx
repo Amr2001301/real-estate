@@ -409,8 +409,17 @@ export default async function AdminBrokerReservationsPage({
                             </p>
                           )}
                         </>
+                      ) : r.commissionLockedAmount != null ? (
+                        <>
+                          <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-2xs font-medium text-teal-700">
+                            مبلغ ثابت
+                          </span>
+                          <p className="text-2xs text-slate-400 tabular-nums mt-0.5">
+                            {formatCurrency(r.commissionLockedAmount, currency)}
+                          </p>
+                        </>
                       ) : (
-                        <span className="text-slate-400 text-xs">—</span>
+                        <span className="text-slate-400 text-xs">غير محددة</span>
                       )}
                     </td>
 

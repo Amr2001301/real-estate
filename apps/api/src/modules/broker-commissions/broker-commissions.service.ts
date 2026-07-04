@@ -164,24 +164,54 @@ export class BrokerCommissionsService {
       };
     }
 
-    const lockedPct = contract.reservation.commissionLockedPct;
-    const lockedAmount = contract.reservation.commissionLockedAmount;
+    let lockedPct = contract.reservation.commissionLockedPct;
+    let lockedAmount = contract.reservation.commissionLockedAmount;
     const basisAmount = contract.totalAmount;
     const projectId = contract.unit.building.phase.projectId;
 
-    // Compute gross amount, preferring the locked snapshot. If only pct is
-    // available we derive amount = basisAmount * pct / 100. Without either
-    // we refuse to create an invalid commission.
+    // When the reservation was created through the admin CRM (not the broker
+    // portal), commissionLockedPct and commissionLockedAmount are both null
+    // because no commission snapshot was computed at reservation time.
+    // Fall back to the broker's current configured rate so that admin-created
+    // broker deals still generate a commission on signing.
+    if (lockedPct === null && lockedAmount === null) {
+      const [broker, projectAccess] = await Promise.all([
+        this.prisma.broker.findUnique({
+          where: { id: contract.brokerId! },
+          select: { defaultCommissionPct: true, commissionModel: true },
+        }),
+        this.prisma.brokerProjectAccess.findFirst({
+          where: { brokerId: contract.brokerId!, projectId, active: true },
+          select: { commissionPct: true, fixedAmountPerUnit: true },
+        }),
+      ]);
+
+      if (broker?.commissionModel === 'FIXED_PER_UNIT') {
+        lockedAmount = projectAccess?.fixedAmountPerUnit ?? null;
+      } else {
+        const pct = projectAccess?.commissionPct ?? broker?.defaultCommissionPct ?? null;
+        lockedPct = pct;
+      }
+    }
+
+    // Compute gross amount from the final contract value, not the reservation
+    // snapshot. The snapshot amount (commissionLockedAmount) was calculated from
+    // snapshot.totalPayable at reservation time, which can differ from
+    // contract.totalAmount if the installment plan changed or the contract was
+    // created with a different total. We always recompute from the locked RATE
+    // against the final signed contract amount so that commissionNet tracks
+    // salesGross at the correct percentage. For FIXED_PER_UNIT (lockedPct is
+    // null), we use the locked fixed amount since it is not percentage-based.
     let grossAmount: Prisma.Decimal;
-    if (lockedAmount !== null && lockedAmount !== undefined) {
-      grossAmount = lockedAmount;
-    } else if (lockedPct !== null && lockedPct !== undefined) {
+    if (lockedPct !== null && lockedPct !== undefined) {
       grossAmount = basisAmount.mul(lockedPct).div(100);
+    } else if (lockedAmount !== null && lockedAmount !== undefined) {
+      grossAmount = lockedAmount;
     } else {
       return {
         status: 'skipped',
         reason:
-          'reservation has neither commissionLockedAmount nor commissionLockedPct; skipping (configure broker commission rates and re-convert)',
+          'reservation has neither commissionLockedAmount nor commissionLockedPct, and broker has no commission rate configured',
       };
     }
 

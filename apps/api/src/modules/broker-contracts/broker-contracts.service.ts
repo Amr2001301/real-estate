@@ -43,6 +43,16 @@ const BROKER_CONTRACT_INCLUDE = {
       lead: { select: { id: true, fullName: true, phone: true } },
     },
   },
+  brokerCommission: {
+    select: {
+      id: true,
+      commissionNumber: true,
+      commissionPct: true,
+      grossAmount: true,
+      netAmount: true,
+      status: true,
+    },
+  },
   installmentPlan: {
     select: {
       id: true,

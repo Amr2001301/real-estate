@@ -432,24 +432,44 @@ export default async function AdminBrokerContractsPage({
                       )}
                     </td>
 
-                    {/* Locked commission — % bold, amount muted */}
+                    {/* Locked commission — BrokerCommission record takes priority over reservation snapshot */}
                     <td className="py-3.5 px-4">
-                      {c.reservation?.commissionLockedPct != null ? (
-                        <>
-                          <p className="text-xs font-semibold text-slate-800 tabular-nums">
-                            {Number(c.reservation.commissionLockedPct).toFixed(2)}%
-                          </p>
-                          {c.reservation.commissionLockedAmount != null && (
-                            <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
-                              {formatCurrency(c.reservation.commissionLockedAmount, currency)}
-                            </p>
-                          )}
-                        </>
-                      ) : (
-                        <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          غير مقفلة
-                        </span>
-                      )}
+                      {(() => {
+                        const comm = c.brokerCommission;
+                        const pct  = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
+                        const amt  = comm?.netAmount      ?? c.reservation?.commissionLockedAmount;
+                        if (pct != null) {
+                          return (
+                            <>
+                              <p className="text-xs font-semibold text-slate-800 tabular-nums">
+                                {Number(pct).toFixed(2)}%
+                              </p>
+                              {amt != null && (
+                                <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
+                                  {formatCurrency(amt, currency)}
+                                </p>
+                              )}
+                            </>
+                          );
+                        }
+                        if (amt != null) {
+                          return (
+                            <>
+                              <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-2xs font-medium text-teal-700">
+                                مبلغ ثابت
+                              </span>
+                              <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
+                                {formatCurrency(amt, currency)}
+                              </p>
+                            </>
+                          );
+                        }
+                        return (
+                          <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
+                            غير محددة
+                          </span>
+                        );
+                      })()}
                     </td>
 
                     {/* Date */}

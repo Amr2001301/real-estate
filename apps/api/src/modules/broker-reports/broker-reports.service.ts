@@ -343,10 +343,10 @@ export class BrokerReportsService {
     // which is awkward for groupBy — we approximate contract counts by
     // counting distinct contractIds within the commission window per project.
     const commissions = await this.prisma.brokerCommission.findMany({
-      where: this.commissionWhere({
-        brokerId: query.brokerId,
-        range,
-      }),
+      where: {
+        ...this.commissionWhere({ brokerId: query.brokerId, range }),
+        status: { notIn: [BrokerCommissionStatus.CANCELLED, BrokerCommissionStatus.REJECTED] },
+      },
       select: {
         projectId: true,
         brokerId: true,
@@ -355,7 +355,7 @@ export class BrokerReportsService {
         netAmount: true,
         basisAmount: true,
         contract: { select: { signedAt: true } },
-        payout: { select: { status: true, totalNet: true, id: true } },
+        payout: { select: { status: true } },
       },
     });
 
@@ -367,7 +367,6 @@ export class BrokerReportsService {
       salesGross: Prisma.Decimal;
       commissionGross: Prisma.Decimal;
       commissionNet: Prisma.Decimal;
-      payoutIds: Set<string>;
       payoutNet: Prisma.Decimal;
     };
 
@@ -383,7 +382,6 @@ export class BrokerReportsService {
           salesGross: new Prisma.Decimal(0),
           commissionGross: new Prisma.Decimal(0),
           commissionNet: new Prisma.Decimal(0),
-          payoutIds: new Set(),
           payoutNet: new Prisma.Decimal(0),
         } satisfies ProjectAgg);
       agg.brokerIds.add(c.brokerId);
@@ -394,9 +392,10 @@ export class BrokerReportsService {
       }
       agg.commissionGross = agg.commissionGross.add(c.grossAmount);
       agg.commissionNet = agg.commissionNet.add(c.netAmount);
-      if (c.payout && c.payout.status === BrokerPayoutStatus.PAID && !agg.payoutIds.has(c.payout.id)) {
-        agg.payoutIds.add(c.payout.id);
-        agg.payoutNet = agg.payoutNet.add(c.payout.totalNet);
+      // Attribute the paid amount per-commission (not per-payout) to avoid
+      // double-counting a single payout across multiple projects.
+      if (c.payout?.status === BrokerPayoutStatus.PAID) {
+        agg.payoutNet = agg.payoutNet.add(c.netAmount);
       }
       byProject.set(c.projectId, agg);
     }
@@ -1067,10 +1066,14 @@ export class BrokerReportsService {
         };
       },
       commissionTotals: async () => {
+        const activeCommW = {
+          ...commW,
+          status: { notIn: [BrokerCommissionStatus.CANCELLED, BrokerCommissionStatus.REJECTED] },
+        };
         const [allAgg, pendingAgg] = await Promise.all([
           this.prisma.brokerCommission.aggregate({
             _sum: { grossAmount: true, netAmount: true },
-            where: commW,
+            where: activeCommW,
           }),
           this.prisma.brokerCommission.aggregate({
             _sum: { netAmount: true },

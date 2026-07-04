@@ -282,19 +282,43 @@ export default async function PortalContractsPage({
                     </td>
 
                     <td className="py-3 px-4">
-                      {c.reservation?.commissionLockedPct != null ? (
-                        <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-amber-100">
-                          <BadgePercent className="h-3 w-3" />
-                          {Number(c.reservation.commissionLockedPct).toFixed(2)}%
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                      {c.reservation?.commissionLockedAmount != null && (
-                        <p className="text-2xs text-slate-500 mt-1 tabular-nums">
-                          {formatCurrency(c.reservation.commissionLockedAmount, currency)}
-                        </p>
-                      )}
+                      {(() => {
+                        // Priority: use the materialized BrokerCommission record when it
+                        // exists (signed contracts). Fall back to the reservation snapshot
+                        // for unsigned contracts or admin-CRM deals without a commission record.
+                        const comm = c.brokerCommission;
+                        const pct  = comm?.commissionPct ?? c.reservation?.commissionLockedPct;
+                        const amt  = comm?.netAmount      ?? c.reservation?.commissionLockedAmount;
+                        if (pct != null) {
+                          return (
+                            <>
+                              <div className="inline-flex items-center gap-1 rounded-full bg-amber-50 text-amber-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-amber-100">
+                                <BadgePercent className="h-3 w-3" />
+                                {Number(pct).toFixed(2)}%
+                              </div>
+                              {amt != null && (
+                                <p className="text-2xs text-slate-500 mt-1 tabular-nums">
+                                  {formatCurrency(amt, currency)}
+                                </p>
+                              )}
+                            </>
+                          );
+                        }
+                        if (amt != null) {
+                          return (
+                            <>
+                              <div className="inline-flex items-center gap-1 rounded-full bg-teal-50 text-teal-700 px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ring-teal-100">
+                                <BadgePercent className="h-3 w-3" />
+                                مبلغ ثابت
+                              </div>
+                              <p className="text-2xs text-slate-500 mt-1 tabular-nums">
+                                {formatCurrency(amt, currency)}
+                              </p>
+                            </>
+                          );
+                        }
+                        return <span className="text-slate-400 text-xs">غير محدد</span>;
+                      })()}
                     </td>
 
                     <td className="py-3 px-4 tabular-nums font-semibold text-slate-900 text-xs">
