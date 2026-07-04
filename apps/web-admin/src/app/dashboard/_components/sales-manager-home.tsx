@@ -944,38 +944,32 @@ function PipelineCard({ stageCount, total }: { stageCount: Record<string, number
         </Link>
       </div>
 
-      <div className="p-5 space-y-4">
+      <div className="px-5 pb-5 pt-4 space-y-3">
         {total > 0 ? (
           <>
-            {/* Stage tiles */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            {/* Connected stage grid — shared borders, no gaps */}
+            <div className="grid grid-cols-4 border border-hairline rounded-[14px] overflow-hidden divide-x divide-hairline rtl:divide-x-reverse">
               {items.map((s) => {
-                const tile = STAGE_TILE[s.stage] ?? STAGE_TILE.NEW!;
+                const tile = STAGE_TILE[s.stage] ?? STAGE_TILE['NEW']!;
                 const pct  = total > 0 ? Math.round((s.count / total) * 100) : 0;
                 return (
                   <div key={s.stage}
-                    className={cn(
-                      'relative rounded-[14px] border border-hairline overflow-hidden',
-                      tile.tileCls,
-                      s.count === 0 && 'opacity-50',
-                    )}>
-                    <div className={cn('h-[3px] bg-gradient-to-l', tile.topBar)} />
-                    <div className="px-3 py-3 text-center">
-                      <p className={cn('text-2xl font-black tabular-nums leading-none', tile.valueCls)}>
-                        {s.count}
-                      </p>
-                      <p className="text-[10px] text-slate-500 font-medium mt-1 leading-tight">{s.label}</p>
-                      {pct > 0 && (
-                        <p className="text-[10px] text-slate-400 tabular-nums mt-0.5">{pct}%</p>
-                      )}
-                    </div>
+                    className={cn('relative py-4 px-3 text-center', s.count === 0 && 'opacity-40')}>
+                    <div className={cn('absolute top-0 inset-x-0 h-[3px] bg-gradient-to-l', tile.topBar)} />
+                    <p className={cn('text-2xl font-black tabular-nums leading-none mt-0.5', tile.valueCls)}>
+                      {s.count}
+                    </p>
+                    <p className="text-[11px] text-slate-600 font-medium mt-1.5 leading-tight">{s.label}</p>
+                    {pct > 0 && (
+                      <p className="text-[10px] text-slate-400 tabular-nums mt-0.5">{pct}%</p>
+                    )}
                   </div>
                 );
               })}
             </div>
 
             {/* Progress bar */}
-            <div className="flex rounded-full overflow-hidden h-2 gap-px bg-slate-100">
+            <div className="flex rounded-full overflow-hidden h-1.5 bg-slate-100">
               {items.filter((s) => s.count > 0).map((s) => (
                 <div key={s.stage}
                   className={cn('h-full first:rounded-s-full last:rounded-e-full', s.barCls)}
