@@ -12,6 +12,10 @@ import {
   Bell,
   CheckCircle2,
   ArrowUpRight,
+  TrendingUp,
+  Target,
+  Users,
+  ArrowRight,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
@@ -23,29 +27,22 @@ import {
   ReservationStatusBadge,
   AppointmentStatusBadge,
 } from '@/components/badges';
-import {
-  PremiumPageHero,
-  PremiumMetricStrip,
-} from '@/components/premium';
+import { PremiumPageHero } from '@/components/premium';
 
 interface PerformanceRow {
   signedContractsCount: number;
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
-
 function daysUntil(dateStr: string): number {
   return (new Date(dateStr).getTime() - Date.now()) / 86400000;
 }
 
 function isToday(dateStr: string): boolean {
-  const d   = new Date(dateStr);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth()    === now.getMonth() &&
-    d.getDate()     === now.getDate()
-  );
+  const d = new Date(dateStr), now = new Date();
+  return d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate()  === now.getDate();
 }
 
 function expiryLabel(dateStr: string): string {
@@ -59,40 +56,161 @@ function leadAgeDays(lead: Lead): number {
   return Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
 }
 
-// ── Design helpers ────────────────────────────────────────────────────────────
+// ── Lead stage config ─────────────────────────────────────────────────────────
+const STAGE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  NEW:              { label: 'جديدة',     color: 'text-slate-600',  bg: 'bg-slate-100'   },
+  CONTACTED:        { label: 'تواصل',     color: 'text-blue-700',   bg: 'bg-blue-50'     },
+  VISIT_SCHEDULED:  { label: 'موعد محدد', color: 'text-brand-700',  bg: 'bg-brand-50'    },
+  VISITED:          { label: 'تمت الزيارة',color:'text-violet-700', bg: 'bg-violet-50'   },
+  NEGOTIATING:      { label: 'تفاوض',     color: 'text-amber-700',  bg: 'bg-amber-50'    },
+  WON:              { label: 'فوز',       color: 'text-emerald-700', bg: 'bg-emerald-50' },
+  LOST:             { label: 'خسارة',     color: 'text-red-700',    bg: 'bg-red-50'      },
+};
 
+// ── Design helpers ────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap">
-        {children}
-      </span>
-      <div className="flex-1 h-px bg-hairline" />
+    <div className="flex items-center gap-2.5">
+      <span className="h-1.5 w-1.5 rounded-full bg-brand-500 shrink-0" />
+      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{children}</span>
+      <span className="flex-1 h-px bg-hairline" />
+    </div>
+  );
+}
+
+// ── KPI Tile ──────────────────────────────────────────────────────────────────
+function KpiTile({
+  label, value, sub, icon, topBar, iconCls, valueCls,
+}: {
+  label: string; value: number; sub?: string;
+  icon: React.ReactNode; topBar: string; iconCls: string; valueCls: string;
+}) {
+  return (
+    <div className="relative bg-surface rounded-[18px] border border-hairline shadow-soft overflow-hidden">
+      <div className={cn('h-[3px] bg-gradient-to-l', topBar)} />
+      <div className="flex items-center gap-3 px-4 py-4">
+        <span className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4', iconCls)}>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className={cn('text-xl font-black tabular-nums leading-none', valueCls)}>{value}</p>
+          <p className="text-[11px] text-slate-600 font-medium mt-0.5 truncate">{label}</p>
+          {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sales Pipeline ────────────────────────────────────────────────────────────
+function SalesPipeline({
+  openLeads, visitsCount, reservationsCount, contractsCount, stageGroups,
+}: {
+  openLeads: number; visitsCount: number; reservationsCount: number; contractsCount: number;
+  stageGroups: Record<string, number>;
+}) {
+  const stages = [
+    { label: 'الفرص المفتوحة',  value: openLeads,          icon: <Zap />,           clr: 'brand',   bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
+    { label: 'الزيارات القادمة', value: visitsCount,         icon: <CalendarClock />, clr: 'sky',     bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
+    { label: 'الحجوزات النشطة',  value: reservationsCount,   icon: <BookmarkCheck />, clr: 'emerald', bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
+    { label: 'العقود هذا الشهر', value: contractsCount,      icon: <FileText />,      clr: 'violet',  bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
+  ] as const;
+
+  const pipelineStages = [
+    { key: 'NEW',             label: 'جديدة'       },
+    { key: 'CONTACTED',       label: 'تواصل'       },
+    { key: 'VISIT_SCHEDULED', label: 'موعد محدد'   },
+    { key: 'VISITED',         label: 'تمت الزيارة' },
+    { key: 'NEGOTIATING',     label: 'تفاوض'       },
+  ];
+
+  const maxStage = Math.max(...pipelineStages.map((s) => stageGroups[s.key] ?? 0), 1);
+
+  return (
+    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-hairline bg-canvas/30">
+        <span className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 text-brand-600">
+          <TrendingUp />
+        </span>
+        <div>
+          <h3 className="text-[13.5px] font-bold text-navy leading-none">مسار المبيعات</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">من الفرصة إلى العقد</p>
+        </div>
+      </div>
+
+      <div className="p-5 space-y-5">
+        {/* Pipeline stages row */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {stages.map((s, i) => {
+            const prev = i > 0 ? stages[i - 1]!.value : null;
+            const rate = prev && prev > 0 ? Math.round((s.value / prev) * 100) : null;
+            return (
+              <div key={s.label} className="flex flex-col items-center text-center gap-2">
+                <div className="flex items-center gap-2 w-full justify-center">
+                  {i > 0 && <div className="hidden sm:block h-px flex-1 bg-hairline" />}
+                  <div className={cn(
+                    'h-10 w-10 rounded-full flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4 ring-1',
+                    s.bg,
+                  )}>
+                    {s.icon}
+                  </div>
+                  {i < stages.length - 1 && <div className="hidden sm:block h-px flex-1 bg-hairline" />}
+                </div>
+                <div>
+                  <p className="text-2xl font-black text-slate-900 tabular-nums leading-none">{s.value}</p>
+                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">{s.label}</p>
+                  {rate !== null && (
+                    <p className={cn('text-[10px] font-semibold mt-0.5', rate > 0 ? 'text-emerald-600' : 'text-slate-400')}>
+                      {rate}% تحويل
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Stage distribution bar */}
+        {openLeads > 0 && (
+          <div className="border-t border-hairline pt-4">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">توزيع الفرص حسب المرحلة</p>
+            <div className="space-y-2">
+              {pipelineStages.map((s) => {
+                const count = stageGroups[s.key] ?? 0;
+                const pct   = Math.round((count / maxStage) * 100);
+                const cfg   = STAGE_CONFIG[s.key]!;
+                return count > 0 ? (
+                  <div key={s.key} className="flex items-center gap-3">
+                    <span className={cn('text-[11px] font-medium w-[80px] shrink-0 text-end', cfg.color)}>{s.label}</span>
+                    <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                      <div className={cn('h-full rounded-full', cfg.bg)} style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-700 tabular-nums w-4 shrink-0">{count}</span>
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
-
 export async function SalesDashboard({ userId }: { userId: string }) {
   const nowIso = new Date().toISOString();
 
-  const [leadsRes, reservationsRes, visitsRes, unitsRes, perfRes] =
-    await Promise.all([
-      safe(api.get<Paged<Lead>>('/leads?pageSize=100')),
-      safe(api.get<Paged<Reservation>>('/reservations?pageSize=100')),
-      safe(
-        api.get<Paged<VisitAppointment>>(
-          `/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&pageSize=50`,
-        ),
-      ),
-      safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
-      safe(
-        api.get<PerformanceRow[]>(
-          `/sales-targets/performance?period=${nowIso.slice(0, 7)}`,
-        ),
-      ),
-    ]);
+  const [leadsRes, reservationsRes, visitsRes, unitsRes, perfRes] = await Promise.all([
+    safe(api.get<Paged<Lead>>('/leads?pageSize=100')),
+    safe(api.get<Paged<Reservation>>('/reservations?pageSize=100')),
+    safe(api.get<Paged<VisitAppointment>>(
+      `/visits/appointments?assignedSalesId=${userId}&scheduledFrom=${nowIso}&pageSize=50`,
+    )),
+    safe(api.get<Paged<unknown>>('/units?status=AVAILABLE&pageSize=1')),
+    safe(api.get<PerformanceRow[]>(`/sales-targets/performance?period=${nowIso.slice(0, 7)}`)),
+  ]);
 
   const leads        = leadsRes.data?.data        ?? [];
   const reservations = reservationsRes.data?.data ?? [];
@@ -102,61 +220,50 @@ export async function SalesDashboard({ userId }: { userId: string }) {
 
   // ── KPI computations ──────────────────────────────────────────────────────
   const openLeads          = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST');
-  const activeReservations = reservations.filter(
-    (r) => r.status === 'PENDING' || r.status === 'APPROVED',
-  );
-  const convertedDeals  = reservations.filter((r) => r.status === 'CONVERTED').length;
-  const signedThisMonth = (perfRes.data ?? [])[0]?.signedContractsCount;
-  const closedDeals     = signedThisMonth ?? convertedDeals;
-  const availableUnits  = unitsRes.data?.meta.total ?? 0;
+  const wonLeads           = leads.filter((l) => l.stage === 'WON').length;
+  const lostLeads          = leads.filter((l) => l.stage === 'LOST').length;
+  const activeReservations = reservations.filter((r) => r.status === 'PENDING' || r.status === 'APPROVED');
+  const signedThisMonth    = (perfRes.data ?? [])[0]?.signedContractsCount;
+  const convertedDeals     = reservations.filter((r) => r.status === 'CONVERTED').length;
+  const closedDeals        = signedThisMonth ?? convertedDeals;
+  const availableUnits     = unitsRes.data?.meta.total ?? 0;
 
-  const staleLeadsCount = openLeads.filter(
-    (l) => !l.upcomingVisit && leadAgeDays(l) >= 3,
-  ).length;
-
-  const expiringWithin7Count = reservations.filter((r) => {
-    if (r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED')
-      return false;
+  const staleLeadsCount    = openLeads.filter((l) => !l.upcomingVisit && leadAgeDays(l) >= 3).length;
+  const expiringWithin7    = reservations.filter((r) => {
+    if (r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED') return false;
     const d = daysUntil(r.expiresAt);
     return d >= 0 && d <= 7;
-  }).length;
-
+  });
   const todayVisits = visits.filter((v) => isToday(v.scheduledAt));
-
   const expiringUrgent = reservations.filter((r) => {
-    if (r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED')
-      return false;
+    if (r.status === 'CONVERTED' || r.status === 'CANCELLED' || r.status === 'EXPIRED') return false;
     const d = daysUntil(r.expiresAt);
     return d >= 0 && d < 2;
   });
 
-  const hasTodayPriorities = todayVisits.length > 0 || expiringUrgent.length > 0;
+  // Stage distribution
+  const stageGroups = openLeads.reduce<Record<string, number>>((acc, l) => {
+    acc[l.stage] = (acc[l.stage] ?? 0) + 1;
+    return acc;
+  }, {});
 
-  // ── Section rows ──────────────────────────────────────────────────────────
-  const recentLeads = leads
-    .slice()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 6);
-
+  // Content rows
+  const recentLeads           = [...leads].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 5);
   const upcomingVisitRows     = visits.slice(0, 5);
-  const activeReservationRows = activeReservations
-    .slice()
-    .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime())
-    .slice(0, 5);
+  const activeReservationRows = [...activeReservations].sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()).slice(0, 5);
 
-  const showVisits       = !visitsRes.error      && upcomingVisitRows.length     > 0;
+  const showVisits       = !visitsRes.error && upcomingVisitRows.length > 0;
   const showReservations = !reservationsRes.error && activeReservationRows.length > 0;
+  const hasPriorities    = todayVisits.length > 0 || expiringUrgent.length > 0;
 
   return (
     <div className="space-y-5">
 
-      {/* ── Header ────────────────────────────────────────────────────────── */}
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title="لوحة المبيعات"
         description="نظرة سريعة على فرصك، زياراتك، حجوزاتك، والعقود المتوقعة."
-        breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-        ]}
+        breadcrumbs={[{ label: 'لوحة التحكم', href: '/dashboard' }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/dashboard/leads/new">
@@ -178,76 +285,90 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         }
       />
 
-      {/* ── KPI strip ─────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        metrics={[
-          {
-            label: 'فرصي المفتوحة',
-            value: openLeads.length,
-            sub:   staleLeadsCount > 0 ? 'بعضها يحتاج متابعة' : 'لا متابعات متأخرة',
-            icon:  <Zap />,
-            tone:  'brand',
-          },
-          {
-            label: 'متابعات مستحقة',
-            value: staleLeadsCount,
-            sub:   staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة',
-            icon:  <AlertTriangle />,
-            tone:  staleLeadsCount > 0 ? 'warning' : 'success',
-          },
-          {
-            label: 'زياراتي القادمة',
-            value: visits.length,
-            sub:   todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم',
-            icon:  <CalendarClock />,
-            tone:  'info',
-          },
-          {
-            label: 'حجوزاتي النشطة',
-            value: activeReservations.length,
-            sub:   expiringWithin7Count > 0
-                     ? `${expiringWithin7Count} تنتهي قريباً`
-                     : 'لا حجوزات تنتهي قريباً',
-            icon:  <BookmarkCheck />,
-            tone:  expiringWithin7Count > 0 ? 'warning' : 'success',
-          },
-          {
-            label: 'عقود هذا الشهر',
-            value: closedDeals,
-            sub:   signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود',
-            icon:  <FileText />,
-            tone:  'purple',
-          },
-          {
-            label: 'الوحدات المتاحة',
-            value: availableUnits,
-            sub:   'جاهزة للعرض',
-            icon:  <Home />,
-            tone:  'teal',
-          },
-        ]}
+      {/* ── KPI tiles ─────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
+        <KpiTile
+          label="فرصي المفتوحة"
+          value={openLeads.length}
+          sub={`${wonLeads} فوز · ${lostLeads} خسارة`}
+          icon={<Zap />}
+          topBar="from-brand-300 via-brand-500 to-brand-300"
+          iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
+          valueCls="text-brand-700"
+        />
+        <KpiTile
+          label="متابعات مستحقة"
+          value={staleLeadsCount}
+          sub={staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة'}
+          icon={<AlertTriangle />}
+          topBar={staleLeadsCount > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-400 to-emerald-300'}
+          iconCls={staleLeadsCount > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
+          valueCls={staleLeadsCount > 0 ? 'text-amber-700' : 'text-emerald-700'}
+        />
+        <KpiTile
+          label="زياراتي القادمة"
+          value={visits.length}
+          sub={todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم'}
+          icon={<CalendarClock />}
+          topBar="from-sky-300 via-sky-500 to-sky-300"
+          iconCls="bg-sky-50 text-sky-600 ring-1 ring-sky-100"
+          valueCls="text-sky-700"
+        />
+        <KpiTile
+          label="حجوزاتي النشطة"
+          value={activeReservations.length}
+          sub={expiringWithin7.length > 0 ? `${expiringWithin7.length} تنتهي قريباً` : 'لا حجوزات تنتهي قريباً'}
+          icon={<BookmarkCheck />}
+          topBar={expiringWithin7.length > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-500 to-emerald-300'}
+          iconCls={expiringWithin7.length > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
+          valueCls={expiringWithin7.length > 0 ? 'text-amber-700' : 'text-emerald-700'}
+        />
+        <KpiTile
+          label="عقود هذا الشهر"
+          value={closedDeals}
+          sub={signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود'}
+          icon={<FileText />}
+          topBar="from-violet-300 via-violet-500 to-violet-300"
+          iconCls="bg-violet-50 text-violet-600 ring-1 ring-violet-100"
+          valueCls="text-violet-700"
+        />
+        <KpiTile
+          label="الوحدات المتاحة"
+          value={availableUnits}
+          sub="جاهزة للعرض"
+          icon={<Home />}
+          topBar="from-teal-300 via-teal-500 to-teal-300"
+          iconCls="bg-teal-50 text-teal-600 ring-1 ring-teal-100"
+          valueCls="text-teal-700"
+        />
+      </div>
+
+      {/* ── Sales pipeline ────────────────────────────────────────────────── */}
+      <SalesPipeline
+        openLeads={openLeads.length}
+        visitsCount={visits.length}
+        reservationsCount={activeReservations.length}
+        contractsCount={closedDeals}
+        stageGroups={stageGroups}
       />
 
       {/* ── Today priorities ──────────────────────────────────────────────── */}
-      {hasTodayPriorities && (
+      {hasPriorities && (
         <div className="space-y-2.5">
           <SectionLabel>أولويات اليوم</SectionLabel>
-          <TodayPriorityPanel
-            todayVisits={todayVisits}
-            expiringUrgent={expiringUrgent}
-          />
+          <TodayPriorityPanel todayVisits={todayVisits} expiringUrgent={expiringUrgent} />
         </div>
       )}
 
-      {/* ── Content grid ──────────────────────────────────────────────────── */}
+      {/* ── Current activity ──────────────────────────────────────────────── */}
       <div className="space-y-2.5">
         <SectionLabel>نشاطي الحالي</SectionLabel>
         {showVisits && showReservations ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:items-start">
             <SectionCard
               title="أحدث الفرص"
-              icon={<Zap className="h-3.5 w-3.5 text-brand-600" />}
-              iconBg="bg-brand-50"
+              icon={<Zap />}
+              iconCls="bg-brand-50 ring-brand-100 text-brand-600"
               href="/dashboard/leads"
               hrefLabel="فتح الفرص"
               error={leadsRes.error}
@@ -255,39 +376,32 @@ export async function SalesDashboard({ userId }: { userId: string }) {
               emptyText="لا توجد فرص حديثة."
               className="lg:col-span-2"
             >
-              {recentLeads.map((l) => (
-                <LeadRow key={l.id} lead={l} staleAfterDays={3} />
-              ))}
+              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} />)}
             </SectionCard>
-
             <div className="space-y-4">
               <SectionCard
                 title="زياراتي القادمة"
-                icon={<CalendarClock className="h-3.5 w-3.5 text-blue-600" />}
-                iconBg="bg-blue-50"
+                icon={<CalendarClock />}
+                iconCls="bg-sky-50 ring-sky-100 text-sky-600"
                 href="/dashboard/visits"
                 hrefLabel="فتح الزيارات"
                 error={visitsRes.error}
                 empty={upcomingVisitRows.length === 0}
                 emptyText="لا توجد زيارات قادمة."
               >
-                {upcomingVisitRows.map((v) => (
-                  <VisitRow key={v.id} visit={v} />
-                ))}
+                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} />)}
               </SectionCard>
               <SectionCard
                 title="حجوزاتي النشطة"
-                icon={<BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />}
-                iconBg="bg-emerald-50"
+                icon={<BookmarkCheck />}
+                iconCls="bg-emerald-50 ring-emerald-100 text-emerald-600"
                 href="/dashboard/reservations"
                 hrefLabel="فتح الحجوزات"
                 error={reservationsRes.error}
                 empty={activeReservationRows.length === 0}
                 emptyText="لا توجد حجوزات نشطة."
               >
-                {activeReservationRows.map((r) => (
-                  <ReservationRow key={r.id} reservation={r} />
-                ))}
+                {activeReservationRows.map((r) => <ReservationRow key={r.id} reservation={r} />)}
               </SectionCard>
             </div>
           </div>
@@ -295,56 +409,50 @@ export async function SalesDashboard({ userId }: { userId: string }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
             <SectionCard
               title="أحدث الفرص"
-              icon={<Zap className="h-3.5 w-3.5 text-brand-600" />}
-              iconBg="bg-brand-50"
+              icon={<Zap />}
+              iconCls="bg-brand-50 ring-brand-100 text-brand-600"
               href="/dashboard/leads"
               hrefLabel="فتح الفرص"
               error={leadsRes.error}
               empty={recentLeads.length === 0}
               emptyText="لا توجد فرص حديثة."
             >
-              {recentLeads.map((l) => (
-                <LeadRow key={l.id} lead={l} staleAfterDays={3} />
-              ))}
+              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} />)}
             </SectionCard>
             {showVisits && (
               <SectionCard
                 title="زياراتي القادمة"
-                icon={<CalendarClock className="h-3.5 w-3.5 text-blue-600" />}
-                iconBg="bg-blue-50"
+                icon={<CalendarClock />}
+                iconCls="bg-sky-50 ring-sky-100 text-sky-600"
                 href="/dashboard/visits"
                 hrefLabel="فتح الزيارات"
                 error={visitsRes.error}
                 empty={upcomingVisitRows.length === 0}
                 emptyText="لا توجد زيارات قادمة."
               >
-                {upcomingVisitRows.map((v) => (
-                  <VisitRow key={v.id} visit={v} />
-                ))}
+                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} />)}
               </SectionCard>
             )}
             {showReservations && (
               <SectionCard
                 title="حجوزاتي النشطة"
-                icon={<BookmarkCheck className="h-3.5 w-3.5 text-emerald-600" />}
-                iconBg="bg-emerald-50"
+                icon={<BookmarkCheck />}
+                iconCls="bg-emerald-50 ring-emerald-100 text-emerald-600"
                 href="/dashboard/reservations"
                 hrefLabel="فتح الحجوزات"
                 error={reservationsRes.error}
                 empty={activeReservationRows.length === 0}
                 emptyText="لا توجد حجوزات نشطة."
               >
-                {activeReservationRows.map((r) => (
-                  <ReservationRow key={r.id} reservation={r} />
-                ))}
+                {activeReservationRows.map((r) => <ReservationRow key={r.id} reservation={r} />)}
               </SectionCard>
             )}
           </div>
         ) : (
           <SectionCard
             title="أحدث الفرص"
-            icon={<Zap className="h-3.5 w-3.5 text-brand-600" />}
-            iconBg="bg-brand-50"
+            icon={<Zap />}
+            iconCls="bg-brand-50 ring-brand-100 text-brand-600"
             href="/dashboard/leads"
             hrefLabel="فتح الفرص"
             error={leadsRes.error}
@@ -352,9 +460,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
             emptyText="لا توجد فرص حديثة."
             className="max-w-2xl"
           >
-            {recentLeads.map((l) => (
-              <LeadRow key={l.id} lead={l} staleAfterDays={3} />
-            ))}
+            {recentLeads.map((l) => <LeadRow key={l.id} lead={l} />)}
           </SectionCard>
         )}
       </div>
@@ -363,22 +469,21 @@ export async function SalesDashboard({ userId }: { userId: string }) {
 }
 
 // ── Row sub-components ────────────────────────────────────────────────────────
-
-function LeadRow({ lead: l, staleAfterDays = 3 }: { lead: Lead; staleAfterDays?: number }) {
+function LeadRow({ lead: l }: { lead: Lead }) {
   const age     = leadAgeDays(l);
-  const isStale = !l.upcomingVisit && age >= staleAfterDays;
+  const isStale = !l.upcomingVisit && age >= 3;
   return (
     <Link
       href={`/dashboard/leads/${l.id}` as never}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas/60 transition-colors"
+      className="flex items-center gap-3 px-4 py-3 hover:bg-canvas/60 transition-colors"
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <p className="text-sm font-medium text-slate-900 truncate leading-tight">
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
             {l.client?.fullName ?? l.fullName}
           </p>
           {isStale && (
-            <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold bg-amber-50 text-amber-700">
+            <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
               متأخر
             </span>
           )}
@@ -386,7 +491,7 @@ function LeadRow({ lead: l, staleAfterDays = 3 }: { lead: Lead; staleAfterDays?:
         <p className="text-2xs text-slate-400 truncate mt-0.5 leading-tight">
           {l.projectInterest ? tx(l.projectInterest.name) : 'بدون مشروع'}
           {' · '}
-          {formatDate(l.createdAt)}
+          <span className="tabular-nums">{formatDate(l.createdAt)}</span>
         </p>
       </div>
       <LeadStageBadge stage={l.stage} />
@@ -399,15 +504,15 @@ function VisitRow({ visit: v }: { visit: VisitAppointment }) {
   return (
     <Link
       href={`/dashboard/visits/appointments/${v.id}` as never}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas/60 transition-colors"
+      className="flex items-center gap-3 px-4 py-3 hover:bg-canvas/60 transition-colors"
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <p className="text-sm font-medium text-slate-900 truncate leading-tight">
+        <div className="flex items-center gap-2 min-w-0">
+          <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
             {v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber}
           </p>
           {today && (
-            <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold bg-brand-50 text-brand-700">
+            <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold bg-brand-50 text-brand-700 border border-brand-100">
               اليوم
             </span>
           )}
@@ -431,43 +536,45 @@ function ReservationRow({ reservation: r }: { reservation: Reservation }) {
   return (
     <Link
       href={`/dashboard/reservations/${r.id}` as never}
-      className="flex items-center gap-3 px-4 py-2.5 hover:bg-canvas/60 transition-colors"
+      className="flex items-center gap-3 px-4 py-3 hover:bg-canvas/60 transition-colors"
     >
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-slate-900 truncate leading-tight">
+        <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
           {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
           {r.unit?.code ? ` · ${r.unit.code}` : ''}
         </p>
+        <p className="text-2xs text-slate-400 mt-0.5 leading-tight truncate">
+          {r.lead?.fullName ?? r.client?.fullName ?? '—'}
+        </p>
+      </div>
+      <div className="shrink-0 text-end">
         <p className={cn(
-          'text-2xs mt-0.5 leading-tight tabular-nums',
-          isUrgent ? 'font-semibold text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-400',
+          'text-2xs font-semibold tabular-nums',
+          isUrgent ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-400',
         )}>
           {expiryLabel(r.expiresAt)}
         </p>
+        <ReservationStatusBadge status={r.status} />
       </div>
-      <ReservationStatusBadge status={r.status} />
     </Link>
   );
 }
 
 // ── Today priority panel ──────────────────────────────────────────────────────
-
 function TodayPriorityPanel({
-  todayVisits,
-  expiringUrgent,
+  todayVisits, expiringUrgent,
 }: {
   todayVisits:    VisitAppointment[];
   expiringUrgent: Reservation[];
 }) {
   const total = todayVisits.length + expiringUrgent.length;
-
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-      <div className="flex items-center gap-2.5 px-5 py-3 border-b border-hairline bg-amber-50/40">
-        <div className="relative shrink-0">
+      <div className="flex items-center gap-3 px-5 py-3.5 border-b border-hairline bg-amber-50/50">
+        <span className="h-8 w-8 rounded-xl bg-amber-50 ring-1 ring-amber-100 flex items-center justify-center shrink-0 relative">
           <Bell className="h-4 w-4 text-amber-600" />
           <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
-        </div>
+        </span>
         <h3 className="text-sm font-bold text-slate-900 flex-1">أولويات اليوم</h3>
         <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-amber-100 text-amber-800 text-2xs font-black px-1.5 tabular-nums">
           {total}
@@ -476,26 +583,23 @@ function TodayPriorityPanel({
 
       {todayVisits.length > 0 && (
         <>
-          <div className="flex items-center gap-2 px-5 py-1.5 bg-canvas/50 border-t border-hairline">
-            <CalendarClock className="h-3.5 w-3.5 text-brand-500" />
+          <div className="flex items-center gap-2 px-5 py-2 bg-canvas/50 border-t border-hairline">
+            <CalendarClock className="h-3.5 w-3.5 text-sky-500" />
             <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">زياراتي اليوم</span>
-            <span className="text-2xs font-black text-slate-400 tabular-nums">{todayVisits.length}</span>
+            <span className="text-2xs font-black text-sky-500 tabular-nums">{todayVisits.length}</span>
           </div>
           {todayVisits.map((v) => (
-            <Link
-              key={v.id}
-              href={`/dashboard/visits/appointments/${v.id}` as never}
-              className="flex items-center gap-3 px-5 py-3 hover:bg-canvas/60 transition-colors border-t border-hairline"
-            >
-              <div className="shrink-0 h-7 w-7 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center">
-                <CalendarClock className="h-3.5 w-3.5 text-brand-600" />
-              </div>
+            <Link key={v.id} href={`/dashboard/visits/appointments/${v.id}` as never}
+              className="flex items-center gap-3 px-5 py-3 hover:bg-canvas/60 transition-colors border-t border-hairline">
+              <span className="h-8 w-8 rounded-xl bg-sky-50 ring-1 ring-sky-100 flex items-center justify-center shrink-0">
+                <CalendarClock className="h-3.5 w-3.5 text-sky-600" />
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
                   {v.lead?.fullName ?? v.client?.fullName ?? v.visitNumber}
                 </p>
                 <p className="text-2xs text-slate-500 mt-0.5">
-                  <span className="font-bold text-brand-700 tabular-nums">{formatDateTime(v.scheduledAt)}</span>
+                  <span className="font-bold text-sky-700 tabular-nums">{formatDateTime(v.scheduledAt)}</span>
                   {v.project ? ` · ${tx(v.project.name)}` : ''}
                   {v.unit ? ` · وحدة ${v.unit.code}` : ''}
                 </p>
@@ -508,20 +612,17 @@ function TodayPriorityPanel({
 
       {expiringUrgent.length > 0 && (
         <>
-          <div className="flex items-center gap-2 px-5 py-1.5 bg-canvas/50 border-t border-hairline">
+          <div className="flex items-center gap-2 px-5 py-2 bg-canvas/50 border-t border-hairline">
             <AlertCircle className="h-3.5 w-3.5 text-red-500" />
             <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">حجوزات تنتهي اليوم أو غداً</span>
             <span className="text-2xs font-black text-red-500 tabular-nums">{expiringUrgent.length}</span>
           </div>
           {expiringUrgent.map((r) => (
-            <Link
-              key={r.id}
-              href={`/dashboard/reservations/${r.id}` as never}
-              className="flex items-center gap-3 px-5 py-3 hover:bg-canvas/60 transition-colors border-t border-hairline"
-            >
-              <div className="shrink-0 h-7 w-7 rounded-xl bg-red-50 ring-1 ring-red-100 flex items-center justify-center">
+            <Link key={r.id} href={`/dashboard/reservations/${r.id}` as never}
+              className="flex items-center gap-3 px-5 py-3 hover:bg-canvas/60 transition-colors border-t border-hairline">
+              <span className="h-8 w-8 rounded-xl bg-red-50 ring-1 ring-red-100 flex items-center justify-center shrink-0">
                 <BookmarkCheck className="h-3.5 w-3.5 text-red-500" />
-              </div>
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
                   {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
@@ -543,55 +644,37 @@ function TodayPriorityPanel({
 }
 
 // ── Section card ──────────────────────────────────────────────────────────────
-
 function SectionCard({
-  title,
-  icon,
-  iconBg,
-  href,
-  hrefLabel = 'عرض الكل',
-  error,
-  empty,
-  emptyText,
-  className,
-  children,
+  title, icon, iconCls, href, hrefLabel = 'عرض الكل',
+  error, empty, emptyText, className, children,
 }: {
-  title:      string;
-  icon:       React.ReactNode;
-  iconBg:     string;
-  href:       string;
-  hrefLabel?: string;
-  error?:     string | null;
-  empty:      boolean;
-  emptyText:  string;
-  className?: string;
-  children:   React.ReactNode;
+  title: string; icon: React.ReactNode; iconCls: string;
+  href: string; hrefLabel?: string;
+  error?: string | null; empty: boolean; emptyText: string;
+  className?: string; children: React.ReactNode;
 }) {
   return (
     <div className={cn('bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden', className)}>
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-hairline bg-canvas/40">
-        <div className="flex items-center gap-2">
-          <div className={cn('h-7 w-7 rounded-lg flex items-center justify-center shrink-0', iconBg)}>
+      <div className="flex items-center justify-between gap-2 px-5 py-4 border-b border-hairline bg-canvas/30">
+        <div className="flex items-center gap-3">
+          <span className={cn('h-8 w-8 rounded-xl flex items-center justify-center shrink-0 ring-1 [&>svg]:h-4 [&>svg]:w-4', iconCls)}>
             {icon}
-          </div>
-          <h3 className="text-sm font-bold text-slate-900 tracking-tight">{title}</h3>
+          </span>
+          <h3 className="text-[13.5px] font-bold text-navy leading-none">{title}</h3>
         </div>
-        <Link
-          href={href as never}
-          className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
-        >
+        <Link href={href as never} className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors shrink-0">
           {hrefLabel}
           <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       </div>
       {error ? (
-        <div className="flex items-start gap-2 text-amber-700 text-xs px-4 py-3">
+        <div className="flex items-start gap-2 text-amber-700 text-xs px-5 py-4">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <p>تعذّر تحميل هذا القسم.</p>
         </div>
       ) : empty ? (
-        <div className="flex items-center gap-2.5 px-5 py-4">
-          <CheckCircle2 className="h-4 w-4 text-success-500 shrink-0" />
+        <div className="flex items-center gap-2.5 px-5 py-5">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
           <p className="text-xs text-slate-500">{emptyText}</p>
         </div>
       ) : (
