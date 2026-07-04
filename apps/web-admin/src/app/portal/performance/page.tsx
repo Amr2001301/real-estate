@@ -3,21 +3,22 @@ import {
   TrendingUp,
   UserPlus,
   BookmarkCheck,
-  FileText,
   Banknote,
   BadgePercent,
   Wallet,
   Users as UsersIcon,
   Building2,
-  ArrowLeft,
+  FilePen,
+  CircleDollarSign,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { api, safe } from '@/lib/api';
 import type {
   PortalPerformanceResponse,
   PortalProject,
 } from '@/lib/types';
-import { tx, formatCurrency } from '@/lib/format';
-import { getReportsCurrency } from '@/lib/currency';
+import { tx, formatCurrency, formatCompact } from '@/lib/format';
+import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,7 +29,6 @@ import { FunnelCard } from '@/components/broker/funnel-card';
 import { ExportMenu } from '@/components/export-menu';
 import {
   PremiumPageHero,
-  PremiumMetricStrip,
   PremiumFilterBar,
   PremiumFilterField,
 } from '@/components/premium';
@@ -43,70 +43,83 @@ interface Search {
   brokerAgentId?: string;
 }
 
-function pct(v: number): string {
-  return `${(v * 100).toFixed(1)}%`;
-}
-
 function initials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((w) => w[0])
-    .join('')
-    .toUpperCase();
+  return name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 }
 
-interface ConversionMetric {
-  label: string;
-  value: number;
-  fromLabel: string;
-  toLabel: string;
-}
-
-function ConversionCard({ label, value, fromLabel, toLabel }: ConversionMetric) {
-  const pctVal = Math.min(Math.max(value * 100, 0), 100);
-  const isHigh = pctVal >= 60;
-  const isMed  = pctVal >= 30;
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-4 overflow-hidden">
-      <div className="flex items-start justify-between gap-2 mb-3">
-        <p className="text-xs font-medium text-slate-600 leading-snug">{label}</p>
-        <span
-          className={cn(
-            'text-xl font-bold tabular-nums shrink-0',
-            isHigh ? 'text-success-700' : isMed ? 'text-warning-700' : 'text-danger-600',
-          )}
-        >
-          {pct(value)}
-        </span>
-      </div>
-      <div className="h-2 rounded-full bg-surface-muted overflow-hidden mb-2.5">
-        <div
-          className={cn(
-            'h-full rounded-full transition-all duration-700',
-            isHigh ? 'bg-success-500' : isMed ? 'bg-warning-500' : 'bg-danger-400',
-          )}
-          style={{ width: `${pctVal}%` }}
-        />
-      </div>
-      <div className="flex items-center justify-between text-2xs">
-        <span className="text-slate-500">{fromLabel}</span>
-        <ArrowLeft className="h-3 w-3 text-slate-300 shrink-0 rotate-180" aria-hidden />
-        <span className="text-slate-500">{toLabel}</span>
-      </div>
+    <div className="flex items-center gap-2.5">
+      <span className="h-[5px] w-[5px] rounded-full bg-brand-400/80 shrink-0" />
+      <span className="text-[10.5px] font-bold text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap">
+        {children}
+      </span>
+      <div className="flex-1 h-px bg-hairline" />
     </div>
   );
 }
+
+// ── KPI tiles (replaces PremiumMetricStrip) ───────────────────────────────────
+
+interface KpiTile {
+  label:    string;
+  value:    string;
+  icon:     ReactNode;
+  iconCls:  string;
+  topBar:   string;
+  valueCls: string;
+}
+
+function KpiStrip({ tiles }: { tiles: KpiTile[] }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {tiles.map((tile) => {
+        const isLong = tile.value.length > 8;
+        return (
+          <div
+            key={tile.label}
+            className="relative flex flex-col overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs"
+          >
+            <div className={cn('h-[3px] w-full shrink-0 bg-gradient-to-l', tile.topBar)} />
+            <div className="flex flex-1 flex-col px-4 py-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <span className={cn(
+                  'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl [&_svg]:h-[15px] [&_svg]:w-[15px]',
+                  tile.iconCls,
+                )}>
+                  {tile.icon}
+                </span>
+                <p className="text-[11px] font-semibold text-slate-400 text-end leading-snug line-clamp-2">
+                  {tile.label}
+                </p>
+              </div>
+              <p className={cn(
+                'mt-3 font-black tabular-nums leading-none tracking-tight',
+                isLong ? 'text-[16px]' : 'text-[24px]',
+                tile.valueCls,
+              )}>
+                {tile.value}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function PortalPerformancePage({
   searchParams,
 }: {
   searchParams: Promise<Search>;
 }) {
-  const sp = await searchParams;
+  const sp       = await searchParams;
   const currency = await getReportsCurrency();
-  const qs = new URLSearchParams();
+  const symbol   = currencySymbol(currency);
+  const qs       = new URLSearchParams();
   for (const key of ['from', 'to', 'projectId', 'brokerAgentId'] as const) {
     const v = sp[key];
     if (v) qs.set(key, v);
@@ -136,9 +149,19 @@ export default async function PortalPerformancePage({
 
   const isFiltered = !!(sp.from || sp.to || sp.projectId);
 
+  const kpiTiles: KpiTile[] = [
+    { label: 'فرص مُرسلة',     value: String(summary.leadsSubmitted),                       icon: <UserPlus />,      iconCls: 'bg-brand-50 text-brand-600 ring-1 ring-brand-100',     topBar: 'from-brand-300 via-brand-500 to-brand-300',   valueCls: 'text-brand-700'   },
+    { label: 'حجوزات',          value: String(summary.reservationsCreated),                  icon: <BookmarkCheck />, iconCls: 'bg-sky-50 text-sky-600 ring-1 ring-sky-100',           topBar: 'from-sky-300 via-sky-500 to-sky-300',         valueCls: 'text-sky-700'     },
+    { label: 'عقود موقّعة',     value: String(summary.contractsSigned),                      icon: <FilePen />,       iconCls: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100', topBar: 'from-emerald-300 via-emerald-500 to-emerald-300', valueCls: 'text-emerald-700' },
+    { label: 'إجمالي المبيعات', value: formatCompact(Number(summary.salesGross), symbol),     icon: <Banknote />,      iconCls: 'bg-slate-100 text-slate-600 ring-1 ring-slate-200',    topBar: 'from-slate-300 via-slate-400 to-slate-300',   valueCls: 'text-slate-900'   },
+    { label: 'صافي العمولات',   value: formatCompact(Number(summary.commissionsNet), symbol), icon: <BadgePercent />,  iconCls: 'bg-amber-50 text-amber-600 ring-1 ring-amber-100',     topBar: 'from-amber-300 via-amber-500 to-amber-300',   valueCls: 'text-amber-700'   },
+    { label: 'مدفوع',           value: formatCompact(Number(summary.payoutsTotalNet), symbol),icon: <CircleDollarSign />,iconCls: 'bg-teal-50 text-teal-600 ring-1 ring-teal-100',       topBar: 'from-teal-300 via-teal-500 to-teal-300',     valueCls: 'text-teal-700'    },
+  ];
+
   return (
     <div className="space-y-5">
 
+      {/* ── Hero ───────────────────────────────────────────────────────────── */}
       <PremiumPageHero
         title="أدائي"
         description="مؤشرات أداء شركة الوساطة الخاصة بك — الأرقام مأخوذة من نشاطك الفعلي."
@@ -156,6 +179,7 @@ export default async function PortalPerformancePage({
         }
       />
 
+      {/* ── Filters ────────────────────────────────────────────────────────── */}
       <PremiumFilterBar
         method="get"
         action="/portal/performance"
@@ -171,12 +195,7 @@ export default async function PortalPerformancePage({
         }
       >
         <PremiumFilterField label="المشروع">
-          <Select
-            name="projectId"
-            inputSize="sm"
-            defaultValue={sp.projectId ?? ''}
-            className="w-56"
-          >
+          <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-56">
             <option value="">كل المشاريع</option>
             {projects.map((p) => (
               <option key={p.project.id} value={p.project.id}>
@@ -193,180 +212,161 @@ export default async function PortalPerformancePage({
         </PremiumFilterField>
       </PremiumFilterBar>
 
-      <PremiumMetricStrip
-        variant="compact"
-        metrics={[
-          { label: 'فرص مُرسلة',     value: summary.leadsSubmitted,     icon: <UserPlus />,      tone: 'brand'   },
-          { label: 'حجوزات',          value: summary.reservationsCreated, icon: <BookmarkCheck />, tone: 'info'    },
-          { label: 'عقود موقّعة',     value: summary.contractsSigned,     icon: <FileText />,      tone: 'teal'    },
-          { label: 'إجمالي المبيعات', value: formatCurrency(summary.salesGross, currency),        icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
-          { label: 'صافي العمولات',   value: formatCurrency(summary.commissionsNet, currency),    icon: <BadgePercent />, tone: 'warning', valueSize: 'compact' },
-          { label: 'مدفوع',           value: formatCurrency(summary.payoutsTotalNet, currency),   icon: <Wallet />,       tone: 'success', valueSize: 'compact' },
-        ]}
-      />
+      {/* ── KPI tiles ──────────────────────────────────────────────────────── */}
+      <KpiStrip tiles={kpiTiles} />
 
-      {/* Conversion rates */}
-      <div>
-        <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-3">
-          معدلات التحويل
-        </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <ConversionCard
-            label="فرص → حجوزات"
-            value={summary.leadToReservationRate}
-            fromLabel={`${summary.leadsSubmitted} فرصة`}
-            toLabel={`${summary.reservationsCreated} حجز`}
-          />
-          <ConversionCard
-            label="حجوزات → عقود"
-            value={summary.reservationToContractRate}
-            fromLabel={`${summary.reservationsCreated} حجز`}
-            toLabel={`${summary.contractsCreated} عقد`}
-          />
-          <ConversionCard
-            label="توقيع العقود"
-            value={summary.signedContractRate}
-            fromLabel={`${summary.contractsCreated} عقد`}
-            toLabel={`${summary.contractsSigned} موقّع`}
-          />
-          <ConversionCard
-            label="عقود → مدفوعات"
-            value={summary.contractToPaidPayoutRate}
-            fromLabel={`${summary.contractsSigned} موقّع`}
-            toLabel={`${summary.payoutsPaid} مدفوع`}
-          />
-        </div>
-      </div>
 
-      {/* Funnel + Monthly trend */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <FunnelCard summary={summary} title="قمع تحويل نشاطك" />
+      {/* ── Funnel + Monthly trend ──────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <SectionLabel>قمع التحويل والاتجاه الشهري</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <FunnelCard summary={summary} title="قمع تحويل نشاطك" />
 
-        <div className="bg-surface border border-hairline rounded-[20px] shadow-soft p-5 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-brand-600" />
-              الاتجاه الشهري
-            </h2>
-            <p className="text-2xs text-slate-500">آخر 6 أشهر أو حسب نطاق التاريخ</p>
-          </div>
-          <div className="flex-1">
-            <MonthlyTrendChart data={perf.monthlyTrend} currency={currency} />
+          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-4 w-4 text-brand-600" />
+                </div>
+                <div>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">الاتجاه الشهري</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">آخر 6 أشهر أو حسب نطاق التاريخ</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex-1 p-5">
+              <MonthlyTrendChart data={perf.monthlyTrend} currency={currency} />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Project breakdown */}
-      <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-        <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-hairline">
-          <Building2 className="h-4 w-4 text-brand-600" />
-          <h2 className="text-sm font-bold text-slate-900">تفصيل المشاريع</h2>
-          <span className="text-2xs text-slate-500 ms-1">
-            {perf.projectBreakdown.length} مشروع
-          </span>
-        </div>
-
-        {perf.projectBreakdown.length === 0 ? (
-          <EmptyState icon={<Building2 />} title="لا توجد بيانات لمشاريع" description="—" />
-        ) : (
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="text-start font-semibold py-3 ps-5 pe-4">المشروع</th>
-                  <th className="text-start font-semibold py-3 px-4">عقود</th>
-                  <th className="text-start font-semibold py-3 px-4">المبيعات</th>
-                  <th className="text-start font-semibold py-3 px-4">صافي العمولات</th>
-                  <th className="text-start font-semibold py-3 px-4">مدفوع</th>
-                </tr>
-              </thead>
-              <tbody>
-                {perf.projectBreakdown.map((p) => {
-                  const barPct = Math.max((Number(p.salesGross || 0) / maxSales) * 100, 2);
-                  return (
-                    <tr key={p.projectId} className="border-t border-hairline hover:bg-surface-muted/40 transition-colors">
-                      <td className="py-3 ps-5 pe-4">
-                        <p className="font-semibold text-slate-900">{p.projectName ? tx(p.projectName) : '—'}</p>
-                        {p.city && <p className="text-2xs text-slate-500 mt-0.5">{p.city}</p>}
-                      </td>
-                      <td className="py-3 px-4 tabular-nums text-xs">
-                        <span className="font-semibold text-slate-900">{p.contractsSigned}</span>
-                        <span className="text-slate-400"> / {p.contracts}</span>
-                        <p className="text-2xs text-slate-400 mt-0.5">موقّع / إجمالي</p>
-                      </td>
-                      <td className="py-3 px-4">
-                        <p className="tabular-nums text-xs font-semibold text-slate-900">{formatCurrency(p.salesGross, currency)}</p>
-                        <div className="mt-1.5 h-1.5 w-24 rounded-full bg-surface-muted overflow-hidden">
-                          <div className="h-full bg-brand-400 rounded-full" style={{ width: `${barPct}%` }} />
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 tabular-nums text-xs font-semibold text-slate-900">
-                        {formatCurrency(p.commissionNet, currency)}
-                      </td>
-                      <td className="py-3 px-4 tabular-nums text-xs text-slate-700">
-                        {formatCurrency(p.payoutNet, currency)}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Agent breakdown */}
-      {perf.canSeeAllAgents && perf.agentBreakdown.length > 0 && (
+      {/* ── Project breakdown ───────────────────────────────────────────────── */}
+      <div className="space-y-3">
+        <SectionLabel>تفصيل المشاريع</SectionLabel>
         <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
-          <div className="px-5 pt-4 pb-3 flex items-center gap-2 border-b border-hairline">
-            <UsersIcon className="h-4 w-4 text-brand-600" />
-            <h2 className="text-sm font-bold text-slate-900">أداء الوكلاء</h2>
-            <span className="text-2xs text-slate-500 ms-1">
-              {perf.agentBreakdown.length} وكيل
-            </span>
-            <span className="text-2xs text-slate-400 ms-auto">
-              يظهر لمستخدمي الوسيط بصلاحية إدارة الموظفين فقط
-            </span>
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+            <div className="h-8 w-8 rounded-xl bg-brand-50 ring-1 ring-brand-100 flex items-center justify-center shrink-0">
+              <Building2 className="h-4 w-4 text-brand-600" />
+            </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-navy leading-none">تفصيل المشاريع</h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">{perf.projectBreakdown.length} مشروع</p>
+            </div>
           </div>
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-sm">
-              <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="text-start font-semibold py-3 ps-5 pe-4">الوكيل</th>
-                  <th className="text-start font-semibold py-3 px-4">فرص</th>
-                  <th className="text-start font-semibold py-3 px-4">حجوزات</th>
-                  <th className="text-start font-semibold py-3 px-4">عقود موقّعة</th>
-                  <th className="text-start font-semibold py-3 px-4">مبيعات</th>
-                  <th className="text-start font-semibold py-3 px-4">صافي عمولات</th>
-                </tr>
-              </thead>
-              <tbody>
-                {perf.agentBreakdown.map((a) => (
-                  <tr key={a.brokerAgentId} className="border-t border-hairline hover:bg-surface-muted/40 transition-colors">
-                    <td className="py-3 ps-5 pe-4">
-                      <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xs shrink-0">
-                          {initials(a.fullName)}
-                        </div>
-                        <div>
-                          <p className="font-medium text-slate-900">{a.fullName}</p>
-                          <p className="text-2xs text-slate-500 mt-0.5" dir="ltr">
-                            {a.email ?? a.phone ?? '—'}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 tabular-nums text-slate-700">{a.leadsSubmitted}</td>
-                    <td className="py-3 px-4 tabular-nums text-slate-700">{a.reservations}</td>
-                    <td className="py-3 px-4 tabular-nums text-slate-700">{a.contractsSigned}</td>
-                    <td className="py-3 px-4 tabular-nums text-xs text-slate-700">{formatCurrency(a.salesGross, currency)}</td>
-                    <td className="py-3 px-4 tabular-nums text-xs font-semibold text-slate-900">
-                      {formatCurrency(a.commissionNet, currency)}
-                    </td>
+
+          {perf.projectBreakdown.length === 0 ? (
+            <EmptyState icon={<Building2 />} title="لا توجد بيانات لمشاريع" description="—" />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-hairline bg-canvas/40">
+                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">المشروع</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">عقود</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">المبيعات</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">صافي العمولات</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">مدفوع</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {perf.projectBreakdown.map((p) => {
+                    const barPct = Math.max((Number(p.salesGross || 0) / maxSales) * 100, 2);
+                    return (
+                      <tr key={p.projectId} className="hover:bg-canvas/40 transition-colors">
+                        <td className="py-4 ps-6 pe-4">
+                          <p className="text-[13px] font-bold text-slate-900">{p.projectName ? tx(p.projectName) : '—'}</p>
+                          {p.city && <p className="text-[11px] text-slate-400 mt-0.5">{p.city}</p>}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-baseline gap-1 tabular-nums">
+                            <span className="text-[15px] font-bold text-slate-900">{p.contractsSigned}</span>
+                            <span className="text-[11px] text-slate-400">/ {p.contracts} إجمالي</span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 mt-0.5">موقّع / إجمالي</p>
+                        </td>
+                        <td className="py-4 px-4">
+                          <p className="text-[13px] font-bold text-slate-900 tabular-nums">
+                            {formatCompact(Number(p.salesGross), symbol)}
+                          </p>
+                          <div className="mt-1.5 h-1.5 w-24 rounded-full bg-slate-100 overflow-hidden">
+                            <div className="h-full bg-brand-400 rounded-full" style={{ width: `${barPct}%` }} />
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 tabular-nums">
+                          <span className="text-[13px] font-bold text-amber-700">
+                            {formatCompact(Number(p.commissionNet), symbol)}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 tabular-nums">
+                          <span className="text-[13px] font-semibold text-teal-700">
+                            {formatCompact(Number(p.payoutNet), symbol)}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Agent breakdown ─────────────────────────────────────────────────── */}
+      {perf.canSeeAllAgents && perf.agentBreakdown.length > 0 && (
+        <div className="space-y-3">
+          <SectionLabel>أداء الوكلاء</SectionLabel>
+          <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
+            <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-violet-50 ring-1 ring-violet-100 flex items-center justify-center shrink-0">
+                  <UsersIcon className="h-4 w-4 text-violet-600" />
+                </div>
+                <div>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">أداء الوكلاء</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{perf.agentBreakdown.length} وكيل · يظهر لمستخدمي إدارة الموظفين فقط</p>
+                </div>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-hairline bg-canvas/40">
+                    <th className="text-start py-3 ps-6 pe-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">الوكيل</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">فرص</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">حجوزات</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">عقود موقّعة</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">مبيعات</th>
+                    <th className="text-start py-3 px-4 text-[11px] font-bold text-slate-500 whitespace-nowrap">صافي عمولات</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {perf.agentBreakdown.map((a) => (
+                    <tr key={a.brokerAgentId} className="hover:bg-canvas/40 transition-colors">
+                      <td className="py-4 ps-6 pe-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-xs shrink-0">
+                            {initials(a.fullName)}
+                          </div>
+                          <div>
+                            <p className="text-[13px] font-bold text-slate-900">{a.fullName}</p>
+                            <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
+                              {a.email ?? a.phone ?? '—'}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-brand-700">{a.leadsSubmitted}</td>
+                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-sky-700">{a.reservations}</td>
+                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-emerald-700">{a.contractsSigned}</td>
+                      <td className="py-4 px-4 tabular-nums text-[13px] font-semibold text-slate-700">{formatCompact(Number(a.salesGross), symbol)}</td>
+                      <td className="py-4 px-4 tabular-nums text-[13px] font-bold text-amber-700">{formatCompact(Number(a.commissionNet), symbol)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
