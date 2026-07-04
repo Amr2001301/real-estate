@@ -1270,6 +1270,17 @@ class _FinancialCard extends StatelessWidget {
               ],
             ),
           ),
+          if (installments.totalCount > 0)
+            LinearProgressIndicator(
+              value: installments.paidCount / installments.totalCount,
+              backgroundColor: AppPalette.gold400.withValues(alpha: 0.08),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                installments.overdueCount > 0
+                    ? const Color(0xFFEF4444)
+                    : const Color(0xFF34C77B),
+              ),
+              minHeight: 3,
+            ),
           Divider(height: 1, color: colors.hairline),
 
           // Stats row
@@ -1562,19 +1573,19 @@ class _MRow extends StatelessWidget {
         child: Row(
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [_navyLight, _navy],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                borderRadius: BorderRadius.circular(13),
+                borderRadius: BorderRadius.circular(11),
               ),
               child: const Icon(
                 AppIcons.maintenance,
-                size: 22,
+                size: 18,
                 color: AppPalette.gold300,
               ),
             ),
@@ -1592,7 +1603,7 @@ class _MRow extends StatelessWidget {
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colors.inkStrong,
                       fontWeight: FontWeight.w700,
-                      fontSize: 17,
+                      fontSize: 14,
                     ),
                   ),
                   const SizedBox(height: 4),

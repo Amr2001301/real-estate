@@ -513,13 +513,22 @@ class _PillTabBar extends StatelessWidget {
               children: [
                 const Text('الأقساط'),
                 if (overdueCount > 0) ...[
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 6),
                   Container(
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFEF4444),
-                      shape: BoxShape.circle,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$overdueCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        height: 1.3,
+                      ),
                     ),
                   ),
                 ],
@@ -630,9 +639,12 @@ class _FilterBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <({String label, _Filter value, int count})>[
       (label: 'الكل', value: _Filter.all, count: total),
-      (label: l10n.installmentStatusOverdue, value: _Filter.overdue, count: overdue),
-      (label: l10n.installmentStatusPending, value: _Filter.pending, count: pending),
-      (label: l10n.installmentStatusPaid,    value: _Filter.paid,    count: paid),
+      if (overdue > 0)
+        (label: l10n.installmentStatusOverdue, value: _Filter.overdue, count: overdue),
+      if (pending > 0)
+        (label: l10n.installmentStatusPending, value: _Filter.pending, count: pending),
+      if (paid > 0)
+        (label: l10n.installmentStatusPaid, value: _Filter.paid, count: paid),
     ];
 
     return SizedBox(
@@ -918,8 +930,10 @@ class _InstallmentCard extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                           _compact(inst.amount, lang),
-                          style: const TextStyle(
-                            color: Color(0xFF1A1A2E),
+                          style: TextStyle(
+                            color: inst.status == InstallmentStatus.overdue
+                                ? statusColor
+                                : const Color(0xFF1A1A2E),
                             fontSize: 22,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -0.5,
@@ -946,7 +960,9 @@ class _InstallmentCard extends StatelessWidget {
                           Icon(
                             Icons.event_rounded,
                             size: 14,
-                            color: const Color(0xFF9CA3AF),
+                            color: inst.status == InstallmentStatus.overdue
+                                ? statusColor.withValues(alpha: 0.70)
+                                : const Color(0xFF9CA3AF),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -954,8 +970,10 @@ class _InstallmentCard extends StatelessWidget {
                               inst.dueDate,
                               languageCode: lang,
                             ),
-                            style: const TextStyle(
-                              color: Color(0xFF374151),
+                            style: TextStyle(
+                              color: inst.status == InstallmentStatus.overdue
+                                  ? statusColor
+                                  : const Color(0xFF374151),
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1445,6 +1463,20 @@ class _FinancialCard extends StatelessWidget {
                 Container(
                     height: 0.5,
                     color: Colors.white.withValues(alpha: 0.12)),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                    value: paid / total,
+                    backgroundColor: Colors.white.withValues(alpha: 0.10),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      overdue > 0
+                          ? const Color(0xFFEF4444)
+                          : const Color(0xFF4ADE80),
+                    ),
+                    minHeight: 4,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 _CardStatsRow(
                   total:   total,
@@ -1482,9 +1514,9 @@ class _CardStatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCell(
-            value: '$paid / $total',
+            value: '$paid',
             label: 'مدفوع',
-            color: Colors.white,
+            color: const Color(0xFF4ADE80),
           ),
         ),
         Container(
@@ -1515,9 +1547,9 @@ class _CardStatsRow extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.15)),
         Expanded(
           child: _StatCell(
-            value: '$paid',
-            label: 'مسدد',
-            color: const Color(0xFF4ADE80),
+            value: '${total - paid}',
+            label: 'المتبقي',
+            color: Colors.white,
           ),
         ),
       ],
@@ -1766,13 +1798,14 @@ class _ContractInfoRow extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: _navyCard.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: _navyCard.withValues(alpha: 0.12),
+              gradient: const LinearGradient(
+                colors: [_navyAccent, _navy],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 16, color: _navyCard),
+            child: Icon(icon, size: 16, color: AppPalette.gold400),
           ),
           const SizedBox(width: 12),
           Expanded(
