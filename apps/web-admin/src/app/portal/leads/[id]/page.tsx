@@ -84,36 +84,59 @@ function StatusTimeline({
           : { icon: <CheckCircle2 />, label: 'بانتظار القرار', tone: 'muted' as const, at: null };
 
   const steps = [
-    { icon: <Send />, label: 'أُرسلت للإدارة', tone: 'brand' as const, at: submittedAt, done: true },
-    { icon: <Search />, label: 'قيد المراجعة', tone: 'brand' as const, at: null, done: true },
-    { icon: finalStep.icon, label: finalStep.label, tone: finalStep.tone, at: finalStep.at, done: resolved },
+    { icon: <Send />,         label: 'أُرسلت للإدارة', tone: 'brand'   as const, at: submittedAt, done: true     },
+    { icon: <Search />,       label: 'قيد المراجعة',  tone: 'brand'   as const, at: null,         done: true     },
+    { icon: finalStep.icon,   label: finalStep.label,  tone: finalStep.tone,     at: finalStep.at, done: resolved },
   ];
 
-  const TONE: Record<string, string> = {
-    brand: 'bg-brand-50 text-brand-600 ring-brand-100',
-    success: 'bg-success-50 text-success-600 ring-success-100',
-    danger: 'bg-danger-50 text-danger-600 ring-danger-100',
-    warning: 'bg-warning-50 text-warning-600 ring-warning-100',
-    muted: 'bg-slate-100 text-slate-400 ring-slate-200',
+  const ICON_CLS: Record<string, string> = {
+    brand:   'bg-brand-50   text-brand-600   ring-1 ring-brand-100',
+    success: 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100',
+    danger:  'bg-red-50     text-red-600     ring-1 ring-red-100',
+    warning: 'bg-amber-50   text-amber-600   ring-1 ring-amber-100',
+    muted:   'bg-slate-100  text-slate-400   ring-1 ring-slate-200',
   };
 
   return (
-    <DetailSection title="مسار الفرصة">
-      <ol className="flex flex-col sm:flex-row sm:items-start gap-4 sm:gap-0">
+    <DetailSection icon={<Send />} title="مسار الفرصة">
+      <ol className="flex flex-col sm:flex-row sm:items-start gap-6 sm:gap-0">
         {steps.map((s, i) => (
-          <li key={i} className="flex sm:flex-col sm:flex-1 items-center gap-3 sm:gap-2 sm:text-center">
-            <span
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-full ring-1 ring-inset shrink-0 [&_svg]:h-4 [&_svg]:w-4 ${
-                s.done ? TONE[s.tone] : TONE['muted']
-              }`}
-            >
-              {s.icon}
-            </span>
-            <div className="min-w-0">
-              <p className={`text-xs font-medium ${s.done ? 'text-slate-800' : 'text-slate-400'}`}>
+          <li key={i} className="flex sm:flex-col sm:flex-1 items-center gap-3 sm:gap-0 relative">
+
+            {/* Icon + connector row */}
+            <div className="flex items-center w-full sm:flex-col sm:items-center">
+              {/* Left connector (not on first item) */}
+              {i > 0 && (
+                <div className="hidden sm:block flex-1 h-px bg-hairline" />
+              )}
+
+              {/* Icon circle */}
+              <span className={cn(
+                'inline-flex h-10 w-10 items-center justify-center rounded-full shrink-0 [&_svg]:h-4 [&_svg]:w-4',
+                s.done ? ICON_CLS[s.tone] : ICON_CLS['muted'],
+              )}>
+                {s.icon}
+              </span>
+
+              {/* Right connector (not on last item) */}
+              {i < steps.length - 1 && (
+                <div className="hidden sm:block flex-1 h-px bg-hairline" />
+              )}
+            </div>
+
+            {/* Label + date */}
+            <div className="min-w-0 text-start sm:text-center sm:mt-3 sm:px-2">
+              <p className={cn(
+                'text-xs font-semibold',
+                s.done ? 'text-slate-800' : 'text-slate-400',
+              )}>
                 {s.label}
               </p>
-              {s.at && <p className="text-2xs text-slate-400 mt-0.5">{formatDate(s.at)}</p>}
+              {s.at && (
+                <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">
+                  {formatDate(s.at)}
+                </p>
+              )}
             </div>
           </li>
         ))}
@@ -181,22 +204,22 @@ export default async function PortalLeadDetailPage({
       <DetailHero status={heroStatus}>
         {/* Client */}
         <DetailHeroCol position="first">
+          <HeroColLabel>العميل</HeroColLabel>
           <div className="flex items-start gap-4">
             <div
               className={cn(
-                'h-14 w-14 rounded-2xl flex items-center justify-center shrink-0',
+                'h-14 w-14 rounded-2xl flex items-center justify-center shrink-0 text-lg font-bold shadow-sm',
                 isDuplicate ? 'bg-slate-100 text-slate-500' : avatarColor(lead.fullName),
               )}
             >
               {isDuplicate ? (
                 <Copy className="h-6 w-6" />
               ) : (
-                <span className="text-lg font-bold">{initials(lead.fullName)}</span>
+                <span>{initials(lead.fullName)}</span>
               )}
             </div>
             <div className="min-w-0">
-              <HeroColLabel>العميل</HeroColLabel>
-              <p className="text-xl font-bold text-slate-900 leading-snug">{lead.fullName}</p>
+              <p className="text-[17px] font-extrabold text-slate-900 leading-snug">{lead.fullName}</p>
               <a
                 href={`tel:${lead.phone}`}
                 className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-slate-600 hover:text-brand-700 transition-colors"
@@ -216,9 +239,9 @@ export default async function PortalLeadDetailPage({
                 </a>
               )}
               {lead.assignedSales && (
-                <p className="mt-2 flex items-center gap-1.5 text-2xs text-slate-400">
-                  <UserCog className="h-3 w-3 shrink-0" />
-                  <span className="font-medium text-slate-500">{lead.assignedSales.fullName}</span>
+                <p className="mt-2.5 inline-flex items-center gap-1.5 text-2xs text-slate-500 bg-slate-50 border border-hairline rounded-lg px-2 py-1">
+                  <UserCog className="h-3 w-3 shrink-0 text-slate-400" />
+                  <span className="font-medium">{lead.assignedSales.fullName}</span>
                 </p>
               )}
             </div>
@@ -230,30 +253,28 @@ export default async function PortalLeadDetailPage({
           <HeroColLabel>الاهتمام والمرحلة</HeroColLabel>
           {lead.projectInterest ? (
             <>
-              <p className="text-lg font-bold text-slate-900 leading-snug">
+              <p className="text-[16px] font-extrabold text-slate-900 leading-snug">
                 {tx(lead.projectInterest.name)}
               </p>
-              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                <MapPin className="h-3 w-3 shrink-0" />
+              <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                <MapPin className="h-3 w-3 shrink-0 text-slate-400" />
                 {lead.projectInterest.city ?? ''}
               </p>
               <div className="mt-3">
                 {lead.unitInterest ? (
-                  <>
-                    <CodeText className="text-base font-bold text-slate-800">
+                  <div className="inline-flex flex-col gap-0.5 rounded-xl bg-slate-50 border border-hairline px-3 py-2">
+                    <CodeText className="text-sm font-bold text-slate-800">
                       {lead.unitInterest.code}
                     </CodeText>
-                    <p className="text-xs text-slate-500 mt-0.5">
-                      <CodeText>{lead.unitInterest.type}</CodeText>
-                    </p>
-                  </>
+                    <CodeText className="text-2xs text-slate-500">{lead.unitInterest.type}</CodeText>
+                  </div>
                 ) : (
-                  <p className="text-sm text-slate-400">أي وحدة متاحة في المشروع</p>
+                  <p className="text-xs text-slate-400 italic">أي وحدة متاحة في المشروع</p>
                 )}
               </div>
             </>
           ) : (
-            <p className="text-sm text-slate-400 mt-2">لم يُحدد مشروع بعد</p>
+            <p className="text-sm text-slate-400 mt-2 italic">لم يُحدد مشروع بعد</p>
           )}
           <div className="mt-4 pt-3 border-t border-hairline flex items-center gap-2">
             <span className="text-2xs text-slate-400 shrink-0">المرحلة الحالية</span>
@@ -266,7 +287,7 @@ export default async function PortalLeadDetailPage({
           <HeroColLabel>التواريخ والإحصاء</HeroColLabel>
           <div className="space-y-2.5">
             <HeroDateRow
-              label={<span className="flex items-center gap-1.5"><CalendarDays className="h-3 w-3 text-slate-400" />تاريخ الإرسال</span>}
+              label={<span className="inline-flex items-center gap-1.5"><CalendarDays className="h-3 w-3 text-slate-400" />تاريخ الإرسال</span>}
               value={lead.brokerSubmittedAt ? formatDate(lead.brokerSubmittedAt) : '—'}
             />
             {lead.brokerApprovedAt && (
@@ -289,21 +310,21 @@ export default async function PortalLeadDetailPage({
             'mt-4 pt-3 border-t border-hairline grid gap-3',
             (lead.notes?.length ?? 0) > 0 ? 'grid-cols-2' : 'grid-cols-1',
           )}>
-            <div>
-              <p className="text-2xs text-slate-400">الزيارات</p>
-              <p className="text-xl font-bold text-slate-800 mt-0.5 tabular-nums">
+            <div className="rounded-xl bg-slate-50 border border-hairline px-3 py-2.5">
+              <p className="text-2xs text-slate-400 font-medium">الزيارات</p>
+              <p className="text-2xl font-black text-slate-800 mt-1 tabular-nums leading-none">
                 {appointments.length}
               </p>
               {upcomingVisits.length > 0 && (
-                <p className="text-2xs text-brand-600 font-medium mt-0.5">
+                <p className="text-2xs text-brand-600 font-semibold mt-1">
                   {upcomingVisits.length} قادمة
                 </p>
               )}
             </div>
             {(lead.notes?.length ?? 0) > 0 && (
-              <div>
-                <p className="text-2xs text-slate-400">الملاحظات</p>
-                <p className="text-xl font-bold text-slate-800 mt-0.5 tabular-nums">
+              <div className="rounded-xl bg-slate-50 border border-hairline px-3 py-2.5">
+                <p className="text-2xs text-slate-400 font-medium">الملاحظات</p>
+                <p className="text-2xl font-black text-slate-800 mt-1 tabular-nums leading-none">
                   {lead.notes!.length}
                 </p>
               </div>

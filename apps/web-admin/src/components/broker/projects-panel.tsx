@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Building2, CheckCircle2, Star, Sparkles } from 'lucide-react';
+import { Search, Building2, CheckCircle2, Star, Sparkles, LayoutGrid } from 'lucide-react';
 import type { PortalProject } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { Card } from '@/components/ui/card';
@@ -9,7 +9,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmptyState } from '@/components/ui/empty-state';
-import { PremiumMetricStrip } from '@/components/premium';
 import { cn } from '@/lib/cn';
 import { ProjectCard } from '@/components/broker/project-card';
 
@@ -68,9 +67,49 @@ function isDefault(f: Filters) {
   );
 }
 
+// ── KPI Tile ──────────────────────────────────────────────────────────────────
+interface KpiTileProps {
+  label:    string;
+  value:    number;
+  icon:     React.ReactNode;
+  topBar:   string;
+  iconCls:  string;
+  valueCls: string;
+}
+
+function KpiTile({ label, value, icon, topBar, iconCls, valueCls }: KpiTileProps) {
+  return (
+    <div className="relative bg-surface rounded-[18px] border border-hairline shadow-soft overflow-hidden">
+      <div className={cn('h-[3px] bg-gradient-to-l', topBar)} />
+      <div className="flex items-center gap-3 px-5 py-4">
+        <span className={cn(
+          'h-8 w-8 rounded-xl flex items-center justify-center shrink-0 [&>svg]:h-4 [&>svg]:w-4',
+          iconCls,
+        )}>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className={cn('text-xl font-black tabular-nums leading-none', valueCls)}>{value}</p>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">{label}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Section label ─────────────────────────────────────────────────────────────
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5">
+      <span className="h-1.5 w-1.5 rounded-full bg-brand-500 shrink-0" />
+      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{children}</span>
+      <span className="flex-1 h-px bg-hairline" />
+    </div>
+  );
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
-  // pending = what the user is editing; applied = what's actually filtering the list
   const [pending,  setPending]  = useState<Filters>(DEFAULT);
   const [applied,  setApplied]  = useState<Filters>(DEFAULT);
 
@@ -108,24 +147,46 @@ export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
 
       {/* ── KPI strip ─────────────────────────────────────────────────────── */}
-      <PremiumMetricStrip
-        variant="compact"
-        cols={4}
-        metrics={[
-          { label: 'إجمالي المشاريع', value: totalCount,     icon: <Building2 />,    tone: 'brand'   },
-          { label: 'منشور',           value: publishedCount, icon: <CheckCircle2 />, tone: 'success' },
-          { label: 'جاهز للتسويق',   value: readyCount,     icon: <Star />,         tone: 'info'    },
-          { label: 'مميز',            value: featuredCount,  icon: <Sparkles />,     tone: 'warning' },
-        ]}
-      />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <KpiTile
+          label="إجمالي المشاريع"
+          value={totalCount}
+          icon={<Building2 />}
+          topBar="from-brand-300 via-brand-500 to-brand-300"
+          iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
+          valueCls="text-brand-700"
+        />
+        <KpiTile
+          label="منشور"
+          value={publishedCount}
+          icon={<CheckCircle2 />}
+          topBar="from-emerald-300 via-emerald-500 to-emerald-300"
+          iconCls="bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"
+          valueCls="text-emerald-700"
+        />
+        <KpiTile
+          label="جاهز للتسويق"
+          value={readyCount}
+          icon={<LayoutGrid />}
+          topBar="from-sky-300 via-sky-500 to-sky-300"
+          iconCls="bg-sky-50 text-sky-600 ring-1 ring-sky-100"
+          valueCls="text-sky-700"
+        />
+        <KpiTile
+          label="مميز"
+          value={featuredCount}
+          icon={<Sparkles />}
+          topBar="from-amber-300 via-amber-500 to-amber-300"
+          iconCls="bg-amber-50 text-amber-600 ring-1 ring-amber-100"
+          valueCls="text-amber-700"
+        />
+      </div>
 
       {/* ── Filter bar ────────────────────────────────────────────────────── */}
-      {/* Mirrors the portal form pattern (Leads, Reservations, Contracts).   */}
-      {/* Staged: user edits controls → clicks "تصفية" to apply.              */}
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-white px-3 py-2.5 shadow-xs">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-hairline bg-surface px-4 py-3 shadow-soft">
 
         {/* Search */}
         <Input
@@ -175,7 +236,7 @@ export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
           <option value="yes">جاهز للتسويق</option>
         </Select>
 
-        {/* "مميز" toggle button — only when at least one project is featured */}
+        {/* "مميز" toggle — only when at least one project is featured */}
         {hasFeatured && (
           <button
             type="button"
@@ -205,20 +266,24 @@ export function ProjectsPanel({ projects }: { projects: PortalProject[] }) {
         </div>
       </div>
 
-      {/* Result count — shown only when filters are applied */}
-      {anyApplied && (
-        <div className="flex items-center gap-1.5 px-1 text-xs text-slate-500 -mt-1.5">
-          <span className="font-semibold text-slate-700 tabular-nums">{filtered.length}</span>
-          <span>من {totalCount} مشروع</span>
-        </div>
-      )}
-
-      {/* ── Project cards ─────────────────────────────────────────────────── */}
+      {/* ── Projects list ─────────────────────────────────────────────────── */}
       {filtered.length > 0 && (
-        <div className="flex flex-col gap-4">
-          {filtered.map((p) => (
-            <ProjectCard key={p.project.id} p={p} />
-          ))}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <SectionLabel>
+              {anyApplied ? 'نتائج البحث' : 'المشاريع المتاحة'}
+            </SectionLabel>
+            {anyApplied && (
+              <span className="text-2xs text-slate-400 tabular-nums shrink-0">
+                {filtered.length} من {totalCount}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-4">
+            {filtered.map((p) => (
+              <ProjectCard key={p.project.id} p={p} />
+            ))}
+          </div>
         </div>
       )}
 

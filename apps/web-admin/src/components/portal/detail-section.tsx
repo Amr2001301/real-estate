@@ -2,14 +2,6 @@ import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Card } from '@/components/ui/card';
 
-/* ──────────────────────────────────────────────────────────────────────────────
- * DetailSection
- * Standard secondary section card for portal detail pages.
- *
- * Consistent header: icon + title + optional count badge + optional description.
- * Content area has p-6 padding by default; set noBodyPad to make children
- * go edge-to-edge (useful for tables/lists that bleed to card edges).
- * ──────────────────────────────────────────────────────────────────────────── */
 export function DetailSection({
   icon,
   title,
@@ -32,31 +24,31 @@ export function DetailSection({
   const hasHeader = !!(title || icon !== undefined);
 
   return (
-    <Card className={cn('overflow-hidden', className)}>
+    <Card className={cn('overflow-hidden p-0', className)}>
       {hasHeader && (
-        <div className="px-6 pt-6 pb-0">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            {icon && (
-              <span className="text-brand-600 [&_svg]:h-4 [&_svg]:w-4 shrink-0">{icon}</span>
-            )}
-            {title}
-            {count !== undefined && (
-              <span className="text-2xs font-bold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5 ms-1">
-                {count}
-              </span>
-            )}
-          </h2>
-          {description && <p className="text-xs text-slate-500 mt-1">{description}</p>}
+        <div className="flex items-center gap-3 px-6 py-4 bg-canvas/30 border-b border-hairline">
+          {icon && (
+            <span className="h-8 w-8 rounded-xl bg-brand-50 text-brand-600 ring-1 ring-brand-100 flex items-center justify-center shrink-0 [&_svg]:h-4 [&_svg]:w-4">
+              {icon}
+            </span>
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-900">{title}</h2>
+              {count !== undefined && (
+                <span className="text-2xs font-bold text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">
+                  {count}
+                </span>
+              )}
+            </div>
+            {description && <p className="text-xs text-slate-500 mt-0.5">{description}</p>}
+          </div>
         </div>
       )}
 
-      {/* Border separator only when content goes edge-to-edge */}
-      {hasHeader && noBodyPad && <div className="mt-4 border-t border-hairline" />}
-
       <div
         className={cn(
-          !noBodyPad && hasHeader && 'px-6 pt-4 pb-6',
-          !noBodyPad && !hasHeader && 'p-6',
+          !noBodyPad ? 'p-6' : '',
           bodyClass,
         )}
       >
