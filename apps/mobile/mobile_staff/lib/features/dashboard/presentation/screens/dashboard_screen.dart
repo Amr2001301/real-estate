@@ -58,15 +58,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
-                  // Pinned navy backdrop exactly the height of the status bar /
-                  // Dynamic Island. It is always visible, so content can never
-                  // scroll through the notch area.
+                  // Single unified header: expands to the full branded header,
+                  // collapses to a compact mini-header. Owns the safe-area zone
+                  // so there is never a separate status-bar strip above it.
                   SliverPersistentHeader(
                     pinned: true,
-                    delegate: _NavyStatusBarDelegate(topPad),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _DashboardHeader(
+                    delegate: _DashboardHeaderDelegate(
+                      topPad: topPad,
                       name: session?.displayName,
                       l10n: l10n,
                     ),
@@ -96,136 +94,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           },
         ),
       ),
-    );
-  }
-}
-
-// ── Header (scrolls with content) ─────────────────────────────────────────────
-
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.name, required this.l10n});
-  final String? name;
-  final AppLocalizations l10n;
-
-  static const _navyDeep = Color(0xFF0B1726);
-  static const _navyMid = Color(0xFF14273F);
-  static const _navyLight = Color(0xFF243F62);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-        clipBehavior: Clip.antiAlias,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [_navyLight, _navyMid, _navyDeep],
-            stops: [0.0, 0.45, 1.0],
-          ),
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(AppRadii.xl + 4),
-            bottomRight: Radius.circular(AppRadii.xl + 4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Color(0x40000000),
-              blurRadius: 24,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Positioned.fill(child: CustomPaint(painter: _DotPatternPainter())),
-            PositionedDirectional(
-              top: 0,
-              end: -30,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [Color(0x22C8A24B), Color(0x00C8A24B)],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 40,
-              right: 40,
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      AppPalette.gold400.withValues(alpha: 0.50),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.md,
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          l10n.navDashboard,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -0.3,
-                            height: 1.2,
-                          ),
-                        ),
-                        if (name != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            l10n.dashboardWelcomeUser(name!),
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.70),
-                              fontSize: 14,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 10),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _RoleChip(label: l10n.salesRoleChip),
-                            const SizedBox(width: AppSpacing.xs),
-                            _DateChip(),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 2),
-                    child: NotificationsBell(),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
     );
   }
 }
@@ -2116,32 +1984,230 @@ class _DashboardSkeleton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Pinned navy backdrop that permanently covers the status bar / Dynamic Island
-// so no scrolling content ever bleeds through the notch.
+// Unified dashboard header delegate.
+//
+// maxExtent  = topPad + full expanded content  (~168 px content)
+// minExtent  = topPad + compact mini-header    (~58 px content)
+//
+// The delegate owns the safe-area zone so there is never a separate
+// status-bar strip. The gradient + dot pattern fills the entire height
+// at all scroll positions — no seam, no separate dark strip.
 // ---------------------------------------------------------------------------
-class _NavyStatusBarDelegate extends SliverPersistentHeaderDelegate {
-  const _NavyStatusBarDelegate(this._extent);
-  final double _extent;
+class _DashboardHeaderDelegate extends SliverPersistentHeaderDelegate {
+  const _DashboardHeaderDelegate({
+    required this.topPad,
+    required this.name,
+    required this.l10n,
+  });
 
-  static const _color = Color(0xFF0B1726);
+  final double topPad;
+  final String? name;
+  final AppLocalizations l10n;
 
-  @override
-  double get minExtent => _extent;
+  static const double _expandedContent = 120.0;
+  static const double _collapsedContent = 64.0;
 
-  @override
-  double get maxExtent => _extent;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) =>
-      // SizedBox.expand fills the sliver's allocated extent regardless of whether
-      // the framework passes tight or loose BoxConstraints to the child.
-      SizedBox.expand(child: const ColoredBox(color: _color));
+  static const _navyDeep = Color(0xFF0B1726);
+  static const _navyMid = Color(0xFF14273F);
+  static const _navyLight = Color(0xFF243F62);
 
   @override
-  bool shouldRebuild(covariant _NavyStatusBarDelegate old) =>
-      old._extent != _extent;
+  double get maxExtent => topPad + _expandedContent;
+
+  @override
+  double get minExtent => topPad + _collapsedContent;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final progress = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    // Expanded layer fades out in the first half of the collapse.
+    final expandedAlpha = (1.0 - progress * 2.0).clamp(0.0, 1.0);
+    // Collapsed layer fades in during the second half.
+    final collapsedAlpha = ((progress - 0.5) * 2.0).clamp(0.0, 1.0);
+    // Bottom corners animate from rounded → square as it collapses.
+    final radius = Radius.circular((1.0 - progress) * (AppRadii.xl + 4));
+
+    return SizedBox.expand(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [_navyLight, _navyMid, _navyDeep],
+            stops: [0.0, 0.45, 1.0],
+          ),
+          borderRadius: BorderRadius.only(
+            bottomLeft: radius,
+            bottomRight: radius,
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x40000000),
+              blurRadius: 24,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.only(
+            bottomLeft: radius,
+            bottomRight: radius,
+          ),
+          child: Stack(
+        children: [
+          // Dot pattern — always visible at full opacity.
+          Positioned.fill(
+            child: CustomPaint(painter: _DotPatternPainter()),
+          ),
+
+          // Radial gold glow (expanded only).
+          PositionedDirectional(
+            top: 0,
+            end: -30,
+            child: Opacity(
+              opacity: expandedAlpha,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [Color(0x22C8A24B), Color(0x00C8A24B)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Gold hairline at the bottom edge (expanded only).
+          Positioned(
+            bottom: 0,
+            left: 40,
+            right: 40,
+            child: Opacity(
+              opacity: expandedAlpha,
+              child: Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Colors.transparent,
+                      AppPalette.gold400.withValues(alpha: 0.50),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Expanded content ──────────────────────────────────────────
+          // Bell (left) and title/subtitle/chips (right) sit side-by-side.
+          // OverflowBox prevents overflow assertions during the collapse
+          // animation; ClipRRect handles visual clipping.
+          Opacity(
+            opacity: expandedAlpha,
+            child: OverflowBox(
+              maxHeight: double.infinity,
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  topPad + AppSpacing.xs,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Title / subtitle / chips — RTL index 0 = right side.
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.navDashboard,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                              height: 1.15,
+                            ),
+                          ),
+                          if (name != null) ...[
+                            const SizedBox(height: 3),
+                            Text(
+                              l10n.dashboardWelcomeUser(name!),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.65),
+                                fontSize: 14,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _RoleChip(label: l10n.salesRoleChip),
+                              const SizedBox(width: AppSpacing.xs),
+                              _DateChip(),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    // Bell — RTL last = left side of screen.
+                    const NotificationsBell(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // ── Collapsed mini-header ─────────────────────────────────────
+          Opacity(
+            opacity: collapsedAlpha,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                topPad + AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.sm,
+              ),
+              child: SizedBox(
+                height: 40,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const NotificationsBell(),
+                    const Spacer(),
+                    Text(
+                      l10n.navDashboard,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        height: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _DashboardHeaderDelegate old) =>
+      old.topPad != topPad || old.name != name;
 }
