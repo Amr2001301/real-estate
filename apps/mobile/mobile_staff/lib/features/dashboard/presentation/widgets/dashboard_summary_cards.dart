@@ -44,10 +44,7 @@ class DashboardBonusCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    // Use locale rather than Directionality to avoid widget-tree lookup issues.
-    final chevron = lang == 'ar'
-        ? Icons.chevron_left_rounded
-        : Icons.chevron_right_rounded;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
     return BlocBuilder<BonusSummaryCubit, BonusSummaryState>(
       builder: (context, state) {
@@ -86,7 +83,14 @@ class DashboardBonusCard extends StatelessWidget {
                       ),
                       _PeriodChip(label: _periodLabel(DateTime.now())),
                       const SizedBox(width: AppSpacing.xs),
-                      Icon(chevron, size: 20, color: colors.inkMuted),
+                      Transform.flip(
+                        flipX: isRtl,
+                        child: Icon(
+                          Icons.chevron_left_rounded,
+                          size: 20,
+                          color: colors.inkMuted,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
@@ -106,11 +110,7 @@ class DashboardBonusCard extends StatelessWidget {
                           color: colors.success,
                         ),
                       ),
-                      Container(
-                        width: 1,
-                        height: 48,
-                        color: colors.hairline,
-                      ),
+                      Container(width: 1, height: 48, color: colors.hairline),
                       Expanded(
                         child: Padding(
                           padding: const EdgeInsetsDirectional.only(
@@ -192,11 +192,7 @@ class _Metric extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 13,
-            color: colors.inkMuted,
-            height: 1.3,
-          ),
+          style: TextStyle(fontSize: 13, color: colors.inkMuted, height: 1.3),
         ),
       ],
     );

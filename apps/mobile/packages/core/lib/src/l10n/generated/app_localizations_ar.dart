@@ -2212,4 +2212,19 @@ class AppLocalizationsAr extends AppLocalizations {
   String dashboardWelcomeUser(String name) {
     return 'أهلاً بعودتك، $name';
   }
+
+  @override
+  String get dashboardTodaySnapshot => 'لقطة اليوم';
+
+  @override
+  String get dashboardTodayFocus => 'أولويات اليوم';
+
+  @override
+  String get dashboardMonthlyPerformance => 'الأداء الشهري';
+
+  @override
+  String get dashboardFocusAllClear => 'لا توجد أولويات عاجلة الآن';
+
+  @override
+  String get dashboardSuggestedProperties => 'فرص عقارية مناسبة';
 }

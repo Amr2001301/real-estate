@@ -24,6 +24,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return Scaffold(
       body: Column(
         children: [
@@ -31,7 +32,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           AppNavHeader(
             title: l10n.accountNotifications,
             leadingAction: NavHeaderAction(
-              icon: Icons.arrow_back_rounded,
+              icon: isRtl ? Icons.arrow_forward_rounded : Icons.arrow_back_rounded,
               tooltip: l10n.actionCancel,
               onTap: () => context.pop(),
             ),

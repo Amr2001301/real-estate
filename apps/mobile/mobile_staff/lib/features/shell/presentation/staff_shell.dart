@@ -56,6 +56,10 @@ class _StaffShellState extends State<StaffShell> {
           create: (ctx) => TargetSummaryCubit(
               GetSalesPerformance(ctx.read<PerformanceRepository>())),
         ),
+        BlocProvider(
+          create: (ctx) => StaffProjectsCubit(
+              GetStaffProjects(ctx.read<StaffCatalogRepository>())),
+        ),
       ],
       child: const DashboardScreen(),
     ),

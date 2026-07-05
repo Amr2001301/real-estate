@@ -2238,4 +2238,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String dashboardWelcomeUser(String name) {
     return 'Welcome back, $name';
   }
+
+  @override
+  String get dashboardTodaySnapshot => "Today's Snapshot";
+
+  @override
+  String get dashboardTodayFocus => "Today's Priorities";
+
+  @override
+  String get dashboardMonthlyPerformance => 'Monthly Performance';
+
+  @override
+  String get dashboardFocusAllClear => 'No urgent priorities right now';
+
+  @override
+  String get dashboardSuggestedProperties => 'Suggested Properties';
 }

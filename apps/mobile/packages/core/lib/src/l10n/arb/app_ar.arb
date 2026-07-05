@@ -786,5 +786,11 @@
     "placeholders": {
       "name": { "type": "String" }
     }
-  }
+  },
+
+  "dashboardTodaySnapshot": "لقطة اليوم",
+  "dashboardTodayFocus": "أولويات اليوم",
+  "dashboardMonthlyPerformance": "الأداء الشهري",
+  "dashboardFocusAllClear": "لا توجد أولويات عاجلة الآن",
+  "dashboardSuggestedProperties": "فرص عقارية مناسبة"
 }

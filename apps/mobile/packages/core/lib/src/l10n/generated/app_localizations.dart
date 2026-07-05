@@ -4243,6 +4243,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Welcome back, {name}'**
   String dashboardWelcomeUser(String name);
+
+  /// No description provided for @dashboardTodaySnapshot.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Snapshot'**
+  String get dashboardTodaySnapshot;
+
+  /// No description provided for @dashboardTodayFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s Priorities'**
+  String get dashboardTodayFocus;
+
+  /// No description provided for @dashboardMonthlyPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly Performance'**
+  String get dashboardMonthlyPerformance;
+
+  /// No description provided for @dashboardFocusAllClear.
+  ///
+  /// In en, this message translates to:
+  /// **'No urgent priorities right now'**
+  String get dashboardFocusAllClear;
+
+  /// No description provided for @dashboardSuggestedProperties.
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested Properties'**
+  String get dashboardSuggestedProperties;
 }
 
 class _AppLocalizationsDelegate

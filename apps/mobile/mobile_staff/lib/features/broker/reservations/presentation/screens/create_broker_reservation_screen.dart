@@ -546,8 +546,10 @@ class _BackBtn extends StatelessWidget {
           borderRadius: BorderRadius.circular(11),
           border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
         ),
-        child: const Icon(
-          Icons.arrow_back_ios_new_rounded,
+        child: Icon(
+          Directionality.of(context) == TextDirection.rtl
+              ? Icons.arrow_forward_ios_rounded
+              : Icons.arrow_back_ios_new_rounded,
           color: Colors.white,
           size: 16,
         ),

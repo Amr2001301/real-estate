@@ -85,7 +85,11 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded),
+                    Icon(
+                      Directionality.of(context) == TextDirection.rtl
+                          ? Icons.chevron_left_rounded
+                          : Icons.chevron_right_rounded,
+                    ),
                   ],
                 ),
               ),

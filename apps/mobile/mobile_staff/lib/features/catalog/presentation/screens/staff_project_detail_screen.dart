@@ -468,8 +468,13 @@ class _BackButton extends StatelessWidget {
           color: Colors.white.withValues(alpha: 0.15),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.arrow_back_ios_new_rounded,
-            size: 16, color: Colors.white),
+        child: Icon(
+          Directionality.of(context) == TextDirection.rtl
+              ? Icons.arrow_forward_ios_rounded
+              : Icons.arrow_back_ios_new_rounded,
+          size: 16,
+          color: Colors.white,
+        ),
       ),
     );
   }
@@ -819,8 +824,13 @@ class _UnitCard extends StatelessWidget {
                     color: colors.brandGold,
                   ),
                 ),
-                Icon(Icons.arrow_forward_ios_rounded,
-                    size: 12, color: colors.brandGold),
+                Icon(
+                  Directionality.of(context) == TextDirection.rtl
+                      ? Icons.arrow_back_ios_new_rounded
+                      : Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: colors.brandGold,
+                ),
               ],
             ),
           ),
