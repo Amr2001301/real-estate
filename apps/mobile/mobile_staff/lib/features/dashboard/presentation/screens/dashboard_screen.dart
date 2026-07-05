@@ -41,48 +41,60 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final session = context.read<SessionCubit>().state.sessionOrNull;
-    final bottomPad = MediaQuery.of(context).padding.bottom;
+    final mq = MediaQuery.of(context);
+    final topPad = mq.padding.top;
+    final bottomPad = mq.padding.bottom;
 
-    // Header scrolls with content (non-sticky) so it can never overlap body.
-    // RefreshIndicator wraps the entire CustomScrollView so pull-to-refresh
-    // works naturally from anywhere on the page.
-    return Scaffold(
-      body: BlocBuilder<DashboardCubit, DashboardState>(
-        builder: (context, state) {
-          return RefreshIndicator(
-            onRefresh: _refresh,
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _DashboardHeader(
-                    name: session?.displayName,
-                    l10n: l10n,
+    // AnnotatedRegion keeps status-bar icons white for the lifetime of this
+    // screen — even after the header scrolls away and the pinned backdrop
+    // (SliverPersistentHeader below) is the only navy element on screen.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        body: BlocBuilder<DashboardCubit, DashboardState>(
+          builder: (context, state) {
+            return RefreshIndicator(
+              onRefresh: _refresh,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // Pinned navy backdrop exactly the height of the status bar /
+                  // Dynamic Island. It is always visible, so content can never
+                  // scroll through the notch area.
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _NavyStatusBarDelegate(topPad),
                   ),
-                ),
-                if (state.status == DataStatus.initial ||
-                    state.status == DataStatus.loading)
                   SliverToBoxAdapter(
-                    child: _DashboardSkeleton(bottomPad: bottomPad),
-                  )
-                else if (state.status == DataStatus.failure)
-                  SliverFillRemaining(
-                    child: ErrorState(
-                      failure: state.failure,
-                      onRetry: () => context.read<DashboardCubit>().load(),
-                    ),
-                  )
-                else
-                  SliverToBoxAdapter(
-                    child: _DashboardBody(
-                      data: state.data!,
-                      bottomPad: bottomPad,
+                    child: _DashboardHeader(
+                      name: session?.displayName,
+                      l10n: l10n,
                     ),
                   ),
-              ],
-            ),
-          );
-        },
+                  if (state.status == DataStatus.initial ||
+                      state.status == DataStatus.loading)
+                    SliverToBoxAdapter(
+                      child: _DashboardSkeleton(bottomPad: bottomPad),
+                    )
+                  else if (state.status == DataStatus.failure)
+                    SliverFillRemaining(
+                      child: ErrorState(
+                        failure: state.failure,
+                        onRetry: () => context.read<DashboardCubit>().load(),
+                      ),
+                    )
+                  else
+                    SliverToBoxAdapter(
+                      child: _DashboardBody(
+                        data: state.data!,
+                        bottomPad: bottomPad,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -101,11 +113,7 @@ class _DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final topPad = MediaQuery.of(context).padding.top;
-
-    return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
-      child: Container(
+    return Container(
         clipBehavior: Clip.antiAlias,
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -161,9 +169,9 @@ class _DashboardHeader extends StatelessWidget {
               ),
             ),
             Padding(
-              padding: EdgeInsets.fromLTRB(
+              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                topPad + AppSpacing.sm,
+                AppSpacing.sm,
                 AppSpacing.md,
                 AppSpacing.md,
               ),
@@ -218,7 +226,6 @@ class _DashboardHeader extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -904,7 +911,7 @@ class _PrimaryBookingCardState extends State<_PrimaryBookingCard> {
         duration: const Duration(milliseconds: 120),
         curve: const Cubic(0.32, 0.72, 0, 1),
         child: Container(
-          height: 68,
+          height: 62,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [_gold1, _gold2],
@@ -1164,11 +1171,12 @@ class _SuggestedPropertiesSection extends StatelessWidget {
             .toList();
         if (projects.isEmpty) return const SizedBox.shrink();
 
-        // availableWidth = screen width minus the parent's horizontal padding (2 × md).
-        // cardWidth leaves ~52px gap so the next card peeks by ~40px.
+        // availableWidth = screen width minus the parent horizontal padding (2×md).
+        // 52 = separator(12) + peek(40). No upper clamp so peek stays ~40px on
+        // large phones (a 320 cap caused ~76px peek on 430pt devices).
         final availableWidth =
             MediaQuery.of(context).size.width - AppSpacing.md * 2;
-        final cardWidth = (availableWidth - 52).clamp(240.0, 320.0);
+        final cardWidth = (availableWidth - 52.0).clamp(220.0, double.infinity);
 
         return SizedBox(
           height: 245,
@@ -1579,38 +1587,15 @@ class _PipelineRow extends StatelessWidget {
     final toneColor = _color(leadStageTone(stage), colors);
     final progress = count / maxCount;
 
-    // Widget order: [bar, count, chip]
-    // In RTL this renders right-to-left as: chip (rightmost) | count | bar.
-    // Arabic users read: stage name → number → proportion bar.
+    // RTL row order: [chip, count, bar]
+    // In RTL, index-0 is placed at the START (rightmost), so the stage chip
+    // lands on the RIGHT — the first element Arabic eyes encounter — then the
+    // count, then the bar filling leftward. Natural right-to-left reading:
+    // stage name → number → proportion bar.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppRadii.xs),
-              child: LinearProgressIndicator(
-                value: progress,
-                backgroundColor: toneColor.withValues(alpha: 0.10),
-                valueColor: AlwaysStoppedAnimation<Color>(toneColor),
-                minHeight: 8,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          SizedBox(
-            width: 22,
-            child: Text(
-              '$count',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: colors.inkStrong,
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
           Container(
             width: 72,
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
@@ -1628,6 +1613,31 @@ class _PipelineRow extends StatelessWidget {
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: toneColor,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          SizedBox(
+            width: 22,
+            child: Text(
+              '$count',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: colors.inkStrong,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppRadii.xs),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: toneColor.withValues(alpha: 0.10),
+                valueColor: AlwaysStoppedAnimation<Color>(toneColor),
+                minHeight: 8,
               ),
             ),
           ),
@@ -1661,7 +1671,6 @@ class _PerformanceDarkModule extends StatelessWidget {
             final isLoading =
                 targetState.status == TargetSummaryStatus.loading &&
                 bonusState.status == SummaryStatus.loading;
-
             if (isLoading) return _PerformanceSkeleton();
 
             final hasTarget =
@@ -1670,6 +1679,8 @@ class _PerformanceDarkModule extends StatelessWidget {
             final hasBonus =
                 bonusState.status == SummaryStatus.ready &&
                 bonusState.overview != null;
+            final perf = targetState.performance;
+            final bonus = bonusState.overview;
 
             return Container(
               decoration: BoxDecoration(
@@ -1696,161 +1707,214 @@ class _PerformanceDarkModule extends StatelessWidget {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.all(AppSpacing.md),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        // ── Header ──────────────────────────────────
                         Row(
                           children: [
                             Container(
-                              width: 38,
-                              height: 38,
+                              width: 30,
+                              height: 30,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [
-                                    AppPalette.gold300,
-                                    AppPalette.gold500,
-                                  ],
+                                  colors: [AppPalette.gold300, AppPalette.gold500],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                                borderRadius: const BorderRadius.all(
-                                  Radius.circular(11),
-                                ),
+                                borderRadius: const BorderRadius.all(Radius.circular(9)),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: AppPalette.gold400.withValues(
-                                      alpha: 0.40,
-                                    ),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                                    color: AppPalette.gold400.withValues(alpha: 0.40),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
                               child: const Icon(
                                 Icons.insights_rounded,
                                 color: AppPalette.navy,
-                                size: 18,
+                                size: 15,
                               ),
                             ),
-                            const SizedBox(width: AppSpacing.sm),
+                            const SizedBox(width: AppSpacing.xs),
                             Text(
                               l10n.dashboardMonthlyPerformance,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                             const Spacer(),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 9,
-                                vertical: 4,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
                                 border: Border.all(
                                   color: Colors.white.withValues(alpha: 0.20),
                                 ),
-                                borderRadius: BorderRadius.circular(
-                                  AppRadii.pill,
-                                ),
+                                borderRadius: BorderRadius.circular(AppRadii.pill),
                               ),
                               child: Text(
                                 _period(),
                                 style: TextStyle(
                                   color: Colors.white.withValues(alpha: 0.60),
-                                  fontSize: 11,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: AppSpacing.sm),
-                        Container(
-                          height: 1,
-                          color: Colors.white.withValues(alpha: 0.10),
-                        ),
-                        const SizedBox(height: AppSpacing.md),
+                        const SizedBox(height: 8),
+                        Container(height: 0.5, color: Colors.white.withValues(alpha: 0.12)),
+                        const SizedBox(height: 8),
 
+                        // ── Metrics ──────────────────────────────────
                         if (hasTarget) ...[
-                          _DarkProgressBar(
-                            label: l10n.targetAmount,
-                            achievedLabel: PriceFormatter.format(
-                              targetState.performance!.achievedAmount,
-                              languageCode: lang,
-                            ),
-                            targetLabel:
-                                targetState.performance!.targetAmount == null
-                                ? null
-                                : PriceFormatter.format(
-                                    targetState.performance!.targetAmount!,
-                                    languageCode: lang,
+                          IntrinsicHeight(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // Sales amount column
+                                Expanded(
+                                  flex: 5,
+                                  child: _PerfMetricCell(
+                                    label: l10n.targetAmount,
+                                    value: PriceFormatter.format(
+                                      perf!.achievedAmount,
+                                      languageCode: lang,
+                                    ),
+                                    target: perf.targetAmount == null
+                                        ? null
+                                        : PriceFormatter.format(
+                                            perf.targetAmount!,
+                                            languageCode: lang,
+                                          ),
+                                    color: AppPalette.gold400,
                                   ),
-                            percent:
-                                targetState.performance!.targetAmountPercent ??
-                                0,
-                            color: AppPalette.gold400,
+                                ),
+                                _PerfVertDivider(),
+                                // Units column
+                                Expanded(
+                                  flex: 3,
+                                  child: _PerfMetricCell(
+                                    label: l10n.targetUnits,
+                                    value: '${perf.achievedUnits}',
+                                    target: perf.targetUnits == null
+                                        ? null
+                                        : '${perf.targetUnits}',
+                                    color: AppPalette.successLight,
+                                    alignEnd: true,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: AppSpacing.md),
-                          _DarkProgressBar(
-                            label: l10n.targetUnits,
-                            achievedLabel:
-                                '${targetState.performance!.achievedUnits}',
-                            targetLabel:
-                                targetState.performance!.targetUnits == null
-                                ? null
-                                : '${targetState.performance!.targetUnits}',
-                            percent:
-                                targetState.performance!.targetUnitsPercent ??
-                                0,
-                            color: AppPalette.successLight,
+                          const SizedBox(height: 8),
+                          // Thin progress bar + percentage
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: AppRadii.pillAll,
+                                  child: LinearProgressIndicator(
+                                    value: (perf.targetAmountPercent ?? 0)
+                                            .clamp(0.0, 100.0) /
+                                        100,
+                                    minHeight: 5,
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.12),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                      AppPalette.gold400,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: AppSpacing.xs),
+                              SizedBox(
+                                width: 34,
+                                child: Text(
+                                  '${(perf.targetAmountPercent ?? 0).toStringAsFixed(0)}%',
+                                  textAlign: TextAlign.end,
+                                  style: TextStyle(
+                                    color: AppPalette.gold400.withValues(alpha: 0.90),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ] else if (targetState.status !=
-                            TargetSummaryStatus.loading) ...[
+                        ] else if (targetState.status != TargetSummaryStatus.loading) ...[
                           Text(
                             l10n.targetsNone,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.50),
-                              fontSize: 13,
+                              fontSize: 12,
                             ),
                           ),
                         ],
 
+                        // ── Commission ───────────────────────────────
                         if (hasBonus) ...[
-                          const SizedBox(height: AppSpacing.md),
-                          Container(
-                            height: 1,
-                            color: Colors.white.withValues(alpha: 0.10),
-                          ),
-                          const SizedBox(height: AppSpacing.md),
+                          const SizedBox(height: 8),
+                          Container(height: 0.5, color: Colors.white.withValues(alpha: 0.12)),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
-                              Expanded(
-                                child: _DarkStatCell(
-                                  label: l10n.bonusPaid,
-                                  value: PriceFormatter.format(
-                                    bonusState.overview!.paidTotal,
-                                    languageCode: lang,
-                                  ),
-                                  color: AppPalette.successLight,
+                              Icon(
+                                Icons.check_circle_rounded,
+                                size: 12,
+                                color: AppPalette.successLight,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.bonusPaid,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.55),
+                                  fontSize: 11,
                                 ),
                               ),
-                              Container(
-                                width: 1,
-                                height: 52,
-                                color: Colors.white.withValues(alpha: 0.12),
+                              const SizedBox(width: 5),
+                              Text(
+                                PriceFormatter.format(
+                                  bonus!.paidTotal,
+                                  languageCode: lang,
+                                ),
+                                style: const TextStyle(
+                                  color: AppPalette.successLight,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                              Expanded(
-                                child: _DarkStatCell(
-                                  label: l10n.bonusPending,
-                                  value: PriceFormatter.format(
-                                    bonusState.overview!.pendingTotal,
-                                    languageCode: lang,
-                                  ),
+                              const Spacer(),
+                              Icon(
+                                Icons.schedule_rounded,
+                                size: 12,
+                                color: AppPalette.warningLight,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.bonusPending,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.55),
+                                  fontSize: 11,
+                                ),
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                PriceFormatter.format(
+                                  bonus.pendingTotal,
+                                  languageCode: lang,
+                                ),
+                                style: const TextStyle(
                                   color: AppPalette.warningLight,
-                                  alignEnd: true,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ],
@@ -1869,132 +1933,86 @@ class _PerformanceDarkModule extends StatelessWidget {
   }
 }
 
-class _DarkProgressBar extends StatelessWidget {
-  const _DarkProgressBar({
-    required this.label,
-    required this.achievedLabel,
-    this.targetLabel,
-    required this.percent,
-    required this.color,
-  });
-  final String label;
-  final String achievedLabel;
-  final String? targetLabel;
-  final double percent;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final pct = percent.clamp(0.0, 100.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.75),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            Text(
-              targetLabel == null
-                  ? achievedLabel
-                  : '$achievedLabel / $targetLabel',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.55),
-                fontSize: 12,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        // Bar + inline percentage in one row
-        Row(
-          children: [
-            Expanded(
-              child: ClipRRect(
-                borderRadius: AppRadii.pillAll,
-                child: LinearProgressIndicator(
-                  value: pct / 100,
-                  minHeight: 8,
-                  backgroundColor: Colors.white.withValues(alpha: 0.12),
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            SizedBox(
-              width: 38,
-              child: Text(
-                '${pct.toStringAsFixed(0)}%',
-                textAlign: TextAlign.end,
-                style: TextStyle(
-                  color: color.withValues(alpha: 0.90),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _DarkStatCell extends StatelessWidget {
-  const _DarkStatCell({
+class _PerfMetricCell extends StatelessWidget {
+  const _PerfMetricCell({
     required this.label,
     required this.value,
+    this.target,
     required this.color,
     this.alignEnd = false,
   });
   final String label;
   final String value;
+  final String? target;
   final Color color;
   final bool alignEnd;
 
   @override
   Widget build(BuildContext context) {
-    final align = alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
-    final textAlign = alignEnd ? TextAlign.end : TextAlign.start;
-    final padding = alignEnd
-        ? const EdgeInsetsDirectional.only(start: AppSpacing.sm)
-        : EdgeInsetsDirectional.zero;
+    final cross = alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     return Padding(
-      padding: padding,
+      padding: alignEnd
+          ? const EdgeInsetsDirectional.only(start: AppSpacing.xs)
+          : EdgeInsetsDirectional.zero,
       child: Column(
-        crossAxisAlignment: align,
+        crossAxisAlignment: cross,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            value,
-            textAlign: textAlign,
+            label,
             style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: color,
-              height: 1.1,
+              color: Colors.white.withValues(alpha: 0.55),
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: textAlign,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.55),
-              height: 1.2,
-            ),
+          const SizedBox(height: 3),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                ),
+              ),
+              if (target != null) ...[
+                Text(
+                  '  /  ',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.25),
+                    fontSize: 11,
+                  ),
+                ),
+                Text(
+                  target!,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.45),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+class _PerfVertDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 0.5,
+        margin: const EdgeInsets.symmetric(horizontal: 10),
+        color: Colors.white.withValues(alpha: 0.14),
+      );
 }
 
 class _PerformanceSkeleton extends StatelessWidget {
@@ -2095,4 +2113,35 @@ class _DashboardSkeleton extends StatelessWidget {
       ),
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Pinned navy backdrop that permanently covers the status bar / Dynamic Island
+// so no scrolling content ever bleeds through the notch.
+// ---------------------------------------------------------------------------
+class _NavyStatusBarDelegate extends SliverPersistentHeaderDelegate {
+  const _NavyStatusBarDelegate(this._extent);
+  final double _extent;
+
+  static const _color = Color(0xFF0B1726);
+
+  @override
+  double get minExtent => _extent;
+
+  @override
+  double get maxExtent => _extent;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) =>
+      // SizedBox.expand fills the sliver's allocated extent regardless of whether
+      // the framework passes tight or loose BoxConstraints to the child.
+      SizedBox.expand(child: const ColoredBox(color: _color));
+
+  @override
+  bool shouldRebuild(covariant _NavyStatusBarDelegate old) =>
+      old._extent != _extent;
 }
