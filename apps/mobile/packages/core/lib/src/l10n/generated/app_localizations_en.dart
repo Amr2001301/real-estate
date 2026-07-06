@@ -2295,4 +2295,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardSuggestedProperties => 'Suggested Properties';
+
+  @override
+  String get staffShareWithClient => 'Share with client';
+
+  @override
+  String get staffAddInterestedClient => 'Add interested client';
+
+  @override
+  String get staffSendToClient => 'Send to client';
+
+  @override
+  String get staffEditProject => 'Edit project';
 }

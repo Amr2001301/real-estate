@@ -2269,4 +2269,16 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dashboardSuggestedProperties => 'فرص عقارية مناسبة';
+
+  @override
+  String get staffShareWithClient => 'مشاركة مع عميل';
+
+  @override
+  String get staffAddInterestedClient => 'إضافة عميل مهتم';
+
+  @override
+  String get staffSendToClient => 'إرسال للعميل';
+
+  @override
+  String get staffEditProject => 'تعديل المشروع';
 }

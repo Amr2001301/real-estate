@@ -54,8 +54,6 @@ class _StaffProjectsScreenState extends State<StaffProjectsScreen> {
     final cubit = context.read<StaffProjectsCubit>();
     final topInset = MediaQuery.paddingOf(context).top;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
-    final lang = Localizations.localeOf(context).languageCode;
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light.copyWith(
         statusBarColor: Colors.transparent,
@@ -70,6 +68,14 @@ class _StaffProjectsScreenState extends State<StaffProjectsScreen> {
               final visible = state.status == DataStatus.success
                   ? _filtered(state.projects)
                   : <StaffProject>[];
+
+              // Count per status for the filter badges
+              final all = state.projects;
+              final counts = <String, int>{
+                _kAllStatus: all.length,
+                for (final s in _kStatuses)
+                  s: all.where((p) => p.status == s).length,
+              };
 
               return CustomScrollView(
                 slivers: [
@@ -97,11 +103,11 @@ class _StaffProjectsScreenState extends State<StaffProjectsScreen> {
                     ),
                   ),
 
-                  // ── Status filter chips ────────────────────────────────────
+                  // ── Status filter ──────────────────────────────────────────
                   SliverToBoxAdapter(
-                    child: _FilterStrip(
+                    child: _StatusFilter(
                       selected: _statusFilter,
-                      lang: lang,
+                      counts: counts,
                       onSelected: (s) => setState(() => _statusFilter = s),
                     ),
                   ),
@@ -455,24 +461,40 @@ class _CountBadge extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Filter strip — surface background with bottom separator, scrollable chips
+// Status filter — scrollable pill chips with count badge + status dot
+// Matches the reference payment-screen filter pattern
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _FilterStrip extends StatelessWidget {
-  const _FilterStrip({
+// Semantic dot colors per status
+const _kStatusDotColors = <String, Color>{
+  'PUBLISHED': Color(0xFF22C55E), // green
+  'DRAFT':     Color(0xFFF59E0B), // amber
+  'ARCHIVED':  Color(0xFF9CA3AF), // muted gray
+};
+
+class _StatusFilter extends StatelessWidget {
+  const _StatusFilter({
     required this.selected,
-    required this.lang,
+    required this.counts,
     required this.onSelected,
   });
 
   final String selected;
-  final String lang;
+  final Map<String, int> counts;
   final ValueChanged<String> onSelected;
 
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
+
+    final values = [_kAllStatus, ..._kStatuses];
+    final labels = [
+      l10n.leadsFilterAll,
+      projectStatusLabel(l10n, 'PUBLISHED'),
+      projectStatusLabel(l10n, 'DRAFT'),
+      projectStatusLabel(l10n, 'ARCHIVED'),
+    ];
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -481,75 +503,119 @@ class _FilterStrip extends StatelessWidget {
           bottom: BorderSide(color: colors.hairline, width: 0.5),
         ),
       ),
-      child: SizedBox(
-        height: 42,
-        child: SingleChildScrollView(
+      child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.lg,
-            vertical: 4,
+            vertical: 10,
           ),
           child: Row(
             children: [
-              _FilterChip(
-                label: l10n.leadsFilterAll,
-                active: selected.isEmpty,
-                onTap: () => onSelected(_kAllStatus),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              for (final s in _kStatuses) ...[
-                _FilterChip(
-                  label: projectStatusLabel(l10n, s),
-                  active: selected == s,
-                  onTap: () => onSelected(selected == s ? _kAllStatus : s),
+              for (int i = 0; i < values.length; i++) ...[
+                _StatusChip(
+                  label: labels[i],
+                  count: counts[values[i]] ?? 0,
+                  active: selected == values[i],
+                  dotColor: _kStatusDotColors[values[i]],
+                  onTap: () => onSelected(values[i]),
                 ),
-                if (s != _kStatuses.last) const SizedBox(width: AppSpacing.xs),
+                if (i < values.length - 1)
+                  const SizedBox(width: AppSpacing.xs),
               ],
             ],
           ),
-        ),
       ),
     );
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({
     required this.label,
+    required this.count,
     required this.active,
     required this.onTap,
+    this.dotColor,
   });
 
   final String label;
+  final int count;
   final bool active;
   final VoidCallback onTap;
+  final Color? dotColor;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 4,
+          horizontal: AppSpacing.sm + 4,
+          vertical: 11,
         ),
         decoration: BoxDecoration(
           color: active ? colors.brandNavy : colors.surface,
-          border: Border.all(
-            color: active ? colors.brandNavy : colors.hairline,
-          ),
           borderRadius: AppRadii.pillAll,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? Colors.white : colors.inkStrong,
-            height: 1.2,
+          border: Border.all(
+            color: active
+                ? colors.brandNavy
+                : colors.hairline,
+            width: active ? 0 : 1,
           ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Count badge — always visible, style changes with active state
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xs,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: active
+                    ? Colors.white.withValues(alpha: 0.18)
+                    : colors.surfaceSoft,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: active ? Colors.white : colors.inkStrong,
+                  height: 1.2,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            // Status dot (inactive only, not for "الكل")
+            if (!active && dotColor != null) ...[
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.xxs + 2),
+            ],
+            // Label
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color: active ? Colors.white : colors.inkStrong,
+                height: 1.2,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -593,7 +659,7 @@ class _ProjectCard extends StatelessWidget {
   const _ProjectCard({required this.project});
   final StaffProject project;
 
-  static const double _imageHeight = 220;
+  static const double _imageHeight = 236;
 
   @override
   Widget build(BuildContext context) {
@@ -735,60 +801,58 @@ class _ProjectCard extends StatelessWidget {
                 ],
               ),
 
-              // ── White content body ──────────────────────────────────────
+              // ── Card body ───────────────────────────────────────────────
               Container(
                 color: colors.surface,
-                padding: const EdgeInsets.all(AppSpacing.md),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                  AppSpacing.md,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (description.isNotEmpty) ...[
                       Text(
                         description,
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: colors.inkMuted,
-                          height: 1.6,
+                          height: 1.55,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: AppSpacing.md),
+                      const SizedBox(height: AppSpacing.sm),
                     ],
+                    // Primary row: price (start) + available chip (end)
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (project.availableUnitsCount != null)
-                          _AvailableChip(count: project.availableUnitsCount!),
-                        const Spacer(),
                         if (project.startingPrice != null)
                           _PriceTag(
                             price: project.startingPrice!,
                             lang: lang,
                             l10n: l10n,
                           ),
+                        const Spacer(),
+                        if (project.availableUnitsCount != null)
+                          _AvailableChip(
+                            count: project.availableUnitsCount!,
+                          ),
                       ],
                     ),
+                    // Secondary row: unit types + total (only if present)
                     if (project.unitTypes.isNotEmpty ||
                         project.totalUnitsCount != null) ...[
-                      const SizedBox(height: AppSpacing.xs),
+                      const SizedBox(height: AppSpacing.xs + 2),
+                      Container(height: 0.5, color: colors.hairline),
+                      const SizedBox(height: AppSpacing.xs + 2),
                       _UnitMetaRow(
                         types: project.unitTypes,
                         total: project.totalUnitsCount,
                       ),
                     ],
-                    const SizedBox(height: AppSpacing.sm),
-                    SizedBox(
-                      width: double.infinity,
-                      child: AppButton(
-                        label: l10n.viewUnits,
-                        icon: Icons.grid_view_rounded,
-                        variant: AppButtonVariant.gold,
-                        size: AppButtonSize.small,
-                        onPressed: () => context.push(
-                          '/projects/${project.id}',
-                          extra: project,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ),
@@ -882,24 +946,25 @@ class _PriceTag extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           l10n.projectStartingFrom,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 11,
             color: colors.inkMuted,
             fontWeight: FontWeight.w500,
           ),
         ),
+        const SizedBox(height: 1),
         Text(
           _compact(price),
           style: TextStyle(
-            fontSize: 15,
+            fontSize: 20,
             fontWeight: FontWeight.w800,
             color: colors.brandGold,
-            height: 1.1,
+            height: 1.0,
           ),
         ),
       ],

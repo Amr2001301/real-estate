@@ -4357,6 +4357,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Suggested Properties'**
   String get dashboardSuggestedProperties;
+
+  /// No description provided for @staffShareWithClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Share with client'**
+  String get staffShareWithClient;
+
+  /// No description provided for @staffAddInterestedClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Add interested client'**
+  String get staffAddInterestedClient;
+
+  /// No description provided for @staffSendToClient.
+  ///
+  /// In en, this message translates to:
+  /// **'Send to client'**
+  String get staffSendToClient;
+
+  /// No description provided for @staffEditProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit project'**
+  String get staffEditProject;
 }
 
 class _AppLocalizationsDelegate

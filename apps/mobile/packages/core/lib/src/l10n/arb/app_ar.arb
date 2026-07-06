@@ -806,5 +806,10 @@
   "dashboardTodayFocus": "أولويات اليوم",
   "dashboardMonthlyPerformance": "الأداء الشهري",
   "dashboardFocusAllClear": "لا توجد أولويات عاجلة الآن",
-  "dashboardSuggestedProperties": "فرص عقارية مناسبة"
+  "dashboardSuggestedProperties": "فرص عقارية مناسبة",
+
+  "staffShareWithClient": "مشاركة مع عميل",
+  "staffAddInterestedClient": "إضافة عميل مهتم",
+  "staffSendToClient": "إرسال للعميل",
+  "staffEditProject": "تعديل المشروع"
 }

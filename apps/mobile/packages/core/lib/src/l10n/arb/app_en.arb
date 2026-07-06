@@ -809,5 +809,10 @@
   "dashboardTodayFocus": "Today's Priorities",
   "dashboardMonthlyPerformance": "Monthly Performance",
   "dashboardFocusAllClear": "No urgent priorities right now",
-  "dashboardSuggestedProperties": "Suggested Properties"
+  "dashboardSuggestedProperties": "Suggested Properties",
+
+  "staffShareWithClient": "Share with client",
+  "staffAddInterestedClient": "Add interested client",
+  "staffSendToClient": "Send to client",
+  "staffEditProject": "Edit project"
 }
