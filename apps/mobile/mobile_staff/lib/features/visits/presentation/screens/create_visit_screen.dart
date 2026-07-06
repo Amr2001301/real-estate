@@ -38,11 +38,23 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final lang = Localizations.localeOf(context).languageCode;
+    final l10n  = context.l10n;
+    final lang  = Localizations.localeOf(context).languageCode;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.visitNew)),
-      body: BlocConsumer<CreateVisitCubit, CreateVisitState>(
+      body: Column(
+        children: [
+          AppNavHeader(
+            title: l10n.visitNew,
+            leadingAction: NavHeaderAction(
+              icon: isRtl
+                  ? Icons.arrow_forward_ios_rounded
+                  : Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<CreateVisitCubit, CreateVisitState>(
         listenWhen: (a, b) => a.submitted != b.submitted || a.submitFailure != b.submitFailure,
         listener: (context, state) {
           if (state.submitted) {
@@ -55,13 +67,14 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
           }
         },
         builder: (context, state) {
-          final cubit = context.read<CreateVisitCubit>();
+          final cubit   = context.read<CreateVisitCubit>();
+          final colors  = context.appColors;
           return ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
+            padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg, AppSpacing.md, AppSpacing.lg, AppSpacing.xl),
             children: [
               if (!state.fixedProject) ...[
-                Text(l10n.visitProject, style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: AppSpacing.sm),
+                _SectionLabel(l10n.visitProject),
                 _ProjectPicker(state: state),
                 if (state.showValidation && !state.hasProject) ...[
                   const SizedBox(height: AppSpacing.xs),
@@ -69,28 +82,57 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
                 ],
                 const SizedBox(height: AppSpacing.lg),
               ],
-              Text(l10n.visitWhen, style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: AppSpacing.sm),
-              AppCard(
-                onTap: _pickDateTime,
-                child: Row(
-                  children: [
-                    Icon(Icons.event_outlined, color: context.appColors.brandGold),
-                    const SizedBox(width: AppSpacing.md),
-                    Expanded(
-                      child: Text(
-                        state.scheduledAt == null
-                            ? l10n.visitPickDateTime
-                            : DateFormatter.mediumDate(state.scheduledAt!, languageCode: lang),
-                        style: Theme.of(context).textTheme.bodyLarge,
+              _SectionLabel(l10n.visitWhen),
+              Container(
+                decoration: BoxDecoration(
+                  color: colors.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: colors.hairline),
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _pickDateTime,
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36, height: 36,
+                            decoration: BoxDecoration(
+                              color: colors.brandGold.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.event_outlined,
+                                color: colors.brandGold, size: 18),
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Text(
+                              state.scheduledAt == null
+                                  ? l10n.visitPickDateTime
+                                  : DateFormatter.mediumDate(
+                                      state.scheduledAt!, languageCode: lang),
+                              style: state.scheduledAt == null
+                                  ? Theme.of(context).textTheme.bodyLarge
+                                      ?.copyWith(color: colors.inkMuted)
+                                  : Theme.of(context).textTheme.bodyLarge
+                                      ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: colors.inkStrong),
+                            ),
+                          ),
+                          Icon(
+                            Directionality.of(context) == TextDirection.rtl
+                                ? Icons.chevron_left_rounded
+                                : Icons.chevron_right_rounded,
+                            color: colors.inkMuted,
+                          ),
+                        ],
                       ),
                     ),
-                    Icon(
-                      Directionality.of(context) == TextDirection.rtl
-                          ? Icons.chevron_left_rounded
-                          : Icons.chevron_right_rounded,
-                    ),
-                  ],
+                  ),
                 ),
               ),
               if (state.showValidation && !state.hasSchedule) ...[
@@ -120,6 +162,9 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
             ],
           );
         },
+      ),
+          ),
+        ],
       ),
     );
   }
@@ -160,6 +205,34 @@ class _ProjectPicker extends StatelessWidget {
         );
     }
   }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+        child: Row(
+          children: [
+            Container(
+              width: 3, height: 16,
+              decoration: BoxDecoration(
+                color: AppPalette.gold400,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _Err extends StatelessWidget {

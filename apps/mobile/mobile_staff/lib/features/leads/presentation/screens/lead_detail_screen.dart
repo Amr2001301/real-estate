@@ -43,33 +43,48 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    final l10n  = context.l10n;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.fallbackName ?? l10n.navLeads)),
-      body: BlocConsumer<LeadDetailCubit, LeadDetailState>(
-        listenWhen: (a, b) =>
-            a.actionFailure != b.actionFailure && b.actionFailure != null,
-        listener: (context, state) =>
-            showFailureSnackBar(context, state.actionFailure!),
-        builder: (context, state) {
-          switch (state.status) {
-            case DataStatus.initial:
-            case DataStatus.loading:
-              return const Center(child: CircularProgressIndicator());
-            case DataStatus.failure:
-              return ErrorState(
-                failure: state.failure,
-                onRetry: () => context.read<LeadDetailCubit>().load(),
-              );
-            case DataStatus.empty:
-            case DataStatus.success:
-              return _Body(
-                state: state,
-                noteController: _note,
-                onSubmitNote: _submitNote,
-              );
-          }
-        },
+      body: Column(
+        children: [
+          AppNavHeader(
+            title: widget.fallbackName ?? l10n.navLeads,
+            leadingAction: NavHeaderAction(
+              icon: isRtl
+                  ? Icons.arrow_forward_ios_rounded
+                  : Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<LeadDetailCubit, LeadDetailState>(
+              listenWhen: (a, b) =>
+                  a.actionFailure != b.actionFailure && b.actionFailure != null,
+              listener: (context, state) =>
+                  showFailureSnackBar(context, state.actionFailure!),
+              builder: (context, state) {
+                switch (state.status) {
+                  case DataStatus.initial:
+                  case DataStatus.loading:
+                    return const Center(child: CircularProgressIndicator());
+                  case DataStatus.failure:
+                    return ErrorState(
+                      failure: state.failure,
+                      onRetry: () => context.read<LeadDetailCubit>().load(),
+                    );
+                  case DataStatus.empty:
+                  case DataStatus.success:
+                    return _Body(
+                      state: state,
+                      noteController: _note,
+                      onSubmitNote: _submitNote,
+                    );
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

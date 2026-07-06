@@ -8,7 +8,6 @@ import '../../../../common/visit_status_label.dart';
 import '../../domain/entities/visit.dart';
 import '../cubit/visits_cubit.dart';
 
-/// Visits (appointments) list with a "today" toggle and status filter chips.
 class VisitsScreen extends StatefulWidget {
   const VisitsScreen({super.key});
 
@@ -30,31 +29,35 @@ class _VisitsScreenState extends State<VisitsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<VisitsCubit>();
+    final l10n     = context.l10n;
+    final cubit    = context.read<VisitsCubit>();
+    final isRtl    = Directionality.of(context) == TextDirection.rtl;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.navVisits),
-        actions: [
-          BlocBuilder<VisitsCubit, VisitsListState>(
-            buildWhen: (a, b) => a.today != b.today,
-            builder: (context, state) => IconButton(
-              tooltip: l10n.visitsToday,
-              isSelected: state.today,
-              icon: const Icon(Icons.today_outlined),
-              selectedIcon: const Icon(Icons.today_rounded),
-              onPressed: cubit.toggleToday,
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _create,
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.visitNew),
-      ),
       body: Column(
         children: [
+          BlocBuilder<VisitsCubit, VisitsListState>(
+            buildWhen: (a, b) => a.today != b.today,
+            builder: (context, state) => AppNavHeader(
+              title: l10n.navVisits,
+              leadingAction: NavHeaderAction(
+                icon: isRtl
+                    ? Icons.arrow_forward_ios_rounded
+                    : Icons.arrow_back_ios_new_rounded,
+                onTap: () => context.pop(),
+              ),
+              actions: [
+                NavHeaderAction(
+                  icon: state.today
+                      ? Icons.today_rounded
+                      : Icons.today_outlined,
+                  tooltip: l10n.visitsToday,
+                  onTap: cubit.toggleToday,
+                ),
+              ],
+            ),
+          ),
           _StatusFilter(),
           Expanded(
             child: BlocBuilder<VisitsCubit, VisitsListState>(
@@ -75,10 +78,14 @@ class _VisitsScreenState extends State<VisitsScreen> {
                     return RefreshIndicator(
                       onRefresh: cubit.load,
                       child: ListView.separated(
-                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        padding: EdgeInsets.fromLTRB(
+                            AppSpacing.md, AppSpacing.sm,
+                            AppSpacing.md, bottomPad + 100),
                         itemCount: state.visits.length,
-                        separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) => _VisitTile(visit: state.visits[i]),
+                        separatorBuilder: (_, _) =>
+                            const SizedBox(height: AppSpacing.sm),
+                        itemBuilder: (context, i) =>
+                            _VisitTile(visit: state.visits[i]),
                       ),
                     );
                 }
@@ -87,81 +94,214 @@ class _VisitsScreenState extends State<VisitsScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _create,
+        icon: const Icon(Icons.add_rounded),
+        label: Text(l10n.visitNew),
+      ),
     );
   }
 }
 
+// ── Status filter ─────────────────────────────────────────────────────────────
+
 class _StatusFilter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final cubit = context.read<VisitsCubit>();
-    return SizedBox(
-      height: 48,
+    final l10n   = context.l10n;
+    final cubit  = context.read<VisitsCubit>();
+    final colors = context.appColors;
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(
+          bottom: BorderSide(color: colors.hairline, width: 0.5),
+        ),
+      ),
       child: BlocBuilder<VisitsCubit, VisitsListState>(
         buildWhen: (a, b) => a.statusFilter != b.statusFilter,
-        builder: (context, state) => ListView(
+        builder: (context, state) => SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          children: [
-            Padding(
-              padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
-              child: ChoiceChip(
-                label: Text(l10n.leadsFilterAll),
-                selected: state.statusFilter == null,
-                onSelected: (_) => cubit.setStatus(null),
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg, vertical: 10),
+          child: Row(
+            children: [
+              _FilterChip(
+                label: l10n.leadsFilterAll,
+                active: state.statusFilter == null,
+                onTap: () => cubit.setStatus(null),
               ),
-            ),
-            for (final s in kVisitStatuses)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: AppSpacing.xs),
-                child: ChoiceChip(
-                  label: Text(visitStatusLabel(l10n, s)),
-                  selected: state.statusFilter == s,
-                  onSelected: (_) => cubit.setStatus(s),
+              for (final s in kVisitStatuses) ...[
+                const SizedBox(width: AppSpacing.xs),
+                _FilterChip(
+                  label: visitStatusLabel(l10n, s),
+                  active: state.statusFilter == s,
+                  onTap: () => cubit.setStatus(s),
                 ),
-              ),
-          ],
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+// ── Filter chip ───────────────────────────────────────────────────────────────
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm + 4, vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? colors.brandNavy : colors.surface,
+          borderRadius: AppRadii.pillAll,
+          border: Border.all(
+            color: active ? colors.brandNavy : colors.hairline,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+            color: active ? Colors.white : colors.inkStrong,
+            height: 1.2,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Visit tile ────────────────────────────────────────────────────────────────
+
 class _VisitTile extends StatelessWidget {
   const _VisitTile({required this.visit});
   final Visit visit;
 
+  Color _toneColor(BadgeTone tone, AppColorsExt c) => switch (tone) {
+        BadgeTone.success => c.success,
+        BadgeTone.warning => c.warning,
+        BadgeTone.error   => c.error,
+        BadgeTone.info    => c.info,
+        BadgeTone.gold    => c.brandGold,
+        _                 => c.inkMuted,
+      };
+
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final lang = Localizations.localeOf(context).languageCode;
-    return AppCard(
-      onTap: () => context.push('/visits/${visit.id}', extra: visit),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(visit.clientName ?? visit.projectName ?? l10n.navVisits,
-                    style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (visit.scheduledAt != null)
-                      DateFormatter.shortDate(visit.scheduledAt!, languageCode: lang),
-                    if (visit.unitCode != null) visit.unitCode!,
-                  ].join(' · '),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: colors.inkMuted),
-                ),
-              ],
+    final l10n        = context.l10n;
+    final colors      = context.appColors;
+    final lang        = Localizations.localeOf(context).languageCode;
+    final tone        = visitStatusTone(visit.status);
+    final statusColor = _toneColor(tone, colors);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: AppRadii.card,
+        boxShadow: colors.shadowCard,
+      ),
+      child: ClipRRect(
+        borderRadius: AppRadii.card,
+        child: Material(
+          color: colors.surface,
+          child: InkWell(
+            onTap: () => context.push('/visits/${visit.id}', extra: visit),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: colors.hairline, width: 0.5),
+                borderRadius: AppRadii.card,
+              ),
+              child: Stack(
+                children: [
+                  PositionedDirectional(
+                    top: 0, bottom: 0, start: 0,
+                    child: Container(width: 4, color: statusColor),
+                  ),
+                  Padding(
+                    padding: const EdgeInsetsDirectional.fromSTEB(
+                      AppSpacing.md, AppSpacing.md,
+                      AppSpacing.md, AppSpacing.md,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                visit.clientName ??
+                                    visit.projectName ??
+                                    l10n.navVisits,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w700,
+                                  color: colors.inkStrong,
+                                  height: 1.2,
+                                ),
+                              ),
+                              if (visit.scheduledAt != null) ...[
+                                const SizedBox(height: 3),
+                                Row(children: [
+                                  Icon(Icons.schedule_rounded,
+                                      size: 12, color: colors.inkMuted),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    DateFormatter.shortDate(
+                                        visit.scheduledAt!,
+                                        languageCode: lang),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: colors.inkMuted,
+                                        height: 1.3),
+                                  ),
+                                  if (visit.unitCode != null) ...[
+                                    Text(' · ',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: colors.inkMuted)),
+                                    Text(visit.unitCode!,
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: colors.inkMuted)),
+                                  ],
+                                ]),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
+                        StatusBadge(
+                          label: visitStatusLabel(l10n, visit.status),
+                          tone: tone,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: AppSpacing.sm),
-          StatusBadge(label: visitStatusLabel(l10n, visit.status), tone: visitStatusTone(visit.status)),
-        ],
+        ),
       ),
     );
   }

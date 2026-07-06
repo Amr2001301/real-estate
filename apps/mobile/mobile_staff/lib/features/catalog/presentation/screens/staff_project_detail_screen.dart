@@ -197,9 +197,9 @@ class _StaffProjectDetailScreenState extends State<StaffProjectDetailScreen> {
                             // Staff action chips
                             Padding(
                               padding: const EdgeInsets.fromLTRB(
-                                  AppSpacing.md,
+                                  AppSpacing.xl,
                                   AppSpacing.lg,
-                                  AppSpacing.md,
+                                  AppSpacing.xl,
                                   0),
                               child: _StaffActions(
                                 onScrollToUnits: () {
@@ -844,29 +844,38 @@ class _IdentityBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Status badge
-        StatusBadge(
-          label: statusLabel,
-          tone: statusTone,
-          variant: BadgeVariant.solid,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-
-        // Project name
-        Text(
-          name,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w900,
-            color: colors.inkStrong,
-            height: 1.1,
-            letterSpacing: -0.5,
-          ),
+        // Name + status badge on the same row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Text(
+                name,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: colors.inkStrong,
+                  height: 1.1,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: StatusBadge(
+                label: statusLabel,
+                tone: statusTone,
+                variant: BadgeVariant.solid,
+              ),
+            ),
+          ],
         ),
 
         // City
         if (city != null) ...[
           const SizedBox(height: AppSpacing.xs + 2),
           Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Icon(Icons.location_on_rounded,
                   size: 15, color: AppPalette.gold400),
@@ -911,50 +920,65 @@ class _StaffActions extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-      child: Row(
-        children: [
-          _ActionChip(
-            icon: Icons.share_rounded,
-            label: l10n.staffShareWithClient,
-            bgColor: colors.brandGold.withValues(alpha: 0.08),
-            fgColor: colors.brandGold,
-            border: Border.all(
-              color: colors.brandGold.withValues(alpha: 0.55),
-              width: 1.2,
+    // 2×2 grid — all actions visible, no horizontal scroll needed.
+    return Column(
+      children: [
+        // Primary row
+        Row(
+          children: [
+            Expanded(
+              child: _ActionChip(
+                icon: Icons.share_rounded,
+                label: l10n.staffShareWithClient,
+                bgColor: colors.brandGold.withValues(alpha: 0.08),
+                fgColor: colors.brandGold,
+                border: Border.all(
+                  color: colors.brandGold.withValues(alpha: 0.55),
+                  width: 1.2,
+                ),
+                onTap: () {},
+              ),
             ),
-            onTap: () {},
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          _ActionChip(
-            icon: Icons.person_add_rounded,
-            label: l10n.staffAddInterestedClient,
-            bgColor: colors.brandNavy,
-            fgColor: Colors.white,
-            onTap: () {},
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          _ActionChip(
-            icon: Icons.grid_view_rounded,
-            label: l10n.viewUnits,
-            bgColor: colors.surfaceSoft,
-            fgColor: colors.inkStrong,
-            border: Border.all(color: colors.hairline),
-            onTap: onScrollToUnits,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          _ActionChip(
-            icon: Icons.edit_rounded,
-            label: l10n.staffEditProject,
-            bgColor: colors.surfaceSoft,
-            fgColor: colors.inkMuted,
-            border: Border.all(color: colors.hairline),
-            onTap: () {},
-          ),
-        ],
-      ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: _ActionChip(
+                icon: Icons.person_add_rounded,
+                label: l10n.staffAddInterestedClient,
+                bgColor: colors.brandNavy,
+                fgColor: Colors.white,
+                onTap: () {},
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        // Secondary row
+        Row(
+          children: [
+            Expanded(
+              child: _ActionChip(
+                icon: Icons.grid_view_rounded,
+                label: l10n.viewUnits,
+                bgColor: colors.surfaceSoft,
+                fgColor: colors.inkStrong,
+                border: Border.all(color: colors.hairline),
+                onTap: onScrollToUnits,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Expanded(
+              child: _ActionChip(
+                icon: Icons.edit_rounded,
+                label: l10n.staffEditProject,
+                bgColor: colors.surfaceSoft,
+                fgColor: colors.inkMuted,
+                border: Border.all(color: colors.hairline),
+                onTap: () {},
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -983,7 +1007,7 @@ class _ActionChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.xs + 2,
+          vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
           color: bgColor,
@@ -991,7 +1015,7 @@ class _ActionChip extends StatelessWidget {
           border: border,
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 15, color: fgColor),
             const SizedBox(width: AppSpacing.xs - 2),
@@ -1112,7 +1136,6 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -1152,27 +1175,32 @@ class _StatCard extends StatelessWidget {
                 AppSpacing.md),
             child: Column(
               children: [
-                Icon(icon, size: 22, color: colors.brandGold),
-                const SizedBox(height: 8),
+                Icon(icon, size: 24, color: colors.brandGold),
+                const SizedBox(height: 10),
                 Text(
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium?.copyWith(
+                  style: TextStyle(
+                    fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: valueColor,
-                    letterSpacing: -0.2,
+                    letterSpacing: -0.3,
+                    height: 1.1,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: 4),
                 Text(
                   label,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: colors.inkMuted),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: colors.inkMuted,
+                  ),
                 ),
               ],
             ),
