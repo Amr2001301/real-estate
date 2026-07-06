@@ -1466,6 +1466,72 @@ abstract class AppLocalizations {
   /// **'Profile'**
   String get profileTitle;
 
+  /// No description provided for @profileAccountSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Account & Performance'**
+  String get profileAccountSettings;
+
+  /// No description provided for @staffSectionTools.
+  ///
+  /// In en, this message translates to:
+  /// **'Advisor Tools'**
+  String get staffSectionTools;
+
+  /// No description provided for @staffMyClientsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage clients and active opportunities'**
+  String get staffMyClientsDesc;
+
+  /// No description provided for @staffMyLeadsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Track sales stages and communication'**
+  String get staffMyLeadsDesc;
+
+  /// No description provided for @staffMyTargetsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales and unit targets'**
+  String get staffMyTargetsDesc;
+
+  /// No description provided for @staffMyBonusDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Paid and pending amounts'**
+  String get staffMyBonusDesc;
+
+  /// No description provided for @staffMyVisitsDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Visits schedule and follow-ups'**
+  String get staffMyVisitsDesc;
+
+  /// No description provided for @staffShortcutPerformance.
+  ///
+  /// In en, this message translates to:
+  /// **'My Performance'**
+  String get staffShortcutPerformance;
+
+  /// No description provided for @staffShortcutVisits.
+  ///
+  /// In en, this message translates to:
+  /// **'My Visits'**
+  String get staffShortcutVisits;
+
+  /// No description provided for @staffShortcutClients.
+  ///
+  /// In en, this message translates to:
+  /// **'My Clients'**
+  String get staffShortcutClients;
+
+  /// No description provided for @staffShortcutCommissions.
+  ///
+  /// In en, this message translates to:
+  /// **'My Commissions'**
+  String get staffShortcutCommissions;
+
   /// No description provided for @profileEdit.
   ///
   /// In en, this message translates to:
@@ -1483,6 +1549,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Language'**
   String get fieldLanguage;
+
+  /// No description provided for @settingsSecurity.
+  ///
+  /// In en, this message translates to:
+  /// **'Security & Password'**
+  String get settingsSecurity;
+
+  /// No description provided for @settingsSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'Support & Help'**
+  String get settingsSupport;
+
+  /// No description provided for @bonusViewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View Commissions'**
+  String get bonusViewAll;
 
   /// No description provided for @favoritesEmptyTitle.
   ///

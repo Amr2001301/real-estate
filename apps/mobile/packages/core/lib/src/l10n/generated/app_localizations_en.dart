@@ -743,6 +743,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileTitle => 'Profile';
 
   @override
+  String get profileAccountSettings => 'Account & Performance';
+
+  @override
+  String get staffSectionTools => 'Advisor Tools';
+
+  @override
+  String get staffMyClientsDesc => 'Manage clients and active opportunities';
+
+  @override
+  String get staffMyLeadsDesc => 'Track sales stages and communication';
+
+  @override
+  String get staffMyTargetsDesc => 'Sales and unit targets';
+
+  @override
+  String get staffMyBonusDesc => 'Paid and pending amounts';
+
+  @override
+  String get staffMyVisitsDesc => 'Visits schedule and follow-ups';
+
+  @override
+  String get staffShortcutPerformance => 'My Performance';
+
+  @override
+  String get staffShortcutVisits => 'My Visits';
+
+  @override
+  String get staffShortcutClients => 'My Clients';
+
+  @override
+  String get staffShortcutCommissions => 'My Commissions';
+
+  @override
   String get profileEdit => 'Edit profile';
 
   @override
@@ -750,6 +783,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fieldLanguage => 'Language';
+
+  @override
+  String get settingsSecurity => 'Security & Password';
+
+  @override
+  String get settingsSupport => 'Support & Help';
+
+  @override
+  String get bonusViewAll => 'View Commissions';
 
   @override
   String get favoritesEmptyTitle => 'No favorites yet';
@@ -2240,10 +2282,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get dashboardTodaySnapshot => "Today's Snapshot";
+  String get dashboardTodaySnapshot => 'Today\'s Snapshot';
 
   @override
-  String get dashboardTodayFocus => "Today's Priorities";
+  String get dashboardTodayFocus => 'Today\'s Priorities';
 
   @override
   String get dashboardMonthlyPerformance => 'Monthly Performance';

@@ -44,6 +44,7 @@ class _StaffProjectsScreenState extends State<StaffProjectsScreen> {
     final l10n = context.l10n;
     final cubit = context.read<StaffProjectsCubit>();
     final bottomPad = MediaQuery.of(context).padding.bottom;
+    final lang = Localizations.localeOf(context).languageCode;
 
     return Scaffold(
       body: Column(
@@ -57,19 +58,10 @@ class _StaffProjectsScreenState extends State<StaffProjectsScreen> {
             hint: l10n.projectsSearchHint,
             onSubmitted: cubit.setSearch,
           ),
-          AppFilterPills<String>(
-            allLabel: l10n.leadsFilterAll,
-            selected: _statusFilter.isEmpty ? null : _statusFilter,
-            onSelected: (v) => setState(() => _statusFilter = v ?? _kAllStatus),
-            options: _kStatuses
-                .map(
-                  (s) => FilterPillOption(
-                    value: s,
-                    label: projectStatusLabel(l10n, s),
-                    tone: projectStatusTone(s),
-                  ),
-                )
-                .toList(),
+          _FilterRow(
+            selected: _statusFilter,
+            lang: lang,
+            onSelected: (s) => setState(() => _statusFilter = s),
           ),
           Expanded(
             child: BlocBuilder<StaffProjectsCubit, StaffProjectsState>(
@@ -103,13 +95,13 @@ class _StaffProjectsScreenState extends State<StaffProjectsScreen> {
                       child: ListView.separated(
                         padding: EdgeInsets.fromLTRB(
                           AppSpacing.md,
-                          AppSpacing.xs,
+                          AppSpacing.sm,
                           AppSpacing.md,
-                          bottomPad + 80,
+                          bottomPad + 100,
                         ),
                         itemCount: visible.length,
                         separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.md),
+                            const SizedBox(height: AppSpacing.sm),
                         itemBuilder: (context, i) =>
                             _ProjectCard(project: visible[i]),
                       ),
@@ -152,7 +144,7 @@ class _ProjectCard extends StatelessWidget {
           ClipRRect(
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             child: SizedBox(
-              height: 168,
+              height: 156,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
@@ -238,22 +230,22 @@ class _ProjectCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.md,
-              AppSpacing.sm,
+              AppSpacing.xxs,
               AppSpacing.md,
-              AppSpacing.md,
+              AppSpacing.xs,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Metrics strip (available / total / price)
+                // Metrics strip (available / price / total)
                 if (_hasMetrics) ...[
                   _MetricsStrip(project: project, lang: lang),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
                 ],
-                // Unit type pills
+                // Unit type row
                 if (project.unitTypes.isNotEmpty) ...[
                   _UnitTypeRow(types: project.unitTypes),
-                  const SizedBox(height: AppSpacing.sm),
+                  const SizedBox(height: AppSpacing.xs),
                 ],
                 // CTA — gold filled, full width
                 SizedBox(
@@ -285,19 +277,20 @@ class _MetricsStrip extends StatelessWidget {
   final StaffProject project;
   final String lang;
 
-  /// Compact price: 35000000 → "35م" / "35M"
+  /// Compact price: 35000000 → "35م ج.م" / "35M EGP"
   String _compactPrice(double price) {
+    final currency = lang == 'ar' ? ' ج.م' : ' EGP';
     if (price >= 1e6) {
       final v = price / 1e6;
       final suffix = lang == 'ar' ? 'م' : 'M';
-      if (v == v.truncateToDouble()) return '${v.toInt()}$suffix';
-      return '${v.toStringAsFixed(1)}$suffix';
+      if (v == v.truncateToDouble()) return '${v.toInt()}$suffix$currency';
+      return '${v.toStringAsFixed(1)}$suffix$currency';
     }
     if (price >= 1e3) {
       final suffix = lang == 'ar' ? 'ك' : 'K';
-      return '${(price / 1e3).toInt()}$suffix';
+      return '${(price / 1e3).toInt()}$suffix$currency';
     }
-    return price.toInt().toString();
+    return '${price.toInt()}$currency';
   }
 
   @override
@@ -351,7 +344,7 @@ class _MetricsStrip extends StatelessWidget {
             for (var i = 0; i < items.length; i++) ...[
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   child: _MetricCell(slot: items[i]),
                 ),
               ),
@@ -390,7 +383,7 @@ class _MetricCell extends StatelessWidget {
         Text(
           slot.value,
           style: TextStyle(
-            fontSize: 22,
+            fontSize: 16,
             fontWeight: FontWeight.w800,
             color: slot.valueColor,
             height: 1.1,
@@ -505,6 +498,97 @@ class _SearchBar extends StatelessWidget {
           ),
           filled: true,
           fillColor: colors.surface,
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Status filter chips
+// ═══════════════════════════════════════════════════════════════════════════════
+
+class _FilterRow extends StatelessWidget {
+  const _FilterRow({
+    required this.selected,
+    required this.lang,
+    required this.onSelected,
+  });
+  final String selected; // '' = all
+  final String lang;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return SizedBox(
+      height: 40,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: 2,
+        ),
+        child: Row(
+          children: [
+            _FilterChip(
+              label: l10n.leadsFilterAll,
+              active: selected.isEmpty,
+              onTap: () => onSelected(_kAllStatus),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            for (final s in _kStatuses) ...[
+              _FilterChip(
+                label: projectStatusLabel(l10n, s),
+                active: selected == s,
+                onTap: () =>
+                    onSelected(selected == s ? _kAllStatus : s),
+              ),
+              if (s != _kStatuses.last) const SizedBox(width: AppSpacing.xs),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: 4,
+        ),
+        decoration: BoxDecoration(
+          color: active ? colors.brandNavy : colors.surface,
+          border: Border.all(
+            color: active ? colors.brandNavy : colors.hairline,
+          ),
+          borderRadius: AppRadii.pillAll,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            color: active ? Colors.white : colors.inkStrong,
+            height: 1.2,
+          ),
         ),
       ),
     );

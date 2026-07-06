@@ -737,6 +737,39 @@ class AppLocalizationsAr extends AppLocalizations {
   String get profileTitle => 'الملف الشخصي';
 
   @override
+  String get profileAccountSettings => 'إعدادات الحساب والأداء';
+
+  @override
+  String get staffSectionTools => 'أدوات المستشار';
+
+  @override
+  String get staffMyClientsDesc => 'إدارة العملاء والفرص الحالية';
+
+  @override
+  String get staffMyLeadsDesc => 'متابعة مراحل البيع والتواصل';
+
+  @override
+  String get staffMyTargetsDesc => 'أهداف المبيعات والوحدات';
+
+  @override
+  String get staffMyBonusDesc => 'المدفوع والمعلّق';
+
+  @override
+  String get staffMyVisitsDesc => 'جدول الزيارات والمتابعات';
+
+  @override
+  String get staffShortcutPerformance => 'أدائي';
+
+  @override
+  String get staffShortcutVisits => 'زياراتي';
+
+  @override
+  String get staffShortcutClients => 'عملائي';
+
+  @override
+  String get staffShortcutCommissions => 'عمولاتي';
+
+  @override
   String get profileEdit => 'تعديل الملف';
 
   @override
@@ -744,6 +777,15 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get fieldLanguage => 'اللغة';
+
+  @override
+  String get settingsSecurity => 'الأمان وكلمة المرور';
+
+  @override
+  String get settingsSupport => 'الدعم والمساعدة';
+
+  @override
+  String get bonusViewAll => 'عرض العمولات';
 
   @override
   String get favoritesEmptyTitle => 'لا توجد مفضلة بعد';
