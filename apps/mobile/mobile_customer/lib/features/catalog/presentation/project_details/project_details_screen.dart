@@ -116,6 +116,10 @@ class _DetailPageState extends State<_DetailPage> {
     return _px > (_DetailPage._heroH - _DetailPage._sheetPeek - topInset - 56);
   }
 
+  // Project name would enter the status-bar unsafe area — show pinned header.
+  bool get _showHeader =>
+      _px > (_DetailPage._heroH - _DetailPage._sheetPeek + 28);
+
   @override
   Widget build(BuildContext context) {
     final state = widget.state;
@@ -127,7 +131,9 @@ class _DetailPageState extends State<_DetailPage> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: (_overSheet && !_showHeader)
+          ? SystemUiOverlayStyle.dark
+          : SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: colors.canvas,
         body: Stack(
@@ -255,33 +261,18 @@ class _DetailPageState extends State<_DetailPage> {
               ),
             ),
 
-            // ── 3. Floating nav buttons (always on top) ────────────────────
+            // ── 3. Adaptive nav overlay ───────────────────────────────────
             Positioned(
-              top: topInset,
+              top: 0,
               left: 0,
               right: 0,
-              height: 68,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _NavBtn(
-                      overSheet: _overSheet,
-                      child: BackButton(
-                        color: _overSheet
-                            ? colors.inkStrong
-                            : Colors.white,
-                      ),
-                    ),
-                    _NavBtn(
-                      overSheet: _overSheet,
-                      child: FavoriteToggleButton(
-                          isProject: true, id: project.id),
-                    ),
-                  ],
-                ),
+              child: _NavOverlay(
+                topInset: topInset,
+                overSheet: _overSheet,
+                showHeader: _showHeader,
+                title: project.name.resolve(lang),
+                projectId: project.id,
+                colors: colors,
               ),
             ),
 
@@ -522,33 +513,132 @@ class _SheetHandle extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Nav button — transitions between glass (over hero) and surface (over sheet)
+// Adaptive nav overlay
+// Three states as user scrolls:
+//   1. Over hero    → glass circles, white icons
+//   2. Over sheet   → surface circles, inkStrong icons
+//   3. showHeader   → full-width navy bar with project title
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _NavBtn extends StatelessWidget {
-  const _NavBtn({required this.overSheet, required this.child});
+class _NavOverlay extends StatelessWidget {
+  const _NavOverlay({
+    required this.topInset,
+    required this.overSheet,
+    required this.showHeader,
+    required this.title,
+    required this.projectId,
+    required this.colors,
+  });
+
+  final double topInset;
   final bool overSheet;
+  final bool showHeader;
+  final String title;
+  final String projectId;
+  final AppColorsExt colors;
+
+  @override
+  Widget build(BuildContext context) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final backIcon = isRtl
+        ? Icons.arrow_forward_ios_rounded
+        : Icons.arrow_back_ios_new_rounded;
+    final iconColor =
+        (!showHeader && overSheet) ? colors.inkStrong : Colors.white;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeInOut,
+      color: showHeader ? _navyDeep : Colors.transparent,
+      height: topInset + kToolbarHeight,
+      padding: EdgeInsets.only(top: topInset),
+      child: Row(
+        children: [
+          const SizedBox(width: AppSpacing.sm),
+          // Back button
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: _NavCircle(
+              overSheet: overSheet,
+              showHeader: showHeader,
+              colors: colors,
+              child: Icon(backIcon, size: 18, color: iconColor),
+            ),
+          ),
+          // Project title — fades in when header is active
+          Expanded(
+            child: AnimatedOpacity(
+              opacity: showHeader ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 180),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm),
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          // Favorite button
+          _NavCircle(
+            overSheet: overSheet,
+            showHeader: showHeader,
+            colors: colors,
+            child: FavoriteToggleButton(
+              isProject: true,
+              id: projectId,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavCircle extends StatelessWidget {
+  const _NavCircle({
+    required this.overSheet,
+    required this.showHeader,
+    required this.colors,
+    required this.child,
+  });
+
+  final bool overSheet;
+  final bool showHeader;
+  final AppColorsExt colors;
   final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: 42,
       height: 42,
       decoration: BoxDecoration(
-        color: overSheet
-            ? colors.surface
-            : Colors.white.withValues(alpha: 0.18),
+        color: showHeader
+            ? Colors.white.withValues(alpha: 0.12)
+            : overSheet
+                ? colors.surface
+                : Colors.white.withValues(alpha: 0.18),
         shape: BoxShape.circle,
         border: Border.all(
-          color: overSheet
-              ? colors.hairline
-              : Colors.white.withValues(alpha: 0.32),
+          color: showHeader
+              ? Colors.white.withValues(alpha: 0.20)
+              : overSheet
+                  ? colors.hairline
+                  : Colors.white.withValues(alpha: 0.32),
           width: 0.8,
         ),
-        boxShadow: overSheet ? colors.shadowSoft : null,
+        boxShadow:
+            (!showHeader && overSheet) ? colors.shadowSoft : null,
       ),
       child: IconButtonTheme(
         data: IconButtonThemeData(
@@ -560,7 +650,7 @@ class _NavBtn extends StatelessWidget {
             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
-        child: child,
+        child: Center(child: child),
       ),
     );
   }

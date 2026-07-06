@@ -38,6 +38,10 @@ class _StaffProjectDetailScreenState extends State<StaffProjectDetailScreen> {
     return _px > (_heroH - _sheetPeek - topInset - 56);
   }
 
+  // True once the sheet scrolls far enough that the identity block
+  // (project name) would reach the status-bar unsafe area.
+  bool get _showHeader => _px > (_heroH - _sheetPeek + 28);
+
   @override
   void initState() {
     super.initState();
@@ -63,7 +67,9 @@ class _StaffProjectDetailScreenState extends State<StaffProjectDetailScreen> {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light,
+      value: (_overSheet && !_showHeader)
+          ? SystemUiOverlayStyle.dark
+          : SystemUiOverlayStyle.light,
       child: Scaffold(
         backgroundColor: colors.canvas,
         body: BlocBuilder<StaffProjectDetailCubit, StaffProjectDetailState>(
@@ -325,29 +331,19 @@ class _StaffProjectDetailScreenState extends State<StaffProjectDetailScreen> {
                   ),
                 ),
 
-                // ── 3. Floating back button ────────────────────────────────────
+                // ── 3. Adaptive nav overlay ───────────────────────────────────
+                // Glass circle → surface circle → pinned navy header as user scrolls.
                 Positioned(
-                  top: topInset + AppSpacing.sm,
-                  left: AppSpacing.lg,
-                  right: AppSpacing.lg,
-                  child: Row(
-                    children: [
-                      _NavBtn(
-                        overSheet: _overSheet,
-                        child: GestureDetector(
-                          onTap: () => context.pop(),
-                          child: Icon(
-                            Directionality.of(context) == TextDirection.rtl
-                                ? Icons.arrow_forward_ios_rounded
-                                : Icons.arrow_back_ios_new_rounded,
-                            size: 18,
-                            color: _overSheet
-                                ? colors.inkStrong
-                                : Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: _NavOverlay(
+                    topInset: topInset,
+                    overSheet: _overSheet,
+                    showHeader: _showHeader,
+                    title: name,
+                    onBack: () => context.pop(),
+                    colors: colors,
                   ),
                 ),
               ],
@@ -723,34 +719,103 @@ class _SheetHandle extends StatelessWidget {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Floating nav button (glass over hero, surface over sheet)
+// Adaptive nav overlay
+// Three states as user scrolls:
+//   1. Over hero       → glass circle button, white icon
+//   2. Over sheet      → surface circle button, inkStrong icon
+//   3. showHeader      → full-width navy bar with project title
 // ══════════════════════════════════════════════════════════════════════════════
-class _NavBtn extends StatelessWidget {
-  const _NavBtn({required this.overSheet, required this.child});
+class _NavOverlay extends StatelessWidget {
+  const _NavOverlay({
+    required this.topInset,
+    required this.overSheet,
+    required this.showHeader,
+    required this.title,
+    required this.onBack,
+    required this.colors,
+  });
+
+  final double topInset;
   final bool overSheet;
-  final Widget child;
+  final bool showHeader;
+  final String title;
+  final VoidCallback onBack;
+  final AppColorsExt colors;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final backIcon = isRtl
+        ? Icons.arrow_forward_ios_rounded
+        : Icons.arrow_back_ios_new_rounded;
+
+    // When in header mode: full-width navy bar with back button + title.
+    // Otherwise: just a floating circle button positioned at the start corner.
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: overSheet
-            ? colors.surface
-            : Colors.white.withValues(alpha: 0.18),
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: overSheet
-              ? colors.hairline
-              : Colors.white.withValues(alpha: 0.32),
-          width: 0.8,
-        ),
-        boxShadow: overSheet ? colors.shadowSoft : null,
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeInOut,
+      color: showHeader ? _navyDeep : Colors.transparent,
+      height: topInset + kToolbarHeight,
+      padding: EdgeInsets.only(top: topInset),
+      child: Row(
+        children: [
+          const SizedBox(width: AppSpacing.sm),
+          // Back button — always present
+          GestureDetector(
+            onTap: onBack,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: showHeader
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : overSheet
+                        ? colors.surface
+                        : Colors.white.withValues(alpha: 0.18),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: showHeader
+                      ? Colors.white.withValues(alpha: 0.20)
+                      : overSheet
+                          ? colors.hairline
+                          : Colors.white.withValues(alpha: 0.32),
+                  width: 0.8,
+                ),
+                boxShadow:
+                    (!showHeader && overSheet) ? colors.shadowSoft : null,
+              ),
+              child: Center(
+                child: Icon(
+                  backIcon,
+                  size: 18,
+                  color: (!showHeader && overSheet)
+                      ? colors.inkStrong
+                      : Colors.white,
+                ),
+              ),
+            ),
+          ),
+          // Project title — only visible in header mode
+          AnimatedOpacity(
+            opacity: showHeader ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 180),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
-      child: Center(child: child),
     );
   }
 }
