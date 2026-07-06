@@ -16,6 +16,7 @@ class StaffProject extends Equatable {
     required this.id,
     required this.name,
     required this.status,
+    this.description,
     this.city,
     this.coverImageUrl,
     this.mediaUrls = const [],
@@ -29,6 +30,7 @@ class StaffProject extends Equatable {
   final String id;
   final Translatable name;
   final String status;
+  final Translatable? description;
   final String? city;
   final String? coverImageUrl;
   final List<String> mediaUrls;
@@ -43,6 +45,7 @@ class StaffProject extends Equatable {
         id,
         name,
         status,
+        description,
         city,
         coverImageUrl,
         mediaUrls,

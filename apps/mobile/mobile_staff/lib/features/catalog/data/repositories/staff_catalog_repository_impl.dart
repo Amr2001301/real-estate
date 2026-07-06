@@ -21,10 +21,11 @@ class StaffCatalogRepositoryImpl implements StaffCatalogRepository {
   Future<Result<StaffProjectDetail>> getProjectDetail(String id) {
     return guardApiCall(() async {
       final dto = await _remote.getProject(id);
+      final project = dto.toEntity();
       final units = await _remote.listUnits(projectId: id);
       return StaffProjectDetail(
-        project: dto.toEntity(),
-        description: dto.descriptionTranslatable,
+        project: project,
+        description: project.description,
         units: units.map((u) => u.toEntity()).toList(),
       );
     });

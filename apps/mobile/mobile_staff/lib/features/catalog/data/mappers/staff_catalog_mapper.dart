@@ -8,6 +8,9 @@ extension StaffProjectDtoMapper on StaffProjectDto {
         id: id,
         name: Translatable(ar: nameAr ?? '', en: nameEn ?? ''),
         status: status,
+        description: (descriptionAr != null || descriptionEn != null)
+            ? Translatable(ar: descriptionAr ?? '', en: descriptionEn ?? '')
+            : null,
         city: city,
         coverImageUrl: coverImageUrl,
         mediaUrls: mediaUrls,
@@ -17,11 +20,6 @@ extension StaffProjectDtoMapper on StaffProjectDto {
         startingPrice: startingPrice,
         unitTypes: unitTypes,
       );
-
-  Translatable? get descriptionTranslatable =>
-      (descriptionAr != null || descriptionEn != null)
-          ? Translatable(ar: descriptionAr ?? '', en: descriptionEn ?? '')
-          : null;
 }
 
 extension StaffUnitDtoMapper on StaffUnitDto {
