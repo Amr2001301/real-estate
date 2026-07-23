@@ -1,11 +1,16 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../common/catalog_status_label.dart';
 import '../../domain/entities/staff_project.dart';
 import '../cubit/staff_unit_detail_cubit.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Root
+// ─────────────────────────────────────────────────────────────────────────────
 
 class StaffUnitDetailScreen extends StatefulWidget {
   const StaffUnitDetailScreen({super.key, this.projectId});
@@ -26,191 +31,243 @@ class _StaffUnitDetailScreenState extends State<StaffUnitDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    return BlocBuilder<StaffUnitDetailCubit, StaffUnitDetailState>(
+      builder: (context, state) {
+        switch (state.status) {
+          case DataStatus.initial:
+          case DataStatus.loading:
+            return Scaffold(
+              appBar: AppBar(
+                backgroundColor: context.appColors.brandNavy,
+                foregroundColor: Colors.white,
+                leading: BackButton(onPressed: () => context.pop()),
+              ),
+              body: const Center(child: CircularProgressIndicator()),
+            );
+          case DataStatus.failure:
+            return Scaffold(
+              appBar: AppBar(
+                backgroundColor: context.appColors.brandNavy,
+                foregroundColor: Colors.white,
+                leading: BackButton(onPressed: () => context.pop()),
+              ),
+              body: ErrorState(
+                failure: state.failure,
+                onRetry: () => context.read<StaffUnitDetailCubit>().load(),
+              ),
+            );
+          case DataStatus.empty:
+          case DataStatus.success:
+            return _DetailPage(unit: state.data!, projectId: widget.projectId);
+        }
+      },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Floating-sheet detail page
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _DetailPage extends StatefulWidget {
+  const _DetailPage({required this.unit, this.projectId});
+  final StaffUnit unit;
+  final String? projectId;
+
+  static const double _heroH = 380.0;
+  static const double _peekH = 48.0;
+
+  @override
+  State<_DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<_DetailPage> {
+  late final ScrollController _scroll;
+  double _px = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scroll = ScrollController()
+      ..addListener(() {
+        if (mounted) {
+          setState(() => _px = _scroll.offset.clamp(0.0, double.infinity));
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
+
+  bool get _overSheet =>
+      _px > (_DetailPage._heroH - _DetailPage._peekH - 56);
+
+  @override
+  Widget build(BuildContext context) {
+    final unit = widget.unit;
+    final l10n = context.l10n;
     final colors = context.appColors;
-    final topPad = MediaQuery.of(context).padding.top;
+    final lang = Localizations.localeOf(context).languageCode;
+    final topInset = MediaQuery.paddingOf(context).top;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
+    final effProjectId = widget.projectId ?? unit.projectId;
+    final hasProject = unit.projectName != null || unit.projectCity != null;
 
-    return Scaffold(
-      backgroundColor: colors.canvas,
-      body: BlocBuilder<StaffUnitDetailCubit, StaffUnitDetailState>(
-        builder: (context, state) {
-          if (state.status == DataStatus.initial ||
-              state.status == DataStatus.loading) {
-            return Column(
-              children: [
-                _NavHeader(topPad: topPad, title: context.l10n.unitDetails),
-                const Expanded(
-                    child: Center(child: CircularProgressIndicator())),
-              ],
-            );
-          }
-          if (state.status == DataStatus.failure) {
-            return Column(
-              children: [
-                _NavHeader(topPad: topPad, title: context.l10n.unitDetails),
-                Expanded(
-                  child: ErrorState(
-                    failure: state.failure,
-                    onRetry: () =>
-                        context.read<StaffUnitDetailCubit>().load(),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: colors.canvas,
+        body: Stack(
+          children: [
+            // ── 1. Pinned hero ──────────────────────────────────────────────
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: _DetailPage._heroH + topInset,
+              child: _HeroPanel(unit: unit, lang: lang),
+            ),
+
+            // ── 2. Scrollable cream sheet ───────────────────────────────────
+            SingleChildScrollView(
+              controller: _scroll,
+              physics: const ClampingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    height: topInset +
+                        _DetailPage._heroH -
+                        _DetailPage._peekH,
                   ),
-                ),
-              ],
-            );
-          }
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colors.canvas,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(AppRadii.xxl + 10),
+                        topRight: Radius.circular(AppRadii.xxl + 10),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.20),
+                          blurRadius: 36,
+                          offset: const Offset(0, -8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _SheetHandle(colors: colors),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            AppSpacing.xs,
+                            AppSpacing.lg,
+                            0,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _IdentityRow(unit: unit),
+                              const SizedBox(height: AppSpacing.sm),
+                              if (unit.type != null)
+                                Text(
+                                  unit.type!,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w800,
+                                        color: colors.inkStrong,
+                                        height: 1.1,
+                                      ),
+                                ),
+                              const SizedBox(height: AppSpacing.lg),
+                              if (unit.price != null &&
+                                  unit.price!.isNotEmpty) ...[
+                                _PriceBlock(unit: unit, lang: lang),
+                                const SizedBox(height: AppSpacing.xl),
+                              ],
+                              _SectionTitle(l10n.unitDetails),
+                              const SizedBox(height: AppSpacing.md),
+                              _SpecsRow(unit: unit),
+                              if (hasProject) ...[
+                                const SizedBox(height: AppSpacing.xl),
+                                _SectionTitle(l10n.navProjects),
+                                const SizedBox(height: AppSpacing.md),
+                                _ProjectCard(unit: unit, lang: lang),
+                              ],
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 180 + bottomInset),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
-          final unit = state.data!;
-          return _UnitDetailBody(unit: unit, projectId: widget.projectId);
-        },
+            // ── 3. Floating nav (back button) ───────────────────────────────
+            Positioned(
+              top: topInset,
+              left: 0,
+              right: 0,
+              height: 68,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    _NavBtn(
+                      overSheet: _overSheet,
+                      child: BackButton(
+                        color: _overSheet ? colors.inkStrong : Colors.white,
+                        onPressed: () =>
+                            context.canPop() ? context.pop() : null,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            // ── 4. Sticky dock ──────────────────────────────────────────────
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: _StickyActionBar(unit: unit, effProjectId: effProjectId),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Body — scroll controller drives title fade to eliminate duplicate
-// ══════════════════════════════════════════════════════════════════════════════
-class _UnitDetailBody extends StatefulWidget {
-  const _UnitDetailBody({required this.unit, this.projectId});
-  final StaffUnit unit;
-  final String? projectId;
+// ─────────────────────────────────────────────────────────────────────────────
+// Hero
+// ─────────────────────────────────────────────────────────────────────────────
 
-  @override
-  State<_UnitDetailBody> createState() => _UnitDetailBodyState();
-}
-
-class _UnitDetailBodyState extends State<_UnitDetailBody> {
-  final _scrollController = ScrollController();
-  bool _titleVisible = false;
-
-  // Responsive hero: 27% of screen height, clamped to [200, 260]
-  double _heroHeight = 220.0;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final screenH = MediaQuery.of(context).size.height;
-    _heroHeight = (screenH * 0.27).clamp(200.0, 260.0);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_onScroll);
-  }
-
-  void _onScroll() {
-    final collapsed = _scrollController.hasClients &&
-        _scrollController.offset > _heroHeight - kToolbarHeight;
-    if (collapsed != _titleVisible) {
-      setState(() => _titleVisible = collapsed);
-    }
-  }
-
-  @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).padding.bottom;
-    final lang = Localizations.localeOf(context).languageCode;
-    final colors = context.appColors;
-    final unit = widget.unit;
-    final available = unit.status == 'AVAILABLE';
-    final effProjectId = widget.projectId ?? unit.projectId;
-
-    return Column(
-      children: [
-        Expanded(
-          child: CustomScrollView(
-            controller: _scrollController,
-            slivers: [
-              // ── Hero app bar ───────────────────────────────────────────────
-              SliverAppBar(
-                expandedHeight: _heroHeight,
-                pinned: true,
-                backgroundColor: colors.brandNavy,
-                surfaceTintColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                automaticallyImplyLeading: false,
-                leading: _BackButton(),
-                // Title fades in ONLY when the hero has collapsed — fixes duplicate
-                title: AnimatedOpacity(
-                  opacity: _titleVisible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 180),
-                  child: Text(
-                    context.l10n.unitCode(unit.code),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                flexibleSpace: FlexibleSpaceBar(
-                  collapseMode: CollapseMode.pin,
-                  background: _HeroImage(
-                    unit: unit,
-                    lang: lang,
-                  ),
-                ),
-              ),
-
-              // ── Compact price strip ────────────────────────────────────────
-              if (unit.price != null && unit.price!.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: _PriceStrip(
-                    unit: unit,
-                    lang: lang,
-                    available: available,
-                  ),
-                ),
-
-              // ── Specs grid ─────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.md, AppSpacing.sm, AppSpacing.md, 0),
-                  child: _SpecsSection(unit: unit),
-                ),
-              ),
-
-              // Scroll breathing room above sticky bar
-              // Accounts for: top(12) + large btn(52) + gap(8) + small btn(40) + bottom(12)
-              SliverToBoxAdapter(
-                child: SizedBox(height: bottomPad + 148),
-              ),
-            ],
-          ),
-        ),
-        // ── Sticky action bar ──────────────────────────────────────────────
-        _ActionBar(
-          unit: unit,
-          effProjectId: effProjectId,
-          bottomPad: bottomPad,
-        ),
-      ],
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Hero image — title only shown here (not duplicated in SliverAppBar title)
-// ══════════════════════════════════════════════════════════════════════════════
-class _HeroImage extends StatelessWidget {
-  const _HeroImage({required this.unit, required this.lang});
+class _HeroPanel extends StatelessWidget {
+  const _HeroPanel({required this.unit, required this.lang});
   final StaffUnit unit;
   final String lang;
 
   @override
   Widget build(BuildContext context) {
     final heroUrl = unit.heroImageUrl;
-    final imageCount = unit.mediaUrls.isNotEmpty
-        ? unit.mediaUrls.length
-        : (heroUrl != null ? 1 : 0);
+    final projectName = unit.projectName?.resolve(lang);
+    final city = unit.projectCity;
+    final locationLabel =
+        [projectName, city].whereType<String>().join(' · ');
 
     return Stack(
       fit: StackFit.expand,
@@ -219,99 +276,95 @@ class _HeroImage extends StatelessWidget {
           AppNetworkImage(url: heroUrl)
         else
           _Placeholder(),
-
-        // Bottom-dominant gradient
-        const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [Colors.transparent, Color(0xCC000000)],
-              stops: [0.45, 1.0],
-            ),
-          ),
-        ),
-
-        // Gallery count pill — bottom trailing, only when multiple images
-        if (imageCount > 1)
-          PositionedDirectional(
-            end: AppSpacing.md,
-            bottom: AppSpacing.md,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        // Top scrim — status bar legibility
+        const Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 180,
+          child: IgnorePointer(
+            child: DecoratedBox(
               decoration: BoxDecoration(
-                color: Colors.black54,
-                borderRadius: BorderRadius.circular(AppRadii.pill),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.photo_library_outlined,
-                      size: 12, color: Colors.white70),
-                  const SizedBox(width: 4),
-                  Text(
-                    '1 / $imageCount',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xCC000000), Color(0x00000000)],
+                ),
               ),
             ),
           ),
-
-        // Unit title at the bottom-start — the ONLY place it appears (no duplicate)
-        PositionedDirectional(
-          start: AppSpacing.md,
-          end: imageCount > 1 ? 80 : AppSpacing.md,
-          bottom: AppSpacing.md,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                context.l10n.unitCode(unit.code),
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1.2,
-                  shadows: [Shadow(blurRadius: 6, color: Colors.black45)],
+        ),
+        // Bottom scrim — location pill readability
+        const Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 100,
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Color(0x88000000), Color(0x00000000)],
                 ),
               ),
-              if (unit.type != null)
-                Text(
-                  unit.type!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.white70,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              if (unit.projectName != null || unit.projectCity != null) ...[
-                const SizedBox(height: 3),
-                Row(
-                  children: [
-                    const Icon(Icons.apartment_outlined,
-                        size: 12, color: Colors.white54),
-                    const SizedBox(width: 4),
-                    Text(
-                      [
-                        unit.projectName?.resolve(lang),
-                        unit.projectCity,
-                      ].whereType<String>().join(' · '),
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.white54),
-                    ),
-                  ],
-                ),
-              ],
-            ],
+            ),
           ),
         ),
+        if (locationLabel.isNotEmpty)
+          PositionedDirectional(
+            bottom: AppSpacing.xl + 4,
+            start: AppSpacing.lg,
+            end: AppSpacing.lg,
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+                ),
+                child: _LocationPill(label: locationLabel),
+              ),
+            ),
+          ),
       ],
+    );
+  }
+}
+
+class _LocationPill extends StatelessWidget {
+  const _LocationPill({required this.label});
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding:
+          const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppPalette.navy.withValues(alpha: 0.85),
+        borderRadius: AppRadii.pillAll,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.location_on_rounded, size: 14, color: Colors.white),
+          const SizedBox(width: AppSpacing.xs),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -332,103 +385,221 @@ class _Placeholder extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Compact price strip — replaces the heavy navy block
-// ══════════════════════════════════════════════════════════════════════════════
-class _PriceStrip extends StatelessWidget {
-  const _PriceStrip(
-      {required this.unit, required this.lang, required this.available});
-  final StaffUnit unit;
-  final String lang;
-  final bool available;
+// ─────────────────────────────────────────────────────────────────────────────
+// Sheet chrome
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SheetHandle extends StatelessWidget {
+  const _SheetHandle({required this.colors});
+  final AppColorsExt colors;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    final l10n = context.l10n;
-    final price = num.tryParse(unit.price!);
-    final area = num.tryParse(unit.area ?? '');
-    final pricePerM2 =
-        (price != null && area != null && area > 0) ? price / area : null;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(
-          AppSpacing.md, AppSpacing.md, AppSpacing.md, 0),
-      padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md, vertical: 8),
-      decoration: BoxDecoration(
-        color: available ? colors.brandNavy : colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        border: available ? null : Border.all(color: colors.hairline),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // Price
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  l10n.unitPrice,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: available ? Colors.white54 : colors.inkMuted,
-                    letterSpacing: 0.4,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: AlignmentDirectional.centerStart,
-                  child: Text(
-                    PriceFormatter.formatString(unit.price,
-                        languageCode: lang),
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: available ? colors.brandGold : colors.inkStrong,
-                      height: 1.1,
-                    ),
-                  ),
-                ),
-                if (pricePerM2 != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    '${l10n.pricePerMeter}: ${PriceFormatter.format(pricePerM2, languageCode: lang)}',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: available
-                          ? Colors.white.withValues(alpha: 0.45)
-                          : colors.inkMuted,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(top: 10, bottom: 6),
+      child: Center(
+        child: Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+            color: colors.hairline,
+            borderRadius: AppRadii.pillAll,
           ),
-          // Status badge — status card removed; badge integrated here
-          const SizedBox(width: AppSpacing.sm),
-          StatusBadge(
-            label: unitStatusLabel(l10n, unit.status),
-            tone: unitStatusTone(unit.status),
-            variant: BadgeVariant.solid,
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Specs section — compact 2-col grid
-// ══════════════════════════════════════════════════════════════════════════════
-class _SpecsSection extends StatelessWidget {
-  const _SpecsSection({required this.unit});
+/// Floating action button — glass (over hero) or solid surface circle (over sheet).
+class _NavBtn extends StatelessWidget {
+  const _NavBtn({required this.overSheet, required this.child});
+  final bool overSheet;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        color: overSheet
+            ? colors.surface
+            : Colors.white.withValues(alpha: 0.18),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: overSheet
+              ? colors.hairline
+              : Colors.white.withValues(alpha: 0.30),
+        ),
+        boxShadow: overSheet ? colors.shadowCard : null,
+      ),
+      child: ClipOval(
+        child: IconButtonTheme(
+          data: IconButtonThemeData(
+            style: IconButton.styleFrom(
+              minimumSize: const Size(42, 42),
+              maximumSize: const Size(42, 42),
+              padding: EdgeInsets.zero,
+              iconSize: 20,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identity + pricing
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _IdentityRow extends StatelessWidget {
+  const _IdentityRow({required this.unit});
   final StaffUnit unit;
 
-  static String _formatArea(String? raw) {
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        StatusBadge(
+          label: unitStatusLabel(context.l10n, unit.status),
+          tone: unitStatusTone(unit.status),
+          variant: BadgeVariant.solid,
+        ),
+        Text(
+          context.l10n.unitCode(unit.code),
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: colors.inkMuted,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PriceBlock extends StatelessWidget {
+  const _PriceBlock({required this.unit, required this.lang});
+  final StaffUnit unit;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(
+          color: AppPalette.gold400.withValues(alpha: 0.25),
+        ),
+      ),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 3,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [AppPalette.gold300, AppPalette.gold500],
+                ),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.l10n.unitPrice,
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: colors.inkMuted,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    PriceFormatter.formatString(unit.price,
+                        languageCode: lang),
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: colors.brandGold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Section heading
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.title);
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 18,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppPalette.gold300, AppPalette.gold500],
+            ),
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: colors.inkStrong,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Spec chips
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SpecsRow extends StatelessWidget {
+  const _SpecsRow({required this.unit});
+  final StaffUnit unit;
+
+  static String _fmtArea(String? raw) {
     final n = num.tryParse(raw ?? '');
     if (n == null) return raw ?? '';
     return n == n.truncateToDouble()
@@ -439,225 +610,86 @@ class _SpecsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-
-    final specs = <_SpecTile>[
-      if (unit.area != null)
-        _SpecTile(
-          icon: Icons.square_foot_rounded,
-          label: l10n.unitArea,
-          value: '${_formatArea(unit.area)} م²',
-        ),
+    final stats = <(IconData, String, String)>[
       if (unit.bedrooms != null)
-        _SpecTile(
-          icon: Icons.bed_outlined,
-          label: l10n.unitBedrooms,
-          value: '${unit.bedrooms}',
-        ),
+        (Icons.bed_outlined, '${unit.bedrooms}', l10n.unitBedrooms),
       if (unit.bathrooms != null)
-        _SpecTile(
-          icon: Icons.bathtub_outlined,
-          label: l10n.unitBathrooms,
-          value: '${unit.bathrooms}',
+        (Icons.bathtub_outlined, '${unit.bathrooms}', l10n.unitBathrooms),
+      if (unit.area != null)
+        (
+          Icons.square_foot_outlined,
+          '${_fmtArea(unit.area)} م²',
+          l10n.unitArea,
         ),
       if (unit.floor != null)
-        _SpecTile(
-          icon: Icons.layers_outlined,
-          label: l10n.unitFloor,
-          value: '${unit.floor}',
-        ),
-      if (unit.type != null)
-        _SpecTile(
-          icon: Icons.home_outlined,
-          label: l10n.unitType,
-          value: unit.type!,
-        ),
-      if (unit.projectCity != null)
-        _SpecTile(
-          icon: Icons.location_on_outlined,
-          label: '',
-          value: unit.projectCity!,
-        ),
+        (Icons.layers_outlined, '${unit.floor}', l10n.unitFloor),
     ];
 
-    if (specs.isEmpty) return const SizedBox.shrink();
+    if (stats.isEmpty) return const SizedBox.shrink();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    return Row(
       children: [
-        _SectionLabel(title: l10n.unitDetails),
-        const SizedBox(height: 4),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          crossAxisSpacing: 4,
-          mainAxisSpacing: 4,
-          childAspectRatio: 3.8,
-          children: specs.map((s) => _SpecCard(tile: s)).toList(),
-        ),
+        for (int i = 0; i < stats.length; i++) ...[
+          if (i > 0) const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _StatChip(
+              icon: stats[i].$1,
+              value: stats[i].$2,
+              label: stats[i].$3,
+            ),
+          ),
+        ],
       ],
     );
   }
 }
 
-class _SpecTile {
-  const _SpecTile(
-      {required this.icon, required this.label, required this.value});
-  final IconData icon;
-  final String label;
-  final String value;
-}
-
-class _SpecCard extends StatelessWidget {
-  const _SpecCard({required this.tile});
-  final _SpecTile tile;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: colors.surfaceSoft,
-        borderRadius: BorderRadius.circular(AppRadii.xs),
-        border: Border.all(color: colors.hairline),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: colors.brandGoldSoft,
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(tile.icon, size: 13, color: colors.brandGold),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (tile.label.isNotEmpty)
-                  Text(
-                    tile.label,
-                    style: TextStyle(fontSize: 9, color: colors.inkMuted),
-                  ),
-                Text(
-                  tile.value,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: colors.inkStrong,
-                    height: 1.1,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Sticky action bar
-// ══════════════════════════════════════════════════════════════════════════════
-class _ActionBar extends StatelessWidget {
-  const _ActionBar({
-    required this.unit,
-    required this.effProjectId,
-    required this.bottomPad,
+class _StatChip extends StatelessWidget {
+  const _StatChip({
+    required this.icon,
+    required this.value,
+    required this.label,
   });
-  final StaffUnit unit;
-  final String? effProjectId;
-  final double bottomPad;
+  final IconData icon;
+  final String value;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
     final colors = context.appColors;
-    final available = unit.status == 'AVAILABLE';
-
+    final theme = Theme.of(context);
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm,
-        AppSpacing.md,
-        bottomPad > 0 ? bottomPad : AppSpacing.sm,
+      padding: const EdgeInsets.symmetric(
+        vertical: AppSpacing.md,
+        horizontal: AppSpacing.xs,
       ),
       decoration: BoxDecoration(
         color: colors.surface,
-        border: Border(top: BorderSide(color: colors.hairline)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.07),
-            blurRadius: 16,
-            offset: const Offset(0, -4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.7)),
+        boxShadow: colors.shadowCard,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Primary
-          AppButton(
-            label: l10n.reservationCreate,
-            icon: Icons.bookmark_add_outlined,
-            size: AppButtonSize.large,
-            variant:
-                available ? AppButtonVariant.gold : AppButtonVariant.outline,
-            onPressed: available
-                ? () => context.push(
-                      '/reservations/new',
-                      extra: {'unitId': unit.id},
-                    )
-                : null,
+          Icon(icon, size: 22, color: colors.brandGold),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: colors.inkStrong,
+            ),
           ),
-          const SizedBox(height: AppSpacing.xs),
-          // Secondary row
-          Row(
-            children: [
-              if (effProjectId != null) ...[
-                Expanded(
-                  child: AppButton(
-                    label: l10n.visitNew,
-                    icon: Icons.event_outlined,
-                    size: AppButtonSize.medium,
-                    variant: AppButtonVariant.outline,
-                    onPressed: () => context.push(
-                      '/visits/new',
-                      extra: {
-                        'projectId': effProjectId,
-                        'unitId': unit.id,
-                      },
-                    ),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xs),
-              ],
-              Expanded(
-                child: AppButton(
-                  label: l10n.calculatorTitle,
-                  icon: Icons.calculate_outlined,
-                  size: AppButtonSize.medium,
-                  variant: AppButtonVariant.outline,
-                  onPressed: () => context.push(
-                    '/calculator',
-                    extra: {
-                      'price': double.tryParse(unit.price ?? ''),
-                      'projectId': unit.projectId,
-                    },
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(color: colors.inkMuted),
           ),
         ],
       ),
@@ -665,30 +697,73 @@ class _ActionBar extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Fallback header (loading / error)
-// ══════════════════════════════════════════════════════════════════════════════
-class _NavHeader extends StatelessWidget {
-  const _NavHeader({required this.topPad, required this.title});
-  final double topPad;
-  final String title;
+// ─────────────────────────────────────────────────────────────────────────────
+// Project card
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ProjectCard extends StatelessWidget {
+  const _ProjectCard({required this.unit, required this.lang});
+  final StaffUnit unit;
+  final String lang;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.appColors;
+    final theme = Theme.of(context);
+    final name = unit.projectName?.resolve(lang);
+    final city = unit.projectCity;
+
     return Container(
-      padding: EdgeInsets.fromLTRB(
-          AppSpacing.sm, topPad + AppSpacing.sm, AppSpacing.md, AppSpacing.sm),
-      color: context.appColors.brandNavy,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceSoft,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border:
+            Border.all(color: AppPalette.gold400.withValues(alpha: 0.20)),
+      ),
       child: Row(
         children: [
-          _BackButton(),
-          const SizedBox(width: AppSpacing.sm),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: colors.brandGoldSoft,
+              borderRadius: BorderRadius.circular(AppRadii.md),
+            ),
+            child: Icon(Icons.apartment_rounded,
+                color: colors.brandGold, size: 22),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (name != null)
+                  Text(
+                    name,
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                if (city != null)
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_rounded,
+                          size: 13, color: colors.brandGold),
+                      const SizedBox(width: 3),
+                      Flexible(
+                        child: Text(
+                          city,
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: colors.inkMuted),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
           ),
         ],
@@ -697,63 +772,167 @@ class _NavHeader extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Back button
-// ══════════════════════════════════════════════════════════════════════════════
-class _BackButton extends StatelessWidget {
+// ─────────────────────────────────────────────────────────────────────────────
+// Sticky action dock
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _StickyActionBar extends StatelessWidget {
+  const _StickyActionBar({required this.unit, this.effProjectId});
+  final StaffUnit unit;
+  final String? effProjectId;
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => context.pop(),
-      child: Container(
-        width: 36,
-        height: 36,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.15),
-          shape: BoxShape.circle,
+    final colors = context.appColors;
+    final l10n = context.l10n;
+    final available = unit.status == 'AVAILABLE';
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.lg,
+          AppSpacing.xs,
+          AppSpacing.lg,
+          AppSpacing.sm,
         ),
-        child: Icon(
-          Directionality.of(context) == TextDirection.rtl
-              ? Icons.arrow_forward_ios_rounded
-              : Icons.arrow_back_ios_new_rounded,
-          size: 16,
-          color: Colors.white,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            boxShadow: colors.shadowCard,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(AppRadii.xl),
+            child: Stack(
+              children: [
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [AppPalette.navy700, AppPalette.navy],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  left: AppSpacing.xl,
+                  right: AppSpacing.xl,
+                  child: Container(
+                    height: 1,
+                    color: AppPalette.gold400.withValues(alpha: 0.35),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppButton(
+                        label: l10n.reservationCreate,
+                        icon: Icons.bookmark_add_outlined,
+                        variant: available
+                            ? AppButtonVariant.gold
+                            : AppButtonVariant.outline,
+                        size: AppButtonSize.large,
+                        expand: true,
+                        onPressed: available
+                            ? () => context.push(
+                                  '/reservations/new',
+                                  extra: {'unitId': unit.id},
+                                )
+                            : null,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          if (effProjectId != null) ...[
+                            Expanded(
+                              child: _GlassAction(
+                                label: l10n.visitNew,
+                                icon: Icons.event_outlined,
+                                onTap: () => context.push(
+                                  '/visits/new',
+                                  extra: {
+                                    'projectId': effProjectId,
+                                    'unitId': unit.id,
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: AppSpacing.xs),
+                          ],
+                          Expanded(
+                            child: _GlassAction(
+                              label: l10n.calculatorTitle,
+                              icon: Icons.calculate_outlined,
+                              onTap: () => context.push(
+                                '/calculator',
+                                extra: {
+                                  'price': double.tryParse(unit.price ?? ''),
+                                  'projectId': unit.projectId,
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// Section label
-// ══════════════════════════════════════════════════════════════════════════════
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel({required this.title});
-  final String title;
+class _GlassAction extends StatelessWidget {
+  const _GlassAction({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 16,
-          decoration: BoxDecoration(
-            color: colors.brandGold,
-            borderRadius: BorderRadius.circular(2),
+    return Material(
+      color: Colors.white.withValues(alpha: 0.10),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadii.md),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: SizedBox(
+          height: 44,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.white, size: 18),
+              const SizedBox(width: AppSpacing.xs),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 7),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: colors.inkStrong,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

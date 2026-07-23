@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/installment.dart';
 import '../cubit/calculator_cubit.dart';
@@ -43,182 +44,164 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n  = context.l10n;
-    final cubit = context.read<CalculatorCubit>();
-    final lang  = Localizations.localeOf(context).languageCode;
-    final colors = context.appColors;
-    final theme  = Theme.of(context);
+    final l10n   = context.l10n;
+    final cubit  = context.read<CalculatorCubit>();
+    final lang   = Localizations.localeOf(context).languageCode;
+    final isRtl  = Directionality.of(context) == TextDirection.rtl;
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      backgroundColor: colors.canvas,
-      appBar: AppBar(
-        title: Text(l10n.calculatorTitle),
-        centerTitle: true,
-      ),
-      body: BlocBuilder<CalculatorCubit, CalculatorState>(
-        builder: (context, state) => CustomScrollView(
-          slivers: [
-            // ── Plan templates ──────────────────────────────────────────
-            if (state.templatesStatus == DataStatus.success &&
-                state.templates.isNotEmpty)
-              SliverToBoxAdapter(
-                child: _PlanTemplatesSection(
-                  state: state,
-                  monthsController: _months,
-                  increaseController: _increase,
-                ),
-              ),
-
-            // ── Input form ──────────────────────────────────────────────
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg, AppSpacing.md, AppSpacing.lg, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Section header
-                    Row(
-                      children: [
-                        Container(
-                          width: 3,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            color: AppPalette.gold400,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'بيانات الحساب',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-
-                    // Price
-                    _InputCard(
-                      icon: Icons.home_work_rounded,
-                      label: l10n.calculatorPrice,
-                      controller: _price,
-                      onChanged: (v) => cubit.setPrice(_d(v)),
-                      hint: '15,000,000',
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-
-                    // Down payment + Reservation in a row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _InputCard(
-                            icon: Icons.payments_rounded,
-                            label: l10n.calculatorDownPayment,
-                            controller: _down,
-                            onChanged: (v) => cubit.setDownPayment(_d(v)),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _InputCard(
-                            icon: Icons.bookmark_rounded,
-                            label: l10n.calculatorReservation,
-                            controller: _reservation,
-                            onChanged: (v) => cubit.setReservation(_d(v)),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-
-                    // Months + Increase in a row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _InputCard(
-                            icon: Icons.calendar_month_rounded,
-                            label: l10n.calculatorMonths,
-                            controller: _months,
-                            onChanged: (v) =>
-                                cubit.setMonths(int.tryParse(v.trim()) ?? 0),
-                            hint: '12',
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _InputCard(
-                            icon: Icons.trending_up_rounded,
-                            label: l10n.calculatorIncrease,
-                            controller: _increase,
-                            onChanged: (v) => cubit.setIncrease(_d(v)),
-                            hint: '0',
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    // Validation error
-                    if (state.invalid) ...[
-                      const SizedBox(height: AppSpacing.sm),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: colors.error.withValues(alpha: 0.07),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: colors.error.withValues(alpha: 0.20),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.error_outline_rounded,
-                                size: 15, color: colors.error),
-                            const SizedBox(width: 7),
-                            Expanded(
-                              child: Text(
-                                l10n.calculatorInvalid,
-                                style: theme.textTheme.bodySmall
-                                    ?.copyWith(color: colors.error),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-
-                    const SizedBox(height: AppSpacing.lg),
-
-                    // Calculate button
-                    AppButton(
-                      label: l10n.calculatorCompute,
-                      icon: Icons.calculate_rounded,
-                      variant: AppButtonVariant.gold,
-                      expand: true,
-                      onPressed: cubit.calculate,
+      body: Column(
+        children: [
+          AppNavHeader(
+            title: l10n.calculatorTitle,
+            leadingAction: NavHeaderAction(
+              icon: isRtl
+                  ? Icons.arrow_forward_ios_rounded
+                  : Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: BlocBuilder<CalculatorCubit, CalculatorState>(
+              builder: (context, state) => ListView(
+                padding: EdgeInsets.fromLTRB(
+                    AppSpacing.lg, AppSpacing.md,
+                    AppSpacing.lg, bottomPad + AppSpacing.xl),
+                children: [
+                  // ── Plan templates ──────────────────────────────────────
+                  if (state.templatesStatus == DataStatus.success &&
+                      state.templates.isNotEmpty) ...[
+                    _PlanTemplatesSection(
+                      state: state,
+                      monthsController: _months,
+                      increaseController: _increase,
                     ),
                     const SizedBox(height: AppSpacing.lg),
                   ],
-                ),
+
+                  // ── Input form ──────────────────────────────────────────
+                  _SectionHeader('بيانات الحساب'),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Price
+                  _InputCard(
+                    icon: Icons.home_work_rounded,
+                    label: l10n.calculatorPrice,
+                    controller: _price,
+                    onChanged: (v) => cubit.setPrice(_d(v)),
+                    hint: '15,000,000',
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Down payment + Reservation in a row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _InputCard(
+                          icon: Icons.payments_rounded,
+                          label: l10n.calculatorDownPayment,
+                          controller: _down,
+                          onChanged: (v) => cubit.setDownPayment(_d(v)),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _InputCard(
+                          icon: Icons.bookmark_rounded,
+                          label: l10n.calculatorReservation,
+                          controller: _reservation,
+                          onChanged: (v) => cubit.setReservation(_d(v)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Months + Increase in a row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _InputCard(
+                          icon: Icons.calendar_month_rounded,
+                          label: l10n.calculatorMonths,
+                          controller: _months,
+                          onChanged: (v) =>
+                              cubit.setMonths(int.tryParse(v.trim()) ?? 0),
+                          hint: '12',
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: _InputCard(
+                          icon: Icons.trending_up_rounded,
+                          label: l10n.calculatorIncrease,
+                          controller: _increase,
+                          onChanged: (v) => cubit.setIncrease(_d(v)),
+                          hint: '0',
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Validation error
+                  if (state.invalid) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    _ErrorBanner(context.l10n.calculatorInvalid),
+                  ],
+
+                  const SizedBox(height: AppSpacing.lg),
+
+                  // Calculate button
+                  AppButton(
+                    label: l10n.calculatorCompute,
+                    icon: Icons.calculate_rounded,
+                    variant: AppButtonVariant.gold,
+                    expand: true,
+                    onPressed: cubit.calculate,
+                  ),
+
+                  // ── Result ──────────────────────────────────────────────
+                  if (state.result != null) ...[
+                    const SizedBox(height: AppSpacing.lg),
+                    _ResultCard(result: state.result!, lang: lang),
+                  ],
+                ],
               ),
             ),
-
-            // ── Result ──────────────────────────────────────────────────
-            if (state.result != null)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg, 0, AppSpacing.lg, AppSpacing.lg),
-                  child: _ResultCard(result: state.result!, lang: lang),
-                ),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
+}
+
+// ── Section header ────────────────────────────────────────────────────────────
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.title);
+  final String title;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        children: [
+          Container(
+            width: 3,
+            height: 18,
+            decoration: BoxDecoration(
+              color: AppPalette.gold400,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      );
 }
 
 // ── Plan templates section ────────────────────────────────────────────────────
@@ -240,34 +223,20 @@ class _PlanTemplatesSection extends StatelessWidget {
     final theme  = Theme.of(context);
     final colors = context.appColors;
 
-    return Padding(
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(AppRadii.card.topLeft.x),
+        border: Border.all(color: colors.hairline),
+        boxShadow: colors.shadowCard,
+      ),
       padding: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 3,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: AppPalette.gold400,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.calculatorPlans,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
+          _SectionHeader(l10n.calculatorPlans),
           const SizedBox(height: AppSpacing.sm),
-
-          // Group chips by template name
           ...state.templates.map((t) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,9 +275,6 @@ class _PlanTemplatesSection extends StatelessWidget {
               ],
             );
           }),
-
-          const SizedBox(height: AppSpacing.md),
-          Divider(color: colors.hairline),
         ],
       ),
     );
@@ -336,15 +302,10 @@ class _DurationChip extends StatelessWidget {
         duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppPalette.gold400.withValues(alpha: 0.12)
-              : colors.surface,
-          borderRadius: BorderRadius.circular(10),
+          color: isSelected ? colors.brandNavy : colors.surface,
+          borderRadius: AppRadii.pillAll,
           border: Border.all(
-            color: isSelected
-                ? AppPalette.gold400.withValues(alpha: 0.50)
-                : colors.hairline,
-            width: isSelected ? 1.5 : 1,
+            color: isSelected ? colors.brandNavy : colors.hairline,
           ),
         ),
         child: Row(
@@ -353,13 +314,13 @@ class _DurationChip extends StatelessWidget {
             Icon(
               Icons.calendar_month_rounded,
               size: 13,
-              color: isSelected ? AppPalette.gold500 : colors.inkMuted,
+              color: isSelected ? Colors.white : colors.inkMuted,
             ),
             const SizedBox(width: 5),
             Text(
               '$months شهر',
               style: TextStyle(
-                color: isSelected ? AppPalette.gold500 : colors.inkStrong,
+                color: isSelected ? Colors.white : colors.inkStrong,
                 fontSize: 13,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -370,14 +331,14 @@ class _DurationChip extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? AppPalette.gold400.withValues(alpha: 0.15)
+                      ? Colors.white.withValues(alpha: 0.18)
                       : colors.hairline,
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '+${increase.toStringAsFixed(increase.truncateToDouble() == increase ? 0 : 1)}%',
                   style: TextStyle(
-                    color: isSelected ? AppPalette.gold500 : colors.inkMuted,
+                    color: isSelected ? Colors.white : colors.inkMuted,
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
                   ),
@@ -417,6 +378,7 @@ class _InputCard extends StatelessWidget {
         color: colors.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: colors.hairline),
+        boxShadow: colors.shadowCard,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,6 +416,41 @@ class _InputCard extends StatelessWidget {
                 color: colors.inkMuted.withValues(alpha: 0.40),
                 fontSize: 15,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Error banner ──────────────────────────────────────────────────────────────
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner(this.text);
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.appColors;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: colors.error.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: colors.error.withValues(alpha: 0.20)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, size: 15, color: colors.error),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              text,
+              style: Theme.of(context)
+                  .textTheme
+                  .bodySmall
+                  ?.copyWith(color: colors.error),
             ),
           ),
         ],
@@ -568,8 +565,6 @@ class _ResultCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
-
-          // Divider
           Container(height: 0.5, color: Colors.white.withValues(alpha: 0.07)),
 
           // Detail rows
