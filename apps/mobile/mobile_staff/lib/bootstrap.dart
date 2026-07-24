@@ -35,7 +35,10 @@ Future<void> bootstrap(EnvConfig env) async {
   debugPrint('[Startup] platform=${defaultTargetPlatform.name} apiBaseUrl=${config.apiBaseUrl}');
 
   await _initLocalNotifications();
-  await _initFirebase();
+  await _initFirebase().timeout(
+    const Duration(seconds: 5),
+    onTimeout: () => debugPrint('[Firebase] init timed out — FCM disabled'),
+  );
   runApp(await buildAppRoot(env: EnvConfig.current, child: const StaffApp()));
 }
 

@@ -16,7 +16,7 @@ dependencies:
   core:
     path: ../packages/core
 
-  flutter_bloc: ^8.1.6
+  flutter_bloc: ^9.1.1
   go_router: ^14.6.2
   dio: ^5.7.0 # data layer (remote data sources) only
 
@@ -38,9 +38,11 @@ dev_dependencies:
   integration_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  bloc_test: ^9.1.7
+  bloc_test: ^10.0.0
 
 flutter:
   uses-material-design: true
+  config:
+    enable-swift-package-manager: false
   assets:
     - assets/brand/devora-logo.png

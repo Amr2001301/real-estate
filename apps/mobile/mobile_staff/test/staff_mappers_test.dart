@@ -36,7 +36,7 @@ void main() {
       expect(project.status, 'PUBLISHED');
       expect(project.city, 'Cairo');
       expect(project.coverImageUrl, 'https://cdn/x.jpg');
-      expect(dto.descriptionTranslatable?.en, 'Desc');
+      expect(dto.descriptionEn, 'Desc');
     });
   });
 
