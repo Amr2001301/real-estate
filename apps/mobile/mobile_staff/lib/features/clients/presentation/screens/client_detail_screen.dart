@@ -93,7 +93,7 @@ class _Body extends StatelessWidget {
           )
         else
           for (final lead in detail.leads) ...[
-            _LeadTile(lead: lead, lang: lang),
+            _LeadCard(lead: lead, lang: lang),
             const SizedBox(height: AppSpacing.sm),
           ],
       ],
@@ -107,13 +107,31 @@ class _ClientCard extends StatelessWidget {
   const _ClientCard({required this.client});
   final StaffClient client;
 
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[0].characters.first}${parts[1].characters.first}';
+    }
+    return parts[0].characters.first;
+  }
+
+  Color _toneColor(AppColorsExt c, BadgeTone tone) => switch (tone) {
+        BadgeTone.success => c.success,
+        BadgeTone.warning => c.warning,
+        BadgeTone.error   => c.error,
+        BadgeTone.info    => c.info,
+        BadgeTone.gold    => c.brandGold,
+        _                 => c.inkMuted,
+      };
+
   @override
   Widget build(BuildContext context) {
+    final l10n   = context.l10n;
     final colors = context.appColors;
     final theme  = Theme.of(context);
-    final initials = client.fullName.isNotEmpty
-        ? client.fullName.characters.first
-        : '?';
+    final tone   = leadStageTone(client.latestStage);
+    final stageColor = _toneColor(colors, tone);
+    final initials = client.fullName.isNotEmpty ? _initials(client.fullName) : '?';
 
     return Container(
       decoration: BoxDecoration(
@@ -122,8 +140,8 @@ class _ClientCard extends StatelessWidget {
         border: Border.all(color: colors.hairline),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 14,
             offset: const Offset(0, 4),
           ),
         ],
@@ -132,47 +150,124 @@ class _ClientCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // ── Top: avatar + info ──────────────────────────────────────
           Padding(
             padding: const EdgeInsets.all(16),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar circle with gold border
+                // Avatar with gold ring + glow
                 Container(
-                  width: 54, height: 54,
+                  width: 56, height: 56,
                   decoration: BoxDecoration(
                     color: colors.brandGoldSoft,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: colors.brandGold.withValues(alpha: 0.30),
+                      color: colors.brandGold.withValues(alpha: 0.35),
                       width: 2,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: colors.brandGold.withValues(alpha: 0.15),
+                        blurRadius: 8,
+                        spreadRadius: 1,
+                      ),
+                    ],
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     initials,
                     style: TextStyle(
                       color: colors.brandGold,
-                      fontSize: 22,
+                      fontSize: initials.length > 1 ? 18 : 22,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Name + contact meta
+
+                // Name + stage badge + meta
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        client.fullName,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          height: 1.2,
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              client.fullName,
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // Stage badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: stageColor.withValues(alpha: 0.10),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: stageColor.withValues(alpha: 0.25),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5, height: 5,
+                                  decoration: BoxDecoration(
+                                    color: stageColor, shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  leadStageLabel(l10n, client.latestStage),
+                                  style: TextStyle(
+                                    color: stageColor,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+
+                      // Lead count chip
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: colors.surfaceSoft,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.folder_open_outlined,
+                                size: 12, color: colors.inkMuted),
+                            const SizedBox(width: 4),
+                            Text(
+                              l10n.clientsLeadCount(client.leadCount),
+                              style: TextStyle(
+                                color: colors.inkMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+
                       if (client.email != null) ...[
-                        const SizedBox(height: 5),
+                        const SizedBox(height: 6),
                         Row(children: [
                           Icon(Icons.email_outlined,
                               size: 13, color: colors.inkMuted),
@@ -206,7 +301,10 @@ class _ClientCard extends StatelessWidget {
               ],
             ),
           ),
+
           Divider(height: 1, color: colors.hairline),
+
+          // ── Contact buttons ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.all(12),
             child: StaffContactButtons(phone: client.phone),
@@ -244,66 +342,141 @@ class _SectionHeader extends StatelessWidget {
       );
 }
 
-// ── Lead tile ─────────────────────────────────────────────────────────────────
+// ── Lead card ─────────────────────────────────────────────────────────────────
 
-class _LeadTile extends StatelessWidget {
-  const _LeadTile({required this.lead, required this.lang});
+class _LeadCard extends StatelessWidget {
+  const _LeadCard({required this.lead, required this.lang});
   final ClientLeadRef lead;
   final String lang;
+
+  Color _toneColor(AppColorsExt c, BadgeTone tone) => switch (tone) {
+        BadgeTone.success => c.success,
+        BadgeTone.warning => c.warning,
+        BadgeTone.error   => c.error,
+        BadgeTone.info    => c.info,
+        BadgeTone.gold    => c.brandGold,
+        _                 => c.inkMuted,
+      };
 
   @override
   Widget build(BuildContext context) {
     final l10n   = context.l10n;
     final colors = context.appColors;
+    final theme  = Theme.of(context);
+    final tone   = leadStageTone(lead.stage);
+    final stageColor = _toneColor(colors, tone);
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
     return GestureDetector(
       onTap: () => context.push('/leads/${lead.leadId}'),
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
           color: colors.surface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: colors.hairline),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    lead.projectInterest ?? l10n.navLeads,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (lead.createdAt != null) ...[
-                    const SizedBox(height: 3),
-                    Text(
-                      DateFormatter.shortDate(
-                          lead.createdAt!, languageCode: lang),
-                      style: Theme.of(context).textTheme.labelSmall
-                          ?.copyWith(color: colors.inkMuted),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            StatusBadge(
-              label: leadStageLabel(l10n, lead.stage),
-              tone: leadStageTone(lead.stage),
-            ),
-            const SizedBox(width: 4),
-            Icon(
-              Directionality.of(context) == TextDirection.rtl
-                  ? Icons.chevron_left_rounded
-                  : Icons.chevron_right_rounded,
-              color: colors.inkMuted,
-              size: 18,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
           ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Stage-colored left accent bar
+              Container(
+                width: 4,
+                decoration: BoxDecoration(
+                  color: stageColor,
+                  borderRadius: isRtl
+                      ? const BorderRadius.only(
+                          topRight: Radius.circular(16),
+                          bottomRight: Radius.circular(16),
+                        )
+                      : const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          bottomLeft: Radius.circular(16),
+                        ),
+                ),
+              ),
+
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              lead.projectInterest ?? l10n.navLeads,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            if (lead.createdAt != null) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(Icons.calendar_today_outlined,
+                                      size: 11, color: colors.inkMuted),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    DateFormatter.shortDate(
+                                        lead.createdAt!,
+                                        languageCode: lang),
+                                    style: theme.textTheme.labelSmall
+                                        ?.copyWith(color: colors.inkMuted),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+
+                      // Stage badge pill
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: stageColor.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: stageColor.withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Text(
+                          leadStageLabel(l10n, lead.stage),
+                          style: TextStyle(
+                            color: stageColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        isRtl
+                            ? Icons.chevron_left_rounded
+                            : Icons.chevron_right_rounded,
+                        color: colors.inkMuted,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
