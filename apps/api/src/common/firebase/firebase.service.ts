@@ -27,7 +27,7 @@ export class FirebaseService implements OnModuleInit {
 
     try {
       // Lazy require keeps firebase-admin out of the graph until configured.
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const admin = require('firebase-admin') as typeof import('firebase-admin');
       // Env files store the key with literal "\n"; restore real newlines.
       const privateKey = privateKeyRaw.replace(/\\n/g, '\n');

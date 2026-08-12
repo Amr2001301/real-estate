@@ -41,7 +41,6 @@ import * as argon2 from 'argon2';
 // the top of `seedPublicDemo()`.
 process.env.SEED_PUBLIC_DEMO = 'true';
 
-// eslint-disable-next-line import/order
 import { main as runDevSeed } from './seed';
 
 const prisma = new PrismaClient();

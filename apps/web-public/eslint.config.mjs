@@ -1,13 +1,6 @@
-// Public website flat config. Layers Next.js rules on top of the shared root
-// config via FlatCompat (eslint-config-next is still eslintrc-format).
-
-import { FlatCompat } from '@eslint/eslintrc';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import nextPlugin from '@next/eslint-plugin-next';
+import hooksPlugin from 'eslint-plugin-react-hooks';
 import rootConfig from '../../eslint.config.mjs';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const compat = new FlatCompat({ baseDirectory: __dirname });
 
 const REACT_AND_DOM_GLOBALS = {
   React: 'readonly',
@@ -40,7 +33,20 @@ const REACT_AND_DOM_GLOBALS = {
 
 const config = [
   ...rootConfig,
-  ...compat.extends('next/core-web-vitals'),
+  {
+    plugins: { '@next/next': nextPlugin },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+    },
+  },
+  {
+    plugins: { 'react-hooks': hooksPlugin },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: { globals: REACT_AND_DOM_GLOBALS },

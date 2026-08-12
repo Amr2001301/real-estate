@@ -45,6 +45,25 @@ const COMMON_GLOBALS = {
   crypto: 'readonly',
   TextEncoder: 'readonly',
   TextDecoder: 'readonly',
+  FileList: 'readonly',
+  XMLHttpRequest: 'readonly',
+  alert: 'readonly',
+  confirm: 'readonly',
+  prompt: 'readonly',
+  HTMLHeadingElement: 'readonly',
+  HTMLParagraphElement: 'readonly',
+  HTMLTableElement: 'readonly',
+  HTMLLabelElement: 'readonly',
+  HTMLSpanElement: 'readonly',
+  SVGElement: 'readonly',
+  SVGRectElement: 'readonly',
+  SVGSVGElement: 'readonly',
+  requestAnimationFrame: 'readonly',
+  cancelAnimationFrame: 'readonly',
+  MutationObserver: 'readonly',
+  ResizeObserver: 'readonly',
+  IntersectionObserver: 'readonly',
+  IntersectionObserverEntry: 'readonly',
   // Node-style modules
   module: 'readonly',
   require: 'readonly',
@@ -89,6 +108,8 @@ export default [
     plugins: { '@typescript-eslint': tsPlugin },
     rules: {
       ...tsPlugin.configs.recommended.rules,
+      // TS compiler handles redeclaration; the base rule false-fires on type/value name sharing.
+      'no-redeclare': 'off',
       // Defer to the TS-ESLint variant; the core rule double-fires on enums/types.
       'no-unused-vars': 'off',
       '@typescript-eslint/no-unused-vars': [
@@ -103,12 +124,14 @@ export default [
       '@typescript-eslint/no-namespace': 'off',
       // Empty catch blocks are sometimes intentional (best-effort cleanup).
       'no-empty': ['error', { allowEmptyCatch: true }],
+      // Allow ternary expressions used as statements (e.g. cond ? a() : b()).
+      '@typescript-eslint/no-unused-expressions': ['error', { allowTernary: true, allowShortCircuit: true }],
     },
   },
 
   // Test files — jest globals + relaxed `any`.
   {
-    files: ['**/*.{spec,test}.{ts,tsx,js}', '**/__tests__/**/*.{ts,tsx,js}'],
+    files: ['**/*.{spec,test}.{ts,tsx,js}', '**/*.e2e-spec.ts', '**/__tests__/**/*.{ts,tsx,js}'],
     languageOptions: {
       globals: {
         ...COMMON_GLOBALS,

@@ -1,17 +1,8 @@
-// Web-admin's flat config. Layers Next.js rules on top of the root config via
-// FlatCompat (eslint-config-next is still a legacy/eslintrc-format config).
-
-import { FlatCompat } from '@eslint/eslintrc';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import nextPlugin from '@next/eslint-plugin-next';
+import hooksPlugin from 'eslint-plugin-react-hooks';
+import reactPlugin from 'eslint-plugin-react';
 import rootConfig from '../../eslint.config.mjs';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const compat = new FlatCompat({ baseDirectory: __dirname });
-
-// Extra globals used as types/namespaces inside .tsx files (DOM types that
-// ESLint's no-undef can't see without `@types/dom` declared globally, plus
-// React used as a namespace e.g. `React.ReactNode`).
 const REACT_AND_DOM_GLOBALS = {
   React: 'readonly',
   JSX: 'readonly',
@@ -48,12 +39,26 @@ const REACT_AND_DOM_GLOBALS = {
 
 const config = [
   ...rootConfig,
-  ...compat.extends('next/core-web-vitals'),
+  {
+    plugins: { '@next/next': nextPlugin },
+    rules: {
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs['core-web-vitals'].rules,
+    },
+  },
+  {
+    plugins: { 'react-hooks': hooksPlugin },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
+    },
+  },
   {
     files: ['**/*.{ts,tsx}'],
     languageOptions: { globals: REACT_AND_DOM_GLOBALS },
   },
   {
+    plugins: { react: reactPlugin },
     rules: {
       // No next/image migration yet across existing pages — warn only.
       '@next/next/no-img-element': 'warn',

@@ -72,7 +72,7 @@ function paletteFor(name: string): string {
 }
 
 function isCode(s: string): boolean {
-  return /^[A-Z0-9#\-\/]{3,}$/.test(s.trim());
+  return /^[A-Z0-9#\-/]{3,}$/.test(s.trim());
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
