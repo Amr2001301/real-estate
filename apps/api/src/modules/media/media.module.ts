@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -9,19 +10,43 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { IsEnum, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { MediaType, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { R2Service } from './r2.service';
 
-class CreatePresignedDto {
-  @IsString()
-  contentType!: string;
+// 50 MiB — sized to accommodate compressed property marketing videos (video/mp4).
+// Images are typically under 5 MiB; the extra headroom is for video uploads.
+export const MAX_MEDIA_UPLOAD_SIZE_BYTES = 50 * 1024 * 1024;
 
-  @IsIn(['projects', 'units', 'contracts', 'receipts', 'maintenance', 'banners'])
-  folder!: 'projects' | 'units' | 'contracts' | 'receipts' | 'maintenance' | 'banners';
+// Explicit allowlist of MIME types the general media presign endpoint accepts.
+// SVG is excluded (can contain active/scriptable content).
+// Dangerous types (text/html, application/javascript, etc.) are never added here.
+export const ALLOWED_MEDIA_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'video/mp4',
+  'application/pdf', // receipts (deposit payment proof) and floor-plan attachments
+] as const;
+
+export type AllowedMediaMimeType = (typeof ALLOWED_MEDIA_MIME_TYPES)[number];
+
+class CreatePresignedDto {
+  @IsIn([...ALLOWED_MEDIA_MIME_TYPES])
+  contentType!: AllowedMediaMimeType;
+
+  @IsIn(['projects', 'units', 'banners', 'receipts'])
+  folder!: 'projects' | 'units' | 'banners' | 'receipts';
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MAX_MEDIA_UPLOAD_SIZE_BYTES)
+  sizeBytes!: number;
 
   @IsOptional()
   @IsString()
@@ -50,7 +75,18 @@ class MediaService {
   ) {}
 
   presign(dto: CreatePresignedDto) {
-    return this.r2.createPresignedUpload(dto);
+    // Defense-in-depth: enforce policy even if DTO validation is bypassed internally.
+    if (!(ALLOWED_MEDIA_MIME_TYPES as readonly string[]).includes(dto.contentType)) {
+      throw new BadRequestException(`Content type "${dto.contentType}" is not allowed`);
+    }
+    if (!Number.isInteger(dto.sizeBytes) || dto.sizeBytes < 1 || dto.sizeBytes > MAX_MEDIA_UPLOAD_SIZE_BYTES) {
+      throw new BadRequestException(`File size is invalid or exceeds the ${MAX_MEDIA_UPLOAD_SIZE_BYTES}-byte limit`);
+    }
+    return this.r2.createPresignedUpload({
+      contentType: dto.contentType,
+      folder: dto.folder,
+      extension: dto.extension,
+    });
   }
 
   attachProject(dto: AttachProjectMediaDto) {

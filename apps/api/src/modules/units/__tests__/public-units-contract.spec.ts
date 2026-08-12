@@ -93,6 +93,8 @@ function makePrismaMock() {
   };
 }
 
+// updatedAt is intentionally exposed on public unit responses — it powers
+// the sitemap lastModified field. Only truly sensitive relations are blocked.
 const SENSITIVE_KEYS = [
   'reservationExpiresAt',
   'history',
@@ -101,7 +103,6 @@ const SENSITIVE_KEYS = [
   'building',
   'buildingId',
   'createdAt',
-  'updatedAt',
 ];
 
 describe('Public units · response contract', () => {
@@ -198,6 +199,7 @@ describe('Public units · response contract', () => {
     expect(item.project).not.toHaveProperty('status');
     expect(item.project).not.toHaveProperty('lat');
     for (const k of SENSITIVE_KEYS) expect(item).not.toHaveProperty(k);
+    expect(item).toHaveProperty('updatedAt');
   });
 
   it('detail includes all comparison fields + media[] and leaks nothing', async () => {
@@ -217,6 +219,7 @@ describe('Public units · response contract', () => {
     expect(res.body.project).toMatchObject({ id: 'p-1', city: 'Riyadh' });
     expect(Array.isArray(res.body.media)).toBe(true);
     for (const k of SENSITIVE_KEYS) expect(res.body).not.toHaveProperty(k);
+    expect(res.body).toHaveProperty('updatedAt');
     // History must not be queried for the public path.
     expect(mock.unit.findUnique.mock.calls[0][0].include.history).toBeUndefined();
   });

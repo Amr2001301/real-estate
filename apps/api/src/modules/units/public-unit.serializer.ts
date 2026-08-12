@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import type { Unit, UnitMedia, UnitStatus } from '@prisma/client';
 
+
 /**
  * Public-safe unit shapes for the marketing website + client-side comparison.
  * Hand-whitelisted: never expose `history` (status-change reasons + actor),
@@ -17,7 +18,7 @@ interface ProjectSummaryInput {
 
 interface UnitInput extends Pick<
   Unit,
-  'id' | 'code' | 'type' | 'area' | 'bedrooms' | 'bathrooms' | 'floor' | 'price' | 'status'
+  'id' | 'code' | 'type' | 'area' | 'bedrooms' | 'bathrooms' | 'floor' | 'price' | 'status' | 'updatedAt'
 > {
   media?: MediaLike[];
   project?: ProjectSummaryInput | null;
@@ -57,5 +58,6 @@ export function serializePublicUnit(unit: UnitInput) {
     coverImage: media[0]?.url ?? null,
     media,
     project: projectSummary(unit.project),
+    updatedAt: unit.updatedAt.toISOString(),
   };
 }

@@ -105,9 +105,11 @@ export function DocumentUploader({ onUploaded, onCleared }: Props) {
         const body = await presignRes.text();
         throw new Error(`فشل التحضير (${presignRes.status}): ${body.slice(0, 200)}`);
       }
-      const { uploadUrl, publicUrl } = (await presignRes.json()) as {
+      // Private-bucket presigns (documents, contracts, receipts) omit publicUrl.
+      // Use the bare object key as the stored fileUrl in that case.
+      const { uploadUrl, publicUrl, key: objectKey } = (await presignRes.json()) as {
         uploadUrl: string;
-        publicUrl: string;
+        publicUrl?: string;
         key: string;
       };
 
@@ -130,7 +132,7 @@ export function DocumentUploader({ onUploaded, onCleared }: Props) {
 
       setPhase('done');
       onUploaded({
-        fileUrl: publicUrl,
+        fileUrl: publicUrl ?? objectKey,
         fileName: file.name,
         mimeType: ct,
         sizeBytes: file.size,

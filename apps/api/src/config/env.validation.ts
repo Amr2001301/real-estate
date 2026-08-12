@@ -37,6 +37,9 @@ const EnvSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().optional(),
   R2_BUCKET: z.string().optional(),
   R2_PUBLIC_URL: z.string().optional(),
+  // Private bucket for sensitive objects (contracts, receipts, documents,
+  // maintenance). Must differ from R2_BUCKET. Required in production.
+  R2_PRIVATE_BUCKET: z.string().optional(),
 
   // Generic S3-compatible endpoint (MinIO, LocalStack, …). When set, the
   // media service uses it instead of constructing the Cloudflare R2
@@ -56,6 +59,10 @@ const EnvSchema = z.object({
   INSTALLMENT_REMINDER_DAYS_BEFORE: z.coerce.number().int().positive().optional(),
   INSTALLMENT_REMINDER_CRON: z.string().optional(),
   INSTALLMENT_REMINDER_TIMEZONE: z.string().optional(),
+
+  // Base URL of the customer-facing website — used to build the password-reset
+  // link sent in the forgot-password email. Must not be localhost in production.
+  PUBLIC_WEB_URL: z.string().url().default('http://localhost:3001'),
 
   SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
   SEED_ADMIN_PASSWORD: z.string().min(8).default('ChangeMe123!'),
@@ -109,11 +116,20 @@ function assertProductionRequirements(env: AppEnv): string[] {
     ['R2_ACCOUNT_ID', 'R2_ACCOUNT_ID'],
     ['R2_ACCESS_KEY_ID', 'R2_ACCESS_KEY_ID'],
     ['R2_SECRET_ACCESS_KEY', 'R2_SECRET_ACCESS_KEY'],
-    ['R2_BUCKET', 'R2_BUCKET'],
+    ['R2_BUCKET', 'R2_BUCKET (public media bucket)'],
     ['R2_PUBLIC_URL', 'R2_PUBLIC_URL'],
+    ['R2_PRIVATE_BUCKET', 'R2_PRIVATE_BUCKET (private document bucket — contracts, receipts, documents)'],
   ];
   for (const [key, label] of r2Fields) {
     if (!env[key]) errs.push(`${label} is required in production (file uploads will fail)`);
+  }
+  // Enforce bucket isolation — same bucket for public and private defeats the
+  // security model (private objects would have a public CDN URL).
+  if (env.R2_BUCKET && env.R2_PRIVATE_BUCKET && env.R2_BUCKET === env.R2_PRIVATE_BUCKET) {
+    errs.push(
+      'R2_BUCKET and R2_PRIVATE_BUCKET must be different buckets — using the same bucket ' +
+      'for public and private objects disables storage isolation',
+    );
   }
 
   // SMTP — required so notification emails actually leave the box.
@@ -127,11 +143,44 @@ function assertProductionRequirements(env: AppEnv): string[] {
     if (!env[key]) errs.push(`${label} is required in production`);
   }
 
+  // OTP: console provider silently drops codes in production (logOtpForDev
+  // hides the code but never sends an SMS). Require an actual delivery channel.
+  if (env.OTP_PROVIDER === 'console') {
+    errs.push(
+      'OTP_PROVIDER=console is not allowed in production — OTP codes will never be delivered. ' +
+      'Set OTP_PROVIDER=twilio with the required Twilio credentials.',
+    );
+  }
+
   // Twilio — only required when the SMS path is actually enabled.
   if (env.OTP_PROVIDER === 'twilio') {
     if (!env.TWILIO_ACCOUNT_SID) errs.push('TWILIO_ACCOUNT_SID is required when OTP_PROVIDER=twilio');
     if (!env.TWILIO_AUTH_TOKEN) errs.push('TWILIO_AUTH_TOKEN is required when OTP_PROVIDER=twilio');
     if (!env.TWILIO_FROM) errs.push('TWILIO_FROM is required when OTP_PROVIDER=twilio');
+  }
+
+  // Redis: the Zod default fills in localhost when REDIS_URL is missing.
+  // In cloud/container deployments Redis is an external service — silently
+  // falling back to localhost causes BullMQ to retry indefinitely in background.
+  const redisHost = (() => {
+    try { return new URL(env.REDIS_URL).hostname; } catch { return ''; }
+  })();
+  if (redisHost === 'localhost' || redisHost === '127.0.0.1' || redisHost === '::1') {
+    errs.push(
+      'REDIS_URL must be explicitly configured to an external Redis instance in production. ' +
+      'The current value resolves to localhost, which is the unsafe default.',
+    );
+  }
+
+  // Password-reset link URL must not point to localhost in production.
+  const webHost = (() => {
+    try { return new URL(env.PUBLIC_WEB_URL).hostname; } catch { return ''; }
+  })();
+  if (webHost === 'localhost' || webHost === '127.0.0.1' || webHost === '::1') {
+    errs.push(
+      'PUBLIC_WEB_URL must be explicitly configured to the production website URL. ' +
+      'The current value resolves to localhost — password-reset emails will link to a local server.',
+    );
   }
 
   // Firebase is intentionally NOT required — FCM is not yet wired in code.

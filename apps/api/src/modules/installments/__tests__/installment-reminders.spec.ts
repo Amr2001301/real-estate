@@ -1,6 +1,7 @@
 import {
   InstallmentDueSoonCron,
   InstallmentRemindersService,
+  InstallmentsCron,
 } from '../installments.module';
 
 /**
@@ -166,15 +167,29 @@ describe('InstallmentRemindersService.run', () => {
 });
 
 describe('InstallmentDueSoonCron env gate', () => {
+  function makePassthroughLock() {
+    return {
+      withLock: jest.fn().mockImplementation(
+        async (_k: string, _t: number, fn: () => Promise<unknown>) => fn(),
+      ),
+    };
+  }
+
+  function makeSkippedLock() {
+    return { withLock: jest.fn().mockResolvedValue(null) };
+  }
+
   it('does NOT run when INSTALLMENT_REMINDERS_ENABLED is unset/false', async () => {
     const reminders = { run: jest.fn().mockResolvedValue(undefined) };
-    const cronOff = new InstallmentDueSoonCron(reminders as never, makeConfig({}) as never);
+    const lock = makePassthroughLock();
+    const cronOff = new InstallmentDueSoonCron(reminders as never, makeConfig({}) as never, lock as never);
     await cronOff.daily();
     expect(reminders.run).not.toHaveBeenCalled();
 
     const cronFalse = new InstallmentDueSoonCron(
       reminders as never,
       makeConfig({ INSTALLMENT_REMINDERS_ENABLED: 'false' }) as never,
+      lock as never,
     );
     await cronFalse.daily();
     expect(reminders.run).not.toHaveBeenCalled();
@@ -185,8 +200,45 @@ describe('InstallmentDueSoonCron env gate', () => {
     const cron = new InstallmentDueSoonCron(
       reminders as never,
       makeConfig({ INSTALLMENT_REMINDERS_ENABLED: 'true' }) as never,
+      makePassthroughLock() as never,
     );
     await cron.daily();
     expect(reminders.run).toHaveBeenCalledWith({ dryRun: false });
+  });
+
+  it('does NOT run when lock is not acquired (no duplicate reminders)', async () => {
+    const reminders = { run: jest.fn().mockResolvedValue(undefined) };
+    const cron = new InstallmentDueSoonCron(
+      reminders as never,
+      makeConfig({ INSTALLMENT_REMINDERS_ENABLED: 'true' }) as never,
+      makeSkippedLock() as never,
+    );
+    await cron.daily();
+    expect(reminders.run).not.toHaveBeenCalled();
+  });
+});
+
+describe('InstallmentsCron lock behavior', () => {
+  it('calls markOverdue when lock is acquired', async () => {
+    const svc = { markOverdue: jest.fn().mockResolvedValue(undefined) };
+    const lock = {
+      withLock: jest.fn().mockImplementation(
+        async (_k: string, _t: number, fn: () => Promise<unknown>) => fn(),
+      ),
+    };
+    const cron = new InstallmentsCron(svc as never, lock as never);
+    await cron.daily();
+
+    expect(svc.markOverdue).toHaveBeenCalledTimes(1);
+    expect(lock.withLock).toHaveBeenCalledWith('installments-mark-overdue', 5 * 60_000, expect.any(Function));
+  });
+
+  it('does NOT call markOverdue when lock is held by another instance', async () => {
+    const svc = { markOverdue: jest.fn() };
+    const lock = { withLock: jest.fn().mockResolvedValue(null) };
+    const cron = new InstallmentsCron(svc as never, lock as never);
+    await cron.daily();
+
+    expect(svc.markOverdue).not.toHaveBeenCalled();
   });
 });

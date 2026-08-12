@@ -40,7 +40,7 @@ function makeService() {
     getOrThrow: jest.fn().mockReturnValue('secret'),
     get: jest.fn().mockImplementation((k: string) => (k.includes('REFRESH') ? '30d' : '15m')),
   };
-  const service = new AuthService(prisma as never, jwt as never, config as never, {} as never);
+  const service = new AuthService(prisma as never, jwt as never, config as never, {} as never, { sendPasswordReset: jest.fn() } as never);
   return { service, prisma, created };
 }
 

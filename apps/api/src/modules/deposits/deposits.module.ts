@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Body,
+  ConflictException,
   Controller,
   Get,
   Injectable,
@@ -289,23 +290,30 @@ class DepositsService {
     };
     const depositType = depositTypeMap[installment.type] ?? DepositType.INSTALLMENT;
 
+    const paidAt = dto.paidAt ? new Date(dto.paidAt) : new Date();
+
     const deposit = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.deposit.create({
+      // Atomic claim: mark PAID only if still PENDING. Row-level locking in
+      // Postgres serializes concurrent calls — the second transaction to reach
+      // this UPDATE sees count=0 and aborts before any Deposit row is written.
+      const claimed = await tx.installment.updateMany({
+        where: { id: dto.installmentId, status: { not: InstallmentStatus.PAID } },
+        data: { status: InstallmentStatus.PAID, paidAt },
+      });
+      if (claimed.count === 0) {
+        throw new ConflictException('هذا القسط مدفوع بالفعل');
+      }
+      return tx.deposit.create({
         data: {
           type: depositType,
           contractId: dto.contractId,
           installmentId: dto.installmentId,
           amount: new Prisma.Decimal(dto.amount),
-          paidAt: dto.paidAt ? new Date(dto.paidAt) : new Date(),
+          paidAt,
           receiptUrl: dto.receiptUrl ?? null,
           recordedById,
         },
       });
-      await tx.installment.update({
-        where: { id: dto.installmentId },
-        data: { status: InstallmentStatus.PAID, paidAt: created.paidAt },
-      });
-      return created;
     });
     // Mirror the receipt as a first-class document (best-effort; legacy
     // receiptUrl is already persisted on the deposit).

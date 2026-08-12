@@ -170,6 +170,89 @@ export async function otpVerifyAction(input: OtpVerifyInput): Promise<AuthAction
   return { ok: true, redirectTo: safeAccountFrom(input.from) };
 }
 
+export interface ForgotPasswordInput {
+  email: string;
+}
+
+/** Request a password-reset email → POST /v1/auth/forgot-password. */
+export async function forgotPasswordAction(
+  input: ForgotPasswordInput,
+): Promise<{ ok: boolean; status: number }> {
+  const email = input.email?.trim() ?? '';
+  if (!email) return { ok: false, status: 400 };
+
+  const res = await postAuth('/auth/forgot-password', { email });
+  return { ok: res.ok, status: res.status };
+}
+
+export interface ResetPasswordInput {
+  token: string;
+  newPassword: string;
+}
+
+/** Exchange a reset token for a new password → POST /v1/auth/reset-password. */
+export async function resetPasswordAction(
+  input: ResetPasswordInput,
+): Promise<{ ok: boolean; status: number }> {
+  const token = input.token?.trim() ?? '';
+  const newPassword = input.newPassword ?? '';
+  if (!token || newPassword.length < 8) return { ok: false, status: 400 };
+
+  const res = await postAuth('/auth/reset-password', { token, newPassword });
+  return { ok: res.ok, status: res.status };
+}
+
+export interface VerifyEmailInput {
+  token: string;
+}
+
+/** Submit the token from /verify-email?token=... → POST /v1/auth/verify-email. */
+export async function verifyEmailAction(
+  input: VerifyEmailInput,
+): Promise<{ ok: boolean; alreadyVerified?: boolean; status: number }> {
+  const token = input.token?.trim() ?? '';
+  if (!token) return { ok: false, status: 400 };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/v1/auth/verify-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ token }),
+      cache: 'no-store',
+    });
+  } catch {
+    return { ok: false, status: 0 };
+  }
+
+  if (!res.ok) return { ok: false, status: res.status };
+  try {
+    const body = (await res.json()) as { ok?: boolean; alreadyVerified?: boolean };
+    return { ok: true, alreadyVerified: body.alreadyVerified ?? false, status: res.status };
+  } catch {
+    return { ok: true, status: res.status };
+  }
+}
+
+/** Resend the email-verification link. Requires a valid session cookie. */
+export async function resendVerificationAction(): Promise<{ ok: boolean; status: number }> {
+  const c = await cookies();
+  const accessToken = c.get('access_token')?.value;
+  if (!accessToken) return { ok: false, status: 401 };
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/v1/auth/resend-verification`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/json' },
+      cache: 'no-store',
+    });
+  } catch {
+    return { ok: false, status: 0 };
+  }
+  return { ok: res.ok, status: res.status };
+}
+
 /**
  * Clear the session cookies and return to /login. Best-effort backend logout
  * (token revocation) is attempted but never blocks the local clear.

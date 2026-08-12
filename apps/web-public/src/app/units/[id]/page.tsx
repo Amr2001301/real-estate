@@ -25,6 +25,7 @@ import { CompareToggle } from '@/components/compare/CompareToggle';
 import { CompareBar } from '@/components/compare/CompareBar';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, unitProductLd } from '@/lib/jsonld';
+import { ViewTracker } from '@/components/analytics/ViewTracker';
 
 const REVALIDATE = 60;
 
@@ -136,6 +137,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
 
   return (
     <CompareProvider>
+      <ViewTracker event="unit_view" params={{ unit_id: unit.id, unit_status: unit.status }} />
       <JsonLd
         data={breadcrumbLd([
           { name: 'الرئيسية', path: '/' },

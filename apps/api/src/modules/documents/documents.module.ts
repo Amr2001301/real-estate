@@ -46,17 +46,27 @@ import { R2Service } from '../media/r2.service';
 // ── URL safety ────────────────────────────────────────────────────────────
 
 /**
- * Reject obviously unsafe URLs before they hit the database. We only
- * accept http(s) absolute URLs (S3/R2/CDN) and signed presigned URLs from
- * the existing presign endpoint. Anything else (javascript:, file:, data:,
- * arbitrary local paths) is refused.
+ * Object key pattern for our private-bucket uploads:
+ *   <known-folder>/<YYYY-MM-DD>/<uuid>[.<ext>]
+ *
+ * These arrive from createPresignedUpload / uploadObject when the folder is
+ * private (documents, contracts, receipts, maintenance). We accept them in
+ * addition to http(s) CDN URLs so private-bucket uploads work without a
+ * public URL.
+ */
+const STORAGE_KEY_RE =
+  /^(?:contracts|receipts|documents|maintenance|projects|units|banners|avatars)\/\d{4}-\d{2}-\d{2}\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(?:\.[a-z0-9]{1,8})?$/;
+
+/**
+ * Reject obviously unsafe values before they hit the database. Accepts:
+ *   - Bare storage object keys matching STORAGE_KEY_RE (new private uploads)
+ *   - Absolute http(s) CDN URLs (existing public/legacy uploads)
+ *
+ * Anything else (javascript:, file:, data:, arbitrary paths) is refused.
  *
  * `allowedLocalBase` is the configured object-storage public base
  * (R2Service.publicBaseUrl). When set, a localhost URL is permitted ONLY if
- * it lives under that exact base. This lets our own presigned-origin URLs
- * round-trip through the signed-download path in local dev (where the
- * storage base is http://localhost:9000/…) while still rejecting arbitrary
- * localhost/SSRF targets.
+ * it lives under that exact base (local dev MinIO presigned URLs).
  */
 function assertSafeUrl(value: unknown, allowedLocalBase = ''): string {
   if (typeof value !== 'string' || value.length === 0) {
@@ -66,21 +76,23 @@ function assertSafeUrl(value: unknown, allowedLocalBase = ''): string {
   if (trimmed.length > 2048) {
     throw new BadRequestException('fileUrl is too long');
   }
+  // Accept bare storage keys from private-bucket uploads (no URL prefix).
+  if (STORAGE_KEY_RE.test(trimmed)) return trimmed;
+
   let parsed: URL;
   try {
     parsed = new URL(trimmed);
   } catch {
-    throw new BadRequestException('fileUrl must be an absolute http(s) URL');
+    throw new BadRequestException('fileUrl must be an absolute http(s) URL or a valid storage key');
   }
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new BadRequestException(
       `fileUrl scheme "${parsed.protocol}" is not allowed`,
     );
   }
-  // Reject anything that resolves to localhost — admin-uploaded docs should
-  // live on a public/CDN URL. Exception: our own configured object storage,
-  // which is localhost in local dev (MinIO). That carve-out is matched by an
-  // exact base-prefix check, not a bare host check.
+  // Reject localhost — admin-uploaded docs should live on a CDN URL or be a
+  // bare key. Exception: our own configured storage base (MinIO in local dev),
+  // matched by exact prefix check to prevent SSRF against other local services.
   const host = parsed.hostname.toLowerCase();
   if (host === 'localhost' || host === '0.0.0.0' || host === '127.0.0.1') {
     if (allowedLocalBase && trimmed.startsWith(allowedLocalBase)) return trimmed;
@@ -323,6 +335,22 @@ export class DocumentsService {
   }
 
   /**
+   * Generates a short-lived presigned GET URL for a document so staff can
+   * download private objects without a public CDN link. Callers must verify
+   * the document exists before calling this (findOne throws 404).
+   */
+  async download(id: string): Promise<{ url: string; expiresIn: number; fileName: string | null; contentType: string | null }> {
+    const doc = await this.findOne(id);
+    const key = this.r2.keyFromStoredValue(doc.fileUrl);
+    const { url, expiresIn } = await this.r2.createPresignedDownload({
+      key,
+      fileName: doc.fileName,
+      contentType: doc.mimeType,
+    });
+    return { url, expiresIn, fileName: doc.fileName, contentType: doc.mimeType };
+  }
+
+  /**
    * Lookup helper for entity-page widgets. Returns up to `limit` most
    * recent non-deleted documents for the given owner. ADMIN-only at the
    * controller — for portal/broker access, see Phase 17 §E note.
@@ -437,6 +465,14 @@ class DocumentsController {
   @Delete(':id')
   softDelete(@Param('id', ParseUUIDPipe) id: string) {
     return this.svc.softDelete(id);
+  }
+
+  // Staff download — generates a short-lived presigned GET URL. Mounted after
+  // the create route so `:id` cannot shadow the literal 'presign' segment.
+  @Permissions('documents:read')
+  @Get(':id/download')
+  download(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.download(id);
   }
 }
 

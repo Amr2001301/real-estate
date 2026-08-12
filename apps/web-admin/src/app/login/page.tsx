@@ -5,10 +5,11 @@ import LoginForm from './form';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string | string[] }>;
+  searchParams: Promise<{ from?: string | string[]; reset?: string | string[] }>;
 }) {
   const sp = await searchParams;
   const from = typeof sp.from === 'string' ? sp.from : undefined;
+  const passwordReset = sp.reset === '1';
 
   return (
     // h-screen + overflow-y-auto = inner scroll container
@@ -71,6 +72,11 @@ export default async function LoginPage({
                     </p>
                   </div>
 
+                  {passwordReset && (
+                    <div className="mb-5 rounded-xl border border-success-100 bg-success-50 px-4 py-3">
+                      <p className="text-sm text-success-700">تم تغيير كلمة المرور بنجاح. سجّل دخولك بكلمة المرور الجديدة.</p>
+                    </div>
+                  )}
                   {/* Form — all auth logic lives here, untouched */}
                   <LoginForm from={from} />
                 </div>

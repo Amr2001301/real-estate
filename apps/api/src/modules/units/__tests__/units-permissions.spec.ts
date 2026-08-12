@@ -59,6 +59,7 @@ const fixture: {
     status: 'AVAILABLE' | 'RESERVED' | 'SOLD';
     reservationExpiresAt: Date | null;
     price: number;
+    updatedAt: Date;
   };
   blockers: { reservations: number; contracts: number; maintenance: number };
 } = {
@@ -68,6 +69,7 @@ const fixture: {
     status: 'AVAILABLE',
     reservationExpiresAt: null,
     price: 100000,
+    updatedAt: new Date('2026-01-01'),
   },
   blockers: { reservations: 0, contracts: 0, maintenance: 0 },
 };
@@ -176,6 +178,7 @@ describe('Units module · permissions enforcement', () => {
       status: 'AVAILABLE',
       reservationExpiresAt: null,
       price: 100000,
+      updatedAt: new Date('2026-01-01'),
     };
     fixture.blockers = { reservations: 0, contracts: 0, maintenance: 0 };
   });

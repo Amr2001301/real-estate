@@ -16,6 +16,10 @@ function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 }
 
+function isPasswordReset(v: string | string[] | undefined): boolean {
+  return v === '1' || (Array.isArray(v) && v[0] === '1');
+}
+
 /**
  * True only for a safe internal `/account…` return target (same guard the
  * middleware/login action use). Drives a gentle "session ended / login
@@ -34,6 +38,7 @@ function isAccountFrom(from: string): boolean {
 export default async function LoginPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const showSessionNotice = isAccountFrom(firstStr(sp.from));
+  const showResetNotice = isPasswordReset(sp.reset);
 
   return (
     <AuthShell
@@ -43,7 +48,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       switchLabel="إنشاء حساب جديد"
       switchHref={routes.register}
     >
-      {showSessionNotice && (
+      {showResetNotice && (
+        <InlineNotice tone="success" className="mb-5">
+          تم تغيير كلمة المرور بنجاح. سجّل دخولك بكلمة المرور الجديدة.
+        </InlineNotice>
+      )}
+      {showSessionNotice && !showResetNotice && (
         <InlineNotice tone="info" className="mb-5">
           انتهت الجلسة أو يلزم تسجيل الدخول للمتابعة.
         </InlineNotice>

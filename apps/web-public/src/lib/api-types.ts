@@ -27,6 +27,7 @@ export interface PublicProjectListItem {
   status: string;
   coverImage: string | null;
   availableUnitsCount: number;
+  updatedAt: string;
 }
 
 export interface PublicProjectDetail {
@@ -41,6 +42,7 @@ export interface PublicProjectDetail {
   status: string;
   media: PublicMedia[];
   availableUnitsCount: number;
+  updatedAt: string;
 }
 
 export interface PublicProjectSummary {
@@ -62,6 +64,7 @@ export interface PublicUnit {
   coverImage: string | null;
   media: PublicMedia[];
   project: PublicProjectSummary | null;
+  updatedAt: string;
 }
 
 export interface Paginated<T> {
@@ -452,6 +455,7 @@ export interface MeProfile {
   locale: string;
   active: boolean;
   avatarUrl: string | null;
+  emailVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string | null;

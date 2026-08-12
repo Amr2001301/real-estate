@@ -27,6 +27,9 @@ export const routes = {
   accountNotifications: '/account/notifications',
   login: '/login',
   register: '/register',
+  forgotPassword: '/forgot-password',
+  resetPassword: '/reset-password',
+  verifyEmail: '/verify-email',
   privacy: '/privacy',
   terms: '/terms',
 } as const;

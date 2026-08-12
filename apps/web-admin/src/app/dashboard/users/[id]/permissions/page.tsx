@@ -92,7 +92,7 @@ export default async function UserPermissionsPage({
       />
 
       {/* ── User identity card ──────────────────────────────────────────── */}
-      <PremiumSectionCard padded={false}>
+      <PremiumSectionCard title="معلومات المستخدم" padded={false}>
         <div className="flex items-center gap-5 px-6 py-5">
           {/* Avatar */}
           <span

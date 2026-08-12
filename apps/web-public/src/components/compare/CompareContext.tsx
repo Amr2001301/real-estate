@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { trackEvent } from '@/lib/analytics';
 
 export const MAX_COMPARE = 3;
 export const COMPARE_STORAGE_KEY = 'compare:units';
@@ -104,6 +105,7 @@ export function CompareProvider({
           flashNotice(`يمكنك مقارنة ${MAX_COMPARE} وحدات كحد أقصى. أزل وحدة لإضافة أخرى.`);
           return prev;
         }
+        trackEvent('compare_add', { item_id: item.id });
         return [...prev, item];
       });
     },

@@ -41,6 +41,7 @@ describe('AuthService · email login role gate', () => {
       jwt as never,
       config as never,
       sms as never,
+      { sendPasswordReset: jest.fn() } as never,
     );
     return { service, prisma };
   }

@@ -30,20 +30,23 @@ enum Locale {
 }
 
 model User {
-  id           String    @id @default(uuid()) @db.Uuid
-  role         UserRole
-  email        String?   @unique
-  phone        String?   @unique
-  passwordHash String?
-  fullName     String
-  locale       Locale    @default(ar)
-  active       Boolean   @default(true)
-  avatarUrl    String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  lastLoginAt  DateTime?
+  id                String    @id @default(uuid()) @db.Uuid
+  role              UserRole
+  email             String?   @unique
+  phone             String?   @unique
+  passwordHash      String?
+  fullName          String
+  locale            Locale    @default(ar)
+  active            Boolean   @default(true)
+  avatarUrl         String?
+  emailVerifiedAt   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastLoginAt       DateTime?
 
   refreshTokens           RefreshToken[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
   rolePermissions         UserPermission[]
   deviceTokens            DeviceToken[]
   notifications           Notification[]
@@ -116,6 +119,31 @@ model RefreshToken {
   expiresAt DateTime
   revokedAt DateTime?
   createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 hash of the raw token — raw token is ONLY sent in the email link.
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
 
   @@index([userId])
 }

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { readClientUser } from '@/lib/client-user';
+import { trackEvent } from '@/lib/analytics';
 
 /**
  * Client-side favorites state for public pages. Calls the authenticated
@@ -103,6 +104,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           });
           const res = await fetch(`/api-proxy/me/favorites/${favId}`, { method: 'DELETE' });
           if (!res.ok) throw new Error('delete failed');
+          trackEvent('favorite_remove', { content_type: kind, item_id: id });
         } else {
           // Optimistic add (placeholder id until the real one returns)
           setMap((prev) => ({ ...prev, [id]: '__pending__' }));
@@ -114,6 +116,7 @@ export function FavoritesProvider({ children }: { children: React.ReactNode }) {
           if (!res.ok) throw new Error('add failed');
           const created = (await res.json()) as FavItem;
           setMap((prev) => ({ ...prev, [id]: created.id }));
+          trackEvent('favorite_add', { content_type: kind, item_id: id });
         }
       } catch {
         // Revert to the pre-toggle state

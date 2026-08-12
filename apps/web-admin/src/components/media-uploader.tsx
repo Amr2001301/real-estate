@@ -2,14 +2,29 @@
 
 import { useState } from 'react';
 
-type Folder = 'projects' | 'units' | 'contracts' | 'receipts' | 'maintenance' | 'banners';
+type Folder = 'projects' | 'units' | 'receipts' | 'banners';
 type MediaType = 'IMAGE' | 'VIDEO' | 'FLOORPLAN' | 'DOCUMENT';
+
+// Mirrors the backend ALLOWED_MEDIA_MIME_TYPES and MAX_MEDIA_UPLOAD_SIZE_BYTES.
+// Backend re-validates — these are UX-only guards to give instant feedback.
+const ALLOWED_MEDIA_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'video/mp4',
+  'application/pdf',
+]);
+const MAX_MEDIA_SIZE_BYTES = 50 * 1024 * 1024; // 50 MiB
 
 interface Props {
   /** Where in R2 the file goes — also drives accept attr */
   folder: Folder;
-  /** Called after upload + attach succeeds. Receives the public URL. */
-  onUploaded: (publicUrl: string, key: string) => void | Promise<void>;
+  /**
+   * Called after upload + attach succeeds.
+   * `storedValue` is the public CDN URL for public folders, or the bare object
+   * key for private folders (receipts, etc.) — use it as the persisted value.
+   */
+  onUploaded: (storedValue: string, key: string) => void | Promise<void>;
   /** If provided, after upload we'll call this server endpoint to attach */
   attach?: {
     type: 'project' | 'unit';
@@ -26,11 +41,22 @@ export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel 
   const [progress, setProgress] = useState(0);
 
   const defaultAccept =
-    folder === 'contracts' || folder === 'receipts' ? 'application/pdf' : 'image/*,video/mp4';
+    folder === 'receipts' ? 'application/pdf' : 'image/*,video/mp4';
 
   async function handleFile(file: File) {
     setError(null);
     setProgress(0);
+
+    // Client-side guards — backend re-validates; these give instant UX feedback.
+    if (!ALLOWED_MEDIA_TYPES.has(file.type)) {
+      setError('نوع الملف غير مدعوم. يُقبل: صور (JPEG/PNG/WebP)، فيديو MP4، PDF.');
+      return;
+    }
+    if (file.size > MAX_MEDIA_SIZE_BYTES) {
+      setError('حجم الملف كبير جداً (الحد الأقصى 50 ميجابايت).');
+      return;
+    }
+
     setStatus('signing');
 
     try {
@@ -40,16 +66,18 @@ export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel 
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({
-          contentType: file.type || 'application/octet-stream',
+          contentType: file.type,
           folder,
+          sizeBytes: file.size,
           extension: file.name.split('.').pop(),
         }),
       });
       if (!res.ok) throw new Error(`presign failed (${res.status})`);
+      // Private-folder presigns (receipts) omit publicUrl — use key as stored value.
       const { uploadUrl, key, publicUrl } = (await res.json()) as {
         uploadUrl: string;
         key: string;
-        publicUrl: string;
+        publicUrl?: string;
       };
 
       // 2) Upload directly to R2 (XHR for progress)
@@ -87,7 +115,7 @@ export function MediaUploader({ folder, onUploaded, attach, accept, buttonLabel 
       }
 
       setStatus('done');
-      await onUploaded(publicUrl, key);
+      await onUploaded(publicUrl ?? key, key);
       // Reset so the same file can be re-selected if needed
       setTimeout(() => {
         setStatus('idle');

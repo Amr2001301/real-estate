@@ -1,0 +1,109 @@
+name: DB Backup (Scheduled)
+
+# Runs a logical pg_dump backup on a schedule and uploads the dump + checksum
+# to a dedicated private backup storage bucket.
+#
+# Trigger conditions:
+#   - Scheduled: daily at 02:00 UTC
+#   - Manual: workflow_dispatch (for on-demand pre-deploy backups)
+#
+# Required GitHub secrets (set in repo Settings → Secrets → Actions):
+#   DATABASE_URL          — Production PostgreSQL connection string
+#   BACKUP_S3_ENDPOINT    — S3-compatible endpoint for backup storage (R2/S3)
+#   BACKUP_S3_BUCKET      — Dedicated PRIVATE backup bucket name
+#   BACKUP_S3_ACCESS_KEY  — Access key for backup bucket
+#   BACKUP_S3_SECRET_KEY  — Secret key for backup bucket
+#
+# IMPORTANT: The backup bucket must be SEPARATE from the application media
+# bucket (R2_BUCKET / R2_PRIVATE_BUCKET). Backup files must never be in a
+# publicly accessible bucket.
+#
+# DATABASE_URL is consumed by the backup script but never printed.
+
+on:
+  schedule:
+    # 02:00 UTC daily
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for manual backup (e.g. pre-deploy)'
+        required: false
+        default: 'manual'
+
+jobs:
+  backup:
+    name: logical pg_dump backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      - name: Run backup script
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          chmod +x scripts/db-backup.sh
+          scripts/db-backup.sh
+
+      - name: Upload backup to private backup bucket
+        env:
+          BACKUP_S3_ENDPOINT: ${{ secrets.BACKUP_S3_ENDPOINT }}
+          BACKUP_S3_BUCKET:   ${{ secrets.BACKUP_S3_BUCKET }}
+          AWS_ACCESS_KEY_ID:  ${{ secrets.BACKUP_S3_ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.BACKUP_S3_SECRET_KEY }}
+        run: |
+          DUMP_FILE="$(ls -t backups/devora-*.dump | head -1)"
+          CHECKSUM_FILE="${DUMP_FILE}.sha256"
+
+          if [[ -z "${DUMP_FILE}" ]]; then
+            echo "ERROR: No dump file found." >&2
+            exit 1
+          fi
+
+          # Install AWS CLI (used for S3-compatible upload; works with R2/S3/MinIO)
+          pip install awscli --quiet
+
+          DEST_PREFIX="daily/$(date +%Y/%m)"
+
+          aws s3 cp "${DUMP_FILE}" \
+            "s3://${BACKUP_S3_BUCKET}/${DEST_PREFIX}/$(basename "${DUMP_FILE}")" \
+            --endpoint-url "${BACKUP_S3_ENDPOINT}" \
+            --no-progress
+
+          aws s3 cp "${CHECKSUM_FILE}" \
+            "s3://${BACKUP_S3_BUCKET}/${DEST_PREFIX}/$(basename "${CHECKSUM_FILE}")" \
+            --endpoint-url "${BACKUP_S3_ENDPOINT}" \
+            --no-progress
+
+          echo "Uploaded: ${DEST_PREFIX}/$(basename "${DUMP_FILE}")"
+          echo "Uploaded: ${DEST_PREFIX}/$(basename "${CHECKSUM_FILE}")"
+
+      - name: Verify checksum round-trip
+        run: |
+          DUMP_FILE="$(ls -t backups/devora-*.dump | head -1)"
+          CHECKSUM_FILE="${DUMP_FILE}.sha256"
+          if sha256sum --check "${CHECKSUM_FILE}"; then
+            echo "Checksum verification: OK"
+          else
+            echo "ERROR: Checksum verification FAILED" >&2
+            exit 1
+          fi
+
+      - name: Report backup size and retention reminder
+        run: |
+          DUMP_FILE="$(ls -t backups/devora-*.dump | head -1)"
+          SIZE="$(du -sh "${DUMP_FILE}" | cut -f1)"
+          echo "Backup size: ${SIZE}"
+          echo "Retention policy reminder:"
+          echo "  - Daily backups: keep 14 days"
+          echo "  - Weekly backups: keep 8 weeks"
+          echo "  - Monthly backups: keep 12 months"
+          echo "  Lifecycle rules must be configured in the backup bucket."

@@ -27,6 +27,7 @@ import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, projectResidenceLd } from '@/lib/jsonld';
 import { Accordion, type AccordionItem } from '@/components/ui/Accordion';
 import { CtaBand } from '@/components/marketing/CtaBand';
+import { ViewTracker } from '@/components/analytics/ViewTracker';
 
 const REVALIDATE = 60;
 
@@ -160,6 +161,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
 
   return (
     <>
+      <ViewTracker event="project_view" params={{ project_id: project.id, city: project.city }} />
       <JsonLd
         data={breadcrumbLd([
           { name: 'الرئيسية', path: '/' },

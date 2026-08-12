@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import { formatCurrency } from '@/lib/format';
-import { currencySymbol } from '@/lib/currency';
+import { currencySymbol } from '@/lib/currency-format';
 import type {
   InstallmentPlanTemplate,
   DownPaymentType,

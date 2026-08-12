@@ -95,6 +95,7 @@ function makePrismaMock() {
     installment: {
       findFirst: jest.fn().mockImplementation(async () => fixture.installment),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     deposit: {
       findUnique: jest.fn().mockImplementation(async ({ where }) => ({
@@ -187,6 +188,7 @@ describe('Deposits · recording + verification workflow', () => {
     mock.contract.findUnique.mockClear();
     mock.installment.findFirst.mockClear();
     mock.installment.update.mockClear();
+    mock.installment.updateMany.mockClear();
     mock.deposit.create.mockClear();
     mock.deposit.update.mockClear();
     mock.document.findFirst.mockClear();
@@ -215,12 +217,13 @@ describe('Deposits · recording + verification workflow', () => {
     expect(depArgs.data.contractId).toBe(CONTRACT_ID);
     expect(depArgs.data.installmentId).toBe(INSTALLMENT_ID);
 
-    expect(mock.installment.update).toHaveBeenCalledTimes(1);
-    const instArgs = mock.installment.update.mock.calls[0]![0] as {
-      where: { id: string };
+    expect(mock.installment.updateMany).toHaveBeenCalledTimes(1);
+    const instArgs = mock.installment.updateMany.mock.calls[0]![0] as {
+      where: { id: string; status: { not: string } };
       data: { status: string; paidAt: Date };
     };
     expect(instArgs.where.id).toBe(INSTALLMENT_ID);
+    expect(instArgs.where.status).toEqual({ not: 'PAID' });
     expect(instArgs.data.status).toBe('PAID');
     expect(instArgs.data.paidAt).toBeInstanceOf(Date);
 

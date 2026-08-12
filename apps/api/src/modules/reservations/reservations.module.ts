@@ -8,6 +8,7 @@ import {
   Logger,
   Module,
   NotFoundException,
+  Optional,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -67,6 +68,8 @@ import {
 // single source of truth for contract documents. ContractsModule exports the
 // service; its dependency graph does not import reservations, so no cycle.
 import { ContractsModule, ContractsService } from '../contracts/contracts.module';
+import { CronLockService } from '../../common/cron/cron-lock.service';
+import { captureExceptionSafe } from '../../common/observability/sentry';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
 // signs a contract — and convert always produces an unsigned contract.
@@ -602,6 +605,17 @@ export class ReservationsService {
     const resolvedPaidAt: Date | null = null;
 
     return this.prisma.$transaction(async (tx) => {
+      // Atomic unit claim: the WHERE clause on status guarantees that only one
+      // concurrent transaction can transition AVAILABLE → RESERVED. A second
+      // request that reaches this point after the first has committed will see
+      // count === 0 and throw before any Reservation row is written, rolling
+      // back the entire transaction with no partial writes.
+      const claimed = await tx.unit.updateMany({
+        where: { id: dto.unitId, status: UnitStatus.AVAILABLE },
+        data: { status: UnitStatus.RESERVED, reservationExpiresAt: expiresAt },
+      });
+      if (claimed.count === 0) throw new ConflictException('Unit is no longer available');
+
       const reservation = await tx.reservation.create({
         data: {
           reservationNumber,
@@ -630,10 +644,6 @@ export class ReservationsService {
           snapshotTotalPayable,
           snapshotFinalPaymentAmount,
         },
-      });
-      await tx.unit.update({
-        where: { id: dto.unitId },
-        data: { status: UnitStatus.RESERVED, reservationExpiresAt: expiresAt },
       });
       await tx.unitStatusHistory.create({
         data: {
@@ -2001,7 +2011,7 @@ export class ReservationsService {
     for (const r of due) {
       await this.prisma.$transaction(async (tx) => {
         await tx.reservation.update({
-          where: { id: r.id },
+          where: { id: r.id, status: ReservationStatus.PENDING },
           data: { status: ReservationStatus.EXPIRED },
         });
         await tx.reservationActivity.create({
@@ -2061,12 +2071,27 @@ export class ReservationsService {
 }
 
 @Injectable()
-class ReservationExpiryCron {
-  constructor(private readonly svc: ReservationsService) {}
+export class ReservationExpiryCron {
+  private readonly logger = new Logger(ReservationExpiryCron.name);
+
+  constructor(
+    private readonly svc: ReservationsService,
+    @Optional() private readonly lock?: CronLockService,
+  ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async run() {
-    await this.svc.expireDue();
+    try {
+      const result = this.lock
+        ? await this.lock.withLock('reservation-expiry', 4 * 60_000, () => this.svc.expireDue())
+        : await this.svc.expireDue();
+      if (result !== null) {
+        this.logger.log(`Reservation expiry sweep: expired=${result.expired}`);
+      }
+    } catch (err) {
+      this.logger.error(`[reservation-expiry] cron failed: ${(err as Error).message}`);
+      captureExceptionSafe(err, { job: 'reservation-expiry' });
+    }
   }
 }
 

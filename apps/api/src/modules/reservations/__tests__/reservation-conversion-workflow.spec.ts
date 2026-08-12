@@ -167,6 +167,7 @@ function makePrismaMock() {
     unit: {
       findUnique: jest.fn().mockImplementation(async () => fixture.reservation.unit),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     unitStatusHistory: { create: jest.fn().mockResolvedValue({}) },
     user: {

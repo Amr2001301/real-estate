@@ -90,13 +90,14 @@ function makePrismaMock() {
 
 const r2Mock = { createPresignedUpload: jest.fn() };
 
+// updatedAt is intentionally exposed on public project responses — it powers
+// the sitemap lastModified field. Only truly sensitive relations are blocked.
 const SENSITIVE_KEYS = [
   'leads',
   'visitRequests',
   'brokerCommissions',
   'phases',
   'createdAt',
-  'updatedAt',
 ];
 
 describe('Public projects · response contract', () => {
@@ -152,6 +153,8 @@ describe('Public projects · response contract', () => {
     const res = await request(app.getHttpServer()).get('/public/projects').expect(200);
     const item = res.body.data[0];
     for (const k of SENSITIVE_KEYS) expect(item).not.toHaveProperty(k);
+    // updatedAt IS intentionally exposed for sitemap freshness — verify it is present.
+    expect(item).toHaveProperty('updatedAt');
   });
 
   it('detail returns whitelisted fields + media[] + availableUnitsCount', async () => {
@@ -166,6 +169,7 @@ describe('Public projects · response contract', () => {
     expect(Array.isArray(res.body.media)).toBe(true);
     expect(res.body.media[0]).toEqual({ url: 'https://cdn/x.jpg', type: 'IMAGE', order: 0 });
     for (const k of SENSITIVE_KEYS) expect(res.body).not.toHaveProperty(k);
+    expect(res.body).toHaveProperty('updatedAt');
   });
 
   it('detail 404s an unpublished project', async () => {

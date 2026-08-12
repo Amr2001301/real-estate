@@ -75,9 +75,10 @@ services:
       timeout: 5s
       retries: 10
 
-  # One-shot init container: waits for MinIO, creates the bucket, and grants
-  # anonymous download so signed PUT works AND <img src> can read uploaded
-  # objects directly. Idempotent — `mb` + `anonymous set` no-op if already set.
+  # One-shot init container: waits for MinIO, then creates two buckets:
+  #   PUBLIC  bucket (real-estate-media)   — anonymous download enabled (mirrors R2 CDN)
+  #   PRIVATE bucket (real-estate-private) — no public access (mirrors R2 private bucket)
+  # Idempotent — `mb` + `anonymous set` no-op if already configured.
   createbuckets:
     image: minio/mc:RELEASE.2024-11-21T17-21-54Z
     profiles: ["infra", "full"]
@@ -94,11 +95,15 @@ services:
           "$${MINIO_ROOT_PASSWORD:-minioadmin}"
         mc mb --ignore-existing "local/$${S3_BUCKET:-real-estate-media}"
         mc anonymous set download "local/$${S3_BUCKET:-real-estate-media}"
-        echo "bucket $${S3_BUCKET:-real-estate-media} ready"
+        echo "public bucket $${S3_BUCKET:-real-estate-media} ready"
+        mc mb --ignore-existing "local/$${S3_PRIVATE_BUCKET:-real-estate-private}"
+        mc anonymous set none "local/$${S3_PRIVATE_BUCKET:-real-estate-private}"
+        echo "private bucket $${S3_PRIVATE_BUCKET:-real-estate-private} ready"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-real-estate-media}
+      S3_PRIVATE_BUCKET: ${S3_PRIVATE_BUCKET:-real-estate-private}
     restart: "no"
 
   api:
@@ -137,6 +142,7 @@ services:
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
       R2_BUCKET: ${R2_BUCKET:-}
       R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
+      R2_PRIVATE_BUCKET: ${R2_PRIVATE_BUCKET:-}
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID:-}
       FIREBASE_CLIENT_EMAIL: ${FIREBASE_CLIENT_EMAIL:-}
       FIREBASE_PRIVATE_KEY: ${FIREBASE_PRIVATE_KEY:-}

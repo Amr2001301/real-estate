@@ -2,6 +2,8 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -13,10 +15,14 @@ import { randomBytes, randomInt, createHash } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { SmsService } from './sms.service';
+import { EmailService } from './email.service';
 import type { UserRole } from '@prisma/client';
 
 const OTP_TTL_MIN = 10;
 const OTP_MAX_ATTEMPTS = 5;
+const RESET_TTL_MIN = 20;
+const VERIFY_TTL_MIN = 60;
+const VERIFY_RESEND_COOLDOWN_MS = 60_000;
 
 @Injectable()
 export class AuthService {
@@ -27,6 +33,7 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly sms: SmsService,
+    private readonly email: EmailService,
   ) {}
 
   // ------------- Email + password (Admin / Sales / Broker) -------------
@@ -111,12 +118,16 @@ export class AuthService {
       const passwordHash = await argon2.hash(dto.password);
       const claimed = await this.prisma.user.update({
         where: { id: matchedRow.id },
-        data: { fullName, email, phone, passwordHash, locale: 'ar' },
+        // Claiming a synthetic row: clear emailVerifiedAt because the email may
+        // have changed (synthetic rows can have stale or null emails).
+        data: { fullName, email, phone, passwordHash, locale: 'ar', emailVerifiedAt: null },
       });
       // P9 — sweep any OTHER synthetic peers (e.g. one matched by phone
       // here, another that holds an email-only stub) that the in-place
       // claim above didn't touch.
       await this.tryClaimSyntheticPeers(claimed.id);
+      // Send verification email for the claimed email address.
+      await this.sendVerificationEmailSafe(claimed.id, email);
       return this.issueTokens(claimed.id, claimed.role);
     }
 
@@ -132,6 +143,9 @@ export class AuthService {
       },
     });
     await this.tryClaimSyntheticPeers(user.id);
+    // Send verification email after successful registration (best-effort — a
+    // delivery failure must never block the registration itself).
+    await this.sendVerificationEmailSafe(user.id, email);
     return this.issueTokens(user.id, user.role);
   }
 
@@ -308,6 +322,203 @@ export class AuthService {
     return { ok: true };
   }
 
+  // ------------- Forgot / Reset password -------------
+
+  /**
+   * Request a password reset. Always returns the same response regardless of
+   * whether the email exists — prevents user enumeration. Raw token is sent
+   * only in the email link; only the SHA-256 hash is persisted.
+   */
+  async forgotPassword(rawEmail: string): Promise<{ ok: true }> {
+    const email = rawEmail.trim().toLowerCase();
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, passwordHash: true, active: true },
+    });
+
+    // Silently return if the account doesn't exist or has no password set.
+    if (!user || !user.email || !user.passwordHash) return { ok: true };
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + RESET_TTL_MIN * 60_000);
+
+    await this.prisma.$transaction([
+      // Invalidate all previous active reset tokens for this user so only the
+      // latest reset email remains usable.
+      this.prisma.passwordResetToken.updateMany({
+        where: { userId: user.id, consumedAt: null },
+        data: { consumedAt: new Date() },
+      }),
+      this.prisma.passwordResetToken.create({
+        data: { userId: user.id, tokenHash, expiresAt },
+      }),
+    ]);
+
+    // A send failure must never reveal user existence — always return ok: true.
+    try {
+      await this.email.sendPasswordReset(user.email, rawToken);
+    } catch (err: unknown) {
+      this.logger.error(`password-reset email error: ${(err as Error).message}`);
+    }
+
+    return { ok: true };
+  }
+
+  /**
+   * Exchange a valid reset token for a new password. Atomically:
+   *   1. Marks the token consumed.
+   *   2. Updates the password hash.
+   *   3. Revokes all existing refresh tokens (forces re-login on all devices).
+   */
+  async resetPassword(rawToken: string, newPassword: string): Promise<{ ok: true }> {
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+
+    const record = await this.prisma.passwordResetToken.findUnique({ where: { tokenHash } });
+    if (!record || record.consumedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException('Reset token is invalid or has expired');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: record.userId },
+      select: { id: true, passwordHash: true, active: true },
+    });
+    if (!user || !user.active) throw new BadRequestException('Reset token is invalid or has expired');
+
+    const passwordHash = await argon2.hash(newPassword);
+    await this.prisma.$transaction([
+      this.prisma.passwordResetToken.update({
+        where: { id: record.id },
+        data: { consumedAt: new Date() },
+      }),
+      this.prisma.user.update({ where: { id: user.id }, data: { passwordHash } }),
+      this.prisma.refreshToken.updateMany({
+        where: { userId: user.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      }),
+    ]);
+
+    return { ok: true };
+  }
+
+  // ------------- Email verification -------------
+
+  /**
+   * Consume a raw verification token and mark the user's email as verified.
+   * The user field is set server-side only — the client cannot bypass this.
+   *
+   * If the token is already consumed, expired, or unknown: throws 400.
+   * If the user's email is already verified: returns ok:true with a note.
+   */
+  async verifyEmail(rawToken: string): Promise<{ ok: true; alreadyVerified?: true }> {
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+
+    const record = await this.prisma.emailVerificationToken.findUnique({ where: { tokenHash } });
+    if (!record || record.consumedAt || record.expiresAt < new Date()) {
+      throw new BadRequestException('Verification link is invalid or has expired');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: record.userId },
+      select: { id: true, emailVerifiedAt: true, active: true },
+    });
+    if (!user || !user.active) {
+      throw new BadRequestException('Verification link is invalid or has expired');
+    }
+
+    if (user.emailVerifiedAt) {
+      // Consume the token so it cannot be replayed, but don't change state.
+      await this.prisma.emailVerificationToken.update({
+        where: { id: record.id },
+        data: { consumedAt: new Date() },
+      });
+      return { ok: true, alreadyVerified: true };
+    }
+
+    await this.prisma.$transaction([
+      this.prisma.emailVerificationToken.update({
+        where: { id: record.id },
+        data: { consumedAt: new Date() },
+      }),
+      // Invalidate all other outstanding verification tokens for this user.
+      this.prisma.emailVerificationToken.updateMany({
+        where: { userId: record.userId, consumedAt: null, id: { not: record.id } },
+        data: { consumedAt: new Date() },
+      }),
+      this.prisma.user.update({
+        where: { id: record.userId },
+        data: { emailVerifiedAt: new Date() },
+      }),
+    ]);
+
+    return { ok: true };
+  }
+
+  /**
+   * Authenticated resend: issues a new verification token for the calling user's
+   * email. Previous tokens are invalidated. Enforces a 60-second per-user
+   * cooldown to prevent email flooding.
+   *
+   * No-ops silently when:
+   * - the user has no email (OTP-only account)
+   * - the user's email is already verified
+   */
+  async resendVerification(userId: string): Promise<{ ok: true }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, emailVerifiedAt: true, active: true },
+    });
+    if (!user || !user.active || !user.email || user.emailVerifiedAt) {
+      // Silent no-op: OTP-only accounts, already-verified, or inactive.
+      return { ok: true };
+    }
+
+    // Cooldown: reject if a token was issued within the last 60 seconds.
+    const recent = await this.prisma.emailVerificationToken.findFirst({
+      where: {
+        userId,
+        createdAt: { gte: new Date(Date.now() - VERIFY_RESEND_COOLDOWN_MS) },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (recent) {
+      throw new HttpException(
+        'Please wait before requesting another verification email',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    await this.sendVerificationEmailSafe(userId, user.email);
+    return { ok: true };
+  }
+
+  /**
+   * Issue a new email verification token and send the verification email.
+   * Invalidates all previous tokens for the user first.
+   * Errors are swallowed — a send failure must never block registration or resend responses.
+   */
+  private async sendVerificationEmailSafe(userId: string, email: string): Promise<void> {
+    try {
+      const rawToken = randomBytes(32).toString('hex');
+      const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+      const expiresAt = new Date(Date.now() + VERIFY_TTL_MIN * 60_000);
+
+      await this.prisma.$transaction([
+        this.prisma.emailVerificationToken.updateMany({
+          where: { userId, consumedAt: null },
+          data: { consumedAt: new Date() },
+        }),
+        this.prisma.emailVerificationToken.create({
+          data: { userId, tokenHash, expiresAt },
+        }),
+      ]);
+
+      await this.email.sendEmailVerification(email, rawToken);
+    } catch (err) {
+      this.logger.error(`[email-verify] failed for user ${userId}: ${(err as Error).message}`);
+    }
+  }
+
   private async issueTokens(userId: string, role: UserRole) {
     const accessToken = await this.jwt.signAsync(
       { sub: userId, role },
@@ -335,6 +546,7 @@ export class AuthService {
         email: true,
         phone: true,
         locale: true,
+        emailVerifiedAt: true,
       },
     });
 

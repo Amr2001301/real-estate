@@ -14,6 +14,7 @@ import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
 import { JsonLoggerService } from './common/logging/json-logger.service';
 import { requestIdMiddleware } from './common/logging/request-id.middleware';
+import { isSentryEnabled } from './common/observability/sentry';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -58,7 +59,18 @@ async function bootstrap() {
 
   const port = Number(config.get('PORT') ?? 4000);
   await app.listen(port);
-  Logger.log(`API running on http://localhost:${port}/v1 (docs: /docs)`, 'Bootstrap');
+
+  const redisUrl = config.get<string>('REDIS_URL') ?? '';
+  let redisHost = 'not-configured';
+  try { redisHost = new URL(redisUrl).hostname; } catch { /* ignore */ }
+
+  Logger.log(
+    `started env=${config.get('NODE_ENV')} port=${port} ` +
+    `sentry=${isSentryEnabled() ? 'enabled' : 'disabled'} ` +
+    `redis=${redisHost} otp=${config.get('OTP_PROVIDER')} ` +
+    `storage=${config.get('R2_ACCOUNT_ID') ? 'r2' : 'local/unset'}`,
+    'Bootstrap',
+  );
 }
 
 bootstrap().catch((err) => {

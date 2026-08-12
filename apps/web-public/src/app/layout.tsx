@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, IBM_Plex_Sans_Arabic, Tajawal } from 'next/font/google';
+import Script from 'next/script';
 import './globals.css';
 import { buildMetadata } from '@/lib/seo';
 import { Navbar } from '@/components/layout/Navbar';
@@ -7,6 +8,9 @@ import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import { FavoritesProvider } from '@/components/favorites/FavoritesProvider';
 import { ChatWidget } from '@/components/chat/ChatWidget';
+import { PageViewTracker } from '@/components/analytics/PageViewTracker';
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const inter = Inter({
   subsets: ['latin'],
@@ -40,6 +44,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <body className="min-h-full">
+        {GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','${GA_ID}',{send_page_view:false});`}
+            </Script>
+          </>
+        )}
+        <PageViewTracker />
         <ThemeProvider>
           <FavoritesProvider>
             <Navbar />

@@ -110,12 +110,14 @@ jobs:
         working-directory: apps/api
         run: pnpm prisma:generate
 
-      # `migrate status` is read-only: it reports drift between schema + migrations
-      # without applying anything. Acceptable against a real DB.
-      - name: Prisma migrate status (read-only check)
+      # Prove all committed migrations apply cleanly to a fresh database, then
+      # verify no schema drift exists (schema.prisma out of sync with migrations).
+      # Both commands must succeed — CI fails on migration error or drift.
+      - name: Validate migration integrity
         working-directory: apps/api
-        run: npx prisma migrate status --schema=./prisma/schema.prisma
-        continue-on-error: true # report but don't fail the build until migrations are stable
+        run: |
+          npx prisma migrate deploy --schema=./prisma/schema.prisma
+          npx prisma migrate status --schema=./prisma/schema.prisma
 
       - name: Lint
         run: pnpm -r lint

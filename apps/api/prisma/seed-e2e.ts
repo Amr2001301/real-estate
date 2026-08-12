@@ -203,8 +203,9 @@ async function main(): Promise<void> {
     where: { email: 'sales@example.com' },
     select: { id: true },
   });
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com';
   const adminUser = await prisma.user.findUniqueOrThrow({
-    where: { email: 'admin@example.com' },
+    where: { email: adminEmail },
     select: { id: true },
   });
 

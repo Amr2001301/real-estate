@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, MailCheck } from 'lucide-react';
 import { customerLoginAction, customerRegisterAction } from '@/lib/auth-actions';
+import { trackEvent } from '@/lib/analytics';
 import { routes } from '@/lib/routes';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +14,7 @@ import { FormError } from '@/components/states/FormError';
 import { InlineNotice } from '@/components/states/InlineNotice';
 
 type Mode = 'login' | 'register';
+type Step = 'form' | 'check-email';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
@@ -71,6 +73,8 @@ export function CustomerAuthForm({
 }) {
   const router = useRouter();
   const isRegister = mode === 'register';
+  const [step, setStep] = useState<Step>('form');
+  const [registeredEmail, setRegisteredEmail] = useState('');
   const [pending, setPending] = useState(false);
   const [topError, setTopError] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -123,8 +127,16 @@ export function CustomerAuthForm({
       : await customerLoginAction({ email: email.trim(), password, from });
 
     if (res.ok) {
-      // Cookies are already set by the server action; navigate and refresh so
-      // server components pick up the new session. Tokens never touch JS here.
+      if (isRegister) {
+        trackEvent('sign_up_complete');
+        setRegisteredEmail(email.trim());
+        setPending(false);
+        setStep('check-email');
+        return;
+      }
+      trackEvent('login_complete');
+      // Login: cookies already set; navigate and refresh so server components
+      // pick up the new session. Tokens never touch JS here.
       router.push(res.redirectTo as Route);
       router.refresh();
     } else {
@@ -135,6 +147,33 @@ export function CustomerAuthForm({
           : mapLoginError(res.status, res.code),
       );
     }
+  }
+
+  if (step === 'check-email') {
+    return (
+      <PremiumCard className="flex flex-col items-center gap-4 p-8 text-center">
+        <MailCheck className="h-14 w-14 text-gold-500" aria-hidden />
+        <h2 className="text-xl font-bold text-ink-strong">تم إنشاء حسابك بنجاح</h2>
+        <p className="text-sm text-ink-muted leading-relaxed">
+          أرسلنا رابط تأكيد إلى{' '}
+          <span className="font-medium text-ink-strong" dir="ltr">{registeredEmail}</span>.
+          {' '}تحقق من بريدك الوارد (ومجلد الرسائل غير المرغوب) وانقر الرابط لتفعيل حسابك.
+        </p>
+        <button
+          type="button"
+          onClick={() => { router.push(routes.account as Route); router.refresh(); }}
+          className="mt-2 w-full rounded-full bg-navy px-8 py-3.5 text-base font-medium tracking-tight text-white transition-all hover:-translate-y-0.5 hover:bg-navy-700"
+        >
+          الانتقال إلى الحساب
+        </button>
+        <p className="text-xs text-ink-muted">
+          لم تصلك الرسالة؟{' '}
+          <a href={routes.accountProfile} className="underline underline-offset-4 hover:text-ink-strong">
+            يمكنك إعادة الإرسال من الملف الشخصي
+          </a>.
+        </p>
+      </PremiumCard>
+    );
   }
 
   return (
@@ -234,10 +273,17 @@ export function CustomerAuthForm({
           )}
         </Button>
 
-        {!isRegister && onUseOtp && (
-          <button type="button" onClick={onUseOtp} className="block w-full text-center text-sm text-ink-muted transition-colors hover:text-ink-strong">
-            الدخول برقم الجوال بدلاً من ذلك
-          </button>
+        {!isRegister && (
+          <div className="flex flex-col items-center gap-2">
+            {onUseOtp && (
+              <button type="button" onClick={onUseOtp} className="text-sm text-ink-muted transition-colors hover:text-ink-strong">
+                الدخول برقم الجوال بدلاً من ذلك
+              </button>
+            )}
+            <a href={routes.forgotPassword} className="text-sm text-ink-muted transition-colors hover:text-gold-600">
+              نسيت كلمة المرور؟
+            </a>
+          </div>
         )}
       </form>
     </PremiumCard>

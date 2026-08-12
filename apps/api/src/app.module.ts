@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { BullModule } from '@nestjs/bullmq';
@@ -41,6 +41,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module';
 import { DocumentsModule } from './modules/documents/documents.module';
 import { MeDocumentsModule } from './modules/documents/me-documents.module';
 import { OwnershipModule } from './common/ownership/ownership.module';
+import { CronLockModule } from './common/cron/cron-lock.module';
 import { BrokersModule } from './modules/brokers/brokers.module';
 import { BrokerUsersModule } from './modules/broker-users/broker-users.module';
 import { BrokerAccessModule } from './modules/broker-access/broker-access.module';
@@ -64,13 +65,13 @@ import { HealthController } from './modules/health/health.controller';
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     BullModule.forRootAsync({
-      useFactory: () => ({
-        connection: {
-          url: process.env.REDIS_URL ?? 'redis://localhost:6379',
-        },
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        connection: { url: config.getOrThrow<string>('REDIS_URL') },
       }),
     }),
     PrismaModule,
+    CronLockModule,
     OwnershipModule,
 
     AuthModule,

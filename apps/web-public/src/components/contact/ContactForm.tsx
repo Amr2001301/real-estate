@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle2, Send, Building2, Home as HomeIcon, Clock3, CalendarClock } from 'lucide-react';
 import { safePost, type ApiResult } from '@/lib/api';
+import { trackEvent } from '@/lib/analytics';
 import { routes } from '@/lib/routes';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button, ButtonLink } from '@/components/ui/Button';
@@ -131,6 +132,10 @@ export function ContactForm({
     const res = isVisit ? await submitVisit() : await submitInfo();
 
     if (res.ok) {
+      trackEvent(isVisit ? 'visit_request_submit' : 'info_request_submit', {
+        ...(context.projectId ? { project_id: context.projectId } : {}),
+        ...(context.unitId ? { unit_id: context.unitId } : {}),
+      });
       setStatus('success');
     } else {
       setStatus('error');

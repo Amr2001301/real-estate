@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useActionState, useState } from 'react';
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import { loginAction, type LoginState } from './actions';
@@ -89,6 +90,15 @@ export default function LoginForm({ from }: { from?: string }) {
           'تسجيل الدخول'
         )}
       </button>
+
+      <p className="text-center text-[13px] text-text-muted">
+        <Link
+          href="/forgot-password"
+          className="text-navy/60 underline-offset-4 hover:text-navy hover:underline"
+        >
+          نسيت كلمة المرور؟
+        </Link>
+      </p>
     </form>
   );
 }

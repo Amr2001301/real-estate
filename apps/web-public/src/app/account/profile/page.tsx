@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { Mail, ShieldCheck, CalendarDays, Clock } from 'lucide-react';
+import { Mail, ShieldCheck, CalendarDays, Clock, BadgeCheck, MailWarning } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { MeProfile } from '@/lib/api-types';
@@ -7,6 +7,7 @@ import { PremiumCard } from '@/components/ui/PremiumCard';
 import { ErrorState } from '@/components/states/ErrorState';
 import { ProfileForm } from '@/components/account/ProfileForm';
 import { AccountPageHeader } from '@/components/account/AccountPageHeader';
+import { ResendVerificationButton } from '@/components/account/ResendVerificationButton';
 
 export const metadata = buildMetadata({
   title: 'الملف الشخصي',
@@ -84,6 +85,22 @@ export default async function AccountProfilePage() {
           <p className="mt-1 text-sm text-ink-muted">هذه البيانات للعرض فقط ولا يمكن تعديلها من هنا.</p>
           <div className="mt-4 divide-y divide-hairline">
             <InfoRow icon={<Mail className="h-4 w-4" aria-hidden />} label="البريد الإلكتروني" value={profile.email ?? '—'} />
+            {profile.email && (
+              <div className="flex items-start gap-3 py-3.5">
+                <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${profile.emailVerifiedAt ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
+                  {profile.emailVerifiedAt
+                    ? <BadgeCheck className="h-4 w-4" aria-hidden />
+                    : <MailWarning className="h-4 w-4" aria-hidden />}
+                </span>
+                <div className="min-w-0">
+                  <div className="text-xs text-ink-muted">حالة البريد الإلكتروني</div>
+                  <div className="text-sm font-medium text-ink-strong">
+                    {profile.emailVerifiedAt ? `مؤكَّد — ${formatDate(profile.emailVerifiedAt)}` : 'غير مؤكَّد'}
+                  </div>
+                  {!profile.emailVerifiedAt && <ResendVerificationButton />}
+                </div>
+              </div>
+            )}
             <InfoRow icon={<ShieldCheck className="h-4 w-4" aria-hidden />} label="نوع الحساب" value={roleLabel} />
             <InfoRow icon={<CalendarDays className="h-4 w-4" aria-hidden />} label="تاريخ الانضمام" value={formatDate(profile.createdAt)} />
             <InfoRow icon={<Clock className="h-4 w-4" aria-hidden />} label="آخر تسجيل دخول" value={formatDate(profile.lastLoginAt)} />

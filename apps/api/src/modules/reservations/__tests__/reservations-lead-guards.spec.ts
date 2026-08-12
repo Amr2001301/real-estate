@@ -97,6 +97,7 @@ function makePrismaMock(leadOverrides: Parameters<typeof makeLead>[0] = {}) {
     unit: {
       findUnique: jest.fn().mockResolvedValue(unit),
       update: jest.fn().mockResolvedValue({}),
+      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     reservation: {
       findFirst: jest.fn().mockResolvedValue(null),

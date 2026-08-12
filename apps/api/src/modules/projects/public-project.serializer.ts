@@ -22,7 +22,7 @@ export interface StaffProjectSummary {
 
 interface ProjectListInput extends Pick<
   Project,
-  'id' | 'name' | 'description' | 'city' | 'lat' | 'lng' | 'services' | 'featured' | 'status'
+  'id' | 'name' | 'description' | 'city' | 'lat' | 'lng' | 'services' | 'featured' | 'status' | 'updatedAt'
 > {
   media?: MediaLike[];
 }
@@ -52,6 +52,7 @@ export function serializePublicProjectListItem(
     status: project.status,
     coverImage: media[0]?.url ?? null,
     availableUnitsCount,
+    updatedAt: project.updatedAt.toISOString(),
   };
 }
 
@@ -100,5 +101,6 @@ export function serializePublicProjectDetail(
     status: project.status,
     media: serializeMedia(project.media),
     availableUnitsCount,
+    updatedAt: project.updatedAt.toISOString(),
   };
 }

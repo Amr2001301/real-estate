@@ -8,6 +8,7 @@ import {
   Logger,
   Module,
   NotFoundException,
+  Optional,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -67,6 +68,8 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { CronLockService } from '../../common/cron/cron-lock.service';
+import { captureExceptionSafe } from '../../common/observability/sentry';
 
 enum SlaUnit {
   HOURS = 'HOURS',
@@ -295,7 +298,7 @@ export class MaintenanceService {
     }
     for (const f of files) {
       const ext = ATTACH_MIME[f.mimetype];
-      const { publicUrl } = await this.r2.uploadObject({
+      const { key } = await this.r2.uploadObject({
         buffer: f.buffer,
         contentType: f.mimetype,
         folder: 'maintenance',
@@ -306,7 +309,7 @@ export class MaintenanceService {
         ownerId: requestId,
         category: f.mimetype === 'application/pdf' ? DocumentCategory.OTHER : DocumentCategory.IMAGE,
         title: (f.originalname || 'مرفق').slice(0, 200),
-        fileUrl: publicUrl,
+        fileUrl: key,
         fileName: f.originalname?.slice(0, 255),
         mimeType: f.mimetype,
         sizeBytes: f.size,
@@ -1905,12 +1908,26 @@ class MaintenanceController {
  * re-runs are safe. ScheduleModule is registered globally in AppModule.
  */
 @Injectable()
-class MaintenanceUnresolvedCron {
-  constructor(private readonly svc: MaintenanceService) {}
+export class MaintenanceUnresolvedCron {
+  private readonly logger = new Logger(MaintenanceUnresolvedCron.name);
+
+  constructor(
+    private readonly svc: MaintenanceService,
+    @Optional() private readonly lock?: CronLockService,
+  ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async run() {
-    await this.svc.markUnresolved();
+    try {
+      if (this.lock) {
+        await this.lock.withLock('maintenance-unresolved', 2 * 60_000, () => this.svc.markUnresolved());
+      } else {
+        await this.svc.markUnresolved();
+      }
+    } catch (err) {
+      this.logger.error(`[maintenance-unresolved] cron failed: ${(err as Error).message}`);
+      captureExceptionSafe(err, { job: 'maintenance-unresolved' });
+    }
   }
 }
 
@@ -1921,12 +1938,26 @@ class MaintenanceUnresolvedCron {
  * needed). ScheduleModule is registered globally in AppModule.
  */
 @Injectable()
-class MaintenanceSlaCheckCron {
-  constructor(private readonly svc: MaintenanceService) {}
+export class MaintenanceSlaCheckCron {
+  private readonly logger = new Logger(MaintenanceSlaCheckCron.name);
+
+  constructor(
+    private readonly svc: MaintenanceService,
+    @Optional() private readonly lock?: CronLockService,
+  ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
   async run() {
-    await this.svc.checkSla();
+    try {
+      if (this.lock) {
+        await this.lock.withLock('maintenance-sla-check', 2 * 60_000, () => this.svc.checkSla());
+      } else {
+        await this.svc.checkSla();
+      }
+    } catch (err) {
+      this.logger.error(`[maintenance-sla-check] cron failed: ${(err as Error).message}`);
+      captureExceptionSafe(err, { job: 'maintenance-sla-check' });
+    }
   }
 }
 

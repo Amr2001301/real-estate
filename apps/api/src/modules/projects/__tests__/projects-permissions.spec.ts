@@ -76,6 +76,7 @@ function makePrismaMock() {
         id: 'p1',
         name: { ar: 'م', en: 'P' },
         status: 'PUBLISHED',
+        updatedAt: new Date('2026-01-01'),
       }),
       count: jest.fn().mockResolvedValue(0),
       create: jest.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
@@ -443,7 +444,7 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
       FakeAuthGuard.currentUser = { sub: 'admin-1', role: UserRole.ADMIN, codes: [] };
       await request(app.getHttpServer())
         .post('/media/presign')
-        .send({ kind: 'project', mimeType: 'image/jpeg', sizeBytes: 1024 })
+        .send({ contentType: 'image/jpeg', folder: 'projects', sizeBytes: 1024 })
         .expect(201);
       expect(r2Mock.createPresignedUpload).toHaveBeenCalled();
     });
@@ -488,7 +489,7 @@ describe('Project surface · permissions enforcement (projects + phases + buildi
       };
       await request(app.getHttpServer())
         .post('/media/presign')
-        .send({ kind: 'project', mimeType: 'image/jpeg', sizeBytes: 1024 })
+        .send({ contentType: 'image/jpeg', folder: 'projects', sizeBytes: 1024 })
         .expect(403);
       expect(r2Mock.createPresignedUpload).not.toHaveBeenCalled();
     });

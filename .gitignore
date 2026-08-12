@@ -64,3 +64,8 @@ playwright/.cache/
 
 # Playwright storage-state (Phase 7E) — JWT tokens; never commit
 **/e2e/.auth/
+
+# Database backups — contain sensitive customer data, never commit
+backups/
+*.dump
+*.pgdump
