@@ -14,6 +14,7 @@ import { ApiTags } from '@nestjs/swagger';
 import { Allow, IsObject, IsOptional, IsString } from 'class-validator';
 import { Prisma, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { Permissions } from '../../common/decorators/permissions.decorator';
 
@@ -107,15 +108,17 @@ class SettingsService {
   }
 
   async get(key: string): Promise<SettingView> {
-    const s = await this.prisma.setting.findUnique({ where: { key } });
+    // Middleware injects companyId filter; findFirst handles compound-PK uniqueness.
+    const s = await this.prisma.setting.findFirst({ where: { key } });
     if (!s) throw new NotFoundException(`Setting ${key} not found`);
     return decorate(s);
   }
 
   async upsert(key: string, value: Prisma.InputJsonValue): Promise<SettingView> {
+    const companyId = getRequiredCompanyId();
     const row = await this.prisma.setting.upsert({
-      where: { key },
-      create: { key, value },
+      where: { companyId_key: { companyId, key } },
+      create: { companyId, key, value },
       update: { value },
     });
     return decorate(row);

@@ -8,6 +8,7 @@ import { RolesGuard } from '../../../common/guards/roles.guard';
 import { PermissionsGuard } from '../../../common/guards/permissions.guard';
 import { PrismaService } from '../../../common/prisma/prisma.service';
 import { PERMISSIONS_KEY, type PermissionsMeta } from '../../../common/decorators/permissions.decorator';
+import { enterTenantContext } from '../../../common/tenant/tenant-context';
 
 /**
  * Integration test for the settings module. Verifies that:
@@ -21,6 +22,8 @@ import { PERMISSIONS_KEY, type PermissionsMeta } from '../../../common/decorator
  * Here we'd need to remove @Roles(ADMIN) to exercise that path, which we
  * deliberately don't (production behavior is the source of truth).
  */
+
+const FAKE_COMPANY_ID = 'aaaaaaaa-bbbb-4bbb-8bbb-cccccccccccc';
 
 interface FakeUser {
   sub: string;
@@ -36,9 +39,12 @@ class FakeAuthGuard implements CanActivate {
     req.user = {
       sub: FakeAuthGuard.currentUser.sub,
       role: FakeAuthGuard.currentUser.role,
+      companyId: FAKE_COMPANY_ID,
       email: null,
       phone: null,
     };
+    // Establish tenant context so SettingsService.upsert() can call getRequiredCompanyId().
+    enterTenantContext({ companyId: FAKE_COMPANY_ID, bypass: false, isPublic: false });
     return true;
   }
 }
@@ -61,7 +67,7 @@ function makePrismaMock() {
         updatedAt: new Date(),
       }),
       upsert: jest.fn().mockImplementation(({ where, update, create }) => ({
-        key: where.key,
+        key: where.companyId_key?.key ?? create.key,
         value: update.value ?? create.value,
         updatedAt: new Date(),
       })),

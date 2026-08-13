@@ -89,14 +89,21 @@ async function cleanup() {
 // ── Seed ─────────────────────────────────────────────────────────────────────
 
 async function seed() {
-  console.log('🌱 Seeding demo system settings...');
+  const companyId = process.env.SEED_COMPANY_ID
+    ?? (await prisma.company.findFirst({ select: { id: true } }))?.id;
+  if (!companyId) {
+    console.error('❌ No company found. Pass SEED_COMPANY_ID or seed a Company first.');
+    process.exit(1);
+  }
+
+  console.log(`🌱 Seeding demo system settings for company ${companyId}...`);
   let created = 0;
 
   for (const { key, value } of DEMO_SETTINGS) {
     await prisma.setting.upsert({
-      where:  { key },
+      where:  { companyId_key: { companyId, key } },
       update: { value: value as never },
-      create: { key, value: value as never },
+      create: { companyId, key, value: value as never },
     });
     created++;
     console.log(`   ✓ ${key}`);
