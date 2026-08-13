@@ -11,6 +11,76 @@ datasource db {
 }
 
 // =============================================================================
+// TENANT / COMPANY
+// =============================================================================
+
+model Company {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String
+  slug          String   @unique            // URL-safe identifier, used for subdomain routing
+  logoUrl       String?
+  country       String?                     // ISO 3166-1 alpha-2 (SA, AE, EG …)
+  currency      String   @default("SAR")    // ISO 4217
+  defaultLocale Locale   @default(ar)
+  timezone      String   @default("Asia/Riyadh") // IANA tz database name
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // ── Relations ──────────────────────────────────────────────────────────────
+  users                    User[]
+  projects                 Project[]
+  phases                   Phase[]
+  buildings                Building[]
+  units                    Unit[]
+  unitStatusHistories      UnitStatusHistory[]
+  unitMaintenanceItems     UnitMaintenanceItem[]
+  leadSources              LeadSource[]
+  leads                    Lead[]
+  leadNotes                LeadNote[]
+  leadActivities           LeadActivity[]
+  infoRequests             InfoRequest[]
+  visitRequests            VisitRequest[]
+  visitAppointments        VisitAppointment[]
+  visitActivities          VisitActivity[]
+  reservations             Reservation[]
+  reservationNotes         ReservationNote[]
+  reservationActivities    ReservationActivity[]
+  contracts                Contract[]
+  installmentPlans         InstallmentPlan[]
+  installments             Installment[]
+  deposits                 Deposit[]
+  installmentPlanTemplates InstallmentPlanTemplate[]
+  bonusRules               BonusRule[]
+  bonusEntries             BonusEntry[]
+  salesTargets             SalesTarget[]
+  maintenanceCategories    MaintenanceCategory[]
+  maintenanceRequests      MaintenanceRequest[]
+  maintenanceRequestItems  MaintenanceRequestItem[]
+  cmsPages                 CmsPage[]
+  banners                  Banner[]
+  articles                 Article[]
+  notificationTemplates    NotificationTemplate[]
+  notifications            Notification[]
+  auditLogs                AuditLog[]
+  brokers                  Broker[]
+  brokerUsers              BrokerUser[]
+  brokerProjectAccesses    BrokerProjectAccess[]
+  brokerUnitAccesses       BrokerUnitAccess[]
+  brokerCommissions        BrokerCommission[]
+  brokerPayouts            BrokerPayout[]
+  brokerActivityLogs       BrokerActivityLog[]
+  settings                 Setting[]
+  documents                Document[]
+  chatSessions             ChatSession[]
+  chatMessages             ChatMessage[]
+  chatFeedback             ChatFeedback[]
+
+  @@index([slug])
+  @@index([isActive])
+}
+
+// =============================================================================
 // AUTH & USERS
 // =============================================================================
 
@@ -95,6 +165,13 @@ model User {
   brokerActivityLogs          BrokerActivityLog[]   @relation("BrokerActivityLogAgent")
   uploadedDocuments           Document[]            @relation("DocumentUploader")
 
+  // ── Tenant scoping ───────────────────────────────────────────────────────
+  // Nullable so existing users and platform-level ADMIN users without a
+  // company assignment are unaffected. Assigned by MT-Seed-01 for all
+  // current users; required for new users via the registration flow.
+  companyId    String?  @db.Uuid
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   // ── Sales team scoping (additive) ────────────────────────────────────────
   // A SALES user may be assigned to a SALES_MANAGER via managerId. Nullable so
   // existing users are unaffected; self-relation, no cascade.
@@ -106,6 +183,7 @@ model User {
   @@index([phone])
   @@index([email])
   @@index([managerId])
+  @@index([companyId])
 }
 
 model RefreshToken {
@@ -235,8 +313,12 @@ model Project {
   brokerAccess  BrokerProjectAccess[]
   brokerCommissions BrokerCommission[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([city])
   @@index([status, featured])
+  @@index([companyId])
 }
 
 model ProjectMedia {
@@ -260,7 +342,11 @@ model Phase {
   createdAt DateTime   @default(now())
   buildings Building[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([projectId])
+  @@index([companyId])
 }
 
 model Building {
@@ -273,7 +359,11 @@ model Building {
   createdAt   DateTime @default(now())
   units       Unit[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([phaseId])
+  @@index([companyId])
 }
 
 model Unit {
@@ -310,9 +400,13 @@ model Unit {
   brokerAccess        BrokerUnitAccess[]
   brokerCommissions   BrokerCommission[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@unique([buildingId, code])
   @@index([status])
   @@index([price])
+  @@index([companyId])
 }
 
 model UnitMedia {
@@ -338,7 +432,11 @@ model UnitStatusHistory {
   reason      String?
   changedAt   DateTime   @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([unitId, changedAt])
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -360,6 +458,11 @@ model LeadSource {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   leads     Lead[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 model Lead {
@@ -403,6 +506,9 @@ model Lead {
   appointments    VisitAppointment[]
   visitActivities VisitActivity[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([clientId])
   @@index([assignedSalesId])
   @@index([stage])
@@ -411,6 +517,7 @@ model Lead {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([brokerApprovalStatus])
+  @@index([companyId])
 }
 
 model LeadNote {
@@ -422,7 +529,11 @@ model LeadNote {
   body      String
   createdAt DateTime @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([leadId, createdAt])
+  @@index([companyId])
 }
 
 model LeadActivity {
@@ -433,7 +544,11 @@ model LeadActivity {
   payload   Json     @default("{}")
   createdAt DateTime @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([leadId, createdAt])
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -511,8 +626,12 @@ model InfoRequest {
   status    String   @default("OPEN") // OPEN | RESPONDED | CLOSED
   createdAt DateTime @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([projectId])
   @@index([userId])
+  @@index([companyId])
 }
 
 model VisitRequest {
@@ -558,12 +677,16 @@ model VisitRequest {
   appointments    VisitAppointment[]
   visitActivities VisitActivity[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([status])
   @@index([requestStatus])
   @@index([projectId])
   @@index([assignedSalesId])
   @@index([brokerId])
   @@index([brokerAgentId])
+  @@index([companyId])
 }
 
 model VisitAppointment {
@@ -622,6 +745,9 @@ model VisitAppointment {
 
   visitActivities VisitActivity[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([status])
   @@index([scheduledAt])
   @@index([visitRequestId])
@@ -630,6 +756,7 @@ model VisitAppointment {
   @@index([clientId])
   @@index([brokerId])
   @@index([brokerAgentId])
+  @@index([companyId])
 }
 
 model VisitActivity {
@@ -651,10 +778,14 @@ model VisitActivity {
   note           String?
   createdAt      DateTime          @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([visitRequestId])
   @@index([visitId])
   @@index([leadId])
   @@index([clientId])
+  @@index([companyId])
 }
 
 model Favorite {
@@ -777,6 +908,9 @@ model Reservation {
   deposits         Deposit[]
   brokerCommissions BrokerCommission[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([unitId])
   @@index([salesId])
   @@index([clientId])
@@ -785,6 +919,7 @@ model Reservation {
   @@index([selectedDurationOptionId])
   @@index([brokerId])
   @@index([brokerAgentId])
+  @@index([companyId])
 }
 
 enum ReservationActivityType {
@@ -808,7 +943,11 @@ model ReservationNote {
   author        User?       @relation("ReservationNoteAuthor", fields: [authorId], references: [id])
   createdAt     DateTime    @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([reservationId])
+  @@index([companyId])
 }
 
 model ReservationActivity {
@@ -821,7 +960,11 @@ model ReservationActivity {
   note          String?
   createdAt     DateTime                @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([reservationId])
+  @@index([companyId])
 }
 
 model Contract {
@@ -852,11 +995,15 @@ model Contract {
   // At most one auto-generated sales commission entry (Batch B wires creation).
   bonusEntry      BonusEntry?
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([customerId])
   @@index([unitId])
   @@index([reservationId])
   @@index([brokerId])
   @@index([brokerAgentId])
+  @@index([companyId])
 }
 
 model InstallmentPlan {
@@ -870,6 +1017,11 @@ model InstallmentPlan {
   createdAt     DateTime             @default(now())
 
   installments Installment[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 model Installment {
@@ -885,8 +1037,12 @@ model Installment {
 
   deposits Deposit[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([planId, dueDate])
   @@index([status])
+  @@index([companyId])
 }
 
 /// P11 — Manual/offline payment-proof review state. NO_PROOF is the default
@@ -939,11 +1095,15 @@ model Deposit {
   proofDocument    Document?           @relation("DepositProofDocument", fields: [proofDocumentId], references: [id], onDelete: SetNull)
   paymentMethod    PaymentMethod?
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([contractId])
   @@index([reservationId])
   @@index([reviewStatus])
   @@index([reviewedById])
   @@index([proofDocumentId])
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -1025,8 +1185,12 @@ model InstallmentPlanTemplate {
   durationOptions InstallmentPlanDurationOption[]
   reservations    Reservation[]                  @relation("ReservationPlanTemplate")
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([projectId])
   @@index([status])
+  @@index([companyId])
 }
 
 model InstallmentPlanDurationOption {
@@ -1086,6 +1250,11 @@ model BonusRule {
   autoApplyOnSignedContract Boolean @default(false)
   createdAt  DateTime     @default(now())
   entries    BonusEntry[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 model BonusEntry {
@@ -1110,8 +1279,12 @@ model BonusEntry {
   basisAmount  Decimal?         @db.Decimal(14, 2)
   commissionPct Decimal?        @db.Decimal(5, 2)
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([salesId, period])
   @@index([status])
+  @@index([companyId])
 }
 
 model SalesTarget {
@@ -1123,7 +1296,11 @@ model SalesTarget {
   unitsTarget  Int
   createdAt    DateTime @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@unique([salesId, period])
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -1190,6 +1367,11 @@ model MaintenanceCategory {
   requests MaintenanceRequest[]
   maintenanceItems UnitMaintenanceItem[]
   requestItems MaintenanceRequestItem[]
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 // A maintainable component of a unit (AC, plumbing, doors, ...) with an
@@ -1217,9 +1399,13 @@ model UnitMaintenanceItem {
   requests     MaintenanceRequest[]
   requestItems MaintenanceRequestItem[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([unitId])
   @@index([categoryId])
   @@index([active])
+  @@index([companyId])
 }
 
 model MaintenanceRequest {
@@ -1281,6 +1467,9 @@ model MaintenanceRequest {
 
   items MaintenanceRequestItem[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([customerId])
   @@index([status])
   @@index([itemId])
@@ -1289,6 +1478,7 @@ model MaintenanceRequest {
   @@index([closedAt])
   @@index([complaintAt])
   @@index([unresolvedAt])
+  @@index([companyId])
 }
 
 // One selected category/component on a maintenance request. Snapshots the
@@ -1308,9 +1498,13 @@ model MaintenanceRequestItem {
   warrantyEndSnapshot      DateTime?
   createdAt                DateTime            @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([requestId])
   @@index([categoryId])
   @@index([itemId])
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -1325,6 +1519,11 @@ model CmsPage {
   published Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 model Banner {
@@ -1335,6 +1534,11 @@ model Banner {
   active    Boolean  @default(true)
   order     Int      @default(0)
   createdAt DateTime @default(now())
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 model Article {
@@ -1347,6 +1551,11 @@ model Article {
   published Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 enum NotificationChannel {
@@ -1364,6 +1573,11 @@ model NotificationTemplate {
   active    Boolean             @default(true)
   createdAt DateTime            @default(now())
   updatedAt DateTime            @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 model Notification {
@@ -1377,8 +1591,12 @@ model Notification {
   readAt       DateTime?
   createdAt    DateTime            @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([userId, createdAt])
   @@index([userId, readAt])
+  @@index([companyId])
 }
 
 model AuditLog {
@@ -1393,8 +1611,12 @@ model AuditLog {
   ip         String?
   createdAt  DateTime @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([entityType, entityId])
   @@index([actorId, createdAt])
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -1498,8 +1720,12 @@ model Broker {
   payouts           BrokerPayout[]
   activityLogs      BrokerActivityLog[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([status])
   @@index([code])
+  @@index([companyId])
 }
 
 model BrokerUser {
@@ -1518,7 +1744,11 @@ model BrokerUser {
   createdAt             DateTime         @default(now())
   updatedAt             DateTime         @updatedAt
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([brokerId, status])
+  @@index([companyId])
 }
 
 model BrokerProjectAccess {
@@ -1534,8 +1764,12 @@ model BrokerProjectAccess {
   active             Boolean  @default(true)
   createdAt          DateTime @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@unique([brokerId, projectId])
   @@index([projectId, active])
+  @@index([companyId])
 }
 
 model BrokerUnitAccess {
@@ -1547,8 +1781,12 @@ model BrokerUnitAccess {
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@unique([brokerId, unitId])
   @@index([unitId, active])
+  @@index([companyId])
 }
 
 model BrokerCommission {
@@ -1596,11 +1834,15 @@ model BrokerCommission {
   payoutId          String?                @db.Uuid
   payout            BrokerPayout?          @relation(fields: [payoutId], references: [id])
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([brokerId, status])
   @@index([projectId, earnedAt])
   @@index([brokerAgentId])
   @@index([status, earnedAt])
   @@index([payoutId])
+  @@index([companyId])
 }
 
 model BrokerPayout {
@@ -1640,9 +1882,13 @@ model BrokerPayout {
 
   commissions       BrokerCommission[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([brokerId, status])
   @@index([brokerId, period])
   @@index([status, createdAt])
+  @@index([companyId])
 }
 
 model BrokerActivityLog {
@@ -1657,18 +1903,29 @@ model BrokerActivityLog {
   payload       Json               @default("{}")
   createdAt     DateTime           @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([brokerId, createdAt])
   @@index([brokerAgentId, createdAt])
+  @@index([companyId])
 }
 
 // =============================================================================
 // SETTINGS (key-value)
 // =============================================================================
 
+// NOTE: Setting uses key as PK for backward-compat. Full per-company
+// key scoping (compound PK) is deferred to MT-Schema-04 with a data migration.
 model Setting {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
 }
 
 // =============================================================================
@@ -1738,11 +1995,15 @@ model Document {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([ownerType, ownerId])
   @@index([category])
   @@index([uploadedById])
   @@index([createdAt])
   @@index([deletedAt])
+  @@index([companyId])
 }
 
 
@@ -1792,8 +2053,12 @@ model ChatSession {
   messages ChatMessage[]
   feedback ChatFeedback[]
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([anonymousId])
   @@index([lastMessageAt])
+  @@index([companyId])
 }
 
 model ChatMessage {
@@ -1809,7 +2074,11 @@ model ChatMessage {
   tokensOut  Int?
   createdAt  DateTime    @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([sessionId, createdAt])
+  @@index([companyId])
 }
 
 model ChatFeedback {
@@ -1821,5 +2090,9 @@ model ChatFeedback {
   comment   String?
   createdAt DateTime           @default(now())
 
+  companyId String?  @db.Uuid
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   @@index([sessionId])
+  @@index([companyId])
 }

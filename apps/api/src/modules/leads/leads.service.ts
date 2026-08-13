@@ -15,6 +15,7 @@ import {
   CreateLeadSourceDto,
 } from './dto/lead.dto';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { getTenantContext } from '../../common/tenant/tenant-context';
 
 @Injectable()
 export class LeadsService {
@@ -160,6 +161,7 @@ export class LeadsService {
           phone,
           email,
           locale: 'ar',
+          companyId: getTenantContext()?.companyId ?? null,
         },
         select: { id: true, fullName: true, phone: true, email: true },
       });

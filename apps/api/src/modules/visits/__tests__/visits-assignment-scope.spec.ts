@@ -59,6 +59,7 @@ const manager: AuthUser = {
   role: UserRole.SALES_MANAGER,
   email: null,
   phone: null,
+  companyId: null,
 };
 
 describe('Visits · SALES_MANAGER assignment scope', () => {

@@ -31,6 +31,7 @@ import { type TestApp, createTestApp } from '../setup-app';
 import { type E2EFixtures, loadE2EFixtures } from '../helpers/seed-fixtures';
 import { bearer, loginAs } from '../helpers/login';
 import { ContractsService } from '../../src/modules/contracts/contracts.module';
+import { enterTenantContext } from '../../src/common/tenant/tenant-context';
 
 describe('P12 — Contract conversion document linking + notifications (e2e)', () => {
   let testApp: TestApp;
@@ -52,8 +53,8 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
-    const prisma = testApp.prisma;
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
+    const prisma = testApp.rawPrisma;
 
     [adminToken, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!'),
@@ -63,12 +64,16 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
 
     customer1UserId = fixtures.userIds.customer1UserId;
 
+    const company = await prisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
+    const testCompanyId = company.id;
+
     // Fresh AVAILABLE unit under an existing building — conversion flips it to
     // SOLD, so we never touch a seeded unit another spec might read.
     const building = await prisma.building.findFirstOrThrow({ select: { id: true } });
     const unit = await prisma.unit.create({
       data: {
         buildingId: building.id,
+        companyId: testCompanyId,
         code: `P12-E2E-${Date.now()}`,
         type: '2BR',
         area: 120,
@@ -82,6 +87,7 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
     // startsAt required) and zero booking amount (no payment gating).
     const reservation = await prisma.reservation.create({
       data: {
+        companyId: testCompanyId,
         unitId: unit.id,
         salesId: fixtures.userIds.salesId,
         clientId: customer1UserId,
@@ -208,7 +214,7 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
   // ── P12.5 — DB notifications (no Firebase) ────────────────────────────────
 
   it('P12.5: customer received contract_created_customer + contract_document_available notifications', async () => {
-    const rows = await testApp.prisma.notification.findMany({
+    const rows = await testApp.rawPrisma.notification.findMany({
       where: {
         userId: customer1UserId,
         templateCode: { in: ['contract_created_customer', 'contract_document_available'] },
@@ -229,16 +235,20 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
     // A contract whose row predates P12: pdfUrl is set but NO Document exists.
     const LEGACY_PDF_URL = 'https://r2.example.com/contracts/legacy/p12-backfill-old.pdf';
     let legacyContractId: string;
+    let legacyCompanyId: string;
     let contractsService: ContractsService;
 
     beforeAll(async () => {
-      const prisma = testApp.prisma;
+      const prisma = testApp.rawPrisma;
       contractsService = testApp.app.get(ContractsService);
 
+      const company = await prisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
+      legacyCompanyId = company.id;
       const building = await prisma.building.findFirstOrThrow({ select: { id: true } });
       const unit = await prisma.unit.create({
         data: {
           buildingId: building.id,
+          companyId: legacyCompanyId,
           code: `P12-LEGACY-${Date.now()}`,
           type: '2BR',
           area: 110,
@@ -251,6 +261,7 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
       // Document row (the bug the backfill repairs).
       const contract = await prisma.contract.create({
         data: {
+          companyId: legacyCompanyId,
           customerId: customer1UserId,
           unitId: unit.id,
           totalAmount: '400000',
@@ -263,7 +274,7 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
     });
 
     const countContractDocs = () =>
-      testApp.prisma.document.count({
+      testApp.rawPrisma.document.count({
         where: {
           ownerType: 'CONTRACT',
           ownerId: legacyContractId,
@@ -286,6 +297,10 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
     });
 
     it('dry-run reports would-create and writes nothing', async () => {
+      // backfillContractDocument is called directly (no HTTP), so no
+      // TenantContextInterceptor runs. Set the ALS context manually so the
+      // Prisma tenant middleware can filter by companyId.
+      enterTenantContext({ companyId: legacyCompanyId, bypass: false, isPublic: false });
       const result = await contractsService.backfillContractDocument(
         { id: legacyContractId, contractNumber: null, pdfUrl: LEGACY_PDF_URL },
         { dryRun: true },
@@ -295,6 +310,7 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
     });
 
     it('execute registers a CUSTOMER_VISIBLE CONTRACT document visible in the Documents Center', async () => {
+      enterTenantContext({ companyId: legacyCompanyId, bypass: false, isPublic: false });
       const result = await contractsService.backfillContractDocument(
         { id: legacyContractId, contractNumber: null, pdfUrl: LEGACY_PDF_URL },
         { dryRun: false },
@@ -352,6 +368,7 @@ describe('P12 — Contract conversion document linking + notifications (e2e)', (
     });
 
     it('is idempotent: a second execute is a no-op (still exactly one document)', async () => {
+      enterTenantContext({ companyId: legacyCompanyId, bypass: false, isPublic: false });
       const result = await contractsService.backfillContractDocument(
         { id: legacyContractId, contractNumber: null, pdfUrl: LEGACY_PDF_URL },
         { dryRun: false },

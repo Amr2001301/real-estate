@@ -20,6 +20,7 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
+import { PrismaClient } from '@prisma/client';
 
 import { AppModule } from '../src/app.module';
 import { DateSerializerInterceptor } from '../src/common/interceptors/date-serializer.interceptor';
@@ -28,7 +29,18 @@ import { PrismaService } from '../src/common/prisma/prisma.service';
 
 export interface TestApp {
   app: INestApplication;
+  /**
+   * The tenant-enforced PrismaService used by the Nest application internally.
+   * Do NOT call this directly in test setup/assertions — it requires an active
+   * ALS tenant context. Use `rawPrisma` instead for direct DB operations.
+   */
   prisma: PrismaService;
+  /**
+   * A raw PrismaClient with no tenant middleware — for use in test beforeAll /
+   * afterAll hooks and helper assertions that need direct DB access without
+   * going through the HTTP layer.
+   */
+  rawPrisma: PrismaClient;
   close: () => Promise<void>;
 }
 
@@ -56,10 +68,17 @@ export async function createTestApp(): Promise<TestApp> {
   await app.init();
 
   const prisma = app.get(PrismaService);
+  // Raw client with no tenant middleware — for test fixture setup and direct
+  // DB assertions that happen outside the HTTP request lifecycle.
+  const rawPrisma = new PrismaClient();
+  await rawPrisma.$connect();
+
   return {
     app,
     prisma,
+    rawPrisma,
     close: async () => {
+      await rawPrisma.$disconnect();
       await app.close();
     },
   };

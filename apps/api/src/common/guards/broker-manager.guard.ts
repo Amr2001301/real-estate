@@ -5,6 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { enterTenantContext } from '../tenant/tenant-context';
 
 /**
  * Runs AFTER BrokerScopeGuard. Allows only broker users who can manage their
@@ -17,6 +18,7 @@ export class BrokerManagerGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<{
+      user?: { companyId?: string | null };
       brokerUserId?: string;
     }>();
     if (!req.brokerUserId) {
@@ -25,8 +27,18 @@ export class BrokerManagerGuard implements CanActivate {
       throw new ForbiddenException('Broker scope not resolved');
     }
 
+    const companyId = req.user?.companyId ?? null;
+    if (!companyId) {
+      throw new ForbiddenException('Broker account is not associated with a company');
+    }
+
+    // BrokerScopeGuard already called enterTenantContext; this is a no-op
+    // for the common case, but guards may run in different orders on specific
+    // routes so we set it again to be safe.
+    enterTenantContext({ companyId, bypass: false, isPublic: false });
+
     const me = await this.prisma.brokerUser.findUnique({
-      where: { id: req.brokerUserId },
+      where: { id: req.brokerUserId! },
       select: { isPrimaryContact: true, canManageBrokerUsers: true },
     });
     if (!me) {

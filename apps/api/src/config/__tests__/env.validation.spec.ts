@@ -38,6 +38,7 @@ function validProd(overrides: Record<string, string | undefined> = {}): Record<s
     R2_PRIVATE_BUCKET: 'prod-private',
     PUBLIC_WEB_URL: 'https://app.example.com',
     SEED_ADMIN_PASSWORD: 'Pr0ductionSecurePass!',
+    DEFAULT_COMPANY_ID: 'a0000000-0000-4000-8000-000000000001',
     ...overrides,
   };
 }

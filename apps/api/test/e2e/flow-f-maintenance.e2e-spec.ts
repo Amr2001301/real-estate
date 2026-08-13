@@ -51,7 +51,7 @@ describe('Flow F — Maintenance with photos (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -74,12 +74,12 @@ describe('Flow F — Maintenance with photos (e2e)', () => {
 
     it('F1: customer1 POST /v1/me/maintenance-requests → 201', async () => {
       // The DTO requires unitId + categoryIds[] + description.
-      const cat = await testApp.prisma.maintenanceCategory.findFirstOrThrow({
+      const cat = await testApp.rawPrisma.maintenanceCategory.findFirstOrThrow({
         orderBy: { createdAt: 'asc' },
         select: { id: true },
       });
       // Find any of customer1's units (the seed gave them one via their contract).
-      const myUnit = await testApp.prisma.contract.findFirstOrThrow({
+      const myUnit = await testApp.rawPrisma.contract.findFirstOrThrow({
         where: { customerId: fixtures.userIds.customer1UserId },
         select: { unitId: true },
       });

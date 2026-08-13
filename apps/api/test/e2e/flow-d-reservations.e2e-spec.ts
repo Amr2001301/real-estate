@@ -44,7 +44,7 @@ describe('Flow D — Reservation journey (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token, broker2Token, customer1Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -70,7 +70,7 @@ describe('Flow D — Reservation journey (e2e)', () => {
    * choice deterministic across calls.
    */
   async function pickAvailableUnit(projectId: string): Promise<{ id: string }> {
-    const u = await testApp.prisma.unit.findFirst({
+    const u = await testApp.rawPrisma.unit.findFirst({
       where: { status: UnitStatus.AVAILABLE, building: { phase: { projectId } } },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { id: true },
@@ -107,7 +107,7 @@ describe('Flow D — Reservation journey (e2e)', () => {
       expect(typeof id).toBe('string');
       salesReservationId = id as string;
 
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: salesReservationId },
         select: { status: true, unitId: true, brokerId: true, salesId: true },
       });
@@ -118,7 +118,7 @@ describe('Flow D — Reservation journey (e2e)', () => {
     });
 
     it('D2: the unit transitions AVAILABLE → RESERVED after the create', async () => {
-      const u = await testApp.prisma.unit.findUniqueOrThrow({
+      const u = await testApp.rawPrisma.unit.findUniqueOrThrow({
         where: { id: salesReservationUnitId },
         select: { status: true, reservationExpiresAt: true },
       });
@@ -170,7 +170,7 @@ describe('Flow D — Reservation journey (e2e)', () => {
       expect(typeof id).toBe('string');
       brokerReservationId = id as string;
 
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: brokerReservationId },
         select: { status: true, brokerId: true },
       });

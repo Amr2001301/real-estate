@@ -45,7 +45,7 @@ describe('Flow C — Visit journey (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -82,7 +82,7 @@ describe('Flow C — Visit journey (e2e)', () => {
       expect(typeof id).toBe('string');
       customer1RequestId = id as string;
 
-      const row = await testApp.prisma.visitRequest.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.visitRequest.findUniqueOrThrow({
         where: { id: customer1RequestId },
         select: { requestStatus: true, userId: true, projectId: true },
       });
@@ -141,7 +141,7 @@ describe('Flow C — Visit journey (e2e)', () => {
       expect(typeof id).toBe('string');
       apptId = id as string;
 
-      const row = await testApp.prisma.visitAppointment.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.visitAppointment.findUniqueOrThrow({
         where: { id: apptId },
         select: { status: true, assignedSalesId: true },
       });
@@ -156,14 +156,14 @@ describe('Flow C — Visit journey (e2e)', () => {
         .send({ salesNotes: 'phase 7b — confirmed by phone' });
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.visitAppointment.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.visitAppointment.findUniqueOrThrow({
         where: { id: apptId },
         select: { status: true, confirmedAt: true },
       });
       expect(row.status).toBe('CONFIRMED');
       expect(row.confirmedAt).not.toBeNull();
 
-      const acts = await testApp.prisma.visitActivity.findMany({
+      const acts = await testApp.rawPrisma.visitActivity.findMany({
         where: { visitId: apptId, type: 'VISIT_CONFIRMED' },
         select: { id: true },
       });
@@ -180,14 +180,14 @@ describe('Flow C — Visit journey (e2e)', () => {
         });
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.visitAppointment.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.visitAppointment.findUniqueOrThrow({
         where: { id: apptId },
         select: { status: true, completedAt: true },
       });
       expect(row.status).toBe('COMPLETED');
       expect(row.completedAt).not.toBeNull();
 
-      const acts = await testApp.prisma.visitActivity.findMany({
+      const acts = await testApp.rawPrisma.visitActivity.findMany({
         where: { visitId: apptId, type: 'VISIT_COMPLETED' },
         select: { id: true },
       });
@@ -227,7 +227,7 @@ describe('Flow C — Visit journey (e2e)', () => {
       .send({ cancellationReason: 'phase 7b — cancel-path test' });
     expect(cancelRes.status).toBe(201);
 
-    const row = await testApp.prisma.visitAppointment.findUniqueOrThrow({
+    const row = await testApp.rawPrisma.visitAppointment.findUniqueOrThrow({
       where: { id: apptId },
       select: { status: true, cancelledAt: true },
     });

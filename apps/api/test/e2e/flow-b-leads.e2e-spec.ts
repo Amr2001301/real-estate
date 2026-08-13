@@ -43,7 +43,7 @@ describe('Flow B — Lead journey (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token, broker2Token, customer1Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -77,14 +77,14 @@ describe('Flow B — Lead journey (e2e)', () => {
 
     // The endpoint may or may not return the lead id in the body — fall back
     // to a direct DB lookup keyed on the phone we just submitted.
-    const client = await testApp.prisma.user.findUnique({
+    const client = await testApp.rawPrisma.user.findUnique({
       where: { phone },
       select: { id: true, role: true, fullName: true },
     });
     expect(client).not.toBeNull();
     expect(client!.role).toBe('CLIENT');
 
-    const lead = await testApp.prisma.lead.findFirst({
+    const lead = await testApp.rawPrisma.lead.findFirst({
       where: { clientId: client!.id },
       select: { id: true, stage: true, sourceId: true, projectInterestId: true },
     });
@@ -105,15 +105,15 @@ describe('Flow B — Lead journey (e2e)', () => {
     });
     expect(res.status).toBe(201);
 
-    const client = await testApp.prisma.user.findUniqueOrThrow({
+    const client = await testApp.rawPrisma.user.findUniqueOrThrow({
       where: { phone },
       select: { id: true },
     });
-    const lead = await testApp.prisma.lead.findFirstOrThrow({
+    const lead = await testApp.rawPrisma.lead.findFirstOrThrow({
       where: { clientId: client.id },
       select: { id: true },
     });
-    const vr = await testApp.prisma.visitRequest.findFirst({
+    const vr = await testApp.rawPrisma.visitRequest.findFirst({
       where: { leadId: lead.id },
       select: { id: true, requestStatus: true, projectId: true },
     });
@@ -134,7 +134,7 @@ describe('Flow B — Lead journey (e2e)', () => {
     expect(res.status).toBe(201);
 
     // The InfoRequest row should be tied to the authenticated user.
-    const ir = await testApp.prisma.infoRequest.findFirst({
+    const ir = await testApp.rawPrisma.infoRequest.findFirst({
       where: { userId: fixtures.userIds.customer1UserId },
       orderBy: { createdAt: 'desc' },
       select: { id: true, userId: true, projectId: true, message: true },
@@ -164,7 +164,7 @@ describe('Flow B — Lead journey (e2e)', () => {
       leadId = res.body.id;
 
       // Sanity check: the lead reads back to the same sales rep.
-      const row = await testApp.prisma.lead.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.lead.findUniqueOrThrow({
         where: { id: leadId },
         select: { stage: true, assignedSalesId: true },
       });
@@ -179,7 +179,7 @@ describe('Flow B — Lead journey (e2e)', () => {
         .send({ stage: 'INTERESTED', reason: 'phase 7b — first follow-up call ok' });
       expect(res.status).toBe(200);
 
-      const row = await testApp.prisma.lead.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.lead.findUniqueOrThrow({
         where: { id: leadId },
         select: { stage: true },
       });
@@ -187,7 +187,7 @@ describe('Flow B — Lead journey (e2e)', () => {
     });
 
     it('B6: stage change writes a LeadActivity row (type=status_change, from→to in payload)', async () => {
-      const acts = await testApp.prisma.leadActivity.findMany({
+      const acts = await testApp.rawPrisma.leadActivity.findMany({
         where: { leadId, type: 'status_change' },
         orderBy: { createdAt: 'desc' },
         select: { id: true, type: true, payload: true },
@@ -254,12 +254,12 @@ describe('Flow B — Lead journey (e2e)', () => {
     expect(listRes.status).toBe(200);
     const ids: string[] = collectIds(listRes.body);
     // Look up everything broker1's firm owns in the DB and assert none leak.
-    const broker1Firm = await testApp.prisma.broker.findUniqueOrThrow({
+    const broker1Firm = await testApp.rawPrisma.broker.findUniqueOrThrow({
       where: { code: fixtures.brokerCodes.BROKER_1 },
       select: { id: true },
     });
     const broker1OwnedIds = (
-      await testApp.prisma.lead.findMany({
+      await testApp.rawPrisma.lead.findMany({
         where: { brokerId: broker1Firm.id },
         select: { id: true },
       })

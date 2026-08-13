@@ -41,7 +41,7 @@ import * as argon2 from 'argon2';
 // the top of `seedPublicDemo()`.
 process.env.SEED_PUBLIC_DEMO = 'true';
 
-import { main as runDevSeed } from './seed';
+import { main as runDevSeed, backfillCompanyId } from './seed';
 
 const prisma = new PrismaClient();
 
@@ -532,6 +532,11 @@ async function main(): Promise<void> {
   }
 
   console.log('✅ [e2e] Seed complete.');
+  // Backfill companyId on any e2e-created rows that still have NULL. The dev
+  // seed already ran its backfill, so this pass only touches e2e-new rows.
+  const defaultCompany = await prisma.company.findFirstOrThrow({ where: { isActive: true } });
+  await backfillCompanyId(defaultCompany.id);
+
   console.log('   Brokers:');
   console.log(`     ${E2E_BROKER_CODES.BROKER_1} → projects [${p1.id}, ${p2.id}]`);
   console.log(`     ${E2E_BROKER_CODES.BROKER_2} → project  [${p3.id}]`);

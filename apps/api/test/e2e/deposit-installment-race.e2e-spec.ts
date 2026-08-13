@@ -39,25 +39,30 @@ describe('Deposit installment race condition — real Postgres concurrency proof
   let adminToken: string;
   let contractId: string;
   let planId: string;
+  let testCompanyId: string;
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
     // SEED_ADMIN_PASSWORD may be overridden in .env for local dev (Admin12345!).
     // CI uses the default ChangeMe123! set in seed.ts.
     const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!';
     adminToken = await loginAs(testApp.app, 'admin@example.com', adminPassword);
 
+    const company = await testApp.rawPrisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
+    testCompanyId = company.id;
+
     // Pick a building under p1 — the unit only needs a valid FK.
-    const building = await testApp.prisma.building.findFirstOrThrow({
+    const building = await testApp.rawPrisma.building.findFirstOrThrow({
       where: { phase: { projectId: fixtures.projects.p1Id } },
       select: { id: true },
     });
 
     // SOLD so catalog queries never surface it; status is irrelevant to record().
-    const unit = await testApp.prisma.unit.create({
+    const unit = await testApp.rawPrisma.unit.create({
       data: {
         buildingId: building.id,
+        companyId: testCompanyId,
         code: `DEP-RACE-UNIT-${Date.now()}`,
         type: '2BR',
         area: 100,
@@ -67,8 +72,9 @@ describe('Deposit installment race condition — real Postgres concurrency proof
       select: { id: true },
     });
 
-    const contract = await testApp.prisma.contract.create({
+    const contract = await testApp.rawPrisma.contract.create({
       data: {
+        companyId: testCompanyId,
         customerId: fixtures.userIds.customer1UserId,
         unitId: unit.id,
         totalAmount: 1_000_000,
@@ -79,8 +85,9 @@ describe('Deposit installment race condition — real Postgres concurrency proof
     contractId = contract.id;
 
     // InstallmentPlan.contractId is @unique — one plan per contract.
-    const plan = await testApp.prisma.installmentPlan.create({
+    const plan = await testApp.rawPrisma.installmentPlan.create({
       data: {
+        companyId: testCompanyId,
         contractId,
         totalMonths: 12,
         monthlyAmount: INSTALLMENT_AMOUNT,
@@ -100,8 +107,9 @@ describe('Deposit installment race condition — real Postgres concurrency proof
   /** Create a fresh PENDING installment so each iteration starts clean. */
   async function createFreshInstallment(index: number): Promise<string> {
     const month = String((index % 12) + 1).padStart(2, '0');
-    const installment = await testApp.prisma.installment.create({
+    const installment = await testApp.rawPrisma.installment.create({
       data: {
+        companyId: testCompanyId,
         planId,
         type: 'INSTALLMENT',
         dueDate: new Date(`2026-${month}-01`),
@@ -140,11 +148,11 @@ describe('Deposit installment race condition — real Postgres concurrency proof
       expect(sortedStatuses).toEqual([201, 409]);
 
       const [installment, deposits] = await Promise.all([
-        testApp.prisma.installment.findUniqueOrThrow({
+        testApp.rawPrisma.installment.findUniqueOrThrow({
           where: { id: installmentId },
           select: { status: true },
         }),
-        testApp.prisma.deposit.findMany({
+        testApp.rawPrisma.deposit.findMany({
           where: { installmentId },
           select: { id: true },
         }),

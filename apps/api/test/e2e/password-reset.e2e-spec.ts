@@ -28,6 +28,7 @@ import { AppModule } from '../../src/app.module';
 import { EmailService } from '../../src/modules/auth/email.service';
 import { DateSerializerInterceptor } from '../../src/common/interceptors/date-serializer.interceptor';
 import { requestIdMiddleware } from '../../src/common/logging/request-id.middleware';
+import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../src/common/prisma/prisma.service';
 
 // ── Stub ─────────────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ class StubEmailService {
 interface TestApp {
   app: INestApplication;
   prisma: PrismaService;
+  rawPrisma: PrismaClient;
   email: StubEmailService;
   close: () => Promise<void>;
 }
@@ -77,13 +79,18 @@ async function createTestApp(): Promise<TestApp> {
   app.useGlobalInterceptors(new DateSerializerInterceptor());
   await app.init();
   const prisma = app.get(PrismaService);
-  return { app, prisma, email: emailStub, close: async () => app.close() };
+  const rawPrisma = new PrismaClient();
+  await rawPrisma.$connect();
+  return {
+    app, prisma, rawPrisma, email: emailStub,
+    close: async () => { await rawPrisma.$disconnect(); await app.close(); },
+  };
 }
 
 // ── Helper: insert a known reset token directly in the DB ─────────────────────
 
 async function insertResetToken(
-  prisma: PrismaService,
+  prisma: PrismaClient,
   userId: string,
   rawToken: string,
   opts: { expired?: boolean } = {},
@@ -121,7 +128,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
       });
     expect(reg.status).toBe(201);
 
-    const u = await testApp.prisma.user.findUnique({ where: { email: USER_EMAIL } });
+    const u = await testApp.rawPrisma.user.findUnique({ where: { email: USER_EMAIL } });
     userId = u!.id;
   }, 30_000);
 
@@ -163,7 +170,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
     expect(rawToken).toBeTruthy();
 
     const expectedHash = createHash('sha256').update(rawToken).digest('hex');
-    const record = await testApp.prisma.passwordResetToken.findFirst({
+    const record = await testApp.rawPrisma.passwordResetToken.findFirst({
       where: { tokenHash: expectedHash },
     });
     expect(record).not.toBeNull();
@@ -187,7 +194,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
     expect(testApp.email.lastRawToken).toBeTruthy();
 
     // Token A is now consumed
-    const recordA = await testApp.prisma.passwordResetToken.findUnique({ where: { tokenHash: hashA } });
+    const recordA = await testApp.rawPrisma.passwordResetToken.findUnique({ where: { tokenHash: hashA } });
     expect(recordA?.consumedAt).not.toBeNull();
   });
 
@@ -204,7 +211,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
 
   it('R5: POST /reset-password rejects an expired token', async () => {
     const rawToken = `expired-${Date.now()}`;
-    await insertResetToken(testApp.prisma, userId, rawToken, { expired: true });
+    await insertResetToken(testApp.rawPrisma, userId, rawToken, { expired: true });
 
     const res = await http(testApp)
       .post('/v1/auth/reset-password')
@@ -214,7 +221,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
 
   it('R6: POST /reset-password succeeds with a valid token', async () => {
     const rawToken = `valid-reset-r6-${Date.now()}`;
-    await insertResetToken(testApp.prisma, userId, rawToken);
+    await insertResetToken(testApp.rawPrisma, userId, rawToken);
 
     const res = await http(testApp)
       .post('/v1/auth/reset-password')
@@ -248,7 +255,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
     const preResetRefresh = login.body.tokens.refreshToken as string;
 
     const rawToken = `valid-reset-r9-${Date.now()}`;
-    await insertResetToken(testApp.prisma, userId, rawToken);
+    await insertResetToken(testApp.rawPrisma, userId, rawToken);
     const reset = await http(testApp)
       .post('/v1/auth/reset-password')
       .send({ token: rawToken, newPassword: INITIAL_PW }); // reset back
@@ -262,7 +269,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
   });
 
   it('R9a: DB password hash matches argon2 hash of current password', async () => {
-    const user = await testApp.prisma.user.findUnique({
+    const user = await testApp.rawPrisma.user.findUnique({
       where: { email: USER_EMAIL },
       select: { passwordHash: true },
     });
@@ -273,7 +280,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
 
   it('R10: used reset token cannot be replayed (single-use)', async () => {
     const rawToken = `replay-test-${Date.now()}`;
-    await insertResetToken(testApp.prisma, userId, rawToken);
+    await insertResetToken(testApp.rawPrisma, userId, rawToken);
 
     const first = await http(testApp)
       .post('/v1/auth/reset-password')
@@ -288,7 +295,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
 
   it('R11: consumed reset token in DB has consumedAt set', async () => {
     const rawToken = `consumed-check-${Date.now()}`;
-    await insertResetToken(testApp.prisma, userId, rawToken);
+    await insertResetToken(testApp.rawPrisma, userId, rawToken);
 
     // Consume it
     await http(testApp)
@@ -296,7 +303,7 @@ describe('Password reset flow (e2e, real Postgres)', () => {
       .send({ token: rawToken, newPassword: INITIAL_PW });
 
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
-    const record = await testApp.prisma.passwordResetToken.findUnique({
+    const record = await testApp.rawPrisma.passwordResetToken.findUnique({
       where: { tokenHash },
     });
     expect(record?.consumedAt).not.toBeNull();

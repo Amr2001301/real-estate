@@ -47,7 +47,7 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, clientToken, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!'),
@@ -93,7 +93,7 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
   // ── P13.1 / P13.2 / P13.3 — persistence + userId attribution ─────────────
 
   it('P13.1: guest inquiry is saved WITHOUT a userId', async () => {
-    const row = await testApp.prisma.infoRequest.findUniqueOrThrow({
+    const row = await testApp.rawPrisma.infoRequest.findUniqueOrThrow({
       where: { id: guestReqId },
       select: { userId: true, leadId: true },
     });
@@ -102,11 +102,11 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
   });
 
   it('P13.2: client inquiry is saved WITH the submitting client userId', async () => {
-    const clientUser = await testApp.prisma.user.findUniqueOrThrow({
+    const clientUser = await testApp.rawPrisma.user.findUniqueOrThrow({
       where: { email: fixtures.users.CLIENT_1.email },
       select: { id: true },
     });
-    const row = await testApp.prisma.infoRequest.findUniqueOrThrow({
+    const row = await testApp.rawPrisma.infoRequest.findUniqueOrThrow({
       where: { id: clientReqId },
       select: { userId: true },
     });
@@ -178,7 +178,7 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
 
   it('P13.6: ADMIN + SALES_MANAGER receive info_request_created notifications without phone/email', async () => {
     const [adminNotifs, managerNotifs] = await Promise.all([
-      testApp.prisma.notification.findMany({
+      testApp.rawPrisma.notification.findMany({
         where: {
           userId: fixtures.userIds.adminId,
           templateCode: 'info_request_created',
@@ -186,7 +186,7 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
         },
         select: { payload: true },
       }),
-      testApp.prisma.notification.findMany({
+      testApp.rawPrisma.notification.findMany({
         where: {
           userId: fixtures.userIds.managerId,
           templateCode: 'info_request_created',
@@ -208,7 +208,7 @@ describe('P13 — Info requests admin visibility + notifications (e2e)', () => {
   });
 
   it('P13.6b: a plain SALES rep is NOT notified (no assignment/routing rule)', async () => {
-    const salesNotifs = await testApp.prisma.notification.count({
+    const salesNotifs = await testApp.rawPrisma.notification.count({
       where: { userId: fixtures.userIds.salesId, templateCode: 'info_request_created' },
     });
     expect(salesNotifs).toBe(0);

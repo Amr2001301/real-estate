@@ -10,6 +10,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { LocaleInterceptor } from './common/interceptors/locale.interceptor';
 import { AuditInterceptor } from './common/interceptors/audit.interceptor';
 import { RequestLoggerInterceptor } from './common/interceptors/request-logger.interceptor';
+import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { PermissionsGuard } from './common/guards/permissions.guard';
@@ -123,6 +124,9 @@ import { HealthController } from './modules/health/health.controller';
     // Logger runs first so errors thrown by other interceptors still get
     // logged + forwarded to Sentry.
     { provide: APP_INTERCEPTOR, useClass: RequestLoggerInterceptor },
+    // Tenant context must be set before any business interceptor (Locale, Audit)
+    // so that Prisma middleware has the ALS companyId available.
+    { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
     { provide: APP_INTERCEPTOR, useClass: LocaleInterceptor },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],

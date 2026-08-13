@@ -54,7 +54,7 @@ describe('Flow E — Customer financial + signed documents (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [salesToken, broker1Token, clientToken, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'sales@example.com', 'SalesPass123!'),
@@ -178,7 +178,7 @@ describe('Flow E — Customer financial + signed documents (e2e)', () => {
       if (!row || typeof row !== 'object') continue;
       const contractId: unknown = row.contractId ?? row.contract?.id;
       if (typeof contractId !== 'string') continue;
-      const owner = await testApp.prisma.contract.findUnique({
+      const owner = await testApp.rawPrisma.contract.findUnique({
         where: { id: contractId },
         select: { customerId: true },
       });

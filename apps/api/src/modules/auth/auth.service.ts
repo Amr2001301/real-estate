@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { randomBytes, randomInt, createHash } from 'node:crypto';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { getTenantContext } from '../../common/tenant/tenant-context';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
 import { SmsService } from './sms.service';
 import { EmailService } from './email.service';
@@ -79,11 +80,11 @@ export class AuthService {
     const [byEmail, byPhone] = await Promise.all([
       this.prisma.user.findUnique({
         where: { email },
-        select: { id: true, role: true, passwordHash: true, phone: true },
+        select: { id: true, role: true, passwordHash: true, phone: true, companyId: true },
       }),
       this.prisma.user.findUnique({
         where: { phone },
-        select: { id: true, role: true, passwordHash: true, email: true },
+        select: { id: true, role: true, passwordHash: true, email: true, companyId: true },
       }),
     ]);
 
@@ -116,11 +117,16 @@ export class AuthService {
       // Safe to claim. Update credentials + canonical contact fields; existing
       // FK rows (Lead.clientId, Reservation.clientId, …) continue to resolve.
       const passwordHash = await argon2.hash(dto.password);
+      // Preserve existing companyId from the synthetic row (it was set by the
+      // staff/lead flow when the row was first created). Fall back to the active
+      // tenant context companyId (set by the interceptor from DEFAULT_COMPANY_ID
+      // for public routes) for legacy rows that pre-date the MT migration.
+      const claimCompanyId = matchedRow.companyId ?? (getTenantContext()?.companyId ?? null);
       const claimed = await this.prisma.user.update({
         where: { id: matchedRow.id },
         // Claiming a synthetic row: clear emailVerifiedAt because the email may
         // have changed (synthetic rows can have stale or null emails).
-        data: { fullName, email, phone, passwordHash, locale: 'ar', emailVerifiedAt: null },
+        data: { fullName, email, phone, passwordHash, locale: 'ar', emailVerifiedAt: null, companyId: claimCompanyId },
       });
       // P9 — sweep any OTHER synthetic peers (e.g. one matched by phone
       // here, another that holds an email-only stub) that the in-place
@@ -140,6 +146,7 @@ export class AuthService {
         phone,
         passwordHash,
         locale: 'ar',
+        companyId: getTenantContext()?.companyId ?? null,
       },
     });
     await this.tryClaimSyntheticPeers(user.id);
@@ -215,7 +222,13 @@ export class AuthService {
     let user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user) {
       user = await this.prisma.user.create({
-        data: { phone, fullName: fullName ?? 'New User', role: 'CLIENT', locale: 'ar' },
+        data: {
+          phone,
+          fullName: fullName ?? 'New User',
+          role: 'CLIENT',
+          locale: 'ar',
+          companyId: getTenantContext()?.companyId ?? null,
+        },
       });
     } else {
       await this.prisma.user.update({

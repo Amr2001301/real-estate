@@ -11,6 +11,7 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { getTenantContext } from '../../common/tenant/tenant-context';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
 import {
   CreatePortalVisitRequestDto,
@@ -198,6 +199,7 @@ export class BrokerPortalVisitsService {
             phone: info.phone,
             email: info.email,
             locale: 'ar',
+            companyId: getTenantContext()?.companyId ?? null,
           },
           select: { id: true, fullName: true, phone: true, email: true },
         }));

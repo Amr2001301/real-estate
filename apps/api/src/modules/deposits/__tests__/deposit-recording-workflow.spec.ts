@@ -95,7 +95,11 @@ function makePrismaMock() {
     installment: {
       findFirst: jest.fn().mockImplementation(async () => fixture.installment),
       update: jest.fn().mockResolvedValue({}),
-      updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      updateMany: jest.fn().mockImplementation(async () => ({
+        // Simulate the atomic PENDING→PAID claim: returns count=0 when the
+        // installment is already PAID (the real DB rejects it via WHERE status≠PAID).
+        count: fixture.installment?.status === 'PAID' ? 0 : 1,
+      })),
     },
     deposit: {
       findUnique: jest.fn().mockImplementation(async ({ where }) => ({
@@ -274,12 +278,12 @@ describe('Deposits · recording + verification workflow', () => {
     expect(mock.installment.update).not.toHaveBeenCalled();
   });
 
-  it('rejects double-payment when the installment is already PAID (400)', async () => {
+  it('rejects double-payment when the installment is already PAID (409)', async () => {
     fixture.installment!.status = 'PAID';
     await request(app.getHttpServer())
       .post('/deposits')
       .send({ contractId: CONTRACT_ID, installmentId: INSTALLMENT_ID, amount: 5000 })
-      .expect(400);
+      .expect(409);
     expect(mock.deposit.create).not.toHaveBeenCalled();
   });
 

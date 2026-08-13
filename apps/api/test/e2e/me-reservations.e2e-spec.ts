@@ -44,10 +44,11 @@ describe('P7 — /me/reservations (e2e)', () => {
 
   let client1UserId: string;
   let salesUserId: string;
+  let testCompanyId: string;
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, client1Token, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -57,7 +58,10 @@ describe('P7 — /me/reservations (e2e)', () => {
       loginAs(testApp.app, fixtures.users.CUSTOMER_2.email, fixtures.users.CUSTOMER_2.password, 'customer'),
     ]);
 
-    const client1 = await testApp.prisma.user.findUniqueOrThrow({
+    const company = await testApp.rawPrisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
+    testCompanyId = company.id;
+
+    const client1 = await testApp.rawPrisma.user.findUniqueOrThrow({
       where: { email: fixtures.users.CLIENT_1.email },
       select: { id: true },
     });
@@ -81,7 +85,7 @@ describe('P7 — /me/reservations (e2e)', () => {
   const consumedUnitIds = new Set<string>();
 
   async function pickFreshUnit(): Promise<{ id: string }> {
-    const unit = await testApp.prisma.unit.findFirstOrThrow({
+    const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
       where: {
         status: UnitStatus.AVAILABLE,
         id: { notIn: Array.from(consumedUnitIds) },
@@ -106,8 +110,9 @@ describe('P7 — /me/reservations (e2e)', () => {
     clientId: string,
   ): Promise<{ reservationId: string; unitId: string }> {
     const unit = await pickFreshUnit();
-    const reservation = await testApp.prisma.reservation.create({
+    const reservation = await testApp.rawPrisma.reservation.create({
       data: {
+        companyId: testCompanyId,
         unitId: unit.id,
         salesId: salesUserId,
         clientId,
@@ -121,7 +126,7 @@ describe('P7 — /me/reservations (e2e)', () => {
     // Flip the unit to RESERVED so its state matches what the real
     // create flow would produce. We don't write UnitStatusHistory here
     // because Flow D already covers that contract.
-    await testApp.prisma.unit.update({
+    await testApp.rawPrisma.unit.update({
       where: { id: unit.id },
       data: {
         status: UnitStatus.RESERVED,
@@ -181,7 +186,7 @@ describe('P7 — /me/reservations (e2e)', () => {
     });
 
     it('P7.4: after the reservation, CLIENT_1\'s role stays CLIENT (no auto-promotion)', async () => {
-      const u = await testApp.prisma.user.findUniqueOrThrow({
+      const u = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: client1UserId },
         select: { role: true },
       });
@@ -208,8 +213,9 @@ describe('P7 — /me/reservations (e2e)', () => {
     it('P7.5: a reservation whose owner is reached via lead.clientId also surfaces on /me/reservations', async () => {
       // Set up a lead that points back to CLIENT_1, then a reservation that
       // references the lead (not the client directly).
-      const lead = await testApp.prisma.lead.create({
+      const lead = await testApp.rawPrisma.lead.create({
         data: {
+          companyId: testCompanyId,
           clientId: client1UserId,
           fullName: fixtures.users.CLIENT_1.fullName,
           phone: '+966500000P7L', // P7 lead test
@@ -222,8 +228,9 @@ describe('P7 — /me/reservations (e2e)', () => {
       // Allocate a fresh unit and create the reservation by leadId path
       // (clientId is intentionally NOT set on this reservation).
       const unit = await pickFreshUnit();
-      const reservation = await testApp.prisma.reservation.create({
+      const reservation = await testApp.rawPrisma.reservation.create({
         data: {
+          companyId: testCompanyId,
           unitId: unit.id,
           salesId: salesUserId,
           leadId: lead.id, // ← XOR: lead path, clientId stays null
@@ -234,7 +241,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      await testApp.prisma.unit.update({
+      await testApp.rawPrisma.unit.update({
         where: { id: unit.id },
         data: {
           status: UnitStatus.RESERVED,
@@ -260,8 +267,9 @@ describe('P7 — /me/reservations (e2e)', () => {
     it('P7.6: creating a contract DOES promote a CLIENT to CUSTOMER (locks the existing rule)', async () => {
       // Fresh transient CLIENT to avoid mutating the shared CLIENT_1 fixture
       // (flow-e-financial-documents.e2e-spec.ts asserts CLIENT_1 stays CLIENT).
-      const transientClient = await testApp.prisma.user.create({
+      const transientClient = await testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CLIENT,
           fullName: 'P7 Promotion Candidate',
           email: `p7-promo-${Date.now()}@example.com`,
@@ -289,7 +297,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         });
       expect(res.status).toBe(201);
 
-      const after = await testApp.prisma.user.findUniqueOrThrow({
+      const after = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: transientClient.id },
         select: { role: true },
       });
@@ -326,7 +334,7 @@ describe('P7 — /me/reservations (e2e)', () => {
   // an E.164-shaped phone — `/^\+?[1-9]\d{7,14}$/` — so letters break it).
   let p8Seq = 0;
   async function uniqueSuffix(): Promise<string> {
-    const userCount = await testApp.prisma.user.count();
+    const userCount = await testApp.rawPrisma.user.count();
     p8Seq += 1;
     // 6 digits total — enough headroom for tests within one e2e run.
     return String(userCount * 100 + p8Seq).padStart(6, '0');
@@ -346,8 +354,9 @@ describe('P7 — /me/reservations (e2e)', () => {
     password: string;
   }): Promise<{ id: string }> {
     const passwordHash = await argon2.hash(opts.password);
-    return testApp.prisma.user.create({
+    return testApp.rawPrisma.user.create({
       data: {
+        companyId: testCompanyId,
         role: UserRole.CLIENT,
         fullName: opts.fullName,
         email: opts.email.toLowerCase(),
@@ -387,8 +396,9 @@ describe('P7 — /me/reservations (e2e)', () => {
 
       // 1) Simulate the public visit-request path: create a synthetic CLIENT
       //    row (no passwordHash) and a Lead pointing at it.
-      const synthetic = await testApp.prisma.user.create({
+      const synthetic = await testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CLIENT,
           fullName: 'P8 Walk-in Lead',
           phone,
@@ -397,8 +407,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      const lead = await testApp.prisma.lead.create({
+      const lead = await testApp.rawPrisma.lead.create({
         data: {
+          companyId: testCompanyId,
           clientId: synthetic.id,
           fullName: 'P8 Walk-in Lead',
           phone,
@@ -409,8 +420,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         select: { id: true },
       });
       const unit = await pickFreshUnit();
-      const reservation = await testApp.prisma.reservation.create({
+      const reservation = await testApp.rawPrisma.reservation.create({
         data: {
+          companyId: testCompanyId,
           unitId: unit.id,
           salesId: salesUserId,
           leadId: lead.id,
@@ -421,7 +433,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      await testApp.prisma.unit.update({
+      await testApp.rawPrisma.unit.update({
         where: { id: unit.id },
         data: {
           status: UnitStatus.RESERVED,
@@ -443,7 +455,7 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(registerRes.status).toBe(201);
 
       // The claimed row keeps its id, so Lead.clientId still resolves to it.
-      const claimed = await testApp.prisma.user.findUniqueOrThrow({
+      const claimed = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: synthetic.id },
         select: { id: true, role: true, email: true, phone: true, passwordHash: true },
       });
@@ -495,7 +507,7 @@ describe('P7 — /me/reservations (e2e)', () => {
           bookingAmount: 42_500,
         });
       expect(res.status).toBe(201);
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: res.body.id as string },
         select: {
           bookingAmount: true,
@@ -512,7 +524,7 @@ describe('P7 — /me/reservations (e2e)', () => {
 
     it('P8.5: PERCENTAGE mode computes bookingAmount = unit.price * percent / 100 and snapshots the inputs', async () => {
       const unit = await pickFreshUnit();
-      const unitRow = await testApp.prisma.unit.findUniqueOrThrow({
+      const unitRow = await testApp.rawPrisma.unit.findUniqueOrThrow({
         where: { id: unit.id },
         select: { price: true },
       });
@@ -531,7 +543,7 @@ describe('P7 — /me/reservations (e2e)', () => {
           bookingAmountPercent: 5,
         });
       expect(res.status).toBe(201);
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: res.body.id as string },
         select: {
           bookingAmount: true,
@@ -622,8 +634,9 @@ describe('P7 — /me/reservations (e2e)', () => {
       // Legacy lead with the no-`+` form. clientId points at an unrelated
       // synthetic row that the user never owned — proving the bridge fires
       // purely on lead.phone normalization, not on shared user id.
-      const orphan = await testApp.prisma.user.create({
+      const orphan = await testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CLIENT,
           fullName: 'P9 Orphan',
           phone: `+966500other${suffix.slice(-2)}`.replace(/\D/g, ''), // unique, unrelated
@@ -631,8 +644,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      const lead = await testApp.prisma.lead.create({
+      const lead = await testApp.rawPrisma.lead.create({
         data: {
+          companyId: testCompanyId,
           clientId: orphan.id,
           fullName: 'P9 Format Drift',
           phone: leadPhoneNoPlus,
@@ -642,8 +656,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         select: { id: true },
       });
       const unit = await pickFreshUnit();
-      const reservation = await testApp.prisma.reservation.create({
+      const reservation = await testApp.rawPrisma.reservation.create({
         data: {
+          companyId: testCompanyId,
           unitId: unit.id,
           salesId: salesUserId,
           leadId: lead.id,
@@ -654,7 +669,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      await testApp.prisma.unit.update({
+      await testApp.rawPrisma.unit.update({
         where: { id: unit.id },
         data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
       });
@@ -673,7 +688,7 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(collectIds(c2.body)).not.toContain(reservation.id);
 
       // P9 — the real user's role stayed CLIENT (no auto-promotion).
-      const realAfter = await testApp.prisma.user.findUniqueOrThrow({
+      const realAfter = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: real.id },
         select: { role: true },
       });
@@ -687,8 +702,9 @@ describe('P7 — /me/reservations (e2e)', () => {
 
       // Synthetic row with the email, no phone — created by a prior CRM
       // import that only had the customer's email.
-      const synthetic = await testApp.prisma.user.create({
+      const synthetic = await testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CLIENT,
           fullName: 'P9 Identity Peer',
           email,
@@ -696,8 +712,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      const lead = await testApp.prisma.lead.create({
+      const lead = await testApp.rawPrisma.lead.create({
         data: {
+          companyId: testCompanyId,
           clientId: synthetic.id, // ← peer-by-email
           fullName: 'P9 Identity Peer',
           phone: '+999999999999', // unrelated; ownership flows through synthetic.email
@@ -708,8 +725,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         select: { id: true },
       });
       const unit = await pickFreshUnit();
-      const reservation = await testApp.prisma.reservation.create({
+      const reservation = await testApp.rawPrisma.reservation.create({
         data: {
+          companyId: testCompanyId,
           unitId: unit.id,
           salesId: salesUserId,
           leadId: lead.id,
@@ -720,7 +738,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      await testApp.prisma.unit.update({
+      await testApp.rawPrisma.unit.update({
         where: { id: unit.id },
         data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
       });
@@ -736,7 +754,7 @@ describe('P7 — /me/reservations (e2e)', () => {
       // After register's in-place claim, the User row for `email` IS the
       // former synthetic with a passwordHash. Mint a token directly so we
       // can verify visibility without spending the login throttle budget.
-      const claimed = await testApp.prisma.user.findUniqueOrThrow({
+      const claimed = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { email },
         select: { id: true },
       });
@@ -768,8 +786,9 @@ describe('P7 — /me/reservations (e2e)', () => {
       //    phone but stored in a different format. The registration above
       //    couldn't see it (different format → no unique-column match).
       const syntheticPhoneVariant = phone.replace('+', ''); // bare digits
-      const synthetic = await testApp.prisma.user.create({
+      const synthetic = await testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CLIENT,
           fullName: 'P9 Drifted Synthetic',
           phone: syntheticPhoneVariant,
@@ -777,8 +796,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      const lead = await testApp.prisma.lead.create({
+      const lead = await testApp.rawPrisma.lead.create({
         data: {
+          companyId: testCompanyId,
           clientId: synthetic.id,
           fullName: 'P9 Drifted Synthetic',
           phone: syntheticPhoneVariant,
@@ -788,8 +808,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         select: { id: true },
       });
       const unit = await pickFreshUnit();
-      const reservation = await testApp.prisma.reservation.create({
+      const reservation = await testApp.rawPrisma.reservation.create({
         data: {
+          companyId: testCompanyId,
           unitId: unit.id,
           salesId: salesUserId,
           leadId: lead.id,
@@ -800,7 +821,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      await testApp.prisma.unit.update({
+      await testApp.rawPrisma.unit.update({
         where: { id: unit.id },
         data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
       });
@@ -813,13 +834,13 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(tok).toBeTruthy();
 
       // Verify the synthetic was deleted...
-      const syntheticAfter = await testApp.prisma.user.findUnique({
+      const syntheticAfter = await testApp.rawPrisma.user.findUnique({
         where: { id: synthetic.id },
         select: { id: true },
       });
       expect(syntheticAfter).toBeNull();
       // ...and the Lead now points at the real user.
-      const leadAfter = await testApp.prisma.lead.findUniqueOrThrow({
+      const leadAfter = await testApp.rawPrisma.lead.findUniqueOrThrow({
         where: { id: lead.id },
         select: { clientId: true },
       });
@@ -848,8 +869,9 @@ describe('P7 — /me/reservations (e2e)', () => {
       // 2) A synthetic with the target phone exists, anchoring a Lead +
       //    Reservation that the registered user does NOT yet own (no
       //    contact overlap).
-      const synthetic = await testApp.prisma.user.create({
+      const synthetic = await testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CLIENT,
           fullName: 'P9 Patcher',
           phone,
@@ -857,8 +879,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      const lead = await testApp.prisma.lead.create({
+      const lead = await testApp.rawPrisma.lead.create({
         data: {
+          companyId: testCompanyId,
           clientId: synthetic.id,
           fullName: 'P9 Patcher',
           phone,
@@ -868,8 +891,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         select: { id: true },
       });
       const unit = await pickFreshUnit();
-      const reservation = await testApp.prisma.reservation.create({
+      const reservation = await testApp.rawPrisma.reservation.create({
         data: {
+          companyId: testCompanyId,
           unitId: unit.id,
           salesId: salesUserId,
           leadId: lead.id,
@@ -880,7 +904,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      await testApp.prisma.unit.update({
+      await testApp.rawPrisma.unit.update({
         where: { id: unit.id },
         data: { status: UnitStatus.RESERVED, reservationExpiresAt: new Date(Date.now() + 72 * 3_600_000) },
       });
@@ -900,12 +924,12 @@ describe('P7 — /me/reservations (e2e)', () => {
         .send({ phone });
       expect(patch.status).toBe(200);
 
-      const syntheticAfter = await testApp.prisma.user.findUnique({
+      const syntheticAfter = await testApp.rawPrisma.user.findUnique({
         where: { id: synthetic.id },
         select: { id: true },
       });
       expect(syntheticAfter).toBeNull();
-      const leadAfter = await testApp.prisma.lead.findUniqueOrThrow({
+      const leadAfter = await testApp.rawPrisma.lead.findUniqueOrThrow({
         where: { id: lead.id },
         select: { clientId: true },
       });
@@ -940,7 +964,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         email: emailB,
         password: 'StrongPass1!',
       });
-      const realBRow = await testApp.prisma.user.findUniqueOrThrow({
+      const realBRow = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: realB.id },
         select: { passwordHash: true },
       });
@@ -952,7 +976,7 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(tokA).toBeTruthy();
 
       // B still exists with passwordHash intact.
-      const bAfter = await testApp.prisma.user.findUniqueOrThrow({
+      const bAfter = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: realB.id },
         select: { passwordHash: true, email: true },
       });
@@ -981,8 +1005,9 @@ describe('P7 — /me/reservations (e2e)', () => {
       //    a *different* synthetic User row (simulating CRM data drift — e.g.
       //    the admin pasted the phone differently the first time then merged
       //    it manually, ending up with a divergent synthetic row).
-      const orphanSynthetic = await testApp.prisma.user.create({
+      const orphanSynthetic = await testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CLIENT,
           fullName: 'P8 Drifted Synthetic',
           phone: `${phone}-orphan`, // distinct phone column so we don't claim it
@@ -990,8 +1015,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      const lead = await testApp.prisma.lead.create({
+      const lead = await testApp.rawPrisma.lead.create({
         data: {
+          companyId: testCompanyId,
           clientId: orphanSynthetic.id,
           fullName: 'P8 Drifted Synthetic',
           phone, // matches the REAL user's phone — this is the fallback hook
@@ -1002,8 +1028,9 @@ describe('P7 — /me/reservations (e2e)', () => {
         select: { id: true },
       });
       const unit = await pickFreshUnit();
-      const reservation = await testApp.prisma.reservation.create({
+      const reservation = await testApp.rawPrisma.reservation.create({
         data: {
+          companyId: testCompanyId,
           unitId: unit.id,
           salesId: salesUserId,
           leadId: lead.id,
@@ -1016,7 +1043,7 @@ describe('P7 — /me/reservations (e2e)', () => {
         },
         select: { id: true },
       });
-      await testApp.prisma.unit.update({
+      await testApp.rawPrisma.unit.update({
         where: { id: unit.id },
         data: {
           status: UnitStatus.RESERVED,
@@ -1043,7 +1070,7 @@ describe('P7 — /me/reservations (e2e)', () => {
       expect(collectIds(c2.body)).not.toContain(reservation.id);
 
       // Real user must remain CLIENT (no auto-promotion).
-      const realAfter = await testApp.prisma.user.findUniqueOrThrow({
+      const realAfter = await testApp.rawPrisma.user.findUniqueOrThrow({
         where: { id: real.id },
         select: { role: true },
       });

@@ -32,6 +32,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { OptionalAuth } from '../../common/decorators/optional-auth.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { paginate, takeSkip } from '../../common/utils/pagination';
+import { getTenantContext } from '../../common/tenant/tenant-context';
 import {
   NotificationsModule,
   NotificationsService,
@@ -138,6 +139,7 @@ export class RequestsService {
         phone,
         email,
         locale: 'ar',
+        companyId: getTenantContext()?.companyId ?? null,
       },
     });
   }

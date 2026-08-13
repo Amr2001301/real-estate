@@ -35,7 +35,7 @@ describe('me/* scope audit (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
     [customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
       loginAs(testApp.app, fixtures.users.CUSTOMER_2.email, fixtures.users.CUSTOMER_2.password, 'customer'),
@@ -86,17 +86,17 @@ describe('me/* scope audit (e2e)', () => {
 
   it('PATCH /v1/me/notifications/:id/read — cross-user denial: c1 cannot mark c2\'s notification', async () => {
     // Look up customer2's seeded Phase 7E notification id directly via prisma.
-    const c2Notif = await testApp.prisma.notification.findFirstOrThrow({
+    const c2Notif = await testApp.rawPrisma.notification.findFirstOrThrow({
       where: { userId: fixtures.userIds.customer1UserId === '' ? '' : undefined, templateCode: 'phase7e_test' }, // satisfy ts
       orderBy: { createdAt: 'asc' },
       select: { id: true, userId: true },
     });
     // The first row may belong to customer1. Find a row that explicitly belongs to customer2.
-    const customer2User = await testApp.prisma.user.findUniqueOrThrow({
+    const customer2User = await testApp.rawPrisma.user.findUniqueOrThrow({
       where: { email: fixtures.users.CUSTOMER_2.email },
       select: { id: true },
     });
-    const c2Target = await testApp.prisma.notification.findFirstOrThrow({
+    const c2Target = await testApp.rawPrisma.notification.findFirstOrThrow({
       where: { userId: customer2User.id, templateCode: 'phase7e_test', readAt: null },
       select: { id: true },
     });
@@ -108,7 +108,7 @@ describe('me/* scope audit (e2e)', () => {
     expect(res.status).toBe(200);
 
     // Critical assertion: customer2's notification IS STILL UNREAD.
-    const after = await testApp.prisma.notification.findUniqueOrThrow({
+    const after = await testApp.rawPrisma.notification.findUniqueOrThrow({
       where: { id: c2Target.id },
       select: { readAt: true },
     });
@@ -119,11 +119,11 @@ describe('me/* scope audit (e2e)', () => {
 
   it('PATCH /v1/me/notifications/read-all — only marks the caller\'s own rows', async () => {
     // Look up customer2's seeded notification before customer1 calls read-all.
-    const customer2User = await testApp.prisma.user.findUniqueOrThrow({
+    const customer2User = await testApp.rawPrisma.user.findUniqueOrThrow({
       where: { email: fixtures.users.CUSTOMER_2.email },
       select: { id: true },
     });
-    const c2Before = await testApp.prisma.notification.findFirstOrThrow({
+    const c2Before = await testApp.rawPrisma.notification.findFirstOrThrow({
       where: { userId: customer2User.id, templateCode: 'phase7e_test' },
       select: { id: true, readAt: true },
     });
@@ -135,7 +135,7 @@ describe('me/* scope audit (e2e)', () => {
     expect(res.status).toBe(200);
 
     // Customer2's notification is untouched.
-    const c2After = await testApp.prisma.notification.findUniqueOrThrow({
+    const c2After = await testApp.rawPrisma.notification.findUniqueOrThrow({
       where: { id: c2Before.id },
       select: { readAt: true },
     });

@@ -55,6 +55,7 @@ import { Permissions } from '../../common/decorators/permissions.decorator';
 import { paginate } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
+import { runTenantContext } from '../../common/tenant/tenant-context';
 import { computeDurationOption } from './duration-calc';
 
 // ─── Existing contract-based plan DTOs ────────────────────────────────────────
@@ -801,15 +802,17 @@ export class InstallmentsCron {
 
   @Cron(CronExpression.EVERY_DAY_AT_1AM)
   async daily() {
-    try {
-      if (this.lock) {
-        await this.lock.withLock('installments-mark-overdue', 5 * 60_000, () => this.svc.markOverdue());
-      } else {
-        await this.svc.markOverdue();
+    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      try {
+        if (this.lock) {
+          await this.lock.withLock('installments-mark-overdue', 5 * 60_000, () => this.svc.markOverdue());
+        } else {
+          await this.svc.markOverdue();
+        }
+      } catch (err) {
+        captureExceptionSafe(err, { job: 'installments-mark-overdue' });
       }
-    } catch (err) {
-      captureExceptionSafe(err, { job: 'installments-mark-overdue' });
-    }
+    });
   }
 }
 
@@ -1013,17 +1016,19 @@ export class InstallmentDueSoonCron {
   })
   async daily(): Promise<void> {
     const enabled = (this.config.get<string>('INSTALLMENT_REMINDERS_ENABLED') ?? '').toLowerCase() === 'true';
-    if (!enabled) return; // disabled by default — never fires in dev/CI
-    try {
-      if (this.lock) {
-        await this.lock.withLock('installment-reminders', 5 * 60_000, () => this.reminders.run({ dryRun: false }));
-      } else {
-        await this.reminders.run({ dryRun: false });
+    if (!enabled) return;
+    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      try {
+        if (this.lock) {
+          await this.lock.withLock('installment-reminders', 5 * 60_000, () => this.reminders.run({ dryRun: false }));
+        } else {
+          await this.reminders.run({ dryRun: false });
+        }
+      } catch (err) {
+        this.logger.error(`[installment-reminders] cron failed: ${(err as Error).message}`);
+        captureExceptionSafe(err, { job: 'installment-reminders' });
       }
-    } catch (err) {
-      this.logger.error(`[installment-reminders] cron failed: ${(err as Error).message}`);
-      captureExceptionSafe(err, { job: 'installment-reminders' });
-    }
+    });
   }
 }
 

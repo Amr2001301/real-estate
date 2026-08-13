@@ -67,6 +67,11 @@ const EnvSchema = z.object({
   SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
   SEED_ADMIN_PASSWORD: z.string().min(8).default('ChangeMe123!'),
 
+  // ─── Multi-tenancy ───────────────────────────────────────────────────────
+  // UUID of the default company used for @Public() routes (website catalog).
+  // Must be set whenever multi-tenancy enforcement is active.
+  DEFAULT_COMPANY_ID: z.string().uuid().optional(),
+
   // ─── Observability (all optional) ───────────────────────────────────────
   // When SENTRY_DSN is unset the SDK is never required at runtime.
   SENTRY_DSN: z.string().url().optional(),
@@ -189,6 +194,13 @@ function assertProductionRequirements(env: AppEnv): string[] {
   // Don't ship to production with the default admin password.
   if (env.SEED_ADMIN_PASSWORD === PLACEHOLDER_SEED_PASSWORD) {
     errs.push('SEED_ADMIN_PASSWORD still uses the .env.example default — change it');
+  }
+
+  // Multi-tenancy: DEFAULT_COMPANY_ID is required for @Public() routes to scope
+  // catalog queries to the correct tenant. Without it public listing endpoints
+  // will return 500 on any scoped model read.
+  if (!env.DEFAULT_COMPANY_ID) {
+    errs.push('DEFAULT_COMPANY_ID is required in production (public website catalog routes use it to scope tenant data)');
   }
 
   return errs;

@@ -332,11 +332,67 @@ async function seedPublicDemo() {
 // Seed
 // ============================================================================
 
+// ---------------------------------------------------------------------------
+// Backfill companyId on all scoped tables that still have NULL rows.
+// Safe to call multiple times — only updates rows where companyId IS NULL.
+// ---------------------------------------------------------------------------
+async function backfillCompanyId(companyId: string) {
+  const tables = [
+    'Project', 'Phase', 'Building', 'Unit', 'UnitStatusHistory', 'UnitMaintenanceItem',
+    'LeadSource', 'Lead', 'LeadNote', 'LeadActivity',
+    'InfoRequest', 'VisitRequest', 'VisitAppointment', 'VisitActivity',
+    'Reservation', 'ReservationNote', 'ReservationActivity',
+    'Contract', 'InstallmentPlan', 'Installment', 'Deposit',
+    'InstallmentPlanTemplate', 'BonusRule', 'BonusEntry', 'SalesTarget',
+    'MaintenanceCategory', 'MaintenanceRequest', 'MaintenanceRequestItem',
+    'CmsPage', 'Banner', 'Article', 'NotificationTemplate', 'Notification', 'AuditLog',
+    'Broker', 'BrokerUser', 'BrokerProjectAccess', 'BrokerUnitAccess',
+    'BrokerCommission', 'BrokerPayout', 'BrokerActivityLog',
+    'Setting', 'Document', 'ChatSession', 'ChatMessage', 'ChatFeedback',
+  ];
+  for (const table of tables) {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "${table}" SET "companyId" = $1::uuid WHERE "companyId" IS NULL`,
+      companyId,
+    );
+  }
+  // Backfill User table: all roles including CLIENT/CUSTOMER.
+  // CLIENT/CUSTOMER users must have a companyId so the TenantContextInterceptor
+  // can scope their requests correctly. The interceptor has a legacy fallback, but
+  // the authoritative fix is to populate the column at creation time (and here).
+  await prisma.$executeRawUnsafe(
+    `UPDATE "User" SET "companyId" = $1::uuid WHERE "companyId" IS NULL`,
+    companyId,
+  );
+}
+
 async function main() {
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!';
 
   console.log('🌱 Seeding database…');
+
+  // ---- Default Company (idempotent by slug) ----
+  // When DEFAULT_COMPANY_ID is set we pin the company to that UUID so all
+  // environments (dev, e2e, staging) share the same ID and FK references in
+  // seeded data always resolve correctly.
+  const seedCompanyId = process.env.DEFAULT_COMPANY_ID;
+  const company = await prisma.company.upsert({
+    where: { slug: process.env.SEED_COMPANY_SLUG ?? 'default' },
+    create: {
+      ...(seedCompanyId ? { id: seedCompanyId } : {}),
+      name: process.env.SEED_COMPANY_NAME ?? 'Real Estate Platform',
+      slug: process.env.SEED_COMPANY_SLUG ?? 'default',
+      country: process.env.SEED_COMPANY_COUNTRY ?? 'SA',
+      currency: process.env.SEED_COMPANY_CURRENCY ?? 'SAR',
+      defaultLocale: 'ar',
+      timezone: process.env.SEED_COMPANY_TIMEZONE ?? 'Asia/Riyadh',
+      isActive: true,
+    },
+    update: {
+      name: process.env.SEED_COMPANY_NAME ?? 'Real Estate Platform',
+    },
+  });
 
   // ---- Users (idempotent via email upsert) ----
   const adminHash = await argon2.hash(adminPassword);
@@ -1376,6 +1432,9 @@ async function main() {
   // Optional: realistic public-website demo data (dev/staging only).
   await seedPublicDemo();
 
+  // ---- Backfill companyId on all rows that were created before this seed run ----
+  await backfillCompanyId(company.id);
+
   console.log('✅ Seed complete');
   console.log('   Admin:', adminEmail, '/', adminPassword);
   console.log('   Sales: sales@example.com / SalesPass123!');
@@ -1388,7 +1447,7 @@ async function main() {
 // importing it must NOT trigger a write — the e2e seed calls `main()`
 // itself, with `SEED_PUBLIC_DEMO=true` forced so it can find projects to
 // grant broker access to. Idempotent either way.
-export { main };
+export { main, backfillCompanyId };
 export { prisma as _prismaSeedClient };
 
 if (require.main === module) {

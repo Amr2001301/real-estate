@@ -2,10 +2,12 @@ import { Controller, Get, Optional, Res } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
+import { BypassTenant } from '../../common/decorators/bypass-tenant.decorator';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 
 @ApiTags('health')
+@BypassTenant()
 @Controller()
 export class HealthController {
   constructor(

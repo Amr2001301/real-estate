@@ -23,6 +23,7 @@ import { AppModule } from '../../src/app.module';
 import { EmailService } from '../../src/modules/auth/email.service';
 import { DateSerializerInterceptor } from '../../src/common/interceptors/date-serializer.interceptor';
 import { requestIdMiddleware } from '../../src/common/logging/request-id.middleware';
+import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../../src/common/prisma/prisma.service';
 
 // ── Stub ─────────────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ class StubEmailService {
 interface TestApp {
   app: INestApplication;
   prisma: PrismaService;
+  rawPrisma: PrismaClient;
   email: StubEmailService;
   close: () => Promise<void>;
 }
@@ -77,13 +79,18 @@ async function createTestApp(): Promise<TestApp> {
   app.useGlobalInterceptors(new DateSerializerInterceptor());
   await app.init();
   const prisma = app.get(PrismaService);
-  return { app, prisma, email: emailStub, close: async () => app.close() };
+  const rawPrisma = new PrismaClient();
+  await rawPrisma.$connect();
+  return {
+    app, prisma, rawPrisma, email: emailStub,
+    close: async () => { await rawPrisma.$disconnect(); await app.close(); },
+  };
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 async function insertVerifyToken(
-  prisma: PrismaService,
+  prisma: PrismaClient,
   userId: string,
   rawToken: string,
   opts: { expired?: boolean } = {},
@@ -122,7 +129,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
     expect(reg.status).toBe(201);
 
     accessToken = reg.body.tokens.accessToken as string;
-    const u = await testApp.prisma.user.findUnique({ where: { email: USER_EMAIL } });
+    const u = await testApp.rawPrisma.user.findUnique({ where: { email: USER_EMAIL } });
     userId = u!.id;
   }, 30_000);
 
@@ -138,7 +145,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
   });
 
   it('V2: emailVerifiedAt is null immediately after registration', async () => {
-    const u = await testApp.prisma.user.findUnique({ where: { id: userId } });
+    const u = await testApp.rawPrisma.user.findUnique({ where: { id: userId } });
     expect(u!.emailVerifiedAt).toBeNull();
   });
 
@@ -147,7 +154,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
     expect(rawToken).toBeTruthy();
 
     const expectedHash = createHash('sha256').update(rawToken).digest('hex');
-    const record = await testApp.prisma.emailVerificationToken.findFirst({
+    const record = await testApp.rawPrisma.emailVerificationToken.findFirst({
       where: { tokenHash: expectedHash },
     });
     expect(record).not.toBeNull();
@@ -160,7 +167,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
   it('V4: issueTokens response includes emailVerifiedAt: null on registration', () => {
     // Checked via the user object from POST /customer/register in beforeAll
     // We just verify the raw field exists in the DB and matches
-    return testApp.prisma.user.findUnique({ where: { id: userId } }).then((u) => {
+    return testApp.rawPrisma.user.findUnique({ where: { id: userId } }).then((u) => {
       expect(u!.emailVerifiedAt).toBeNull();
     });
   });
@@ -169,7 +176,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
 
   it('V5: POST /verify-email succeeds with a valid unused token', async () => {
     const rawToken = `valid-ev-v5-${Date.now()}`;
-    await insertVerifyToken(testApp.prisma, userId, rawToken);
+    await insertVerifyToken(testApp.rawPrisma, userId, rawToken);
 
     const res = await http(testApp)
       .post('/v1/auth/verify-email')
@@ -179,24 +186,24 @@ describe('Email verification flow (e2e, real Postgres)', () => {
   });
 
   it('V6: emailVerifiedAt is set on the user after successful verification', async () => {
-    const u = await testApp.prisma.user.findUnique({ where: { id: userId } });
+    const u = await testApp.rawPrisma.user.findUnique({ where: { id: userId } });
     expect(u!.emailVerifiedAt).not.toBeNull();
     expect(u!.emailVerifiedAt).toBeInstanceOf(Date);
   });
 
   it('V7: consumed token has consumedAt populated', async () => {
     const rawToken = `consumed-check-v7-${Date.now()}`;
-    await insertVerifyToken(testApp.prisma, userId, rawToken);
+    await insertVerifyToken(testApp.rawPrisma, userId, rawToken);
     await http(testApp).post('/v1/auth/verify-email').send({ token: rawToken });
 
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
-    const record = await testApp.prisma.emailVerificationToken.findUnique({ where: { tokenHash } });
+    const record = await testApp.rawPrisma.emailVerificationToken.findUnique({ where: { tokenHash } });
     expect(record?.consumedAt).not.toBeNull();
   });
 
   it('V8: replay of an already-consumed token returns 400', async () => {
     const rawToken = `replay-v8-${Date.now()}`;
-    await insertVerifyToken(testApp.prisma, userId, rawToken);
+    await insertVerifyToken(testApp.rawPrisma, userId, rawToken);
 
     const first = await http(testApp).post('/v1/auth/verify-email').send({ token: rawToken });
     expect(first.status).toBe(201);
@@ -207,7 +214,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
 
   it('V9: expired token returns 400', async () => {
     const rawToken = `expired-v9-${Date.now()}`;
-    await insertVerifyToken(testApp.prisma, userId, rawToken, { expired: true });
+    await insertVerifyToken(testApp.rawPrisma, userId, rawToken, { expired: true });
 
     const res = await http(testApp).post('/v1/auth/verify-email').send({ token: rawToken });
     expect(res.status).toBe(400);
@@ -223,7 +230,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
   it('V11: already-verified user gets { ok: true, alreadyVerified: true } from a valid token', async () => {
     // User is already verified from V5. Insert another fresh token.
     const rawToken = `already-verified-v11-${Date.now()}`;
-    await insertVerifyToken(testApp.prisma, userId, rawToken);
+    await insertVerifyToken(testApp.rawPrisma, userId, rawToken);
 
     const res = await http(testApp).post('/v1/auth/verify-email').send({ token: rawToken });
     expect(res.status).toBe(201);
@@ -267,8 +274,8 @@ describe('Email verification flow (e2e, real Postgres)', () => {
 
     // Wait a moment to get past the 60s cooldown check — we'll bypass by
     // directly back-dating the token in the DB
-    const newUser = await testApp.prisma.user.findUnique({ where: { email: newEmail } });
-    await testApp.prisma.emailVerificationToken.updateMany({
+    const newUser = await testApp.rawPrisma.user.findUnique({ where: { email: newEmail } });
+    await testApp.rawPrisma.emailVerificationToken.updateMany({
       where: { userId: newUser!.id },
       data: { createdAt: new Date(Date.now() - 61_000) },
     });
@@ -286,7 +293,7 @@ describe('Email verification flow (e2e, real Postgres)', () => {
     expect(newRawToken).not.toBe(firstRawToken);
 
     // Old token is now consumed
-    const oldRecord = await testApp.prisma.emailVerificationToken.findUnique({
+    const oldRecord = await testApp.rawPrisma.emailVerificationToken.findUnique({
       where: { tokenHash: firstHash },
     });
     expect(oldRecord?.consumedAt).not.toBeNull();

@@ -104,7 +104,7 @@ export async function loadE2EFixtures(prisma: PrismaClient): Promise<E2EFixtures
   }
 
   const [admin, sales, manager, broker1User, broker2User, customer1] = await Promise.all([
-    prisma.user.findUniqueOrThrow({ where: { email: 'admin@example.com' }, select: { id: true } }),
+    prisma.user.findUniqueOrThrow({ where: { email: process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com' }, select: { id: true } }),
     prisma.user.findUniqueOrThrow({ where: { email: 'sales@example.com' }, select: { id: true } }),
     prisma.user.findUniqueOrThrow({ where: { email: 'manager@example.com' }, select: { id: true } }),
     prisma.user.findUniqueOrThrow({ where: { email: E2E_USERS.BROKER_1.email }, select: { id: true } }),

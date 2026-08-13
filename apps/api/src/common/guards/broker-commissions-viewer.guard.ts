@@ -5,6 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { enterTenantContext } from '../tenant/tenant-context';
 
 /**
  * Runs AFTER BrokerScopeGuard. Blocks access to commission and payout reads
@@ -17,12 +18,23 @@ export class BrokerCommissionsViewerGuard implements CanActivate {
   constructor(private readonly prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const req = context.switchToHttp().getRequest<{ brokerUserId?: string }>();
+    const req = context.switchToHttp().getRequest<{
+      user?: { companyId?: string | null };
+      brokerUserId?: string;
+    }>();
     if (!req.brokerUserId) {
       throw new ForbiddenException('Broker scope not resolved');
     }
+
+    const companyId = req.user?.companyId ?? null;
+    if (!companyId) {
+      throw new ForbiddenException('Broker account is not associated with a company');
+    }
+
+    enterTenantContext({ companyId, bypass: false, isPublic: false });
+
     const me = await this.prisma.brokerUser.findUnique({
-      where: { id: req.brokerUserId },
+      where: { id: req.brokerUserId! },
       select: { canViewCommissions: true },
     });
     if (!me?.canViewCommissions) {

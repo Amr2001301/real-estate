@@ -171,6 +171,7 @@ const ADMIN_USER: AuthUser = {
   role: UserRole.ADMIN,
   email: null,
   phone: null,
+  companyId: null,
 };
 
 const CUSTOMER_USER: AuthUser = {
@@ -178,6 +179,7 @@ const CUSTOMER_USER: AuthUser = {
   role: UserRole.CUSTOMER,
   email: null,
   phone: null,
+  companyId: null,
 };
 
 describe('Visits · lifecycle notifications (P3)', () => {

@@ -42,17 +42,21 @@ describe('Unit reservation race condition — real Postgres concurrency proof (e
   let fixtures: E2EFixtures;
   let salesToken: string;
   let buildingId: string;
+  let testCompanyId: string;
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     salesToken = await loginAs(testApp.app, 'sales@example.com', 'SalesPass123!');
+
+    const company = await testApp.rawPrisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
+    testCompanyId = company.id;
 
     // Hang fresh units off the first building of p1. p1 is guaranteed to
     // exist (seed-fixtures validates ≥3 projects) and the building is
     // irrelevant to the reservation race — we just need a valid FK.
-    const building = await testApp.prisma.building.findFirstOrThrow({
+    const building = await testApp.rawPrisma.building.findFirstOrThrow({
       where: { phase: { projectId: fixtures.projects.p1Id } },
       select: { id: true },
     });
@@ -67,9 +71,10 @@ describe('Unit reservation race condition — real Postgres concurrency proof (e
 
   /** Create a brand-new AVAILABLE unit so each iteration starts clean. */
   async function createFreshUnit(iteration: number): Promise<string> {
-    const unit = await testApp.prisma.unit.create({
+    const unit = await testApp.rawPrisma.unit.create({
       data: {
         buildingId,
+        companyId: testCompanyId,
         // Timestamp + index keeps the code unique even when iterations fire
         // within the same millisecond.
         code: `E2E-RACE-${Date.now()}-${iteration}`,
@@ -118,15 +123,15 @@ describe('Unit reservation race condition — real Postgres concurrency proof (e
 
       // ── DB assertions ────────────────────────────────────────────────────
       const [unit, reservations, statusHistory] = await Promise.all([
-        testApp.prisma.unit.findUniqueOrThrow({
+        testApp.rawPrisma.unit.findUniqueOrThrow({
           where: { id: unitId },
           select: { status: true },
         }),
-        testApp.prisma.reservation.findMany({
+        testApp.rawPrisma.reservation.findMany({
           where: { unitId },
           select: { id: true, status: true },
         }),
-        testApp.prisma.unitStatusHistory.findMany({
+        testApp.rawPrisma.unitStatusHistory.findMany({
           where: { unitId },
           select: { id: true, oldStatus: true, newStatus: true },
         }),

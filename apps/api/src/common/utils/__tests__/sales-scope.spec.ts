@@ -30,10 +30,10 @@ function prismaMock(): PrismaService {
   } as unknown as PrismaService;
 }
 
-const admin: AuthUser = { sub: 'a', role: UserRole.ADMIN, email: null, phone: null };
-const sales: AuthUser = { sub: SALES_ID, role: UserRole.SALES, email: null, phone: null };
-const manager: AuthUser = { sub: MANAGER_ID, role: UserRole.SALES_MANAGER, email: null, phone: null };
-const customer: AuthUser = { sub: 'c', role: UserRole.CUSTOMER, email: null, phone: null };
+const admin: AuthUser = { sub: 'a', role: UserRole.ADMIN, email: null, phone: null, companyId: null };
+const sales: AuthUser = { sub: SALES_ID, role: UserRole.SALES, email: null, phone: null, companyId: null };
+const manager: AuthUser = { sub: MANAGER_ID, role: UserRole.SALES_MANAGER, email: null, phone: null, companyId: null };
+const customer: AuthUser = { sub: 'c', role: UserRole.CUSTOMER, email: null, phone: null, companyId: null };
 
 describe('sales-scope · isSalesIdInScope', () => {
   it('ADMIN is always in scope (even for null owner)', async () => {

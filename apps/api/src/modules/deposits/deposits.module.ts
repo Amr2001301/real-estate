@@ -268,11 +268,6 @@ class DepositsService {
     });
     if (!installment) throw new BadRequestException('القسط لا ينتمي إلى هذا العقد');
 
-    // Duplicate guard
-    if (installment.status === InstallmentStatus.PAID) {
-      throw new BadRequestException('تم دفع هذا القسط مسبقاً');
-    }
-
     // Amount validation
     const expected = Number(installment.amount);
     if (dto.amount < expected) {

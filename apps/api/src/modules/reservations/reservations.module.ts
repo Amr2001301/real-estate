@@ -70,6 +70,7 @@ import {
 import { ContractsModule, ContractsService } from '../contracts/contracts.module';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
+import { runTenantContext } from '../../common/tenant/tenant-context';
 // BrokerCommissionsModule/Service no longer imported here. Commission
 // materialisation runs from ContractsService.sign() — the only path that
 // signs a contract — and convert always produces an unsigned contract.
@@ -2081,17 +2082,19 @@ export class ReservationExpiryCron {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async run() {
-    try {
-      const result = this.lock
-        ? await this.lock.withLock('reservation-expiry', 4 * 60_000, () => this.svc.expireDue())
-        : await this.svc.expireDue();
-      if (result !== null) {
-        this.logger.log(`Reservation expiry sweep: expired=${result.expired}`);
+    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      try {
+        const result = this.lock
+          ? await this.lock.withLock('reservation-expiry', 4 * 60_000, () => this.svc.expireDue())
+          : await this.svc.expireDue();
+        if (result !== null) {
+          this.logger.log(`Reservation expiry sweep: expired=${result.expired}`);
+        }
+      } catch (err) {
+        this.logger.error(`[reservation-expiry] cron failed: ${(err as Error).message}`);
+        captureExceptionSafe(err, { job: 'reservation-expiry' });
       }
-    } catch (err) {
-      this.logger.error(`[reservation-expiry] cron failed: ${(err as Error).message}`);
-      captureExceptionSafe(err, { job: 'reservation-expiry' });
-    }
+    });
   }
 }
 

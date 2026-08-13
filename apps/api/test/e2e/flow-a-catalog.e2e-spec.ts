@@ -44,7 +44,7 @@ describe('Flow A — Catalog sync (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token, broker2Token, customer1Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -83,7 +83,7 @@ describe('Flow A — Catalog sync (e2e)', () => {
       // A second check via prisma so a buggy controller serializer can't
       // create a false positive on A2 — confirms the e2e DB is the same
       // one we're reading via HTTP.
-      const row = await testApp.prisma.unit.findUnique({
+      const row = await testApp.rawPrisma.unit.findUnique({
         where: { id: fixtures.units.sampleUnitInP1Id },
         select: { id: true },
       });

@@ -47,7 +47,7 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [adminToken, salesToken, broker1Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
@@ -76,7 +76,7 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
    * runs, but in a fresh seed there's always ≥10 available).
    */
   async function createSalesReservation(): Promise<{ reservationId: string; unitId: string }> {
-    const unit = await testApp.prisma.unit.findFirstOrThrow({
+    const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
       where: { status: UnitStatus.AVAILABLE },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       select: { id: true },
@@ -114,14 +114,14 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
         .send({});
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: reservationId },
         select: { status: true, approvedAt: true },
       });
       expect(row.status).toBe(ReservationStatus.APPROVED);
       expect(row.approvedAt).not.toBeNull();
 
-      const unit = await testApp.prisma.unit.findUniqueOrThrow({
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
         where: { id: unitId },
         select: { status: true },
       });
@@ -145,14 +145,14 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
         .send({ reason: 'phase 7c — reject path' });
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: reservationId },
         select: { status: true, rejectedAt: true },
       });
       expect(row.status).toBe(ReservationStatus.REJECTED);
       expect(row.rejectedAt).not.toBeNull();
 
-      const unit = await testApp.prisma.unit.findUniqueOrThrow({
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
         where: { id: unitId },
         select: { status: true },
       });
@@ -182,14 +182,14 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
         .send({ reason: 'phase 7c — cancel after approve' });
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: reservationId },
         select: { status: true, cancelledAt: true },
       });
       expect(row.status).toBe(ReservationStatus.CANCELLED);
       expect(row.cancelledAt).not.toBeNull();
 
-      const unit = await testApp.prisma.unit.findUniqueOrThrow({
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
         where: { id: unitId },
         select: { status: true },
       });
@@ -224,14 +224,14 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
         .send({ note: 'phase 7c — booking payment confirmed' });
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: reservationId },
         select: { bookingPaymentStatus: true, bookingPaidAt: true },
       });
       expect(row.bookingPaymentStatus).toBe(ReservationBookingPaymentStatus.PAID);
       expect(row.bookingPaidAt).not.toBeNull();
 
-      const deposit = await testApp.prisma.deposit.findFirst({
+      const deposit = await testApp.rawPrisma.deposit.findFirst({
         where: { reservationId },
         select: { id: true, type: true, amount: true, verified: true },
       });
@@ -271,19 +271,19 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
         .send({});
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: reservationId },
         select: { status: true },
       });
       expect(row.status).toBe(ReservationStatus.CONVERTED);
 
-      const unit = await testApp.prisma.unit.findUniqueOrThrow({
+      const unit = await testApp.rawPrisma.unit.findUniqueOrThrow({
         where: { id: unitId },
         select: { status: true },
       });
       expect(unit.status).toBe(UnitStatus.SOLD);
 
-      const contract = await testApp.prisma.contract.findFirst({
+      const contract = await testApp.rawPrisma.contract.findFirst({
         where: { reservationId },
         select: { id: true, customerId: true },
       });
@@ -319,7 +319,7 @@ describe('Phase 7C — Admin reservation approval / lifecycle (e2e)', () => {
         .send({});
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.status).toBeLessThan(500);
-      const row = await testApp.prisma.reservation.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.reservation.findUniqueOrThrow({
         where: { id: reservationId },
         select: { status: true },
       });

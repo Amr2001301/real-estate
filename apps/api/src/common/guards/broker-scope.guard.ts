@@ -5,6 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { enterTenantContext } from '../tenant/tenant-context';
 
 export interface BrokerScopeContext {
   brokerId: string;
@@ -28,7 +29,7 @@ export class BrokerScopeGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest<{
-      user?: { sub?: string; role?: string };
+      user?: { sub?: string; role?: string; companyId?: string | null };
       brokerId?: string;
       brokerUserId?: string;
       brokerAgentUserId?: string;
@@ -42,8 +43,21 @@ export class BrokerScopeGuard implements CanActivate {
       throw new ForbiddenException('Broker portal access requires BROKER role');
     }
 
+    // Guards run before TenantContextInterceptor establishes the ALS context.
+    // Prisma 5 uses a lazy proxy — middleware executes in a deferred microtask,
+    // not in the synchronous call frame, so als.run() does not propagate context
+    // to the middleware. Instead, enter the ALS context on the current async
+    // resource now; TenantContextInterceptor will overwrite it with an identical
+    // value when it runs after the guard chain completes.
+    const companyId = user.companyId ?? null;
+    if (!companyId) {
+      throw new ForbiddenException('Broker account is not associated with a company');
+    }
+
+    enterTenantContext({ companyId, bypass: false, isPublic: false });
+
     const brokerUser = await this.prisma.brokerUser.findUnique({
-      where: { userId: user.sub },
+      where: { userId: user.sub! },
       select: {
         id: true,
         userId: true,

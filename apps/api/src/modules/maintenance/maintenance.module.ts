@@ -70,6 +70,7 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { CronLockService } from '../../common/cron/cron-lock.service';
 import { captureExceptionSafe } from '../../common/observability/sentry';
+import { runTenantContext } from '../../common/tenant/tenant-context';
 
 enum SlaUnit {
   HOURS = 'HOURS',
@@ -1918,16 +1919,18 @@ export class MaintenanceUnresolvedCron {
 
   @Cron(CronExpression.EVERY_HOUR)
   async run() {
-    try {
-      if (this.lock) {
-        await this.lock.withLock('maintenance-unresolved', 2 * 60_000, () => this.svc.markUnresolved());
-      } else {
-        await this.svc.markUnresolved();
+    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      try {
+        if (this.lock) {
+          await this.lock.withLock('maintenance-unresolved', 2 * 60_000, () => this.svc.markUnresolved());
+        } else {
+          await this.svc.markUnresolved();
+        }
+      } catch (err) {
+        this.logger.error(`[maintenance-unresolved] cron failed: ${(err as Error).message}`);
+        captureExceptionSafe(err, { job: 'maintenance-unresolved' });
       }
-    } catch (err) {
-      this.logger.error(`[maintenance-unresolved] cron failed: ${(err as Error).message}`);
-      captureExceptionSafe(err, { job: 'maintenance-unresolved' });
-    }
+    });
   }
 }
 
@@ -1948,16 +1951,18 @@ export class MaintenanceSlaCheckCron {
 
   @Cron(CronExpression.EVERY_HOUR)
   async run() {
-    try {
-      if (this.lock) {
-        await this.lock.withLock('maintenance-sla-check', 2 * 60_000, () => this.svc.checkSla());
-      } else {
-        await this.svc.checkSla();
+    await runTenantContext({ companyId: null, bypass: true, isPublic: false }, async () => {
+      try {
+        if (this.lock) {
+          await this.lock.withLock('maintenance-sla-check', 2 * 60_000, () => this.svc.checkSla());
+        } else {
+          await this.svc.checkSla();
+        }
+      } catch (err) {
+        this.logger.error(`[maintenance-sla-check] cron failed: ${(err as Error).message}`);
+        captureExceptionSafe(err, { job: 'maintenance-sla-check' });
       }
-    } catch (err) {
-      this.logger.error(`[maintenance-sla-check] cron failed: ${(err as Error).message}`);
-      captureExceptionSafe(err, { job: 'maintenance-sla-check' });
-    }
+    });
   }
 }
 

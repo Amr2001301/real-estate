@@ -37,7 +37,7 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
 
     [supervisorToken, customer1Token, salesToken] = await Promise.all([
       loginAs(testApp.app, 'maintenance@example.com', 'MaintenancePass123!'),
@@ -72,7 +72,7 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
       .send({ status: 'IN_PROGRESS' });
     expect(res.status).toBe(201);
 
-    const row = await testApp.prisma.maintenanceRequest.findUniqueOrThrow({
+    const row = await testApp.rawPrisma.maintenanceRequest.findUniqueOrThrow({
       where: { id: reqId() },
       select: { status: true },
     });
@@ -96,7 +96,7 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
       .send({ status: 'RESOLVED' });
     expect(res.status).toBe(201);
 
-    const row = await testApp.prisma.maintenanceRequest.findUniqueOrThrow({
+    const row = await testApp.rawPrisma.maintenanceRequest.findUniqueOrThrow({
       where: { id: reqId() },
       select: { status: true },
     });
@@ -123,7 +123,7 @@ describe('Flow F — Maintenance supervisor status machine (e2e)', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
     expect(res.status).toBeLessThan(500);
 
-    const row = await testApp.prisma.maintenanceRequest.findUniqueOrThrow({
+    const row = await testApp.rawPrisma.maintenanceRequest.findUniqueOrThrow({
       where: { id: reqId() },
       select: { status: true },
     });

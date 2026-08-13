@@ -53,7 +53,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
 
   beforeAll(async () => {
     testApp = await createTestApp();
-    fixtures = await loadE2EFixtures(testApp.prisma);
+    fixtures = await loadE2EFixtures(testApp.rawPrisma);
     [adminToken, customer1Token, customer2Token] = await Promise.all([
       loginAs(testApp.app, 'admin@example.com', 'ChangeMe123!'),
       loginAs(testApp.app, fixtures.users.CUSTOMER_1.email, fixtures.users.CUSTOMER_1.password, 'customer'),
@@ -81,6 +81,9 @@ describe('P11 — Payment-proof review (e2e)', () => {
   let p11OtherInstallmentId: string;
 
   beforeAll(async () => {
+    const company = await testApp.rawPrisma.company.findFirstOrThrow({ where: { isActive: true }, select: { id: true } });
+    const testCompanyId = company.id;
+
     // Fresh, isolated customer pair so e2e expectations on the seeded
     // CUSTOMER_1 contract aren't disturbed.
     const passwordHash = await argon2.hash('StrongPass1!');
@@ -88,9 +91,10 @@ describe('P11 — Payment-proof review (e2e)', () => {
     // distinct between the two users (avoid Date.now() collisions inside the
     // same millisecond by suffixing a deterministic per-user index).
     const base = `+96650${process.hrtime.bigint().toString().slice(-8)}`;
-    const [c1, c2] = await testApp.prisma.$transaction([
-      testApp.prisma.user.create({
+    const [c1, c2] = await testApp.rawPrisma.$transaction([
+      testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CUSTOMER,
           fullName: 'P11 Customer A',
           email: `p11-c1-${base.slice(-8)}@example.com`,
@@ -100,8 +104,9 @@ describe('P11 — Payment-proof review (e2e)', () => {
         },
         select: { id: true, email: true },
       }),
-      testApp.prisma.user.create({
+      testApp.rawPrisma.user.create({
         data: {
+          companyId: testCompanyId,
           role: UserRole.CUSTOMER,
           fullName: 'P11 Customer B',
           email: `p11-c2-${base.slice(-8)}@example.com`,
@@ -128,15 +133,16 @@ describe('P11 — Payment-proof review (e2e)', () => {
     // a P7/P8-style flake in earlier suite-order runs. We deliberately
     // skip p1 so loadE2EFixtures' AVAILABLE-p1 dependency stays satisfied
     // for any spec that runs after us.
-    const unit = await testApp.prisma.unit.findFirstOrThrow({
+    const unit = await testApp.rawPrisma.unit.findFirstOrThrow({
       where: {
         NOT: { building: { phase: { projectId: fixtures.projects.p1Id } } },
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
       select: { id: true },
     });
-    const contract = await testApp.prisma.contract.create({
+    const contract = await testApp.rawPrisma.contract.create({
       data: {
+        companyId: testCompanyId,
         contractNumber: `P11-CON-${Date.now()}`,
         customerId: c1.id,
         unitId: unit.id,
@@ -148,8 +154,9 @@ describe('P11 — Payment-proof review (e2e)', () => {
     p11ContractId = contract.id;
     // InstallmentPlan has a direct contractId FK (no templateId field on the
     // join table itself; template linkage lives on the source Reservation).
-    const plan = await testApp.prisma.installmentPlan.create({
+    const plan = await testApp.rawPrisma.installmentPlan.create({
       data: {
+        companyId: testCompanyId,
         contractId: contract.id,
         totalMonths: 12,
         monthlyAmount: new Prisma.Decimal(75_000),
@@ -158,9 +165,10 @@ describe('P11 — Payment-proof review (e2e)', () => {
       select: { id: true },
     });
     p11InstallmentAmount = 75_000;
-    const [i1, i2] = await testApp.prisma.$transaction([
-      testApp.prisma.installment.create({
+    const [i1, i2] = await testApp.rawPrisma.$transaction([
+      testApp.rawPrisma.installment.create({
         data: {
+          companyId: testCompanyId,
           planId: plan.id,
           type: PlanPaymentType.INSTALLMENT,
           amount: new Prisma.Decimal(p11InstallmentAmount),
@@ -169,8 +177,9 @@ describe('P11 — Payment-proof review (e2e)', () => {
         },
         select: { id: true },
       }),
-      testApp.prisma.installment.create({
+      testApp.rawPrisma.installment.create({
         data: {
+          companyId: testCompanyId,
           planId: plan.id,
           type: PlanPaymentType.INSTALLMENT,
           amount: new Prisma.Decimal(p11InstallmentAmount),
@@ -204,7 +213,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
         });
       expect(res.status).toBe(201);
       p11DepositId = res.body.id as string;
-      const row = await testApp.prisma.deposit.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.deposit.findUniqueOrThrow({
         where: { id: p11DepositId },
         select: {
           reviewStatus: true,
@@ -219,7 +228,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
       expect(row.paymentMethod).toBe(PaymentMethod.BANK_TRANSFER);
       expect(row.proofDocumentId).toBeTruthy();
 
-      const doc = await testApp.prisma.document.findUniqueOrThrow({
+      const doc = await testApp.rawPrisma.document.findUniqueOrThrow({
         where: { id: row.proofDocumentId! },
         select: { ownerType: true, ownerId: true, category: true, visibility: true },
       });
@@ -229,7 +238,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
       expect(doc.visibility).toBe(DocumentVisibility.ADMIN_ONLY);
 
       // Installment must still be PENDING (admin approval flips it).
-      const inst = await testApp.prisma.installment.findUniqueOrThrow({
+      const inst = await testApp.rawPrisma.installment.findUniqueOrThrow({
         where: { id: p11InstallmentId },
         select: { status: true },
       });
@@ -299,7 +308,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
         .send({});
       expect(res.status).toBe(201);
 
-      const deposit = await testApp.prisma.deposit.findUniqueOrThrow({
+      const deposit = await testApp.rawPrisma.deposit.findUniqueOrThrow({
         where: { id: p11DepositId },
         select: { reviewStatus: true, verified: true, reviewedAt: true, reviewedById: true },
       });
@@ -308,7 +317,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
       expect(deposit.reviewedAt).toBeTruthy();
       expect(deposit.reviewedById).toBeTruthy();
 
-      const installment = await testApp.prisma.installment.findUniqueOrThrow({
+      const installment = await testApp.rawPrisma.installment.findUniqueOrThrow({
         where: { id: p11InstallmentId },
         select: { status: true, paidAt: true },
       });
@@ -376,7 +385,7 @@ describe('P11 — Payment-proof review (e2e)', () => {
         });
       expect(res.status).toBe(201);
 
-      const row = await testApp.prisma.deposit.findUniqueOrThrow({
+      const row = await testApp.rawPrisma.deposit.findUniqueOrThrow({
         where: { id: rejDepositId },
         select: { reviewStatus: true, rejectionReason: true, paymentMethod: true, verified: true },
       });
@@ -400,12 +409,12 @@ describe('P11 — Payment-proof review (e2e)', () => {
           sizeBytes: 4096,
         });
       expect(res.status).toBe(201);
-      const contract = await testApp.prisma.contract.findUniqueOrThrow({
+      const contract = await testApp.rawPrisma.contract.findUniqueOrThrow({
         where: { id: p11ContractId },
         select: { pdfUrl: true },
       });
       expect(contract.pdfUrl).toBe(fileUrl);
-      const document = await testApp.prisma.document.findFirstOrThrow({
+      const document = await testApp.rawPrisma.document.findFirstOrThrow({
         where: {
           ownerType: DocumentOwnerType.CONTRACT,
           ownerId: p11ContractId,
