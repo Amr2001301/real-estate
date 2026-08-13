@@ -33,7 +33,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix('v1', { exclude: ['health', '/'] });
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
 
   app.useGlobalPipes(
     new ValidationPipe({

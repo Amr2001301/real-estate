@@ -56,6 +56,11 @@ const ALLOW_LIST_FULL_NAMES = new Set<string>([
   'NotificationsController.markAllRead',
   // /v1/me/devices — push-token registration for the current user.
   'NotificationsController.registerDevice',
+  // Auth self-service — available to any authenticated role; scoped to user.sub.
+  'AuthController.changePassword',
+  'AuthController.resendVerification',
+  // /v1/users/me/avatar — current user uploads their own avatar; scoped to user.sub.
+  'UsersController.uploadAvatar',
 ]);
 
 describe('RBAC route coverage (master spec)', () => {

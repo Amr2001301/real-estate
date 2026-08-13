@@ -54,7 +54,7 @@ export async function createTestApp(): Promise<TestApp> {
   app.use(requestIdMiddleware);
   app.use(helmet());
   app.use(cookieParser());
-  app.setGlobalPrefix('v1', { exclude: ['health', '/'] });
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
