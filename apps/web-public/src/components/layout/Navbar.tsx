@@ -9,17 +9,14 @@ import { Menu, X, UserCircle2, LogOut } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { ButtonLink } from '@/components/ui/Button';
 import { Container } from '@/components/ui/Container';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { LangToggle } from '@/components/theme/LangToggle';
 import { logoutAction } from '@/lib/auth-actions';
 import { readClientUser, type ClientUser } from '@/lib/client-user';
-
-/** First name for a light, friendly nav label; falls back to "حسابي". */
-function accountLabel(user: ClientUser | null): string {
-  const first = user?.fullName?.trim().split(/\s+/)[0];
-  return first || 'حسابي';
-}
 
 function Wordmark({ invert }: { invert: boolean }) {
   return (
@@ -42,14 +39,12 @@ function Wordmark({ invert }: { invert: boolean }) {
   );
 }
 
-export function Navbar() {
+export function Navbar({ locale }: { locale: Locale }) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  // UI hint only: read the non-httpOnly `user` cookie AFTER mount so the first
-  // client render matches SSR (guest) and no hydration mismatch occurs. Tokens
-  // are httpOnly and never read here.
   const [user, setUser] = useState<ClientUser | null>(null);
+  const m = siteT(locale);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
@@ -60,15 +55,13 @@ export function Navbar() {
 
   useEffect(() => {
     setOpen(false);
-    // Re-read on every navigation so login/logout reflect immediately.
     setUser(readClientUser());
   }, [pathname]);
 
-  // Only the homepage has a dark hero behind the nav, so it may start
-  // transparent. Every other page starts on a light surface, so the nav must
-  // be solid immediately — otherwise white links vanish over the light bg.
   const isHome = pathname === '/';
   const solid = !isHome || scrolled || open;
+
+  const accountLabel = user?.fullName?.trim().split(/\s+/)[0] || m.nav.myAccount;
 
   return (
     <header
@@ -94,7 +87,7 @@ export function Navbar() {
                   active && (solid ? 'text-ink-strong' : 'text-white'),
                 )}
               >
-                {item.label}
+                {locale === 'ar' ? item.label : item.labelEn}
                 {active && (
                   <span className="absolute inset-x-4 -bottom-0.5 h-0.5 rounded-full bg-gold-400" aria-hidden />
                 )}
@@ -103,7 +96,11 @@ export function Navbar() {
           })}
         </nav>
 
-        <div className="hidden items-center gap-4 lg:flex">
+        <div className="hidden items-center gap-2 lg:flex">
+          <LangToggle
+            current={locale}
+            className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')}
+          />
           <ThemeToggle
             className={cn(
               'rounded-lg',
@@ -112,7 +109,6 @@ export function Navbar() {
           />
           {user ? (
             <>
-              {/* User account capsule — name + micro initials avatar */}
               <Link
                 href={routes.account}
                 className={cn(
@@ -123,17 +119,16 @@ export function Navbar() {
                 )}
               >
                 <span className={cn('text-xs font-bold', solid ? 'text-ink-strong' : 'text-white')}>
-                  {accountLabel(user)}
+                  {accountLabel}
                 </span>
                 <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gold-100 text-[10px] font-black text-gold-600">
                   {(user.fullName.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('') || '؟').toUpperCase()}
                 </span>
               </Link>
-              {/* Premium logout button */}
               <form action={logoutAction}>
                 <button
                   type="submit"
-                  aria-label="تسجيل الخروج"
+                  aria-label={m.nav.logout}
                   className={cn(
                     'inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-bold transition-all duration-200',
                     solid
@@ -142,22 +137,27 @@ export function Navbar() {
                   )}
                 >
                   <LogOut className="h-4 w-4" aria-hidden />
-                  خروج
+                  {m.nav.logout}
                 </button>
               </form>
             </>
           ) : (
             <ButtonLink href={routes.login} variant={solid ? 'outline' : 'gold'} size="sm">
-              تسجيل الدخول
+              {m.nav.login}
             </ButtonLink>
           )}
         </div>
 
+        {/* Mobile controls */}
         <div className="flex items-center gap-1 lg:hidden">
+          <LangToggle
+            current={locale}
+            className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')}
+          />
           <ThemeToggle className={cn(!solid && 'text-white/80 hover:bg-white/10 hover:text-white')} />
           <button
             type="button"
-            aria-label={open ? 'إغلاق القائمة' : 'فتح القائمة'}
+            aria-label={open ? m.nav.closeMenu : m.nav.openMenu}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
             className={cn(
@@ -170,12 +170,15 @@ export function Navbar() {
         </div>
       </Container>
 
-      {open && <MobileMenu user={user} />}
+      {open && <MobileMenu user={user} locale={locale} />}
     </header>
   );
 }
 
-function MobileMenu({ user }: { user: ClientUser | null }) {
+function MobileMenu({ user, locale }: { user: ClientUser | null; locale: Locale }) {
+  const m = siteT(locale);
+  const accountLabel = user?.fullName?.trim().split(/\s+/)[0] || m.nav.myAccount;
+
   return (
     <div className="lg:hidden">
       <Container className="pb-6 pt-2">
@@ -186,7 +189,7 @@ function MobileMenu({ user }: { user: ClientUser | null }) {
               href={item.href as Route}
               className="rounded-2xl px-4 py-3 text-base font-medium text-ink-strong transition-colors hover:bg-surface-soft"
             >
-              {item.label}
+              {locale === 'ar' ? item.label : item.labelEn}
             </Link>
           ))}
           {user ? (
@@ -196,7 +199,7 @@ function MobileMenu({ user }: { user: ClientUser | null }) {
                 className="mt-1 inline-flex items-center gap-2 rounded-2xl px-4 py-3 text-base font-medium text-ink-strong transition-colors hover:bg-surface-soft"
               >
                 <UserCircle2 className="h-5 w-5" aria-hidden />
-                {accountLabel(user)}
+                {accountLabel}
               </Link>
               <form action={logoutAction} className="mt-1">
                 <button
@@ -204,13 +207,13 @@ function MobileMenu({ user }: { user: ClientUser | null }) {
                   className="inline-flex w-full items-center gap-2 rounded-2xl px-4 py-3 text-base font-medium text-ink-muted transition-colors hover:bg-surface-soft"
                 >
                   <LogOut className="h-5 w-5" aria-hidden />
-                  تسجيل الخروج
+                  {m.nav.logout}
                 </button>
               </form>
             </>
           ) : (
             <ButtonLink href={routes.login} variant="primary" size="md" className="mt-2 w-full">
-              تسجيل الدخول
+              {m.nav.login}
             </ButtonLink>
           )}
         </nav>

@@ -3,6 +3,7 @@ import { Inter, IBM_Plex_Sans_Arabic, Tajawal } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { buildMetadata } from '@/lib/seo';
+import { getLocale } from '@/lib/locale';
 import { Navbar } from '@/components/layout/Navbar';
 import { Footer } from '@/components/layout/Footer';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
@@ -35,11 +36,13 @@ const tajawal = Tajawal({
 
 export const metadata: Metadata = buildMetadata();
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const dir = locale === 'ar' ? 'rtl' : 'ltr';
   return (
     <html
-      lang="ar"
-      dir="rtl"
+      lang={locale}
+      dir={dir}
       className={`${inter.variable} ${plexArabic.variable} ${tajawal.variable}`}
       suppressHydrationWarning
     >
@@ -58,9 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PageViewTracker />
         <ThemeProvider>
           <FavoritesProvider>
-            <Navbar />
+            <Navbar locale={locale} />
             <main className="min-h-screen">{children}</main>
-            <Footer />
+            <Footer locale={locale} />
             <ChatWidget />
           </FavoritesProvider>
         </ThemeProvider>

@@ -6,18 +6,13 @@ import { PRIMARY_NAV, routes } from '@/lib/routes';
 import { SITE } from '@/lib/seo';
 import { getContactPhone } from '@/lib/contact';
 import { Container } from '@/components/ui/Container';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 
 const YEAR = new Date().getFullYear();
 
-const ACCOUNT_LINKS: Array<{ label: string; href: string }> = [
-  { label: 'تسجيل الدخول', href: routes.login },
-  { label: 'إنشاء حساب', href: routes.register },
-  { label: 'تواصل معنا', href: routes.contact },
-];
-
 type ContactRow = { icon: typeof Phone; text: string; dir: 'ltr' | 'rtl' };
 
-// Faint texture so the footer reads with depth, not as a flat dark block.
 const DOTS = {
   backgroundImage: 'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
   backgroundSize: '22px 22px',
@@ -38,18 +33,24 @@ function ColumnHeading({ children }: { children: React.ReactNode }) {
   return <span className="mb-3 inline-flex items-center gap-2 text-sm font-bold text-gold-200">{children}</span>;
 }
 
-export function Footer() {
-  // Phone is env-driven (hidden when unset); email/address stay informational.
+export function Footer({ locale }: { locale: Locale }) {
+  const m = siteT(locale);
   const contactPhone = getContactPhone();
   const contact: ContactRow[] = [
     ...(contactPhone ? [{ icon: Phone, text: contactPhone, dir: 'ltr' as const }] : []),
     { icon: Mail, text: 'devorasoftware@gmail.com', dir: 'ltr' as const },
-    { icon: MapPin, text: 'الرياض، المملكة العربية السعودية', dir: 'rtl' as const },
+    { icon: MapPin, text: m.footer.address, dir: locale === 'ar' ? 'rtl' as const : 'ltr' as const },
   ];
+
+  const accountLinks = [
+    { label: m.footer.login, href: routes.login },
+    { label: m.footer.register, href: routes.register },
+    { label: m.footer.contactUs, href: routes.contact },
+  ];
+
   return (
     <footer className="relative overflow-hidden bg-navy text-white/80">
       <div className="h-px w-full bg-gradient-to-l from-transparent via-gold-400/50 to-transparent" aria-hidden />
-      {/* Depth — faint texture + a soft warm glow */}
       <span aria-hidden className="pointer-events-none absolute inset-0 opacity-60" style={DOTS} />
       <span aria-hidden className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-gold-400/10 blur-3xl" />
 
@@ -68,29 +69,33 @@ export function Footer() {
               <span className="font-display text-xl text-white">{SITE.name}</span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/60">
-              نختار لك مشاريع ووحدات سكنية بعناية لتجربة عقارية راقية وموثوقة.
+              {m.footer.tagline}
             </p>
           </div>
 
           {/* Explore */}
           <nav className="flex flex-col gap-3 lg:col-span-2">
-            <ColumnHeading>استكشف</ColumnHeading>
+            <ColumnHeading>{m.footer.explore}</ColumnHeading>
             {PRIMARY_NAV.map((item) => (
-              <FooterLink key={item.href} href={item.href} label={item.label} />
+              <FooterLink
+                key={item.href}
+                href={item.href}
+                label={locale === 'ar' ? item.label : item.labelEn}
+              />
             ))}
           </nav>
 
           {/* Account */}
           <nav className="flex flex-col gap-3 lg:col-span-2">
-            <ColumnHeading>الحساب</ColumnHeading>
-            {ACCOUNT_LINKS.map((item) => (
+            <ColumnHeading>{m.footer.account}</ColumnHeading>
+            {accountLinks.map((item) => (
               <FooterLink key={item.href} href={item.href} label={item.label} />
             ))}
           </nav>
 
-          {/* Contact mini block */}
+          {/* Contact */}
           <div className="flex flex-col gap-3 lg:col-span-3">
-            <ColumnHeading>تواصل معنا</ColumnHeading>
+            <ColumnHeading>{m.footer.contactUs}</ColumnHeading>
             {contact.map(({ icon: Icon, text, dir }) => (
               <div key={text} className="flex items-center gap-2.5 text-sm text-white/65">
                 <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/5 text-gold-200 ring-1 ring-white/10">
@@ -102,14 +107,14 @@ export function Footer() {
           </div>
         </div>
 
-        {/* Slim legal row */}
+        {/* Legal row */}
         <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-xs text-white/45 sm:flex-row">
           <p>
-            © {YEAR} {SITE.name}. جميع الحقوق محفوظة.
+            © {YEAR} {SITE.name}. {m.footer.rights}.
           </p>
           <div className="flex items-center gap-5">
-            <FooterLink href={routes.privacy} label="سياسة الخصوصية" />
-            <FooterLink href={routes.terms} label="الشروط والأحكام" />
+            <FooterLink href={routes.privacy} label={m.footer.privacy} />
+            <FooterLink href={routes.terms} label={m.footer.terms} />
           </div>
         </div>
       </Container>

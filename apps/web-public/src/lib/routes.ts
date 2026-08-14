@@ -37,13 +37,14 @@ export const routes = {
 
 export interface NavItem {
   label: string;
+  labelEn: string;
   href: string;
 }
 
 export const PRIMARY_NAV: NavItem[] = [
-  { label: 'الرئيسية', href: routes.home },
-  { label: 'المشاريع', href: routes.projects },
-  { label: 'الوحدات', href: routes.units },
-  { label: 'المقارنة', href: routes.compare },
-  { label: 'تواصل معنا', href: routes.contact },
+  { label: 'الرئيسية', labelEn: 'Home', href: routes.home },
+  { label: 'المشاريع', labelEn: 'Projects', href: routes.projects },
+  { label: 'الوحدات', labelEn: 'Units', href: routes.units },
+  { label: 'المقارنة', labelEn: 'Compare', href: routes.compare },
+  { label: 'تواصل معنا', labelEn: 'Contact', href: routes.contact },
 ];
