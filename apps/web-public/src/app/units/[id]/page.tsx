@@ -26,6 +26,7 @@ import { CompareBar } from '@/components/compare/CompareBar';
 import { JsonLd } from '@/components/seo/JsonLd';
 import { breadcrumbLd, unitProductLd } from '@/lib/jsonld';
 import { ViewTracker } from '@/components/analytics/ViewTracker';
+import { ShareButton } from '@/components/ui/ShareButton';
 
 const REVALIDATE = 60;
 
@@ -231,7 +232,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 </div>
 
                 {/* CTAs */}
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap items-center gap-3">
                   <ButtonLink
                     href={`${routes.contact}?unitId=${unit.id}` as Route}
                     variant="gold"
@@ -248,6 +249,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                     طلب زيارة
                   </ButtonLink>
                   <CompareToggle item={compareItem} />
+                  <ShareButton title={[title, projectName].filter(Boolean).join(' · ')} />
                 </div>
               </Reveal>
             }

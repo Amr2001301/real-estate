@@ -253,6 +253,17 @@ export class ProjectsService {
     });
   }
 
+  /** Returns sorted distinct city names from PUBLISHED projects. Used by the public city filter. */
+  async findPublicCities(): Promise<{ cities: string[] }> {
+    const rows = await this.prisma.project.findMany({
+      where: { status: ProjectStatus.PUBLISHED },
+      select: { city: true },
+      distinct: ['city'],
+      orderBy: { city: 'asc' },
+    });
+    return { cities: rows.map((r) => r.city) };
+  }
+
   private async assertExists(id: string) {
     const exists = await this.prisma.project.findUnique({ where: { id }, select: { id: true } });
     if (!exists) throw new NotFoundException('Project not found');

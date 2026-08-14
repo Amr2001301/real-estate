@@ -3,19 +3,22 @@ import forms from '@tailwindcss/forms';
 
 const config: Config = {
   content: ['./src/**/*.{ts,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
         // Warm-luxe palette aligned with the public website ("Warm Luxe").
         // Backgrounds/borders/accents are warm; text stays cool navy (slate)
         // to match the website's cool-navy ink on a warm canvas.
-        canvas: '#FAF7F2',
+        // Theme-aware surfaces — toggle-controlled via CSS variables.
+        // Light: warm off-white. Dark: near-black. All opacity modifiers work.
+        canvas: 'rgb(var(--tw-canvas) / <alpha-value>)',
         surface: {
-          DEFAULT: '#FFFFFF',
-          muted: '#F4EFE8',
-          sunken: '#EAE2D6',
+          DEFAULT: 'rgb(var(--tw-surface) / <alpha-value>)',
+          muted:   'rgb(var(--tw-surface-muted) / <alpha-value>)',
+          sunken:  'rgb(var(--tw-surface-sunken) / <alpha-value>)',
         },
-        hairline: '#E7DFD3',
+        hairline: 'rgb(var(--tw-hairline) / <alpha-value>)',
 
         // Refined dark navy used by the website for nav/footer/CTAs — gives the
         // admin shell the same branded identity.

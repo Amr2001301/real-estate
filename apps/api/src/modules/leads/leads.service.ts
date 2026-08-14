@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import * as ExcelJS from 'exceljs';
 import { AppointmentStatus, Prisma, LeadStage, UserRole } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.module';
@@ -429,4 +430,131 @@ export class LeadsService {
       return '';
     }
   }
+
+  // ── Excel Import ──────────────────────────────────────────────────────────
+
+  /** Parse an Excel buffer into validated row previews (no DB side effects). */
+  async previewImport(buffer: Buffer): Promise<ImportPreviewResult> {
+    const rows = await this.parseExcelBuffer(buffer);
+    return { rows };
+  }
+
+  /**
+   * Import leads from an Excel buffer.
+   * - Skips rows where a lead with the same phone already exists.
+   * - Returns counts and per-row errors for the caller to surface.
+   */
+  async importLeads(buffer: Buffer, sourceId?: string): Promise<ImportResult> {
+    const rows = await this.parseExcelBuffer(buffer);
+    const valid = rows.filter((r) => r.valid && r.phone);
+    const invalid = rows.filter((r) => !r.valid || !r.phone);
+
+    const phones = valid.map((r) => r.phone!);
+    const existingLeads = await this.prisma.lead.findMany({
+      where: { phone: { in: phones } },
+      select: { phone: true },
+    });
+    const existingPhones = new Set(existingLeads.map((l) => l.phone));
+
+    let imported = 0;
+    let skipped = 0;
+    const errors: Array<{ row: number; message: string }> = invalid.map((r) => ({
+      row: r.rowNumber,
+      message: r.error ?? 'بيانات غير مكتملة',
+    }));
+
+    for (const row of valid) {
+      if (existingPhones.has(row.phone!)) {
+        skipped++;
+        continue;
+      }
+      try {
+        await this.create({
+          fullName: row.name!,
+          phone: row.phone!,
+          email: row.email ?? undefined,
+          sourceId: sourceId ?? undefined,
+          notes: row.notes ?? undefined,
+        });
+        imported++;
+      } catch (e) {
+        errors.push({ row: row.rowNumber, message: (e as Error).message ?? 'خطأ غير متوقع' });
+      }
+    }
+
+    return { imported, skipped, errors, total: rows.length };
+  }
+
+  private async parseExcelBuffer(buffer: Buffer): Promise<ImportRow[]> {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buffer as unknown as Parameters<typeof wb.xlsx.load>[0]);
+    const ws = wb.worksheets[0];
+    if (!ws) throw new BadRequestException('الملف فارغ أو لا يحتوي على أوراق عمل');
+
+    const rows: ImportRow[] = [];
+    const HEADER_ROW = 1;
+
+    // Detect column indices from header row (case-insensitive Arabic/English)
+    const headerRow = ws.getRow(HEADER_ROW);
+    const colMap: { name: number; phone: number; email: number; notes: number } = {
+      name: 1, phone: 2, email: 3, notes: 4,
+    };
+    headerRow.eachCell((cell, colNum) => {
+      const v = String(cell.value ?? '').trim().toLowerCase();
+      if (['name', 'اسم', 'الاسم', 'full name', 'الاسم الكامل'].includes(v)) colMap.name = colNum;
+      if (['phone', 'هاتف', 'الهاتف', 'mobile', 'جوال'].includes(v)) colMap.phone = colNum;
+      if (['email', 'بريد', 'البريد', 'البريد الإلكتروني', 'e-mail'].includes(v)) colMap.email = colNum;
+      if (['notes', 'note', 'ملاحظات', 'ملاحظة'].includes(v)) colMap.notes = colNum;
+    });
+
+    ws.eachRow((row, rowNum) => {
+      if (rowNum === HEADER_ROW) return;
+
+      const name = String(row.getCell(colMap.name).value ?? '').trim();
+      const phone = String(row.getCell(colMap.phone).value ?? '').trim().replace(/\s+/g, '');
+      const email = String(row.getCell(colMap.email).value ?? '').trim() || undefined;
+      const notes = String(row.getCell(colMap.notes).value ?? '').trim() || undefined;
+
+      if (!name && !phone) return; // blank row
+
+      const errors: string[] = [];
+      if (!name) errors.push('الاسم مطلوب');
+      if (!phone) errors.push('الهاتف مطلوب');
+      if (email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) errors.push('البريد الإلكتروني غير صحيح');
+
+      rows.push({
+        rowNumber: rowNum,
+        name: name || undefined,
+        phone: phone || undefined,
+        email,
+        notes,
+        valid: errors.length === 0,
+        error: errors.join(' — ') || undefined,
+      });
+    });
+
+    if (rows.length === 0) throw new BadRequestException('لم يتم العثور على بيانات في الملف');
+    return rows;
+  }
+}
+
+export interface ImportRow {
+  rowNumber: number;
+  name?: string;
+  phone?: string;
+  email?: string;
+  notes?: string;
+  valid: boolean;
+  error?: string;
+}
+
+export interface ImportPreviewResult {
+  rows: ImportRow[];
+}
+
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; message: string }>;
+  total: number;
 }

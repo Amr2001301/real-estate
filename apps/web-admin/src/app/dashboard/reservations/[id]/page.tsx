@@ -27,6 +27,7 @@ import { ReservationDetailActions } from './_components/detail-actions';
 import { AddNoteForm } from './_components/add-note-form';
 import { BookingPaymentActions } from './_components/booking-payment-actions';
 import { ConvertReservationForm } from './_components/convert-reservation-form';
+import { PrintButton } from '@/components/print/PrintButton';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -108,17 +109,20 @@ export default async function ReservationDetailPage({
           </div>
         }
         actions={
-          <ReservationDetailActions
-            reservationId={reservation.id}
-            status={reservation.status}
-            currentSalesId={reservation.salesId}
-            currentNotes={reservation.notes}
-            salesOptions={salesOptions.map((s) => ({
-              id: s.id,
-              fullName: s.fullName,
-            }))}
-            canManage={isAdmin}
-          />
+          <div className="flex items-center gap-2">
+            <PrintButton path="reservations" id={reservation.id} />
+            <ReservationDetailActions
+              reservationId={reservation.id}
+              status={reservation.status}
+              currentSalesId={reservation.salesId}
+              currentNotes={reservation.notes}
+              salesOptions={salesOptions.map((s) => ({
+                id: s.id,
+                fullName: s.fullName,
+              }))}
+              canManage={isAdmin}
+            />
+          </div>
         }
       />
 

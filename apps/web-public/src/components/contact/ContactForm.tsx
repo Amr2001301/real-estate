@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CheckCircle2, Send, Building2, Home as HomeIcon, Clock3, CalendarClock } from 'lucide-react';
 import { safePost, type ApiResult } from '@/lib/api';
 import { trackEvent } from '@/lib/analytics';
 import { routes } from '@/lib/routes';
+import { captureUtm, type UtmAttribution } from '@/lib/utm';
 import { PremiumCard } from '@/components/ui/PremiumCard';
 import { Button, ButtonLink } from '@/components/ui/Button';
 import { Input, Textarea, Field } from '@/components/ui/Input';
@@ -98,6 +99,7 @@ export function ContactForm({
   const [message, setMessage] = useState('');
   const [preferredDate, setPreferredDate] = useState('');
   const [minDate, setMinDate] = useState('');
+  const utmRef = useRef<UtmAttribution>({});
 
   // A visit request requires a projectId (CreateVisitRequestDto). When the form
   // is in visit mode but no project context resolved, we safely fall back to an
@@ -106,6 +108,7 @@ export function ContactForm({
 
   useEffect(() => {
     setMinDate(tomorrowAtNine());
+    utmRef.current = captureUtm();
   }, []);
 
   function validate(): boolean {
@@ -155,6 +158,7 @@ export function ContactForm({
       ...(email.trim() ? { email: email.trim() } : {}),
       ...(context.projectId ? { projectId: context.projectId } : {}),
       ...(context.unitId ? { unitId: context.unitId } : {}),
+      ...utmRef.current,
     });
   }
 
@@ -170,6 +174,7 @@ export function ContactForm({
       name: fullName.trim(),
       phone: phone.trim(),
       ...(email.trim() ? { email: email.trim() } : {}),
+      ...utmRef.current,
     });
   }
 

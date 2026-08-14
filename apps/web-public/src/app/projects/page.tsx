@@ -25,7 +25,7 @@ export const metadata = buildMetadata({
 const PAGE_SIZE = 9;
 const REVALIDATE = 60;
 
-type SearchParams = Promise<{ q?: string; featured?: string; sort?: string; page?: string }>;
+type SearchParams = Promise<{ q?: string; city?: string; featured?: string; sort?: string; page?: string }>;
 
 function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
@@ -34,27 +34,34 @@ function firstStr(v: string | string[] | undefined): string {
 export default async function ProjectsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const q = firstStr(sp.q).trim();
+  const city = firstStr(sp.city).trim();
   const featured = firstStr(sp.featured) === 'true';
   const sort = firstStr(sp.sort);
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
 
   const params = new URLSearchParams({ pageSize: String(PAGE_SIZE), page: String(page) });
   if (q) params.set('q', q);
+  if (city) params.set('city', city);
   if (featured) params.set('featured', 'true');
   if (sort) params.set('sort', sort);
 
-  const result = await safeFetch<Paginated<PublicProjectListItem>>(
-    `/public/projects?${params.toString()}`,
-    { revalidate: REVALIDATE },
-  );
+  const [result, citiesResult] = await Promise.all([
+    safeFetch<Paginated<PublicProjectListItem>>(
+      `/public/projects?${params.toString()}`,
+      { revalidate: REVALIDATE },
+    ),
+    safeFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300 }),
+  ]);
 
   const projects = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
-  const hasFilters = q !== '' || featured;
+  const cities = citiesResult.ok ? citiesResult.data.cities : [];
+  const hasFilters = q !== '' || city !== '' || featured;
 
   function buildHref(nextPage: number): string {
     const p = new URLSearchParams();
     if (q) p.set('q', q);
+    if (city) p.set('city', city);
     if (featured) p.set('featured', 'true');
     if (sort) p.set('sort', sort);
     if (nextPage > 1) p.set('page', String(nextPage));
@@ -73,7 +80,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
 
       {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
       <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <ProjectsFilterBar initialQ={q} initialFeatured={featured} initialSort={sort} />
+        <ProjectsFilterBar initialQ={q} initialCity={city} initialFeatured={featured} initialSort={sort} cities={cities} />
       </Container>
 
       <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">

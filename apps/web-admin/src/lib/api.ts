@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { formatMissingPermissionMessage } from './permission-error';
 
 export const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
@@ -49,14 +50,62 @@ export interface ApiOptions extends Omit<RequestInit, 'body'> {
   flatten?: boolean;
 }
 
-async function request<T>(path: string, opts: ApiOptions = {}): Promise<T> {
-  const { noAuth, headers, body, flatten, ...init } = opts;
+/**
+ * Exchange the stored refresh_token for a fresh access_token + refresh_token.
+ * Returns true on success. MUST be called from a Server Action or Route
+ * Handler — Next.js does not allow cookie writes during a render, so we swallow
+ * write failures and let the caller decide (e.g. redirect to /login).
+ */
+async function refreshAdminSession(): Promise<boolean> {
   const c = await cookies();
-  const token = c.get('access_token')?.value;
+  const refreshToken = c.get('refresh_token')?.value;
+  if (!refreshToken) return false;
 
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}/v1${path}`, {
+    res = await fetch(`${API_BASE}/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+      cache: 'no-store',
+    });
+  } catch {
+    return false;
+  }
+  if (!res.ok) return false;
+
+  let data: {
+    user: { id: string; role: string; fullName: string };
+    tokens: { accessToken: string; refreshToken: string; expiresIn: number };
+  };
+  try {
+    data = await res.json() as typeof data;
+  } catch {
+    return false;
+  }
+
+  try {
+    const secure = process.env.NODE_ENV === 'production';
+    c.set('access_token', data.tokens.accessToken, {
+      httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: data.tokens.expiresIn,
+    });
+    c.set('refresh_token', data.tokens.refreshToken, {
+      httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 * 30,
+    });
+    c.set('user', JSON.stringify({ id: data.user.id, role: data.user.role, fullName: data.user.fullName }), {
+      httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30,
+    });
+    return true;
+  } catch {
+    // render context — cookie write not allowed; caller will redirect to /login
+    return false;
+  }
+}
+
+async function doFetch(path: string, token: string | undefined, opts: ApiOptions): Promise<Response> {
+  const { noAuth, headers, body, flatten, ...init } = opts;
+  try {
+    return await fetch(`${API_BASE}/v1${path}`, {
       ...init,
       headers: {
         'Content-Type': 'application/json',
@@ -74,19 +123,9 @@ async function request<T>(path: string, opts: ApiOptions = {}): Promise<T> {
     }
     throw new ApiError(0, msg || 'Network error');
   }
+}
 
-  if (res.status === 204) return undefined as T;
-
-  let payload: unknown = null;
-  const text = await res.text();
-  if (text) {
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = text;
-    }
-  }
-
+function parseResponse<T>(res: Response, payload: unknown): T {
   if (!res.ok) {
     const message =
       (payload && typeof payload === 'object' && 'message' in payload
@@ -95,6 +134,37 @@ async function request<T>(path: string, opts: ApiOptions = {}): Promise<T> {
     throw new ApiError(res.status, message, payload);
   }
   return payload as T;
+}
+
+async function readPayload(res: Response): Promise<unknown> {
+  if (res.status === 204) return undefined;
+  const text = await res.text();
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return text; }
+}
+
+async function request<T>(path: string, opts: ApiOptions = {}): Promise<T> {
+  const c = await cookies();
+  const token = c.get('access_token')?.value;
+
+  const first = await doFetch(path, token, opts);
+  if (first.status !== 401) {
+    const payload = await readPayload(first);
+    if (first.status === 204) return undefined as T;
+    return parseResponse<T>(first, payload);
+  }
+
+  // 401 — attempt a single token refresh then retry.
+  const refreshed = await refreshAdminSession();
+  if (!refreshed) redirect('/login');
+
+  const newToken = (await cookies()).get('access_token')?.value;
+  const second = await doFetch(path, newToken, opts);
+  if (second.status === 401) redirect('/login');
+
+  const payload2 = await readPayload(second);
+  if (second.status === 204) return undefined as T;
+  return parseResponse<T>(second, payload2);
 }
 
 export const api = {

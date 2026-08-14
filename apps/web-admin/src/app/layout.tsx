@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google';
 import './globals.css';
+import { ThemeScript } from '@/components/ui/theme-script';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -27,7 +28,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="ar"
       dir="rtl"
       className={`${inter.variable} ${plexArabic.variable}`}
+      suppressHydrationWarning
     >
+      <head>
+        <ThemeScript />
+      </head>
       <body>{children}</body>
     </html>
   );

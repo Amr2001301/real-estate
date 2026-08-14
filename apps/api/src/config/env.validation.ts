@@ -60,6 +60,11 @@ const EnvSchema = z.object({
   INSTALLMENT_REMINDER_CRON: z.string().optional(),
   INSTALLMENT_REMINDER_TIMEZONE: z.string().optional(),
 
+  // Appointment pre-meeting reminders. OFF by default; set APPOINTMENT_REMINDERS_ENABLED=true
+  // in production to activate day-before (9 AM) and hour-before (every 15 min) notifications.
+  APPOINTMENT_REMINDERS_ENABLED: z.enum(['true', 'false']).optional(),
+  APPOINTMENT_REMINDER_TIMEZONE: z.string().optional(),
+
   // Base URL of the customer-facing website — used to build the password-reset
   // link sent in the forgot-password email. Must not be localhost in production.
   PUBLIC_WEB_URL: z.string().url().default('http://localhost:3001'),

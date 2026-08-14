@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Star, X, ArrowDownUp, ChevronDown } from 'lucide-react';
+import { Search, Star, X, ArrowDownUp, ChevronDown, MapPin } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
@@ -11,27 +11,33 @@ import { PROJECT_SORT_OPTIONS } from '@/lib/sort-options';
 
 interface ProjectsFilterBarProps {
   initialQ: string;
+  initialCity: string;
   initialFeatured: boolean;
   initialSort: string;
+  cities: string[];
 }
 
-/**
- * Slim premium filter bar. Drives the listing through the querystring (q +
- * featured) — both already supported by the public projects endpoint. `q`
- * also matches city server-side, so it doubles as a location search.
- */
-export function ProjectsFilterBar({ initialQ, initialFeatured, initialSort }: ProjectsFilterBarProps) {
+export function ProjectsFilterBar({
+  initialQ,
+  initialCity,
+  initialFeatured,
+  initialSort,
+  cities,
+}: ProjectsFilterBarProps) {
   const router = useRouter();
   const [q, setQ] = useState(initialQ);
+  const [city, setCity] = useState(initialCity);
   const [featured, setFeatured] = useState(initialFeatured);
   const [sort, setSort] = useState(initialSort);
 
-  function apply(next: { q?: string; featured?: boolean; sort?: string }) {
+  function apply(next: { q?: string; city?: string; featured?: boolean; sort?: string }) {
     const params = new URLSearchParams();
     const nextQ = next.q ?? q;
+    const nextCity = next.city ?? city;
     const nextFeatured = next.featured ?? featured;
     const nextSort = next.sort ?? sort;
     if (nextQ.trim()) params.set('q', nextQ.trim());
+    if (nextCity) params.set('city', nextCity);
     if (nextFeatured) params.set('featured', 'true');
     if (nextSort) params.set('sort', nextSort);
     const qs = params.toString();
@@ -40,12 +46,13 @@ export function ProjectsFilterBar({ initialQ, initialFeatured, initialSort }: Pr
 
   function reset() {
     setQ('');
+    setCity('');
     setFeatured(false);
     setSort('');
     router.push(routes.projects as never);
   }
 
-  const hasFilters = q.trim() !== '' || featured || sort !== '';
+  const hasFilters = q.trim() !== '' || city !== '' || featured || sort !== '';
 
   return (
     <form
@@ -61,11 +68,32 @@ export function ProjectsFilterBar({ initialQ, initialFeatured, initialSort }: Pr
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث عن مشروع أو مدينة..."
+            placeholder="ابحث عن اسم المشروع..."
             aria-label="بحث"
             className="pr-12"
           />
         </div>
+
+        {cities.length > 0 && (
+          <div className="relative min-w-[160px]">
+            <MapPin className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold-500" aria-hidden />
+            <Select
+              value={city}
+              onChange={(e) => {
+                setCity(e.target.value);
+                apply({ city: e.target.value });
+              }}
+              aria-label="المدينة"
+              className="h-12 pr-11 pl-9"
+            >
+              <option value="">كل المدن</option>
+              {cities.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </Select>
+            <ChevronDown className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted/50" aria-hidden />
+          </div>
+        )}
 
         <button
           type="button"

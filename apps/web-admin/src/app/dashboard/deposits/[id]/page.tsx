@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { VerifyToggle } from '../verify-toggle';
+import { PrintButton } from '@/components/print/PrintButton';
 import {
   ApproveDepositButton,
   RejectDepositDialog,
@@ -72,13 +73,16 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
           { label: 'التفاصيل' },
         ]}
         actions={
-          <span
-            className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-              d.verified ? 'bg-success-100 text-success-700' : 'bg-amber-100 text-amber-700'
-            }`}
-          >
-            {d.verified ? 'متحقق' : 'غير متحقق'}
-          </span>
+          <div className="flex items-center gap-2">
+            <PrintButton path="deposits" id={d.id} />
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                d.verified ? 'bg-success-100 text-success-700' : 'bg-amber-100 text-amber-700'
+              }`}
+            >
+              {d.verified ? 'متحقق' : 'غير متحقق'}
+            </span>
+          </div>
         }
       />
 

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Plus, AlertCircle, Kanban } from 'lucide-react';
+import { Plus, AlertCircle, Kanban, Upload } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Lead, LeadStage } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -52,6 +52,11 @@ export default async function LeadsPage({
         actions={
           <div className="flex items-center gap-2">
             <LeadsFilterPopover defaultStage={sp.stage} defaultQ={sp.q} />
+            <Link href={'/dashboard/leads/import' as never}>
+              <Button variant="secondary" size="md" leftIcon={<Upload className="h-4 w-4" />}>
+                استيراد Excel
+              </Button>
+            </Link>
             <Link href={'/dashboard/leads/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
                 إضافة فرصة جديدة

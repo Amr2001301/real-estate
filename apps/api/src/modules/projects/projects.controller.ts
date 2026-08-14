@@ -30,6 +30,12 @@ export class ProjectsController {
   }
 
   @Public()
+  @Get('public/projects/cities')
+  publicCities() {
+    return this.projects.findPublicCities();
+  }
+
+  @Public()
   @Get('public/projects/:id')
   publicGet(@Param('id', ParseUUIDPipe) id: string) {
     return this.projects.findOne(id, true);

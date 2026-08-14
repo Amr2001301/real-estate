@@ -3,6 +3,7 @@ import type { SessionUser } from '@/lib/session';
 import { IconButton } from '@/components/ui/icon-button';
 import { UserMenu } from './user-menu';
 import { NotificationBell } from './notification-bell';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { api } from '@/lib/api';
 
 interface Props {
@@ -56,6 +57,8 @@ export async function Topbar({ user, notificationsHref, leading }: Props) {
           >
             <HelpCircle />
           </IconButton>
+
+          <ThemeToggle />
 
           <NotificationBell href={notificationsHref} initialCount={unread} />
 

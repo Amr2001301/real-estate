@@ -38,6 +38,25 @@ import {
   NotificationsService,
 } from '../notifications/notifications.module';
 
+/** Extract UTM/ad attribution fields from a DTO, returning null when none are present. */
+function pickUtm(dto: {
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+  utmContent?: string;
+  fbclid?: string;
+}) {
+  const utm = {
+    utmSource: dto.utmSource?.trim() || null,
+    utmMedium: dto.utmMedium?.trim() || null,
+    utmCampaign: dto.utmCampaign?.trim() || null,
+    utmContent: dto.utmContent?.trim() || null,
+    fbclid: dto.fbclid?.trim() || null,
+  };
+  const hasAny = Object.values(utm).some(Boolean);
+  return hasAny ? utm : null;
+}
+
 /** Format a Date's local hours+minutes as HH:mm — used to mirror a customer's
  *  submitted datetime into the `preferredTime` column so admin tooling renders
  *  date and time as separate cells. */
@@ -62,7 +81,15 @@ function portalUserId(user: AuthUser | undefined): string | undefined {
   return undefined;
 }
 
-class CreateInfoRequestDto {
+class UtmDto {
+  @IsOptional() @IsString() utmSource?: string;
+  @IsOptional() @IsString() utmMedium?: string;
+  @IsOptional() @IsString() utmCampaign?: string;
+  @IsOptional() @IsString() utmContent?: string;
+  @IsOptional() @IsString() fbclid?: string;
+}
+
+class CreateInfoRequestDto extends UtmDto {
   @IsString() @MinLength(2) message!: string;
   @IsOptional() @IsUUID() projectId?: string;
   @IsOptional() @IsUUID() unitId?: string;
@@ -71,7 +98,7 @@ class CreateInfoRequestDto {
   @IsOptional() @IsString() email?: string;
 }
 
-class CreateVisitRequestDto {
+class CreateVisitRequestDto extends UtmDto {
   @IsUUID() projectId!: string;
   @IsOptional() @IsUUID() unitId?: string;
   @IsDateString() preferredDate!: string;
@@ -149,11 +176,16 @@ export class RequestsService {
     dto: CreateInfoRequestDto,
     actor: { userId?: string },
   ) {
+    const utm = pickUtm(dto);
     let leadId: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       const existing = await this.prisma.lead.findFirst({ where: { phone: dto.phone } });
       if (existing) {
         leadId = existing.id;
+        // Back-fill UTM on first touch if the lead has none yet.
+        if (utm && !existing.utmSource && !existing.fbclid) {
+          await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
+        }
       } else {
         const client = await this.findOrCreateClient(dto.name, dto.phone, dto.email ?? null);
         const lead = await this.prisma.lead.create({
@@ -165,6 +197,7 @@ export class RequestsService {
             projectInterestId: dto.projectId ?? null,
             unitInterestId: dto.unitId ?? null,
             sourceId: await this.websiteLeadSourceId(),
+            ...utm,
           },
         });
         leadId = lead.id;
@@ -287,11 +320,15 @@ export class RequestsService {
     dto: CreateVisitRequestDto,
     actor: { userId?: string },
   ) {
+    const utm = pickUtm(dto);
     let leadId: string | null = null;
     if (!actor.userId && dto.phone && dto.name) {
       const existing = await this.prisma.lead.findFirst({ where: { phone: dto.phone } });
       if (existing) {
         leadId = existing.id;
+        if (utm && !existing.utmSource && !existing.fbclid) {
+          await this.prisma.lead.update({ where: { id: existing.id }, data: utm });
+        }
       } else {
         const client = await this.findOrCreateClient(dto.name, dto.phone, null);
         const lead = await this.prisma.lead.create({
@@ -302,6 +339,7 @@ export class RequestsService {
             projectInterestId: dto.projectId,
             unitInterestId: dto.unitId ?? null,
             sourceId: await this.websiteLeadSourceId(),
+            ...utm,
           },
         });
         leadId = lead.id;

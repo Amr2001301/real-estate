@@ -28,6 +28,7 @@ import { breadcrumbLd, projectResidenceLd } from '@/lib/jsonld';
 import { Accordion, type AccordionItem } from '@/components/ui/Accordion';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { ViewTracker } from '@/components/analytics/ViewTracker';
+import { ShareButton } from '@/components/ui/ShareButton';
 
 const REVALIDATE = 60;
 
@@ -249,7 +250,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                 </div>
 
                 {/* CTAs */}
-                <div className="mt-5 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap items-center gap-3">
                   <ButtonLink
                     href={`${routes.contact}?projectId=${project.id}` as Route}
                     variant="gold"
@@ -265,6 +266,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                   >
                     طلب زيارة
                   </ButtonLink>
+                  <ShareButton title={name} />
                 </div>
               </Reveal>
             }

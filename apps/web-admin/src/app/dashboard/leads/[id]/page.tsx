@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   Zap,
   User,
+  BarChart2,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type {
@@ -573,6 +574,41 @@ export default async function LeadDetailPage({
                 )}
               </div>
             </PremiumSectionCard>
+
+            {/* Ad Attribution — only shown when at least one UTM field is set */}
+            {(lead.utmSource || lead.utmMedium || lead.utmCampaign || lead.utmContent || lead.fbclid) && (
+              <PremiumSectionCard icon={<BarChart2 />} title="مصدر الإعلان" padded={false}>
+                <dl className="divide-y divide-hairline/60">
+                  {lead.utmSource && (
+                    <InfoRow label="المصدر (Source)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                      <span className="font-mono text-[12px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg">
+                        {lead.utmSource}
+                      </span>
+                    </InfoRow>
+                  )}
+                  {lead.utmMedium && (
+                    <InfoRow label="الوسيلة (Medium)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                      <span className="font-mono text-[12px] text-slate-700">{lead.utmMedium}</span>
+                    </InfoRow>
+                  )}
+                  {lead.utmCampaign && (
+                    <InfoRow label="الحملة (Campaign)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                      <span className="font-mono text-[12px] text-slate-700 text-end">{lead.utmCampaign}</span>
+                    </InfoRow>
+                  )}
+                  {lead.utmContent && (
+                    <InfoRow label="المحتوى (Content)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                      <span className="font-mono text-[12px] text-slate-700 text-end">{lead.utmContent}</span>
+                    </InfoRow>
+                  )}
+                  {lead.fbclid && (
+                    <InfoRow label="Facebook Click ID" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                      <span className="font-mono text-[10px] text-slate-500 truncate max-w-[140px]">{lead.fbclid}</span>
+                    </InfoRow>
+                  )}
+                </dl>
+              </PremiumSectionCard>
+            )}
 
             {/* Info fields */}
             <PremiumSectionCard icon={<Building2 />} title="معلومات الفرصة" padded={false}>

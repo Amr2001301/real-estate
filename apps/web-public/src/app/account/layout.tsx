@@ -17,8 +17,7 @@ const ROLE_LABELS: Partial<Record<SessionRole, string>> = {
  * portal page feels like part of the same site rather than a separate app.
  *
  * Authorization here uses the server-side session (httpOnly token presence +
- * `user` hint); the backend RolesGuard remains the real authority. Customer
- * feature pages (contracts/deposits/maintenance/...) are NOT built yet.
+ * `user` hint); the backend RolesGuard remains the real authority.
  */
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();

@@ -150,6 +150,12 @@ export interface Lead {
   brokerAgent?: { id: string; fullName: string } | null;
   upcomingVisit?: { id: string; visitNumber: string; scheduledAt: string; status: AppointmentStatus } | null;
   notes?: LeadNote[];
+  // ── Ad / UTM attribution (first-touch, all nullable) ──
+  utmSource?:   string | null;
+  utmMedium?:   string | null;
+  utmCampaign?: string | null;
+  utmContent?:  string | null;
+  fbclid?:      string | null;
 }
 
 export interface LeadSource {

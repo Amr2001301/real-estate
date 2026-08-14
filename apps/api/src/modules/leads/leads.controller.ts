@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,7 +8,10 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags } from '@nestjs/swagger';
 import { LeadStage, UserRole } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -24,6 +28,26 @@ import {
   UpdateLeadDto,
   UpdateLeadStageDto,
 } from './dto/lead.dto';
+
+const EXCEL_MAX_BYTES = 5 * 1024 * 1024; // 5 MB
+
+interface UploadedExcel {
+  buffer: Buffer;
+  mimetype: string;
+  size: number;
+  originalname: string;
+}
+
+function assertExcelFile(file: UploadedExcel | undefined): void {
+  if (!file) throw new BadRequestException('لم يتم رفع أي ملف');
+  const allowed = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+  ];
+  if (!allowed.includes(file.mimetype)) {
+    throw new BadRequestException('يجب أن يكون الملف بصيغة Excel (.xlsx أو .xls)');
+  }
+}
 
 @ApiTags('leads')
 @Controller()
@@ -97,6 +121,27 @@ export class LeadsController {
   @Post('leads')
   create(@Body() dto: CreateLeadDto) {
     return this.leads.create(dto);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:create')
+  @Post('leads/import/preview')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: EXCEL_MAX_BYTES } }))
+  async importPreview(@UploadedFile() file: UploadedExcel) {
+    assertExcelFile(file);
+    return this.leads.previewImport(file.buffer);
+  }
+
+  @Roles(UserRole.ADMIN, UserRole.SALES_MANAGER)
+  @Permissions('leads:create')
+  @Post('leads/import')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: EXCEL_MAX_BYTES } }))
+  async import(
+    @UploadedFile() file: UploadedExcel,
+    @Query('sourceId') sourceId?: string,
+  ) {
+    assertExcelFile(file);
+    return this.leads.importLeads(file.buffer, sourceId);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

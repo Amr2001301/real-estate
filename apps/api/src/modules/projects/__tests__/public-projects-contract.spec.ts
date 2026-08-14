@@ -175,4 +175,14 @@ describe('Public projects · response contract', () => {
   it('detail 404s an unpublished project', async () => {
     await request(app.getHttpServer()).get(`/public/projects/${DRAFT_ID}`).expect(404);
   });
+
+  it('GET /public/projects/cities returns { cities: string[] } from PUBLISHED projects only', async () => {
+    mock.project.findMany.mockClear();
+    const res = await request(app.getHttpServer()).get('/public/projects/cities').expect(200);
+    expect(Array.isArray(res.body.cities)).toBe(true);
+    expect(res.body.cities).toContain('Riyadh');
+    // Must scope to PUBLISHED only.
+    const whereArg = mock.project.findMany.mock.calls[0]?.[0]?.where;
+    expect(whereArg?.status).toBe('PUBLISHED');
+  });
 });

@@ -24,6 +24,7 @@ import { ContractPdfPanel } from './pdf-panel';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
 import { createInstallmentPlanAction } from '../actions';
 import { RecordPaymentButton } from './record-payment-button';
+import { PrintButton } from '@/components/print/PrintButton';
 import {
   PremiumPageHero,
   PremiumDetailLayout,
@@ -107,6 +108,7 @@ export default async function ContractDetailPage({
             </span>
           )
         }
+        actions={<PrintButton path="contracts" id={contract.id} />}
       />
 
       <PremiumDetailLayout

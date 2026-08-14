@@ -7,6 +7,13 @@
     --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
     --font-arabic: 'IBM Plex Sans Arabic', system-ui, 'Segoe UI', Tahoma, sans-serif;
 
+    /* ── Theme-aware layout tokens (RGB channel values for Tailwind / <alpha-value>) ── */
+    --tw-canvas:         250 247 242;   /* #FAF7F2 — warm off-white page bg */
+    --tw-surface:        255 255 255;   /* #FFFFFF — card / panel bg */
+    --tw-surface-muted:  244 239 232;   /* #F4EFE8 */
+    --tw-surface-sunken: 234 226 214;   /* #EAE2D6 */
+    --tw-hairline:       231 223 211;   /* #E7DFD3 */
+
     /* Design System: Primary Colors */
     --color-navy-deep: #0F1E33;
     --color-navy-soft: #26405F;
@@ -52,6 +59,15 @@
     --border-radius-xl: 1.5rem;
   }
 
+  /* ── Dark mode token overrides ───────────────────────────── */
+  .dark {
+    --tw-canvas:         18 18 18;    /* #121212 */
+    --tw-surface:        28 28 28;    /* #1C1C1C */
+    --tw-surface-muted:  36 36 36;    /* #242424 */
+    --tw-surface-sunken: 44 44 44;    /* #2C2C2C */
+    --tw-hairline:       52 52 52;    /* #343434 */
+  }
+
   html,
   body {
     height: 100%;
@@ -64,6 +80,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+  }
+
+  .dark body {
+    @apply text-slate-100;
   }
 
   html[dir='rtl'] body {

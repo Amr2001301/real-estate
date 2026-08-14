@@ -487,6 +487,13 @@ model Lead {
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
+  // ── Ad / UTM attribution (first-touch, all nullable) ───────────────────
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  utmContent   String?
+  fbclid       String?
+
   // ── Broker attribution (additive, all nullable) ─────────────────────────
   brokerId              String?            @db.Uuid
   broker                Broker?            @relation(fields: [brokerId], references: [id])
@@ -736,6 +743,10 @@ model VisitAppointment {
   completedAt        DateTime?
   cancelledAt        DateTime?
   noShowAt           DateTime?
+
+  // ── Reminder sentinel timestamps (null = not yet sent) ─────────────────
+  dayBeforeReminderSentAt  DateTime?
+  hourBeforeReminderSentAt DateTime?
 
   // ── Broker attribution (additive, all nullable) ─────────────────────────
   brokerId      String? @db.Uuid

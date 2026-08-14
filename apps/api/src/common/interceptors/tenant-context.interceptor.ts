@@ -3,6 +3,7 @@ import {
   ExecutionContext,
   Injectable,
   NestInterceptor,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -42,10 +43,16 @@ export class TenantContextInterceptor implements NestInterceptor {
     if (isBypass) {
       ctx = { companyId: null, bypass: true, isPublic: false };
     } else if (isPublic) {
-      // Public routes use the default company derived from env. If the env var
-      // is missing the request proceeds with isPublic=true and companyId=null;
-      // services must not call requireTenantContext() on public paths.
+      // Public routes use the default company derived from env. A missing env
+      // var is a deployment misconfiguration — fail fast with 503 so ops sees
+      // a clear signal instead of a cryptic MissingTenantContextError from the
+      // Prisma middleware deep in the call stack.
       const defaultCompanyId = process.env.DEFAULT_COMPANY_ID ?? null;
+      if (!defaultCompanyId) {
+        throw new ServiceUnavailableException(
+          'Server misconfiguration: DEFAULT_COMPANY_ID is not set.',
+        );
+      }
       ctx = { companyId: defaultCompanyId, bypass: false, isPublic: true };
     } else {
       const req = context.switchToHttp().getRequest<{
