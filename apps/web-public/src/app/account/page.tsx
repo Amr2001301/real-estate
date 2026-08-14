@@ -48,6 +48,8 @@ import { RecentRow } from '@/components/account/RecentRow';
 import { RecentPanel } from '@/components/account/RecentPanel';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { notificationTitle } from '@/components/account/NotificationCard';
+import { JourneyTracker } from '@/components/account/JourneyTracker';
+import { ContactSpecialist } from '@/components/account/ContactSpecialist';
 
 export const metadata = buildMetadata({
   title: 'لوحة الحساب',
@@ -527,6 +529,17 @@ export default async function AccountPage() {
             />
           </div>
         </DashSection>
+      )}
+
+      {/* ── Journey tracker + Contact specialist (side-by-side on lg) ─────── */}
+      {isCustomer && (recentReservations.length > 0 || recentContracts.length > 0) && (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <JourneyTracker reservations={recentReservations} contracts={recentContracts} />
+          <ContactSpecialist reservations={recentReservations} visits={recentVisits} />
+        </div>
+      )}
+      {!isCustomer && recentVisits.length > 0 && (
+        <ContactSpecialist reservations={recentReservations} visits={recentVisits} />
       )}
 
       {/* ── Customer: After-Sales (PropertyFocus) ─────────────────────────── */}

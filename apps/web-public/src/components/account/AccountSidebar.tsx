@@ -16,6 +16,7 @@ import {
   Wrench,
   Bell,
   LogOut,
+  FolderOpen,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
@@ -52,6 +53,7 @@ const CUSTOMER_ITEMS: NavItem[] = [
   { href: routes.accountInstallments, label: 'الأقساط', icon: CalendarClock },
   { href: routes.accountDeposits, label: 'الدفعات', icon: Wallet },
   { href: routes.accountMaintenance, label: 'الصيانة', icon: Wrench },
+  { href: routes.accountDocuments, label: 'مستنداتي', icon: FolderOpen },
 ];
 
 function isActive(pathname: string, href: string): boolean {

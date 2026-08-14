@@ -461,3 +461,16 @@ export interface MeProfile {
   lastLoginAt: string | null;
   managerId: string | null;
 }
+
+/** One document entry from GET /v1/me/documents/all */
+export interface MeDocument {
+  id: string;
+  title: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  category: string | null;
+  ownerType: 'CONTRACT' | 'DEPOSIT' | 'MAINTENANCE_REQUEST';
+  ownerId: string;
+  createdAt: string;
+}
+

@@ -12,8 +12,10 @@ import { DocumentOwnerType, DocumentVisibility, UserRole } from '@prisma/client'
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser, AuthUser } from '../../common/decorators/current-user.decorator';
 import { OwnershipService } from '../../common/ownership/ownership.service';
+import { PrismaService } from '../../common/prisma/prisma.service';
 import { R2Service } from '../media/r2.service';
 import { MediaModule } from '../media/media.module';
+import { PrismaModule } from '../../common/prisma/prisma.module';
 import { DocumentsModule, DocumentsService } from './documents.module';
 
 // Owner types a customer is allowed to enumerate documents for.
@@ -32,7 +34,65 @@ class MeDocumentsController {
     private readonly ownership: OwnershipService,
     private readonly documents: DocumentsService,
     private readonly r2: R2Service,
+    private readonly prisma: PrismaService,
   ) {}
+
+  /**
+   * Aggregate all CUSTOMER_VISIBLE documents across every entity this user
+   * owns (contracts, deposits, maintenance requests). Returns a flat list
+   * sorted newest-first with an ownerType label for the frontend to filter by.
+   */
+  @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
+  @Get('all')
+  async listAll(@CurrentUser() user: AuthUser) {
+    const userId = user.sub;
+
+    // Collect all owned entity IDs in parallel.
+    const [contractIds, depositIds, maintenanceIds] = await Promise.all([
+      this.prisma.contract
+        .findMany({ where: { customerId: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id)),
+      this.prisma.deposit
+        .findMany({
+          where: { contract: { customerId: userId } },
+          select: { id: true },
+        })
+        .then((rows) => rows.map((r) => r.id)),
+      this.prisma.maintenanceRequest
+        .findMany({ where: { customerId: userId }, select: { id: true } })
+        .then((rows) => rows.map((r) => r.id)),
+    ]);
+
+    if (!contractIds.length && !depositIds.length && !maintenanceIds.length) {
+      return [];
+    }
+
+    const docs = await this.prisma.document.findMany({
+      where: {
+        deletedAt: null,
+        visibility: DocumentVisibility.CUSTOMER_VISIBLE,
+        OR: [
+          ...(contractIds.length ? [{ ownerType: DocumentOwnerType.CONTRACT, ownerId: { in: contractIds } }] : []),
+          ...(depositIds.length ? [{ ownerType: DocumentOwnerType.DEPOSIT, ownerId: { in: depositIds } }] : []),
+          ...(maintenanceIds.length ? [{ ownerType: DocumentOwnerType.MAINTENANCE_REQUEST, ownerId: { in: maintenanceIds } }] : []),
+        ],
+      },
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        mimeType: true,
+        category: true,
+        ownerType: true,
+        ownerId: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+
+    return docs;
+  }
 
   @Roles(UserRole.CLIENT, UserRole.CUSTOMER)
   @Get()
@@ -86,7 +146,7 @@ class MeDocumentsController {
 }
 
 @Module({
-  imports: [MediaModule, DocumentsModule],
+  imports: [MediaModule, DocumentsModule, PrismaModule],
   controllers: [MeDocumentsController],
 })
 export class MeDocumentsModule {}

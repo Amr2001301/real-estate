@@ -25,6 +25,7 @@ export const routes = {
   accountMaintenance: '/account/maintenance',
   accountMaintenanceNew: '/account/maintenance/new',
   accountNotifications: '/account/notifications',
+  accountDocuments: '/account/documents',
   login: '/login',
   register: '/register',
   forgotPassword: '/forgot-password',
