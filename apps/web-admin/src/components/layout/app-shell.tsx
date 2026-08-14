@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { SessionUser } from '@/lib/session';
 import type { NavSection } from '@/lib/nav';
+import { getLocale } from '@/lib/locale';
 import { ToastProvider } from '@/components/ui/toast';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
@@ -14,16 +15,18 @@ interface Props {
   children: ReactNode;
 }
 
-export function AppShell({ user, navSections, children }: Props) {
+export async function AppShell({ user, navSections, children }: Props) {
+  const locale = await getLocale();
   return (
     <ToastProvider>
       <div className="h-dvh flex overflow-hidden bg-canvas">
-        <Sidebar user={user} sections={navSections} />
+        <Sidebar user={user} sections={navSections} locale={locale} />
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Topbar
             user={user}
+            locale={locale}
             notificationsHref={user.role === 'BROKER' ? '/portal/notifications' : '/dashboard/notifications'}
-            leading={<MobileNav user={user} sections={navSections} />}
+            leading={<MobileNav user={user} sections={navSections} locale={locale} />}
           />
           <main id="main-scroll" className="flex-1 min-w-0 overflow-y-auto scrollbar-thin">
             <ScrollReset containerId="main-scroll" />

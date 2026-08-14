@@ -1,25 +1,20 @@
 import { LogOut } from 'lucide-react';
 import type { SessionUser, SessionRole } from '@/lib/session';
+import type { Locale } from '@/lib/locale';
 import { filterNavForRole, NAV_ICONS, type NavSection } from '@/lib/nav';
+import { uiT } from '@/messages/ui';
 import { logoutAction } from '@/app/login/actions';
 import { Brand } from './brand';
 import { NavLink } from './nav-link';
 
 interface Props {
   user: SessionUser;
+  locale: Locale;
   /** Optional override for nav sections. Falls back to filterNavForRole(user.role). */
   sections?: NavSection[];
   onNavigate?: () => void;
   className?: string;
 }
-
-const ROLE_LABEL: Record<SessionRole, string> = {
-  ADMIN: 'مدير النظام',
-  SALES: 'مبيعات',
-  SALES_MANAGER: 'مدير مبيعات',
-  BROKER: 'وسيط',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-};
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -28,8 +23,9 @@ function initials(name: string): string {
   return (parts[0]![0]! + parts[parts.length - 1]![0]!).toUpperCase();
 }
 
-export function SidebarContent({ user, sections, onNavigate }: Props) {
+export function SidebarContent({ user, locale, sections, onNavigate }: Props) {
   const resolved = sections ?? filterNavForRole(user.role);
+  const m = uiT(locale);
 
   return (
     <div className="flex flex-col h-full bg-sidebar-bg text-sidebar-text">
@@ -55,7 +51,7 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
               {user.fullName}
             </p>
             <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-white/[0.09] text-brand-300/90 ring-1 ring-white/[0.12]">
-              {ROLE_LABEL[user.role]}
+              {m.sidebar.roles[user.role as SessionRole]}
             </span>
           </div>
         </div>
@@ -64,9 +60,9 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3 space-y-5">
         {resolved.map((section) => (
-          <div key={section.title}>
+          <div key={section.titleKey}>
             <p className="px-3 mb-2 text-[9.5px] font-bold uppercase tracking-[0.18em] text-sidebar-text-muted/38 select-none">
-              {section.title}
+              {m.nav.sections[section.titleKey]}
             </p>
             <div className="space-y-0.5">
               {section.items.map((item) => {
@@ -75,7 +71,7 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
                   <NavLink
                     key={item.href}
                     href={item.href}
-                    label={item.label}
+                    label={m.nav.items[item.labelKey]}
                     icon={<Icon className="h-[17px] w-[17px]" strokeWidth={1.75} />}
                     onNavigate={onNavigate}
                   />
@@ -94,7 +90,7 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
             className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-[12.5px] font-medium text-sidebar-text-muted/55 hover:text-white/85 hover:bg-white/[0.07] transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 focus-visible:ring-inset"
           >
             <LogOut className="h-[15px] w-[15px] shrink-0 opacity-70 group-hover:opacity-100" aria-hidden />
-            تسجيل الخروج
+            {m.sidebar.logout}
           </button>
         </form>
       </div>
@@ -103,7 +99,7 @@ export function SidebarContent({ user, sections, onNavigate }: Props) {
   );
 }
 
-export function Sidebar({ user, sections, className }: Omit<Props, 'onNavigate'>) {
+export function Sidebar({ user, locale, sections, className }: Omit<Props, 'onNavigate'>) {
   return (
     <aside
       className={`hidden lg:flex w-[256px] shrink-0 relative z-20 ${className ?? ''}`}
@@ -112,7 +108,7 @@ export function Sidebar({ user, sections, className }: Omit<Props, 'onNavigate'>
       }}
     >
       <div className="h-full w-full">
-        <SidebarContent user={user} sections={sections} />
+        <SidebarContent user={user} locale={locale} sections={sections} />
       </div>
     </aside>
   );

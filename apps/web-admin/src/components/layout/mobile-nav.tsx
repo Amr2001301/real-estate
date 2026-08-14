@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import type { SessionUser } from '@/lib/session';
+import type { Locale } from '@/lib/locale';
 import type { NavSection } from '@/lib/nav';
 import { IconButton } from '@/components/ui/icon-button';
 import { SidebarContent } from './sidebar';
@@ -11,9 +12,11 @@ import { SidebarContent } from './sidebar';
 export function MobileNav({
   user,
   sections,
+  locale,
 }: {
   user: SessionUser;
   sections?: NavSection[];
+  locale: Locale;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -38,10 +41,13 @@ export function MobileNav({
     };
   }, [open]);
 
+  const menuLabel = locale === 'ar' ? 'القائمة' : 'Menu';
+  const closeLabel = locale === 'ar' ? 'إغلاق' : 'Close';
+
   return (
     <>
       <IconButton
-        label="القائمة"
+        label={menuLabel}
         variant="ghost"
         size="md"
         onClick={() => setOpen(true)}
@@ -60,12 +66,12 @@ export function MobileNav({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="إغلاق"
+              aria-label={closeLabel}
               className="absolute top-5 start-4 inline-flex h-8 w-8 items-center justify-center rounded-lg text-sidebar-text-muted hover:text-white hover:bg-sidebar-bg-hover transition-colors z-10"
             >
               <X className="h-4 w-4" />
             </button>
-            <SidebarContent user={user} sections={sections} onNavigate={() => setOpen(false)} />
+            <SidebarContent user={user} locale={locale} sections={sections} onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}

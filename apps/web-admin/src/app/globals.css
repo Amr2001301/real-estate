@@ -59,13 +59,13 @@
     --border-radius-xl: 1.5rem;
   }
 
-  /* ── Dark mode token overrides ───────────────────────────── */
+  /* ── Dark mode token overrides — navy-branded palette ───── */
   .dark {
-    --tw-canvas:         18 18 18;    /* #121212 */
-    --tw-surface:        28 28 28;    /* #1C1C1C */
-    --tw-surface-muted:  36 36 36;    /* #242424 */
-    --tw-surface-sunken: 44 44 44;    /* #2C2C2C */
-    --tw-hairline:       52 52 52;    /* #343434 */
+    --tw-canvas:         11 17 33;    /* #0B1121 — deep navy-black */
+    --tw-surface:        18 28 50;    /* #121C32 — navy card bg */
+    --tw-surface-muted:  24 37 64;    /* #182540 */
+    --tw-surface-sunken: 8  13 26;    /* #080D1A — deepest inset */
+    --tw-hairline:       34 52 85;    /* #223455 — navy border */
   }
 
   html,
@@ -83,6 +83,13 @@
   }
 
   .dark body {
+    @apply text-slate-200;
+  }
+
+  .dark h1,
+  .dark h2,
+  .dark h3,
+  .dark h4 {
     @apply text-slate-100;
   }
 

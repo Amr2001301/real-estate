@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter, IBM_Plex_Sans_Arabic } from 'next/font/google';
+import { getLocale } from '@/lib/locale';
 import './globals.css';
 import { ThemeScript } from '@/components/ui/theme-script';
 
@@ -22,11 +23,13 @@ export const metadata: Metadata = {
   icons: { icon: '/favicon.ico' },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const dir = locale === 'ar' ? 'rtl' : 'ltr';
   return (
     <html
-      lang="ar"
-      dir="rtl"
+      lang={locale}
+      dir={dir}
       className={`${inter.variable} ${plexArabic.variable}`}
       suppressHydrationWarning
     >
