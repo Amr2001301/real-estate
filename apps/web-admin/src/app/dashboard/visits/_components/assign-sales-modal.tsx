@@ -7,6 +7,8 @@ import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { assignSalesAction } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 interface Props {
   appointmentId: string;
@@ -14,6 +16,7 @@ interface Props {
   currentSalesId?: string | null;
   open: boolean;
   onClose: () => void;
+  locale?: Locale;
 }
 
 const INITIAL = { error: null as string | null };
@@ -24,7 +27,9 @@ export function AssignSalesModal({
   currentSalesId,
   open,
   onClose,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.visitComponents;
   const action = assignSalesAction.bind(null, appointmentId);
   const [state, dispatch, pending] = useActionState(
     async (_prev: typeof INITIAL, fd: FormData) => {
@@ -41,29 +46,28 @@ export function AssignSalesModal({
 
   // Empty state — when no sales reps exist (or the list fetch failed), render
   // a friendly explanation + a deep-link to /dashboard/users instead of an
-  // empty <select> that silently confuses admins. Mirrors the schedule modal,
-  // which already guards `salesOptions.length > 0` before rendering the field.
+  // empty <select> that silently confuses admins.
   const hasSalesOptions = salesOptions.length > 0;
 
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="تغيير المندوب"
+      title={m.assignTitle}
       size="sm"
       footer={
         hasSalesOptions ? (
           <>
             <Button variant="outline" size="sm" type="button" onClick={onClose}>
-              إلغاء
+              {m.cancelModalBtn}
             </Button>
             <Button variant="primary" size="sm" type="submit" form="assign-form" loading={pending}>
-              تعيين
+              {m.assignBtn}
             </Button>
           </>
         ) : (
           <Button variant="outline" size="sm" type="button" onClick={onClose}>
-            إغلاق
+            {m.closeBtn}
           </Button>
         )
       }
@@ -76,7 +80,7 @@ export function AssignSalesModal({
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              المندوب <span className="text-danger-600">*</span>
+              {m.assignSalesRepLabel} <span className="text-danger-600">*</span>
             </label>
             <select
               name="assignedSalesId"
@@ -84,7 +88,7 @@ export function AssignSalesModal({
               defaultValue={currentSalesId ?? ''}
               className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30"
             >
-              <option value="">اختر مندوباً</option>
+              <option value="">{m.chooseSalesPlaceholder}</option>
               {salesOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {salesActorLabel(s)}
@@ -99,14 +103,14 @@ export function AssignSalesModal({
             <Users className="h-6 w-6" aria-hidden />
           </div>
           <div className="space-y-1.5">
-            <p className="text-sm font-medium text-slate-800">لا يوجد مندوبون متاحون</p>
+            <p className="text-sm font-medium text-slate-800">{m.noSalesTitle}</p>
             <p className="text-xs text-slate-500 leading-relaxed">
-              لم يتم العثور على أي مستخدم بصلاحية مندوب مبيعات أو مدير مبيعات. أضف مستخدماً جديداً لتعيينه على الزيارات.
+              {m.noSalesDesc}
             </p>
           </div>
           <Link href={'/dashboard/users' as never}>
             <Button variant="primary" size="sm" leftIcon={<UserPlus className="h-3.5 w-3.5" />}>
-              إدارة المستخدمين
+              {m.manageUsersBtn}
             </Button>
           </Link>
         </div>

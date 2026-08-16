@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
 import { requireAdmin } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { PremiumPageHero } from '@/components/premium';
 import BroadcastForm from './_form';
@@ -13,25 +15,28 @@ export default async function BroadcastNotificationPage() {
   const session = await requireAdmin();
   if (session.role !== 'ADMIN') notFound();
 
+  const locale = await getLocale();
+  const m = uiT(locale).notificationsBroadcast;
+
   return (
     <div className="flex flex-col gap-6">
       <PremiumPageHero
-        title="إرسال إشعار يدوي"
-        description="أنشئ وأرسل إشعاراً مخصصاً إلى جمهور محدد. الإشعار يصل فوراً إلى قائمة إشعارات المستخدم."
+        title={m.pageTitle}
+        description={m.pageDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الإشعارات', href: '/dashboard/notifications' },
-          { label: 'إرسال يدوي' },
+          { label: m.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbNotifications, href: '/dashboard/notifications' },
+          { label: m.breadcrumbBroadcast },
         ]}
         actions={
           <Link href="/dashboard/notifications">
             <Button variant="ghost" leftIcon={<ArrowRight className="h-4 w-4" />}>
-              العودة للإشعارات
+              {m.backBtn}
             </Button>
           </Link>
         }
       />
-      <BroadcastForm />
+      <BroadcastForm locale={locale} />
     </div>
   );
 }

@@ -22,6 +22,8 @@ import {
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
 import { getSession } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { extractPaginatedData } from '@/lib/extract-paginated';
 import { pickAr, unitTypeLabel, formatPrice, formatNumber } from '@/lib/format';
@@ -218,11 +220,13 @@ function QuickActionTile({
 function TimelinePanel({
   title,
   href,
+  viewAllLabel,
   children,
 }: {
-  title:    string;
-  href:     string;
-  children: React.ReactNode;
+  title:        string;
+  href:         string;
+  viewAllLabel: string;
+  children:     React.ReactNode;
 }) {
   return (
     <PremiumCard className="p-5">
@@ -232,7 +236,7 @@ function TimelinePanel({
           href={href as Route}
           className="inline-flex shrink-0 items-center rounded-lg border border-hairline/70 bg-surface-soft px-3 py-1 text-[10px] font-extrabold text-ink-strong shadow-sm transition-all duration-200 hover:bg-hairline/40"
         >
-          عرض الكل
+          {viewAllLabel}
         </Link>
       </div>
       <div className="space-y-4 border-s-2 border-gold-200/60 ps-4">{children}</div>
@@ -272,6 +276,9 @@ export default async function AccountPage() {
   const session = await getSession();
   if (!session) redirect('/login');
   const isCustomer = session.role === 'CUSTOMER';
+
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.dashboard;
 
   // ── Data fetching — unchanged ─────────────────────────────────────────────
   const [favsR, visitsR, reqsR, resvR] = await Promise.allSettled([
@@ -364,61 +371,61 @@ export default async function AccountPage() {
     ? [
         {
           icon:     Wallet,
-          label:    'إجمالي المدفوعات',
+          label:    m.totalPayments,
           value:    depositsAmountText ?? '—',
-          currency: depositsAmountText ? 'ج.م' : undefined,
-          hint:     'إجمالي محصّل',
+          currency: depositsAmountText ? m.currency || undefined : undefined,
+          hint:     m.totalCollected,
           href:     routes.accountDeposits,
         },
         {
           icon:  FileText,
-          label: 'العقود النشطة',
+          label: m.activeContracts,
           value: fmt(contractsCount),
-          hint:  'عقود موثّقة',
+          hint:  m.verifiedContracts,
           href:  routes.accountContracts,
         },
         {
           icon:  Wrench,
-          label: 'الصيانة والزيارات',
+          label: m.maintenanceVisits,
           value: sum(maintenanceCount, visitsCount),
-          hint:  'قيد المتابعة',
+          hint:  m.inProgress,
           href:  routes.accountMaintenance,
         },
         {
           icon:  Heart,
-          label: 'المفضلة',
+          label: m.favorites,
           value: fmt(favoritesCount),
-          hint:  'عناصر محفوظة',
+          hint:  m.savedItems,
           href:  routes.accountFavorites,
         },
       ]
     : [
         {
           icon:  Heart,
-          label: 'المفضلة',
+          label: m.favorites,
           value: fmt(favoritesCount),
-          hint:  'عناصر محفوظة',
+          hint:  m.savedItems,
           href:  routes.accountFavorites,
         },
         {
           icon:  CalendarClock,
-          label: 'طلبات الزيارة',
+          label: m.visitRequests,
           value: fmt(visitsCount),
-          hint:  'مجدولة',
+          hint:  m.scheduled,
           href:  routes.accountVisits,
         },
         {
           icon:  MessageSquareText,
-          label: 'الاستفسارات',
+          label: m.inquiries,
           value: fmt(requestsCount),
-          hint:  'قيد المعالجة',
+          hint:  m.processing,
           href:  routes.accountRequests,
         },
         {
           icon:  BookmarkCheck,
-          label: 'الحجوزات',
+          label: m.reservations,
           value: fmt(reservationsCount),
-          hint:  'نشطة',
+          hint:  m.active,
           href:  routes.accountReservations,
         },
       ];
@@ -431,7 +438,7 @@ export default async function AccountPage() {
         href={routes.accountContracts}
         icon={FileText}
         title={contractTitle(c)}
-        subtitle={`عقد رقم ${c.contractNumber ?? '—'}`}
+        subtitle={`${m.contractPrefix} ${c.contractNumber ?? '—'}`}
         trailing={
           <span className="whitespace-nowrap text-sm font-bold text-ink-strong">
             {formatPrice(c.totalAmount)}
@@ -444,7 +451,7 @@ export default async function AccountPage() {
         key={`r-${r.id}`}
         href={routes.accountReservations}
         icon={BookmarkCheck}
-        title={`حجز رقم ${r.reservationNumber ?? '—'}`}
+        title={`${m.reservationPrefix} ${r.reservationNumber ?? '—'}`}
         subtitle={r.unit ? `${unitTypeLabel(r.unit.type)} · ${r.unit.code}` : undefined}
         trailing={<StatusBadge status={r.status} />}
       />
@@ -457,23 +464,23 @@ export default async function AccountPage() {
         key={`n-${n.id}`}
         title={notificationTitle(n.templateCode)}
         subtitle={formatDateTime(n.createdAt)}
-        trailing={!n.read ? <Badge tone="gold">جديد</Badge> : undefined}
+        trailing={!n.read ? <Badge tone="gold">{m.newBadge}</Badge> : undefined}
       />
     )),
     ...recentVisits.map((v) => (
       <TimelineItem
         key={`v-${v.id}`}
-        title={entityTitle(v.project, v.unit, 'طلب زيارة')}
-        subtitle={`الموعد المفضل: ${formatDateTime(v.preferredDate)}`}
+        title={entityTitle(v.project, v.unit, m.visitLabel)}
+        subtitle={`${m.preferredDate} ${formatDateTime(v.preferredDate)}`}
         trailing={<StatusBadge status={v.requestStatus} />}
       />
     )),
   ].slice(0, 3);
 
-  const rightTitle = isCustomer ? 'أحدث الحجوزات والعقود' : 'أحدث الحجوزات';
+  const rightTitle = isCustomer ? m.recentBookings : m.recentReservations;
   const rightIcon  = isCustomer ? FileText : BookmarkCheck;
   const rightHref  = isCustomer ? routes.accountContracts : routes.accountReservations;
-  const leftTitle  = isCustomer ? 'الإشعارات والزيارات' : 'أحدث الزيارات';
+  const leftTitle  = isCustomer ? m.notificationsVisits : m.recentVisits;
   const leftHref   = isCustomer ? routes.accountNotifications : routes.accountVisits;
   const hasActivity = rightRows.length > 0 || leftItems.length > 0;
 
@@ -489,43 +496,43 @@ export default async function AccountPage() {
 
       {/* ── Customer: Quick Actions ────────────────────────────────────────── */}
       {isCustomer && (
-        <DashSection icon={Zap} title="إجراءات سريعة">
+        <DashSection icon={Zap} title={m.quickActions}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <QuickActionTile
               href={routes.accountProperty}
               icon={Building2}
-              label="عقاراتي"
-              description="تفاصيل وحدتك وعقدك"
+              label={m.myProperty}
+              description={m.propertyDetails}
             />
             <QuickActionTile
               href={routes.accountInstallments}
               icon={CreditCard}
-              label="جدول الأقساط"
-              description={unpaidCount > 0 ? `${formatNumber(unpaidCount)} قسط متبقٍ` : 'عرض خطة التقسيط'}
+              label={m.installmentSchedule}
+              description={unpaidCount > 0 ? `${formatNumber(unpaidCount)} ${m.installmentDue}` : m.viewInstallments}
             />
             <QuickActionTile
               href={routes.accountMaintenanceNew}
               icon={Wrench}
-              label="طلب صيانة"
-              description="أبلغ عن مشكلة أو طلب خدمة"
+              label={m.maintenance}
+              description={m.maintenanceSub}
             />
             <QuickActionTile
               href={routes.accountContracts}
               icon={FileText}
-              label="عقودي"
-              description="عرض وتحميل العقود"
+              label={m.myContracts}
+              description={m.viewContracts}
             />
             <QuickActionTile
               href={routes.accountDeposits}
               icon={Wallet}
-              label="سجل الدفعات"
-              description={depositsTotalText ? `مجموع: ${depositsTotalText}` : 'عرض المدفوعات'}
+              label={m.paymentHistory}
+              description={depositsTotalText ? `${m.total} ${depositsTotalText}` : m.viewPayments}
             />
             <QuickActionTile
               href={routes.accountNotifications}
               icon={Bell}
-              label="الإشعارات"
-              description="تحديثات حول عقودك وطلباتك"
+              label={m.notifications}
+              description={m.notificationsSub}
             />
           </div>
         </DashSection>
@@ -546,7 +553,7 @@ export default async function AccountPage() {
       {isCustomer && primaryContract && (
         <DashSection
           icon={Sparkles}
-          title="منطقة الملكية"
+          title={m.ownershipArea}
           action={
             <div className="flex items-center gap-2">
               <ButtonLink
@@ -556,7 +563,7 @@ export default async function AccountPage() {
                 className="h-auto rounded-xl px-4 py-1.5 text-xs font-bold shadow-sm"
               >
                 <Building2 className="h-3.5 w-3.5" aria-hidden />
-                عقاراتي
+                {m.myProperty}
               </ButtonLink>
               <ButtonLink
                 href={routes.accountMaintenanceNew}
@@ -565,7 +572,7 @@ export default async function AccountPage() {
                 className="h-auto rounded-xl px-4 py-1.5 text-xs font-bold shadow-sm"
               >
                 <Wrench className="h-3.5 w-3.5" aria-hidden />
-                صيانة
+                {m.maintenanceArea}
               </ButtonLink>
             </div>
           }
@@ -580,7 +587,7 @@ export default async function AccountPage() {
 
       {/* ── Activity center ────────────────────────────────────────────────── */}
       {hasActivity ? (
-        <DashSection icon={Activity} title="آخر النشاط">
+        <DashSection icon={Activity} title={m.recentActivity}>
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {rightRows.length > 0 && (
               <RecentPanel icon={rightIcon} title={rightTitle} href={rightHref}>
@@ -588,7 +595,7 @@ export default async function AccountPage() {
               </RecentPanel>
             )}
             {leftItems.length > 0 && (
-              <TimelinePanel title={leftTitle} href={leftHref}>
+              <TimelinePanel title={leftTitle} href={leftHref} viewAllLabel={m.viewAll}>
                 {leftItems}
               </TimelinePanel>
             )}
@@ -596,7 +603,7 @@ export default async function AccountPage() {
         </DashSection>
       ) : (
         !isCustomer && (
-          <DashSection icon={UserCircle2} title="ابدأ رحلتك">
+          <DashSection icon={UserCircle2} title={m.startJourney}>
             <PremiumCard className="px-8 py-12 text-center">
               {/* Decorative glow */}
               <span className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-gold-50/60 to-transparent" aria-hidden />
@@ -605,17 +612,17 @@ export default async function AccountPage() {
                   <UserCircle2 className="h-8 w-8" aria-hidden />
                 </span>
                 <div>
-                  <h3 className="text-xl font-black text-ink-strong">ابدأ رحلتك العقارية</h3>
+                  <h3 className="text-xl font-black text-ink-strong">{m.startJourneyTitle}</h3>
                   <p className="mt-2 text-sm text-ink-muted max-w-sm mx-auto leading-relaxed">
-                    تصفّح المشاريع والوحدات، واحفظ ما يهمّك أو اطلب زيارة، وستظهر متابعتك هنا.
+                    {m.startJourneyMsg}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
                   <ButtonLink href={routes.projects} variant="primary" size="md">
-                    تصفّح المشاريع
+                    {m.browseProjects}
                   </ButtonLink>
                   <ButtonLink href={routes.units} variant="outline" size="md">
-                    استكشف الوحدات
+                    {m.exploreUnits}
                   </ButtonLink>
                 </div>
               </div>

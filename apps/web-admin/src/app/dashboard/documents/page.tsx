@@ -27,6 +27,8 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -111,7 +113,9 @@ export default async function DocumentsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const sp = await searchParams;
+  const [sp, locale] = await Promise.all([searchParams, getLocale()]);
+  const m = uiT(locale).documentsPage;
+
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -133,16 +137,16 @@ export default async function DocumentsPage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="المستندات"
-        description="إدارة مستندات العملاء والعقود والوحدات داخل المنصة."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'المستندات' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbDocuments },
         ]}
         actions={
           <Link href="/dashboard/documents/new">
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              إضافة مستند
+              {m.addDocument}
             </Button>
           </Link>
         }
@@ -150,7 +154,7 @@ export default async function DocumentsPage({
 
       {sp.ok && (
         <div className="rounded-2xl bg-success-50 border border-success-100 text-success-700 p-4 text-sm">
-          تم حذف المستند.
+          {m.deleteSuccess}
         </div>
       )}
       {sp.err && (
@@ -160,7 +164,7 @@ export default async function DocumentsPage({
       )}
       {res.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل المستندات: {res.error}
+          {m.loadError}: {res.error}
         </div>
       )}
 
@@ -168,14 +172,14 @@ export default async function DocumentsPage({
         variant="compact"
         metrics={[
           {
-            label: hasFilters ? 'نتائج التصفية' : 'الإجمالي',
+            label: hasFilters ? m.metricFiltered : m.metricTotal,
             value: totalCount,
             icon: <FileText className="h-4 w-4" />,
             primary: true,
             tone: 'brand',
           },
           {
-            label: 'آخر رفع',
+            label: m.metricLastUpload,
             value: lastDate ? formatDate(lastDate) : '—',
             icon: <Clock className="h-4 w-4" />,
             tone: 'neutral',
@@ -184,7 +188,7 @@ export default async function DocumentsPage({
           ...(totalPages > 1
             ? [
                 {
-                  label: 'الصفحة',
+                  label: m.metricPage,
                   value: `${page} / ${totalPages}`,
                   icon: <List className="h-4 w-4" />,
                   tone: 'neutral' as const,
@@ -200,54 +204,54 @@ export default async function DocumentsPage({
         action="/dashboard/documents"
         trailing={
           <div className="flex items-center gap-1.5">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{m.btnFilter}</Button>
             {hasFilters && (
               <Link href="/dashboard/documents">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{m.btnClear}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="بحث">
+        <PremiumFilterField label={m.filterSearch}>
           <Input
             name="q"
             inputSize="sm"
-            placeholder="بحث باسم الشخص"
+            placeholder={m.filterSearchPlaceholder}
             defaultValue={sp.q ?? ''}
             className="min-w-[180px]"
           />
         </PremiumFilterField>
-        <PremiumFilterField label="نوع المالك">
+        <PremiumFilterField label={m.filterOwnerType}>
           <Select name="ownerType" inputSize="sm" defaultValue={sp.ownerType ?? ''} className="w-36">
-            <option value="">كل المالكين</option>
+            <option value="">{m.filterOwnerTypeAll}</option>
             {OWNER_TYPES.map((t) => (
               <option key={t} value={t}>{OWNER_TYPE_LABEL[t]}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="التصنيف">
+        <PremiumFilterField label={m.filterCategory}>
           <Select name="category" inputSize="sm" defaultValue={sp.category ?? ''} className="w-36">
-            <option value="">كل التصنيفات</option>
+            <option value="">{m.filterCategoryAll}</option>
             {CATEGORIES.map((c) => (
               <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="الترتيب">
+        <PremiumFilterField label={m.filterSort}>
           <Select name="sortOrder" inputSize="sm" defaultValue={sp.sortOrder ?? 'asc'} className="w-36">
-            <option value="asc">الأقدم أولًا</option>
-            <option value="desc">الأحدث أولًا</option>
+            <option value="asc">{m.filterSortAsc}</option>
+            <option value="desc">{m.filterSortDesc}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
       <PremiumSectionCard
-        title="المستندات"
+        title={m.sectionTitle}
         trailing={
           meta ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {meta.total.toLocaleString('ar-EG')} مستند
+              {meta.total.toLocaleString('ar-EG')} {m.sectionCount}
             </span>
           ) : undefined
         }
@@ -256,21 +260,21 @@ export default async function DocumentsPage({
         {items.length === 0 ? (
           <PremiumEmptyState
             icon={<FileText />}
-            title="لا توجد مستندات"
-            description="ابدأ بإضافة أول مستند من زر «إضافة مستند» أعلى الصفحة."
+            title={m.emptyTitle}
+            description={m.emptyDescription}
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 w-[35%]">العنوان</th>
-                  <th className="text-start py-3 px-4">التصنيف</th>
-                  <th className="text-start py-3 px-4">المالك</th>
-                  <th className="text-start py-3 px-4">الحجم</th>
-                  <th className="text-start py-3 px-4">رفع بواسطة</th>
-                  <th className="text-start py-3 px-4">الوقت</th>
-                  <th className="text-end py-3 ps-4 pe-5">إجراءات</th>
+                  <th className="text-start py-3 ps-5 pe-4 w-[35%]">{m.colTitle}</th>
+                  <th className="text-start py-3 px-4">{m.colCategory}</th>
+                  <th className="text-start py-3 px-4">{m.colOwner}</th>
+                  <th className="text-start py-3 px-4">{m.colSize}</th>
+                  <th className="text-start py-3 px-4">{m.colUploadedBy}</th>
+                  <th className="text-start py-3 px-4">{m.colTime}</th>
+                  <th className="text-end py-3 ps-4 pe-5">{m.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -290,7 +294,7 @@ export default async function DocumentsPage({
                             title={row.title || undefined}
                           >
                             {row.title || (
-                              <span className="text-slate-400">مستند بدون عنوان</span>
+                              <span className="text-slate-400">{m.noTitle}</span>
                             )}
                           </Link>
                           {row.fileName && (
@@ -352,14 +356,14 @@ export default async function DocumentsPage({
                             target="_blank"
                             rel="noopener noreferrer"
                             className={ACTION_BTN}
-                            aria-label="فتح الملف"
+                            aria-label={m.ariaOpenFile}
                           >
                             <ExternalLink className="h-4 w-4" />
                           </a>
                           <Link
                             href={`/dashboard/documents/${row.id}`}
                             className={ACTION_BTN}
-                            aria-label="تفاصيل المستند"
+                            aria-label={m.ariaDocDetails}
                           >
                             <Eye className="h-4 w-4" />
                           </Link>

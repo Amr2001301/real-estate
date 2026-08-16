@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import {
   confirmBookingPaymentAction,
   unconfirmBookingPaymentAction,
@@ -15,6 +17,7 @@ interface Props {
   bookingPaymentStatus: ReservationBookingPaymentStatus;
   reservationStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'EXPIRED' | 'CONVERTED';
   bookingAmount: number;
+  locale?: Locale;
 }
 
 export function BookingPaymentActions({
@@ -22,7 +25,9 @@ export function BookingPaymentActions({
   bookingPaymentStatus,
   reservationStatus,
   bookingAmount,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.reservationDetailPage;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +75,7 @@ export function BookingPaymentActions({
             onClick={handleConfirm}
             leftIcon={<CheckCircle2 className="h-4 w-4" />}
           >
-            تأكيد استلام مبلغ الحجز
+            {m.bookingPaymentConfirmBtn}
           </Button>
         )}
         {bookingPaymentStatus === 'PAID' && (
@@ -83,13 +88,13 @@ export function BookingPaymentActions({
             onClick={handleUnconfirm}
             leftIcon={<XCircle className="h-4 w-4" />}
           >
-            إلغاء تأكيد الاستلام
+            {m.bookingPaymentUnconfirmBtn}
           </Button>
         )}
       </div>
       {bookingAmount <= 0 && bookingPaymentStatus !== 'PAID' && (
         <p className="text-xs text-amber-700">
-          يجب تحديد مبلغ الحجز قبل تأكيد الاستلام
+          {m.bookingPaymentAmountRequired}
         </p>
       )}
     </div>

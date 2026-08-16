@@ -6,8 +6,9 @@ import { CalendarDays } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import type { CompareMode, PeriodMode } from '@/lib/report-filter';
+import type { Locale } from '@/lib/locale';
 
-// ── Arabic month labels ───────────────────────────────────────────────────────
+// ── Month labels ──────────────────────────────────────────────────────────────
 const MONTHS_AR = [
   { v: '1', l: 'يناير' },   { v: '2',  l: 'فبراير' },
   { v: '3', l: 'مارس' },    { v: '4',  l: 'أبريل' },
@@ -17,11 +18,28 @@ const MONTHS_AR = [
   { v: '11', l: 'نوفمبر' }, { v: '12', l: 'ديسمبر' },
 ];
 
+const MONTHS_EN = [
+  { v: '1', l: 'January' },   { v: '2',  l: 'February' },
+  { v: '3', l: 'March' },     { v: '4',  l: 'April' },
+  { v: '5', l: 'May' },       { v: '6',  l: 'June' },
+  { v: '7', l: 'July' },      { v: '8',  l: 'August' },
+  { v: '9', l: 'September' }, { v: '10', l: 'October' },
+  { v: '11', l: 'November' }, { v: '12', l: 'December' },
+];
+
+// ── Quarter labels ────────────────────────────────────────────────────────────
 const QUARTERS_AR = [
   { v: '1', l: 'الربع الأول (يناير – مارس)' },
   { v: '2', l: 'الربع الثاني (أبريل – يونيو)' },
   { v: '3', l: 'الربع الثالث (يوليو – سبتمبر)' },
   { v: '4', l: 'الربع الرابع (أكتوبر – ديسمبر)' },
+];
+
+const QUARTERS_EN = [
+  { v: '1', l: 'Q1 (January – March)' },
+  { v: '2', l: 'Q2 (April – June)' },
+  { v: '3', l: 'Q3 (July – September)' },
+  { v: '4', l: 'Q4 (October – December)' },
 ];
 
 function buildYears() {
@@ -41,6 +59,7 @@ export interface ReportFilterBarProps {
   defaultDateTo: string;
   defaultCompare: CompareMode;
   basePath: string;
+  locale?: Locale;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -53,6 +72,7 @@ export function ReportFilterBar({
   defaultDateTo,
   defaultCompare,
   basePath,
+  locale = 'ar',
 }: ReportFilterBarProps) {
   const router = useRouter();
 
@@ -63,6 +83,8 @@ export function ReportFilterBar({
   const [dateFrom, setFrom]   = useState(defaultDateFrom);
   const [dateTo, setTo]       = useState(defaultDateTo);
   const [compare, setCompare] = useState<CompareMode>(defaultCompare);
+
+  const isAr = locale === 'ar';
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -79,12 +101,12 @@ export function ReportFilterBar({
     router.push(`${basePath}?${p.toString()}`);
   }
 
-  const MODE_LABEL: Record<PeriodMode, string> = {
-    monthly:   'شهري',
-    quarterly: 'ربع سنوي',
-    yearly:    'سنوي',
-    custom:    'نطاق مخصص',
-  };
+  const MODE_LABEL: Record<PeriodMode, string> = isAr
+    ? { monthly: 'شهري', quarterly: 'ربع سنوي', yearly: 'سنوي', custom: 'نطاق مخصص' }
+    : { monthly: 'Monthly', quarterly: 'Quarterly', yearly: 'Yearly', custom: 'Custom range' };
+
+  const MONTHS   = isAr ? MONTHS_AR   : MONTHS_EN;
+  const QUARTERS = isAr ? QUARTERS_AR : QUARTERS_EN;
 
   return (
     <form
@@ -105,7 +127,7 @@ export function ReportFilterBar({
         value={mode}
         onChange={(e) => setMode(e.target.value as PeriodMode)}
         className="w-36"
-        aria-label="نوع الفترة"
+        aria-label={isAr ? 'نوع الفترة' : 'Period type'}
       >
         {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (
           <option key={m} value={m}>{MODE_LABEL[m]}</option>
@@ -119,7 +141,7 @@ export function ReportFilterBar({
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}
           className="w-24"
-          aria-label="السنة"
+          aria-label={isAr ? 'السنة' : 'Year'}
         >
           {YEARS.map((y) => (
             <option key={y} value={y}>{y}</option>
@@ -134,9 +156,9 @@ export function ReportFilterBar({
           value={month}
           onChange={(e) => setMonth(Number(e.target.value))}
           className="w-36"
-          aria-label="الشهر"
+          aria-label={isAr ? 'الشهر' : 'Month'}
         >
-          {MONTHS_AR.map((m) => (
+          {MONTHS.map((m) => (
             <option key={m.v} value={m.v}>{m.l}</option>
           ))}
         </Select>
@@ -149,9 +171,9 @@ export function ReportFilterBar({
           value={quarter}
           onChange={(e) => setQuarter(Number(e.target.value))}
           className="w-56"
-          aria-label="الربع"
+          aria-label={isAr ? 'الربع' : 'Quarter'}
         >
-          {QUARTERS_AR.map((q) => (
+          {QUARTERS.map((q) => (
             <option key={q.v} value={q.v}>{q.l}</option>
           ))}
         </Select>
@@ -161,23 +183,23 @@ export function ReportFilterBar({
       {mode === 'custom' && (
         <>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 shrink-0">من</span>
+            <span className="text-xs text-slate-500 shrink-0">{isAr ? 'من' : 'From'}</span>
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setFrom(e.target.value)}
               className="h-8 rounded-lg border border-hairline bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-xs transition-colors"
-              aria-label="من تاريخ"
+              aria-label={isAr ? 'من تاريخ' : 'From date'}
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-slate-500 shrink-0">إلى</span>
+            <span className="text-xs text-slate-500 shrink-0">{isAr ? 'إلى' : 'To'}</span>
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setTo(e.target.value)}
               className="h-8 rounded-lg border border-hairline bg-white px-2.5 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-xs transition-colors"
-              aria-label="إلى تاريخ"
+              aria-label={isAr ? 'إلى تاريخ' : 'To date'}
             />
           </div>
         </>
@@ -192,17 +214,28 @@ export function ReportFilterBar({
         value={compare}
         onChange={(e) => setCompare(e.target.value as CompareMode)}
         className="w-48"
-        aria-label="وضع المقارنة"
+        aria-label={isAr ? 'وضع المقارنة' : 'Comparison mode'}
       >
-        <option value="none">بدون مقارنة</option>
-        <option value="previous-period">الفترة السابقة</option>
-        <option value="previous-month">الشهر السابق</option>
-        <option value="yoy">نفس الفترة من العام السابق</option>
+        {isAr ? (
+          <>
+            <option value="none">بدون مقارنة</option>
+            <option value="previous-period">الفترة السابقة</option>
+            <option value="previous-month">الشهر السابق</option>
+            <option value="yoy">نفس الفترة من العام السابق</option>
+          </>
+        ) : (
+          <>
+            <option value="none">No comparison</option>
+            <option value="previous-period">Previous period</option>
+            <option value="previous-month">Previous month</option>
+            <option value="yoy">Same period last year</option>
+          </>
+        )}
       </Select>
 
       {/* Apply */}
       <Button type="submit" variant="primary" size="sm" className="ms-auto shrink-0">
-        تطبيق
+        {isAr ? 'تطبيق' : 'Apply'}
       </Button>
     </form>
   );

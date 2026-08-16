@@ -21,10 +21,11 @@ import {
   PremiumPageHero,
   PremiumMetricStrip,
   PremiumFilterBar,
-  PremiumFilterField,
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -46,6 +47,9 @@ export default async function AdminBrokerLeadsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerLeadsPage;
+
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -116,12 +120,12 @@ export default async function AdminBrokerLeadsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="فرص الوسطاء"
-        description="متابعة فرص المبيعات القادمة من الوسطاء ومراحلها التشغيلية."
+        title={m.heroTitle}
+        description={m.heroDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'فرص الوسطاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
+          { label: m.breadcrumbSelf },
         ]}
       />
 
@@ -131,32 +135,32 @@ export default async function AdminBrokerLeadsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي الفرص',
+            label: m.kpiTotal,
             value: totalLeads,
             icon: <Users />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'قيد المراجعة',
+            label: m.kpiPending,
             value: counts.pending,
             icon: <Users />,
             tone: 'warning',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'موافق عليه',
+            label: m.kpiApproved,
             value: counts.approved,
             icon: <Users />,
             tone: 'success',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'مرفوض',
+            label: m.kpiRejected,
             value: counts.rejected,
             icon: <Users />,
             tone: 'danger',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
         ]}
       />
@@ -165,7 +169,7 @@ export default async function AdminBrokerLeadsPage({
       {leadsRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل الفرص: {leadsRes.error}</p>
+          <p className="font-medium">{m.errorLoad}{leadsRes.error}</p>
         </div>
       )}
 
@@ -179,12 +183,12 @@ export default async function AdminBrokerLeadsPage({
 
         {/* ── Row 1: search + actions (always visible) ──────────────────────── */}
         <div className="flex-1 min-w-[160px]">
-          <label htmlFor="bl-q" className="sr-only">بحث</label>
+          <label htmlFor="bl-q" className="sr-only">{m.searchLabel}</label>
           <Input
             id="bl-q"
             name="q"
             inputSize="sm"
-            placeholder="بحث: اسم / هاتف / بريد"
+            placeholder={m.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             leftAddon={<Search />}
             className="w-full"
@@ -193,10 +197,10 @@ export default async function AdminBrokerLeadsPage({
 
         {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {hasAnyFilter && (
             <Link href={'/dashboard/broker-leads' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
@@ -209,7 +213,7 @@ export default async function AdminBrokerLeadsPage({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filterHideFilters : m.filterAdvanced}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -223,40 +227,40 @@ export default async function AdminBrokerLeadsPage({
           <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="bl-broker" className="text-[11px] font-medium text-slate-400">الوسيط</label>
+                <label htmlFor="bl-broker" className="text-[11px] font-medium text-slate-400">{m.filterBroker}</label>
                 <Select id="bl-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''}>
-                  <option value="">كل الوسطاء</option>
+                  <option value="">{m.filterAllBrokers}</option>
                   {brokers.map((b) => (
                     <option key={b.id} value={b.id}>{b.companyName}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bl-status" className="text-[11px] font-medium text-slate-400">حالة المراجعة</label>
+                <label htmlFor="bl-status" className="text-[11px] font-medium text-slate-400">{m.filterReviewStatus}</label>
                 <Select id="bl-status" name="brokerApprovalStatus" inputSize="sm" defaultValue={sp.brokerApprovalStatus ?? ''}>
-                  <option value="">كل الحالات</option>
-                  <option value="PENDING">قيد المراجعة</option>
-                  <option value="APPROVED">موافق عليه</option>
-                  <option value="REJECTED">مرفوض</option>
-                  <option value="DUPLICATE">مكرر</option>
+                  <option value="">{m.filterAllStatuses}</option>
+                  <option value="PENDING">{m.filterStatusPending}</option>
+                  <option value="APPROVED">{m.filterStatusApproved}</option>
+                  <option value="REJECTED">{m.filterStatusRejected}</option>
+                  <option value="DUPLICATE">{m.filterStatusDuplicate}</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bl-stage" className="text-[11px] font-medium text-slate-400">المرحلة</label>
+                <label htmlFor="bl-stage" className="text-[11px] font-medium text-slate-400">{m.filterStage}</label>
                 <Select id="bl-stage" name="stage" inputSize="sm" defaultValue={sp.stage ?? ''}>
-                  <option value="">كل المراحل</option>
-                  <option value="NEW">جديد</option>
-                  <option value="INTERESTED">مهتم</option>
-                  <option value="VISIT">زيارة</option>
-                  <option value="NEGOTIATION">تفاوض</option>
-                  <option value="WON">فوز</option>
-                  <option value="LOST">خسارة</option>
+                  <option value="">{m.filterAllStages}</option>
+                  <option value="NEW">{m.filterStageNew}</option>
+                  <option value="INTERESTED">{m.filterStageInterested}</option>
+                  <option value="VISIT">{m.filterStageVisit}</option>
+                  <option value="NEGOTIATION">{m.filterStageNegotiation}</option>
+                  <option value="WON">{m.filterStageWon}</option>
+                  <option value="LOST">{m.filterStageLost}</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bl-project" className="text-[11px] font-medium text-slate-400">المشروع</label>
+                <label htmlFor="bl-project" className="text-[11px] font-medium text-slate-400">{m.filterProject}</label>
                 <Select id="bl-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
-                  <option value="">كل المشاريع</option>
+                  <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
@@ -270,20 +274,20 @@ export default async function AdminBrokerLeadsPage({
       {/* ── Leads table ──────────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<Users />}
-        title="قائمة الفرص"
-        description="فرص أرسلها الوسطاء وتحتاج إلى مراجعة الإدارة."
+        title={m.tableTitle}
+        description={m.tableDescription}
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {totalLeads.toLocaleString('ar-EG')} فرصة
+            {totalLeads.toLocaleString('ar-EG')} {m.tableTrailingCount}
           </span>
         }
       >
         {rows.length === 0 && !leadsRes.error ? (
           <PremiumEmptyState
             icon={<Users />}
-            title="لا توجد فرص من الوسطاء"
-            description="ستظهر هنا فور إرسال الوسطاء أول فرصة."
+            title={m.emptyTitle}
+            description={m.emptyDescription}
             className="py-12"
           />
         ) : (
@@ -291,13 +295,13 @@ export default async function AdminBrokerLeadsPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">العميل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوسيط</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المشروع</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المراجعة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المرحلة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المبيعات</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">التاريخ</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colClient}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colProject}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colReview}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStage}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colSales}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colDate}</th>
                   <th className="text-start py-3 ps-4 pe-5 w-px" />
                 </tr>
               </thead>
@@ -377,7 +381,7 @@ export default async function AdminBrokerLeadsPage({
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          غير معيّن
+                          {m.unassigned}
                         </span>
                       )}
                     </td>
@@ -390,7 +394,7 @@ export default async function AdminBrokerLeadsPage({
                     {/* Action */}
                     <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/broker-leads/${l.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.actionView} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>

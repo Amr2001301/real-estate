@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
 import type { Paged, VisitRequest, VisitAppointment } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { Tabs } from '@/components/ui/tabs';
@@ -22,26 +23,18 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 
-function resolvedName(...parts: (string | null | undefined)[]): { name: string; isFallback: boolean } {
+function resolvedName(noClientName: string, ...parts: (string | null | undefined)[]): { name: string; isFallback: boolean } {
   for (const p of parts) {
     const n = p?.trim() ?? '';
     if (n.length > 1) return { name: n, isFallback: false };
-    if (n.length === 1) return { name: 'عميل بدون اسم', isFallback: true };
+    if (n.length === 1) return { name: noClientName, isFallback: true };
   }
   return { name: '—', isFallback: false };
 }
-
-const SOURCE_LABEL: Record<string, string> = {
-  WEBSITE: 'الموقع',
-  MOBILE_APP: 'التطبيق',
-  SALES: 'مبيعات',
-  PHONE: 'هاتف',
-  WHATSAPP: 'واتساب',
-  OTHER: 'أخرى',
-};
 
 type Tab = 'requests' | 'appointments' | 'today' | 'past';
 
@@ -67,10 +60,20 @@ export default async function VisitsPage({
   const sp = await searchParams;
   const tab: Tab = (sp.tab as Tab) ?? (sp.clientId ? 'appointments' : 'requests');
 
-  const [statsRes, salesRes] = await Promise.all([
+  const [statsRes, salesRes, locale] = await Promise.all([
     safe(api.get<Stats>('/visits/stats')),
     safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
+    getLocale(),
   ]);
+  const m = uiT(locale).pages.visits;
+  const SOURCE_LABEL: Record<string, string> = {
+    WEBSITE: m.sourceLabels.WEBSITE,
+    MOBILE_APP: m.sourceLabels.APP,
+    SALES: m.sourceLabels.SALES,
+    PHONE: m.sourceLabels.PHONE,
+    WHATSAPP: m.sourceLabels.WHATSAPP,
+    OTHER: m.sourceLabels.OTHER,
+  };
 
   const stats = statsRes.data;
   const salesOptions: SalesUser[] = salesRes.data?.data ?? [];
@@ -116,18 +119,18 @@ export default async function VisitsPage({
 
   const tabTitle =
     tab === 'requests'
-      ? 'طلبات الزيارة'
+      ? m.tabs.requests
       : tab === 'appointments'
-        ? 'الزيارات المجدولة'
+        ? m.tabs.scheduled
         : tab === 'today'
-          ? 'زيارات اليوم'
-          : 'الزيارات السابقة';
+          ? m.tabs.today
+          : m.tabs.past;
 
   const tabs = [
-    { label: 'طلبات الزيارة', href: '/dashboard/visits?tab=requests', count: stats?.totalRequests },
-    { label: 'الزيارات المجدولة', href: '/dashboard/visits?tab=appointments', count: stats?.scheduledVisits },
-    { label: 'زيارات اليوم', href: '/dashboard/visits?tab=today', count: stats?.todayVisits },
-    { label: 'الزيارات السابقة', href: '/dashboard/visits?tab=past' },
+    { label: m.tabs.requests, href: '/dashboard/visits?tab=requests', count: stats?.totalRequests },
+    { label: m.tabs.scheduled, href: '/dashboard/visits?tab=appointments', count: stats?.scheduledVisits },
+    { label: m.tabs.today, href: '/dashboard/visits?tab=today', count: stats?.todayVisits },
+    { label: m.tabs.past, href: '/dashboard/visits?tab=past' },
   ];
 
   const activeHref = `/dashboard/visits?tab=${tab}`;
@@ -135,16 +138,16 @@ export default async function VisitsPage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="الزيارات"
-        description="متابعة زيارات العملاء وجدولتها وحالات التأكيد."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الزيارات' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <Link href="/dashboard/visits/new">
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              زيارة جديدة
+              {m.addBtn}
             </Button>
           </Link>
         }
@@ -154,26 +157,26 @@ export default async function VisitsPage({
         variant="compact"
         metrics={[
           {
-            label: 'طلبات جديدة',
+            label: m.kpi.newRequests,
             value: stats?.newRequests ?? '—',
             icon: <CalendarClock className="h-4 w-4" />,
             tone: 'info',
           },
           {
-            label: 'زيارات اليوم',
+            label: m.kpi.today,
             value: stats?.todayVisits ?? '—',
             icon: <CalendarDays className="h-4 w-4" />,
             primary: true,
             tone: 'brand',
           },
           {
-            label: 'هذا الأسبوع',
+            label: m.kpi.thisWeek,
             value: stats?.weekVisits ?? '—',
             icon: <CalendarCheck className="h-4 w-4" />,
             tone: 'success',
           },
           {
-            label: 'تحتاج تأكيد',
+            label: m.kpi.needConfirm,
             value: stats?.pendingConfirmation ?? '—',
             icon: <Clock className="h-4 w-4" />,
             tone: 'warning',
@@ -195,7 +198,7 @@ export default async function VisitsPage({
           title={tabTitle}
           trailing={
             <span className="text-xs text-slate-400 tabular-nums">
-              {requestsData.length} طلب
+              {requestsData.length} {m.requestSuffix}
             </span>
           }
           padded={false}
@@ -203,26 +206,27 @@ export default async function VisitsPage({
           {requestsData.length === 0 ? (
             <PremiumEmptyState
               icon={<CalendarClock />}
-              title="لا توجد طلبات زيارة"
+              title={m.empty.noRequests}
             />
           ) : (
             <div className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-sm">
                 <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                   <tr>
-                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">رقم الطلب</th>
-                    <th className="text-start py-3 px-4">العميل</th>
-                    <th className="text-start py-3 px-4">المشروع / الوحدة</th>
-                    <th className="text-start py-3 px-4 whitespace-nowrap">التاريخ المفضل</th>
-                    <th className="text-start py-3 px-4">المصدر</th>
-                    <th className="text-start py-3 px-4">الحالة</th>
-                    <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الإنشاء</th>
+                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.requestCols.id}</th>
+                    <th className="text-start py-3 px-4">{m.requestCols.client}</th>
+                    <th className="text-start py-3 px-4">{m.requestCols.project}</th>
+                    <th className="text-start py-3 px-4 whitespace-nowrap">{m.requestCols.preferredDate}</th>
+                    <th className="text-start py-3 px-4">{m.requestCols.source}</th>
+                    <th className="text-start py-3 px-4">{m.requestCols.status}</th>
+                    <th className="text-start py-3 px-4 whitespace-nowrap">{m.requestCols.created}</th>
                     <th className="py-3 ps-4 pe-5" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {requestsData.map((r) => {
                     const { name, isFallback } = resolvedName(
+                      m.noClientName,
                       r.customerName,
                       r.user?.fullName,
                       r.lead?.fullName,
@@ -259,7 +263,7 @@ export default async function VisitsPage({
                           <div>
                             <p className="text-slate-800">{tx(r.project?.name)}</p>
                             {r.unit && (
-                              <p className="text-xs text-slate-500">وحدة: {r.unit.code}</p>
+                              <p className="text-xs text-slate-500">{m.unitPrefix} {r.unit.code}</p>
                             )}
                           </div>
                         </td>
@@ -276,7 +280,7 @@ export default async function VisitsPage({
                         </td>
                         <td className="py-3 px-4">
                           {r.requestStatus ? (
-                            <VisitRequestStatusBadge status={r.requestStatus} />
+                            <VisitRequestStatusBadge status={r.requestStatus} locale={locale} />
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
                           )}
@@ -285,7 +289,7 @@ export default async function VisitsPage({
                           {formatDate(r.createdAt)}
                         </td>
                         <td className="py-3 ps-4 pe-5 text-end">
-                          <RequestActions request={r} salesOptions={salesOptions} />
+                          <RequestActions request={r} salesOptions={salesOptions} locale={locale} />
                         </td>
                       </tr>
                     );
@@ -302,7 +306,7 @@ export default async function VisitsPage({
           title={tabTitle}
           trailing={
             <span className="text-xs text-slate-400 tabular-nums">
-              {appointmentsData.length} زيارة
+              {appointmentsData.length} {m.visitSuffix}
             </span>
           }
           padded={false}
@@ -310,25 +314,26 @@ export default async function VisitsPage({
           {appointmentsData.length === 0 ? (
             <PremiumEmptyState
               icon={<CalendarDays />}
-              title="لا توجد زيارات"
+              title={m.empty.noVisits}
             />
           ) : (
             <div className="overflow-x-auto scrollbar-thin">
               <table className="w-full text-sm">
                 <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                   <tr>
-                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">رقم الزيارة</th>
-                    <th className="text-start py-3 px-4">العميل</th>
-                    <th className="text-start py-3 px-4">المشروع / الوحدة</th>
-                    <th className="text-start py-3 px-4">الموعد</th>
-                    <th className="text-start py-3 px-4">المندوب</th>
-                    <th className="text-start py-3 px-4">الحالة</th>
+                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.appointmentCols.id}</th>
+                    <th className="text-start py-3 px-4">{m.appointmentCols.client}</th>
+                    <th className="text-start py-3 px-4">{m.appointmentCols.project}</th>
+                    <th className="text-start py-3 px-4">{m.appointmentCols.scheduled}</th>
+                    <th className="text-start py-3 px-4">{m.appointmentCols.agent}</th>
+                    <th className="text-start py-3 px-4">{m.appointmentCols.status}</th>
                     <th className="py-3 ps-4 pe-5" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-hairline">
                   {appointmentsData.map((a) => {
                     const { name, isFallback } = resolvedName(
+                      m.noClientName,
                       a.client?.fullName,
                       a.lead?.fullName,
                       a.visitRequest?.customerName,
@@ -368,7 +373,7 @@ export default async function VisitsPage({
                           <div>
                             <p className="text-slate-800">{tx(a.project?.name)}</p>
                             {a.unit && (
-                              <p className="text-xs text-slate-500">وحدة: {a.unit.code}</p>
+                              <p className="text-xs text-slate-500">{m.unitPrefix} {a.unit.code}</p>
                             )}
                           </div>
                         </td>
@@ -379,10 +384,10 @@ export default async function VisitsPage({
                           {a.assignedSales?.fullName ?? '—'}
                         </td>
                         <td className="py-3 px-4">
-                          <AppointmentStatusBadge status={a.status} />
+                          <AppointmentStatusBadge status={a.status} locale={locale} />
                         </td>
                         <td className="py-3 ps-4 pe-5 text-end">
-                          <AppointmentActions appointment={a} salesOptions={salesOptions} />
+                          <AppointmentActions appointment={a} salesOptions={salesOptions} locale={locale} />
                         </td>
                       </tr>
                     );

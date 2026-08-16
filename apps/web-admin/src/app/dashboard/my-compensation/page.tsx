@@ -10,12 +10,13 @@ import {
   FileText,
   AlertCircle,
   Wallet,
-  Eye,
   TrendingUp,
   Award,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { Paged, Lead, Reservation, VisitAppointment } from '@/lib/types';
 import { formatDate } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
@@ -64,33 +65,6 @@ interface PerformanceRow {
   targetUnitsPercent: number | null;
 }
 
-// ── Constants ──────────────────────────────────────────────────────────────
-
-const MONTH_NAMES = [
-  'يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو',
-  'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
-];
-
-const SOURCE_LABEL: Record<EntrySource, string> = {
-  MANUAL: 'إدخال يدوي',
-  CONTRACT_AUTO: 'تلقائي من عقد',
-};
-const SOURCE_CLS: Record<EntrySource, string> = {
-  MANUAL: 'bg-slate-100 text-slate-600',
-  CONTRACT_AUTO: 'bg-info-100 text-info-700',
-};
-
-const STATUS_LABEL: Record<EntryStatus, string> = {
-  PENDING: 'معلق',
-  APPROVED: 'معتمد',
-  PAID: 'مدفوع',
-};
-const STATUS_CLS: Record<EntryStatus, string> = {
-  PENDING: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',
-  APPROVED: 'bg-info-50 text-info-700 ring-1 ring-inset ring-info-100',
-  PAID: 'bg-success-50 text-success-700 ring-1 ring-inset ring-success-100',
-};
-
 // ── Pure helpers ───────────────────────────────────────────────────────────
 
 function fmtAmt(value: number | string | null | undefined, symbol = 'ج.م'): string {
@@ -98,20 +72,6 @@ function fmtAmt(value: number | string | null | undefined, symbol = 'ج.م'): st
   const n = typeof value === 'string' ? Number(value) : value;
   if (Number.isNaN(n)) return '—';
   return `${n.toLocaleString('en-US')} ${symbol}`;
-}
-
-function getPlanDisplay(planName: string | null | undefined, source: EntrySource | undefined): string {
-  if (source === 'MANUAL') return 'مستحق يدوي';
-  if (!planName) return 'خطة عمولة';
-  if (/\b(test|temp|debug|draft|sample|example)\b/i.test(planName)) return 'خطة عمولة';
-  return planName;
-}
-
-function periodLabel(period: string): string {
-  const [y, m] = period.split('-');
-  const mIdx = parseInt(m ?? '0', 10) - 1;
-  const name = MONTH_NAMES[mIdx] ?? period;
-  return `${name} ${y}`;
 }
 
 function pctLabel(value: number | null): string {
@@ -136,11 +96,11 @@ function pctTextColor(pct: number | null): string {
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
-function SectionError() {
+function SectionError({ msg }: { msg: string }) {
   return (
     <div className="flex items-start gap-2 text-warning-700 text-sm p-4">
       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-      <p>تعذّر تحميل هذا القسم.</p>
+      <p>{msg}</p>
     </div>
   );
 }
@@ -163,34 +123,34 @@ function PctCell({ pct, neutral = false }: { pct: number | null; neutral?: boole
   );
 }
 
-function PerfBadge({ pct }: { pct: number | null }) {
+function PerfBadge({ pct, labels }: { pct: number | null; labels: { none: string; excellent: string; onTrack: string; needsEffort: string; needsAttention: string } }) {
   if (pct === null)
     return (
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-medium bg-slate-100 text-slate-400">
-        لا يوجد أداء بعد
+        {labels.none}
       </span>
     );
   if (pct >= 100)
     return (
       <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100">
-        <Award className="h-2.5 w-2.5" /> متقدم
+        <Award className="h-2.5 w-2.5" /> {labels.excellent}
       </span>
     );
   if (pct >= 75)
     return (
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-        على المسار
+        {labels.onTrack}
       </span>
     );
   if (pct >= 50)
     return (
       <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100">
-        يحتاج جهدًا
+        {labels.needsEffort}
       </span>
     );
   return (
     <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-red-50 text-red-700 ring-1 ring-inset ring-red-100">
-      يحتاج متابعة
+      {labels.needsAttention}
     </span>
   );
 }
@@ -198,9 +158,10 @@ function PerfBadge({ pct }: { pct: number | null }) {
 // ── Page ──────────────────────────────────────────────────────────────────
 
 export default async function MyCompensationPage() {
-  const session = await getSession();
-  const nowIso = new Date().toISOString();
+  const [session, locale] = await Promise.all([getSession(), getLocale()]);
+  const m = uiT(locale).myCompensationPage;
 
+  const nowIso = new Date().toISOString();
   const selfId = session?.id;
   const selfParam = selfId ? `salesId=${selfId}` : '';
 
@@ -216,10 +177,24 @@ export default async function MyCompensationPage() {
               `/visits/appointments?assignedSalesId=${selfId}&scheduledFrom=${nowIso}&pageSize=50`,
             ),
           )
-        : Promise.resolve({ data: undefined, error: 'لا توجد جلسة' as string }),
+        : Promise.resolve({ data: undefined, error: m.noSession as string }),
       getReportsCurrency(),
     ]);
   const symbol = currencySymbol(currency);
+
+  function periodLabel(period: string): string {
+    const [y, mo] = period.split('-');
+    const mIdx = parseInt(mo ?? '0', 10) - 1;
+    const name = m.months[mIdx] ?? period;
+    return `${name} ${y}`;
+  }
+
+  function getPlanDisplay(planName: string | null | undefined, source: EntrySource | undefined): string {
+    if (source === 'MANUAL') return m.planManual;
+    if (!planName) return m.planDefault;
+    if (/\b(test|temp|debug|draft|sample|example)\b/i.test(planName)) return m.planDefault;
+    return planName;
+  }
 
   const entries = Array.isArray(bonusRes.data)
     ? bonusRes.data
@@ -260,15 +235,15 @@ export default async function MyCompensationPage() {
     .sort()
     .at(-1);
 
-  const openLeads         = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST').length;
+  const openLeads          = leads.filter((l) => l.stage !== 'WON' && l.stage !== 'LOST').length;
   const activeReservations = reservations.filter((r) => r.status === 'PENDING' || r.status === 'APPROVED').length;
-  const convertedDeals    = reservations.filter((r) => r.status === 'CONVERTED').length;
+  const convertedDeals     = reservations.filter((r) => r.status === 'CONVERTED').length;
 
   const perfOpenLeads          = currentPerf?.openLeadsCount          ?? openLeads;
   const perfUpcomingVisits     = currentPerf?.upcomingVisitsCount      ?? upcomingVisits.length;
   const perfActiveReservations = currentPerf?.activeReservationsCount  ?? activeReservations;
   const perfClosed             = currentPerf?.signedContractsCount      ?? convertedDeals;
-  const perfClosedLabel        = currentPerf ? 'عقود موقّعة هذا الشهر' : 'حجوزات محوّلة (تقديري)';
+  const perfClosedLabel        = currentPerf ? m.perfClosedContractsLabel : m.perfClosedDealsLabel;
 
   const allPerfZero =
     perfOpenLeads === 0 &&
@@ -276,18 +251,26 @@ export default async function MyCompensationPage() {
     perfActiveReservations === 0 &&
     perfClosed === 0;
 
+  const perfBadgeLabels = {
+    none: m.perfBadgeNone,
+    excellent: m.perfBadgeExcellent,
+    onTrack: m.perfBadgeOnTrack,
+    needsEffort: m.perfBadgeNeedsEffort,
+    needsAttention: m.perfBadgeNeedsAttention,
+  };
+
   const activityMetrics = [
     ...(perfOpenLeads > 0
-      ? [{ label: 'فرص مفتوحة',    value: String(perfOpenLeads),          icon: <Users />,         tone: 'brand'   as const }]
+      ? [{ label: m.activityOpenLeads,        value: String(perfOpenLeads),         icon: <Users />,         tone: 'brand'   as const }]
       : []),
     ...(perfUpcomingVisits > 0
-      ? [{ label: 'زيارات قادمة',  value: String(perfUpcomingVisits),      icon: <CalendarClock />, tone: 'neutral' as const }]
+      ? [{ label: m.activityUpcomingVisits,   value: String(perfUpcomingVisits),    icon: <CalendarClock />, tone: 'neutral' as const }]
       : []),
     ...(perfActiveReservations > 0
-      ? [{ label: 'حجوزات نشطة',   value: String(perfActiveReservations),  icon: <BookmarkCheck />, tone: 'success' as const }]
+      ? [{ label: m.activityActiveReservations, value: String(perfActiveReservations), icon: <BookmarkCheck />, tone: 'success' as const }]
       : []),
     ...(perfClosed > 0
-      ? [{ label: 'صفقات مغلقة',   value: String(perfClosed), sub: perfClosedLabel, icon: <FileText />, tone: 'info' as const }]
+      ? [{ label: m.activityClosedDeals, value: String(perfClosed), sub: perfClosedLabel, icon: <FileText />, tone: 'info' as const }]
       : []),
   ];
 
@@ -295,56 +278,53 @@ export default async function MyCompensationPage() {
     <div className="space-y-5">
 
       <PremiumPageHero
-        title="مستحقاتي وأهدافي"
+        title={m.title}
         description={
           session?.role === 'SALES_MANAGER'
-            ? 'بياناتك الشخصية كمندوب — منفصلة عن تقارير الفريق. جميع الأرقام للعرض فقط.'
-            : 'ملخّصك الشخصي لمستحقات العمولات والمكافآت، والأهداف الشهرية، ونشاطك الحالي. للعرض فقط.'
+            ? m.descriptionManager
+            : m.descriptionStaff
         }
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'مستحقاتي وأهدافي' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbSelf },
         ]}
       />
-
-      {/* Read-only notice */}
-    
 
       {/* KPI strip */}
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي المستحق', value: fmtAmt(owedTotal, symbol),    icon: <Hash />,         tone: 'brand',   sub: owedTotal === 0 ? 'لا توجد مستحقات مستحقة' : 'لم يُصرف بعد'    },
-          { label: 'المدفوع',        value: fmtAmt(paidTotal, symbol),    icon: <Banknote />,     tone: 'success', sub: lastPaidAt ? `آخر دفعة: ${formatDate(lastPaidAt)}` : (paidTotal === 0 ? 'لا يوجد صرف بعد' : undefined) },
-          { label: 'المعتمد',        value: fmtAmt(approvedTotal, symbol), icon: <CheckCircle2 />, tone: 'info',    sub: approvedTotal === 0 ? 'لا توجد مستحقات معتمدة' : 'معتمد وقيد الصرف' },
-          { label: 'المعلق',         value: fmtAmt(pendingTotal, symbol),  icon: <Clock />,        tone: 'warning', sub: pendingTotal === 0 ? 'لا توجد مستحقات معلقة' : 'في انتظار الاعتماد' },
+          { label: m.kpiOwed,     value: fmtAmt(owedTotal, symbol),    icon: <Hash />,         tone: 'brand',   sub: owedTotal === 0 ? m.kpiOwedSubNone : m.kpiOwedSubHas    },
+          { label: m.kpiPaid,     value: fmtAmt(paidTotal, symbol),    icon: <Banknote />,     tone: 'success', sub: lastPaidAt ? m.kpiPaidSubLast(formatDate(lastPaidAt)) : (paidTotal === 0 ? m.kpiPaidSubNone : undefined) },
+          { label: m.kpiApproved, value: fmtAmt(approvedTotal, symbol), icon: <CheckCircle2 />, tone: 'info',    sub: approvedTotal === 0 ? m.kpiApprovedSubNone : m.kpiApprovedSubHas },
+          { label: m.kpiPending,  value: fmtAmt(pendingTotal, symbol),  icon: <Clock />,        tone: 'warning', sub: pendingTotal === 0 ? m.kpiPendingSubNone : m.kpiPendingSubHas },
         ]}
       />
 
       {/* Compensation entries */}
-      <PremiumSectionCard icon={<Wallet />} title="مستحقاتي" padded={false}
+      <PremiumSectionCard icon={<Wallet />} title={m.entriesSectionTitle} padded={false}
         trailing={
           !bonusRes.error && entries.length > 0
-            ? <span className="text-2xs font-semibold text-slate-400">{entries.length} سجل</span>
+            ? <span className="text-2xs font-semibold text-slate-400">{m.entriesCountSuffix(entries.length)}</span>
             : undefined
         }
       >
         {bonusRes.error ? (
-          <SectionError />
+          <SectionError msg={m.errorSection} />
         ) : entries.length === 0 ? (
-          <EmptyState icon={<Wallet />} title="لا توجد مستحقات حتى الآن" className="py-12" />
+          <EmptyState icon={<Wallet />} title={m.entriesEmpty} className="py-12" />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500 border-b border-hairline">
                 <tr>
-                  <th className="px-5 py-2.5 text-start font-medium whitespace-nowrap">الفترة</th>
-                  <th className="px-4 py-2.5 text-start font-medium">سبب المستحق</th>
-                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">طريقة الإدخال</th>
-                  <th className="px-4 py-2.5 text-end font-medium whitespace-nowrap">المبلغ</th>
-                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">الحالة</th>
-                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">تاريخ الصرف</th>
-                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">تاريخ الإنشاء</th>
+                  <th className="px-5 py-2.5 text-start font-medium whitespace-nowrap">{m.colPeriod}</th>
+                  <th className="px-4 py-2.5 text-start font-medium">{m.colReason}</th>
+                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">{m.colSource}</th>
+                  <th className="px-4 py-2.5 text-end font-medium whitespace-nowrap">{m.colAmount}</th>
+                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">{m.colStatus}</th>
+                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">{m.colPaidAt}</th>
+                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">{m.colCreatedAt}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -357,16 +337,20 @@ export default async function MyCompensationPage() {
                       <span className="text-sm text-slate-700">{getPlanDisplay(e.rule?.name, e.source)}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', SOURCE_CLS[e.source ?? 'MANUAL'])}>
-                        {SOURCE_LABEL[e.source ?? 'MANUAL']}
+                      <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', e.source === 'CONTRACT_AUTO' ? 'bg-info-100 text-info-700' : 'bg-slate-100 text-slate-600')}>
+                        {m.sourceLabels[e.source ?? 'MANUAL']}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-end whitespace-nowrap">
                       <span className="font-semibold tabular-nums text-slate-800 text-sm">{fmtAmt(e.amount, symbol)}</span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight', STATUS_CLS[e.status])}>
-                        {STATUS_LABEL[e.status]}
+                      <span className={cn('inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight',
+                        e.status === 'PENDING'  ? 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200' :
+                        e.status === 'APPROVED' ? 'bg-info-50 text-info-700 ring-1 ring-inset ring-info-100' :
+                        'bg-success-50 text-success-700 ring-1 ring-inset ring-success-100',
+                      )}>
+                        {m.statusLabels[e.status]}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -386,29 +370,29 @@ export default async function MyCompensationPage() {
       </PremiumSectionCard>
 
       {/* My targets */}
-      <PremiumSectionCard icon={<Target />} title="أهدافي الشهرية" padded={false}
+      <PremiumSectionCard icon={<Target />} title={m.targetsSectionTitle} padded={false}
         trailing={
           !targetsRes.error && targets.length > 0
-            ? <span className="text-2xs font-semibold text-slate-400">{targets.length} هدف</span>
+            ? <span className="text-2xs font-semibold text-slate-400">{m.targetsCountSuffix(targets.length)}</span>
             : undefined
         }
       >
         {targetsRes.error ? (
-          <SectionError />
+          <SectionError msg={m.errorSection} />
         ) : targets.length === 0 ? (
-          <EmptyState icon={<Target />} title="لا توجد أهداف محدّدة بعد" className="py-12" />
+          <EmptyState icon={<Target />} title={m.targetsEmpty} className="py-12" />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm min-w-[740px]">
               <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500 border-b border-hairline">
                 <tr>
-                  <th className="px-5 py-2.5 text-start font-medium whitespace-nowrap">الشهر</th>
-                  <th className="px-4 py-2.5 text-end font-medium whitespace-nowrap">هدف القيمة</th>
-                  <th className="px-4 py-2.5 text-end font-medium whitespace-nowrap">المحقق</th>
-                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">نسبة القيمة</th>
-                  <th className="px-4 py-2.5 text-center font-medium whitespace-nowrap">الوحدات</th>
-                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">نسبة الوحدات</th>
-                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">الأداء</th>
+                  <th className="px-5 py-2.5 text-start font-medium whitespace-nowrap">{m.colMonth}</th>
+                  <th className="px-4 py-2.5 text-end font-medium whitespace-nowrap">{m.colValueTarget}</th>
+                  <th className="px-4 py-2.5 text-end font-medium whitespace-nowrap">{m.colAchieved}</th>
+                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">{m.colValuePct}</th>
+                  <th className="px-4 py-2.5 text-center font-medium whitespace-nowrap">{m.colUnits}</th>
+                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">{m.colUnitsPct}</th>
+                  <th className="px-4 py-2.5 text-start font-medium whitespace-nowrap">{m.colPerformance}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -455,7 +439,7 @@ export default async function MyCompensationPage() {
                         <PctCell pct={perf ? (unitPct ?? 0) : null} neutral={noActivity} />
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <PerfBadge pct={noActivity ? null : (amtPct ?? 0)} />
+                        <PerfBadge pct={noActivity ? null : (amtPct ?? 0)} labels={perfBadgeLabels} />
                       </td>
                     </tr>
                   );
@@ -463,7 +447,7 @@ export default async function MyCompensationPage() {
               </tbody>
             </table>
             <p className="px-5 py-2.5 text-2xs text-slate-400 border-t border-hairline">
-              القيم المحققة مستخرجة من العقود الموقّعة خلال كل شهر.
+              {m.targetsNote}
             </p>
           </div>
         )}
@@ -471,7 +455,7 @@ export default async function MyCompensationPage() {
 
       {/* Current activity */}
       {!allPerfZero && (
-        <PremiumSectionCard icon={<TrendingUp />} title="نشاطي الحالي" description="هذا الشهر">
+        <PremiumSectionCard icon={<TrendingUp />} title={m.activityTitle} description={m.activityDesc}>
           <PremiumMetricStrip variant="compact" metrics={activityMetrics} />
         </PremiumSectionCard>
       )}

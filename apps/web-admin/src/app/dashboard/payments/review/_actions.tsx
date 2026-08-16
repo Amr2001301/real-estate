@@ -4,14 +4,18 @@ import { useActionState, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { approveDepositAction, rejectDepositAction, type DepositFormState } from '../../deposits/actions';
 
 interface ApproveProps {
   depositId: string;
   contractId: string | null;
+  locale?: Locale;
 }
 
-export function ApproveDepositButton({ depositId, contractId }: ApproveProps) {
+export function ApproveDepositButton({ depositId, contractId, locale = 'ar' }: ApproveProps) {
+  const m = uiT(locale).paymentReviewPage.actions;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +40,7 @@ export function ApproveDepositButton({ depositId, contractId }: ApproveProps) {
         onClick={handleClick}
         leftIcon={<Check className="h-3.5 w-3.5" />}
       >
-        تأكيد الدفع
+        {m.approve}
       </Button>
       {error && <span className="text-xs text-danger-700">{error}</span>}
     </div>
@@ -46,9 +50,11 @@ export function ApproveDepositButton({ depositId, contractId }: ApproveProps) {
 interface RejectProps {
   depositId: string;
   contractId: string | null;
+  locale?: Locale;
 }
 
-export function RejectDepositDialog({ depositId, contractId }: RejectProps) {
+export function RejectDepositDialog({ depositId, contractId, locale = 'ar' }: RejectProps) {
+  const m = uiT(locale).paymentReviewPage.actions;
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<DepositFormState, FormData>(rejectDepositAction, {});
   const router = useRouter();
@@ -68,7 +74,7 @@ export function RejectDepositDialog({ depositId, contractId }: RejectProps) {
         onClick={() => setOpen(true)}
         leftIcon={<X className="h-3.5 w-3.5" />}
       >
-        رفض الدفع
+        {m.reject}
       </Button>
     );
   }
@@ -76,22 +82,22 @@ export function RejectDepositDialog({ depositId, contractId }: RejectProps) {
   return (
     <div className="absolute inset-0 z-40 flex items-end justify-end bg-slate-900/40 p-6 sm:items-center sm:justify-center">
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
-        <h3 className="text-base font-semibold text-slate-900">رفض إثبات الدفع</h3>
+        <h3 className="text-base font-semibold text-slate-900">{m.rejectTitle}</h3>
         <p className="mt-1 text-xs text-slate-500">
-          سيتلقّى العميل إشعارًا بأن الإثبات قد رُفض، مع ملخّص من سبب الرفض (حتى 140 حرفًا).
+          {m.rejectDesc}
         </p>
         <form action={formAction} className="mt-4 space-y-3">
           <input type="hidden" name="depositId" value={depositId} />
           <input type="hidden" name="contractId" value={contractId ?? ''} />
           <label className="block text-sm font-medium text-slate-700">
-            سبب الرفض
+            {m.rejectReasonLabel}
             <textarea
               name="reason"
               required
               rows={4}
               maxLength={2000}
               className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
-              placeholder="مثلاً: المبلغ لا يطابق قيمة القسط، أو الإيصال غير واضح…"
+              placeholder={m.rejectPlaceholder}
             />
           </label>
           {state.error && (
@@ -102,10 +108,10 @@ export function RejectDepositDialog({ depositId, contractId }: RejectProps) {
           )}
           <div className="flex justify-end gap-2 pt-1">
             <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
-              إلغاء
+              {m.cancelBtn}
             </Button>
             <Button type="submit" variant="primary" size="sm">
-              تأكيد الرفض
+              {m.confirmRejectBtn}
             </Button>
           </div>
         </form>

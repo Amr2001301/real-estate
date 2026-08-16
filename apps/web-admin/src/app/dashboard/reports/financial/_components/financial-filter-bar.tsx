@@ -8,22 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import type { CompareMode, PeriodMode } from '@/lib/report-filter';
-
-const MONTHS_AR = [
-  { v: '1',  l: 'يناير' },   { v: '2',  l: 'فبراير' },
-  { v: '3',  l: 'مارس' },    { v: '4',  l: 'أبريل' },
-  { v: '5',  l: 'مايو' },    { v: '6',  l: 'يونيو' },
-  { v: '7',  l: 'يوليو' },   { v: '8',  l: 'أغسطس' },
-  { v: '9',  l: 'سبتمبر' },  { v: '10', l: 'أكتوبر' },
-  { v: '11', l: 'نوفمبر' },  { v: '12', l: 'ديسمبر' },
-];
-
-const QUARTERS_AR = [
-  { v: '1', l: 'الربع الأول (يناير – مارس)' },
-  { v: '2', l: 'الربع الثاني (أبريل – يونيو)' },
-  { v: '3', l: 'الربع الثالث (يوليو – سبتمبر)' },
-  { v: '4', l: 'الربع الرابع (أكتوبر – ديسمبر)' },
-];
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 function buildYears(): number[] {
   const y = new Date().getFullYear();
@@ -34,10 +20,6 @@ const YEARS = buildYears();
 const DATE_CLS =
   'h-8 rounded-lg border border-hairline bg-white px-2.5 text-xs text-slate-700 ' +
   'focus:outline-none focus:ring-2 focus:ring-brand-500/30 focus:border-brand-400 shadow-xs transition-colors';
-
-const MODE_LABEL: Record<PeriodMode, string> = {
-  monthly: 'شهري', quarterly: 'ربع سنوي', yearly: 'سنوي', custom: 'نطاق مخصص',
-};
 
 export interface FinancialFilterBarProps {
   defaultMode: PeriodMode;
@@ -52,6 +34,7 @@ export interface FinancialFilterBarProps {
   defaultType?: string;
   defaultShowFilters?: boolean;
   projects: { id: string; name: string }[];
+  locale?: Locale;
 }
 
 export function FinancialFilterBar({
@@ -60,8 +43,10 @@ export function FinancialFilterBar({
   defaultProjectId = '', defaultQ = '', defaultType = '',
   defaultShowFilters = false,
   projects,
+  locale = 'ar',
 }: FinancialFilterBarProps) {
   const router = useRouter();
+  const fb = uiT(locale).financialFilterBar;
 
   const [mode,        setMode]        = useState<PeriodMode>(defaultMode);
   const [month,       setMonth]       = useState(defaultMonth);
@@ -127,10 +112,10 @@ export function FinancialFilterBar({
             value={mode}
             onChange={(e) => setMode(e.target.value as PeriodMode)}
             className="w-36"
-            aria-label="نوع الفترة"
+            aria-label={fb.periodLabel}
           >
-            {(Object.keys(MODE_LABEL) as PeriodMode[]).map((m) => (
-              <option key={m} value={m}>{MODE_LABEL[m]}</option>
+            {(Object.keys(fb.periodModes) as PeriodMode[]).map((pm) => (
+              <option key={pm} value={pm}>{fb.periodModes[pm]}</option>
             ))}
           </Select>
 
@@ -141,7 +126,7 @@ export function FinancialFilterBar({
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
               className="w-24"
-              aria-label="السنة"
+              aria-label={fb.yearLabel}
             >
               {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
             </Select>
@@ -154,9 +139,9 @@ export function FinancialFilterBar({
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
               className="w-36"
-              aria-label="الشهر"
+              aria-label={fb.monthLabel}
             >
-              {MONTHS_AR.map((m) => <option key={m.v} value={m.v}>{m.l}</option>)}
+              {fb.months.map((mo) => <option key={mo.v} value={mo.v}>{mo.l}</option>)}
             </Select>
           )}
 
@@ -167,9 +152,9 @@ export function FinancialFilterBar({
               value={quarter}
               onChange={(e) => setQuarter(Number(e.target.value))}
               className="w-56"
-              aria-label="الربع"
+              aria-label={fb.quarterLabel}
             >
-              {QUARTERS_AR.map((qr) => <option key={qr.v} value={qr.v}>{qr.l}</option>)}
+              {fb.quarters.map((qr) => <option key={qr.v} value={qr.v}>{qr.l}</option>)}
             </Select>
           )}
 
@@ -177,23 +162,23 @@ export function FinancialFilterBar({
           {mode === 'custom' && (
             <>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-500 shrink-0">من</span>
+                <span className="text-xs text-slate-500 shrink-0">{fb.fromLabel}</span>
                 <input
                   type="date"
                   value={dateFrom}
                   onChange={(e) => setFrom(e.target.value)}
                   className={DATE_CLS}
-                  aria-label="من تاريخ"
+                  aria-label={fb.fromAriaLabel}
                 />
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-slate-500 shrink-0">إلى</span>
+                <span className="text-xs text-slate-500 shrink-0">{fb.toLabel}</span>
                 <input
                   type="date"
                   value={dateTo}
                   onChange={(e) => setTo(e.target.value)}
                   className={DATE_CLS}
-                  aria-label="إلى تاريخ"
+                  aria-label={fb.toAriaLabel}
                 />
               </div>
             </>
@@ -207,19 +192,19 @@ export function FinancialFilterBar({
             value={compare}
             onChange={(e) => setCompare(e.target.value as CompareMode)}
             className="w-48"
-            aria-label="وضع المقارنة"
+            aria-label={fb.compareLabel}
           >
-            <option value="none">بدون مقارنة</option>
-            <option value="previous-period">الفترة السابقة</option>
-            <option value="previous-month">الشهر السابق</option>
-            <option value="yoy">نفس الفترة من العام السابق</option>
+            <option value="none">{fb.compareOptions.none}</option>
+            <option value="previous-period">{fb.compareOptions.prevPeriod}</option>
+            <option value="previous-month">{fb.compareOptions.prevMonth}</option>
+            <option value="yoy">{fb.compareOptions.yoy}</option>
           </Select>
 
           {/* Apply + Clear */}
           <div className="flex items-center gap-1.5 ms-auto">
-            <Button type="submit" variant="primary" size="sm">تطبيق</Button>
+            <Button type="submit" variant="primary" size="sm">{fb.applyBtn}</Button>
             {hasAdvanced && (
-              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>مسح</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>{fb.clearBtn}</Button>
             )}
           </div>
 
@@ -235,7 +220,7 @@ export function FinancialFilterBar({
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? fb.hideFilters : fb.showFilters}
             {hasAdvanced && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -249,42 +234,41 @@ export function FinancialFilterBar({
           <div className="border-t border-hairline bg-surface-muted/30 px-4 py-3.5">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">المشروع</label>
+                <label className="text-[11px] font-medium text-slate-400">{fb.advancedPanel.projectLabel}</label>
                 <Select
                   inputSize="sm"
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
-                  aria-label="المشروع"
+                  aria-label={fb.advancedPanel.projectLabel}
                 >
-                  <option value="">كل المشاريع</option>
+                  <option value="">{fb.advancedPanel.allProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">العميل</label>
+                <label className="text-[11px] font-medium text-slate-400">{fb.advancedPanel.clientLabel}</label>
                 <Input
                   inputSize="sm"
-                  placeholder="ابحث باسم العميل"
+                  placeholder={fb.advancedPanel.clientPlaceholder}
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  aria-label="العميل"
+                  aria-label={fb.advancedPanel.clientLabel}
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">نوع الدفعة</label>
+                <label className="text-[11px] font-medium text-slate-400">{fb.advancedPanel.typeLabel}</label>
                 <Select
                   inputSize="sm"
                   value={type}
                   onChange={(e) => setType(e.target.value)}
-                  aria-label="نوع الدفعة"
+                  aria-label={fb.advancedPanel.typeLabel}
                 >
-                  <option value="">كل الأنواع</option>
-                  <option value="BOOKING_AMOUNT">مبلغ الحجز</option>
-                  <option value="DOWN_PAYMENT">دفعة أولى</option>
-                  <option value="INSTALLMENT">قسط شهري</option>
-                  <option value="FINAL_PAYMENT">دفعة أخيرة</option>
+                  <option value="">{fb.advancedPanel.allTypes}</option>
+                  {(Object.keys(fb.advancedPanel.typeOptions) as Array<keyof typeof fb.advancedPanel.typeOptions>).map((k) => (
+                    <option key={k} value={k}>{fb.advancedPanel.typeOptions[k]}</option>
+                  ))}
                 </Select>
               </div>
             </div>

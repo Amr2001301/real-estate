@@ -5,6 +5,8 @@ import { Star } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { submitSalesFeedbackAction } from '../actions';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 /**
  * Gap 7 — sales/manager/admin records their own feedback on a COMPLETED visit.
@@ -16,11 +18,14 @@ export function SalesFeedbackForm({
   appointmentId,
   initialRating,
   initialNotes,
+  locale = 'ar',
 }: {
   appointmentId: string;
   initialRating: number | null;
   initialNotes: string | null;
+  locale?: Locale;
 }) {
+  const m = uiT(locale).pages.visitsAppointmentDetail;
   const [rating, setRating] = useState(initialRating ?? 0);
   const [hover, setHover] = useState(0);
   const [notes, setNotes] = useState(initialNotes ?? '');
@@ -48,7 +53,7 @@ export function SalesFeedbackForm({
           <button
             key={n}
             type="button"
-            aria-label={`${n} نجوم`}
+            aria-label={m.salesFeedbackStarAriaLabel(String(n))}
             onClick={() => setRating(n === rating ? 0 : n)}
             onMouseEnter={() => setHover(n)}
             onMouseLeave={() => setHover(0)}
@@ -69,14 +74,14 @@ export function SalesFeedbackForm({
         onChange={(e) => setNotes(e.target.value)}
         maxLength={1000}
         rows={2}
-        placeholder="ملاحظات المندوب عن الزيارة (اختياري إن أضفت تقييماً)"
+        placeholder={m.salesFeedbackPlaceholder}
         className="w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15"
         disabled={pending}
       />
       {error && <p className="text-xs text-danger-700">{error}</p>}
-      {ok && <p className="text-xs text-success-700">تم حفظ ملاحظاتك.</p>}
+      {ok && <p className="text-xs text-success-700">{m.salesFeedbackSaved}</p>}
       <Button type="button" variant="primary" size="sm" onClick={submit} disabled={pending}>
-        {pending ? 'جارٍ الحفظ…' : 'حفظ ملاحظات المندوب'}
+        {pending ? m.salesFeedbackSaving : m.salesFeedbackSaveBtn}
       </Button>
     </div>
   );

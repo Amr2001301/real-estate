@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { NewMaintenanceForm } from './new-maintenance-form';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,10 @@ export default async function NewMaintenancePage({
   searchParams: Promise<{ err?: string }>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale);
+  const n = m.pages.maintenanceNew;
+
   const [customersRes, adminsRes] = await Promise.all([
     safe(api.get<Paged<User>>('/users?role=CUSTOMER&pageSize=200')),
     safe(api.get<Paged<User>>('/users?role=ADMIN,MAINTENANCE_SUPERVISOR&pageSize=100')),
@@ -34,7 +40,7 @@ export default async function NewMaintenancePage({
                   href={'/dashboard' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  لوحة التحكم
+                  {m.common.breadcrumbHome}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -43,27 +49,27 @@ export default async function NewMaintenancePage({
                   href={'/dashboard/maintenance' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  الصيانة
+                  {m.nav.items.maintenance}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">طلب جديد</span>
+                <span className="font-semibold text-slate-600">{n.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                طلب صيانة جديد
+                {n.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                إنشاء طلب صيانة نيابة عن العميل. عند اختيار مسؤول يبدأ الطلب بحالة «مسند»، وإلا «مفتوح».
+                {n.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              جديد
+              {n.badge}
             </span>
           </div>
         </div>
@@ -73,13 +79,13 @@ export default async function NewMaintenancePage({
         <div className="rounded-xl bg-warning-50 border border-warning-100 text-warning-700 px-4 py-3 text-sm flex items-start gap-2">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">تعذّر إنشاء الطلب</p>
+            <p className="font-semibold">{n.errorTitle}</p>
             <p className="text-xs mt-0.5 text-warning-700/80">{sp.err}</p>
           </div>
         </div>
       )}
 
-      <NewMaintenanceForm customers={customers} admins={admins} />
+      <NewMaintenanceForm customers={customers} admins={admins} locale={locale} />
     </div>
   );
 }

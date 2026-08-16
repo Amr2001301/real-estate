@@ -1,21 +1,15 @@
 import { FileText, Building2, Home, Wallet, Calendar, CalendarClock, Clock } from 'lucide-react';
 import { formatPrice, formatNumber, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeContract } from '@/lib/api-types';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { AccountCard, AccountCardIcon } from '@/components/account/AccountCard';
 import { DocumentDownloadByOwner } from '@/components/account/DocumentDownloadByOwner';
 
-/** Per-frequency adverb for the instalment capsule (e.g. "شهريًا"). */
-const FREQUENCY_ADVERB: Record<string, string> = {
-  MONTHLY: 'شهريًا',
-  QUARTERLY: 'ربع سنوي',
-  SEMI_ANNUAL: 'نصف سنوي',
-  YEARLY: 'سنويًا',
-};
-
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, locale: string): string {
   if (!iso) return '—';
   try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
   } catch {
     return '—';
   }
@@ -34,7 +28,17 @@ function FootItem({ icon: Icon, label, value }: { icon: typeof Calendar; label: 
   );
 }
 
-export function ContractCard({ contract }: { contract: MeContract }) {
+export async function ContractCard({ contract }: { contract: MeContract }) {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.contracts;
+
+  const FREQUENCY_ADVERB: Record<string, string> = {
+    MONTHLY: m.frequencyMonthly,
+    QUARTERLY: m.frequencyQuarterly,
+    SEMI_ANNUAL: m.frequencySemiAnnual,
+    YEARLY: m.frequencyYearly,
+  };
+
   const project = contract.unit?.building?.phase?.project ?? null;
   const projectName = project ? pickAr(project.name) : '';
   const unitLabel = contract.unit ? `${unitTypeLabel(contract.unit.type)} · ${contract.unit.code}` : '';
@@ -50,7 +54,7 @@ export function ContractCard({ contract }: { contract: MeContract }) {
             <FileText className="h-5 w-5" aria-hidden />
           </AccountCardIcon>
           <div className="min-w-0">
-            <h3 className="text-base font-bold text-ink-strong">عقد رقم {contract.contractNumber ?? '—'}</h3>
+            <h3 className="text-base font-bold text-ink-strong">{m.contractPrefix} {contract.contractNumber ?? '—'}</h3>
             {subtitle && (
               <p className="mt-1 flex items-start gap-1.5 text-xs text-ink-muted">
                 {contract.unit ? (
@@ -67,14 +71,14 @@ export function ContractCard({ contract }: { contract: MeContract }) {
         {contract.hasDocument === false ? (
           <span className="inline-flex shrink-0 cursor-not-allowed items-center gap-1.5 rounded-xl border border-hairline/60 bg-surface-soft px-3.5 py-2 text-xs font-medium text-ink-muted/60">
             <FileText className="h-4 w-4" aria-hidden />
-            العقد غير متاح بعد
+            {m.documentUnavailable}
           </span>
         ) : (
           <DocumentDownloadByOwner
             ownerType="CONTRACT"
             ownerId={contract.id}
-            label="تحميل العقد PDF"
-            emptyLabel="العقد غير متاح بعد"
+            label={m.downloadPdf}
+            emptyLabel={m.documentUnavailable}
             variant="compact"
           />
         )}
@@ -83,7 +87,7 @@ export function ContractCard({ contract }: { contract: MeContract }) {
       {/* ── Financial grid: grounded on a soft shaded panel ── */}
       <div className="my-4 grid grid-cols-1 items-center gap-4 rounded-xl bg-surface-soft/40 p-4 sm:grid-cols-2">
         <div className="min-w-0">
-          <span className="mb-0.5 block text-[11px] font-medium text-ink-muted">إجمالي العقد</span>
+          <span className="mb-0.5 block text-[11px] font-medium text-ink-muted">{m.totalAmount}</span>
           <div className="font-display text-lg font-bold tracking-tight text-ink-strong" dir="auto">
             {formatPrice(contract.totalAmount)}
           </div>
@@ -91,7 +95,7 @@ export function ContractCard({ contract }: { contract: MeContract }) {
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 sm:justify-end">
           <div className="min-w-0">
-            <span className="mb-0.5 block text-[11px] font-medium text-ink-muted">الدفعة الأولى</span>
+            <span className="mb-0.5 block text-[11px] font-medium text-ink-muted">{m.downPayment}</span>
             <div className="text-sm font-semibold text-ink-strong" dir="auto">
               {formatPrice(contract.downPayment)}
             </div>
@@ -100,7 +104,7 @@ export function ContractCard({ contract }: { contract: MeContract }) {
             <div className="inline-flex items-center gap-1.5 rounded-xl border border-warning/20 bg-warning/10 px-3 py-1.5 text-xs font-semibold text-warning">
               <Wallet className="h-3.5 w-3.5 shrink-0" aria-hidden />
               <span dir="auto">
-                {formatPrice(plan.monthlyAmount)} / {FREQUENCY_ADVERB[plan.frequency] ?? 'شهريًا'}
+                {formatPrice(plan.monthlyAmount)} / {FREQUENCY_ADVERB[plan.frequency] ?? m.frequencyMonthly}
               </span>
             </div>
           )}
@@ -111,11 +115,11 @@ export function ContractCard({ contract }: { contract: MeContract }) {
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-hairline/80 pt-3 text-[11px]">
         <FootItem
           icon={Calendar}
-          label="تاريخ التوقيع"
-          value={contract.signedAt ? formatDate(contract.signedAt) : 'غير موقّع'}
+          label={m.signedAtLabel}
+          value={contract.signedAt ? formatDate(contract.signedAt, locale) : m.unsignedLabel}
         />
-        {plan && <FootItem icon={CalendarClock} label="بداية الخطة" value={formatDate(plan.startsAt)} />}
-        {plan && <FootItem icon={Clock} label="مدة السداد" value={`${formatNumber(plan.totalMonths)} شهرًا`} />}
+        {plan && <FootItem icon={CalendarClock} label={m.planStartLabel} value={formatDate(plan.startsAt, locale)} />}
+        {plan && <FootItem icon={Clock} label={m.durationLabel} value={`${formatNumber(plan.totalMonths)} ${m.monthsSuffix}`} />}
       </div>
     </AccountCard>
   );

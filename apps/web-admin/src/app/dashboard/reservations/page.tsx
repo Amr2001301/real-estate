@@ -4,6 +4,7 @@ import {
   XCircle, CalendarX2, AlertCircle, SlidersHorizontal,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
 import type { Paged, Reservation } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
@@ -21,6 +22,7 @@ import {
   PremiumFilterBar,
   PremiumFilterField,
 } from '@/components/premium';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,13 +92,15 @@ export default async function ReservationsPage({
   if (sp.dateFrom) qs.set('dateFrom', sp.dateFrom);
   if (sp.dateTo) qs.set('dateTo', sp.dateTo);
 
-  const [statsRes, reservationsRes, projectsRes, salesRes, currency] = await Promise.all([
+  const [statsRes, reservationsRes, projectsRes, salesRes, currency, locale] = await Promise.all([
     safe(api.get<Stats>('/reservations/stats')),
     safe(api.get<Paged<Reservation>>(`/reservations?${qs}`)),
     safe(api.get<{ data: ProjectOption[] }>('/projects?pageSize=100')),
     safe(api.get<{ data: SalesUser[] }>('/users?role=SALES,SALES_MANAGER&pageSize=100')),
     getReportsCurrency(),
+    getLocale(),
   ]);
+  const m = uiT(locale).pages.reservations;
   const symbol = currencySymbol(currency);
 
   const stats = statsRes.data;
@@ -110,16 +114,16 @@ export default async function ReservationsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="الحجوزات"
-        description="متابعة حجوزات العملاء وحالاتها عبر المشاريع والوحدات."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الحجوزات' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <Link href="/dashboard/reservations/new">
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              إنشاء حجز جديد
+              {m.addBtn}
             </Button>
           </Link>
         }
@@ -130,11 +134,11 @@ export default async function ReservationsPage({
         variant="compact"
         cols={5}
         metrics={[
-          { label: 'إجمالي الحجوزات', value: stats?.total   ?? '—', icon: <BookmarkCheck />, tone: 'neutral', primary: true },
-          { label: 'قيد المراجعة',    value: stats?.pending  ?? '—', icon: <Clock />,         tone: 'warning' },
-          { label: 'تمت الموافقة',    value: stats?.approved ?? '—', icon: <CheckCircle2 />,  tone: 'success' },
-          { label: 'مرفوضة',          value: stats?.rejected ?? '—', icon: <XCircle />,       tone: 'danger'  },
-          { label: 'منتهية / ملغاة',  value: (stats?.expired ?? 0) + (stats?.cancelled ?? 0), icon: <CalendarX2 />, tone: 'info' },
+          { label: m.kpi.total,           value: stats?.total   ?? '—', icon: <BookmarkCheck />, tone: 'neutral', primary: true },
+          { label: m.kpi.underReview,     value: stats?.pending  ?? '—', icon: <Clock />,         tone: 'warning' },
+          { label: m.kpi.approved,        value: stats?.approved ?? '—', icon: <CheckCircle2 />,  tone: 'success' },
+          { label: m.kpi.rejected,        value: stats?.rejected ?? '—', icon: <XCircle />,       tone: 'danger'  },
+          { label: m.kpi.cancelledExpired, value: (stats?.expired ?? 0) + (stats?.cancelled ?? 0), icon: <CalendarX2 />, tone: 'info' },
         ]}
       />
 
@@ -147,31 +151,31 @@ export default async function ReservationsPage({
 
         {/* Search — flex-1 to fill available space */}
         <div className="flex-1 min-w-[160px]">
-          <label htmlFor="res-q" className="sr-only">بحث</label>
+          <label htmlFor="res-q" className="sr-only">{m.filter.searchLabel}</label>
           <Input
             id="res-q"
             name="q"
             inputSize="sm"
             defaultValue={sp.q ?? ''}
-            placeholder="اسم العميل أو رقم الحجز…"
+            placeholder={m.filter.searchPlaceholder}
             className="w-full"
           />
         </div>
 
-        <PremiumFilterField label="الحالة" htmlFor="res-status">
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="res-status">
           <Select id="res-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
-            <option value="">كل الحالات</option>
-            <option value="PENDING">قيد المراجعة</option>
-            <option value="APPROVED">تمت الموافقة</option>
-            <option value="REJECTED">مرفوض</option>
-            <option value="CANCELLED">ملغي</option>
-            <option value="EXPIRED">منتهي</option>
+            <option value="">{m.filter.allStatuses}</option>
+            <option value="PENDING">{m.filter.pending}</option>
+            <option value="APPROVED">{m.filter.approved}</option>
+            <option value="REJECTED">{m.filter.rejected}</option>
+            <option value="CANCELLED">{m.filter.cancelled}</option>
+            <option value="EXPIRED">{m.filter.expired}</option>
           </Select>
         </PremiumFilterField>
 
-        <PremiumFilterField label="المشروع" htmlFor="res-projectId">
+        <PremiumFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="res-projectId">
           <Select id="res-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
-            <option value="">كل المشاريع</option>
+            <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
@@ -180,10 +184,10 @@ export default async function ReservationsPage({
 
         {/* Action buttons — before advanced panel so they stay in row 1 */}
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {(sp.q || sp.status || sp.projectId || hasAdvancedFilters) && (
             <Link href="/dashboard/reservations">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
@@ -196,7 +200,7 @@ export default async function ReservationsPage({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filter.advancedHide : m.filter.advancedShow}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">!</span>
             )}
@@ -208,20 +212,20 @@ export default async function ReservationsPage({
           <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">المندوب</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.agentLabel}</label>
                 <Select name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
-                  <option value="">الكل</option>
+                  <option value="">{m.filter.allAgents}</option>
                   {salesOptions.map((s) => (
                     <option key={s.id} value={s.id}>{salesActorLabel(s)}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">من تاريخ</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.dateFrom}</label>
                 <Input name="dateFrom" type="date" inputSize="sm" defaultValue={sp.dateFrom ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">إلى تاريخ</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.dateTo}</label>
                 <Input name="dateTo" type="date" inputSize="sm" defaultValue={sp.dateTo ?? ''} />
               </div>
             </div>
@@ -241,15 +245,15 @@ export default async function ReservationsPage({
       <DataTable
         rowKey={(r) => r.id}
         rows={reservations}
-        emptyMessage="لا توجد حجوزات"
+        emptyMessage={m.empty}
         columns={[
           {
             key: 'number',
-            header: 'رقم الحجز',
+            header: m.cols.id,
             cell: (r) => (
               <Link
                 href={`/dashboard/reservations/${r.id}`}
-                title="عرض تفاصيل الحجز"
+                title={m.detailTitle}
                 className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
               >
                 {r.reservationNumber ?? r.id.slice(0, 8)}
@@ -258,7 +262,7 @@ export default async function ReservationsPage({
           },
           {
             key: 'client',
-            header: 'العميل',
+            header: m.cols.client,
             cell: (r) => {
               const name = r.client?.fullName ?? r.lead?.fullName ?? '—';
               const phone = r.client?.phone ?? r.lead?.phone ?? '';
@@ -272,25 +276,25 @@ export default async function ReservationsPage({
           },
           {
             key: 'project',
-            header: 'المشروع / الوحدة',
+            header: m.cols.project,
             cell: (r) => {
               const project = r.unit?.building?.phase?.project;
               return (
                 <div>
                   <p>{project ? tx(project.name) : '—'}</p>
-                  {r.unit && <p className="text-xs text-slate-500">وحدة: {r.unit.code}</p>}
+                  {r.unit && <p className="text-xs text-slate-500">{m.unitPrefix} {r.unit.code}</p>}
                 </div>
               );
             },
           },
           {
             key: 'sales',
-            header: 'المندوب',
+            header: m.cols.agent,
             cell: (r) => r.sales?.fullName ?? '—',
           },
           {
             key: 'booking',
-            header: 'مبلغ الحجز',
+            header: m.cols.amount,
             cell: (r) => {
               const amount = Number(r.bookingAmount);
               return (
@@ -300,30 +304,30 @@ export default async function ReservationsPage({
                       ? `${amount.toLocaleString('ar-SA')} ${symbol}`
                       : '—'}
                   </span>
-                  <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} />
+                  <ReservationBookingPaymentBadge status={r.bookingPaymentStatus} locale={locale} />
                 </div>
               );
             },
           },
           {
             key: 'status',
-            header: 'الحالة',
-            cell: (r) => <ReservationStatusBadge status={r.status} />,
+            header: m.cols.status,
+            cell: (r) => <ReservationStatusBadge status={r.status} locale={locale} />,
           },
           {
             key: 'expires',
-            header: 'تاريخ الانتهاء',
+            header: m.cols.expiresAt,
             cell: (r) => <span className="text-xs">{formatDateTime(r.expiresAt)}</span>,
           },
           {
             key: 'created',
-            header: 'تاريخ الإنشاء',
+            header: m.cols.created,
             cell: (r) => formatDate(r.createdAt),
           },
           {
             key: 'actions',
             header: '',
-            cell: (r) => <ReservationActions reservation={r} />,
+            cell: (r) => <ReservationActions reservation={r} locale={locale} />,
           },
         ]}
       />
@@ -336,6 +340,7 @@ export default async function ReservationsPage({
           total={paginationMeta.total}
           basePath="/dashboard/reservations"
           params={sp}
+          locale={locale}
         />
       )}
     </div>

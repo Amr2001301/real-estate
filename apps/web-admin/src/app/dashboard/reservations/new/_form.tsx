@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { LeadStage } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { computeDurationOption } from '@/lib/installment-calc';
 import { createReservationAction, type ReservationFormState } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
@@ -19,8 +21,6 @@ interface Unit {
   id: string;
   code: string;
   type: string;
-  // P8 — preview source for PERCENTAGE booking mode. Display only; backend
-  // recomputes from the canonical Unit row when the reservation is created.
   price?: string | number;
   building?: {
     phase?: { projectId?: string; project?: { id: string; name: { ar: string; en: string } } };
@@ -71,6 +71,7 @@ interface Props {
   clients: Client[];
   salesOptions: SalesUser[];
   plans: PlanOption[];
+  locale?: Locale;
 }
 
 function toFiniteOrEmpty(v: unknown): string {
@@ -79,46 +80,34 @@ function toFiniteOrEmpty(v: unknown): string {
   return Number.isFinite(n) ? String(n) : '';
 }
 
-const STAGE_LABELS: Record<LeadStage, string> = {
-  NEW: 'جديد',
-  INTERESTED: 'مهتم',
-  VISIT: 'زيارة',
-  NEGOTIATION: 'تفاوض',
-  WON: 'تم البيع',
-  LOST: 'خسارة',
-};
-
-const ROLE_LABELS: Record<'CLIENT' | 'CUSTOMER', string> = {
-  CLIENT: 'عميل مسجل',
-  CUSTOMER: 'عميل مشتري',
-};
-
-function formatLeadLabel(l: Lead): string {
-  const project = l.projectInterest?.name.ar ?? 'بدون تحديد مشروع';
-  const stage = STAGE_LABELS[l.stage] ?? l.stage;
-  return `${l.fullName} — ${project} — ${stage} — ${l.phone}`;
-}
-
-function formatClientLabel(c: Client): string {
-  const role = ROLE_LABELS[c.role];
-  const phone = c.phone ?? 'بدون هاتف';
-  return `${c.fullName} — ${role} — ${phone}`;
-}
-
-const NAV_SECTIONS = [
-  { id: 'section-unit',    num: '01', label: 'الوحدة العقارية',            sub: 'اختيار الوحدة المراد حجزها' },
-  { id: 'section-client',  num: '02', label: 'العميل',                     sub: 'فرصة CRM أو عميل مسجل' },
-  { id: 'section-details', num: '03', label: 'تفاصيل الحجز',               sub: 'المندوب والمدة والملاحظات' },
-  { id: 'section-plan',    num: '04', label: 'خطة التقسيط ومبلغ الحجز',   sub: 'الخطة والمبلغ ومدة التقسيط' },
-];
-
 export default function NewReservationForm({
   units,
   leads,
   clients,
   salesOptions,
   plans,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.reservationsForm;
+
+  const STAGE_LABELS: Record<LeadStage, string> = {
+    NEW: m.stageNew, INTERESTED: m.stageInterested, VISIT: m.stageVisit,
+    NEGOTIATION: m.stageNegotiation, WON: m.stageWon, LOST: m.stageLost,
+  };
+  const ROLE_LABELS: Record<'CLIENT' | 'CUSTOMER', string> = {
+    CLIENT: m.roleClient, CUSTOMER: m.roleCustomer,
+  };
+  function formatLeadLabel(l: Lead): string {
+    const project = l.projectInterest?.name.ar ?? m.noProject;
+    const stage = STAGE_LABELS[l.stage] ?? l.stage;
+    return `${l.fullName} — ${project} — ${stage} — ${l.phone}`;
+  }
+  function formatClientLabel(c: Client): string {
+    const role = ROLE_LABELS[c.role];
+    const phone = c.phone ?? m.noPhone;
+    return `${c.fullName} — ${role} — ${phone}`;
+  }
+
   const [state, formAction] = useActionState<ReservationFormState, FormData>(
     createReservationAction,
     {},
@@ -127,9 +116,6 @@ export default function NewReservationForm({
   const [selectedUnitId, setSelectedUnitId] = useState('');
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [selectedDurationOptionId, setSelectedDurationOptionId] = useState('');
-  // P8 — booking amount mode. PLAN keeps the legacy plan-driven behavior
-  // (server copies plan.reservationAmount; admin doesn't enter a value);
-  // FIXED + PERCENTAGE are admin overrides.
   const [bookingAmountMode, setBookingAmountMode] = useState<'PLAN' | 'FIXED' | 'PERCENTAGE'>('PLAN');
   const [fixedAmountInput, setFixedAmountInput] = useState('');
   const [percentInput, setPercentInput] = useState('');
@@ -141,7 +127,6 @@ export default function NewReservationForm({
   const selectedProjectId =
     selectedUnit?.building?.phase?.projectId ?? selectedUnit?.building?.phase?.project?.id ?? '';
 
-  // Plans applicable to the selected unit: same project AND (plan.unitId is null OR matches unit)
   const availablePlans = useMemo(() => {
     if (!selectedUnitId || !selectedProjectId) return [] as PlanOption[];
     return plans.filter(
@@ -153,14 +138,12 @@ export default function NewReservationForm({
 
   function handleUnitChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setSelectedUnitId(e.target.value);
-    // Reset plan + duration when unit changes (different project ⇒ different plans)
     setSelectedPlanId('');
     setSelectedDurationOptionId('');
   }
 
   function handlePlanChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setSelectedPlanId(e.target.value);
-    // Force the user to pick a duration explicitly — never auto-select.
     setSelectedDurationOptionId('');
   }
 
@@ -178,8 +161,6 @@ export default function NewReservationForm({
   ) ?? null;
   const durationMissing = planHasDurations && !selectedDuration;
 
-  // P8 — preview of the booking amount the server will compute for the chosen
-  // mode. Mirrors the backend math: unit.price × percent / 100, rounded to 2dp.
   const selectedUnitPrice = useMemo(() => {
     if (!selectedUnit?.price) return 0;
     const n = Number(selectedUnit.price);
@@ -193,7 +174,6 @@ export default function NewReservationForm({
     return Math.round(selectedUnitPrice * (p / 100) * 100) / 100;
   }, [bookingAmountMode, percentInput, selectedUnitPrice]);
 
-  // Live snapshot preview using the same formula the backend uses
   const previewSnapshot = useMemo(() => {
     if (!selectedPlan || !selectedDuration) return null;
     const netPrice = Number(selectedPlan.netPrice ?? selectedPlan.reservationAmount);
@@ -206,6 +186,13 @@ export default function NewReservationForm({
     });
   }, [selectedPlan, selectedDuration]);
 
+  const navSections = [
+    { id: 'section-unit',    num: '01', label: m.nav01Label, sub: m.nav01Sub },
+    { id: 'section-client',  num: '02', label: m.nav02Label, sub: m.nav02Sub },
+    { id: 'section-details', num: '03', label: m.nav03Label, sub: m.nav03Sub },
+    { id: 'section-plan',    num: '04', label: m.nav04Label, sub: m.nav04Sub },
+  ];
+
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
@@ -216,20 +203,20 @@ export default function NewReservationForm({
       )}
 
       <PremiumFormLayout
-        navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="الحجز يبدأ بحالة قيد المراجعة. يمكن اعتماده أو رفضه من صفحة التفاصيل."
+        navSections={navSections}
+        sidebarBadge={m.sidebarBadge}
+        sidebarInfo={m.sidebarInfo}
       >
-        {/* ── Section 01: الوحدة العقارية ── */}
+        {/* ── Section 01: Unit ── */}
         <PremiumFormPanel
           id="section-unit"
           number="01"
-          title="الوحدة العقارية"
-          description="اختر الوحدة المراد حجزها. يجب أن تكون الوحدة في حالة متاحة."
+          title={m.p1Title}
+          description={m.p1Desc}
         >
-          <Field label="الوحدة" name="unitId" required>
+          <Field label={m.unitLabel} name="unitId" required>
             <Select name="unitId" required value={selectedUnitId} onChange={handleUnitChange}>
-              <option value="">— اختر وحدة —</option>
+              <option value="">{m.unitOptionEmpty}</option>
               {units.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.code} — {u.type}
@@ -242,16 +229,16 @@ export default function NewReservationForm({
           </Field>
         </PremiumFormPanel>
 
-        {/* ── Section 02: العميل ── */}
+        {/* ── Section 02: Client ── */}
         <PremiumFormPanel
           id="section-client"
           number="02"
-          title="العميل"
-          description="اختر مصدر واحد فقط: إما عميل محتمل من CRM، أو عميل مسجل في النظام."
+          title={m.p2Title}
+          description={m.p2Desc}
         >
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-foreground">نوع المالك</span>
+              <span className="text-sm font-medium text-foreground">{m.ownerTypeLabel}</span>
               <div className="flex flex-wrap gap-3">
                 <label
                   className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
@@ -268,7 +255,7 @@ export default function NewReservationForm({
                     onChange={() => setOwnerType('lead')}
                     className="accent-brand-500"
                   />
-                  <span>عميل محتمل من CRM</span>
+                  <span>{m.ownerLead}</span>
                 </label>
                 <label
                   className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
@@ -285,20 +272,20 @@ export default function NewReservationForm({
                     onChange={() => setOwnerType('client')}
                     className="accent-brand-500"
                   />
-                  <span>عميل مسجل</span>
+                  <span>{m.ownerClient}</span>
                 </label>
               </div>
             </div>
 
             {ownerType === 'lead' ? (
               <Field
-                label="العميل المحتمل (Lead)"
+                label={m.leadFieldLabel}
                 name="leadId"
-                hint="فرصة من CRM — اسم، مشروع الاهتمام، مرحلة، هاتف"
+                hint={m.leadFieldHint}
                 required
               >
                 <Select name="leadId" required>
-                  <option value="">— اختر فرصة —</option>
+                  <option value="">{m.leadOptionEmpty}</option>
                   {leads.map((l) => (
                     <option key={l.id} value={l.id}>
                       {formatLeadLabel(l)}
@@ -308,13 +295,13 @@ export default function NewReservationForm({
               </Field>
             ) : (
               <Field
-                label="العميل المسجل"
+                label={m.clientFieldLabel}
                 name="clientId"
-                hint="حساب مسجل في النظام — اسم، نوع الحساب، هاتف"
+                hint={m.clientFieldHint}
                 required
               >
                 <Select name="clientId" required>
-                  <option value="">— اختر عميلاً مسجلاً —</option>
+                  <option value="">{m.clientOptionEmpty}</option>
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
                       {formatClientLabel(c)}
@@ -326,17 +313,17 @@ export default function NewReservationForm({
           </div>
         </PremiumFormPanel>
 
-        {/* ── Section 03: تفاصيل الحجز ── */}
+        {/* ── Section 03: Details ── */}
         <PremiumFormPanel
           id="section-details"
           number="03"
-          title="تفاصيل الحجز"
-          description="حدد المندوب المسؤول، مدة صلاحية الحجز، وأي ملاحظات داخلية."
+          title={m.p3Title}
+          description={m.p3Desc}
         >
           <div className="flex flex-col gap-5">
-            <Field label="المندوب المسؤول" name="salesId">
+            <Field label={m.salesLabel} name="salesId">
               <Select name="salesId">
-                <option value="">— اختر مندوباً —</option>
+                <option value="">{m.salesOptionEmpty}</option>
                 {salesOptions.map((s) => (
                   <option key={s.id} value={s.id}>
                     {salesActorLabel(s)}
@@ -346,43 +333,43 @@ export default function NewReservationForm({
             </Field>
 
             <Field
-              label="صلاحية الحجز (بالساعات)"
+              label={m.expiryLabel}
               name="expiresInHours"
-              hint="المدة الزمنية التي يبقى فيها الحجز قيد المراجعة قبل انتهائه تلقائياً"
+              hint={m.expiryHint}
             >
               <Select name="expiresInHours" defaultValue="72">
-                <option value="24">24 ساعة (يوم)</option>
-                <option value="48">48 ساعة (يومان)</option>
-                <option value="72">72 ساعة (3 أيام) — افتراضي</option>
-                <option value="120">120 ساعة (5 أيام)</option>
-                <option value="168">168 ساعة (أسبوع)</option>
-                <option value="336">336 ساعة (أسبوعان)</option>
+                <option value="24">{m.expiry24}</option>
+                <option value="48">{m.expiry48}</option>
+                <option value="72">{m.expiry72}</option>
+                <option value="120">{m.expiry120}</option>
+                <option value="168">{m.expiry168}</option>
+                <option value="336">{m.expiry336}</option>
               </Select>
             </Field>
 
-            <Field label="ملاحظات" name="notes" hint="ملاحظات داخلية اختيارية">
-              <Textarea name="notes" rows={3} placeholder="أضف ملاحظات اختيارية…" />
+            <Field label={m.notesLabel} name="notes" hint={m.notesHint}>
+              <Textarea name="notes" rows={3} placeholder={m.notesPlaceholder} />
             </Field>
           </div>
         </PremiumFormPanel>
 
-        {/* ── Section 04: خطة التقسيط ومبلغ الحجز ── */}
+        {/* ── Section 04: Plan & Booking Amount ── */}
         <PremiumFormPanel
           id="section-plan"
           number="04"
-          title="خطة التقسيط ومبلغ الحجز"
-          description="اختر خطة التقسيط للوحدة، أو حدِّد مبلغ الحجز يدوياً (قيمة ثابتة أو نسبة من سعر الوحدة)."
+          title={m.p4Title}
+          description={m.p4Desc}
         >
           <div className="flex flex-col gap-5">
             <Field
-              label="خطة التقسيط"
+              label={m.planLabel}
               name="installmentPlanTemplateId"
               hint={
                 !selectedUnitId
-                  ? 'اختر الوحدة أولاً لعرض الخطط المتاحة'
+                  ? m.planHintNoUnit
                   : availablePlans.length === 0
-                    ? 'لا توجد خطط نشطة لهذه الوحدة/المشروع'
-                    : 'مبلغ الحجز المطلوب يتم تحديده تلقائياً من الخطة المختارة.'
+                    ? m.planHintNone
+                    : m.planHintAvailable
               }
             >
               <Select
@@ -391,10 +378,10 @@ export default function NewReservationForm({
                 onChange={handlePlanChange}
                 disabled={!selectedUnitId || availablePlans.length === 0}
               >
-                <option value="">— بدون خطة (اختياري) —</option>
+                <option value="">{m.planOptionNone}</option>
                 {availablePlans.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} — مبلغ الحجز: {p.reservationAmount}
+                    {p.name} — {m.planOptionReservation} {p.reservationAmount}
                   </option>
                 ))}
               </Select>
@@ -404,21 +391,18 @@ export default function NewReservationForm({
               <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-sm">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium">لا يمكن استخدام هذه الخطة لإنشاء حجز.</p>
-                  <p className="text-xs mt-1">
-                    الخطة المختارة لا تحدد دفعة الحجز (reservationAmount = 0). يرجى تعديل الخطة
-                    وتحديد قيمة موجبة لـ &laquo;دفعة الحجز&raquo; قبل ربطها بحجز جديد.
-                  </p>
+                  <p className="font-medium">{m.planInvalidTitle}</p>
+                  <p className="text-xs mt-1">{m.planInvalidDetail}</p>
                 </div>
               </div>
             )}
 
             {selectedPlan && (
               <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-3">
-                <h3 className="text-sm font-semibold text-slate-900">تفاصيل الخطة المختارة</h3>
+                <h3 className="text-sm font-semibold text-slate-900">{m.planDetailsTitle}</h3>
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <dt className="text-slate-500">مبلغ الحجز المطلوب</dt>
+                    <dt className="text-slate-500">{m.planRequiredBooking}</dt>
                     <dd
                       className={
                         selectedPlanHasBookingAmount
@@ -431,7 +415,7 @@ export default function NewReservationForm({
                   </div>
                   {selectedPlan.downPaymentAmount !== undefined && (
                     <div className="flex items-center justify-between">
-                      <dt className="text-slate-500">الدفعة الأولى</dt>
+                      <dt className="text-slate-500">{m.planDownPayment}</dt>
                       <dd className="font-medium tabular-nums">
                         {toFiniteOrEmpty(selectedPlan.downPaymentAmount) || '0'}
                       </dd>
@@ -439,33 +423,25 @@ export default function NewReservationForm({
                   )}
                   {selectedPlan.durationOptions.length > 0 && (
                     <div className="flex items-center justify-between">
-                      <dt className="text-slate-500">خيارات المدة المتاحة</dt>
+                      <dt className="text-slate-500">{m.planDurationCount}</dt>
                       <dd className="font-medium tabular-nums">
                         {selectedPlan.durationOptions.length}
                       </dd>
                     </div>
                   )}
                   <div className="flex items-center justify-between sm:col-span-2 border-t border-hairline pt-2 mt-1">
-                    <dt className="text-slate-500">حالة دفع مبلغ الحجز</dt>
-                    <dd className="font-medium text-amber-700">غير مدفوع (سيتم التأكيد لاحقاً)</dd>
+                    <dt className="text-slate-500">{m.planPaymentStatus}</dt>
+                    <dd className="font-medium text-amber-700">{m.planPaymentStatusValue}</dd>
                   </div>
                 </dl>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  مبلغ الحجز المطلوب يتم تحديده من خطة التقسيط ولا يمكن للمبيعات تعديله. تأكيد السداد يتم من صفحة تفاصيل الحجز بعد الإنشاء.
-                </p>
+                <p className="text-xs text-slate-400 leading-relaxed">{m.planNote}</p>
               </div>
             )}
 
-            {/* P8 — Booking amount mode. PLAN keeps the current behavior (server
-                copies plan.reservationAmount). FIXED + PERCENTAGE are admin
-                overrides; the radio sends `bookingAmountMode` only when the admin
-                chose an override. */}
             <div className="rounded-2xl border border-hairline bg-surface p-4 space-y-3">
               <div>
-                <h3 className="text-sm font-semibold text-slate-900">طريقة تحديد مبلغ الحجز</h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  يمكنك ترك مبلغ الحجز ليُحسب من خطة التقسيط، أو إدخاله يدوياً كقيمة ثابتة أو كنسبة من سعر الوحدة.
-                </p>
+                <h3 className="text-sm font-semibold text-slate-900">{m.bookingAmountTitle}</h3>
+                <p className="text-xs text-slate-500 mt-1">{m.bookingAmountDesc}</p>
               </div>
               <div className="flex flex-wrap gap-3 text-sm">
                 <label className="inline-flex items-center gap-2">
@@ -476,7 +452,7 @@ export default function NewReservationForm({
                     checked={bookingAmountMode === 'PLAN'}
                     onChange={() => setBookingAmountMode('PLAN')}
                   />
-                  <span>من خطة التقسيط</span>
+                  <span>{m.bookingModePlan}</span>
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -486,7 +462,7 @@ export default function NewReservationForm({
                     checked={bookingAmountMode === 'FIXED'}
                     onChange={() => setBookingAmountMode('FIXED')}
                   />
-                  <span>مبلغ ثابت</span>
+                  <span>{m.bookingModeFixed}</span>
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -496,19 +472,18 @@ export default function NewReservationForm({
                     checked={bookingAmountMode === 'PERCENTAGE'}
                     onChange={() => setBookingAmountMode('PERCENTAGE')}
                   />
-                  <span>نسبة من سعر الوحدة</span>
+                  <span>{m.bookingModePct}</span>
                 </label>
               </div>
-              {/* Hidden field sent to the server only when admin chose an override. */}
               {(bookingAmountMode === 'FIXED' || bookingAmountMode === 'PERCENTAGE') && (
                 <input type="hidden" name="bookingAmountMode" value={bookingAmountMode} />
               )}
 
               {bookingAmountMode === 'FIXED' && (
                 <Field
-                  label="مبلغ الحجز (قيمة ثابتة)"
+                  label={m.fixedLabel}
                   name="bookingAmount"
-                  hint="أدخل مبلغاً موجباً. سيُسجَّل كـ FIXED ويُسترجع في تفاصيل الحجز."
+                  hint={m.fixedHint}
                   required
                 >
                   <input
@@ -519,7 +494,7 @@ export default function NewReservationForm({
                     value={fixedAmountInput}
                     onChange={(e) => setFixedAmountInput(e.target.value)}
                     className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
-                    placeholder="مثلاً 50000"
+                    placeholder={m.fixedPlaceholder}
                     required
                   />
                 </Field>
@@ -528,9 +503,9 @@ export default function NewReservationForm({
               {bookingAmountMode === 'PERCENTAGE' && (
                 <>
                   <Field
-                    label="النسبة المئوية من سعر الوحدة"
+                    label={m.pctLabel}
                     name="bookingAmountPercent"
-                    hint="نسبة بين 0.01 و 100. سيتم حساب المبلغ تلقائياً وعرضه قبل الإرسال."
+                    hint={m.pctHint}
                     required
                   >
                     <input
@@ -542,19 +517,19 @@ export default function NewReservationForm({
                       value={percentInput}
                       onChange={(e) => setPercentInput(e.target.value)}
                       className="block w-full rounded-xl border border-hairline bg-white px-3 py-2 text-sm"
-                      placeholder="مثلاً 5"
+                      placeholder={m.pctPlaceholder}
                       required
                     />
                   </Field>
                   <div className="rounded-xl bg-slate-50 border border-hairline p-3 text-sm space-y-1">
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">سعر الوحدة المختارة</span>
+                      <span className="text-slate-500">{m.unitPriceLabel}</span>
                       <span className="font-medium tabular-nums">
-                        {selectedUnitPrice > 0 ? selectedUnitPrice.toLocaleString('ar') : '— غير محدد —'}
+                        {selectedUnitPrice > 0 ? selectedUnitPrice.toLocaleString('ar') : m.unitPriceUnset}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-500">مبلغ الحجز المحسوب</span>
+                      <span className="text-slate-500">{m.calcAmountLabel}</span>
                       <span className="font-bold tabular-nums text-brand-700">
                         {percentPreviewAmount != null
                           ? percentPreviewAmount.toLocaleString('ar')
@@ -564,7 +539,7 @@ export default function NewReservationForm({
                     {selectedUnitPrice <= 0 && (
                       <p className="text-xs text-danger-700 flex items-center gap-1.5">
                         <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-                        لا يمكن حساب النسبة لأن سعر الوحدة غير محدد. اختر وحدة بسعر &gt; 0 أو استخدم وضع المبلغ الثابت.
+                        {m.unitNoPriceError}
                       </p>
                     )}
                   </div>
@@ -580,10 +555,10 @@ export default function NewReservationForm({
                   value={selectedDurationOptionId}
                 />
                 <Field
-                  label="مدة التقسيط"
+                  label={m.durationFieldLabel}
                   name="installmentPlanDurationOptionSelect"
                   required
-                  hint="اختر مدة التقسيط بعد الاتفاق مع العميل. القيم المالية أدناه يتم حفظها كلقطة وقت إنشاء الحجز."
+                  hint={m.durationHint}
                 >
                   <Select
                     name="installmentPlanDurationOptionSelect"
@@ -591,13 +566,13 @@ export default function NewReservationForm({
                     onChange={(e) => setSelectedDurationOptionId(e.target.value)}
                     required
                   >
-                    <option value="">— اختر مدة —</option>
+                    <option value="">{m.durationOptionEmpty}</option>
                     {selectedPlan!.durationOptions
                       .slice()
                       .sort((a, b) => a.durationMonths - b.durationMonths)
                       .map((o) => (
                         <option key={o.id} value={o.id}>
-                          {o.durationMonths} شهر — زيادة {Number(o.increasePercentage)}%
+                          {m.durationOptionLabel(o.durationMonths, Number(o.increasePercentage))}
                         </option>
                       ))}
                   </Select>
@@ -606,63 +581,59 @@ export default function NewReservationForm({
                 {durationMissing && (
                   <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-sm">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                    <p>اختر مدة التقسيط قبل إنشاء الحجز.</p>
+                    <p>{m.durationMissingError}</p>
                   </div>
                 )}
 
                 {selectedDuration && previewSnapshot && (
                   <div className="rounded-2xl border border-brand-100 bg-brand-50/50 p-4 space-y-2">
-                    <h3 className="text-sm font-semibold text-slate-900">
-                      لقطة الحساب (سيتم حفظها مع الحجز)
-                    </h3>
+                    <h3 className="text-sm font-semibold text-slate-900">{m.snapshotTitle}</h3>
                     <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                       <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">مدة التقسيط</dt>
+                        <dt className="text-slate-500">{m.snapshotDuration}</dt>
                         <dd className="font-medium tabular-nums">
-                          {selectedDuration.durationMonths} شهر
+                          {selectedDuration.durationMonths} {m.snapshotMonthSuffix}
                         </dd>
                       </div>
                       <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">نسبة الزيادة</dt>
+                        <dt className="text-slate-500">{m.snapshotIncrease}</dt>
                         <dd className="font-medium tabular-nums">
                           {Number(selectedDuration.increasePercentage)}%
                         </dd>
                       </div>
                       <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">المبلغ المتبقي</dt>
+                        <dt className="text-slate-500">{m.snapshotRemaining}</dt>
                         <dd className="font-medium tabular-nums">
                           {previewSnapshot.remainingAmount.toFixed(2)}
                         </dd>
                       </div>
                       <div className="flex items-center justify-between">
-                        <dt className="text-slate-500">المبلغ الممول</dt>
+                        <dt className="text-slate-500">{m.snapshotFinanced}</dt>
                         <dd className="font-medium tabular-nums">
                           {previewSnapshot.financedAmount.toFixed(2)}
                         </dd>
                       </div>
                       <div className="flex items-center justify-between sm:col-span-2 border-t border-hairline pt-2 mt-1">
-                        <dt className="text-slate-700 font-medium">القسط الشهري</dt>
+                        <dt className="text-slate-700 font-medium">{m.snapshotMonthly}</dt>
                         <dd className="font-bold tabular-nums text-brand-700 text-base">
                           {previewSnapshot.monthlyInstallment.toFixed(2)}
                         </dd>
                       </div>
                       <div className="flex items-center justify-between sm:col-span-2">
-                        <dt className="text-slate-700 font-medium">إجمالي السداد</dt>
+                        <dt className="text-slate-700 font-medium">{m.snapshotTotal}</dt>
                         <dd className="font-bold tabular-nums">
                           {previewSnapshot.totalPayable.toFixed(2)}
                         </dd>
                       </div>
                     </dl>
-                    <p className="text-xs text-slate-400 leading-relaxed">
-                      نسبة الزيادة والقيم المحسوبة للعرض فقط ولا يمكن للمبيعات تعديلها. سيتم تجميد هذه القيم على الحجز عند الإنشاء.
-                    </p>
+                    <p className="text-xs text-slate-400 leading-relaxed">{m.snapshotNote}</p>
                   </div>
                 )}
               </>
             )}
 
-            <Field label="ملاحظات مبلغ الحجز" name="bookingNotes">
-              <Textarea name="bookingNotes" rows={2} placeholder="ملاحظات داخلية اختيارية حول مبلغ الحجز…" />
+            <Field label={m.bookingNotesLabel} name="bookingNotes">
+              <Textarea name="bookingNotes" rows={2} placeholder={m.bookingNotesPlaceholder} />
             </Field>
           </div>
         </PremiumFormPanel>
@@ -673,16 +644,16 @@ export default function NewReservationForm({
         primary={
           selectedPlanInvalid || durationMissing ? (
             <Button type="button" variant="primary" size="md" disabled>
-              إنشاء الحجز
+              {m.submitCreate}
             </Button>
           ) : (
-            <SubmitButton>إنشاء الحجز</SubmitButton>
+            <SubmitButton>{m.submitCreate}</SubmitButton>
           )
         }
         secondary={
           <Link href={'/dashboard/reservations' as never}>
             <Button variant="ghost" size="md" type="button">
-              إلغاء
+              {m.cancelBtn}
             </Button>
           </Link>
         }

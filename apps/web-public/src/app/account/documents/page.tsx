@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { FolderOpen } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { MeDocument } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
@@ -28,6 +30,9 @@ export default async function AccountDocumentsPage({ searchParams }: { searchPar
   const sp = await searchParams;
   const filter = firstStr(sp.type) || 'all';
 
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.documents;
+
   let documents: MeDocument[];
   try {
     documents = await authFetch<MeDocument[]>('/me/documents/all');
@@ -36,12 +41,12 @@ export default async function AccountDocumentsPage({ searchParams }: { searchPar
     return (
       <div className="space-y-8">
         <AccountPageHeader
-          title="مستنداتي"
-          description="جميع مستنداتك وملفاتك في مكان واحد."
+          title={m.title}
+          description={m.description}
         />
         <ErrorState
-          title="تعذّر تحميل المستندات حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -56,23 +61,23 @@ export default async function AccountDocumentsPage({ searchParams }: { searchPar
   return (
     <div className="space-y-8">
       <AccountPageHeader
-        title="مستنداتي"
-        description="جميع عقودك وإيصالات الدفع وملفاتك في مكان واحد."
+        title={m.title}
+        description={m.sectionTitle}
       />
 
       {documents.length === 0 ? (
         <EmptyState
-          title="لا توجد مستندات بعد"
-          message="ستظهر هنا مستنداتك (العقود، الإيصالات، تقارير الصيانة) بمجرد رفعها من قِبل فريقنا."
+          title={m.emptyTitle}
+          message={m.emptyMsg}
           icon={<FolderOpen className="h-6 w-6" aria-hidden />}
           action={
             <ButtonLink href={routes.account} variant="outline" size="md">
-              العودة إلى لوحة الحساب
+              {m.backToDashboard}
             </ButtonLink>
           }
         />
       ) : (
-        <DocumentList documents={filtered} all={documents} activeFilter={filter} />
+        <DocumentList documents={filtered} all={documents} activeFilter={filter} locale={locale} />
       )}
     </div>
   );

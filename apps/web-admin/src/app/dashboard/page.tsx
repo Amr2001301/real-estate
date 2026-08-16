@@ -23,6 +23,8 @@ import { getSession } from '@/lib/session';
 import { cn } from '@/lib/cn';
 import { formatCompact } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { ChartPanel } from '@/components/dashboard/chart-panel';
 import { SalesPerformanceChart } from '@/components/dashboard/sales-performance-chart';
@@ -128,14 +130,14 @@ function activityHref(type: string, id: string): string | undefined {
   }
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(iso: string, m: ReturnType<typeof uiT>['pages']['dashboard']): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const mins   = Math.round(diffMs / 60000);
-  if (mins < 1)  return 'الآن';
-  if (mins < 60) return `منذ ${mins} دقيقة`;
+  if (mins < 1)  return m.relativeNow;
+  if (mins < 60) return m.relativeMinutes(mins);
   const hrs = Math.round(mins / 60);
-  if (hrs < 24)  return `منذ ${hrs} ساعة`;
-  return `منذ ${Math.round(hrs / 24)} يوم`;
+  if (hrs < 24)  return m.relativeHours(hrs);
+  return m.relativeDays(Math.round(hrs / 24));
 }
 
 function SectionLabel({ children }: { children: ReactNode }) {
@@ -164,9 +166,6 @@ function pctDelta(current: number, prev: number): number | null {
   return Math.round(((current - prev) / prev) * 100);
 }
 
-function deltaLabel(pct: number): string {
-  return `${pct >= 0 ? '↑' : '↓'}${Math.abs(pct)}% عن الشهر الماضي`;
-}
 
 // ── Revenue Command Strip (KPI tiles) — KEEP EXACTLY ────────────────────────
 
@@ -185,10 +184,12 @@ function RevenueCommandStrip({
   kpis,
   financial,
   symbol,
+  m,
 }: {
   kpis:      AdminSummary['kpis'] | undefined | null;
   financial: AdminSummary['financial'] | undefined | null;
   symbol?:   string;
+  m:         ReturnType<typeof uiT>['pages']['dashboard'];
 }) {
   const hasFin     = financial != null;
   const total      = financial?.totalContractValue     ?? 0;
@@ -219,44 +220,44 @@ function RevenueCommandStrip({
 
   const tiles: CommandTile[] = [
     {
-      label:    'إجمالي التعاقدات',
+      label:    m.kpi.totalContracts,
       value:    hasFin ? formatCompact(total, symbol) : '—',
-      sub:      'القيمة الكلية للعقود النشطة',
+      sub:      m.kpi.totalContractsSub,
       valueCls: 'text-slate-900',
       iconCls:  'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
       icon:     <Building2 className="h-[18px] w-[18px]" />,
     },
     {
-      label:    'إجمالي المحصّل',
+      label:    m.kpi.totalCollected,
       value:    hasFin ? formatCompact(collected, symbol) : '—',
-      sub:      rate !== null ? `${rate}% من قيمة العقود` : '—',
+      sub:      rate !== null ? m.collectedRateSub(rate) : '—',
       valueCls: 'text-success-700',
       iconCls:  'bg-success-50 text-success-600 ring-1 ring-success-100',
-      delta:    collectionDeltaPct !== null ? deltaLabel(collectionDeltaPct) : undefined,
+      delta:    collectionDeltaPct !== null ? m.deltaLabel(collectionDeltaPct) : undefined,
       deltaCls: collectionDeltaPct !== null && collectionDeltaPct >= 0
                   ? 'text-success-600'
                   : 'text-danger-600',
       icon:     <TrendingUp className="h-[18px] w-[18px]" />,
     },
     {
-      label:    'معدل التحصيل',
+      label:    m.kpi.collectionRate,
       value:    rate !== null ? `${rate}%` : '—',
       sub:      rate === null  ? '—'                          :
-                rate >= 70     ? 'أداء ممتاز — فوق المستهدف' :
-                rate >= 40     ? 'يحتاج متابعة'              :
-                                 'أداء منخفض — تدخل مطلوب',
+                rate >= 70     ? m.kpi.collectionGood :
+                rate >= 40     ? m.kpi.collectionOk   :
+                                 m.kpi.collectionBad,
       valueCls: rateValueCls,
       iconCls:  rateIconCls,
       icon:     <Activity className="h-[18px] w-[18px]" />,
     },
     {
-      label:    'مبالغ متأخرة',
+      label:    m.kpi.overdue,
       value:    hasFin ? formatCompact(overdue, symbol) : '—',
       sub:      overdue > 0
                   ? overdueRate !== null
-                    ? `${overdueRate}% من إجمالي العقود`
-                    : 'تجاوزت تاريخ الاستحقاق'
-                  : 'لا مبالغ متأخرة',
+                    ? m.overdueRateSub(overdueRate)
+                    : m.overdueExceeded
+                  : m.kpi.overdueNone,
       valueCls: hasFin && overdue > 0 ? 'text-danger-700' : 'text-slate-400',
       iconCls:  hasFin && overdue > 0
                   ? 'bg-danger-50 text-danger-600 ring-1 ring-danger-100'
@@ -264,15 +265,15 @@ function RevenueCommandStrip({
       icon:     <AlertCircle className="h-[18px] w-[18px]" />,
     },
     {
-      label:    'عقود الشهر',
+      label:    m.kpi.monthContracts,
       value:    hasFin ? String(signedThisMonth) : '—',
       sub:      kpis
-                  ? `${kpis.soldUnits} وحدة مباعة · ${kpis.reservedUnits} محجوزة`
+                  ? m.monthContractsSub(kpis.soldUnits, kpis.reservedUnits)
                   : '—',
       valueCls: 'text-slate-900',
       iconCls:  'bg-sky-50 text-sky-600 ring-1 ring-sky-100',
       delta:    contractsDelta !== null
-                  ? `${contractsDelta >= 0 ? '+' : ''}${contractsDelta} عن الشهر الماضي`
+                  ? m.monthDeltaSign(contractsDelta)
                   : undefined,
       deltaCls: contractsDelta !== null && contractsDelta >= 0
                   ? 'text-success-600'
@@ -327,12 +328,18 @@ function RevenueCommandStrip({
 
 // ── Compact Action Bar ────────────────────────────────────────────────────────
 
-function CompactActionBar({ alerts }: { alerts: AdminSummary['alerts'] | undefined }) {
+function CompactActionBar({
+  alerts,
+  m,
+}: {
+  alerts: AdminSummary['alerts'] | undefined;
+  m: ReturnType<typeof uiT>['pages']['dashboard'];
+}) {
   const items = [
-    { key: 'contracts',   label: 'عقود بانتظار التوقيع',  value: alerts?.contractsAwaitingSignature ?? 0,  href: '/dashboard/contracts',  icon: <FileText />,       tone: 'danger'  as const },
-    { key: 'maintenance', label: 'طلبات صيانة مفتوحة',    value: alerts?.openMaintenance ?? 0,             href: '/dashboard/maintenance', icon: <Wrench />,         tone: 'warning' as const },
-    { key: 'visits',      label: 'زيارات بانتظار التأكيد', value: alerts?.visitsAwaitingConfirmation ?? 0,  href: '/dashboard/visits',     icon: <CalendarCheck2 />, tone: 'info'    as const },
-    { key: 'requests',    label: 'استفسارات مفتوحة',       value: alerts?.infoRequestsOpen ?? 0,            href: '/dashboard/requests',   icon: <MessageSquare />,  tone: 'info'    as const },
+    { key: 'contracts',   label: m.actionBar.pendingContracts,  value: alerts?.contractsAwaitingSignature ?? 0,  href: '/dashboard/contracts',  icon: <FileText />,       tone: 'danger'  as const },
+    { key: 'maintenance', label: m.actionBar.openMaintenance,   value: alerts?.openMaintenance ?? 0,             href: '/dashboard/maintenance', icon: <Wrench />,         tone: 'warning' as const },
+    { key: 'visits',      label: m.actionBar.pendingVisits,     value: alerts?.visitsAwaitingConfirmation ?? 0,  href: '/dashboard/visits',     icon: <CalendarCheck2 />, tone: 'info'    as const },
+    { key: 'requests',    label: m.actionBar.openLeads,         value: alerts?.infoRequestsOpen ?? 0,            href: '/dashboard/requests',   icon: <MessageSquare />,  tone: 'info'    as const },
   ];
   const total = items.reduce((s, i) => s + i.value, 0);
 
@@ -358,13 +365,13 @@ function CompactActionBar({ alerts }: { alerts: AdminSummary['alerts'] | undefin
             <CheckCircle2 className="h-3.5 w-3.5 text-success-600" />
           )}
         </div>
-        <p className="text-sm font-bold text-slate-900">يتطلب اتخاذ إجراء</p>
+        <p className="text-sm font-bold text-slate-900">{m.actionBar.header}</p>
         {total > 0 ? (
           <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-danger-100 text-danger-700 text-2xs font-black px-1.5 tabular-nums">
             {total}
           </span>
         ) : (
-          <p className="text-xs text-success-600 font-medium">كل العمليات تسير بشكل طبيعي</p>
+          <p className="text-xs text-success-600 font-medium">{m.actionBar.allClear}</p>
         )}
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-hairline">
@@ -423,7 +430,15 @@ function RankBadge({ rank }: { rank: number }) {
   );
 }
 
-function TopSalesCard({ rows, symbol }: { rows: PerformanceRow[]; symbol?: string }) {
+function TopSalesCard({
+  rows,
+  symbol,
+  m,
+}: {
+  rows: PerformanceRow[];
+  symbol?: string;
+  m: ReturnType<typeof uiT>['pages']['dashboard'];
+}) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
@@ -432,15 +447,15 @@ function TopSalesCard({ rows, symbol }: { rows: PerformanceRow[]; symbol?: strin
             <TrendingUp className="h-3.5 w-3.5 text-emerald-600" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 leading-tight">أفضل مندوبي المبيعات</h3>
-            <p className="text-2xs text-slate-400 mt-0.5">هذا الشهر · القيمة المحققة</p>
+            <h3 className="text-sm font-bold text-slate-900 leading-tight">{m.topSales.title}</h3>
+            <p className="text-2xs text-slate-400 mt-0.5">{m.topSales.sub}</p>
           </div>
         </div>
         <Link
           href={'/dashboard/sales/performance' as never}
           className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
         >
-          الكل
+          {m.viewAll}
           <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -451,7 +466,7 @@ function TopSalesCard({ rows, symbol }: { rows: PerformanceRow[]; symbol?: strin
               <RankBadge rank={i} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-slate-900 truncate">{r.salesName}</p>
-                <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.signedContractsCount} عقد موقّع</p>
+                <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.signedContractsCount} {m.topSales.contractSuffix}</p>
               </div>
               <p className="text-xs font-black tabular-nums text-emerald-700 shrink-0">
                 {formatCompact(r.achievedAmount, symbol)}
@@ -461,7 +476,7 @@ function TopSalesCard({ rows, symbol }: { rows: PerformanceRow[]; symbol?: strin
         </div>
       ) : (
         <div className="px-5 py-6 text-center">
-          <p className="text-xs text-slate-400">لا توجد بيانات هذا الشهر</p>
+          <p className="text-xs text-slate-400">{m.topSales.empty}</p>
         </div>
       )}
     </div>
@@ -470,7 +485,15 @@ function TopSalesCard({ rows, symbol }: { rows: PerformanceRow[]; symbol?: strin
 
 // ── Top Brokers Card ──────────────────────────────────────────────────────────
 
-function TopBrokersCard({ rows, symbol }: { rows: TopBrokerRow[]; symbol?: string }) {
+function TopBrokersCard({
+  rows,
+  symbol,
+  m,
+}: {
+  rows: TopBrokerRow[];
+  symbol?: string;
+  m: ReturnType<typeof uiT>['pages']['dashboard'];
+}) {
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
       <div className="flex items-center justify-between gap-2 px-5 py-3 border-b border-hairline bg-canvas/40">
@@ -479,15 +502,15 @@ function TopBrokersCard({ rows, symbol }: { rows: TopBrokerRow[]; symbol?: strin
             <Award className="h-3.5 w-3.5 text-violet-600" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-900 leading-tight">أفضل الوسطاء</h3>
-            <p className="text-2xs text-slate-400 mt-0.5">ترتيب بحجم المبيعات</p>
+            <h3 className="text-sm font-bold text-slate-900 leading-tight">{m.topBrokers.title}</h3>
+            <p className="text-2xs text-slate-400 mt-0.5">{m.topBrokers.sub}</p>
           </div>
         </div>
         <Link
           href={'/dashboard/broker-reports' as never}
           className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
         >
-          الكل
+          {m.viewAll}
           <ArrowUpRight className="h-3.5 w-3.5" />
         </Link>
       </div>
@@ -498,7 +521,7 @@ function TopBrokersCard({ rows, symbol }: { rows: TopBrokerRow[]; symbol?: strin
               <RankBadge rank={i} />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-semibold text-slate-900 truncate">{r.companyName}</p>
-                <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.contractsSigned} عقد موقّع</p>
+                <p className="text-2xs text-slate-400 mt-0.5 tabular-nums">{r.contractsSigned} {m.topBrokers.contractSuffix}</p>
               </div>
               <p className="text-xs font-black tabular-nums text-violet-700 shrink-0">
                 {formatCompact(Number(r.salesGross), symbol)}
@@ -508,7 +531,7 @@ function TopBrokersCard({ rows, symbol }: { rows: TopBrokerRow[]; symbol?: strin
         </div>
       ) : (
         <div className="px-5 py-6 text-center">
-          <p className="text-xs text-slate-400">لا توجد بيانات حالياً</p>
+          <p className="text-xs text-slate-400">{m.topBrokers.empty}</p>
         </div>
       )}
     </div>
@@ -521,19 +544,21 @@ function CashFlowPreviewCard({
   forecast,
   overdueTotal,
   symbol,
+  m,
 }: {
   forecast:     NonNullable<AdminSummary['cashflowForecast']>;
   overdueTotal: number;
   symbol?:      string;
+  m:            ReturnType<typeof uiT>['pages']['dashboard'];
 }) {
   const { next30, next3160, next6190 } = forecast;
   const grandTotal = next30 + next3160 + next6190 + overdueTotal;
 
   const slots = [
-    { label: 'خلال 30 يوم',  amount: next30,      barCls: 'bg-success-400', valueCls: 'text-success-700' },
-    { label: '31 – 60 يوم', amount: next3160,     barCls: 'bg-amber-400',   valueCls: 'text-amber-700'   },
-    { label: '61 – 90 يوم', amount: next6190,     barCls: 'bg-brand-400',   valueCls: 'text-brand-700'   },
-    { label: 'متأخر حالياً', amount: overdueTotal, barCls: 'bg-danger-400',  valueCls: 'text-danger-700'  },
+    { label: m.cashFlow.slot30,      amount: next30,      barCls: 'bg-success-400', valueCls: 'text-success-700' },
+    { label: m.cashFlow.slot60,      amount: next3160,     barCls: 'bg-amber-400',   valueCls: 'text-amber-700'   },
+    { label: m.cashFlow.slot90,      amount: next6190,     barCls: 'bg-brand-400',   valueCls: 'text-brand-700'   },
+    { label: m.cashFlow.slotOverdue, amount: overdueTotal, barCls: 'bg-danger-400',  valueCls: 'text-danger-700'  },
   ] as const;
 
   return (
@@ -544,10 +569,10 @@ function CashFlowPreviewCard({
             <CalendarDays className="h-4 w-4 text-brand-600" />
           </div>
           <div>
-            <p className="text-[14px] font-bold text-navy leading-none">توقع التدفق النقدي</p>
+            <p className="text-[14px] font-bold text-navy leading-none">{m.cashFlow.title}</p>
             {grandTotal > 0 && (
               <p className="text-[11px] text-slate-400 mt-0.5">
-                الإجمالي:{' '}
+                {m.cashFlow.totalSub}{' '}
                 <span className="font-semibold text-slate-600">{formatCompact(grandTotal, symbol)}</span>
               </p>
             )}
@@ -557,7 +582,7 @@ function CashFlowPreviewCard({
           href={'/dashboard/financial-dashboard' as never}
           className="flex items-center gap-1 text-[11px] font-bold text-brand-700 hover:text-brand-800 transition-colors"
         >
-          تفاصيل التحصيل
+          {m.cashFlow.detailLink}
           <ArrowLeft className="h-3 w-3" />
         </Link>
       </div>
@@ -573,7 +598,7 @@ function CashFlowPreviewCard({
               <div className="h-1.5 w-full rounded-full bg-surface-muted overflow-hidden">
                 <div className={cn('h-full rounded-full', slot.barCls)} style={{ width: `${pct}%` }} />
               </div>
-              <p className="text-[10px] text-slate-400 leading-none tabular-nums">{pct}% من الإجمالي</p>
+              <p className="text-[10px] text-slate-400 leading-none tabular-nums">{m.pctOfTotal(pct)}</p>
             </div>
           );
         })}
@@ -592,7 +617,11 @@ export default async function DashboardHome() {
   if (session?.role === 'SALES')         return <SalesDashboard userId={session.id} />;
   if (session?.role === 'SALES_MANAGER') return <SalesManagerDashboard />;
 
-  const currency = await getReportsCurrency();
+  const [currency, locale] = await Promise.all([
+    getReportsCurrency(),
+    getLocale(),
+  ]);
+  const m      = uiT(locale).pages.dashboard;
   const symbol = currencySymbol(currency);
   const now    = new Date();
   const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -628,7 +657,7 @@ export default async function DashboardHome() {
       user:   it.title,
       action: it.action,
       entity: it.context ?? '—',
-      time:   relativeTime(it.createdAt),
+      time:   relativeTime(it.createdAt, m),
       href:   activityHref(it.type, rawId),
       type:   it.type,
     };
@@ -649,12 +678,12 @@ export default async function DashboardHome() {
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="لوحة التحكم"
-        description="نظرة شاملة على أداء المنصة والإجراءات المعلقة"
+        title={m.title}
+        description={m.description}
         meta={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
             <LayoutDashboard className="h-3.5 w-3.5" />
-            لوحة تحكم
+            {m.badge}
           </span>
         }
         actions={
@@ -662,7 +691,7 @@ export default async function DashboardHome() {
             <GenerateReportButton />
             <Link href={'/dashboard/projects/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                مشروع جديد
+                {m.newProject}
               </Button>
             </Link>
           </div>
@@ -674,7 +703,7 @@ export default async function DashboardHome() {
         <div className="rounded-[18px] bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm flex items-start gap-3">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">تعذر تحميل المؤشرات الحية</p>
+            <p className="font-semibold">{m.errorTitle}</p>
             <p className="text-xs mt-0.5 text-warning-700/80">{error}</p>
           </div>
         </div>
@@ -682,14 +711,14 @@ export default async function DashboardHome() {
 
       {/* ── KPI Strip — KEEP EXACTLY ──────────────────────────────────────────── */}
       {summary && (
-        <RevenueCommandStrip kpis={kpis} financial={summary.financial} symbol={symbol} />
+        <RevenueCommandStrip kpis={kpis} financial={summary.financial} symbol={symbol} m={m} />
       )}
 
       {/* ── Compact Action Bar ────────────────────────────────────────────────── */}
-      <CompactActionBar alerts={summary?.alerts} />
+      <CompactActionBar alerts={summary?.alerts} m={m} />
 
       {/* ── Activity Feed + Top Performers ────────────────────────────────────── */}
-      <SectionLabel>النشاط والأداء</SectionLabel>
+      <SectionLabel>{m.sections.activity}</SectionLabel>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
         {/* Activity Feed — 2/3 */}
@@ -700,9 +729,9 @@ export default async function DashboardHome() {
                 <Activity className="h-4 w-4 text-brand-600" />
               </div>
               <div>
-                <h2 className="text-[14px] font-bold text-navy leading-none">آخر النشاطات</h2>
+                <h2 className="text-[14px] font-bold text-navy leading-none">{m.activityFeed.title}</h2>
                 {activityRows.length > 0 && (
-                  <p className="text-[11px] text-slate-400 mt-0.5">{activityRows.length} نشاط مسجّل</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{m.activityCount(activityRows.length)}</p>
                 )}
               </div>
             </div>
@@ -710,40 +739,40 @@ export default async function DashboardHome() {
               href={'/dashboard/audit' as never}
               className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
             >
-              عرض الكل
+              {m.viewAllFull}
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
           {activityRows.length > 0
             ? <ActivityTable rows={activityRows.slice(0, 8)} compact />
-            : <EmptyBlock message="لا توجد نشاطات مسجلة بعد" />
+            : <EmptyBlock message={m.activityFeed.empty} />
           }
         </div>
 
         {/* Top Performers — 1/3 */}
         <div className="space-y-4">
-          <TopSalesCard rows={topSalesRows} symbol={symbol} />
-          <TopBrokersCard rows={topBrokerRows} symbol={symbol} />
+          <TopSalesCard rows={topSalesRows} symbol={symbol} m={m} />
+          <TopBrokersCard rows={topBrokerRows} symbol={symbol} m={m} />
         </div>
       </div>
 
       {/* ── Performance Analytics ─────────────────────────────────────────────── */}
       <div className="space-y-3">
-        <SectionLabel>تحليل الأداء</SectionLabel>
+        <SectionLabel>{m.sections.analysis}</SectionLabel>
         <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-5">
           <ChartPanel
-            title="اتجاه الحجوزات الشهري"
-            description="الحجوزات المسجلة — آخر 6 أشهر"
+            title={m.charts.reservationTrend}
+            description={m.charts.reservationDesc}
             className={hasFunnel ? 'lg:col-span-7' : 'lg:col-span-12'}
             trailing={
               <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-brand-50 text-brand-700 text-2xs font-semibold">
-                آخر 6 أشهر
+                {m.charts.reservationBadge}
               </span>
             }
           >
             {trendData.length > 0
               ? <SalesPerformanceChart data={trendData} />
-              : <EmptyBlock message="لا توجد بيانات كافية" />
+              : <EmptyBlock message={m.charts.empty} />
             }
           </ChartPanel>
           {hasFunnel && summary?.funnel && (
@@ -757,7 +786,7 @@ export default async function DashboardHome() {
       {/* ── Project Health Matrix ─────────────────────────────────────────────── */}
       {topProjects.length > 0 && (
         <div className="space-y-3">
-          <SectionLabel>صحة المشاريع</SectionLabel>
+          <SectionLabel>{m.sections.projectHealth}</SectionLabel>
           <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
             <div className="flex items-center justify-between gap-3 px-6 py-4 border-b border-hairline bg-canvas/30">
               <div className="flex items-center gap-3">
@@ -765,15 +794,15 @@ export default async function DashboardHome() {
                   <Building2 className="h-4 w-4 text-brand-600" />
                 </div>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">صحة المشاريع</h2>
-                  <p className="text-[11px] text-slate-400 mt-0.5">{topProjects.length} مشروع نشط</p>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">{m.projectHealth.title}</h2>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{topProjects.length} {m.projectHealth.activeSuffix}</p>
                 </div>
               </div>
               <Link
                 href={'/dashboard/projects' as never}
                 className="flex items-center gap-1 text-xs font-bold text-brand-700 hover:text-brand-800 transition-colors"
               >
-                عرض الكل
+                {m.projectHealth.viewAll}
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -787,7 +816,7 @@ export default async function DashboardHome() {
       {/* ── Financial Health + Lead Sources ───────────────────────────────────── */}
       {(hasFinancial || leadSlices.length > 0) && (
         <div className="space-y-3">
-          <SectionLabel>الصحة المالية ومصادر العملاء</SectionLabel>
+          <SectionLabel>{m.sections.financial}</SectionLabel>
           <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch gap-5">
             {hasFinancial && summary?.financial && (
               <div className={cn('lg:col-span-8', leadSlices.length === 0 && 'lg:col-span-12')}>
@@ -796,14 +825,14 @@ export default async function DashboardHome() {
             )}
             {leadSlices.length > 0 && (
               <ChartPanel
-                title="مصادر الفرص"
-                description="توزيع العملاء المحتملين حسب القناة"
+                title={m.charts.leadSources}
+                description={m.charts.leadSourcesDesc}
                 className={cn(hasFinancial ? 'lg:col-span-4' : 'lg:col-span-12')}
               >
                 <LeadSourceDonut
                   slices={leadSlices}
                   centerLabel={donutCenter}
-                  centerSub="إجمالي الفرص"
+                  centerSub={m.charts.donutSub}
                 />
               </ChartPanel>
             )}
@@ -814,11 +843,12 @@ export default async function DashboardHome() {
       {/* ── Cash Flow Forecast ────────────────────────────────────────────────── */}
       {summary?.cashflowForecast && (
         <div className="space-y-3">
-          <SectionLabel>توقع التدفق النقدي — الـ 90 يوم القادمة</SectionLabel>
+          <SectionLabel>{m.sections.cashFlow}</SectionLabel>
           <CashFlowPreviewCard
             forecast={summary.cashflowForecast}
             overdueTotal={summary.financial?.overdueTotal ?? 0}
             symbol={symbol}
+            m={m}
           />
         </div>
       )}

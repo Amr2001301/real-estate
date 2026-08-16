@@ -1,26 +1,8 @@
 import { Activity } from 'lucide-react';
 import type { VisitActivity, VisitActivityType } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
-
-const TYPE_LABELS: Record<VisitActivityType, string> = {
-  REQUEST_CREATED: 'تم إنشاء الطلب',
-  REQUEST_REVIEWED: 'تمت مراجعة الطلب',
-  REQUEST_REJECTED: 'تم رفض الطلب',
-  REQUEST_CANCELLED: 'تم إلغاء الطلب',
-  VISIT_SCHEDULED: 'تمت جدولة الزيارة',
-  VISIT_CONFIRMED: 'تم تأكيد الزيارة',
-  VISIT_COMPLETED: 'اكتملت الزيارة',
-  VISIT_CANCELLED: 'تم إلغاء الزيارة',
-  VISIT_NO_SHOW: 'لم يحضر العميل',
-  VISIT_RESCHEDULED: 'تمت إعادة جدولة الزيارة',
-  SALES_ASSIGNED: 'تم تعيين مندوب',
-  NOTE_ADDED: 'تمت إضافة ملاحظة',
-  // P2 — two-sided confirmation activity labels
-  CUSTOMER_CONFIRMED: 'أكد العميل الزيارة',
-  CUSTOMER_RESCHEDULE_REQUESTED: 'طلب العميل إعادة الجدولة',
-  REMINDER_SENT: 'تم إرسال تذكير',
-  SALES_REASSIGNED: 'تم تغيير المندوب',
-};
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 const TYPE_COLORS: Partial<Record<VisitActivityType, string>> = {
   VISIT_COMPLETED: 'bg-success-500',
@@ -37,12 +19,15 @@ const TYPE_COLORS: Partial<Record<VisitActivityType, string>> = {
 
 interface Props {
   activities: VisitActivity[];
+  locale?: Locale;
 }
 
-export function VisitTimeline({ activities }: Props) {
+export function VisitTimeline({ activities, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.visitComponents;
+
   if (activities.length === 0) {
     return (
-      <div className="text-center py-8 text-sm text-slate-400">لا توجد أحداث بعد</div>
+      <div className="text-center py-8 text-sm text-slate-400">{m.timelineEmpty}</div>
     );
   }
 
@@ -59,7 +44,7 @@ export function VisitTimeline({ activities }: Props) {
             </div>
             <div className={`pb-4 min-w-0 ${isLast ? '' : ''}`}>
               <p className="text-sm font-medium text-slate-900">
-                {TYPE_LABELS[a.type] ?? a.type}
+                {m.activityLabels[a.type] ?? a.type}
               </p>
               {a.note && (
                 <p className="text-xs text-slate-600 mt-0.5">{a.note}</p>
@@ -78,17 +63,18 @@ export function VisitTimeline({ activities }: Props) {
   );
 }
 
-export function VisitTimelineCard({ activities }: Props) {
+export function VisitTimelineCard({ activities, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.visitComponents;
   return (
     <div>
       <div className="flex items-center gap-2 mb-4">
         <Activity className="h-5 w-5 text-brand-600" />
-        <h2 className="text-base font-semibold text-slate-900 tracking-tight">سجل الأحداث</h2>
+        <h2 className="text-base font-semibold text-slate-900 tracking-tight">{m.timelineTitle}</h2>
         <span className="ms-auto text-2xs font-semibold text-slate-400">
-          {activities.length} حدث
+          {activities.length} {m.timelineEventSuffix}
         </span>
       </div>
-      <VisitTimeline activities={activities} />
+      <VisitTimeline activities={activities} locale={locale} />
     </div>
   );
 }

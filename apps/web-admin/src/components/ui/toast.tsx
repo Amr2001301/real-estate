@@ -79,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               type="button"
               onClick={() => dismiss(t.id)}
               className="text-slate-400 hover:text-slate-700 text-sm leading-none"
-              aria-label="إغلاق"
+              aria-label="Close"
             >
               ×
             </button>

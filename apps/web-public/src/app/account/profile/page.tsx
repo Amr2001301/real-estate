@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { Mail, ShieldCheck, CalendarDays, Clock, BadgeCheck, MailWarning } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { MeProfile } from '@/lib/api-types';
 import { PremiumCard } from '@/components/ui/PremiumCard';
@@ -14,11 +16,6 @@ export const metadata = buildMetadata({
   description: 'إدارة بياناتك في ديفورا.',
   robots: { index: false, follow: false },
 });
-
-const ROLE_LABELS: Record<string, string> = {
-  CLIENT: 'عميل',
-  CUSTOMER: 'عميل / مالك وحدة',
-};
 
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
@@ -55,6 +52,11 @@ function InfoRow({
 }
 
 export default async function AccountProfilePage() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.profile;
+
+  const ROLE_LABELS: Record<string, string> = m.roles;
+
   let profile: MeProfile;
   try {
     profile = await authFetch<MeProfile>('/users/me');
@@ -62,10 +64,10 @@ export default async function AccountProfilePage() {
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <AccountPageHeader title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
+        <AccountPageHeader title={m.title} description={m.description} />
         <ErrorState
-          title="تعذّر تحميل بياناتك حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -76,15 +78,15 @@ export default async function AccountProfilePage() {
 
   return (
     <div className="space-y-8">
-      <AccountPageHeader title="الملف الشخصي" description="بياناتك ومعلومات حسابك في ديفورا." />
+      <AccountPageHeader title={m.title} description={m.description} />
 
       <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
         {/* Read-only account info */}
         <PremiumCard className="p-6 sm:p-8">
-          <h2 className="text-xl font-bold text-ink-strong">معلومات الحساب</h2>
-          <p className="mt-1 text-sm text-ink-muted">هذه البيانات للعرض فقط ولا يمكن تعديلها من هنا.</p>
+          <h2 className="text-xl font-bold text-ink-strong">{m.sectionTitle}</h2>
+          <p className="mt-1 text-sm text-ink-muted">{m.sectionNote}</p>
           <div className="mt-4 divide-y divide-hairline">
-            <InfoRow icon={<Mail className="h-4 w-4" aria-hidden />} label="البريد الإلكتروني" value={profile.email ?? '—'} />
+            <InfoRow icon={<Mail className="h-4 w-4" aria-hidden />} label={m.emailLabel} value={profile.email ?? '—'} />
             {profile.email && (
               <div className="flex items-start gap-3 py-3.5">
                 <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${profile.emailVerifiedAt ? 'bg-success/10 text-success' : 'bg-warning/10 text-warning'}`}>
@@ -93,24 +95,24 @@ export default async function AccountProfilePage() {
                     : <MailWarning className="h-4 w-4" aria-hidden />}
                 </span>
                 <div className="min-w-0">
-                  <div className="text-xs text-ink-muted">حالة البريد الإلكتروني</div>
+                  <div className="text-xs text-ink-muted">{m.emailStatus}</div>
                   <div className="text-sm font-medium text-ink-strong">
-                    {profile.emailVerifiedAt ? `مؤكَّد — ${formatDate(profile.emailVerifiedAt)}` : 'غير مؤكَّد'}
+                    {profile.emailVerifiedAt ? `${m.emailVerified} ${formatDate(profile.emailVerifiedAt)}` : m.emailUnverified}
                   </div>
                   {!profile.emailVerifiedAt && <ResendVerificationButton />}
                 </div>
               </div>
             )}
-            <InfoRow icon={<ShieldCheck className="h-4 w-4" aria-hidden />} label="نوع الحساب" value={roleLabel} />
-            <InfoRow icon={<CalendarDays className="h-4 w-4" aria-hidden />} label="تاريخ الانضمام" value={formatDate(profile.createdAt)} />
-            <InfoRow icon={<Clock className="h-4 w-4" aria-hidden />} label="آخر تسجيل دخول" value={formatDate(profile.lastLoginAt)} />
+            <InfoRow icon={<ShieldCheck className="h-4 w-4" aria-hidden />} label={m.roleLabel} value={roleLabel} />
+            <InfoRow icon={<CalendarDays className="h-4 w-4" aria-hidden />} label={m.joinedLabel} value={formatDate(profile.createdAt)} />
+            <InfoRow icon={<Clock className="h-4 w-4" aria-hidden />} label={m.lastLoginLabel} value={formatDate(profile.lastLoginAt)} />
           </div>
         </PremiumCard>
 
         {/* Editable fields */}
         <PremiumCard className="p-6 sm:p-8">
-          <h2 className="text-xl font-bold text-ink-strong">تعديل البيانات</h2>
-          <p className="mb-6 mt-1 text-sm text-ink-muted">حدّث صورتك الشخصية وبياناتك الأساسية.</p>
+          <h2 className="text-xl font-bold text-ink-strong">{m.editTitle}</h2>
+          <p className="mb-6 mt-1 text-sm text-ink-muted">{m.editSub}</p>
           <ProfileForm
             initialFullName={profile.fullName}
             initialPhone={profile.phone ?? ''}

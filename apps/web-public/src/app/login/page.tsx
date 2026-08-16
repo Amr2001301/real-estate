@@ -1,5 +1,7 @@
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { LoginCard } from '@/components/auth/LoginCard';
 import { InlineNotice } from '@/components/states/InlineNotice';
@@ -39,23 +41,25 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
   const sp = await searchParams;
   const showSessionNotice = isAccountFrom(firstStr(sp.from));
   const showResetNotice = isPasswordReset(sp.reset);
+  const locale = await getLocale();
+  const m = siteT(locale);
 
   return (
     <AuthShell
-      title="مرحبًا بك في عالم من الرقي العقاري"
-      subtitle="سجّل دخولك لمتابعة طلباتك، زياراتك، ووحداتك المفضلة."
-      switchPrompt="ليس لديك حساب؟"
-      switchLabel="إنشاء حساب جديد"
+      title={m.auth.login.title}
+      subtitle={m.auth.login.subtitle}
+      switchPrompt={m.auth.login.switchPrompt}
+      switchLabel={m.auth.login.switchLabel}
       switchHref={routes.register}
     >
       {showResetNotice && (
         <InlineNotice tone="success" className="mb-5">
-          تم تغيير كلمة المرور بنجاح. سجّل دخولك بكلمة المرور الجديدة.
+          {m.auth.login.resetNotice}
         </InlineNotice>
       )}
       {showSessionNotice && !showResetNotice && (
         <InlineNotice tone="info" className="mb-5">
-          انتهت الجلسة أو يلزم تسجيل الدخول للمتابعة.
+          {m.auth.login.sessionNotice}
         </InlineNotice>
       )}
       <LoginCard />

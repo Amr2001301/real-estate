@@ -12,6 +12,8 @@ import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
 import type { Paged, Project } from '@/lib/types';
 import { tx, formatDate } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconButton } from '@/components/ui/icon-button';
@@ -44,7 +46,13 @@ export default async function ProjectsPage({
 }: {
   searchParams: Promise<Filters>;
 }) {
-  const sp = await searchParams;
+  const [sp, locale, session] = await Promise.all([
+    searchParams,
+    getLocale(),
+    getSession(),
+  ]);
+  const m = uiT(locale).pages.projects;
+
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({
@@ -78,7 +86,6 @@ export default async function ProjectsPage({
 
   // Project mutations are ADMIN-only (projects:create/update/publish/delete).
   // SALES browses read-only, so creation CTAs are hidden for them.
-  const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
 
   // KPI computation from real data (no fakes).
@@ -92,17 +99,17 @@ export default async function ProjectsPage({
 
       {/* ── Premium hero ── */}
       <PremiumPageHero
-        title="قائمة المشاريع"
-        description="إدارة ومراقبة أداء المحفظة العقارية الحالية."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'المشاريع' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           isAdmin ? (
             <Link href={'/dashboard/projects/new' as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                إضافة مشروع جديد
+                {m.addBtn}
               </Button>
             </Link>
           ) : undefined
@@ -114,17 +121,17 @@ export default async function ProjectsPage({
         variant="compact"
         cols={4}
         metrics={[
-          { label: 'إجمالي المشاريع',  value: total,         icon: <Building2 />,   tone: 'brand',   primary: true },
-          { label: 'مشاريع منشورة',    value: published,     icon: <CheckCircle2 />, tone: 'success' },
-          { label: 'مسودات',            value: drafts,        icon: <Pencil />,       tone: 'warning' },
-          { label: 'مشاريع مميزة',    value: featuredCount, icon: <Star />,         tone: 'purple'  },
+          { label: m.kpi.total,     value: total,         icon: <Building2 />,   tone: 'brand',   primary: true },
+          { label: m.kpi.published, value: published,     icon: <CheckCircle2 />, tone: 'success' },
+          { label: m.kpi.drafts,    value: drafts,        icon: <Pencil />,       tone: 'warning' },
+          { label: m.kpi.featured,  value: featuredCount, icon: <Star />,         tone: 'purple'  },
         ]}
       />
 
       {/* ── Error banner ── */}
       {pagedRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل المشاريع: {pagedRes.error}
+          {m.errorPrefix} {pagedRes.error}
         </div>
       )}
 
@@ -134,38 +141,38 @@ export default async function ProjectsPage({
         action="/dashboard/projects"
         trailing={
           <div className="flex items-center gap-1.5">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{m.filter.searchLabel}</Button>
             {(sp.status || sp.city || sp.q) && (
               <Link href={'/dashboard/projects' as never}>
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="بحث" htmlFor="q">
+        <PremiumFilterField label={m.filter.searchLabel} htmlFor="q">
           <Input
             id="q"
             name="q"
             type="search"
-            placeholder="بحث باسم المشروع..."
+            placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             className="flex-1 min-w-40 h-8 text-sm"
           />
         </PremiumFilterField>
 
-        <PremiumFilterField label="الحالة" htmlFor="status">
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="status">
           <Select id="status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
-            <option value="">كل الحالات</option>
-            <option value="DRAFT">مسودة</option>
-            <option value="PUBLISHED">منشور</option>
-            <option value="ARCHIVED">مؤرشف</option>
+            <option value="">{m.filter.allStatuses}</option>
+            <option value="DRAFT">{m.filter.draft}</option>
+            <option value="PUBLISHED">{m.filter.published}</option>
+            <option value="ARCHIVED">{m.filter.archived}</option>
           </Select>
         </PremiumFilterField>
 
-        <PremiumFilterField label="المدينة" htmlFor="city">
+        <PremiumFilterField label={m.filter.cityLabel} htmlFor="city">
           <Select id="city" name="city" inputSize="sm" defaultValue={sp.city ?? ''} className="w-36 shrink-0">
-            <option value="">كل المدن</option>
+            <option value="">{m.filter.allCities}</option>
             {cities.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -179,12 +186,12 @@ export default async function ProjectsPage({
           <table className="w-full text-sm">
             <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
               <tr>
-                <th className="text-start py-3.5 ps-5 pe-4">المشروع</th>
-                <th className="text-start py-3.5 px-4">الموقع</th>
-                <th className="text-start py-3.5 px-4">الحالة</th>
-                <th className="text-start py-3.5 px-4">المراحل</th>
-                <th className="text-start py-3.5 px-4">النوع</th>
-                <th className="text-start py-3.5 px-4">آخر تحديث</th>
+                <th className="text-start py-3.5 ps-5 pe-4">{m.cols.project}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.location}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.status}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.phases}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.type}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.updated}</th>
                 <th className="text-start py-3.5 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -194,8 +201,8 @@ export default async function ProjectsPage({
                   <td colSpan={7} className="p-0">
                     <PremiumEmptyState
                       icon={<Building2 />}
-                      title="لا توجد مشاريع بعد"
-                      description="ابدأ بإضافة أول مشروع لمحفظتك العقارية."
+                      title={m.empty.title}
+                      description={m.empty.description}
                       action={
                         isAdmin ? (
                           <Link href={'/dashboard/projects/new' as never}>
@@ -204,7 +211,7 @@ export default async function ProjectsPage({
                               size="sm"
                               leftIcon={<Plus className="h-4 w-4" />}
                             >
-                              إضافة مشروع
+                              {m.empty.addBtn}
                             </Button>
                           </Link>
                         ) : undefined
@@ -244,19 +251,19 @@ export default async function ProjectsPage({
                       </span>
                     </td>
                     <td className="py-3.5 px-4">
-                      <ProjectStatusBadge status={p.status} />
+                      <ProjectStatusBadge status={p.status} locale={locale} />
                     </td>
                     <td className="py-3.5 px-4 text-slate-700 tabular-nums">
-                      {phaseCount > 0 ? `${phaseCount} مرحلة` : '—'}
+                      {phaseCount > 0 ? `${phaseCount} ${m.phaseSuffix}` : '—'}
                     </td>
                     <td className="py-3.5 px-4">
                       {p.featured ? (
                         <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-                          <Star className="h-3 w-3 fill-current" /> مميز
+                          <Star className="h-3 w-3 fill-current" /> {m.featured}
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-500">
-                          قياسي
+                          {m.standard}
                         </span>
                       )}
                     </td>
@@ -265,7 +272,7 @@ export default async function ProjectsPage({
                     </td>
                     <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/projects/${p.id}` as never}>
-                        <IconButton label="عرض تفاصيل المشروع" variant="outline" size="sm">
+                        <IconButton label={m.viewBtn} variant="outline" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -285,6 +292,7 @@ export default async function ProjectsPage({
               total={paged.meta.total}
               basePath="/dashboard/projects"
               params={{ status: sp.status, city: sp.city, q: sp.q }}
+              locale={locale}
             />
           </div>
         )}

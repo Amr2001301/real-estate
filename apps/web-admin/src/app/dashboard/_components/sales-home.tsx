@@ -28,6 +28,8 @@ import {
   AppointmentStatusBadge,
 } from '@/components/badges';
 import { PremiumPageHero } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 interface PerformanceRow {
   signedContractsCount: number;
@@ -45,26 +47,9 @@ function isToday(dateStr: string): boolean {
     d.getDate()  === now.getDate();
 }
 
-function expiryLabel(dateStr: string): string {
-  const d = Math.ceil(daysUntil(dateStr));
-  if (d <= 0) return 'ينتهي اليوم';
-  if (d === 1) return 'ينتهي غداً';
-  return `يتبقى ${d} أيام`;
-}
-
 function leadAgeDays(lead: Lead): number {
   return Math.floor((Date.now() - new Date(lead.createdAt).getTime()) / 86400000);
 }
-
-// ── Lead stage config ─────────────────────────────────────────────────────────
-const STAGE_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  NEW:         { label: 'جديد',   color: 'text-slate-600',  bg: 'bg-slate-100'  },
-  INTERESTED:  { label: 'مهتم',   color: 'text-blue-700',   bg: 'bg-blue-50'    },
-  VISIT:       { label: 'زيارة',  color: 'text-brand-700',  bg: 'bg-brand-50'   },
-  NEGOTIATION: { label: 'تفاوض',  color: 'text-amber-700',  bg: 'bg-amber-50'   },
-  WON:         { label: 'فوز',    color: 'text-emerald-700', bg: 'bg-emerald-50' },
-  LOST:        { label: 'خسارة', color: 'text-red-700',    bg: 'bg-red-50'     },
-};
 
 // ── Design helpers ────────────────────────────────────────────────────────────
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -103,24 +88,34 @@ function KpiTile({
 
 // ── Sales Pipeline ────────────────────────────────────────────────────────────
 function SalesPipeline({
-  openLeads, visitsCount, reservationsCount, contractsCount, stageGroups,
+  openLeads, visitsCount, reservationsCount, contractsCount, stageGroups, m,
 }: {
   openLeads: number; visitsCount: number; reservationsCount: number; contractsCount: number;
   stageGroups: Record<string, number>;
+  m: ReturnType<typeof uiT>['pages']['salesHome'];
 }) {
   const stages = [
-    { label: 'فرصي المفتوحة',   value: openLeads,         icon: <Zap />,           clr: 'brand',   bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
-    { label: 'زياراتي القادمة',  value: visitsCount,        icon: <CalendarClock />, clr: 'sky',     bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
-    { label: 'حجوزاتي النشطة',  value: reservationsCount,  icon: <BookmarkCheck />, clr: 'emerald', bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
-    { label: 'عقودي هذا الشهر', value: contractsCount,     icon: <FileText />,      clr: 'violet',  bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
+    { label: m.stageOpenLeads,         value: openLeads,         icon: <Zap />,           clr: 'brand',   bg: 'bg-brand-50   text-brand-600   ring-brand-100'   },
+    { label: m.stageUpcomingVisits,     value: visitsCount,        icon: <CalendarClock />, clr: 'sky',     bg: 'bg-sky-50     text-sky-600     ring-sky-100'     },
+    { label: m.stageActiveReservations, value: reservationsCount,  icon: <BookmarkCheck />, clr: 'emerald', bg: 'bg-emerald-50 text-emerald-600 ring-emerald-100' },
+    { label: m.stageMonthContracts,     value: contractsCount,     icon: <FileText />,      clr: 'violet',  bg: 'bg-violet-50  text-violet-600  ring-violet-100'  },
   ] as const;
 
   const pipelineStages = [
-    { key: 'NEW',         label: 'جديد'   },
-    { key: 'INTERESTED',  label: 'مهتم'   },
-    { key: 'VISIT',       label: 'زيارة'  },
-    { key: 'NEGOTIATION', label: 'تفاوض'  },
+    { key: 'NEW',         label: m.stageLabelNew         },
+    { key: 'INTERESTED',  label: m.stageLabelInterested  },
+    { key: 'VISIT',       label: m.stageLabelVisit       },
+    { key: 'NEGOTIATION', label: m.stageLabelNegotiation },
   ];
+
+  const stageColors: Record<string, { color: string; bg: string }> = {
+    NEW:         { color: 'text-slate-600',   bg: 'bg-slate-100'  },
+    INTERESTED:  { color: 'text-blue-700',    bg: 'bg-blue-50'    },
+    VISIT:       { color: 'text-brand-700',   bg: 'bg-brand-50'   },
+    NEGOTIATION: { color: 'text-amber-700',   bg: 'bg-amber-50'   },
+    WON:         { color: 'text-emerald-700', bg: 'bg-emerald-50' },
+    LOST:        { color: 'text-red-700',     bg: 'bg-red-50'     },
+  };
 
   const maxStage = Math.max(...pipelineStages.map((s) => stageGroups[s.key] ?? 0), 1);
 
@@ -132,8 +127,8 @@ function SalesPipeline({
           <TrendingUp />
         </span>
         <div>
-          <h3 className="text-[13.5px] font-bold text-navy leading-none">مسار المبيعات</h3>
-          <p className="text-[11px] text-slate-400 mt-0.5">من الفرصة إلى العقد</p>
+          <h3 className="text-[13.5px] font-bold text-navy leading-none">{m.pipelineTitle}</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">{m.pipelineDesc}</p>
         </div>
       </div>
 
@@ -160,7 +155,7 @@ function SalesPipeline({
                   <p className="text-[11px] text-slate-500 font-medium mt-0.5">{s.label}</p>
                   {rate !== null && (
                     <p className={cn('text-[10px] font-semibold mt-0.5', rate > 0 ? 'text-emerald-600' : 'text-slate-400')}>
-                      {rate}% تحويل
+                      {rate}{m.conversionSuffix}
                     </p>
                   )}
                 </div>
@@ -172,12 +167,12 @@ function SalesPipeline({
         {/* Stage distribution bar */}
         {openLeads > 0 && (
           <div className="border-t border-hairline pt-4">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">توزيع الفرص حسب المرحلة</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">{m.pipelineStageDistLabel}</p>
             <div className="space-y-2">
               {pipelineStages.map((s) => {
                 const count = stageGroups[s.key] ?? 0;
                 const pct   = Math.round((count / maxStage) * 100);
-                const cfg   = STAGE_CONFIG[s.key]!;
+                const cfg   = stageColors[s.key]!;
                 return count > 0 ? (
                   <div key={s.key} className="flex items-center gap-3">
                     <span className={cn('text-[11px] font-medium w-[80px] shrink-0 text-end', cfg.color)}>{s.label}</span>
@@ -198,6 +193,9 @@ function SalesPipeline({
 
 // ── Main component ────────────────────────────────────────────────────────────
 export async function SalesDashboard({ userId }: { userId: string }) {
+  const locale = await getLocale();
+  const m = uiT(locale).pages.salesHome;
+
   const nowIso = new Date().toISOString();
 
   const [leadsRes, reservationsRes, visitsRes, unitsRes, perfRes] = await Promise.all([
@@ -257,29 +255,37 @@ export async function SalesDashboard({ userId }: { userId: string }) {
   const showReservations = !reservationsRes.error && activeReservationRows.length > 0;
   const hasPriorities    = todayVisits.length > 0 || expiringUrgent.length > 0;
 
+  // Expiry label helper (locale-aware)
+  function expiryLabel(dateStr: string): string {
+    const d = Math.ceil(daysUntil(dateStr));
+    if (d <= 0) return m.expiryToday;
+    if (d === 1) return m.expiryTomorrow;
+    return m.expiryDays(d);
+  }
+
   return (
     <div className="space-y-5">
 
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="لوحة المبيعات"
-        description="نظرة سريعة على فرصك، زياراتك، حجوزاتك، والعقود المتوقعة."
-        breadcrumbs={[{ label: 'لوحة التحكم', href: '/dashboard' }]}
+        title={m.heroTitle}
+        description={m.heroDesc}
+        breadcrumbs={[{ label: m.heroBreadcrumb, href: '/dashboard' }]}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href="/dashboard/leads/new">
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                إضافة فرصة
+                {m.btnAddLead}
               </Button>
             </Link>
             <Link href="/dashboard/visits/new">
               <Button variant="outline" size="md" leftIcon={<CalendarPlus className="h-4 w-4" />}>
-                جدولة زيارة
+                {m.btnScheduleVisit}
               </Button>
             </Link>
             <Link href="/dashboard/reservations/new">
               <Button variant="outline" size="md" leftIcon={<BookmarkCheck className="h-4 w-4" />}>
-                إنشاء حجز
+                {m.btnCreateReservation}
               </Button>
             </Link>
           </div>
@@ -289,54 +295,54 @@ export async function SalesDashboard({ userId }: { userId: string }) {
       {/* ── KPI tiles ─────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
         <KpiTile
-          label="فرصي المفتوحة"
+          label={m.kpiOpenLeads}
           value={openLeads.length}
-          sub={`${wonLeads} فوز · ${lostLeads} خسارة`}
+          sub={m.kpiOpenLeadsSub(wonLeads, lostLeads)}
           icon={<Zap />}
           topBar="from-brand-300 via-brand-500 to-brand-300"
           iconCls="bg-brand-50 text-brand-600 ring-1 ring-brand-100"
           valueCls="text-brand-700"
         />
         <KpiTile
-          label="متابعات مستحقة"
+          label={m.kpiStaleLeads}
           value={staleLeadsCount}
-          sub={staleLeadsCount > 0 ? 'بدون نشاط +3 أيام' : 'لا متابعات متأخرة'}
+          sub={staleLeadsCount > 0 ? m.kpiStaleLeadsSubWarning : m.kpiStaleLeadsSubOk}
           icon={<AlertTriangle />}
           topBar={staleLeadsCount > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-400 to-emerald-300'}
           iconCls={staleLeadsCount > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
           valueCls={staleLeadsCount > 0 ? 'text-amber-700' : 'text-emerald-700'}
         />
         <KpiTile
-          label="زياراتي القادمة"
+          label={m.kpiUpcomingVisits}
           value={visits.length}
-          sub={todayVisits.length > 0 ? `${todayVisits.length} اليوم` : 'لا زيارات اليوم'}
+          sub={todayVisits.length > 0 ? m.kpiUpcomingVisitsSubToday(todayVisits.length) : m.kpiUpcomingVisitsSubNone}
           icon={<CalendarClock />}
           topBar="from-sky-300 via-sky-500 to-sky-300"
           iconCls="bg-sky-50 text-sky-600 ring-1 ring-sky-100"
           valueCls="text-sky-700"
         />
         <KpiTile
-          label="حجوزاتي النشطة"
+          label={m.kpiActiveReservations}
           value={activeReservations.length}
-          sub={expiringWithin7.length > 0 ? `${expiringWithin7.length} تنتهي قريباً` : 'لا حجوزات تنتهي قريباً'}
+          sub={expiringWithin7.length > 0 ? m.kpiActiveReservationsSubWarning(expiringWithin7.length) : m.kpiActiveReservationsSubOk}
           icon={<BookmarkCheck />}
           topBar={expiringWithin7.length > 0 ? 'from-amber-300 via-amber-500 to-amber-300' : 'from-emerald-300 via-emerald-500 to-emerald-300'}
           iconCls={expiringWithin7.length > 0 ? 'bg-amber-50 text-amber-600 ring-1 ring-amber-100' : 'bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100'}
           valueCls={expiringWithin7.length > 0 ? 'text-amber-700' : 'text-emerald-700'}
         />
         <KpiTile
-          label="عقود هذا الشهر"
+          label={m.kpiMonthContracts}
           value={closedDeals}
-          sub={signedThisMonth !== undefined ? 'عقود موقّعة' : 'محوّلة إلى عقود'}
+          sub={signedThisMonth !== undefined ? m.kpiMonthContractsSigned : m.kpiMonthContractsConverted}
           icon={<FileText />}
           topBar="from-violet-300 via-violet-500 to-violet-300"
           iconCls="bg-violet-50 text-violet-600 ring-1 ring-violet-100"
           valueCls="text-violet-700"
         />
         <KpiTile
-          label="الوحدات المتاحة"
+          label={m.kpiAvailableUnits}
           value={availableUnits}
-          sub="جاهزة للعرض"
+          sub={m.kpiAvailableUnitsSub}
           icon={<Home />}
           topBar="from-teal-300 via-teal-500 to-teal-300"
           iconCls="bg-teal-50 text-teal-600 ring-1 ring-teal-100"
@@ -351,117 +357,125 @@ export async function SalesDashboard({ userId }: { userId: string }) {
         reservationsCount={activeReservations.length}
         contractsCount={closedDeals}
         stageGroups={stageGroups}
+        m={m}
       />
 
       {/* ── Today priorities ──────────────────────────────────────────────── */}
       {hasPriorities && (
         <div className="space-y-2.5">
-          <SectionLabel>أولويات اليوم</SectionLabel>
-          <TodayPriorityPanel todayVisits={todayVisits} expiringUrgent={expiringUrgent} />
+          <SectionLabel>{m.sectionTodayPriorities}</SectionLabel>
+          <TodayPriorityPanel todayVisits={todayVisits} expiringUrgent={expiringUrgent} m={m} expiryLabel={expiryLabel} />
         </div>
       )}
 
       {/* ── Current activity ──────────────────────────────────────────────── */}
       <div className="space-y-2.5">
-        <SectionLabel>نشاطي الحالي</SectionLabel>
+        <SectionLabel>{m.sectionCurrentActivity}</SectionLabel>
         {showVisits && showReservations ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:items-start">
             <SectionCard
-              title="أحدث الفرص"
+              title={m.cardRecentLeads}
               icon={<Zap />}
               iconCls="bg-brand-50 ring-brand-100 text-brand-600"
               href="/dashboard/leads"
-              hrefLabel="فتح الفرص"
+              hrefLabel={m.cardOpenLeadsLink}
               error={leadsRes.error}
               empty={recentLeads.length === 0}
-              emptyText="لا توجد فرص حديثة."
+              emptyText={m.emptyRecentLeads}
+              loadErrorText={m.cardLoadError}
               className="lg:col-span-2"
             >
-              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} />)}
+              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} />)}
             </SectionCard>
             <div className="space-y-4">
               <SectionCard
-                title="زياراتي القادمة"
+                title={m.cardUpcomingVisits}
                 icon={<CalendarClock />}
                 iconCls="bg-sky-50 ring-sky-100 text-sky-600"
                 href="/dashboard/visits"
-                hrefLabel="فتح الزيارات"
+                hrefLabel={m.cardVisitsLink}
                 error={visitsRes.error}
                 empty={upcomingVisitRows.length === 0}
-                emptyText="لا توجد زيارات قادمة."
+                emptyText={m.emptyUpcomingVisits}
+                loadErrorText={m.cardLoadError}
               >
-                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} />)}
+                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} m={m} />)}
               </SectionCard>
               <SectionCard
-                title="حجوزاتي النشطة"
+                title={m.cardActiveReservations}
                 icon={<BookmarkCheck />}
                 iconCls="bg-emerald-50 ring-emerald-100 text-emerald-600"
                 href="/dashboard/reservations"
-                hrefLabel="فتح الحجوزات"
+                hrefLabel={m.cardReservationsLink}
                 error={reservationsRes.error}
                 empty={activeReservationRows.length === 0}
-                emptyText="لا توجد حجوزات نشطة."
+                emptyText={m.emptyActiveReservations}
+                loadErrorText={m.cardLoadError}
               >
-                {activeReservationRows.map((r) => <ReservationRow key={r.id} reservation={r} />)}
+                {activeReservationRows.map((r) => <ReservationRow key={r.id} reservation={r} expiryLabel={expiryLabel} />)}
               </SectionCard>
             </div>
           </div>
         ) : showVisits || showReservations ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:items-start">
             <SectionCard
-              title="أحدث الفرص"
+              title={m.cardRecentLeads}
               icon={<Zap />}
               iconCls="bg-brand-50 ring-brand-100 text-brand-600"
               href="/dashboard/leads"
-              hrefLabel="فتح الفرص"
+              hrefLabel={m.cardOpenLeadsLink}
               error={leadsRes.error}
               empty={recentLeads.length === 0}
-              emptyText="لا توجد فرص حديثة."
+              emptyText={m.emptyRecentLeads}
+              loadErrorText={m.cardLoadError}
             >
-              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} />)}
+              {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} />)}
             </SectionCard>
             {showVisits && (
               <SectionCard
-                title="زياراتي القادمة"
+                title={m.cardUpcomingVisits}
                 icon={<CalendarClock />}
                 iconCls="bg-sky-50 ring-sky-100 text-sky-600"
                 href="/dashboard/visits"
-                hrefLabel="فتح الزيارات"
+                hrefLabel={m.cardVisitsLink}
                 error={visitsRes.error}
                 empty={upcomingVisitRows.length === 0}
-                emptyText="لا توجد زيارات قادمة."
+                emptyText={m.emptyUpcomingVisits}
+                loadErrorText={m.cardLoadError}
               >
-                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} />)}
+                {upcomingVisitRows.map((v) => <VisitRow key={v.id} visit={v} m={m} />)}
               </SectionCard>
             )}
             {showReservations && (
               <SectionCard
-                title="حجوزاتي النشطة"
+                title={m.cardActiveReservations}
                 icon={<BookmarkCheck />}
                 iconCls="bg-emerald-50 ring-emerald-100 text-emerald-600"
                 href="/dashboard/reservations"
-                hrefLabel="فتح الحجوزات"
+                hrefLabel={m.cardReservationsLink}
                 error={reservationsRes.error}
                 empty={activeReservationRows.length === 0}
-                emptyText="لا توجد حجوزات نشطة."
+                emptyText={m.emptyActiveReservations}
+                loadErrorText={m.cardLoadError}
               >
-                {activeReservationRows.map((r) => <ReservationRow key={r.id} reservation={r} />)}
+                {activeReservationRows.map((r) => <ReservationRow key={r.id} reservation={r} expiryLabel={expiryLabel} />)}
               </SectionCard>
             )}
           </div>
         ) : (
           <SectionCard
-            title="أحدث الفرص"
+            title={m.cardRecentLeads}
             icon={<Zap />}
             iconCls="bg-brand-50 ring-brand-100 text-brand-600"
             href="/dashboard/leads"
-            hrefLabel="فتح الفرص"
+            hrefLabel={m.cardOpenLeadsLink}
             error={leadsRes.error}
             empty={recentLeads.length === 0}
-            emptyText="لا توجد فرص حديثة."
+            emptyText={m.emptyRecentLeads}
+            loadErrorText={m.cardLoadError}
             className="max-w-2xl"
           >
-            {recentLeads.map((l) => <LeadRow key={l.id} lead={l} />)}
+            {recentLeads.map((l) => <LeadRow key={l.id} lead={l} m={m} />)}
           </SectionCard>
         )}
       </div>
@@ -470,7 +484,7 @@ export async function SalesDashboard({ userId }: { userId: string }) {
 }
 
 // ── Row sub-components ────────────────────────────────────────────────────────
-function LeadRow({ lead: l }: { lead: Lead }) {
+function LeadRow({ lead: l, m }: { lead: Lead; m: ReturnType<typeof uiT>['pages']['salesHome'] }) {
   const age     = leadAgeDays(l);
   const isStale = !l.upcomingVisit && age >= 3;
   return (
@@ -485,12 +499,12 @@ function LeadRow({ lead: l }: { lead: Lead }) {
           </p>
           {isStale && (
             <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold bg-amber-50 text-amber-700 border border-amber-100">
-              متأخر
+              {m.badgeStale}
             </span>
           )}
         </div>
         <p className="text-2xs text-slate-400 truncate mt-0.5 leading-tight">
-          {l.projectInterest ? tx(l.projectInterest.name) : 'بدون مشروع'}
+          {l.projectInterest ? tx(l.projectInterest.name) : m.noProject}
           {' · '}
           <span className="tabular-nums">{formatDate(l.createdAt)}</span>
         </p>
@@ -500,7 +514,7 @@ function LeadRow({ lead: l }: { lead: Lead }) {
   );
 }
 
-function VisitRow({ visit: v }: { visit: VisitAppointment }) {
+function VisitRow({ visit: v, m }: { visit: VisitAppointment; m: ReturnType<typeof uiT>['pages']['salesHome'] }) {
   const today = isToday(v.scheduledAt);
   return (
     <Link
@@ -514,7 +528,7 @@ function VisitRow({ visit: v }: { visit: VisitAppointment }) {
           </p>
           {today && (
             <span className="shrink-0 inline-flex items-center rounded-full px-1.5 py-0.5 text-2xs font-semibold bg-brand-50 text-brand-700 border border-brand-100">
-              اليوم
+              {m.badgeToday}
             </span>
           )}
         </div>
@@ -530,7 +544,13 @@ function VisitRow({ visit: v }: { visit: VisitAppointment }) {
   );
 }
 
-function ReservationRow({ reservation: r }: { reservation: Reservation }) {
+function ReservationRow({
+  reservation: r,
+  expiryLabel,
+}: {
+  reservation: Reservation;
+  expiryLabel: (dateStr: string) => string;
+}) {
   const remaining = Math.ceil(daysUntil(r.expiresAt));
   const isUrgent  = remaining <= 1;
   const isWarning = remaining <= 7 && remaining > 1;
@@ -563,10 +583,12 @@ function ReservationRow({ reservation: r }: { reservation: Reservation }) {
 
 // ── Today priority panel ──────────────────────────────────────────────────────
 function TodayPriorityPanel({
-  todayVisits, expiringUrgent,
+  todayVisits, expiringUrgent, m, expiryLabel,
 }: {
   todayVisits:    VisitAppointment[];
   expiringUrgent: Reservation[];
+  m: ReturnType<typeof uiT>['pages']['salesHome'];
+  expiryLabel: (dateStr: string) => string;
 }) {
   const total = todayVisits.length + expiringUrgent.length;
   return (
@@ -576,7 +598,7 @@ function TodayPriorityPanel({
           <Bell className="h-4 w-4 text-amber-600" />
           <span className="absolute -top-0.5 -end-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white" />
         </span>
-        <h3 className="text-sm font-bold text-slate-900 flex-1">أولويات اليوم</h3>
+        <h3 className="text-sm font-bold text-slate-900 flex-1">{m.todayPrioritiesTitle}</h3>
         <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-amber-100 text-amber-800 text-2xs font-black px-1.5 tabular-nums">
           {total}
         </span>
@@ -586,7 +608,7 @@ function TodayPriorityPanel({
         <>
           <div className="flex items-center gap-2 px-5 py-2 bg-canvas/50 border-t border-hairline">
             <CalendarClock className="h-3.5 w-3.5 text-sky-500" />
-            <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">زياراتي اليوم</span>
+            <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">{m.todayVisitsSubLabel}</span>
             <span className="text-2xs font-black text-sky-500 tabular-nums">{todayVisits.length}</span>
           </div>
           {todayVisits.map((v) => (
@@ -602,7 +624,7 @@ function TodayPriorityPanel({
                 <p className="text-2xs text-slate-500 mt-0.5">
                   <span className="font-bold text-sky-700 tabular-nums">{formatDateTime(v.scheduledAt)}</span>
                   {v.project ? ` · ${tx(v.project.name)}` : ''}
-                  {v.unit ? ` · وحدة ${v.unit.code}` : ''}
+                  {v.unit ? ` · ${m.unitPrefix} ${v.unit.code}` : ''}
                 </p>
               </div>
               <AppointmentStatusBadge status={v.status} />
@@ -615,7 +637,7 @@ function TodayPriorityPanel({
         <>
           <div className="flex items-center gap-2 px-5 py-2 bg-canvas/50 border-t border-hairline">
             <AlertCircle className="h-3.5 w-3.5 text-red-500" />
-            <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">حجوزات تنتهي اليوم أو غداً</span>
+            <span className="text-2xs font-bold uppercase tracking-wide text-slate-500 flex-1">{m.expiringReservationsSubLabel}</span>
             <span className="text-2xs font-black text-red-500 tabular-nums">{expiringUrgent.length}</span>
           </div>
           {expiringUrgent.map((r) => (
@@ -627,7 +649,7 @@ function TodayPriorityPanel({
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-slate-900 truncate leading-tight">
                   {r.reservationNumber ?? `#${r.id.slice(0, 8).toUpperCase()}`}
-                  {r.unit?.code ? ` · وحدة ${r.unit.code}` : ''}
+                  {r.unit?.code ? ` · ${m.unitPrefix} ${r.unit.code}` : ''}
                 </p>
                 <p className="text-2xs text-slate-500 mt-0.5">
                   {r.lead?.fullName ?? r.client?.fullName ?? '—'}
@@ -646,12 +668,13 @@ function TodayPriorityPanel({
 
 // ── Section card ──────────────────────────────────────────────────────────────
 function SectionCard({
-  title, icon, iconCls, href, hrefLabel = 'عرض الكل',
-  error, empty, emptyText, className, children,
+  title, icon, iconCls, href, hrefLabel = '',
+  error, empty, emptyText, loadErrorText, className, children,
 }: {
   title: string; icon: React.ReactNode; iconCls: string;
   href: string; hrefLabel?: string;
   error?: string | null; empty: boolean; emptyText: string;
+  loadErrorText: string;
   className?: string; children: React.ReactNode;
 }) {
   return (
@@ -671,7 +694,7 @@ function SectionCard({
       {error ? (
         <div className="flex items-start gap-2 text-amber-700 text-xs px-5 py-4">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>تعذّر تحميل هذا القسم.</p>
+          <p>{loadErrorText}</p>
         </div>
       ) : empty ? (
         <div className="flex items-center gap-2.5 px-5 py-5">

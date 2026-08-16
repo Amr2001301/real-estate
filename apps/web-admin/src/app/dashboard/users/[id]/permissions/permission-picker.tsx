@@ -17,10 +17,12 @@ import {
   PERMISSION_TYPE_CLS,
   type PermissionType,
 } from '@/lib/permission-labels';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { cn } from '@/lib/cn';
 import { applyUserPermissions } from './actions';
 
-// ── Category icons (matches /dashboard/permissions catalog) ──────────────────
+// ── Category icons (keyed by Arabic category name from permission-labels) ──────
 
 const CATEGORY_ICON: Record<string, ReactNode> = {
   'المبيعات':                 <TrendingUp />,
@@ -52,6 +54,7 @@ interface Props {
   userName: string;
   assigned: PermissionItem[];
   available: PermissionItem[];
+  locale?: Locale;
 }
 
 const CATEGORY_ORDER = new Map<string, number>(
@@ -68,7 +71,8 @@ interface Row extends PermissionItem {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PermissionPicker({ userId, userName, assigned, available }: Props) {
+export function PermissionPicker({ userId, userName, assigned, available, locale = 'ar' }: Props) {
+  const m = uiT(locale).userPermissionsPage;
   const router = useRouter();
   const [query, setQuery]       = useState('');
   const [pending, startTransition] = useTransition();
@@ -152,19 +156,19 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
               <ShieldCheck />
             </span>
             <div>
-              <p className="text-[13px] font-semibold text-slate-800">الصلاحيات الممنوحة</p>
+              <p className="text-[13px] font-semibold text-slate-800">{m.grantedTitle}</p>
               <p className="text-[11px] text-slate-400 tabular-nums mt-0.5">
                 <span className="font-bold text-brand-700">{assignedCount}</span>
-                {' '}من{' '}
+                {' '}{m.ofLabel}{' '}
                 <span className="font-medium text-slate-600">{allRows.length}</span>
-                {' '}صلاحية
+                {' '}{m.permissionSuffix}
               </p>
             </div>
           </div>
           {pending && (
             <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              جارٍ الحفظ…
+              {m.savingLabel}
             </span>
           )}
         </div>
@@ -176,7 +180,7 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
               inputSize="sm"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث بالاسم أو الوصف أو القسم أو الرمز…"
+              placeholder={m.searchPlaceholder}
               leftAddon={<Search />}
             />
           </div>
@@ -189,7 +193,7 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
               onClick={() => run(matchUnassigned, [], null)}
               leftIcon={<CheckCheck className="h-3.5 w-3.5" />}
             >
-              تحديد{matchUnassigned.length > 0 ? ` (${matchUnassigned.length})` : ''}
+              {m.selectAllBtn}{matchUnassigned.length > 0 ? ` (${matchUnassigned.length})` : ''}
             </Button>
             <span className="h-5 w-px bg-hairline shrink-0" aria-hidden />
             <Button
@@ -201,7 +205,7 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
               className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
               leftIcon={<X className="h-3.5 w-3.5" />}
             >
-              إلغاء{matchAssigned.length > 0 ? ` (${matchAssigned.length})` : ''}
+              {m.deselectAllBtn}{matchAssigned.length > 0 ? ` (${matchAssigned.length})` : ''}
             </Button>
           </div>
         </div>
@@ -211,14 +215,14 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
       {groups.length === 0 ? (
         <div className="bg-surface border border-hairline rounded-[20px] shadow-soft flex flex-col items-center justify-center py-16 gap-2.5">
           <ShieldCheck className="h-10 w-10 text-slate-200" />
-          <p className="text-[13px] font-semibold text-slate-500">لا توجد صلاحيات مطابقة</p>
+          <p className="text-[13px] font-semibold text-slate-500">{m.noMatchTitle}</p>
           {query && (
             <button
               type="button"
               onClick={() => setQuery('')}
               className="text-[12px] text-brand-600 hover:underline mt-0.5"
             >
-              مسح البحث
+              {m.clearSearch}
             </button>
           )}
         </div>
@@ -229,19 +233,20 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
             const allGranted     = grantedInGroup === rows.length;
             const someGranted    = grantedInGroup > 0 && !allGranted;
             const icon           = CATEGORY_ICON[group] ?? <ShieldCheck />;
+            const groupLabel     = m.categoryNames[group] ?? group;
 
             return (
               <div
                 key={group}
                 className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden"
               >
-                {/* Group header — same pattern as permissions catalog */}
+                {/* Group header */}
                 <div className="flex items-center justify-between px-5 py-3 border-b border-hairline bg-surface-muted/40">
                   <div className="flex items-center gap-2.5">
                     <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-brand-100 text-brand-700 shrink-0 [&_svg]:h-3.5 [&_svg]:w-3.5">
                       {icon}
                     </span>
-                    <h3 className="text-[13px] font-semibold text-slate-800">{group}</h3>
+                    <h3 className="text-[13px] font-semibold text-slate-800">{groupLabel}</h3>
                   </div>
                   <span
                     className={cn(
@@ -267,7 +272,7 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
                             : 'hover:bg-canvas/40',
                         )}
                       >
-                        {/* Content — takes up the full row */}
+                        {/* Content */}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[13px] font-semibold text-slate-900 leading-tight">
@@ -321,8 +326,9 @@ export function PermissionPicker({ userId, userName, assigned, available }: Prop
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <p className="text-[11px] text-slate-400 px-1">
-        التغييرات تُحفظ فوراً عند التحديد أو الإلغاء. لا يؤثر ذلك على دور{' '}
-        <span className="font-medium text-slate-500">{userName}</span> الأساسي.
+        {m.footerNotePrefix}{' '}
+        <span className="font-medium text-slate-500">{userName}</span>
+        {' '}{m.footerNoteSuffix}
       </p>
 
     </div>

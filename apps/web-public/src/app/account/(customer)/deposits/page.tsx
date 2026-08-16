@@ -4,6 +4,8 @@ import type { Route } from 'next';
 import { Wallet, CalendarClock } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { formatPrice, formatNumber } from '@/lib/format';
 import type { MeDepositsResponse } from '@/lib/api-types';
@@ -20,15 +22,6 @@ export const metadata = buildMetadata({
   robots: { index: false, follow: false },
 });
 
-function Header() {
-  return (
-    <AccountPageHeader
-      title="الدفعات"
-      description="سجل دفعاتك المسجّلة لدى الشركة (للعرض فقط)."
-    />
-  );
-}
-
 function TotalItem({ label, value }: { label: string; value: string | undefined }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-xl border border-hairline bg-surface-soft/60 p-2 text-center">
@@ -41,6 +34,16 @@ function TotalItem({ label, value }: { label: string; value: string | undefined 
 }
 
 export default async function AccountDepositsPage() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.deposits;
+
+  const header = (
+    <AccountPageHeader
+      title={m.title}
+      description={m.description}
+    />
+  );
+
   let result: MeDepositsResponse;
   try {
     // Fixed list endpoint (no page params); render all rows + totals.
@@ -49,10 +52,10 @@ export default async function AccountDepositsPage() {
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <Header />
+        {header}
         <ErrorState
-          title="تعذّر تحميل الدفعات حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -64,7 +67,7 @@ export default async function AccountDepositsPage() {
 
   return (
     <div className="space-y-8">
-      <Header />
+      {header}
 
       <SubmitProofTrigger />
 
@@ -76,25 +79,25 @@ export default async function AccountDepositsPage() {
             <CalendarClock className="h-4 w-4" aria-hidden />
           </span>
           <span className="text-xs font-bold text-ink-strong md:text-sm">
-            اعرض جدول الأقساط وأرسل إثبات الدفع للقسط المستحق
+            {m.installmentsNote}
           </span>
         </div>
         <Link
           href={routes.accountInstallments as Route}
           className="shrink-0 rounded-xl border border-hairline bg-surface px-4 py-2 text-xs font-semibold text-ink-strong shadow-sm transition-all duration-200 hover:bg-navy hover:text-white"
         >
-          الأقساط
+          {m.installmentsLink}
         </Link>
       </div>
 
       {deposits.length === 0 ? (
         <EmptyState
-          title="لا توجد دفعات بعد"
-          message="ستظهر هنا الدفعات التي يسجّلها فريقنا، مع إمكانية تحميل الإيصالات عند توفرها."
+          title={m.emptyTitle}
+          message={m.emptyMsg}
           icon={<Wallet className="h-6 w-6" aria-hidden />}
           action={
             <ButtonLink href={routes.account} variant="outline" size="md">
-              العودة إلى لوحة الحساب
+              {m.backToDashboard}
             </ButtonLink>
           }
         />
@@ -105,22 +108,22 @@ export default async function AccountDepositsPage() {
             <div className="grid grid-cols-1 items-center gap-6 rounded-2xl border border-hairline bg-surface p-6 shadow-sm md:grid-cols-3">
               {/* Main metric — far right */}
               <div>
-                <div className="text-[11px] font-medium text-ink-muted">إجمالي المدفوعات</div>
+                <div className="text-[11px] font-medium text-ink-muted">{m.totalPayments}</div>
                 <div className="mt-1 font-display text-2xl font-black tracking-tight text-ink-strong" dir="auto">
                   {formatPrice(totals.totalAmount)}
                 </div>
                 <span className="mt-1 inline-block rounded-md bg-success/10 px-2 py-0.5 text-[10px] font-medium text-success">
-                  {formatNumber(totals.count)} دفعة
+                  {formatNumber(totals.count)} {m.depositLabel}
                 </span>
               </div>
 
               {/* Breakdown — left two-thirds, separated by a desktop divider */}
               <div className="md:col-span-2 md:border-s md:border-hairline md:ps-6">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <TotalItem label="دفعات الحجز" value={totals.bookingAmount} />
-                  <TotalItem label="الدفعات الأولى" value={totals.downPayment} />
-                  <TotalItem label="الأقساط" value={totals.installment} />
-                  <TotalItem label="الدفعات النهائية" value={totals.finalPayment} />
+                  <TotalItem label={m.catBooking} value={totals.bookingAmount} />
+                  <TotalItem label={m.catFirst} value={totals.downPayment} />
+                  <TotalItem label={m.catInstallment} value={totals.installment} />
+                  <TotalItem label={m.catFinal} value={totals.finalPayment} />
                 </div>
               </div>
             </div>

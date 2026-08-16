@@ -1,5 +1,7 @@
 import { BookmarkCheck } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type {
   AdminBrokerLead,
   Broker,
@@ -30,11 +32,14 @@ export default async function NewAdminBrokerReservationPage({
 }) {
   const sp = await searchParams;
 
-  const [brokersRes, projectsRes, currency] = await Promise.all([
+  const [brokersRes, projectsRes, currency, locale] = await Promise.all([
     safe(api.get<Paged<Broker>>('/brokers?pageSize=200&status=ACTIVE')),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
     getReportsCurrency(),
+    getLocale(),
   ]);
+  const m = uiT(locale);
+  const n = m.pages.brokerReservationsNew;
   const symbol = currencySymbol(currency);
 
   const brokers = (brokersRes.data?.data ?? []).filter((b) => b.status === 'ACTIVE');
@@ -68,17 +73,17 @@ export default async function NewAdminBrokerReservationPage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="إنشاء حجز نيابة عن وسيط"
-        description="استخدم هذا النموذج عندما يطلب الوسيط الحجز عبر الهاتف أو الواتساب. ستظهر الحجز في بوابة الوسيط كأنه أنشأه بنفسه."
+        title={n.title}
+        description={n.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'حجوزات من الوسطاء', href: '/dashboard/broker-reservations' },
-          { label: 'حجز جديد' },
+          { label: m.common.breadcrumbHome, href: '/dashboard' },
+          { label: m.nav.items.brokerReservations, href: '/dashboard/broker-reservations' },
+          { label: n.breadcrumb },
         ]}
         meta={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
             <BookmarkCheck className="h-3.5 w-3.5" />
-            حجز جديد
+            {n.badge}
           </span>
         }
       />
@@ -118,6 +123,7 @@ export default async function NewAdminBrokerReservationPage({
           buildingName: u.building?.name ?? null,
         }))}
         symbol={symbol}
+        locale={locale}
       />
     </div>
   );

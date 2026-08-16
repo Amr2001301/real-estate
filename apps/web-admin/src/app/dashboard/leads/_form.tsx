@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { salesActorLabel } from '@/lib/sales-actor';
 import { ClientPicker } from '@/components/crm/client-picker';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { Project, LeadSource, User } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { createLeadAction, type LeadFormState } from './actions';
@@ -23,22 +25,17 @@ interface SlimUnit {
   projectId: string;
 }
 
-const NAV_SECTIONS = [
-  { id: 'section-client',     num: '01', label: 'العميل المرتبط',     sub: 'ربط الفرصة بعميل قائم أو جديد' },
-  { id: 'section-interest',   num: '02', label: 'الاهتمام والمصدر',   sub: 'المشروع ومصدر الفرصة' },
-  { id: 'section-assignment', num: '03', label: 'الإسناد والمتابعة', sub: 'المندوب المسؤول والملاحظات' },
-];
-
 interface Props {
   projects: Project[];
   sources: LeadSource[];
   sales: User[];
   units?: SlimUnit[];
-  /** Pre-selected client (e.g. when launched from Client Details). */
   initialClient?: User | null;
+  locale?: Locale;
 }
 
-export default function LeadForm({ projects, sources, sales, units = [], initialClient }: Props) {
+export default function LeadForm({ projects, sources, sales, units = [], initialClient, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.leadsForm;
   const [state, formAction] = useActionState<LeadFormState, FormData>(
     createLeadAction,
     {},
@@ -46,6 +43,12 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
 
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const filteredUnits = units.filter((u) => u.projectId === selectedProjectId);
+
+  const navSections = [
+    { id: 'section-client',     num: '01', label: m.navClient.label,     sub: m.navClient.sub },
+    { id: 'section-interest',   num: '02', label: m.navInterest.label,   sub: m.navInterest.sub },
+    { id: 'section-assignment', num: '03', label: m.navAssignment.label, sub: m.navAssignment.sub },
+  ];
 
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
@@ -57,15 +60,15 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
       )}
 
       <PremiumFormLayout
-        navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="سيتم إنشاء الفرصة بحالة جديد افتراضياً. يمكنك تحديث المرحلة من صفحة التفاصيل."
+        navSections={navSections}
+        sidebarBadge={m.sidebarBadge}
+        sidebarInfo={m.sidebarInfo}
       >
         <PremiumFormPanel
           id="section-client"
           number="01"
-          title="العميل المرتبط"
-          description="كل فرصة بيع يجب أن ترتبط بعميل. اختر عميلاً موجوداً، أو أنشئ عميلاً جديداً وسيتم إنشاء حسابه تلقائياً."
+          title={m.panelClientTitle}
+          description={m.panelClientDesc}
         >
           <ClientPicker initialClient={initialClient ?? null} />
         </PremiumFormPanel>
@@ -73,13 +76,13 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
         <PremiumFormPanel
           id="section-interest"
           number="02"
-          title="الاهتمام والمصدر"
-          description="ساعدنا على فهم سياق هذه الفرصة لتحويلها بشكل أسرع."
+          title={m.panelInterestTitle}
+          description={m.panelInterestDesc}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="مصدر الفرصة" name="sourceId">
+            <Field label={m.labelSource} name="sourceId">
               <Select id="sourceId" name="sourceId" defaultValue="">
-                <option value="">— غير محدد —</option>
+                <option value="">{m.optionUnset}</option>
                 {sources.map((s) => (
                   <option key={s.id} value={s.id}>
                     {tx(s.name)}
@@ -87,14 +90,14 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
                 ))}
               </Select>
             </Field>
-            <Field label="المشروع المهتم به" name="projectInterestId">
+            <Field label={m.labelProject} name="projectInterestId">
               <Select
                 id="projectInterestId"
                 name="projectInterestId"
                 defaultValue=""
                 onChange={(e) => setSelectedProjectId(e.target.value)}
               >
-                <option value="">— غير محدد —</option>
+                <option value="">{m.optionUnset}</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {tx(p.name)}
@@ -104,17 +107,16 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
             </Field>
           </div>
 
-          {/* Unit picker — appears after project is chosen */}
           {selectedProjectId && (
             <Field
-              label="الوحدة المهتم بها"
+              label={m.labelUnit}
               name="unitInterestId"
-              hint="اختياري — حدد الوحدة إن كان العميل مهتماً بوحدة بعينها."
+              hint={m.hintUnit}
             >
               <Select id="unitInterestId" name="unitInterestId" defaultValue="">
-                <option value="">— غير محدد —</option>
+                <option value="">{m.optionUnset}</option>
                 {filteredUnits.length === 0 ? (
-                  <option disabled value="">لا توجد وحدات متاحة لهذا المشروع</option>
+                  <option disabled value="">{m.noUnits}</option>
                 ) : (
                   filteredUnits.map((u) => (
                     <option key={u.id} value={u.id}>
@@ -130,13 +132,13 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
         <PremiumFormPanel
           id="section-assignment"
           number="03"
-          title="الإسناد والمتابعة"
-          description="حدّد المسؤول عن متابعة هذه الفرصة وأضف ملاحظاتك الأولية."
+          title={m.panelAssignTitle}
+          description={m.panelAssignDesc}
         >
           <div className="flex flex-col gap-5">
-            <Field label="إسناد إلى مندوب مبيعات" name="assignedSalesId">
+            <Field label={m.labelSales} name="assignedSalesId">
               <Select id="assignedSalesId" name="assignedSalesId" defaultValue="">
-                <option value="">— غير مسند —</option>
+                <option value="">{m.optionUnsetSales}</option>
                 {sales.map((s) => (
                   <option key={s.id} value={s.id}>
                     {salesActorLabel(s)}
@@ -146,9 +148,9 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
             </Field>
 
             <Field
-              label="ملاحظات أولية"
+              label={m.labelNotes}
               name="notes"
-              hint="اختياري — مثال: اهتم بالطابق العلوي، يفضّل التواصل مساءً."
+              hint={m.hintNotes}
             >
               <Textarea id="notes" name="notes" rows={3} />
             </Field>
@@ -166,13 +168,13 @@ export default function LeadForm({ projects, sources, sales, units = [], initial
                 variant="ghost"
                 leftIcon={<X className="h-4 w-4" />}
               >
-                إلغاء
+                {m.cancelBtn}
               </Button>
             </Link>
-            <SubmitButton>إنشاء فرصة CRM</SubmitButton>
+            <SubmitButton>{m.submitBtn}</SubmitButton>
           </>
         }
-        helper="سيتم إنشاء الفرصة بحالة جديد افتراضياً."
+        helper={m.footerHelper}
       />
     </form>
   );

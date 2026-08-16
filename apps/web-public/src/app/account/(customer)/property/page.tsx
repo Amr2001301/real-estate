@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { Building2 } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { Paginated, MeContract } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
@@ -25,18 +27,19 @@ function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 }
 
-function Header() {
-  return (
-    <AccountPageHeader
-      title="عقاراتي"
-      description="الوحدات التي تملكها، مع روابط العقد وطلب الصيانة."
-    />
-  );
-}
-
 export default async function AccountPropertyPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
+
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.property;
+
+  const header = (
+    <AccountPageHeader
+      title={m.title}
+      description={m.description}
+    />
+  );
 
   // "My property" is derived from contracts (each contract = an owned unit);
   // there is no dedicated /me/property endpoint.
@@ -49,10 +52,10 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <Header />
+        {header}
         <ErrorState
-          title="تعذّر تحميل عقاراتك حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -67,16 +70,16 @@ export default async function AccountPropertyPage({ searchParams }: { searchPara
 
   return (
     <div className="space-y-8">
-      <Header />
+      {header}
 
       {contracts.length === 0 ? (
         <EmptyState
-          title="لا توجد عقارات مسجّلة بعد"
-          message="ستظهر هنا وحداتك بعد إتمام إجراءات الشراء وتسجيل العقد من فريقنا."
+          title={m.emptyTitle}
+          message={m.emptyMsg}
           icon={<Building2 className="h-6 w-6" aria-hidden />}
           action={
             <ButtonLink href={routes.account} variant="outline" size="md">
-              العودة إلى لوحة الحساب
+              {m.backToDashboard}
             </ButtonLink>
           }
         />

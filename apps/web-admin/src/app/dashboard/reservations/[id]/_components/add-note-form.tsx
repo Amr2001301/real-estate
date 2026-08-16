@@ -4,12 +4,16 @@ import { useTransition, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { addReservationNoteAction } from '../../actions';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 interface Props {
   reservationId: string;
+  locale?: Locale;
 }
 
-export function AddNoteForm({ reservationId }: Props) {
+export function AddNoteForm({ reservationId, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.reservationDetailPage;
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -25,13 +29,13 @@ export function AddNoteForm({ reservationId }: Props) {
       <Textarea
         name="body"
         rows={3}
-        placeholder="أضف ملاحظة داخلية…"
+        placeholder={m.notePlaceholder}
         disabled={pending}
         required
       />
       <div className="flex justify-end">
         <Button type="submit" variant="primary" size="sm" loading={pending}>
-          حفظ الملاحظة
+          {m.noteSaveBtn}
         </Button>
       </div>
     </form>

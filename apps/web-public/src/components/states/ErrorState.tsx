@@ -15,7 +15,7 @@ interface ErrorStateProps {
 
 /** Branded, friendly error panel. Never surfaces raw error detail. */
 export function ErrorState({
-  title = 'تعذر تحميل المحتوى',
+  title = 'Failed to load',
   message = FRIENDLY.retry,
   onRetry,
   className,
@@ -35,7 +35,7 @@ export function ErrorState({
       {onRetry && (
         <Button variant="outline" size="sm" className="mt-6" onClick={onRetry}>
           <RotateCw className="h-4 w-4" aria-hidden />
-          إعادة المحاولة
+          Retry
         </Button>
       )}
     </div>

@@ -19,11 +19,12 @@ import type {
   InstallmentFrequency,
   StartDateRule,
 } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { computeDurationOption } from '@/lib/installment-calc';
 import { createPlanAction, updatePlanAction, type PlanFormState } from './actions';
 
 interface DurationOptionState {
-  // local id for React keys; not sent to server
   key: string;
   durationMonths: string;
   increasePercentage: string;
@@ -50,6 +51,7 @@ interface Props {
   initialData?: InstallmentPlanTemplate;
   mode:         'create' | 'edit';
   currency?:    string;
+  locale?:      Locale;
 }
 
 function parseNum(val: string): number {
@@ -57,21 +59,20 @@ function parseNum(val: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-// Safely convert any API value (string, number, Decimal, null, undefined) to a finite number
 function safeNum(val: unknown, fallback = 0): number {
   if (val === null || val === undefined || val === '') return fallback;
   const n = typeof val === 'number' ? val : parseFloat(String(val));
   return Number.isFinite(n) ? n : fallback;
 }
 
-// Convert to a display string for an input; returns fallback if the value is not a valid number
 function safeStr(val: unknown, fallback = ''): string {
   const n = safeNum(val, NaN);
   return Number.isFinite(n) ? String(n) : fallback;
 }
 
 
-export default function PlanForm({ projects, initialData, mode, currency = 'SAR' }: Props) {
+export default function PlanForm({ projects, initialData, mode, currency = 'SAR', locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.installmentsForm;
   const symbol = currencySymbol(currency);
   const action =
     mode === 'edit' && initialData
@@ -82,25 +83,20 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
 
   const d = initialData;
 
-  // ── form state ────────────────────────────────────────────────────────────
   const [projectId, setProjectId] = useState(d?.projectId ?? '');
   const [units, setUnits] = useState<UnitOption[]>([]);
   const [unitsLoading, setUnitsLoading] = useState(false);
   const [unitId, setUnitId] = useState(d?.unitId ?? '');
-  // unitPrice tracks the current unit's price from the units list (not the stored plan price)
   const [unitPrice, setUnitPrice] = useState<number>(0);
-  // In edit mode the price may have been customised; keep it editable by default
   const [manualPriceOverride, setManualPriceOverride] = useState(mode === 'edit');
   const [totalPrice, setTotalPrice] = useState(safeStr(d?.totalPrice));
   const [discountType, setDiscountType] = useState<DownPaymentType>(d?.discountType ?? 'FIXED');
-  // For edit, prefer the stored raw value; fall back to the legacy amount.
   const [discountValue, setDiscountValue] = useState(
     safeStr(d?.discountValue ?? d?.discountAmount, '0'),
   );
   const [reservationAmountType, setReservationAmountType] = useState<DownPaymentType>(
     d?.reservationAmountType ?? 'FIXED',
   );
-  // For edit, prefer the stored raw value; fall back to the legacy amount.
   const [reservationAmountValue, setReservationAmountValue] = useState(
     safeStr(d?.reservationAmountValue ?? d?.reservationAmount, '0'),
   );
@@ -122,7 +118,6 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
     d?.finalPaymentAmount != null ? safeStr(d.finalPaymentAmount) : '',
   );
 
-  // Duration options (multi). In edit mode initialise from existing; else start with one row.
   const [durationOptions, setDurationOptions] = useState<DurationOptionState[]>(() => {
     if (d?.durationOptions && d.durationOptions.length > 0) {
       return d.durationOptions.map((opt) => ({
@@ -131,7 +126,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
         increasePercentage: safeStr(opt.increasePercentage, '0'),
       }));
     }
-    if (mode === 'edit') return []; // legacy plan being edited — leave options empty so user opts in
+    if (mode === 'edit') return [];
     return [{ key: newDurationKey(), durationMonths: '12', increasePercentage: '0' }];
   });
 
@@ -152,10 +147,8 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
     );
   }
 
-  // client-side unit validation
   const [unitTouched, setUnitTouched] = useState(false);
 
-  // ── load units when project changes ──────────────────────────────────────
   useEffect(() => {
     if (!projectId) {
       setUnits([]);
@@ -180,7 +173,6 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
         }));
         setUnits(list);
 
-        // In edit mode, restore the unit price from the loaded list; totalPrice stays untouched
         if (d?.unitId) {
           const existing = list.find((u) => u.id === d.unitId);
           if (existing) {
@@ -193,7 +185,6 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, mode]);
 
-  // ── when unit changes, auto-fill price ───────────────────────────────────
   function handleUnitChange(id: string) {
     setUnitId(id);
     setUnitTouched(true);
@@ -212,32 +203,25 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
     }
   }
 
-  // ── manual price override toggle ──────────────────────────────────────────
   function handleManualOverrideChange(checked: boolean) {
     setManualPriceOverride(checked);
     if (!checked && unitPrice > 0) {
-      // Reset total price to unit price
       setTotalPrice(String(unitPrice));
     }
   }
 
-  // ── derived values ────────────────────────────────────────────────────────
   const tp = parseNum(totalPrice);
-  // Discount: PERCENTAGE is of the total price (the pricing base).
   const discValue = parseNum(discountValue);
   const disc = discountType === 'PERCENTAGE' ? (tp * discValue) / 100 : discValue;
   const netPrice = tp - disc;
   const reservationValue = parseNum(reservationAmountValue);
-  // Template preview: PERCENTAGE is of netPrice (mirrors down payment). At
-  // reservation creation the percentage is re-applied to the selected unit price.
   const reservation =
     reservationAmountType === 'PERCENTAGE' ? (netPrice * reservationValue) / 100 : reservationValue;
   const dpVal = parseNum(downPaymentValue);
   const dpAmount = downPaymentType === 'PERCENTAGE' ? (netPrice * dpVal) / 100 : dpVal;
 
-  const unitError = unitTouched && !unitId ? 'يرجى اختيار الوحدة' : undefined;
+  const unitError = unitTouched && !unitId ? m.unitError : undefined;
 
-  // Derived: per-duration calculated rows
   const durationCalcRows = useMemo(() => {
     return durationOptions.map((opt) => {
       const months = parseInt(opt.durationMonths) || 0;
@@ -256,36 +240,28 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
   const durationOptionsError = (() => {
     if (durationOptions.length === 0) return null;
     const months = durationCalcRows.map((r) => r.months);
-    if (months.some((m) => m <= 0))
-      return 'كل مدة يجب أن تكون عدداً صحيحاً موجباً';
+    if (months.some((mo) => mo <= 0)) return m.errorAllDurations;
     const seen = new Set<number>();
-    for (const m of months) {
-      if (seen.has(m)) return `مدة التقسيط ${m} مكررة`;
-      seen.add(m);
+    for (const mo of months) {
+      if (seen.has(mo)) return m.errorDuplicateDuration(mo);
+      seen.add(mo);
     }
-    if (durationCalcRows.some((r) => r.pct < 0))
-      return 'نسبة الزيادة يجب أن تكون صفراً أو أكثر';
+    if (durationCalcRows.some((r) => r.pct < 0)) return m.errorIncreaseNeg;
     return null;
   })();
 
   const reservationPlusDownError =
     netPrice > 0 && reservation + dpAmount > netPrice
-      ? 'مبلغ الحجز + الدفعة الأولى يتجاوزان صافي السعر'
+      ? m.errorReservationPlusDown
       : null;
 
   const useDurationModel = durationOptions.length > 0;
 
-  // Duration-option templates must declare a positive booking amount. The reservation
-  // create flow reads InstallmentPlanTemplate.reservationAmount as the required booking
-  // amount, and rejects plans with 0.
   const reservationAmountError =
     useDurationModel && reservation <= 0
-      ? 'دفعة الحجز يجب أن تكون أكبر من صفر للخطط التي تستخدم خيارات المدة'
+      ? m.errorReservationZero
       : null;
 
-  // ── numeric input helper: allows free typing ──────────────────────────────
-  // We use type="text" + inputMode="decimal" so the browser never blocks
-  // intermediate states (e.g. "1.", "0.0", "-" while typing)
   function numericInputProps(
     value: string,
     onChange: (v: string) => void,
@@ -297,7 +273,6 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
       value,
       onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
         const raw = e.target.value;
-        // Allow digits, a single decimal point, and empty string
         if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
           onChange(raw);
         }
@@ -310,22 +285,21 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
     };
   }
 
-  // ── nav sections (dynamic: legacy section only when no duration options) ──
   const navSections = useDurationModel
     ? [
-        { id: 'section-plan-info',    num: '01', label: 'معلومات الخطة',       sub: 'الاسم والوصف والمشروع والوحدة' },
-        { id: 'section-pricing',      num: '02', label: 'التسعير',             sub: 'السعر والخصم ودفعة الحجز' },
-        { id: 'section-down-payment', num: '03', label: 'الدفعة الأولى',       sub: 'نوع المقدم وقيمته' },
-        { id: 'section-durations',    num: '04', label: 'خيارات المدة',        sub: 'المدد المتاحة ونسب الزيادة' },
-        { id: 'section-start-date',   num: '05', label: 'تاريخ بدء الأقساط',  sub: 'متى يبدأ احتساب الأقساط' },
+        { id: 'section-plan-info',    num: '01', label: m.nav01Title, sub: m.nav01Sub },
+        { id: 'section-pricing',      num: '02', label: m.nav02Title, sub: m.nav02Sub },
+        { id: 'section-down-payment', num: '03', label: m.nav03Title, sub: m.nav03Sub },
+        { id: 'section-durations',    num: '04', label: m.nav04Title, sub: m.nav04Sub },
+        { id: 'section-start-date',   num: '05', label: m.nav05Title, sub: m.nav05Sub },
       ]
     : [
-        { id: 'section-plan-info',    num: '01', label: 'معلومات الخطة',       sub: 'الاسم والوصف والمشروع والوحدة' },
-        { id: 'section-pricing',      num: '02', label: 'التسعير',             sub: 'السعر والخصم ودفعة الحجز' },
-        { id: 'section-down-payment', num: '03', label: 'الدفعة الأولى',       sub: 'نوع المقدم وقيمته' },
-        { id: 'section-durations',    num: '04', label: 'خيارات المدة',        sub: 'المدد المتاحة ونسب الزيادة' },
-        { id: 'section-legacy',       num: '05', label: 'إعدادات قديمة',       sub: 'للخطط القديمة فقط' },
-        { id: 'section-start-date',   num: '06', label: 'تاريخ بدء الأقساط',  sub: 'متى يبدأ احتساب الأقساط' },
+        { id: 'section-plan-info',    num: '01', label: m.nav01Title,       sub: m.nav01Sub },
+        { id: 'section-pricing',      num: '02', label: m.nav02Title,       sub: m.nav02Sub },
+        { id: 'section-down-payment', num: '03', label: m.nav03Title,       sub: m.nav03Sub },
+        { id: 'section-durations',    num: '04', label: m.nav04Title,       sub: m.nav04Sub },
+        { id: 'section-legacy',       num: '05', label: m.nav05LegacyTitle, sub: m.nav05LegacySub },
+        { id: 'section-start-date',   num: '06', label: m.nav06Title,       sub: m.nav06Sub },
       ];
 
   return (
@@ -339,43 +313,38 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
 
       <PremiumFormLayout
         navSections={navSections}
-        sidebarBadge={mode === 'edit' ? 'تعديل' : 'جديد'}
-        sidebarInfo={
-          mode === 'edit'
-            ? 'سيتم تحديث بيانات الخطة فور الحفظ.'
-            : 'بعد الإنشاء يمكن ربط الخطة بحجوزات جديدة.'
-        }
+        sidebarBadge={mode === 'edit' ? m.sidebarBadgeEdit : m.sidebarBadgeNew}
+        sidebarInfo={mode === 'edit' ? m.sidebarInfoEdit : m.sidebarInfoNew}
       >
-        {/* ── Panel 01: معلومات الخطة ── */}
+        {/* ── Panel 01: Plan Info ── */}
         <PremiumFormPanel
           id="section-plan-info"
           number="01"
-          title="معلومات الخطة"
-          description="الاسم والوصف وربط الخطة بمشروع ووحدة."
+          title={m.p1Title}
+          description={m.p1Desc}
         >
           <div className="flex flex-col gap-5">
-            <Field label="اسم الخطة" name="name" required>
+            <Field label={m.labelName} name="name" required>
               <Input
                 id="name"
                 name="name"
                 required
                 defaultValue={d?.name}
-                placeholder="مثال: خطة 24 قسط شهري"
+                placeholder={m.namePlaceholder}
               />
             </Field>
 
-            <Field label="وصف / ملاحظات" name="description">
+            <Field label={m.labelDesc} name="description">
               <Textarea
                 id="description"
                 name="description"
                 rows={2}
                 defaultValue={d?.description ?? ''}
-                placeholder="وصف اختياري للخطة..."
+                placeholder={m.descPlaceholder}
               />
             </Field>
 
-            {/* Project — used to filter units */}
-            <Field label="المشروع" name="projectId" required hint="اختر المشروع لتحميل الوحدات المتاحة">
+            <Field label={m.labelProject} name="projectId" required hint={m.hintProject}>
               <Select
                 id="projectId"
                 name="projectId"
@@ -387,7 +356,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                   setUnitTouched(false);
                 }}
               >
-                <option value="">— اختر مشروعاً —</option>
+                <option value="">{m.optionChooseProject}</option>
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name.ar}
@@ -396,21 +365,20 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
               </Select>
             </Field>
 
-            {/* Unit — always required, visible once project is selected */}
             <Field
-              label="الوحدة"
+              label={m.labelUnit}
               name="unitId"
               required
               error={unitError}
               hint={
                 !projectId
-                  ? 'اختر المشروع أولاً لتحميل الوحدات'
+                  ? m.unitHintNoProject
                   : unitsLoading
-                  ? 'جاري تحميل الوحدات…'
+                  ? m.unitHintLoading
                   : units.length === 0 && mode === 'create'
-                  ? 'لا توجد وحدات متاحة بدون خطة تقسيط في هذا المشروع'
+                  ? m.unitHintNoneCreate
                   : units.length === 0
-                  ? 'لا توجد وحدات متاحة في هذا المشروع'
+                  ? m.unitHintNoneEdit
                   : undefined
               }
             >
@@ -424,7 +392,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                 invalid={!!unitError}
                 onBlur={() => setUnitTouched(true)}
               >
-                <option value="">— اختر وحدة —</option>
+                <option value="">{m.optionChooseUnit}</option>
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.code} — {u.type} — {formatCurrency(u.price, currency)}
@@ -434,36 +402,35 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             </Field>
 
             <div className="grid grid-cols-2 gap-4">
-              <Field label="الحالة" name="status">
+              <Field label={m.labelStatus} name="status">
                 <Select id="status" name="status" defaultValue={d?.status ?? 'DRAFT'}>
-                  <option value="DRAFT">مسودة</option>
-                  <option value="ACTIVE">نشطة</option>
-                  <option value="INACTIVE">غير نشطة</option>
+                  <option value="DRAFT">{m.statusDraft}</option>
+                  <option value="ACTIVE">{m.statusActive}</option>
+                  <option value="INACTIVE">{m.statusInactive}</option>
                 </Select>
               </Field>
-              <Field label="الصلاحية" hint="ثابتة: للمبيعات فقط">
+              <Field label={m.labelVisibility} hint={m.hintVisibility}>
                 <input type="hidden" name="visibility" value="SALES_ONLY" />
                 <div className="h-10 flex items-center rounded-xl border border-hairline bg-canvas/40 px-3 text-sm text-slate-500">
-                  مبيعات فقط
+                  {m.visibilityDisplay}
                 </div>
               </Field>
             </div>
           </div>
         </PremiumFormPanel>
 
-        {/* ── Panel 02: التسعير ── */}
+        {/* ── Panel 02: Pricing ── */}
         <PremiumFormPanel
           id="section-pricing"
           number="02"
-          title="التسعير"
-          description="السعر الإجمالي والخصم وصافي السعر ومبلغ الحجز."
+          title={m.p2Title}
+          description={m.p2Desc}
         >
           <div className="flex flex-col gap-5">
-            {/* Total price — read-only by default, editable when override is on */}
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <label htmlFor="totalPrice" className="text-sm font-medium text-slate-700">
-                  السعر الإجمالي ({symbol})
+                  {m.totalPriceLabel(symbol)}
                   <span className="text-danger-600 ms-0.5">*</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -473,7 +440,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                     onChange={(e) => handleManualOverrideChange(e.target.checked)}
                     className="accent-brand-500 h-3.5 w-3.5"
                   />
-                  <span className="text-xs text-slate-600">تعديل السعر يدوياً</span>
+                  <span className="text-xs text-slate-600">{m.manualOverrideLabel}</span>
                 </label>
               </div>
               <Input
@@ -482,18 +449,16 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                 required
                 readOnly={!manualPriceOverride}
                 className={!manualPriceOverride ? 'bg-canvas/40 text-slate-600 cursor-default' : ''}
-                placeholder="يُحدَّد تلقائياً من سعر الوحدة"
+                placeholder={m.totalPricePlaceholder}
                 {...(manualPriceOverride
                   ? numericInputProps(totalPrice, setTotalPrice, { allowEmpty: false })
                   : { value: totalPrice, onChange: () => {} })}
               />
-              <p className="text-xs text-slate-500">
-                السعر الافتراضي مأخوذ من سعر الوحدة، ويمكن تعديله يدوياً عند الحاجة.
-              </p>
+              <p className="text-xs text-slate-500">{m.totalPriceHint}</p>
             </div>
 
             <div>
-              <span className="text-sm font-medium text-slate-700">نوع الخصم</span>
+              <span className="text-sm font-medium text-slate-700">{m.discountTypeLabel}</span>
               <div className="flex flex-wrap gap-3 mt-2">
                 {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
                   <label
@@ -512,20 +477,16 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                       onChange={() => setDiscountType(t)}
                       className="accent-brand-500"
                     />
-                    <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+                    <span>{t === 'FIXED' ? m.typeFixed : m.typePct}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <Field
-              label={discountType === 'FIXED' ? `قيمة الخصم (${symbol})` : 'نسبة الخصم (%)'}
+              label={discountType === 'FIXED' ? m.discountLabelFixed(symbol) : m.discountLabelPct}
               name="discountValue"
-              hint={
-                discountType === 'PERCENTAGE'
-                  ? 'نسبة من السعر الإجمالي. اتركها صفراً إذا لم يكن هناك خصم.'
-                  : 'اتركها صفراً إذا لم يكن هناك خصم'
-              }
+              hint={discountType === 'PERCENTAGE' ? m.discountHintPct : m.discountHintFixed}
             >
               <Input
                 id="discountValue"
@@ -538,14 +499,14 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             {disc > 0 && (
               <div className="rounded-xl bg-canvas/40 border border-hairline p-3 text-sm">
                 <p className="text-slate-600 font-medium">
-                  {discountType === 'PERCENTAGE' ? 'قيمة الخصم المحتسبة' : 'قيمة الخصم'}
+                  {discountType === 'PERCENTAGE' ? m.discountDisplayPct : m.discountDisplayFixed}
                 </p>
                 <p className="text-slate-900 text-lg font-bold mt-0.5">{formatCurrency(disc, currency)}</p>
               </div>
             )}
 
             <div>
-              <span className="text-sm font-medium text-slate-700">نوع دفعة الحجز</span>
+              <span className="text-sm font-medium text-slate-700">{m.reservationTypeLabel}</span>
               <div className="flex flex-wrap gap-3 mt-2">
                 {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
                   <label
@@ -564,26 +525,22 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                       onChange={() => setReservationAmountType(t)}
                       className="accent-brand-500"
                     />
-                    <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+                    <span>{t === 'FIXED' ? m.typeFixed : m.typePct}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <Field
-              label={reservationAmountType === 'FIXED' ? `قيمة دفعة الحجز (${symbol})` : 'نسبة دفعة الحجز (%)'}
+              label={reservationAmountType === 'FIXED' ? m.reservationLabelFixed(symbol) : m.reservationLabelPct}
               name="reservationAmountValue"
               required
-              hint={
-                reservationAmountType === 'PERCENTAGE'
-                  ? 'نسبة من سعر الوحدة. تُحتسب القيمة من سعر الوحدة المختارة عند إنشاء الحجز. مطلوبة وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
-                  : 'مبلغ الحجز المطلوب من العميل. يُستخدم تلقائياً عند إنشاء الحجز. مطلوب وأكبر من صفر للخطط التي تستخدم خيارات المدة.'
-              }
+              hint={reservationAmountType === 'PERCENTAGE' ? m.reservationHintPct : m.reservationHintFixed}
             >
               <Input
                 id="reservationAmountValue"
                 name="reservationAmountValue"
-                placeholder={reservationAmountType === 'PERCENTAGE' ? '10' : 'مثال: 50000'}
+                placeholder={reservationAmountType === 'PERCENTAGE' ? '10' : ''}
                 {...numericInputProps(reservationAmountValue, setReservationAmountValue, { allowEmpty: true })}
               />
             </Field>
@@ -591,36 +548,34 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
             {reservation > 0 && (
               <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
                 <p className="text-brand-700 font-medium">
-                  {reservationAmountType === 'PERCENTAGE' ? 'دفعة الحجز المحتسبة (من صافي السعر)' : 'دفعة الحجز'}
+                  {reservationAmountType === 'PERCENTAGE' ? m.reservationDisplayPct : m.reservationDisplayFixed}
                 </p>
                 <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(reservation, currency)}</p>
                 {reservationAmountType === 'PERCENTAGE' && (
-                  <p className="text-brand-700/80 text-xs mt-1">
-                    عند إنشاء الحجز ستُحتسب النسبة من سعر الوحدة المختارة.
-                  </p>
+                  <p className="text-brand-700/80 text-xs mt-1">{m.reservationPctNote}</p>
                 )}
               </div>
             )}
 
             {netPrice > 0 && (
               <div className="rounded-xl bg-brand-50 border border-brand-100 p-3 text-sm">
-                <p className="text-brand-700 font-medium">صافي السعر</p>
+                <p className="text-brand-700 font-medium">{m.netPriceLabel}</p>
                 <p className="text-brand-900 text-lg font-bold mt-0.5">{formatCurrency(netPrice, currency)}</p>
               </div>
             )}
           </div>
         </PremiumFormPanel>
 
-        {/* ── Panel 03: الدفعة الأولى (المقدم) ── */}
+        {/* ── Panel 03: Down Payment ── */}
         <PremiumFormPanel
           id="section-down-payment"
           number="03"
-          title="الدفعة الأولى (المقدم)"
-          description="حدد نوع المقدم وقيمته."
+          title={m.p3Title}
+          description={m.p3Desc}
         >
           <div className="flex flex-col gap-5">
             <div>
-              <span className="text-sm font-medium text-slate-700">نوع المقدم</span>
+              <span className="text-sm font-medium text-slate-700">{m.downPaymentTypeLabel}</span>
               <div className="flex flex-wrap gap-3 mt-2">
                 {(['FIXED', 'PERCENTAGE'] as DownPaymentType[]).map((t) => (
                   <label
@@ -639,14 +594,14 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                       onChange={() => setDownPaymentType(t)}
                       className="accent-brand-500"
                     />
-                    <span>{t === 'FIXED' ? 'مبلغ ثابت' : 'نسبة مئوية %'}</span>
+                    <span>{t === 'FIXED' ? m.typeFixed : m.typePct}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             <Field
-              label={downPaymentType === 'FIXED' ? `قيمة المقدم (${symbol})` : 'نسبة المقدم (%)'}
+              label={downPaymentType === 'FIXED' ? m.downPaymentLabelFixed(symbol) : m.downPaymentLabelPct}
               name="downPaymentValue"
               required
             >
@@ -660,22 +615,21 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
 
             {dpAmount > 0 && (
               <div className="rounded-xl bg-amber-50 border border-amber-100 p-3 text-sm">
-                <p className="text-amber-700 font-medium">قيمة المقدم</p>
+                <p className="text-amber-700 font-medium">{m.downPaymentDisplay}</p>
                 <p className="text-amber-900 text-lg font-bold mt-0.5">{formatCurrency(dpAmount, currency)}</p>
               </div>
             )}
           </div>
         </PremiumFormPanel>
 
-        {/* ── Panel 04: خيارات مدة التقسيط ── */}
+        {/* ── Panel 04: Duration Options ── */}
         <PremiumFormPanel
           id="section-durations"
           number="04"
-          title="خيارات مدة التقسيط"
-          description="حدد المدد المتاحة ونسبة الزيادة لكل مدة. المبيعات سيختارون مدة من القائمة فقط (نسبة الزيادة للعرض فقط ولا يمكنهم تعديلها)."
+          title={m.p4Title}
+          description={m.p4Desc}
         >
           <div className="flex flex-col gap-4">
-            {/* Serialize duration options as a hidden JSON field for the server action */}
             <input
               type="hidden"
               name="durationOptions"
@@ -712,11 +666,11 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
               <table className="w-full text-sm">
                 <thead className="bg-canvas/40 border-b border-hairline">
                   <tr>
-                    <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">المدة (شهر)</th>
-                    <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">نسبة الزيادة %</th>
-                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">المبلغ المُمول</th>
-                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">القسط الشهري</th>
-                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">إجمالي السداد</th>
+                    <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">{m.colDuration}</th>
+                    <th className="px-3 py-2.5 text-start text-xs font-medium text-slate-500">{m.colIncrease}</th>
+                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colFinanced}</th>
+                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colMonthly}</th>
+                    <th className="px-3 py-2.5 text-end text-xs font-medium text-slate-500">{m.colTotal}</th>
                     <th className="px-3 py-2.5"></th>
                   </tr>
                 </thead>
@@ -724,9 +678,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                   {durationCalcRows.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="px-4 py-6 text-center text-xs text-slate-400">
-                        {mode === 'edit'
-                          ? 'خطة قديمة بدون خيارات مدة. اضغط "إضافة خيار مدة" للترقية إلى النظام الجديد.'
-                          : 'أضف خيار مدة واحد على الأقل'}
+                        {mode === 'edit' ? m.emptyLegacyEdit : m.emptyCreate}
                       </td>
                     </tr>
                   ) : (
@@ -780,7 +732,7 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                             type="button"
                             onClick={() => removeDurationOption(row.key)}
                             className="p-1.5 rounded-lg text-slate-400 hover:bg-danger-50 hover:text-danger-600 transition"
-                            aria-label="حذف خيار المدة"
+                            aria-label={m.removeDurationAriaLabel}
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -800,12 +752,12 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                 onClick={addDurationOption}
                 leftIcon={<Plus className="h-4 w-4" />}
               >
-                إضافة خيار مدة
+                {m.addDurationBtn}
               </Button>
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              نسبة الزيادة تُطبَّق على المتبقي بعد دفعة الحجز والدفعة الأولى. الصيغة:{' '}
+              {m.durationFormulaNote}{' '}
               <span className="font-mono" dir="ltr">
                 financed = remaining × (1 + %); monthly = financed / months
               </span>
@@ -813,17 +765,17 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
           </div>
         </PremiumFormPanel>
 
-        {/* ── Panel 05: إعدادات قديمة — only when no duration options ── */}
+        {/* ── Panel 05: Legacy (only when no duration options) ── */}
         {!useDurationModel && (
           <PremiumFormPanel
             id="section-legacy"
             number="05"
-            title="إعدادات قديمة (اختيارية)"
-            description="هذه الحقول للخطط القديمة فقط. للخطط الجديدة استخدم خيارات المدة بالأعلى."
+            title={m.p5LegacyTitle}
+            description={m.p5LegacyDesc}
           >
             <div className="flex flex-col gap-5">
               <div className="grid grid-cols-2 gap-4">
-                <Field label="عدد الأقساط" name="installmentsCount">
+                <Field label={m.labelInstallmentsCount} name="installmentsCount">
                   <Input
                     id="installmentsCount"
                     name="installmentsCount"
@@ -833,25 +785,25 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                     })}
                   />
                 </Field>
-                <Field label="تكرار القسط" name="frequency">
+                <Field label={m.labelFrequency} name="frequency">
                   <Select
                     id="frequency"
                     name="frequency"
                     value={frequency}
                     onChange={(e) => setFrequency(e.target.value as InstallmentFrequency)}
                   >
-                    <option value="MONTHLY">شهري</option>
-                    <option value="QUARTERLY">ربع سنوي (كل 3 أشهر)</option>
-                    <option value="SEMI_ANNUAL">نصف سنوي (كل 6 أشهر)</option>
-                    <option value="YEARLY">سنوي</option>
+                    <option value="MONTHLY">{m.freqMonthly}</option>
+                    <option value="QUARTERLY">{m.freqQuarterly}</option>
+                    <option value="SEMI_ANNUAL">{m.freqSemiAnnual}</option>
+                    <option value="YEARLY">{m.freqYearly}</option>
                   </Select>
                 </Field>
               </div>
 
               <Field
-                label={`الدفعة الأخيرة (${symbol})`}
+                label={m.finalPaymentLabel(symbol)}
                 name="finalPaymentAmount"
-                hint="اتركها فارغة إذا لم تكن هناك دفعة بالون"
+                hint={m.finalPaymentHint}
               >
                 <Input
                   id="finalPaymentAmount"
@@ -864,12 +816,12 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
           </PremiumFormPanel>
         )}
 
-        {/* ── Panel 05/06: تاريخ بدء الأقساط ── */}
+        {/* ── Panel 05/06: Start Date ── */}
         <PremiumFormPanel
           id="section-start-date"
           number={useDurationModel ? '05' : '06'}
-          title="تاريخ بدء الأقساط"
-          description="حدد متى يبدأ احتساب تواريخ الأقساط."
+          title={m.p6Title}
+          description={m.p6Desc}
         >
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
@@ -892,17 +844,17 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
                   />
                   <span>
                     {r === 'MANUAL'
-                      ? 'تاريخ محدد يدوياً'
+                      ? m.startManual
                       : r === 'AFTER_RESERVATION'
-                        ? 'بعد تاريخ الحجز'
-                        : 'بعد تاريخ التعاقد'}
+                        ? m.startAfterReservation
+                        : m.startAfterContract}
                   </span>
                 </label>
               ))}
             </div>
 
             {startDateRule === 'MANUAL' && (
-              <Field label="تاريخ بدء الأقساط" name="manualStartDate" required>
+              <Field label={m.labelManualStartDate} name="manualStartDate" required>
                 <Input
                   id="manualStartDate"
                   name="manualStartDate"
@@ -917,14 +869,14 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
         </PremiumFormPanel>
       </PremiumFormLayout>
 
-      {/* ── Net price summary ─────────────────────────────────────────────── */}
+      {/* ── Net price summary ── */}
       {netPrice > 0 && (
         <section className="flex items-center gap-2 rounded-2xl border border-hairline bg-surface px-4 py-3 text-sm">
           <Calculator className="h-4 w-4 text-brand-600" />
-          <span className="text-slate-500">صافي السعر:</span>
+          <span className="text-slate-500">{m.summaryNetPrice}</span>
           <span className="font-bold text-slate-900">{formatCurrency(netPrice, currency)}</span>
           <span className="text-slate-300 mx-1">|</span>
-          <span className="text-slate-500">المتبقي بعد الحجز والدفعة الأولى:</span>
+          <span className="text-slate-500">{m.summaryRemaining}</span>
           <span className="font-bold text-slate-900">
             {formatCurrency(Math.max(0, netPrice - reservation - dpAmount), currency)}
           </span>
@@ -934,14 +886,14 @@ export default function PlanForm({ projects, initialData, mode, currency = 'SAR'
       <FormFooter
         sticky
         primary={
-          <SubmitButton pendingLabel="جاري الحفظ…">
-            {mode === 'create' ? 'إنشاء الخطة' : 'حفظ التعديلات'}
+          <SubmitButton pendingLabel={m.submitPending}>
+            {mode === 'create' ? m.submitCreate : m.submitEdit}
           </SubmitButton>
         }
         secondary={
           <Link href="/dashboard/installments">
             <Button variant="ghost" size="md" type="button">
-              إلغاء
+              {m.cancelBtn}
             </Button>
           </Link>
         }

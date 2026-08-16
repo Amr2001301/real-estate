@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { ChevronLeft, ShieldCheck, Info, Mail, Phone } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { UserPermissionsResponse, UserRole } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
@@ -10,16 +12,6 @@ import { PermissionPicker } from './permission-picker';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  ADMIN:                  'مدير النظام',
-  SALES:                  'مبيعات',
-  SALES_MANAGER:          'مدير مبيعات',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-  CLIENT:                 'متصفّح',
-  CUSTOMER:               'عميل',
-  BROKER:                 'وسيط',
-};
 
 const ROLE_BADGE_CLS: Record<UserRole, string> = {
   ADMIN:                  'bg-purple-100 text-purple-700',
@@ -60,39 +52,43 @@ export default async function UserPermissionsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const res = await safe(api.get<UserPermissionsResponse>(`/users/${id}/permissions`));
+  const [res, locale] = await Promise.all([
+    safe(api.get<UserPermissionsResponse>(`/users/${id}/permissions`)),
+    getLocale(),
+  ]);
   if (res.error || !res.data) notFound();
   const { user, assigned, available } = res.data;
+  const m = uiT(locale).userPermissionsPage;
 
   return (
     <div className="space-y-5">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title={`صلاحيات: ${user.fullName}`}
-        description="إدارة الصلاحيات التفصيلية لهذا المستخدم. لا تغيِّر هذه الصفحة الدور الأساسي."
+        title={`${m.titlePrefix} ${user.fullName}`}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الصلاحيات', href: '/dashboard/permissions' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbPermissions, href: '/dashboard/permissions' },
           { label: user.fullName },
         ]}
         meta={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
             <ShieldCheck className="h-3.5 w-3.5" />
-            صلاحيات شخصية
+            {m.metaBadge}
           </span>
         }
         actions={
           <Link href="/dashboard/permissions">
             <Button variant="outline" size="sm" leftIcon={<ChevronLeft className="h-4 w-4" />}>
-              العودة للصلاحيات
+              {m.backButton}
             </Button>
           </Link>
         }
       />
 
       {/* ── User identity card ──────────────────────────────────────────── */}
-      <PremiumSectionCard title="معلومات المستخدم" padded={false}>
+      <PremiumSectionCard title={m.sectionUser} padded={false}>
         <div className="flex items-center gap-5 px-6 py-5">
           {/* Avatar */}
           <span
@@ -117,7 +113,7 @@ export default async function UserPermissionsPage({
                   ROLE_BADGE_CLS[user.role] ?? 'bg-slate-100 text-slate-600',
                 )}
               >
-                {ROLE_LABEL[user.role] ?? user.role}
+                {m.roleLabels[user.role] ?? user.role}
               </span>
               <span
                 className={cn(
@@ -127,7 +123,7 @@ export default async function UserPermissionsPage({
                     : 'bg-slate-100 text-slate-500',
                 )}
               >
-                {user.active ? 'نشط' : 'معطّل'}
+                {user.active ? m.activeLabel : m.inactiveLabel}
               </span>
             </div>
 
@@ -154,10 +150,7 @@ export default async function UserPermissionsPage({
       {/* ── Info notice ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 rounded-xl border border-brand-100 bg-brand-50/40 px-4 py-3 text-[12px] text-brand-800">
         <Info className="h-4 w-4 shrink-0 text-brand-600" />
-        <span>
-          الصلاحيات التفصيلية محفوظة في النظام وقد لا تكون مفعّلة على كل المسارات بعد.
-          تغييرها لا يُعدِّل الدور الأساسي لـ {user.fullName}.
-        </span>
+        <span>{m.infoNotice(user.fullName)}</span>
       </div>
 
       {/* ── Permissions editor ──────────────────────────────────────────── */}
@@ -166,6 +159,7 @@ export default async function UserPermissionsPage({
         userName={user.fullName}
         assigned={assigned}
         available={available}
+        locale={locale}
       />
 
     </div>

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
 import type { PagedDeposits, Deposit, DepositType, Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -23,6 +24,7 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,13 +33,6 @@ export const dynamic = 'force-dynamic';
 interface ProjectOption { id: string; name: { ar: string; en: string } }
 
 // ── Maps ──────────────────────────────────────────────────────────────────────
-
-const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'مبلغ الحجز',
-  DOWN_PAYMENT:   'دفعة أولى',
-  INSTALLMENT:    'قسط شهري',
-  FINAL_PAYMENT:  'دفعة أخيرة',
-};
 
 const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
   BOOKING_AMOUNT: 'bg-info-50 text-info-700',
@@ -67,9 +62,9 @@ function getDueDate(d: Deposit): string | null {
   return null;
 }
 
-function getDueDateTitle(d: Deposit): string | undefined {
+function getDueDateTitle(d: Deposit, m: ReturnType<typeof uiT>['pages']['deposits']): string | undefined {
   if (d.type === 'BOOKING_AMOUNT') {
-    return d.reservation?.expiresAt ? 'موعد انتهاء الحجز' : 'مستحق عند الحجز';
+    return d.reservation?.expiresAt ? m.dueReservationEnd : m.dueAtReservation;
   }
   return undefined;
 }
@@ -99,9 +94,19 @@ export default async function DepositsPage({
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const sp = await searchParams;
-  const currency = await getReportsCurrency();
+  const [currency, locale, session] = await Promise.all([
+    getReportsCurrency(),
+    getLocale(),
+    getSession(),
+  ]);
+  const m = uiT(locale).pages.deposits;
+  const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
+    BOOKING_AMOUNT: m.typeLabels.RESERVATION,
+    DOWN_PAYMENT:   m.typeLabels.DOWN_PAYMENT,
+    INSTALLMENT:    m.typeLabels.INSTALLMENT,
+    FINAL_PAYMENT:  m.typeLabels.FINAL_PAYMENT,
+  };
   // Registering + verifying deposits are admin/finance actions; SALES is read-only.
-  const session = await getSession();
   const isAdmin = session?.role === 'ADMIN';
   const page = Math.max(1, Number(sp.page ?? 1));
   const pageSize = 20;
@@ -145,17 +150,17 @@ export default async function DepositsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="الدفعات"
-        description="متابعة الدفعات والتحصيلات المرتبطة بالعقود والعملاء."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الدفعات' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           isAdmin ? (
             <Link href="/dashboard/deposits/new">
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                تسجيل دفعة
+                {m.addBtn}
               </Button>
             </Link>
           ) : undefined
@@ -168,31 +173,31 @@ export default async function DepositsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي المحصّل',
+            label: m.kpi.totalCollected,
             value: totals ? formatCurrency(totals.totalAmount, currency) : '—',
             icon: <DollarSign />,
             tone: 'brand',
             primary: true,
-            sub: totals ? `${totals.count} دفعة` : undefined,
+            sub: totals ? `${totals.count} ${m.depositSuffix}` : undefined,
           },
           {
-            label: 'مبالغ الحجز',
+            label: m.kpi.reservationAmounts,
             value: totals ? formatCurrency(totals.bookingAmount, currency) : '—',
             icon: <Landmark />,
             tone: 'info',
           },
           {
-            label: 'الأقساط الشهرية',
+            label: m.kpi.monthlyInstallments,
             value: totals ? formatCurrency(totals.installment, currency) : '—',
             icon: <CreditCard />,
             tone: 'neutral',
           },
           {
-            label: 'عدد الدفعات',
+            label: m.kpi.totalDeposits,
             value: totals?.count ?? 0,
             icon: <Hash />,
             tone: 'success',
-            sub: 'إجمالي الدفعات المسجلة',
+            sub: m.kpi.totalDepositsSub,
           },
         ]}
       />
@@ -208,31 +213,31 @@ export default async function DepositsPage({
         {!showFilters && sp.verified   && <input type="hidden" name="verified"   value={sp.verified} />}
 
         {/* Type */}
-        <PremiumFilterField label="نوع الدفعة" htmlFor="dep-type">
+        <PremiumFilterField label={m.filter.typeLabel} htmlFor="dep-type">
           <Select id="dep-type" name="type" inputSize="sm" defaultValue={sp.type ?? ''} className="w-36 shrink-0">
-            <option value="">كل الأنواع</option>
-            <option value="BOOKING_AMOUNT">مبلغ الحجز</option>
-            <option value="DOWN_PAYMENT">دفعة أولى</option>
-            <option value="INSTALLMENT">قسط شهري</option>
-            <option value="FINAL_PAYMENT">دفعة أخيرة</option>
+            <option value="">{m.filter.allTypes}</option>
+            <option value="BOOKING_AMOUNT">{m.typeLabels.RESERVATION}</option>
+            <option value="DOWN_PAYMENT">{m.typeLabels.DOWN_PAYMENT}</option>
+            <option value="INSTALLMENT">{m.typeLabels.INSTALLMENT}</option>
+            <option value="FINAL_PAYMENT">{m.typeLabels.FINAL_PAYMENT}</option>
           </Select>
         </PremiumFilterField>
 
         {/* Review status */}
-        <PremiumFilterField label="حالة المراجعة" htmlFor="dep-reviewStatus">
+        <PremiumFilterField label={m.filter.reviewLabel} htmlFor="dep-reviewStatus">
           <Select id="dep-reviewStatus" name="reviewStatus" inputSize="sm" defaultValue={sp.reviewStatus ?? ''} className="w-40 shrink-0">
-            <option value="">كل حالات المراجعة</option>
-            <option value="PENDING_REVIEW">قيد المراجعة</option>
-            <option value="APPROVED">معتمد</option>
-            <option value="REJECTED">مرفوض</option>
-            <option value="NO_PROOF">بدون إثبات</option>
+            <option value="">{m.filter.allReviews}</option>
+            <option value="PENDING_REVIEW">{m.filter.underReview}</option>
+            <option value="APPROVED">{m.filter.approved}</option>
+            <option value="REJECTED">{m.filter.rejected}</option>
+            <option value="NO_PROOF">{m.filter.noProof}</option>
           </Select>
         </PremiumFilterField>
 
         {/* Project */}
-        <PremiumFilterField label="المشروع" htmlFor="dep-projectId">
+        <PremiumFilterField label={uiT(locale).pages.units.filter.projectLabel} htmlFor="dep-projectId">
           <Select id="dep-projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
-            <option value="">كل المشاريع</option>
+            <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
@@ -241,12 +246,12 @@ export default async function DepositsPage({
 
         {/* Search — grows to fill available space */}
         <div className="flex-1 min-w-[180px]">
-          <label htmlFor="dep-q" className="sr-only">بحث</label>
+          <label htmlFor="dep-q" className="sr-only">{uiT(locale).common.searchBtn}</label>
           <Input
             id="dep-q"
             name="q"
             inputSize="sm"
-            placeholder="ابحث باسم العميل أو رقم العقد أو الحجز"
+            placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             leftAddon={<Search />}
             className="w-full"
@@ -255,9 +260,9 @@ export default async function DepositsPage({
 
         {/* Action buttons — before advanced panel so they stay in row 1 */}
         <div className="flex items-center gap-2 shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           <Link href="/dashboard/deposits">
-            <Button type="button" variant="secondary" size="sm">إعادة تعيين</Button>
+            <Button type="button" variant="secondary" size="sm">{m.filter.resetBtn}</Button>
           </Link>
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
           <Link
@@ -270,7 +275,7 @@ export default async function DepositsPage({
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filter.advancedHide : m.filter.advancedShow}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -285,36 +290,36 @@ export default async function DepositsPage({
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="paidAtFrom" className="text-[11px] font-medium text-slate-400">تاريخ الدفع من</label>
+                <label htmlFor="paidAtFrom" className="text-[11px] font-medium text-slate-400">{m.filter.dateFrom}</label>
                 <Input id="paidAtFrom" name="paidAtFrom" type="date" inputSize="sm" defaultValue={sp.paidAtFrom ?? ''} />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="paidAtTo" className="text-[11px] font-medium text-slate-400">تاريخ الدفع إلى</label>
+                <label htmlFor="paidAtTo" className="text-[11px] font-medium text-slate-400">{m.filter.dateTo}</label>
                 <Input id="paidAtTo" name="paidAtTo" type="date" inputSize="sm" defaultValue={sp.paidAtTo ?? ''} />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="dueDateFrom" className="text-[11px] font-medium text-slate-400">الاستحقاق من</label>
+                <label htmlFor="dueDateFrom" className="text-[11px] font-medium text-slate-400">{m.filter.dueFrom}</label>
                 <Input id="dueDateFrom" name="dueDateFrom" type="date" inputSize="sm" defaultValue={sp.dueDateFrom ?? ''} />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="dueDateTo" className="text-[11px] font-medium text-slate-400">الاستحقاق إلى</label>
+                <label htmlFor="dueDateTo" className="text-[11px] font-medium text-slate-400">{m.filter.dueTo}</label>
                 <Input id="dueDateTo" name="dueDateTo" type="date" inputSize="sm" defaultValue={sp.dueDateTo ?? ''} />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="ref" className="text-[11px] font-medium text-slate-400">رقم المرجع</label>
-                <Input id="ref" name="ref" inputSize="sm" placeholder="رقم العقد أو الحجز" defaultValue={sp.ref ?? ''} />
+                <label htmlFor="ref" className="text-[11px] font-medium text-slate-400">{m.filter.refLabel}</label>
+                <Input id="ref" name="ref" inputSize="sm" placeholder={m.filter.refPlaceholder} defaultValue={sp.ref ?? ''} />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label htmlFor="verified" className="text-[11px] font-medium text-slate-400">التحقق</label>
+                <label htmlFor="verified" className="text-[11px] font-medium text-slate-400">{m.filter.verifiedLabel}</label>
                 <Select id="verified" name="verified" inputSize="sm" defaultValue={sp.verified ?? ''}>
-                  <option value="">الكل</option>
-                  <option value="true">متحقق</option>
-                  <option value="false">غير متحقق</option>
+                  <option value="">{m.filter.allVerified}</option>
+                  <option value="true">{m.filter.verified}</option>
+                  <option value="false">{m.filter.notVerified}</option>
                 </Select>
               </div>
 
@@ -334,12 +339,12 @@ export default async function DepositsPage({
       {/* ── Deposits table ───────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<ReceiptText />}
-        title="سجل الدفعات"
+        title={m.sectionTitle}
         padded={false}
         trailing={
           deposits ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {deposits.meta.total.toLocaleString('ar-EG')} دفعة
+              {deposits.meta.total.toLocaleString('ar-EG')} {m.depositSuffix}
             </span>
           ) : undefined
         }
@@ -347,8 +352,8 @@ export default async function DepositsPage({
         {!deposits || deposits.data.length === 0 ? (
           <PremiumEmptyState
             icon={<CreditCard />}
-            title="لا توجد دفعات"
-            description="لا توجد دفعات تطابق الفلاتر المختارة"
+            title={m.empty.title}
+            description={m.empty.description}
             className="py-12"
           />
         ) : (
@@ -356,15 +361,15 @@ export default async function DepositsPage({
             <table className="w-full text-sm min-w-[800px]">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">نوع الدفعة</th>
-                  <th className="text-start py-3 px-4">العميل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المرجع</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الاستحقاق</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المبلغ</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الدفع</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الإيصال</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">التحقق</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.type}</th>
+                  <th className="text-start py-3 px-4">{m.cols.client}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.unit}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.ref}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.due}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.amount}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.paidAt}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.receipt}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.verified}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -381,7 +386,7 @@ export default async function DepositsPage({
                               'inline-block px-2 py-0.5 rounded-full text-[11px] font-medium leading-tight hover:opacity-80 transition-opacity',
                               DEPOSIT_TYPE_CLS[d.type as DepositType] ?? 'bg-slate-100 text-slate-600',
                             )}
-                            title="تفاصيل الدفعة"
+                            title={m.detailTooltip}
                           >
                             {DEPOSIT_TYPE_LABELS[d.type as DepositType] ?? d.type}
                           </Link>
@@ -425,7 +430,7 @@ export default async function DepositsPage({
 
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         {dueDate ? (
-                          <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d)}>
+                          <span className="text-xs text-slate-500 tabular-nums" title={getDueDateTitle(d, m)}>
                             {formatDate(dueDate)}
                           </span>
                         ) : (
@@ -450,7 +455,7 @@ export default async function DepositsPage({
                             className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
                           >
                             <ExternalLink className="h-3 w-3 shrink-0" />
-                            عرض
+                            {m.receiptView}
                           </a>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
@@ -459,7 +464,7 @@ export default async function DepositsPage({
 
                       <td className="px-4 py-2.5 whitespace-nowrap">
                         {isAdmin ? (
-                          <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
+                          <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} locale={locale} />
                         ) : (
                           <span
                             className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -468,7 +473,7 @@ export default async function DepositsPage({
                                 : 'bg-amber-100 text-amber-700'
                             }`}
                           >
-                            {d.verified ? 'متحقق' : 'غير متحقق'}
+                            {d.verified ? m.verifiedBadge : m.notVerifiedBadge}
                           </span>
                         )}
                       </td>
@@ -501,6 +506,7 @@ export default async function DepositsPage({
             dueDateTo: sp.dueDateTo,
             verified: sp.verified,
           }}
+          locale={locale}
         />
       )}
     </div>

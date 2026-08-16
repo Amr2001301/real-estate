@@ -13,6 +13,8 @@ import type {
   User,
 } from '@/lib/types';
 import { formatDate, tx, maintenanceSlaLabel, warrantyMonthsLabel } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,9 +38,7 @@ function isOverdue(r: MaintenanceRequest): boolean {
   return isApproved(r) && !!r.dueAt && r.status !== 'CLOSED' && new Date(r.dueAt).getTime() < Date.now();
 }
 
-const PRIORITY_LABEL: Record<string, string> = {
-  LOW: 'منخفضة', MEDIUM: 'متوسطة', HIGH: 'عالية', URGENT: 'عاجلة',
-};
+// PRIORITY_LABEL built from messages in page body
 
 const PRIORITY_DOT: Record<string, string> = {
   LOW: 'bg-slate-400',
@@ -57,18 +57,7 @@ const PRIORITY_BADGE: Record<string, string> = {
 export const dynamic = 'force-dynamic';
 
 const REVIEW_STATUSES: MaintenanceReviewStatus[] = ['PENDING', 'APPROVED', 'REJECTED'];
-const REVIEW_LABEL: Record<MaintenanceReviewStatus, string> = {
-  PENDING: 'قيد المراجعة', APPROVED: 'معتمد', REJECTED: 'مرفوض',
-};
-
 const STATUSES: MaintenanceStatus[] = ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'];
-const STATUS_LABEL: Record<MaintenanceStatus, string> = {
-  OPEN: 'مفتوح',
-  ASSIGNED: 'مُسند',
-  IN_PROGRESS: 'قيد التنفيذ',
-  RESOLVED: 'تم الحل',
-  CLOSED: 'مغلق',
-};
 
 async function createCategoryAction(formData: FormData) {
   'use server';
@@ -106,6 +95,30 @@ export default async function MaintenancePage({
     catErr?: string;
   }>;
 }) {
+  const locale = await getLocale();
+  const m = uiT(locale).pages.maintenance;
+
+  const STATUS_LABEL: Record<MaintenanceStatus, string> = {
+    OPEN:        m.statusLabels.OPEN,
+    ASSIGNED:    m.statusLabels.ASSIGNED,
+    IN_PROGRESS: m.statusLabels.IN_PROGRESS,
+    RESOLVED:    m.statusLabels.RESOLVED,
+    CLOSED:      m.statusLabels.CLOSED,
+  };
+
+  const REVIEW_LABEL: Record<MaintenanceReviewStatus, string> = {
+    PENDING:  m.reviewLabels.PENDING,
+    APPROVED: m.reviewLabels.APPROVED,
+    REJECTED: m.reviewLabels.REJECTED,
+  };
+
+  const PRIORITY_LABEL: Record<string, string> = {
+    LOW:    m.priorityLabels.LOW,
+    MEDIUM: m.priorityLabels.MEDIUM,
+    HIGH:   m.priorityLabels.HIGH,
+    URGENT: m.priorityLabels.URGENT,
+  };
+
   const sp = await searchParams;
   const listQs = new URLSearchParams({ pageSize: '100' });
   if (sp.status) listQs.set('status', sp.status);
@@ -145,11 +158,11 @@ export default async function MaintenancePage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="طلبات الصيانة"
-        description="متابعة طلبات الصيانة المفتوحة والمغلقة عبر المشاريع والوحدات."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الصيانة' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -161,7 +174,7 @@ export default async function MaintenancePage({
             />
             <Link href="/dashboard/maintenance/new">
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                طلب صيانة جديد
+                {m.addBtn}
               </Button>
             </Link>
           </div>
@@ -173,16 +186,16 @@ export default async function MaintenancePage({
         action="/dashboard/maintenance"
         trailing={
           <div className="flex items-center gap-1.5">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
             {hasFilters && (
               <Link href="/dashboard/maintenance">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="الحالة" htmlFor="maint-status">
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="maint-status">
           <Select
             id="maint-status"
             name="status"
@@ -190,13 +203,13 @@ export default async function MaintenancePage({
             defaultValue={sp.status ?? ''}
             className="w-36"
           >
-            <option value="">كل الحالات</option>
+            <option value="">{uiT(locale).common.allStatuses}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{STATUS_LABEL[s]}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="المراجعة" htmlFor="maint-review">
+        <PremiumFilterField label={m.filter.reviewLabel} htmlFor="maint-review">
           <Select
             id="maint-review"
             name="reviewStatus"
@@ -204,13 +217,13 @@ export default async function MaintenancePage({
             defaultValue={sp.reviewStatus ?? ''}
             className="w-36"
           >
-            <option value="">كل المراجعات</option>
+            <option value="">{m.filter.allReviews}</option>
             {REVIEW_STATUSES.map((s) => (
               <option key={s} value={s}>{REVIEW_LABEL[s]}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="التصنيف" htmlFor="maint-category">
+        <PremiumFilterField label={m.filter.categoryLabel} htmlFor="maint-category">
           <Select
             id="maint-category"
             name="categoryId"
@@ -218,13 +231,13 @@ export default async function MaintenancePage({
             defaultValue={sp.categoryId ?? ''}
             className="w-44"
           >
-            <option value="">كل التصنيفات</option>
+            <option value="">{m.filter.allCategories}</option>
             {cats.map((c) => (
               <option key={c.id} value={c.id}>{tx(c.name)}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="المشرف" htmlFor="maint-admin">
+        <PremiumFilterField label={m.filter.supervisorLabel} htmlFor="maint-admin">
           <Select
             id="maint-admin"
             name="assignedAdminId"
@@ -232,7 +245,7 @@ export default async function MaintenancePage({
             defaultValue={sp.assignedAdminId ?? ''}
             className="w-36"
           >
-            <option value="">كل المشرفين</option>
+            <option value="">{m.filter.allSupervisors}</option>
             {admins.map((a) => (
               <option key={a.id} value={a.id}>{a.fullName}</option>
             ))}
@@ -241,22 +254,22 @@ export default async function MaintenancePage({
       </PremiumFilterBar>
 
       {/* KPI + analytics */}
-      <MaintenanceReports filters={reportFilters} />
+      <MaintenanceReports filters={reportFilters} locale={locale} />
 
       {reqsRes.error && (
         <div className="flex items-start gap-2 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>تعذّر تحميل طلبات الصيانة: {reqsRes.error}</p>
+          <p>{m.errorPrefix} {reqsRes.error}</p>
         </div>
       )}
 
       {/* Requests table */}
       <PremiumSectionCard
-        title="طلبات الصيانة"
+        title={m.sectionTitle}
         trailing={
           reqsRes.data ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {reqsRes.data.meta.total.toLocaleString('ar-EG')} طلب
+              {reqsRes.data.meta.total.toLocaleString('ar-EG')} {m.requestSuffix}
             </span>
           ) : undefined
         }
@@ -265,16 +278,16 @@ export default async function MaintenancePage({
         {rows.length === 0 ? (
           <PremiumEmptyState
             icon={<Wrench />}
-            title="لا توجد طلبات صيانة"
+            title={m.empty.title}
             description={
               hasFilters
-                ? 'لا توجد طلبات تطابق الفلاتر المختارة'
-                : 'لم يتم تسجيل أي طلبات صيانة بعد'
+                ? m.empty.filteredDesc
+                : m.empty.emptyDesc
             }
             action={
               hasFilters ? (
                 <Link href="/dashboard/maintenance">
-                  <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                  <Button variant="outline" size="sm">{m.empty.clearBtn}</Button>
                 </Link>
               ) : undefined
             }
@@ -284,24 +297,24 @@ export default async function MaintenancePage({
             <table className="w-full text-sm min-w-[1020px]">
               <thead className="bg-canvas/50 border-b border-hairline sticky top-0 backdrop-blur-sm">
                 <tr>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">العميل</th>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الوحدة</th>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">التصنيف</th>
-                  <th className="text-start py-3 px-5 text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الوصف</th>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الأولوية</th>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">المراجعة</th>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الحالة</th>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الموعد المستهدف</th>
-                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">التاريخ</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.client}</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.unit}</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.category}</th>
+                  <th className="text-start py-3 px-5 text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.description}</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.priority}</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.review}</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.status}</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.targetDate}</th>
+                  <th className="text-start py-3 px-5 whitespace-nowrap text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.cols.date}</th>
                   <th className="py-3 px-5" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
-                {rows.map((m) => {
-                  const overdue = isOverdue(m);
+                {rows.map((row) => {
+                  const overdue = isOverdue(row);
                   return (
                     <tr
-                      key={m.id}
+                      key={row.id}
                       className={cn(
                         'group transition-colors duration-100',
                         overdue ? 'bg-danger-50/30' : 'hover:bg-canvas/40',
@@ -309,67 +322,67 @@ export default async function MaintenancePage({
                     >
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span className="text-[13px] font-semibold text-slate-900">
-                          {m.customer?.fullName ?? '—'}
+                          {row.customer?.fullName ?? '—'}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span className="font-mono text-[12px] font-semibold text-brand-700">
-                          {m.unit?.code ?? <span className="text-slate-300">—</span>}
+                          {row.unit?.code ?? <span className="text-slate-300">—</span>}
                         </span>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span className="text-[12px] text-slate-600">
-                          {m.category ? tx(m.category.name) : <span className="text-slate-300">—</span>}
+                          {row.category ? tx(row.category.name) : <span className="text-slate-300">—</span>}
                         </span>
                       </td>
                       <td
                         className="px-5 py-3.5 text-[12px] text-slate-500 max-w-[200px] truncate"
-                        title={m.description}
+                        title={row.description}
                       >
-                        {m.description}
+                        {row.description}
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
-                        {m.priority ? (
-                          <MaintenancePriorityBadge priority={m.priority} />
+                        {row.priority ? (
+                          <MaintenancePriorityBadge priority={row.priority} locale={locale} />
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
-                        <MaintenanceReviewStatusBadge status={m.reviewStatus} />
+                        <MaintenanceReviewStatusBadge status={row.reviewStatus} locale={locale} />
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <div className="flex flex-wrap items-center gap-1">
-                          <MaintenanceStatusBadge status={m.status} />
-                          {m.unresolvedAt ? (
+                          <MaintenanceStatusBadge status={row.status} locale={locale} />
+                          {row.unresolvedAt ? (
                             <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2 py-0.5 text-[10px] font-semibold">
-                              لم تُحل
+                              {m.unresolved}
                             </span>
-                          ) : m.complaintAt ? (
+                          ) : row.complaintAt ? (
                             <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2 py-0.5 text-[10px] font-semibold">
-                              شكوى
+                              {m.complaint}
                             </span>
                           ) : null}
                         </div>
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
-                        {isApproved(m) && m.dueAt ? (
+                        {isApproved(row) && row.dueAt ? (
                           <span className={cn(
                             'text-[12px] tabular-nums',
                             overdue ? 'text-danger-600 font-semibold' : 'text-slate-500',
                           )}>
-                            {formatDate(m.dueAt)}{overdue ? ' · متأخر' : ''}
+                            {formatDate(row.dueAt)}{overdue ? m.overdue : ''}
                           </span>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-5 py-3.5 text-[12px] text-slate-400 tabular-nums whitespace-nowrap">
-                        {formatDate(m.createdAt)}
+                        {formatDate(row.createdAt)}
                       </td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
-                        <Link href={`/dashboard/maintenance/${m.id}`}>
-                          <IconButton label="عرض تفاصيل الطلب" variant="outline" size="sm">
+                        <Link href={`/dashboard/maintenance/${row.id}`}>
+                          <IconButton label={m.viewBtn} variant="outline" size="sm">
                             <Eye />
                           </IconButton>
                         </Link>
@@ -385,10 +398,10 @@ export default async function MaintenancePage({
 
       {/* Category management */}
       <PremiumSectionCard
-        title="تصنيفات الصيانة"
+        title={m.categories.sectionTitle}
         icon={<Settings2 />}
         trailing={
-          <span className="text-xs text-slate-400 tabular-nums">{cats.length} تصنيف</span>
+          <span className="text-xs text-slate-400 tabular-nums">{cats.length} {m.categories.categorySuffix}</span>
         }
         padded={false}
       >
@@ -424,17 +437,17 @@ export default async function MaintenancePage({
                       {sla && (
                         <div className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                          <span className="text-[12px] text-slate-500">معالجة خلال {sla}</span>
+                          <span className="text-[12px] text-slate-500">{m.categories.slaPrefix} {sla}</span>
                         </div>
                       )}
                       {warranty && (
                         <div className="flex items-center gap-1.5">
                           <Shield className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                          <span className="text-[12px] text-slate-500">ضمان {warranty}</span>
+                          <span className="text-[12px] text-slate-500">{m.categories.warrantyPrefix} {warranty}</span>
                         </div>
                       )}
                       {!sla && !warranty && (
-                        <p className="text-[11px] text-slate-400">بدون مدد محددة</p>
+                        <p className="text-[11px] text-slate-400">{m.categories.noSla}</p>
                       )}
                     </div>
                   </div>
@@ -449,39 +462,39 @@ export default async function MaintenancePage({
           {sp.catErr && (
             <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-3 py-2 text-xs mb-3">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-              <p>تعذّر إضافة التصنيف: {sp.catErr}</p>
+              <p>{m.categoryErrorPrefix} {sp.catErr}</p>
             </div>
           )}
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-3">
-            إضافة تصنيف جديد
+            {m.categories.addTitle}
           </p>
           <form action={createCategoryAction}>
             <div className="flex flex-wrap items-center gap-2">
-              <Input name="ar" required dir="rtl" placeholder="بالعربية" inputSize="sm" className="w-32" />
-              <Input name="en" required dir="ltr" placeholder="English" inputSize="sm" className="w-32" />
-              <Select name="priority" inputSize="sm" defaultValue="MEDIUM" className="w-28" aria-label="الأولوية">
-                <option value="LOW">منخفضة</option>
-                <option value="MEDIUM">متوسطة</option>
-                <option value="HIGH">عالية</option>
-                <option value="URGENT">عاجلة</option>
+              <Input name="ar" required dir="rtl" placeholder={m.categories.namePlaceholderAr} inputSize="sm" className="w-32" />
+              <Input name="en" required dir="ltr" placeholder={m.categories.namePlaceholderEn} inputSize="sm" className="w-32" />
+              <Select name="priority" inputSize="sm" defaultValue="MEDIUM" className="w-28" aria-label={m.categories.priorityAriaLabel}>
+                <option value="LOW">{m.priorityLabels.LOW}</option>
+                <option value="MEDIUM">{m.priorityLabels.MEDIUM}</option>
+                <option value="HIGH">{m.priorityLabels.HIGH}</option>
+                <option value="URGENT">{m.priorityLabels.URGENT}</option>
               </Select>
               <span className="w-px h-5 bg-hairline shrink-0" aria-hidden />
-              <Input name="slaValue" type="number" min={1} placeholder="مدة المعالجة" inputSize="sm" className="w-28" />
-              <Select name="slaUnit" inputSize="sm" defaultValue="HOURS" className="w-20" aria-label="وحدة مدة المعالجة">
-                <option value="HOURS">ساعات</option>
-                <option value="DAYS">أيام</option>
+              <Input name="slaValue" type="number" min={1} placeholder={m.categories.slaPlaceholder} inputSize="sm" className="w-28" />
+              <Select name="slaUnit" inputSize="sm" defaultValue="HOURS" className="w-20" aria-label={m.categories.slaAriaLabel}>
+                <option value="HOURS">{m.categories.slaHours}</option>
+                <option value="DAYS">{m.categories.slaDays}</option>
               </Select>
-              <Input name="warrantyValue" type="number" min={1} placeholder="مدة الضمان" inputSize="sm" className="w-28" />
-              <Select name="warrantyUnit" inputSize="sm" defaultValue="MONTHS" className="w-20" aria-label="وحدة مدة الضمان">
-                <option value="MONTHS">شهور</option>
-                <option value="YEARS">سنوات</option>
+              <Input name="warrantyValue" type="number" min={1} placeholder={m.categories.warrantyPlaceholder} inputSize="sm" className="w-28" />
+              <Select name="warrantyUnit" inputSize="sm" defaultValue="MONTHS" className="w-20" aria-label={m.categories.warrantyAriaLabel}>
+                <option value="MONTHS">{m.categories.warrantyMonths}</option>
+                <option value="YEARS">{m.categories.warrantyYears}</option>
               </Select>
               <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                إضافة
+                {m.categories.addBtn}
               </Button>
             </div>
             <p className="text-[11px] text-slate-400 mt-2.5">
-              مدة المعالجة تحدد الموعد المستهدف بعد اعتماد الطلب. مدة الضمان تُحتسب تلقائياً للوحدة عند توقيع عقد البيع.
+              {m.categories.helper}
             </p>
           </form>
         </div>

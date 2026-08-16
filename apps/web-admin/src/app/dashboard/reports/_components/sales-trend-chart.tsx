@@ -1,5 +1,7 @@
 import { cn } from '@/lib/cn';
 import { formatCurrency } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export interface SalesTrendPoint {
   month: number;
@@ -13,9 +15,11 @@ interface Props {
   highlightMonths?: number[];
   className?:       string;
   currency?:        string;
+  locale?:          Locale;
 }
 
-export function SalesTrendChart({ data, highlightMonths, className, currency = 'SAR' }: Props) {
+export function SalesTrendChart({ data, highlightMonths, className, currency = 'SAR', locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.reports.salesTrend;
   const maxContracts = Math.max(1, ...data.map((d) => d.contracts));
   const allZero = data.every((d) => d.contracts === 0);
   const highlighted = new Set(highlightMonths ?? []);
@@ -23,7 +27,7 @@ export function SalesTrendChart({ data, highlightMonths, className, currency = '
   if (allZero) {
     return (
       <div className={cn('flex flex-col items-center justify-center py-8 text-center', className)}>
-        <p className="text-sm text-slate-400">لا توجد عقود مسجلة في هذه السنة</p>
+        <p className="text-sm text-slate-400">{m.noDataMsg}</p>
       </div>
     );
   }
@@ -42,7 +46,7 @@ export function SalesTrendChart({ data, highlightMonths, className, currency = '
               <div className="w-full flex flex-col items-center justify-end h-full relative group">
                 {/* Hover tooltip */}
                 <div className="absolute -top-14 start-1/2 -translate-x-1/2 z-10 min-w-[88px] rounded-lg bg-slate-900 px-2.5 py-1.5 text-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg pointer-events-none">
-                  <p className="text-2xs font-semibold text-white whitespace-nowrap">{d.contracts} عقد</p>
+                  <p className="text-2xs font-semibold text-white whitespace-nowrap">{d.contracts} {m.contractSuffix}</p>
                   <p className="text-2xs text-slate-300 whitespace-nowrap mt-0.5" dir="ltr">{formatCurrency(d.total, currency)}</p>
                 </div>
                 <div
@@ -55,7 +59,7 @@ export function SalesTrendChart({ data, highlightMonths, className, currency = '
                         : 'bg-brand-200/80 hover:bg-brand-300/80',
                   )}
                   style={{ height: d.contracts === 0 ? '3px' : `${Math.max(pct, 5)}%` }}
-                  aria-label={`${d.label}: ${d.contracts} عقد`}
+                  aria-label={`${d.label}: ${d.contracts} ${m.contractSuffix}`}
                 />
               </div>
             </div>

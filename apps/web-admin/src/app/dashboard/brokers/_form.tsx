@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { Broker } from '@/lib/types';
 import {
   createBrokerAction,
@@ -18,16 +20,9 @@ import {
   type BrokerFormState,
 } from './actions';
 
-const NAV_SECTIONS = [
-  { id: 'section-basic',      num: '01', label: 'المعلومات الأساسية',            sub: 'الاسم والرمز التعريفي' },
-  { id: 'section-contact',    num: '02', label: 'بيانات التواصل',                sub: 'البريد والجوال والعنوان' },
-  { id: 'section-legal',      num: '03', label: 'البيانات القانونية والمصرفية', sub: 'الضريبي والسجل والآيبان' },
-  { id: 'section-commission', num: '04', label: 'شروط العمولة والعقد',          sub: 'النسبة ومدة سريان العقد' },
-  { id: 'section-notes',      num: '05', label: 'ملاحظات داخلية',               sub: 'ظاهرة للإدارة فقط' },
-];
-
 interface Props {
   broker?: Broker;
+  locale?: Locale;
 }
 
 function dateInputValue(value: string | null | undefined): string | undefined {
@@ -40,7 +35,8 @@ function pctValue(value: string | number | null | undefined): string | number | 
   return typeof value === 'string' ? value : value;
 }
 
-export default function BrokerForm({ broker }: Props) {
+export default function BrokerForm({ broker, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.brokersForm;
   const action = broker
     ? updateBrokerAction.bind(null, broker.id)
     : createBrokerAction;
@@ -48,6 +44,14 @@ export default function BrokerForm({ broker }: Props) {
 
   const isEdit = Boolean(broker);
   const cancelHref = isEdit ? `/dashboard/brokers/${broker!.id}` : '/dashboard/brokers';
+
+  const navSections = [
+    { id: 'section-basic',      num: '01', label: m.navBasic.label,      sub: m.navBasic.sub },
+    { id: 'section-contact',    num: '02', label: m.navContact.label,    sub: m.navContact.sub },
+    { id: 'section-legal',      num: '03', label: m.navLegal.label,      sub: m.navLegal.sub },
+    { id: 'section-commission', num: '04', label: m.navCommission.label, sub: m.navCommission.sub },
+    { id: 'section-notes',      num: '05', label: m.navNotes.label,      sub: m.navNotes.sub },
+  ];
 
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
@@ -60,28 +64,24 @@ export default function BrokerForm({ broker }: Props) {
       {state.ok && (
         <div className="flex items-start gap-3 rounded-2xl bg-success-50 border border-success-100 text-success-700 px-5 py-4 text-sm shadow-soft">
           <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تم حفظ التغييرات بنجاح</p>
+          <p className="font-medium">{m.saveOk}</p>
         </div>
       )}
 
       <PremiumFormLayout
-        navSections={NAV_SECTIONS}
-        sidebarBadge={isEdit ? 'تعديل' : 'جديد'}
-        sidebarInfo={
-          isEdit
-            ? 'سيتم تحديث البيانات فور الحفظ.'
-            : 'سيتم إنشاء الوسيط بحالة «قيد الانضمام» بشكل افتراضي.'
-        }
+        navSections={navSections}
+        sidebarBadge={isEdit ? m.badgeEdit : m.badgeNew}
+        sidebarInfo={isEdit ? m.sidebarInfoEdit : m.sidebarInfoNew}
       >
         <PremiumFormPanel
           id="section-basic"
           number="01"
-          title="المعلومات الأساسية"
-          description="اسم الشركة التجاري ورمز التعريف الفريد."
+          title={m.panelBasicTitle}
+          description={m.panelBasicDesc}
         >
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="الاسم القانوني للشركة" name="companyName" required>
+              <Field label={m.labelCompanyName} name="companyName" required>
                 <Input
                   id="companyName"
                   name="companyName"
@@ -89,7 +89,7 @@ export default function BrokerForm({ broker }: Props) {
                   defaultValue={broker?.companyName}
                 />
               </Field>
-              <Field label="الاسم التجاري" name="commercialName" hint="اختياري">
+              <Field label={m.labelCommercialName} name="commercialName" hint={m.hintOptional}>
                 <Input
                   id="commercialName"
                   name="commercialName"
@@ -98,18 +98,14 @@ export default function BrokerForm({ broker }: Props) {
               </Field>
             </div>
             <Field
-              label="رمز الوسيط"
+              label={m.labelCode}
               name="code"
-              hint={
-                isEdit
-                  ? 'يجب أن يكون فريداً. أحرف كبيرة وأرقام وشرطات فقط.'
-                  : 'اختياري — سيتم توليده تلقائياً من اسم الشركة إذا تُرك فارغاً.'
-              }
+              hint={isEdit ? m.hintCodeEdit : m.hintCodeNew}
             >
               <Input
                 id="code"
                 name="code"
-                placeholder="مثال: RIYADH-REALTY"
+                placeholder="e.g. RIYADH-REALTY"
                 dir="ltr"
                 defaultValue={broker?.code ?? ''}
               />
@@ -120,11 +116,11 @@ export default function BrokerForm({ broker }: Props) {
         <PremiumFormPanel
           id="section-contact"
           number="02"
-          title="بيانات التواصل"
-          description="معلومات الاتصال الرئيسية للوسيط."
+          title={m.panelContactTitle}
+          description={m.panelContactDesc}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="البريد الإلكتروني" name="email">
+            <Field label={m.labelEmail} name="email">
               <Input
                 id="email"
                 name="email"
@@ -133,7 +129,7 @@ export default function BrokerForm({ broker }: Props) {
                 defaultValue={broker?.email ?? ''}
               />
             </Field>
-            <Field label="رقم الجوال" name="phone">
+            <Field label={m.labelPhone} name="phone">
               <Input
                 id="phone"
                 name="phone"
@@ -141,10 +137,10 @@ export default function BrokerForm({ broker }: Props) {
                 defaultValue={broker?.phone ?? ''}
               />
             </Field>
-            <Field label="المدينة" name="city">
+            <Field label={m.labelCity} name="city">
               <Input id="city" name="city" defaultValue={broker?.city ?? ''} />
             </Field>
-            <Field label="العنوان" name="address">
+            <Field label={m.labelAddress} name="address">
               <Input id="address" name="address" defaultValue={broker?.address ?? ''} />
             </Field>
           </div>
@@ -153,11 +149,11 @@ export default function BrokerForm({ broker }: Props) {
         <PremiumFormPanel
           id="section-legal"
           number="03"
-          title="البيانات القانونية والمصرفية"
-          description="ضرورية لمعالجة العقود وصرف العمولات لاحقاً."
+          title={m.panelLegalTitle}
+          description={m.panelLegalDesc}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="الرقم الضريبي" name="taxId" hint="يجب أن يكون فريداً">
+            <Field label={m.labelTaxId} name="taxId" hint={m.hintTaxId}>
               <Input
                 id="taxId"
                 name="taxId"
@@ -165,7 +161,7 @@ export default function BrokerForm({ broker }: Props) {
                 defaultValue={broker?.taxId ?? ''}
               />
             </Field>
-            <Field label="رقم السجل التجاري" name="commercialRegistration">
+            <Field label={m.labelCommReg} name="commercialRegistration">
               <Input
                 id="commercialRegistration"
                 name="commercialRegistration"
@@ -173,21 +169,21 @@ export default function BrokerForm({ broker }: Props) {
                 defaultValue={broker?.commercialRegistration ?? ''}
               />
             </Field>
-            <Field label="اسم البنك" name="bankName">
+            <Field label={m.labelBankName} name="bankName">
               <Input
                 id="bankName"
                 name="bankName"
                 defaultValue={broker?.bankName ?? ''}
               />
             </Field>
-            <Field label="اسم صاحب الحساب" name="bankAccountName">
+            <Field label={m.labelBankAccountName} name="bankAccountName">
               <Input
                 id="bankAccountName"
                 name="bankAccountName"
                 defaultValue={broker?.bankAccountName ?? ''}
               />
             </Field>
-            <Field label="رقم الآيبان (IBAN)" name="bankIban">
+            <Field label={m.labelBankIban} name="bankIban">
               <Input
                 id="bankIban"
                 name="bankIban"
@@ -201,15 +197,15 @@ export default function BrokerForm({ broker }: Props) {
         <PremiumFormPanel
           id="section-commission"
           number="04"
-          title="شروط العمولة والعقد"
-          description="القيم الافتراضية للعمولات وفترة سريان عقد الوساطة."
+          title={m.panelCommissionTitle}
+          description={m.panelCommissionDesc}
         >
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field
-                label="نسبة العمولة الافتراضية (%)"
+                label={m.labelCommPct}
                 name="defaultCommissionPct"
-                hint="0 إلى 100"
+                hint={m.hintCommPct}
               >
                 <Input
                   id="defaultCommissionPct"
@@ -221,18 +217,18 @@ export default function BrokerForm({ broker }: Props) {
                   defaultValue={pctValue(broker?.defaultCommissionPct)}
                 />
               </Field>
-              <Field label="نموذج العمولة" name="commissionModel">
+              <Field label={m.labelCommModel} name="commissionModel">
                 <Select
                   id="commissionModel"
                   name="commissionModel"
                   defaultValue={broker?.commissionModel ?? 'PERCENT_OF_SALE'}
                 >
-                  <option value="PERCENT_OF_SALE">نسبة مئوية من قيمة البيع</option>
-                  <option value="FIXED_PER_UNIT">مبلغ ثابت لكل وحدة</option>
-                  <option value="TIERED">شرائح متعددة</option>
+                  <option value="PERCENT_OF_SALE">{m.optionPercent}</option>
+                  <option value="FIXED_PER_UNIT">{m.optionFixed}</option>
+                  <option value="TIERED">{m.optionTiered}</option>
                 </Select>
               </Field>
-              <Field label="تاريخ بدء العقد" name="contractStartAt">
+              <Field label={m.labelContractStart} name="contractStartAt">
                 <Input
                   id="contractStartAt"
                   name="contractStartAt"
@@ -240,7 +236,7 @@ export default function BrokerForm({ broker }: Props) {
                   defaultValue={dateInputValue(broker?.contractStartAt)}
                 />
               </Field>
-              <Field label="تاريخ انتهاء العقد" name="contractEndAt">
+              <Field label={m.labelContractEnd} name="contractEndAt">
                 <Input
                   id="contractEndAt"
                   name="contractEndAt"
@@ -249,7 +245,7 @@ export default function BrokerForm({ broker }: Props) {
                 />
               </Field>
             </div>
-            <Field label="رابط ملف العقد (PDF)" name="contractPdfUrl">
+            <Field label={m.labelContractPdf} name="contractPdfUrl">
               <Input
                 id="contractPdfUrl"
                 name="contractPdfUrl"
@@ -265,10 +261,10 @@ export default function BrokerForm({ broker }: Props) {
         <PremiumFormPanel
           id="section-notes"
           number="05"
-          title="ملاحظات داخلية"
-          description="ظاهرة للإدارة فقط."
+          title={m.panelNotesTitle}
+          description={m.panelNotesDesc}
         >
-          <Field label="ملاحظات" name="notes">
+          <Field label={m.labelNotes} name="notes">
             <Textarea
               id="notes"
               name="notes"
@@ -285,17 +281,13 @@ export default function BrokerForm({ broker }: Props) {
           <>
             <Link href={cancelHref as never}>
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {m.cancelBtn}
               </Button>
             </Link>
-            <SubmitButton>{isEdit ? 'حفظ التغييرات' : 'إضافة الوسيط'}</SubmitButton>
+            <SubmitButton>{isEdit ? m.submitEdit : m.submitNew}</SubmitButton>
           </>
         }
-        helper={
-          isEdit
-            ? 'سيتم تحديث البيانات فور الحفظ.'
-            : 'سيتم إنشاء الوسيط بحالة «قيد الانضمام» بشكل افتراضي.'
-        }
+        helper={isEdit ? m.footerHelperEdit : m.footerHelperNew}
       />
     </form>
   );

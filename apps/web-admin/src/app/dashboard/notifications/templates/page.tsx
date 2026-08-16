@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select } from '@/components/ui/select';
-import { EmptyState } from '@/components/ui/empty-state';
 import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -40,13 +41,7 @@ async function upsertTemplateAction(formData: FormData) {
   revalidatePath('/dashboard/notifications/templates');
 }
 
-// ── Channel helpers ───────────────────────────────────────────────────────────
-
-const CHANNEL_LABEL: Record<Template['channel'], string> = {
-  PUSH:   'إشعار فوري',
-  EMAIL:  'بريد إلكتروني',
-  IN_APP: 'داخل التطبيق',
-};
+// ── Channel tone ──────────────────────────────────────────────────────────────
 
 const CHANNEL_TONE: Record<Template['channel'], BadgeTone> = {
   PUSH:   'info',
@@ -57,23 +52,27 @@ const CHANNEL_TONE: Record<Template['channel'], BadgeTone> = {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function NotificationTemplatesPage() {
-  const r = await safe(api.get<Template[]>('/notification-templates'));
+  const [r, locale] = await Promise.all([
+    safe(api.get<Template[]>('/notification-templates')),
+    getLocale(),
+  ]);
   const templates = r.data ?? [];
+  const m = uiT(locale).notifTemplatesPage;
 
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="قوالب الإشعارات"
-        description="إدارة قوالب نصوص الإشعارات لجميع قنوات الإرسال."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الإشعارات', href: '/dashboard/notifications' },
-          { label: 'القوالب' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbNotifs, href: '/dashboard/notifications' },
+          { label: m.breadcrumbTemplates },
         ]}
         actions={
           <Link href="/dashboard/notifications">
             <Button variant="outline" size="sm" leftIcon={<ArrowRight className="h-3.5 w-3.5" />}>
-              العودة للإشعارات
+              {m.backButton}
             </Button>
           </Link>
         }
@@ -81,13 +80,13 @@ export default async function NotificationTemplatesPage() {
 
       {r.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل القوالب: {r.error}
+          {m.loadError} {r.error}
         </div>
       )}
 
       <PremiumSectionCard
         icon={<Bell />}
-        title="قوالب الإشعارات"
+        title={m.sectionTitle}
         trailing={<CountChip count={templates.length} />}
         padded={false}
       >
@@ -95,19 +94,19 @@ export default async function NotificationTemplatesPage() {
         {templates.length === 0 ? (
           <CompactEmpty
             icon={<Bell className="h-8 w-8" />}
-            title="لا توجد قوالب"
-            description="أضف قالباً جديداً باستخدام النموذج أدناه."
+            title={m.emptyTitle}
+            description={m.emptyDesc}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px] text-sm">
               <thead>
                 <tr className="border-b border-hairline bg-surface-muted/40">
-                  <th className="px-5 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">الكود</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">القناة</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">العنوان</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">الحالة</th>
-                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">آخر تحديث</th>
+                  <th className="px-5 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colCode}</th>
+                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colChannel}</th>
+                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colSubject}</th>
+                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colStatus}</th>
+                  <th className="px-4 py-2.5 text-end text-2xs font-semibold uppercase tracking-wide text-slate-500">{m.colUpdated}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -120,7 +119,7 @@ export default async function NotificationTemplatesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={CHANNEL_TONE[t.channel]} size="sm">
-                        {CHANNEL_LABEL[t.channel]}
+                        {m.channelLabel[t.channel]}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 max-w-[220px]">
@@ -129,7 +128,7 @@ export default async function NotificationTemplatesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <Badge tone={t.active ? 'success' : 'gray'} size="sm" dot>
-                        {t.active ? 'نشط' : 'معطل'}
+                        {t.active ? m.statusActive : m.statusInactive}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-slate-400" dir="ltr">
@@ -149,7 +148,7 @@ export default async function NotificationTemplatesPage() {
               <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
                 <FileEdit className="h-3.5 w-3.5" />
               </span>
-              <span className="text-sm font-semibold text-slate-800">إنشاء / تعديل قالب</span>
+              <span className="text-sm font-semibold text-slate-800">{m.formTitle}</span>
             </div>
             <Plus className="h-4 w-4 text-slate-400 shrink-0 transition-transform duration-200 group-open:rotate-45" />
           </summary>
@@ -166,22 +165,22 @@ export default async function NotificationTemplatesPage() {
                   className="font-mono"
                 />
                 <Select name="channel" defaultValue="PUSH" inputSize="sm">
-                  <option value="PUSH">PUSH — إشعار فوري</option>
-                  <option value="EMAIL">EMAIL — بريد إلكتروني</option>
-                  <option value="IN_APP">IN_APP — داخل التطبيق</option>
+                  <option value="PUSH">{m.channelPush}</option>
+                  <option value="EMAIL">{m.channelEmail}</option>
+                  <option value="IN_APP">{m.channelInApp}</option>
                 </Select>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Input name="ar_subject" required dir="rtl" placeholder="العنوان (عربي)" inputSize="sm" />
+                <Input name="ar_subject" required dir="rtl" placeholder={m.arSubjectPlaceholder} inputSize="sm" />
                 <Input name="en_subject" required dir="ltr" placeholder="Subject (English)" inputSize="sm" />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Textarea name="ar_body" required dir="rtl" rows={3} placeholder="نص الإشعار (عربي)" className="text-sm" />
+                <Textarea name="ar_body" required dir="rtl" rows={3} placeholder={m.arBodyPlaceholder} className="text-sm" />
                 <Textarea name="en_body" required dir="ltr" rows={3} placeholder="Notification body (English)" className="text-sm" />
               </div>
               <div className="flex justify-end">
                 <Button type="submit" size="sm">
-                  حفظ القالب
+                  {m.saveButton}
                 </Button>
               </div>
             </form>

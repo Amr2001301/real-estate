@@ -31,6 +31,8 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -71,6 +73,9 @@ export default async function CustomersPage({
   searchParams: Promise<Filters>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.customers;
+
   const q = (sp.q ?? '').trim();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
   const statusFilter: 'all' | 'active' | 'inactive' =
@@ -114,14 +119,14 @@ export default async function CustomersPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="المتصفحون"
-        description="متابعة زوار المنصة وتحويلهم إلى فرص وعملاء محتملين."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'المتصفحون' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
-          <IconButton label="تصدير" variant="outline" size="md">
+          <IconButton label={m.exportBtn} variant="outline" size="md">
             <Download />
           </IconButton>
         }
@@ -133,33 +138,33 @@ export default async function CustomersPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي العملاء',
+            label: m.kpi.total,
             value: totalCustomers,
             icon: <UserCheck />,
             tone: 'success',
             primary: true,
-            sub: 'عملاء بعد الشراء',
+            sub: m.kpi.totalSub,
           },
           {
-            label: 'إجمالي العقود',
+            label: m.kpi.contracts,
             value: totalContracts,
             icon: <FileText />,
             tone: 'brand',
-            sub: 'عقود مسجّلة',
+            sub: m.kpi.contractsSub,
           },
           {
-            label: 'طلبات صيانة مفتوحة',
+            label: m.kpi.openMaintenance,
             value: openMaintenance,
             icon: <Wrench />,
             tone: 'warning',
-            sub: 'بانتظار المعالجة',
+            sub: m.kpi.openMaintenanceSub,
           },
           {
-            label: 'نشطون (في هذه الصفحة)',
+            label: m.kpi.activeOnPage,
             value: activeOnPage,
             icon: <ShieldCheck />,
             tone: 'info',
-            sub: `من ${rows.length} ظاهر`,
+            sub: m.kpi.activeOnPageSub.replace('{n}', String(rows.length)),
           },
         ]}
       />
@@ -168,37 +173,37 @@ export default async function CustomersPage({
       {customersRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل القائمة: {customersRes.error}</p>
+          <p className="font-medium">{m.errorPrefix} {customersRes.error}</p>
         </div>
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/customers">
-        <PremiumFilterField label="الحالة" htmlFor="cus-status">
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="cus-status">
           <Select id="cus-status" name="status" inputSize="sm" defaultValue={statusFilter} className="w-36 shrink-0">
-            <option value="all">الكل</option>
-            <option value="active">نشطون</option>
-            <option value="inactive">موقوفون</option>
+            <option value="all">{m.filter.all}</option>
+            <option value="active">{m.filter.active}</option>
+            <option value="inactive">{m.filter.suspended}</option>
           </Select>
         </PremiumFilterField>
 
         <div className="flex-1 min-w-[180px]">
-          <label htmlFor="cus-q" className="sr-only">بحث</label>
+          <label htmlFor="cus-q" className="sr-only">{m.filter.searchLabel}</label>
           <Input
             id="cus-q"
             name="q"
             inputSize="sm"
             defaultValue={q}
-            placeholder="ابحث بالاسم، البريد، أو الهاتف…"
+            placeholder={m.filter.searchPlaceholder}
             leftAddon={<Search />}
             className="w-full"
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button type="submit" variant="primary" size="sm">بحث</Button>
+          <Button type="submit" variant="primary" size="sm">{m.filter.searchLabel}</Button>
           {(q || statusFilter !== 'all') && (
             <Link href={'/dashboard/customers' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
         </div>
@@ -207,23 +212,23 @@ export default async function CustomersPage({
       {/* ── Customers table ──────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<UserCheck />}
-        title="قائمة العملاء المالكين"
-        description="عملاء أبرموا عقوداً ويملكون وحدات داخل المحفظة."
+        title={m.sectionTitle}
+        description={m.sectionDesc}
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {totalCustomers.toLocaleString('ar-EG')} عميل
+            {totalCustomers.toLocaleString('ar-EG')} {m.customerSuffix}
           </span>
         }
       >
         {rows.length === 0 ? (
           <PremiumEmptyState
             icon={<UserCheck />}
-            title={q ? 'لا توجد نتائج' : 'لا يوجد عملاء بعد'}
+            title={q ? m.empty.searchTitle : m.empty.emptyTitle}
             description={
               q
-                ? 'جرّب تعديل كلمات البحث أو إزالة الفلاتر.'
-                : 'يتم ترقية العميل المتصفّح إلى عميل تلقائياً عند توقيع أول عقد.'
+                ? m.empty.searchDesc
+                : m.empty.emptyDesc
             }
             className="py-12"
           />
@@ -232,12 +237,12 @@ export default async function CustomersPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">العميل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">بيانات الاتصال</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ التسجيل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">آخر دخول</th>
-                  <th className="text-start py-3 ps-4 pe-5 whitespace-nowrap">الإجراءات</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.client}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.contact}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.status}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.registered}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.lastLogin}</th>
+                  <th className="text-start py-3 ps-4 pe-5 whitespace-nowrap">{m.cols.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -301,11 +306,11 @@ export default async function CustomersPage({
                     <td className="py-3 px-4">
                       {u.active ? (
                         <Badge tone="success" variant="soft" size="sm" dot>
-                          نشط
+                          {m.statusBadge.active}
                         </Badge>
                       ) : (
                         <Badge tone="gray" variant="soft" size="sm" dot>
-                          موقوف
+                          {m.statusBadge.suspended}
                         </Badge>
                       )}
                     </td>
@@ -318,17 +323,17 @@ export default async function CustomersPage({
                     <td className="py-3 ps-4 pe-5">
                       <div className="flex items-center gap-1">
                         <Link href={`/dashboard/contracts?customerId=${u.id}` as never}>
-                          <IconButton label="عقود العميل" variant="outline" size="sm">
+                          <IconButton label={m.actionBtns.contracts} variant="outline" size="sm">
                             <FileText />
                           </IconButton>
                         </Link>
                         <Link href={`/dashboard/maintenance?customerId=${u.id}` as never}>
-                          <IconButton label="طلبات الصيانة" variant="outline" size="sm">
+                          <IconButton label={m.actionBtns.maintenance} variant="outline" size="sm">
                             <Wrench />
                           </IconButton>
                         </Link>
                         <Link href={`/dashboard/customers/${u.id}` as never}>
-                          <IconButton label="عرض تفاصيل العميل" variant="outline" size="sm">
+                          <IconButton label={m.actionBtns.view} variant="outline" size="sm">
                             <Eye />
                           </IconButton>
                         </Link>
@@ -350,6 +355,7 @@ export default async function CustomersPage({
           total={totalCustomers}
           basePath="/dashboard/customers"
           params={statusFilter !== 'all' ? { status: statusFilter } : {}}
+          locale={locale}
         />
       )}
 
@@ -357,13 +363,13 @@ export default async function CustomersPage({
       <div className="flex items-start gap-2.5 rounded-2xl border border-info-100 bg-info-50/60 px-4 py-3 text-xs text-info-700">
         <Info className="h-4 w-4 shrink-0 mt-px text-info-500" />
         <p>
-          هذه الصفحة تعرض العملاء المالكين فقط (بعد توقيع العقد). لإدارة العملاء المتصفّحين قبل الشراء انتقل إلى{' '}
+          {m.infoNote}{' '}
           <Link
             href={'/dashboard/clients?role=CLIENT' as never}
             className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2"
           >
             <UsersIcon className="h-3 w-3" />
-            صفحة المتصفّحين
+            {m.browserLink}
           </Link>
           .
         </p>

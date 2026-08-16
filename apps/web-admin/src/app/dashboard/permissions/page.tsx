@@ -6,6 +6,8 @@ import {
   BarChart3, Lock, LayoutGrid, Award, CircleDollarSign,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { PermissionItem, Paged, User, UserRole } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,16 +33,6 @@ export const fetchCache = 'force-no-store';
 interface Search { q?: string }
 
 type EnrichedPermission = PermissionItem & { meta: PermissionMeta };
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  ADMIN:                  'مدير النظام',
-  SALES:                  'مبيعات',
-  SALES_MANAGER:          'مدير مبيعات',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-  CLIENT:                 'متصفّح',
-  CUSTOMER:               'عميل',
-  BROKER:                 'وسيط',
-};
 
 const ROLE_BADGE_CLS: Record<UserRole, string> = {
   ADMIN:                  'bg-purple-100 text-purple-700',
@@ -97,7 +89,8 @@ export default async function PermissionsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const sp = await searchParams;
+  const [sp, locale] = await Promise.all([searchParams, getLocale()]);
+  const m = uiT(locale).permissionsPage;
 
   const [permsRes, usersRes] = await Promise.all([
     safe(api.get<PermissionItem[]>('/permissions')),
@@ -142,16 +135,16 @@ export default async function PermissionsPage({
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="الصلاحيات"
-        description="مراجعة صلاحيات النظام وإدارة صلاحيات المستخدمين حسب الأدوار والأقسام."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الصلاحيات' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbPermissions },
         ]}
         meta={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
             <ShieldCheck className="h-3.5 w-3.5" />
-            إدارة الصلاحيات
+            {m.metaBadge}
           </span>
         }
       />
@@ -162,25 +155,25 @@ export default async function PermissionsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي الصلاحيات',
+            label: m.kpiTotal,
             value: all.length.toLocaleString('ar-EG'),
             icon: <ShieldCheck />,
             tone: 'brand',
           },
           {
-            label: 'المجموعات',
+            label: m.kpiGroups,
             value: totalGroups.toLocaleString('ar-EG'),
             icon: <LayoutGrid />,
             tone: 'neutral',
           },
           {
-            label: 'المستخدمون',
+            label: m.kpiUsers,
             value: users.length.toLocaleString('ar-EG'),
             icon: <UsersIcon />,
             tone: 'info',
           },
           {
-            label: 'صلاحيات إدارية',
+            label: m.kpiAdmin,
             value: adminPerms.toLocaleString('ar-EG'),
             icon: <Lock />,
             tone: 'warning',
@@ -191,16 +184,13 @@ export default async function PermissionsPage({
       {/* ── Info notice ─────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2.5 rounded-xl border border-brand-100 bg-brand-50/40 px-4 py-3 text-[12px] text-brand-800">
         <Info className="h-4 w-4 shrink-0 text-brand-600" />
-        <span>
-          الصلاحيات تتحكم فيما يمكن للمستخدم عرضه أو تنفيذه.
-          الأكواد التقنية للمرجعة فقط — الأسماء هنا مكتوبة بلغة العمل.
-        </span>
+        <span>{m.infoNotice}</span>
       </div>
 
       {/* ── Error ───────────────────────────────────────────────────────── */}
       {permsRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل الصلاحيات: {permsRes.error}
+          {m.errorLoad} {permsRes.error}
         </div>
       )}
 
@@ -216,10 +206,10 @@ export default async function PermissionsPage({
             action="/dashboard/permissions"
             trailing={
               <>
-                <Button type="submit" variant="primary" size="sm">بحث</Button>
+                <Button type="submit" variant="primary" size="sm">{m.searchBtn}</Button>
                 {sp.q && (
                   <Link href="/dashboard/permissions">
-                    <Button type="button" variant="ghost" size="sm">مسح</Button>
+                    <Button type="button" variant="ghost" size="sm">{m.clearBtn}</Button>
                   </Link>
                 )}
               </>
@@ -229,7 +219,7 @@ export default async function PermissionsPage({
               <Input
                 name="q"
                 inputSize="sm"
-                placeholder="بحث بالاسم أو الوصف أو القسم أو الرمز (مثل: حجز، دفعة، عمولة، audit)"
+                placeholder={m.searchPlaceholder}
                 defaultValue={sp.q ?? ''}
                 leftAddon={<SearchIcon />}
               />
@@ -238,15 +228,15 @@ export default async function PermissionsPage({
 
           {/* Permission group cards */}
           {sections.length === 0 ? (
-            <PremiumSectionCard icon={<ShieldCheck />} title="لا توجد نتائج" padded={false}>
+            <PremiumSectionCard icon={<ShieldCheck />} title={m.noResultsTitle} padded={false}>
               <EmptyState
                 icon={<ShieldCheck />}
-                title="لا توجد صلاحيات مطابقة"
-                description="جرّب توسيع البحث أو تأكّد من بذر رموز الصلاحيات في النظام."
+                title={m.emptyTitle}
+                description={m.emptyDesc}
                 action={
                   sp.q ? (
                     <Link href="/dashboard/permissions">
-                      <Button variant="outline" size="sm">مسح البحث</Button>
+                      <Button variant="outline" size="sm">{m.clearSearch}</Button>
                     </Link>
                   ) : undefined
                 }
@@ -320,16 +310,16 @@ export default async function PermissionsPage({
         <div className="lg:sticky lg:top-4">
           <PremiumSectionCard
             icon={<UsersIcon />}
-            title="إدارة صلاحيات مستخدم"
-            description="اختر مستخدمًا لإدارة الصلاحيات المسندة إليه. سيُكتب التغيير في سجل التدقيق."
+            title={m.sidebarTitle}
+            description={m.sidebarDesc}
             padded={false}
           >
             {users.length === 0 ? (
               <div className="p-5">
                 <EmptyState
                   icon={<UsersIcon />}
-                  title="لا يوجد مستخدمون"
-                  description="لم يتم تحميل أي مستخدمين."
+                  title={m.noUsersTitle}
+                  description={m.noUsersDesc}
                 />
               </div>
             ) : (
@@ -362,7 +352,7 @@ export default async function PermissionsPage({
                             ROLE_BADGE_CLS[u.role] ?? 'bg-slate-100 text-slate-600',
                           )}
                         >
-                          {ROLE_LABEL[u.role] ?? u.role}
+                          {m.roleLabels[u.role] ?? u.role}
                         </span>
                       </div>
 
@@ -371,7 +361,7 @@ export default async function PermissionsPage({
                         href={`/dashboard/users/${u.id}/permissions` as never}
                         className="shrink-0"
                       >
-                        <Button variant="outline" size="sm">إدارة</Button>
+                        <Button variant="outline" size="sm">{m.manageBtn}</Button>
                       </Link>
                     </li>
                   ))}

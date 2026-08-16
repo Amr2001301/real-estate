@@ -5,6 +5,8 @@ import { getSession } from '@/lib/session';
 import type { Paged, InstallmentPlanTemplate } from '@/lib/types';
 import { formatDate, formatCurrency, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -34,12 +36,7 @@ interface ProjectOption {
   name: { ar: string; en: string };
 }
 
-const FREQUENCY_LABELS: Record<string, string> = {
-  MONTHLY: 'شهري',
-  QUARTERLY: 'ربع سنوي',
-  SEMI_ANNUAL: 'نصف سنوي',
-  YEARLY: 'سنوي',
-};
+// FREQUENCY_LABELS built from messages in page body
 
 export default async function InstallmentPlansPage({
   searchParams,
@@ -51,7 +48,16 @@ export default async function InstallmentPlansPage({
     page?: string;
   }>;
 }) {
-  const [sp, session] = await Promise.all([searchParams, getSession()]);
+  const [sp, session, locale] = await Promise.all([searchParams, getSession(), getLocale()]);
+  const m = uiT(locale).pages.installments;
+  const FREQUENCY_LABELS: Record<string, string> = {
+    MONTHLY:     m.frequencyLabels.MONTHLY,
+    QUARTERLY:   m.frequencyLabels.QUARTERLY,
+    SEMI_ANNUAL: m.frequencyLabels.BIANNUAL,
+    BIANNUAL:    m.frequencyLabels.BIANNUAL,
+    YEARLY:      m.frequencyLabels.ANNUAL,
+    ANNUAL:      m.frequencyLabels.ANNUAL,
+  };
   const currency = await getReportsCurrency();
   const isAdmin = session?.role === 'ADMIN';
   const page = Number(sp.page ?? 1);
@@ -78,17 +84,17 @@ export default async function InstallmentPlansPage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="خطط التقسيط"
-        description="متابعة خطط السداد والأقساط المرتبطة بالعقود والعملاء."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'خطط التقسيط' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           isAdmin ? (
             <Link href="/dashboard/installments/new">
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                إنشاء خطة تقسيط
+                {m.addBtn}
               </Button>
             </Link>
           ) : undefined
@@ -100,26 +106,26 @@ export default async function InstallmentPlansPage({
           variant="compact"
           metrics={[
             {
-              label: 'إجمالي الخطط',
+              label: m.kpi.total,
               value: stats.total,
               icon: <Wallet className="h-4 w-4" />,
               primary: true,
               tone: 'brand',
             },
             {
-              label: 'نشطة',
+              label: m.kpi.active,
               value: stats.active,
               icon: <CheckCircle2 className="h-4 w-4" />,
               tone: 'success',
             },
             {
-              label: 'مسودة',
+              label: m.kpi.draft,
               value: stats.draft,
               icon: <FileText className="h-4 w-4" />,
               tone: 'warning',
             },
             {
-              label: 'غير نشطة',
+              label: m.kpi.inactive,
               value: stats.inactive,
               icon: <Wallet className="h-4 w-4" />,
               tone: 'neutral',
@@ -133,39 +139,39 @@ export default async function InstallmentPlansPage({
         action="/dashboard/installments"
         trailing={
           <div className="flex items-center gap-1.5">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
             {(sp.q || sp.projectId || sp.status) && (
               <Link href="/dashboard/installments">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="بحث">
+        <PremiumFilterField label={m.filter.searchLabel}>
           <Input
             name="q"
             inputSize="sm"
             defaultValue={sp.q ?? ''}
-            placeholder="اسم الخطة أو المشروع أو الوحدة…"
+            placeholder={m.filter.searchPlaceholder}
             className="min-w-[180px]"
           />
         </PremiumFilterField>
-        <PremiumFilterField label="المشروع">
+        <PremiumFilterField label={uiT(locale).common.allProjects}>
           <Select name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40">
-            <option value="">كل المشاريع</option>
+            <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
         </PremiumFilterField>
         {isAdmin && (
-          <PremiumFilterField label="الحالة">
+          <PremiumFilterField label={m.filter.statusLabel}>
             <Select name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36">
-              <option value="">كل الحالات</option>
-              <option value="DRAFT">مسودة</option>
-              <option value="ACTIVE">نشطة</option>
-              <option value="INACTIVE">غير نشطة</option>
+              <option value="">{m.filter.allStatuses}</option>
+              <option value="DRAFT">{m.filter.draft}</option>
+              <option value="ACTIVE">{m.filter.active}</option>
+              <option value="INACTIVE">{m.filter.inactive}</option>
             </Select>
           </PremiumFilterField>
         )}
@@ -179,11 +185,11 @@ export default async function InstallmentPlansPage({
       )}
 
       <PremiumSectionCard
-        title="خطط التقسيط"
+        title={m.sectionTitle}
         trailing={
           paginationMeta ? (
             <span className="text-xs text-slate-400 tabular-nums">
-              {paginationMeta.total.toLocaleString('ar-EG')} خطة
+              {paginationMeta.total.toLocaleString('ar-EG')} {m.planSuffix}
             </span>
           ) : undefined
         }
@@ -192,20 +198,20 @@ export default async function InstallmentPlansPage({
         {plans.length === 0 ? (
           <PremiumEmptyState
             icon={<Wallet />}
-            title="لا توجد خطط تقسيط"
-            description="ابدأ بإنشاء أول خطة تقسيط من الزر أعلى الصفحة."
+            title={m.empty.title}
+            description={m.empty.description}
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4">اسم الخطة</th>
-                  <th className="text-start py-3 px-4">المشروع / الوحدة</th>
-                  <th className="text-start py-3 px-4">صافي السعر</th>
-                  <th className="text-start py-3 px-4">الأقساط</th>
-                  <th className="text-start py-3 px-4">الحالة</th>
-                  <th className="text-start py-3 px-4">تاريخ الإنشاء</th>
+                  <th className="text-start py-3 ps-5 pe-4">{m.cols.name}</th>
+                  <th className="text-start py-3 px-4">{m.cols.project}</th>
+                  <th className="text-start py-3 px-4">{m.cols.netPrice}</th>
+                  <th className="text-start py-3 px-4">{m.cols.installments}</th>
+                  <th className="text-start py-3 px-4">{m.cols.status}</th>
+                  <th className="text-start py-3 px-4">{m.cols.created}</th>
                   <th className="py-3 ps-4 pe-5" />
                 </tr>
               </thead>
@@ -223,7 +229,7 @@ export default async function InstallmentPlansPage({
                     <td className="py-3 px-4">
                       <div>
                         <p className="text-slate-800">{r.project ? tx(r.project.name) : '—'}</p>
-                        {r.unit && <p className="text-xs text-slate-500">وحدة: {r.unit.code}</p>}
+                        {r.unit && <p className="text-xs text-slate-500">{m.unitPrefix} {r.unit.code}</p>}
                       </div>
                     </td>
                     <td className="py-3 px-4 tabular-nums font-medium text-slate-800">
@@ -235,9 +241,9 @@ export default async function InstallmentPlansPage({
                         if (optionsCount > 0) {
                           return (
                             <div>
-                              <p className="text-slate-800">{optionsCount} خيار مدة</p>
+                              <p className="text-slate-800">{m.durationOptions(optionsCount)}</p>
                               <p className="text-xs text-slate-500">
-                                {r.durationOptions!.map((o) => `${o.durationMonths}ش`).join(' / ')}
+                                {r.durationOptions!.map((o) => `${o.durationMonths}${m.durationSuffix}`).join(' / ')}
                               </p>
                             </div>
                           );
@@ -245,7 +251,7 @@ export default async function InstallmentPlansPage({
                         return (
                           <div>
                             <p className="text-slate-800">
-                              {r.installmentsCount != null ? `${r.installmentsCount} قسط` : '—'}
+                              {r.installmentsCount != null ? `${r.installmentsCount} ${m.installmentSuffix}` : '—'}
                             </p>
                             <p className="text-xs text-slate-500">
                               {FREQUENCY_LABELS[r.frequency] ?? r.frequency}
@@ -255,13 +261,13 @@ export default async function InstallmentPlansPage({
                       })()}
                     </td>
                     <td className="py-3 px-4">
-                      <PlanTemplateStatusBadge status={r.status} />
+                      <PlanTemplateStatusBadge status={r.status} locale={locale} />
                     </td>
                     <td className="py-3 px-4 text-xs text-slate-500 tabular-nums">
                       {formatDate(r.createdAt)}
                     </td>
                     <td className="py-3 ps-4 pe-5 text-end">
-                      <PlanActions plan={r} isAdmin={isAdmin} />
+                      <PlanActions plan={r} isAdmin={isAdmin} locale={locale} />
                     </td>
                   </tr>
                 ))}
@@ -278,6 +284,7 @@ export default async function InstallmentPlansPage({
           total={paginationMeta.total}
           basePath="/dashboard/installments"
           params={sp}
+          locale={locale}
         />
       )}
     </div>

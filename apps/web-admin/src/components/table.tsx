@@ -15,7 +15,7 @@ interface Props<T> {
   header?: ReactNode;
 }
 
-export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'لا توجد بيانات', header }: Props<T>) {
+export function DataTable<T>({ columns, rows, rowKey, emptyMessage = 'No data', header }: Props<T>) {
   return (
     <div className="bg-surface rounded-2xl border border-hairline shadow-soft overflow-hidden">
       {header && (

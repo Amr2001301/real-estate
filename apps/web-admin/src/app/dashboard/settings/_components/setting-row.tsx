@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Pencil, Lock, Check, X as XIcon } from 'lucide-react';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -13,16 +15,18 @@ interface Props {
   settingKey: string;
   label: string;
   hasLabel: boolean;
-  type: 'نص' | 'رقم' | 'منطقي' | 'JSON';
+  type: 'text' | 'number' | 'boolean' | 'json';
+  typeLabel: string;
   typeCls: string;
   preview: string;
   sensitive: boolean;
   updatedAt: string;
+  locale?: Locale;
 }
 
 /* ── Value display ─────────────────────────────────────────────────────────── */
 
-function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'preview' | 'sensitive'>) {
+function ValueDisplay({ type, preview, sensitive, sr }: Pick<Props, 'type' | 'preview' | 'sensitive'> & { sr: ReturnType<typeof uiT>['settingRow'] }) {
   if (sensitive) {
     return (
       <div className="flex items-center gap-2">
@@ -36,22 +40,22 @@ function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'previe
     );
   }
 
-  if (type === 'منطقي') {
+  if (type === 'boolean') {
     const on = preview === 'true';
     return on ? (
       <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[13px] font-semibold bg-teal-50 text-teal-700 border border-teal-100">
         <Check className="h-3.5 w-3.5 shrink-0" />
-        مفعّل
+        {sr.enabled}
       </span>
     ) : (
       <span className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-[13px] font-semibold bg-slate-100 text-slate-500 border border-slate-200">
         <XIcon className="h-3.5 w-3.5 shrink-0" />
-        غير مفعّل
+        {sr.disabled}
       </span>
     );
   }
 
-  if (type === 'رقم') {
+  if (type === 'number') {
     return (
       <span className="text-[30px] font-black text-slate-800 tabular-nums leading-none" dir="ltr">
         {preview}
@@ -59,7 +63,7 @@ function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'previe
     );
   }
 
-  if (type === 'JSON') {
+  if (type === 'json') {
     const short = preview.replace(/\s+/g, ' ').slice(0, 80);
     return (
       <div className="space-y-1.5 w-full">
@@ -73,7 +77,6 @@ function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'previe
     );
   }
 
-  /* نص */
   return (
     <p className="text-[13px] text-slate-700 leading-relaxed line-clamp-2" dir="auto">
       {preview}
@@ -83,16 +86,16 @@ function ValueDisplay({ type, preview, sensitive }: Pick<Props, 'type' | 'previe
 
 /* ── Type-appropriate edit input ───────────────────────────────────────────── */
 
-function EditInput({ type, preview, sensitive }: Pick<Props, 'type' | 'preview' | 'sensitive'>) {
-  if (type === 'منطقي') {
+function EditInput({ type, preview, sensitive, sr }: Pick<Props, 'type' | 'preview' | 'sensitive'> & { sr: ReturnType<typeof uiT>['settingRow'] }) {
+  if (type === 'boolean') {
     return (
       <Select name="value" defaultValue={preview === 'true' ? 'true' : 'false'} required>
-        <option value="true">نعم (مفعّل)</option>
-        <option value="false">لا (غير مفعّل)</option>
+        <option value="true">{sr.yesEnabled}</option>
+        <option value="false">{sr.noDisabled}</option>
       </Select>
     );
   }
-  if (type === 'رقم') {
+  if (type === 'number') {
     return (
       <Input
         name="value"
@@ -100,19 +103,19 @@ function EditInput({ type, preview, sensitive }: Pick<Props, 'type' | 'preview' 
         step="any"
         dir="ltr"
         defaultValue={sensitive ? '' : preview}
-        placeholder={sensitive ? 'أدخل قيمة رقمية' : preview}
+        placeholder={sensitive ? sr.enterNumber : preview}
         required
       />
     );
   }
-  if (type === 'JSON') {
+  if (type === 'json') {
     return (
       <Textarea
         name="value"
         rows={3}
         dir="ltr"
         defaultValue={sensitive ? '' : preview}
-        placeholder={sensitive ? 'أدخل JSON جديد' : undefined}
+        placeholder={sensitive ? sr.enterJson : undefined}
         className="text-xs font-mono resize-none"
         required
       />
@@ -123,7 +126,7 @@ function EditInput({ type, preview, sensitive }: Pick<Props, 'type' | 'preview' 
       name="value"
       dir="ltr"
       defaultValue={sensitive ? '' : preview}
-      placeholder={sensitive ? 'أدخل القيمة الجديدة' : preview}
+      placeholder={sensitive ? sr.enterValue : preview}
       required
     />
   );
@@ -136,12 +139,15 @@ export function SettingCard({
   label,
   hasLabel,
   type,
+  typeLabel,
   typeCls,
   preview,
   sensitive,
   updatedAt,
+  locale = 'ar',
 }: Props) {
   const [editing, setEditing] = useState(false);
+  const sr = uiT(locale).settingRow;
 
   return (
     <div
@@ -166,15 +172,15 @@ export function SettingCard({
             'text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0',
             typeCls,
           )}>
-            {type}
+            {typeLabel}
           </span>
 
           {/* Edit / close toggle */}
           <button
             type="button"
             onClick={() => setEditing((e) => !e)}
-            aria-label={editing ? 'إلغاء' : 'تعديل الإعداد'}
-            title={editing ? 'إلغاء' : 'تعديل'}
+            aria-label={editing ? sr.cancelBtn : sr.editAriaLabel}
+            title={editing ? sr.cancelBtn : sr.editAriaLabel}
             className={cn(
               'inline-flex items-center justify-center h-6 w-6 rounded-lg transition-colors shrink-0',
               editing
@@ -199,34 +205,34 @@ export function SettingCard({
             {/* Current value hint */}
             {!sensitive && (
               <p className="text-[11px] text-slate-500">
-                الحالية:{' '}
+                {sr.currentLabel}{' '}
                 <span className="font-medium text-slate-700">
-                  {type === 'منطقي'
-                    ? (preview === 'true' ? 'مفعّل' : 'غير مفعّل')
+                  {type === 'boolean'
+                    ? (preview === 'true' ? sr.enabled : sr.disabled)
                     : preview.slice(0, 40)}
                 </span>
               </p>
             )}
 
             <div className="space-y-1">
-              <label className="text-[12px] font-semibold text-slate-800 block">القيمة الجديدة</label>
-              <EditInput type={type} preview={preview} sensitive={sensitive} />
+              <label className="text-[12px] font-semibold text-slate-800 block">{sr.newValueLabel}</label>
+              <EditInput type={type} preview={preview} sensitive={sensitive} sr={sr} />
             </div>
 
             <div className="flex items-center gap-1.5">
-              <Button type="submit" size="sm" variant="primary">حفظ</Button>
+              <Button type="submit" size="sm" variant="primary">{sr.saveBtn}</Button>
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
                 onClick={() => setEditing(false)}
               >
-                إلغاء
+                {sr.cancelBtn}
               </Button>
             </div>
           </form>
         ) : (
-          <ValueDisplay type={type} preview={preview} sensitive={sensitive} />
+          <ValueDisplay type={type} preview={preview} sensitive={sensitive} sr={sr} />
         )}
       </div>
 

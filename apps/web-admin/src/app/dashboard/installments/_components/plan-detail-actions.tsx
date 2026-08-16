@@ -4,15 +4,19 @@ import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckCircle2, PauseCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { activatePlanAction, deactivatePlanAction } from '../actions';
 
 interface Props {
   planId: string;
   action: 'activate' | 'deactivate';
   commandRow?: boolean;
+  locale?: Locale;
 }
 
-export function PlanDetailActions({ planId, action, commandRow }: Props) {
+export function PlanDetailActions({ planId, action, commandRow, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.installments.detailActions;
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -50,8 +54,8 @@ export function PlanDetailActions({ planId, action, commandRow }: Props) {
           {isActivate ? <CheckCircle2 /> : <PauseCircle />}
         </span>
         {isPending
-          ? isActivate ? 'جارٍ التفعيل…' : 'جارٍ الإيقاف…'
-          : isActivate ? 'تفعيل الخطة' : 'إيقاف الخطة'}
+          ? (isActivate ? m.activating : m.deactivating)
+          : (isActivate ? m.activate : m.deactivate)}
       </button>
     );
   }
@@ -67,7 +71,7 @@ export function PlanDetailActions({ planId, action, commandRow }: Props) {
         leftIcon={<CheckCircle2 className="h-4 w-4" />}
         className="text-green-700 border-green-200 hover:bg-green-50"
       >
-        تفعيل الخطة
+        {m.activate}
       </Button>
     );
   }
@@ -82,7 +86,7 @@ export function PlanDetailActions({ planId, action, commandRow }: Props) {
       leftIcon={<PauseCircle className="h-4 w-4" />}
       className="text-amber-700 border-amber-200 hover:bg-amber-50"
     >
-      إيقاف الخطة
+      {m.deactivate}
     </Button>
   );
 }

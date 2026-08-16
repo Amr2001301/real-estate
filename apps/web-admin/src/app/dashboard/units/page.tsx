@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
 import type { Paged, Unit, Project } from '@/lib/types';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -30,6 +31,7 @@ import {
   PremiumFilterField,
   PremiumEmptyState,
 } from '@/components/premium';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -73,11 +75,13 @@ export default async function UnitsPage({
   if (sp.areaMin)   qs.set('areaMin',   sp.areaMin);
   if (sp.areaMax)   qs.set('areaMax',   sp.areaMax);
 
-  const [pagedRes, snapshotRes, projectsRes] = await Promise.all([
+  const [pagedRes, snapshotRes, projectsRes, locale] = await Promise.all([
     safe(api.get<Paged<Unit>>(`/units?${qs.toString()}`)),
     safe(api.get<Paged<Unit>>('/units?pageSize=500')),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
+    getLocale(),
   ]);
+  const m = uiT(locale).pages.units;
 
   const paged = pagedRes.data;
   const rows  = paged?.data ?? [];
@@ -115,21 +119,21 @@ export default async function UnitsPage({
 
       {/* ── Premium hero ── */}
       <PremiumPageHero
-        title="قائمة الوحدات"
-        description="إدارة ومراقبة الوحدات العقارية عبر المشاريع والمراحل."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوحدات' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           isAdmin ? (
             <>
-              <IconButton label="تصدير التقرير" variant="outline" size="md">
+              <IconButton label={m.exportBtn} variant="outline" size="md">
                 <Download />
               </IconButton>
               <Link href={'/dashboard/units/new' as never}>
                 <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                  إضافة وحدة جديدة
+                  {m.addBtn}
                 </Button>
               </Link>
             </>
@@ -143,27 +147,27 @@ export default async function UnitsPage({
         cols={4}
         metrics={[
           {
-            label:   'القيمة الإجمالية',
+            label:   m.kpi.totalValue,
             value:   formatCurrency(all.reduce((s, u) => s + Number(u.price ?? 0), 0), currency),
             icon:    <CircleDollarSign />,
             tone:    'brand',
             primary: true,
           },
           {
-            label: 'إجمالي المتاح',
+            label: m.kpi.totalAvailable,
             value: available,
-            sub:   `من أصل ${total} وحدة`,
+            sub:   m.kpi.availableSub.replace('{n}', String(total)),
             icon:  <CheckCircle2 />,
             tone:  'success',
           },
           {
-            label: 'قيد الحجز',
+            label: m.kpi.reserved,
             value: reserved,
             icon:  <Bookmark />,
             tone:  'warning',
           },
           {
-            label: 'إجمالي المبيعات',
+            label: m.kpi.totalSales,
             value: sold,
             icon:  <Box />,
             tone:  'info',
@@ -174,7 +178,7 @@ export default async function UnitsPage({
       {/* ── Error banner ── */}
       {pagedRes.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل الوحدات: {pagedRes.error}
+          {m.errorPrefix} {pagedRes.error}
         </div>
       )}
 
@@ -192,31 +196,31 @@ export default async function UnitsPage({
         {!showFilters && sp.areaMin  && <input type="hidden" name="areaMin"  value={sp.areaMin} />}
         {!showFilters && sp.areaMax  && <input type="hidden" name="areaMax"  value={sp.areaMax} />}
 
-        <PremiumFilterField label="المشروع" htmlFor="projectId">
+        <PremiumFilterField label={m.filter.projectLabel} htmlFor="projectId">
           <Select id="projectId" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40 shrink-0">
-            <option value="">كل المشاريع</option>
+            <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
         </PremiumFilterField>
 
-        <PremiumFilterField label="الحالة" htmlFor="status">
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="status">
           <Select id="status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-36 shrink-0">
-            <option value="">كل الحالات</option>
-            <option value="AVAILABLE">متاحة</option>
-            <option value="RESERVED">محجوزة</option>
-            <option value="SOLD">مباعة</option>
+            <option value="">{m.filter.allStatuses}</option>
+            <option value="AVAILABLE">{m.filter.available}</option>
+            <option value="RESERVED">{m.filter.reserved}</option>
+            <option value="SOLD">{m.filter.sold}</option>
           </Select>
         </PremiumFilterField>
 
         {/* Action buttons — placed BEFORE the advanced panel so ms-auto keeps them in row 1.
             The basis-full advanced panel below wraps to row 2 without displacing these buttons. */}
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {(sp.projectId || sp.status || hasAdvancedFilters) && (
             <Link href={'/dashboard/units' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
@@ -229,7 +233,7 @@ export default async function UnitsPage({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filter.advancedHide : m.filter.advancedShow}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -243,23 +247,23 @@ export default async function UnitsPage({
           <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">غرف النوم</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.bedroomsLabel}</label>
                 <Input name="bedrooms" type="number" min={0} inputSize="sm" placeholder="—" defaultValue={sp.bedrooms ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">السعر من</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.priceFrom}</label>
                 <Input name="priceMin" type="number" min={0} inputSize="sm" placeholder="0" defaultValue={sp.priceMin ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">السعر إلى</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.priceTo}</label>
                 <Input name="priceMax" type="number" min={0} inputSize="sm" placeholder="∞" defaultValue={sp.priceMax ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">المساحة من (م²)</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.areaFrom}</label>
                 <Input name="areaMin" type="number" min={0} inputSize="sm" placeholder="0" defaultValue={sp.areaMin ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">المساحة إلى (م²)</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.filter.areaTo}</label>
                 <Input name="areaMax" type="number" min={0} inputSize="sm" placeholder="∞" defaultValue={sp.areaMax ?? ''} />
               </div>
             </div>
@@ -273,14 +277,14 @@ export default async function UnitsPage({
           <table className="w-full text-sm">
             <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
               <tr>
-                <th className="text-start py-3.5 ps-5 pe-4">كود الوحدة</th>
-                <th className="text-start py-3.5 px-4">المشروع / المرحلة</th>
-                <th className="text-start py-3.5 px-4">النوع</th>
-                <th className="text-start py-3.5 px-4">المساحة</th>
-                <th className="text-start py-3.5 px-4">الغرف</th>
-                <th className="text-start py-3.5 px-4">السعر</th>
-                <th className="text-start py-3.5 px-4">الحالة</th>
-                <th className="text-start py-3.5 px-4">آخر تحديث</th>
+                <th className="text-start py-3.5 ps-5 pe-4">{m.cols.code}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.project}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.type}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.area}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.bedrooms}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.price}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.status}</th>
+                <th className="text-start py-3.5 px-4">{m.cols.updated}</th>
                 <th className="py-3.5 ps-4 pe-5 w-px"></th>
               </tr>
             </thead>
@@ -290,8 +294,8 @@ export default async function UnitsPage({
                   <td colSpan={9} className="p-0">
                     <PremiumEmptyState
                       icon={<Box />}
-                      title="لا توجد وحدات بعد"
-                      description="ابدأ بإضافة أول وحدة إلى محفظة العقارات."
+                      title={m.empty.title}
+                      description={m.empty.description}
                       action={
                         isAdmin ? (
                           <Link href={'/dashboard/units/new' as never}>
@@ -300,7 +304,7 @@ export default async function UnitsPage({
                               size="sm"
                               leftIcon={<Plus className="h-4 w-4" />}
                             >
-                              إضافة وحدة
+                              {m.empty.addBtn}
                             </Button>
                           </Link>
                         ) : undefined
@@ -333,7 +337,7 @@ export default async function UnitsPage({
                           {phaseName !== '—' && (
                             <p className="text-[11px] text-slate-500 truncate">
                               {phaseName}
-                              {u.building?.name && ` · مبنى ${u.building.name}`}
+                              {u.building?.name && ` · ${m.buildingPrefix} ${u.building.name}`}
                             </p>
                           )}
                         </div>
@@ -343,7 +347,7 @@ export default async function UnitsPage({
                     <td className="py-3.5 px-4 text-slate-700 tabular-nums">
                       <span className="inline-flex items-center gap-1">
                         <Ruler className="h-3.5 w-3.5 text-slate-400" />
-                        {u.area} م²
+                        {u.area} {m.areaSuffix}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-slate-700 tabular-nums">
@@ -356,14 +360,14 @@ export default async function UnitsPage({
                       {formatCurrency(u.price, currency)}
                     </td>
                     <td className="py-3.5 px-4">
-                      <UnitStatusBadge status={u.status} />
+                      <UnitStatusBadge status={u.status} locale={locale} />
                     </td>
                     <td className="py-3.5 px-4 text-xs text-slate-500 whitespace-nowrap">
                       {formatDate(u.updatedAt)}
                     </td>
                     <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/units/${u.id}` as never}>
-                        <IconButton label="عرض تفاصيل الوحدة" variant="outline" size="sm">
+                        <IconButton label={m.viewBtn} variant="outline" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -391,6 +395,7 @@ export default async function UnitsPage({
                 areaMin:   sp.areaMin,
                 areaMax:   sp.areaMax,
               }}
+              locale={locale}
             />
           </div>
         )}

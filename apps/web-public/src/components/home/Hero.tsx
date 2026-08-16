@@ -4,14 +4,18 @@ import { routes } from '@/lib/routes';
 import { Container } from '@/components/ui/Container';
 import { ButtonLink } from '@/components/ui/Button';
 import { Reveal } from '@/components/motion/Reveal';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 
 interface HeroProps {
   image?: string | null;
   projectsCount?: number | null;
   unitsCount?: number | null;
+  locale: Locale;
 }
 
-export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
+export function Hero({ image, projectsCount, unitsCount, locale }: HeroProps) {
+  const m = siteT(locale).home.hero;
   const showProjects = projectsCount != null && projectsCount > 0;
   const showUnits = unitsCount != null && unitsCount > 0;
   const hasStats = showProjects || showUnits;
@@ -60,7 +64,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
             <div className="flex items-center gap-2.5">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold-400" aria-hidden />
               <span className="text-[11px] font-bold uppercase tracking-[0.22em] text-gold-400">
-                عقارات مختارة بعناية
+                {m.eyebrow}
               </span>
             </div>
           </Reveal>
@@ -69,15 +73,15 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
           <Reveal delay={80}>
             <h1 className="mt-7 text-[2.5rem] leading-[1.2] sm:text-5xl lg:text-[3.75rem]">
               <span className="block font-light tracking-tight text-white/75">
-                استثمر في عقار
+                {m.line1}
               </span>
               <span className="block font-extrabold tracking-tight text-white">
-                مختار{' '}
+                {m.line2}{' '}
                 <span
                   className="bg-clip-text text-transparent"
                   style={{ backgroundImage: 'linear-gradient(to left, #b8923e, #f0d080, #d4a84b)' }}
                 >
-                  بعناية
+                  {m.highlight}
                 </span>
               </span>
             </h1>
@@ -89,7 +93,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
           {/* Description */}
           <Reveal delay={150}>
             <p className="mt-5 max-w-[480px] text-[16px] leading-[1.9] text-white/55 sm:text-[17px]">
-              وحدات ومشاريع سكنية وتجارية مختارة بعناية — تناسب السكن والاستثمار.
+              {m.sub}
             </p>
           </Reveal>
 
@@ -103,7 +107,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
                       {projectsCount}+
                     </div>
                     <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                      مشروع
+                      {m.projects}
                     </div>
                   </div>
                 )}
@@ -116,7 +120,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
                       {unitsCount}+
                     </div>
                     <div className="mt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/40">
-                      وحدة
+                      {m.units}
                     </div>
                   </div>
                 )}
@@ -133,7 +137,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
                 size="lg"
                 className="shadow-[0_16px_40px_-12px_rgba(200,162,75,0.55)]"
               >
-                استكشف الوحدات
+                {m.cta1}
               </ButtonLink>
 
               <Link
@@ -143,7 +147,7 @@ export function Hero({ image, projectsCount, unitsCount }: HeroProps) {
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/[0.07] backdrop-blur-sm transition-all duration-200 group-hover:border-white/40 group-hover:bg-white/[0.14]">
                   <MessageCircle className="h-[18px] w-[18px]" aria-hidden />
                 </span>
-                تحدث مع مستشار
+                {m.cta2}
               </Link>
             </div>
           </Reveal>

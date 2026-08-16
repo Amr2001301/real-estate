@@ -38,14 +38,18 @@ function ConvBadge({ rate }: { rate: number }) {
 export function BrokerFunnelChart({
   stages,
   overallConv,
+  overallLabel = 'فرصة → دفعة مُنجزة',
+  noDataLabel = 'لا توجد بيانات',
 }: {
   stages: FunnelStage[];
   overallConv: number | null;
+  overallLabel?: string;
+  noDataLabel?: string;
 }) {
   if (!stages.length) {
     return (
       <div className="flex items-center justify-center h-full text-sm text-slate-400">
-        لا توجد بيانات
+        {noDataLabel}
       </div>
     );
   }
@@ -105,7 +109,7 @@ export function BrokerFunnelChart({
 
       {overallConv !== null && (
         <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-          <span className="text-[10px] text-slate-400">فرصة → دفعة مُنجزة</span>
+          <span className="text-[10px] text-slate-400">{overallLabel}</span>
           <span className="text-[11px] font-black text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full tabular-nums">
             {(overallConv * 100).toFixed(1)}%
           </span>

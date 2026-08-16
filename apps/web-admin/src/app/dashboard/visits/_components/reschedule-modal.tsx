@@ -5,6 +5,8 @@ import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { rescheduleVisitAction } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 interface Props {
   appointmentId: string;
@@ -13,6 +15,7 @@ interface Props {
   currentScheduledAt?: string;
   open: boolean;
   onClose: () => void;
+  locale?: Locale;
 }
 
 const INITIAL = { error: null as string | null };
@@ -24,7 +27,9 @@ export function RescheduleModal({
   currentScheduledAt,
   open,
   onClose,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.visitComponents;
   const action = rescheduleVisitAction.bind(null, appointmentId);
   const [state, dispatch, pending] = useActionState(
     async (_prev: typeof INITIAL, fd: FormData) => {
@@ -45,16 +50,16 @@ export function RescheduleModal({
     <Dialog
       open={open}
       onClose={onClose}
-      title="إعادة جدولة الزيارة"
-      description="سيتم تعيين الموعد الحالي كـ 'معاد جدولته' وإنشاء موعد جديد"
+      title={m.rescheduleTitle}
+      description={m.rescheduleDesc}
       size="md"
       footer={
         <>
           <Button variant="outline" size="sm" type="button" onClick={onClose}>
-            إلغاء
+            {m.cancelModalBtn}
           </Button>
           <Button variant="primary" size="sm" type="submit" form="reschedule-form" loading={pending}>
-            إعادة الجدولة
+            {m.rescheduleSubmitBtn}
           </Button>
         </>
       }
@@ -66,7 +71,7 @@ export function RescheduleModal({
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            الموعد الجديد <span className="text-danger-600">*</span>
+            {m.newAppointmentLabel} <span className="text-danger-600">*</span>
           </label>
           <input
             name="scheduledAt"
@@ -79,13 +84,13 @@ export function RescheduleModal({
 
         {salesOptions.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">المندوب</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{m.salesRepLabel}</label>
             <select
               name="assignedSalesId"
               defaultValue={currentSalesId ?? ''}
               className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30"
             >
-              <option value="">غير محدد</option>
+              <option value="">{m.unspecified}</option>
               {salesOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {salesActorLabel(s)}
@@ -96,7 +101,7 @@ export function RescheduleModal({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">الموقع</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{m.locationLabel}</label>
           <input
             name="location"
             type="text"
@@ -105,7 +110,7 @@ export function RescheduleModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">ملاحظات</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{m.notesLabel}</label>
           <textarea
             name="salesNotes"
             rows={2}

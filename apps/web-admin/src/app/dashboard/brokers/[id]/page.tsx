@@ -20,6 +20,8 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Broker } from '@/lib/types';
 import { formatDate } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { BrokerStatusBadge } from '@/components/badges';
 import { OwnerDocumentsCard } from '@/components/documents/owner-documents-card';
@@ -34,11 +36,12 @@ import {
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-const COMMISSION_MODEL_LABEL: Record<string, string> = {
-  PERCENT_OF_SALE: 'نسبة مئوية من قيمة البيع',
-  FIXED_PER_UNIT: 'مبلغ ثابت لكل وحدة',
-  TIERED: 'شرائح متعددة',
-};
+function commissionModelLabel(model: string, m: ReturnType<typeof uiT>['pages']['brokerDetail']): string {
+  if (model === 'PERCENT_OF_SALE') return m.commissionModelPercent;
+  if (model === 'FIXED_PER_UNIT') return m.commissionModelFixed;
+  if (model === 'TIERED') return m.commissionModelTiered;
+  return model;
+}
 
 // ── Sub-components ─────────────────────────────────────────────────────────
 
@@ -82,19 +85,21 @@ export default async function BrokerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerDetail;
   const r = await safe(api.get<Broker>(`/brokers/${id}`));
 
   if (r.error || !r.data) {
     return (
       <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل بيانات الوسيط: {r.error ?? 'غير موجود'}
+        {m.errorLoad}{r.error ?? m.errorNotFound}
       </div>
     );
   }
 
   const broker = r.data;
   const counts = broker._count ?? { brokerUsers: 0, projectAccess: 0, unitAccess: 0 };
-  const commissionModel = COMMISSION_MODEL_LABEL[broker.commissionModel] ?? broker.commissionModel;
+  const commissionModel = commissionModelLabel(broker.commissionModel, m);
 
   return (
     <div className="space-y-5">
@@ -103,8 +108,8 @@ export default async function BrokerDetailPage({
         title={broker.companyName}
         description={broker.commercialName ?? undefined}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
           { label: broker.companyName },
         ]}
         meta={
@@ -116,19 +121,19 @@ export default async function BrokerDetailPage({
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Link href={`/dashboard/brokers/${broker.id}/edit` as never}>
-              <Button variant="primary" size="md" leftIcon={<Pencil className="h-4 w-4" />}>تعديل</Button>
+              <Button variant="primary" size="md" leftIcon={<Pencil className="h-4 w-4" />}>{m.btnEdit}</Button>
             </Link>
             <Link href={`/dashboard/brokers/${broker.id}/users` as never}>
-              <Button variant="outline" size="md" leftIcon={<UsersIcon className="h-4 w-4" />}>الموظفون</Button>
+              <Button variant="outline" size="md" leftIcon={<UsersIcon className="h-4 w-4" />}>{m.btnEmployees}</Button>
             </Link>
             <Link href={`/dashboard/brokers/${broker.id}/access` as never}>
-              <Button variant="outline" size="md" leftIcon={<ShieldCheck className="h-4 w-4" />}>الصلاحيات</Button>
+              <Button variant="outline" size="md" leftIcon={<ShieldCheck className="h-4 w-4" />}>{m.btnPermissions}</Button>
             </Link>
             <Link href={`/dashboard/brokers/${broker.id}/performance` as never}>
-              <Button variant="outline" size="md" leftIcon={<BarChart3 className="h-4 w-4" />}>الأداء</Button>
+              <Button variant="outline" size="md" leftIcon={<BarChart3 className="h-4 w-4" />}>{m.btnPerformance}</Button>
             </Link>
             <Link href={`/dashboard/brokers/${broker.id}/edit#status` as never}>
-              <Button variant="ghost" size="md">تغيير الحالة</Button>
+              <Button variant="ghost" size="md">{m.btnChangeStatus}</Button>
             </Link>
           </div>
         }
@@ -140,25 +145,25 @@ export default async function BrokerDetailPage({
         cols={4}
         metrics={[
           {
-            label: 'الموظفون',
+            label: m.kpiEmployees,
             value: String(counts.brokerUsers),
             icon: <UsersIcon />,
             tone: 'brand',
           },
           {
-            label: 'المشاريع المتاحة',
+            label: m.kpiProjects,
             value: String(counts.projectAccess),
             icon: <Briefcase />,
             tone: 'info',
           },
           {
-            label: 'الوحدات المتاحة',
+            label: m.kpiUnits,
             value: String(counts.unitAccess),
             icon: <ShieldCheck />,
             tone: 'success',
           },
           {
-            label: 'نسبة العمولة الافتراضية',
+            label: m.kpiDefaultCommission,
             value: `${Number(broker.defaultCommissionPct ?? 0).toFixed(2)}%`,
             icon: <Banknote />,
             sub: commissionModel,
@@ -172,8 +177,8 @@ export default async function BrokerDetailPage({
         main={
           <div className="space-y-5">
 
-            {/* معلومات التواصل */}
-            <PremiumSectionCard title="معلومات التواصل" icon={<Mail />} padded={false}>
+            {/* Contact */}
+            <PremiumSectionCard title={m.sectionContact} icon={<Mail />} padded={false}>
               {/* Contact tiles */}
               <div className="grid grid-cols-2 gap-3 p-5">
                 {/* Phone tile */}
@@ -182,7 +187,7 @@ export default async function BrokerDetailPage({
                     <Phone />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 mb-0.5">رقم الجوال</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 mb-0.5">{m.labelPhone}</p>
                     <p className="text-[13px] font-semibold text-slate-900 truncate" dir="ltr">
                       {broker.phone ?? '—'}
                     </p>
@@ -194,7 +199,7 @@ export default async function BrokerDetailPage({
                     <Mail />
                   </span>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 mb-0.5">البريد الإلكتروني</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 mb-0.5">{m.labelEmail}</p>
                     <p className="text-[13px] font-semibold text-slate-900 truncate" dir="ltr">
                       {broker.email ?? '—'}
                     </p>
@@ -203,38 +208,38 @@ export default async function BrokerDetailPage({
               </div>
               {/* City + Address */}
               <div className="border-t border-hairline divide-y divide-hairline">
-                <SideRow label="المدينة" value={broker.city} />
-                <SideRow label="العنوان" value={broker.address} />
+                <SideRow label={m.labelCity} value={broker.city} />
+                <SideRow label={m.labelAddress} value={broker.address} />
               </div>
             </PremiumSectionCard>
 
-            {/* البيانات القانونية والمصرفية */}
-            <PremiumSectionCard title="البيانات القانونية والمصرفية" icon={<Hash />} padded={false}>
+            {/* Legal & Banking */}
+            <PremiumSectionCard title={m.sectionLegal} icon={<Hash />} padded={false}>
               <div className="divide-y divide-hairline">
-                <SideRow label="الرقم الضريبي" value={broker.taxId} ltr />
-                <SideRow label="السجل التجاري" value={broker.commercialRegistration} ltr />
-                <SideRow label="البنك" value={broker.bankName} />
-                <SideRow label="اسم صاحب الحساب" value={broker.bankAccountName} />
-                <SideRow label="رقم الآيبان" value={broker.bankIban} ltr />
+                <SideRow label={m.labelTaxId} value={broker.taxId} ltr />
+                <SideRow label={m.labelCommReg} value={broker.commercialRegistration} ltr />
+                <SideRow label={m.labelBank} value={broker.bankName} />
+                <SideRow label={m.labelBankAccountName} value={broker.bankAccountName} />
+                <SideRow label={m.labelIban} value={broker.bankIban} ltr />
               </div>
             </PremiumSectionCard>
 
-            {/* ملاحظات داخلية */}
+            {/* Internal notes */}
             {broker.notes && (
-              <PremiumSectionCard title="ملاحظات داخلية">
+              <PremiumSectionCard title={m.sectionNotes}>
                 <p className="text-[13px] text-slate-700 whitespace-pre-wrap leading-relaxed">
                   {broker.notes}
                 </p>
               </PremiumSectionCard>
             )}
 
-            {/* المستندات */}
+            {/* Documents */}
             <OwnerDocumentsCard
               ownerType="BROKER"
               ownerId={broker.id}
               legacy={
                 broker.contractPdfUrl
-                  ? [{ label: 'اتفاقية الوسيط (PDF)', href: broker.contractPdfUrl, hint: 'حقل قديم — broker.contractPdfUrl' }]
+                  ? [{ label: m.legacyDocLabel, href: broker.contractPdfUrl, hint: m.legacyDocHint }]
                   : undefined
               }
             />
@@ -244,48 +249,48 @@ export default async function BrokerDetailPage({
           <div className="space-y-5">
 
             {/* Command panel */}
-            <PremiumCommandPanel title="إجراءات وروابط">
+            <PremiumCommandPanel title={m.cmdTitle}>
               <Link href={`/dashboard/brokers/${broker.id}/performance` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-brand-50 text-brand-600`}><BarChart3 /></span>
-                <span className="text-[13px] font-semibold text-slate-800">الأداء</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdPerformance}</span>
               </Link>
               <Link href={`/dashboard/broker-leads?brokerId=${broker.id}` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-sky-50 text-sky-600`}><UsersIcon /></span>
-                <span className="text-[13px] font-semibold text-slate-800">الفرص</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdLeads}</span>
               </Link>
               <Link href={`/dashboard/broker-reservations?brokerId=${broker.id}` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-amber-50 text-amber-600`}><BookmarkCheck /></span>
-                <span className="text-[13px] font-semibold text-slate-800">الحجوزات</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdReservations}</span>
               </Link>
               <Link href={`/dashboard/broker-contracts?brokerId=${broker.id}` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-emerald-50 text-emerald-600`}><FileText /></span>
-                <span className="text-[13px] font-semibold text-slate-800">العقود</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdContracts}</span>
               </Link>
               <Link href={`/dashboard/broker-commissions?brokerId=${broker.id}` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-violet-50 text-violet-600`}><BadgePercent /></span>
-                <span className="text-[13px] font-semibold text-slate-800">العمولات</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdCommissions}</span>
               </Link>
               <Link href={`/dashboard/broker-payouts?brokerId=${broker.id}` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-blue-50 text-blue-600`}><Wallet /></span>
-                <span className="text-[13px] font-semibold text-slate-800">المدفوعات</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdPayouts}</span>
               </Link>
               <Link href={`/dashboard/brokers/${broker.id}/users` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-slate-100 text-slate-500`}><UsersIcon /></span>
-                <span className="text-[13px] font-semibold text-slate-800">الموظفون</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdEmployees}</span>
               </Link>
               <Link href={`/dashboard/brokers/${broker.id}/access` as never} className={CMD_ROW}>
                 <span className={`${CMD_ICON_BASE} bg-slate-100 text-slate-500`}><ShieldCheck /></span>
-                <span className="text-[13px] font-semibold text-slate-800">الصلاحيات</span>
+                <span className="text-[13px] font-semibold text-slate-800">{m.cmdPermissions}</span>
               </Link>
             </PremiumCommandPanel>
 
-            {/* العقد */}
-            <PremiumSectionCard title="العقد" icon={<CalendarRange />} padded={false}>
+            {/* Contract */}
+            <PremiumSectionCard title={m.sectionContract} icon={<CalendarRange />} padded={false}>
               <div className="divide-y divide-hairline">
-                <DateRow label="بدء العقد" value={formatDate(broker.contractStartAt) ?? '—'} />
-                <DateRow label="انتهاء العقد" value={formatDate(broker.contractEndAt) ?? '—'} />
+                <DateRow label={m.labelContractStart} value={formatDate(broker.contractStartAt) ?? '—'} />
+                <DateRow label={m.labelContractEnd} value={formatDate(broker.contractEndAt) ?? '—'} />
                 <div className="flex items-center justify-between gap-3 px-5 py-3">
-                  <span className="text-[12px] font-medium text-slate-500 shrink-0">ملف العقد</span>
+                  <span className="text-[12px] font-medium text-slate-500 shrink-0">{m.labelContractFile}</span>
                   {broker.contractPdfUrl ? (
                     <a
                       href={broker.contractPdfUrl}
@@ -294,7 +299,7 @@ export default async function BrokerDetailPage({
                       className="flex items-center gap-1.5 text-[12px] font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors shrink-0"
                     >
                       <ExternalLink className="h-3.5 w-3.5" />
-                      فتح الملف
+                      {m.openFile}
                     </a>
                   ) : (
                     <span className="text-[13px] text-slate-300">—</span>

@@ -3,6 +3,8 @@ import { Activity, ArrowLeft, Pencil, Phone, Mail } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { User } from '@/lib/types';
 import { formatDate, formatDateTime } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { PageHeader } from '@/components/ui/page-header';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,13 +33,6 @@ interface AuditPaged {
 }
 
 const PAGE_SIZE = 20;
-
-const ACTION_LABEL: Record<string, string> = {
-  POST: 'إنشاء',
-  PATCH: 'تحديث',
-  PUT: 'تحديث',
-  DELETE: 'حذف',
-};
 
 const PALETTE = [
   'bg-brand-50 text-brand-700',
@@ -71,6 +66,8 @@ export default async function ClientActivityPage({
   const { id } = await params;
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
+  const locale = await getLocale();
+  const m = uiT(locale).pages.clientDetailPage;
 
   const [userRes, auditRes] = await Promise.all([
     safe(api.get<User>(`/users/${id}`)),
@@ -84,7 +81,7 @@ export default async function ClientActivityPage({
   if (userRes.error || !userRes.data) {
     return (
       <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل العميل: {userRes.error ?? 'غير موجود'}
+        {m.errorLoad} {userRes.error ?? m.errorNotFound}
       </div>
     );
   }
@@ -96,16 +93,23 @@ export default async function ClientActivityPage({
   const items = auditRes.data?.data ?? [];
   const total = auditRes.data?.meta.total ?? 0;
 
+  const ACTION_LABEL: Record<string, string> = {
+    POST: m.activityActionCreate,
+    PATCH: m.activityActionUpdate,
+    PUT: m.activityActionUpdate,
+    DELETE: m.activityActionDelete,
+  };
+
   return (
     <div className="space-y-6 lg:space-y-8">
       <PageHeader
-        title={`سجل نشاط: ${u.fullName}`}
-        description="مراجعة كاملة لجميع التغييرات والعمليات المرتبطة بالعميل منذ التسجيل."
+        title={`${m.activityPageTitle}: ${u.fullName}`}
+        description={m.activityPageDesc}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'العملاء', href: `/dashboard/clients?role=${role}` },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbClients, href: `/dashboard/clients?role=${role}` },
           { label: u.fullName, href: `/dashboard/clients/${id}` },
-          { label: 'سجل النشاط' },
+          { label: m.activityTimelineTitle },
         ]}
         actions={
           <Link href={`/dashboard/clients/${id}/edit` as never}>
@@ -114,7 +118,7 @@ export default async function ClientActivityPage({
               size="md"
               leftIcon={<Pencil className="h-4 w-4" />}
             >
-              تعديل الملف
+              {m.btnEdit}
             </Button>
           </Link>
         }
@@ -126,10 +130,10 @@ export default async function ClientActivityPage({
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-brand-600" />
               <h2 className="text-base font-semibold text-slate-900 tracking-tight">
-                التسلسل الزمني للنشاط
+                {m.activityTimelineTitle}
               </h2>
               <span className="ms-auto text-2xs font-semibold text-slate-500">
-                {total} عملية
+                {total} {m.activityTotalSuffix}
               </span>
             </div>
 
@@ -137,13 +141,19 @@ export default async function ClientActivityPage({
               {items.length === 0 ? (
                 <EmptyState
                   icon={<Activity />}
-                  title="لا يوجد نشاط بعد"
-                  description="ستظهر التغييرات والعمليات المرتبطة بهذا العميل هنا تلقائياً."
+                  title={m.activityEmptyTitle}
+                  description={m.activityEmptyDesc}
                 />
               ) : (
                 <ol className="relative ms-4 border-s-2 border-hairline ps-6 space-y-5">
                   {items.map((a) => (
-                    <ActivityItem key={a.id} entry={a} />
+                    <ActivityItem
+                      key={a.id}
+                      entry={a}
+                      actionLabels={ACTION_LABEL}
+                      byLabel={m.activityByLabel}
+                      systemLabel={m.activitySystem}
+                    />
                   ))}
                 </ol>
               )}
@@ -182,7 +192,7 @@ export default async function ClientActivityPage({
                     variant="soft"
                     size="sm"
                   >
-                    {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
+                    {role === 'CUSTOMER' ? m.roleBadgeOwner : m.roleBadgeBrowser}
                   </Badge>
                 </p>
               </div>
@@ -221,7 +231,7 @@ export default async function ClientActivityPage({
                 className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
               >
                 <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-                العودة إلى الملف
+                {m.backToProfile}
               </Link>
             </div>
           </Card>
@@ -229,16 +239,16 @@ export default async function ClientActivityPage({
           {/* Quick stats */}
           <Card className="p-5">
             <h3 className="text-sm font-semibold text-slate-900 tracking-tight mb-3">
-              ملخص سريع
+              {m.quickSummaryTitle}
             </h3>
             <dl className="space-y-2.5 text-sm">
-              <Row label="إجمالي العمليات" value={<span className="tabular-nums font-semibold text-slate-900">{total}</span>} />
-              <Row
-                label="تاريخ التسجيل"
+              <StatRow label={m.summaryTotalOps} value={<span className="tabular-nums font-semibold text-slate-900">{total}</span>} />
+              <StatRow
+                label={m.summaryRegistered}
                 value={<span className="text-slate-700">{formatDate(u.createdAt)}</span>}
               />
-              <Row
-                label="آخر دخول"
+              <StatRow
+                label={m.summaryLastLogin}
                 value={
                   <span className="text-slate-700">
                     {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
@@ -253,7 +263,7 @@ export default async function ClientActivityPage({
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function StatRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <dt className="text-2xs uppercase tracking-wide text-slate-500 font-semibold">
@@ -264,7 +274,17 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-function ActivityItem({ entry }: { entry: AuditLog }) {
+function ActivityItem({
+  entry,
+  actionLabels,
+  byLabel,
+  systemLabel,
+}: {
+  entry: AuditLog;
+  actionLabels: Record<string, string>;
+  byLabel: string;
+  systemLabel: string;
+}) {
   const tone =
     entry.action === 'POST'
       ? 'success'
@@ -276,7 +296,7 @@ function ActivityItem({ entry }: { entry: AuditLog }) {
     danger: 'bg-danger-100 text-danger-700 ring-danger-200',
     brand: 'bg-brand-100 text-brand-700 ring-brand-200',
   };
-  const label = ACTION_LABEL[entry.action] ?? entry.action;
+  const label = actionLabels[entry.action] ?? entry.action;
   return (
     <li className="relative">
       <span
@@ -295,9 +315,9 @@ function ActivityItem({ entry }: { entry: AuditLog }) {
               <span className="font-mono text-xs text-slate-500">{entry.entityType}</span>
             </p>
             <p className="mt-1 text-2xs text-slate-500">
-              بواسطة{' '}
+              {byLabel}{' '}
               <span className="font-medium text-slate-700">
-                {entry.actor?.fullName ?? '— نظام —'}
+                {entry.actor?.fullName ?? systemLabel}
               </span>
               {entry.actor?.role && (
                 <span className="ms-2 inline-block font-mono text-slate-400">

@@ -23,6 +23,8 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -44,6 +46,9 @@ export default async function AdminBrokerCommissionsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerCommissionsPage;
+
   const sp = await searchParams;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
@@ -112,12 +117,12 @@ export default async function AdminBrokerCommissionsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="عمولات الوسطاء"
-        description="متابعة عمولات الوسطاء وحالات الاستحقاق والصرف."
+        title={m.heroTitle}
+        description={m.heroDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'عمولات الوسطاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
+          { label: m.breadcrumbSelf },
         ]}
       />
 
@@ -127,32 +132,32 @@ export default async function AdminBrokerCommissionsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي العمولات',
+            label: m.kpiTotal,
             value: totalCommissions,
             icon: <BadgePercent />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'قيد المراجعة',
+            label: m.kpiPending,
             value: counts.pending,
             icon: <BadgePercent />,
             tone: 'warning',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'موافق عليها',
+            label: m.kpiApproved,
             value: counts.approved,
             icon: <BadgePercent />,
             tone: 'success',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'إجمالي الصافي',
+            label: m.kpiNetTotal,
             value: totalNet > 0 ? formatCurrency(totalNet, currency) : '—',
             icon: <BadgePercent />,
             tone: 'neutral',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
         ]}
       />
@@ -161,7 +166,7 @@ export default async function AdminBrokerCommissionsPage({
       {commRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل العمولات: {commRes.error}</p>
+          <p className="font-medium">{m.errorLoad}{commRes.error}</p>
         </div>
       )}
 
@@ -174,9 +179,9 @@ export default async function AdminBrokerCommissionsPage({
         {!showFilters && sp.to        && <input type="hidden" name="to"        value={sp.to} />}
 
         {/* ── Row 1: broker filter + actions (always visible) ───────────────── */}
-        <PremiumFilterField label="الوسيط" htmlFor="bcom-broker">
+        <PremiumFilterField label={m.filterBrokerLabel} htmlFor="bcom-broker">
           <Select id="bcom-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
-            <option value="">كل الوسطاء</option>
+            <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
             ))}
@@ -185,10 +190,10 @@ export default async function AdminBrokerCommissionsPage({
 
         {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {hasAnyFilter && (
             <Link href={'/dashboard/broker-commissions' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
@@ -201,7 +206,7 @@ export default async function AdminBrokerCommissionsPage({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filterHideFilters : m.filterAdvanced}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -215,30 +220,30 @@ export default async function AdminBrokerCommissionsPage({
           <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-status" className="text-[11px] font-medium text-slate-400">الحالة</label>
+                <label htmlFor="bcom-status" className="text-[11px] font-medium text-slate-400">{m.filterStatus}</label>
                 <Select id="bcom-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
-                  <option value="">كل الحالات</option>
-                  <option value="PENDING">قيد المراجعة</option>
-                  <option value="APPROVED">موافق عليها</option>
-                  <option value="REJECTED">مرفوضة</option>
-                  <option value="CANCELLED">ملغاة</option>
+                  <option value="">{m.filterAllStatuses}</option>
+                  <option value="PENDING">{m.filterStatusPending}</option>
+                  <option value="APPROVED">{m.filterStatusApproved}</option>
+                  <option value="REJECTED">{m.filterStatusRejected}</option>
+                  <option value="CANCELLED">{m.filterStatusCancelled}</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-project" className="text-[11px] font-medium text-slate-400">المشروع</label>
+                <label htmlFor="bcom-project" className="text-[11px] font-medium text-slate-400">{m.filterProject}</label>
                 <Select id="bcom-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
-                  <option value="">كل المشاريع</option>
+                  <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-from" className="text-[11px] font-medium text-slate-400">التاريخ من</label>
+                <label htmlFor="bcom-from" className="text-[11px] font-medium text-slate-400">{m.filterDateFrom}</label>
                 <Input id="bcom-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bcom-to" className="text-[11px] font-medium text-slate-400">التاريخ إلى</label>
+                <label htmlFor="bcom-to" className="text-[11px] font-medium text-slate-400">{m.filterDateTo}</label>
                 <Input id="bcom-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
               </div>
             </div>
@@ -249,17 +254,17 @@ export default async function AdminBrokerCommissionsPage({
       {/* ── Commissions table ────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<BadgePercent />}
-        title="سجل العمولات"
-        description="عمولات تُحتسب تلقائيًا عند توقيع عقود ناتجة عن الوسطاء، وتتطلب اعتماد الإدارة قبل الدفع."
+        title={m.tableTitle}
+        description={m.tableDescription}
         padded={false}
         trailing={
           totalGross > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              صافي: {formatCurrency(totalNet, currency)}
+              {m.tableTrailingNet}{formatCurrency(totalNet, currency)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
-              {totalCommissions.toLocaleString('ar-EG')} عمولة
+              {totalCommissions.toLocaleString('ar-EG')} {m.tableTrailingCount}
             </span>
           )
         }
@@ -267,8 +272,8 @@ export default async function AdminBrokerCommissionsPage({
         {rows.length === 0 && !commRes.error ? (
           <PremiumEmptyState
             icon={<BadgePercent />}
-            title="لا توجد عمولات بعد"
-            description="تُنشأ العمولات تلقائيًا عند توقيع عقد ناتج عن وسيط. لا يتم إنشاؤها يدويًا."
+            title={m.emptyTitle}
+            description={m.emptyDescription}
             className="py-12"
           />
         ) : (
@@ -276,16 +281,16 @@ export default async function AdminBrokerCommissionsPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">رقم العمولة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوسيط</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">العقد</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة / المشروع</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الأساس</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">النسبة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">إجمالي</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">صافي</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الاستحقاق</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colCommissionNumber}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colContract}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colUnit}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBasis}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colRate}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colGross}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colNet}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colDueDate}</th>
                   <th className="text-start py-3 ps-4 pe-5 w-px" />
                 </tr>
               </thead>
@@ -412,7 +417,7 @@ export default async function AdminBrokerCommissionsPage({
                     {/* Action */}
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/dashboard/broker-commissions/${c.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.actionView} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>

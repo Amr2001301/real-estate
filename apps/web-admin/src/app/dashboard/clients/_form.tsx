@@ -10,6 +10,8 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { User } from '@/lib/types';
 import {
   createClientAction,
@@ -17,18 +19,14 @@ import {
   type ClientFormState,
 } from './actions';
 
-const NAV_SECTIONS = [
-  { id: 'section-personal',    num: '01', label: 'المعلومات الشخصية',  sub: 'الاسم الكامل ونوع العميل' },
-  { id: 'section-contact',     num: '02', label: 'معلومات التواصل',    sub: 'البريد الإلكتروني ورقم الهاتف' },
-  { id: 'section-preferences', num: '03', label: 'التفضيلات',          sub: 'اللغة الافتراضية للتواصل' },
-];
-
 interface Props {
   user?: User;
   defaultRole?: 'CLIENT' | 'CUSTOMER';
+  locale?: Locale;
 }
 
-export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
+export default function ClientForm({ user, defaultRole = 'CLIENT', locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.clientsForm;
   const isEdit = Boolean(user);
   const action = user ? updateClientAction.bind(null, user.id) : createClientAction;
   const [state, formAction] = useActionState<ClientFormState, FormData>(action, {});
@@ -36,6 +34,12 @@ export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
   const cancelHref = isEdit
     ? `/dashboard/clients/${user!.id}`
     : `/dashboard/clients?role=${role}`;
+
+  const navSections = [
+    { id: 'section-personal',    num: '01', label: m.navPersonal.label,  sub: m.navPersonal.sub },
+    { id: 'section-contact',     num: '02', label: m.navContact.label,   sub: m.navContact.sub },
+    { id: 'section-preferences', num: '03', label: m.navPrefs.label,     sub: m.navPrefs.sub },
+  ];
 
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
@@ -48,46 +52,42 @@ export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
       {state.ok && (
         <div className="flex items-start gap-3 rounded-2xl bg-success-50 border border-success-100 text-success-700 px-5 py-4 text-sm shadow-soft">
           <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تم حفظ التغييرات بنجاح</p>
+          <p className="font-medium">{m.saveOk}</p>
         </div>
       )}
 
       <PremiumFormLayout
-        navSections={NAV_SECTIONS}
-        sidebarBadge={isEdit ? 'تعديل' : 'جديد'}
-        sidebarInfo={
-          isEdit
-            ? 'سيتم تحديث بيانات العميل فور الحفظ.'
-            : 'سيتم تسجيل العميل في النظام بدون كلمة مرور (وصول العميل عبر OTP).'
-        }
+        navSections={navSections}
+        sidebarBadge={isEdit ? m.badgeEdit : m.badgeNew}
+        sidebarInfo={isEdit ? m.sidebarInfoEdit : m.sidebarInfoNew}
       >
         <PremiumFormPanel
           id="section-personal"
           number="01"
-          title="المعلومات الشخصية"
-          description="الاسم الكامل ونوع العميل في النظام."
+          title={m.panelPersonalTitle}
+          description={m.panelPersonalDesc}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="الاسم الكامل" name="fullName" required>
+            <Field label={m.labelFullName} name="fullName" required>
               <Input
                 id="fullName"
                 name="fullName"
                 required
                 minLength={2}
-                placeholder="مثال: أحمد منصور"
+                placeholder={m.placeholderFullName}
                 defaultValue={user?.fullName}
               />
             </Field>
 
             <Field
-              label="نوع العميل"
+              label={m.labelRole}
               name="role"
-              hint={isEdit ? 'لا يمكن تعديل النوع بعد الإنشاء' : undefined}
+              hint={isEdit ? m.hintRoleEdit : undefined}
             >
               {isEdit ? (
                 <>
                   <Input
-                    value={role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
+                    value={role === 'CUSTOMER' ? m.roleCustomerDisplay : m.roleClientDisplay}
                     readOnly
                     rightAddon={<Lock />}
                     className="bg-surface-muted"
@@ -96,8 +96,8 @@ export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
                 </>
               ) : (
                 <Select id="role" name="role" defaultValue={role}>
-                  <option value="CLIENT">متصفّح (Client)</option>
-                  <option value="CUSTOMER">مالك (Customer)</option>
+                  <option value="CLIENT">{m.optionClient}</option>
+                  <option value="CUSTOMER">{m.optionCustomer}</option>
                 </Select>
               )}
             </Field>
@@ -107,14 +107,14 @@ export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
         <PremiumFormPanel
           id="section-contact"
           number="02"
-          title="معلومات التواصل"
-          description="يجب توفير البريد الإلكتروني أو رقم الهاتف على الأقل."
+          title={m.panelContactTitle}
+          description={m.panelContactDesc}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field
-              label="البريد الإلكتروني"
+              label={m.labelEmail}
               name="email"
-              hint={isEdit ? 'لا يمكن تعديل البريد الإلكتروني حالياً' : 'اختياري'}
+              hint={isEdit ? m.hintEmailEdit : m.hintOptional}
             >
               <Input
                 id="email"
@@ -129,7 +129,7 @@ export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
               />
             </Field>
 
-            <Field label="رقم الهاتف" name="phone" hint="اختياري">
+            <Field label={m.labelPhone} name="phone" hint={m.hintOptional}>
               <Input
                 id="phone"
                 name="phone"
@@ -145,14 +145,14 @@ export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
         <PremiumFormPanel
           id="section-preferences"
           number="03"
-          title="التفضيلات"
-          description="اللغة الافتراضية للتواصل مع العميل."
+          title={m.panelPrefsTitle}
+          description={m.panelPrefsDesc}
         >
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="اللغة المفضلة" name="locale">
+            <Field label={m.labelLocale} name="locale">
               <Select id="locale" name="locale" defaultValue={user?.locale ?? 'ar'}>
-                <option value="ar">العربية</option>
-                <option value="en">الإنجليزية</option>
+                <option value="ar">{m.optionAr}</option>
+                <option value="en">{m.optionEn}</option>
               </Select>
             </Field>
           </div>
@@ -165,17 +165,13 @@ export default function ClientForm({ user, defaultRole = 'CLIENT' }: Props) {
           <>
             <Link href={cancelHref as never}>
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {m.cancelBtn}
               </Button>
             </Link>
-            <SubmitButton>{isEdit ? 'حفظ التغييرات' : 'إنشاء العميل'}</SubmitButton>
+            <SubmitButton>{isEdit ? m.submitEdit : m.submitNew}</SubmitButton>
           </>
         }
-        helper={
-          isEdit
-            ? 'سيتم تحديث بيانات العميل فور الحفظ.'
-            : 'سيتم تسجيل العميل في النظام بدون كلمة مرور (وصول العميل عبر OTP).'
-        }
+        helper={isEdit ? m.footerHelperEdit : m.footerHelperNew}
       />
     </form>
   );

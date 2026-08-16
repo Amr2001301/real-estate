@@ -9,15 +9,19 @@ import { IconButton } from '@/components/ui/icon-button';
 import { RescheduleModal } from './reschedule-modal';
 import { AssignSalesModal } from './assign-sales-modal';
 import { updateAppointmentStatusAction } from '../actions';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 const FINAL: AppointmentStatus[] = ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED'];
 
 interface Props {
   appointment: VisitAppointment;
   salesOptions: { id: string; fullName: string }[];
+  locale?: Locale;
 }
 
-export function AppointmentActions({ appointment, salesOptions }: Props) {
+export function AppointmentActions({ appointment, salesOptions, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.visitComponents;
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
 
@@ -26,7 +30,7 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       <Link href={`/dashboard/visits/appointments/${appointment.id}` as never}>
-        <IconButton label="عرض تفاصيل الزيارة" variant="outline" size="sm">
+        <IconButton label={m.ariaViewVisit} variant="outline" size="sm">
           <Eye />
         </IconButton>
       </Link>
@@ -35,27 +39,22 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
         <>
           <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
 
-          {/* "تأكيد" — admin-side confirm. Available only for SCHEDULED rows,
-              and only useful to acknowledge a customer who can't use the
-              portal; the new workflow expects the customer to confirm
-              themselves via /me/visit-appointments/:id/confirm. */}
+          {/* Admin-side confirm. Available only for SCHEDULED rows. */}
           {appointment.status === 'SCHEDULED' && (
             <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
               <input type="hidden" name="status" value="CONFIRMED" />
               <Button type="submit" variant="subtle" size="sm" leftIcon={<CheckCircle className="h-3.5 w-3.5" />}>
-                تأكيد
+                {m.confirmBtn}
               </Button>
             </form>
           )}
 
-          {/* "تمت" (Complete) — backend guard now requires CONFIRMED. Hiding
-              the button on SCHEDULED / PENDING_RESCHEDULE keeps the UI in
-              lockstep with the server-side rule (no surprise 400). */}
+          {/* Complete — backend guard requires CONFIRMED. */}
           {appointment.status === 'CONFIRMED' && (
             <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
               <input type="hidden" name="status" value="COMPLETED" />
               <Button type="submit" variant="ghost" size="sm" className="text-success-700 hover:bg-success-50">
-                تمت
+                {m.completeBtn}
               </Button>
             </form>
           )}
@@ -66,7 +65,7 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
             leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
             onClick={() => setRescheduleOpen(true)}
           >
-            إعادة جدولة
+            {m.rescheduleBtn}
           </Button>
 
           <Button
@@ -75,11 +74,10 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
             leftIcon={<UserCheck className="h-3.5 w-3.5" />}
             onClick={() => setAssignOpen(true)}
           >
-            المندوب
+            {m.salesRepBtn}
           </Button>
 
-          {/* "لم يحضر" — backend guard rejects no-show before scheduledAt.
-              Hide the button until the visit time has actually passed. */}
+          {/* No-show — backend guard rejects before scheduledAt. */}
           {new Date(appointment.scheduledAt).getTime() <= Date.now() && (
             <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
               <input type="hidden" name="status" value="NO_SHOW" />
@@ -90,7 +88,7 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
                 leftIcon={<UserX className="h-3.5 w-3.5" />}
                 className="text-amber-600 hover:bg-amber-50"
               >
-                لم يحضر
+                {m.noShowBtn}
               </Button>
             </form>
           )}
@@ -104,7 +102,7 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
               leftIcon={<X className="h-3.5 w-3.5" />}
               className="text-danger-600 hover:bg-danger-50"
             >
-              إلغاء
+              {m.cancelBtn}
             </Button>
           </form>
         </>
@@ -117,6 +115,7 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
         currentScheduledAt={appointment.scheduledAt}
         open={rescheduleOpen}
         onClose={() => setRescheduleOpen(false)}
+        locale={locale}
       />
 
       <AssignSalesModal
@@ -125,6 +124,7 @@ export function AppointmentActions({ appointment, salesOptions }: Props) {
         currentSalesId={appointment.assignedSalesId}
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
+        locale={locale}
       />
     </div>
   );

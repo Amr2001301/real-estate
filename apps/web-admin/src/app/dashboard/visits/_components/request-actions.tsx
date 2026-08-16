@@ -8,15 +8,19 @@ import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { ScheduleModal } from './schedule-modal';
 import { updateRequestStatusAction } from '../actions';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 const FINAL: VisitRequestStatus[] = ['CONVERTED', 'REJECTED', 'CANCELLED'];
 
 interface Props {
   request: VisitRequest;
   salesOptions: { id: string; fullName: string }[];
+  locale?: Locale;
 }
 
-export function RequestActions({ request, salesOptions }: Props) {
+export function RequestActions({ request, salesOptions, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.visitComponents;
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const status = request.requestStatus ?? null;
@@ -25,7 +29,7 @@ export function RequestActions({ request, salesOptions }: Props) {
   return (
     <div className="flex items-center gap-1.5">
       <Link href={`/dashboard/visits/requests/${request.id}` as never}>
-        <IconButton label="عرض تفاصيل الزيارة" variant="outline" size="sm">
+        <IconButton label={m.ariaViewVisit} variant="outline" size="sm">
           <Eye />
         </IconButton>
       </Link>
@@ -40,7 +44,7 @@ export function RequestActions({ request, salesOptions }: Props) {
             leftIcon={<CalendarPlus className="h-3.5 w-3.5" />}
             onClick={() => setScheduleOpen(true)}
           >
-            جدولة
+            {m.scheduleBtn}
           </Button>
 
           <form
@@ -55,7 +59,7 @@ export function RequestActions({ request, salesOptions }: Props) {
               leftIcon={<X className="h-3.5 w-3.5" />}
               className="text-danger-600 hover:text-danger-700 hover:bg-danger-50"
             >
-              رفض
+              {m.rejectBtn}
             </Button>
           </form>
 
@@ -71,7 +75,7 @@ export function RequestActions({ request, salesOptions }: Props) {
               leftIcon={<Ban className="h-3.5 w-3.5" />}
               className="text-slate-500 hover:text-slate-700"
             >
-              إلغاء
+              {m.cancelBtn}
             </Button>
           </form>
         </>
@@ -89,6 +93,7 @@ export function RequestActions({ request, salesOptions }: Props) {
         preferredDate={request.preferredDate}
         preferredTime={request.preferredTime}
         customerMessage={request.requestNotes ?? request.notes ?? null}
+        locale={locale}
       />
     </div>
   );

@@ -7,7 +7,8 @@ import { routes } from '@/lib/routes';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Input';
 import { PRICE_RANGES, AREA_RANGES, UNIT_TYPES as TYPES, ROOM_OPTIONS as ROOMS } from '@/lib/unit-filters';
-import { UNIT_SORT_OPTIONS } from '@/lib/sort-options';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 
 export interface UnitsFilterValues {
   projectId: string;
@@ -20,13 +21,6 @@ export interface UnitsFilterValues {
   status: string;
   sort: string;
 }
-
-const STATUSES = [
-  { value: '', label: 'كل الحالات' },
-  { value: 'AVAILABLE', label: 'متاحة' },
-  { value: 'RESERVED', label: 'محجوزة' },
-  { value: 'SOLD', label: 'مباعة' },
-];
 
 /** Compact select: a leading icon (RTL start) plus the shared chevron, no stacked label. */
 function CompactSelect({
@@ -58,8 +52,18 @@ function CompactSelect({
   );
 }
 
-export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
+export function UnitsFilterBar({
+  initial,
+  locale,
+}: {
+  initial: UnitsFilterValues;
+  locale: Locale;
+}) {
   const router = useRouter();
+  const t = siteT(locale).unitsFilter;
+  const statuses = siteT(locale).home.search.statuses;
+  const sortOptions = siteT(locale).sortOptions.unit;
+
   const [type, setType] = useState(initial.type);
   const [bedrooms, setBedrooms] = useState(initial.bedrooms);
   const [bathrooms, setBathrooms] = useState(initial.bathrooms);
@@ -116,49 +120,53 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
       {initial.projectId && (
         <div className="mb-2.5 inline-flex items-center gap-1.5 rounded-full bg-gold-100 px-2.5 py-1 text-xs font-medium text-gold-600">
           <Layers className="h-3.5 w-3.5" aria-hidden />
-          داخل مشروع محدد
+          {t.withinProject}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-[repeat(7,minmax(0,1fr))_auto]">
-        <CompactSelect icon={Building2} label="نوع العقار" value={type} onChange={setType}>
-          {TYPES.map((t) => (
-            <option key={t.value} value={t.value}>{t.label}</option>
+        <CompactSelect icon={Building2} label={t.propertyType} value={type} onChange={setType}>
+          {TYPES.map((tp) => (
+            <option key={tp.value} value={tp.value}>{tp.label}</option>
           ))}
         </CompactSelect>
-        <CompactSelect icon={BedDouble} label="غرف النوم" value={bedrooms} onChange={setBedrooms}>
+        <CompactSelect icon={BedDouble} label={t.bedrooms} value={bedrooms} onChange={setBedrooms}>
           {ROOMS.map((r) => (
-            <option key={r.value} value={r.value}>{r.value ? `${r.label} غرف` : 'كل الغرف'}</option>
+            <option key={r.value} value={r.value}>
+              {r.value ? `${r.label} ${t.roomSuffix}` : t.allRooms}
+            </option>
           ))}
         </CompactSelect>
-        <CompactSelect icon={Bath} label="دورات المياه" value={bathrooms} onChange={setBathrooms}>
+        <CompactSelect icon={Bath} label={t.bathrooms} value={bathrooms} onChange={setBathrooms}>
           {ROOMS.map((r) => (
-            <option key={r.value} value={r.value}>{r.value ? `${r.label} حمّام` : 'كل الحمّامات'}</option>
+            <option key={r.value} value={r.value}>
+              {r.value ? `${r.label} ${t.bathroomSuffix}` : t.allBathrooms}
+            </option>
           ))}
         </CompactSelect>
-        <CompactSelect icon={Wallet} label="نطاق السعر" value={price} onChange={setPrice}>
+        <CompactSelect icon={Wallet} label={t.priceRange} value={price} onChange={setPrice}>
           {PRICE_RANGES.map((r) => (
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </CompactSelect>
-        <CompactSelect icon={Ruler} label="المساحة" value={area} onChange={setArea}>
+        <CompactSelect icon={Ruler} label={t.area} value={area} onChange={setArea}>
           {AREA_RANGES.map((r) => (
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </CompactSelect>
-        <CompactSelect icon={Tag} label="حالة الوحدة" value={status} onChange={setStatus}>
-          {STATUSES.map((s) => (
+        <CompactSelect icon={Tag} label={t.unitStatus} value={status} onChange={setStatus}>
+          {statuses.map((s) => (
             <option key={s.value || 'all'} value={s.value}>{s.label}</option>
           ))}
         </CompactSelect>
-        <CompactSelect icon={ArrowDownUp} label="ترتيب حسب" value={sort} onChange={setSort}>
-          {UNIT_SORT_OPTIONS.map((o) => (
+        <CompactSelect icon={ArrowDownUp} label={t.sortBy} value={sort} onChange={setSort}>
+          {sortOptions.map((o) => (
             <option key={o.value || 'default'} value={o.value}>{o.label}</option>
           ))}
         </CompactSelect>
         <Button type="submit" size="md" className="col-span-2 h-11 w-full sm:col-span-3 lg:col-auto lg:w-auto lg:px-6">
           <Search className="h-5 w-5" aria-hidden />
-          بحث
+          {t.search}
         </Button>
       </div>
 
@@ -170,7 +178,7 @@ export function UnitsFilterBar({ initial }: { initial: UnitsFilterValues }) {
             className="inline-flex items-center gap-1 text-ink-muted transition-colors hover:text-ink-strong"
           >
             <X className="h-4 w-4" aria-hidden />
-            مسح الكل
+            {t.clearAll}
           </button>
         </div>
       )}

@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { ArrowLeft, ReceiptText, Building2, Bookmark, CalendarClock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { Deposit, DepositType } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
@@ -17,32 +19,36 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'مبلغ الحجز',
-  DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط شهري',
-  FINAL_PAYMENT: 'دفعة أخيرة',
-};
-
-const REVIEW_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
-  NO_PROOF: { label: 'بدون إثبات', cls: 'bg-slate-100 text-slate-600' },
-  PENDING_REVIEW: { label: 'قيد المراجعة', cls: 'bg-amber-100 text-amber-700' },
-  APPROVED: { label: 'تم التحقق', cls: 'bg-success-100 text-success-700' },
-  REJECTED: { label: 'مرفوض', cls: 'bg-danger-100 text-danger-700' },
-};
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  CASH: 'نقدًا',
-  BANK_TRANSFER: 'حوالة بنكية',
-  CHEQUE: 'شيك',
-  OTHER: 'أخرى',
-};
-
 export default async function DepositDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const currency = await getReportsCurrency();
-  const session = await getSession();
+  const [currency, locale, session] = await Promise.all([
+    getReportsCurrency(),
+    getLocale(),
+    getSession(),
+  ]);
+  const m = uiT(locale).pages.depositsDetail;
   const isAdmin = session?.role === 'ADMIN';
+
+  const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
+    BOOKING_AMOUNT: m.typeBOOKING_AMOUNT,
+    DOWN_PAYMENT:   m.typeDOWN_PAYMENT,
+    INSTALLMENT:    m.typeINSTALLMENT,
+    FINAL_PAYMENT:  m.typeFINAL_PAYMENT,
+  };
+
+  const REVIEW_STATUS_LABELS: Record<string, { label: string; cls: string }> = {
+    NO_PROOF:       { label: m.reviewNO_PROOF,       cls: 'bg-slate-100 text-slate-600' },
+    PENDING_REVIEW: { label: m.reviewPENDING_REVIEW, cls: 'bg-amber-100 text-amber-700' },
+    APPROVED:       { label: m.reviewAPPROVED,       cls: 'bg-success-100 text-success-700' },
+    REJECTED:       { label: m.reviewREJECTED,       cls: 'bg-danger-100 text-danger-700' },
+  };
+
+  const PAYMENT_METHOD_LABELS: Record<string, string> = {
+    CASH:          m.methodCASH,
+    BANK_TRANSFER: m.methodBANK_TRANSFER,
+    CHEQUE:        m.methodCHEQUE,
+    OTHER:         m.methodOTHER,
+  };
 
   const res = await safe(api.get<Deposit>(`/deposits/${id}`));
   const d = res.data;
@@ -50,9 +56,9 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
   if (!d) {
     return (
       <div className="space-y-5">
-        <PageHeader title="تفاصيل الدفعة" breadcrumbs={[{ label: 'الدفعات', href: '/dashboard/deposits' }, { label: 'التفاصيل' }]} />
+        <PageHeader title={m.pageTitle} breadcrumbs={[{ label: m.breadcrumbDeposits, href: '/dashboard/deposits' }, { label: m.breadcrumbDetail }]} />
         <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
-          تعذّر تحميل الدفعة: {res.error ?? 'غير موجودة'}
+          {m.errorLoad}{res.error ?? m.errorNotFound}
         </div>
       </div>
     );
@@ -65,12 +71,12 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="space-y-5">
       <PageHeader
-        title="تفاصيل الدفعة"
-        description={`رقم الدفعة: ${d.id.slice(0, 8).toUpperCase()}`}
+        title={m.pageTitle}
+        description={m.pageDesc(d.id.slice(0, 8).toUpperCase())}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الدفعات', href: '/dashboard/deposits' },
-          { label: 'التفاصيل' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbDeposits, href: '/dashboard/deposits' },
+          { label: m.breadcrumbDetail },
         ]}
         actions={
           <div className="flex items-center gap-2">
@@ -80,56 +86,50 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                 d.verified ? 'bg-success-100 text-success-700' : 'bg-amber-100 text-amber-700'
               }`}
             >
-              {d.verified ? 'متحقق' : 'غير متحقق'}
+              {d.verified ? `✓ ${uiT(locale).pages.deposits.verifiedBadge}` : uiT(locale).pages.deposits.notVerifiedBadge}
             </span>
           </div>
         }
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Overview */}
         <Card className="lg:col-span-2">
           <CardHeader className="px-5 py-3.5">
             <div className="flex items-center gap-2">
               <ReceiptText className="h-4 w-4 text-brand-500 shrink-0" />
-              <CardTitle className="text-sm">تفاصيل الدفعة</CardTitle>
+              <CardTitle className="text-sm">{m.sectionTitle}</CardTitle>
             </div>
           </CardHeader>
           <CardBody className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-3">
-              <Field label="النوع" value={DEPOSIT_TYPE_LABELS[d.type] ?? d.type} />
-              <Field label="المبلغ" value={formatCurrency(d.amount, currency)} />
-              <Field label="تاريخ الدفع" value={formatDate(d.paidAt)} />
-              <Field label="تاريخ التسجيل" value={formatDateTime(d.createdAt)} />
-              <Field label="العميل" value={customerName} />
-              <Field label="الوحدة" value={unitCode} ltr />
+              <Field label={m.fieldType}      value={DEPOSIT_TYPE_LABELS[d.type] ?? d.type} />
+              <Field label={m.fieldAmount}    value={formatCurrency(d.amount, currency)} />
+              <Field label={m.fieldPaidAt}    value={formatDate(d.paidAt)} />
+              <Field label={m.fieldCreatedAt} value={formatDateTime(d.createdAt)} />
+              <Field label={m.fieldCustomer}  value={customerName} />
+              <Field label={m.fieldUnit}      value={unitCode} ltr />
             </div>
             <div className="pt-2 border-t border-hairline flex flex-wrap items-center gap-3">
               {d.contractId && (
                 <Link href={`/dashboard/contracts/${d.contractId}`} className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1">
-                  <Building2 className="h-3.5 w-3.5" /> العقد {d.contract?.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
+                  <Building2 className="h-3.5 w-3.5" /> {d.contract?.contractNumber ?? `#${d.contractId.slice(0, 8)}`}
                 </Link>
               )}
               {d.reservationId && (
                 <Link href={`/dashboard/reservations/${d.reservationId}`} className="text-xs font-semibold text-indigo-700 hover:text-indigo-800 inline-flex items-center gap-1">
-                  <Bookmark className="h-3.5 w-3.5" /> الحجز {d.reservation?.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
+                  <Bookmark className="h-3.5 w-3.5" /> {d.reservation?.reservationNumber ?? `#${d.reservationId.slice(0, 8)}`}
                 </Link>
               )}
               {d.installment?.dueDate && (
                 <span className="text-xs text-slate-500 inline-flex items-center gap-1">
-                  <CalendarClock className="h-3.5 w-3.5" /> استحقاق القسط: {formatDate(d.installment.dueDate)}
+                  <CalendarClock className="h-3.5 w-3.5" /> {m.fieldInstallmentDue}{formatDate(d.installment.dueDate)}
                 </span>
               )}
             </div>
-            {/* P11 — review status surface. NO_PROOF rows still get the
-                legacy VerifyToggle so admins can manually confirm cash-on-
-                desk deposits without proof. PENDING_REVIEW rows show
-                approve + reject-with-reason. APPROVED/REJECTED rows show
-                the recorded decision. */}
             {d.reviewStatus && d.reviewStatus !== 'NO_PROOF' && (
               <div className="pt-2 border-t border-hairline space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] font-medium text-slate-400">حالة المراجعة:</span>
+                  <span className="text-[11px] font-medium text-slate-400">{m.reviewStatusLabel}</span>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${REVIEW_STATUS_LABELS[d.reviewStatus]?.cls ?? ''}`}
                   >
@@ -137,12 +137,12 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                   </span>
                   {d.paymentMethod && (
                     <span className="text-xs text-slate-500">
-                      طريقة الدفع: {PAYMENT_METHOD_LABELS[d.paymentMethod] ?? d.paymentMethod}
+                      {m.reviewMethodLabel}{PAYMENT_METHOD_LABELS[d.paymentMethod] ?? d.paymentMethod}
                     </span>
                   )}
                   {d.reviewedAt && d.reviewedBy?.fullName && (
                     <span className="text-xs text-slate-500">
-                      راجعها: {d.reviewedBy.fullName} — {formatDateTime(d.reviewedAt)}
+                      {m.reviewedByLabel}{d.reviewedBy.fullName} — {formatDateTime(d.reviewedAt)}
                     </span>
                   )}
                 </div>
@@ -150,7 +150,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                   <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 p-2.5 text-xs text-danger-700">
                     <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                     <div>
-                      <p className="font-semibold">سبب الرفض</p>
+                      <p className="font-semibold">{m.rejectionReasonTitle}</p>
                       <p className="mt-0.5">{d.rejectionReason}</p>
                     </div>
                   </div>
@@ -158,7 +158,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                 {d.reviewStatus === 'APPROVED' && (
                   <p className="flex items-center gap-1.5 text-xs text-success-700">
                     <CheckCircle2 className="h-3.5 w-3.5" />
-                    تم اعتماد الإثبات وتسجيل القسط كمدفوع.
+                    {m.approvedNote}
                   </p>
                 )}
                 {isAdmin && d.reviewStatus === 'PENDING_REVIEW' && (
@@ -169,26 +169,24 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
                 )}
               </div>
             )}
-            {/* Legacy toggle stays for NO_PROOF rows (cash-on-desk admin flow). */}
             {isAdmin && (!d.reviewStatus || d.reviewStatus === 'NO_PROOF') && (
               <div className="pt-2 border-t border-hairline flex items-center gap-2">
-                <span className="text-[11px] font-medium text-slate-400">حالة التحقق:</span>
-                <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} />
+                <span className="text-[11px] font-medium text-slate-400">{m.verifyStatusLabel}</span>
+                <VerifyToggle id={d.id} contractId={d.contractId ?? null} verified={d.verified} locale={locale} />
               </div>
             )}
           </CardBody>
         </Card>
 
-        {/* Documents / receipts */}
         <div className="lg:col-span-1 space-y-1.5">
           <p className="text-[11px] text-slate-400 px-1">
-            ارفع إيصال الدفع أو إثبات التحويل وربطه بهذه الدفعة.
+            {m.docsHint}
           </p>
           <OwnerDocumentsCard
             ownerType="DEPOSIT"
             ownerId={d.id}
-            title="مستندات وإيصالات الدفعة"
-            legacy={d.receiptUrl ? [{ label: 'إيصال الدفع', href: d.receiptUrl, hint: 'إيصال محفوظ كرابط' }] : undefined}
+            title={m.docsTitle}
+            legacy={d.receiptUrl ? [{ label: m.docsLegacyLabel, href: d.receiptUrl, hint: m.docsLegacyHint }] : undefined}
           />
         </div>
       </div>
@@ -198,7 +196,7 @@ export default async function DepositDetailPage({ params }: { params: Promise<{ 
         className="inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800"
       >
         <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
-        العودة إلى سجل الدفعات
+        {m.backLink}
       </Link>
     </div>
   );

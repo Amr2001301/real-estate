@@ -2,6 +2,7 @@ import { BookmarkCheck, Building2, Home, Clock, User2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { formatPrice, pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeReservation, MeReservationBookingPaymentStatus } from '@/lib/api-types';
+import { getLocale } from '@/lib/locale';
 import { AccountCard, AccountCardIcon, type AccountCardAccent } from '@/components/account/AccountCard';
 import { StatusBadge } from '@/components/account/StatusBadge';
 import { BookingPaymentProof } from '@/components/account/BookingPaymentProof';
@@ -59,7 +60,8 @@ function Block({
   );
 }
 
-export function ReservationCard({ reservation }: { reservation: MeReservation }) {
+export async function ReservationCard({ reservation }: { reservation: MeReservation }) {
+  const locale = await getLocale();
   const project = reservation.unit?.building?.phase?.project ?? null;
   const projectName = project ? pickAr(project.name) : '';
   const unitLabel = reservation.unit
@@ -174,6 +176,7 @@ export function ReservationCard({ reservation }: { reservation: MeReservation })
           bookingAmount={reservation.bookingAmount}
           rejected={rejected}
           rejectionReason={bookingDeposit?.rejectionReason}
+          locale={locale}
         />
       )}
     </AccountCard>

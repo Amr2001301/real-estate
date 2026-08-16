@@ -1,7 +1,13 @@
 import Link from 'next/link';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import BrokerForm from '../_form';
 
-export default function NewBrokerPage() {
+export default async function NewBrokerPage() {
+  const locale = await getLocale();
+  const m = uiT(locale);
+  const n = m.pages.brokersNew;
+
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
 
@@ -16,7 +22,7 @@ export default function NewBrokerPage() {
                   href={'/dashboard' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  لوحة التحكم
+                  {m.common.breadcrumbHome}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -25,33 +31,33 @@ export default function NewBrokerPage() {
                   href={'/dashboard/brokers' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  الوسطاء
+                  {m.nav.items.brokers}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">وسيط جديد</span>
+                <span className="font-semibold text-slate-600">{n.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                إضافة وسيط جديد
+                {n.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                سجّل بيانات شركة الوساطة العقارية. يمكنك إضافة الموظفين وصلاحيات الوصول للمشاريع بعد الإنشاء.
+                {n.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              جديد
+              {n.badge}
             </span>
           </div>
         </div>
       </div>
 
-      <BrokerForm />
+      <BrokerForm locale={locale} />
     </div>
   );
 }

@@ -5,32 +5,19 @@ import { useRouter } from 'next/navigation';
 import { Search } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
-import { PRICE_RANGES } from '@/lib/unit-filters';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-
-const TABS: Array<{ key: string; label: string; type: string }> = [
-  { key: 'res',   label: 'سكني',   type: '' },
-  { key: 'admin', label: 'إداري',  type: 'office' },
-  { key: 'comm',  label: 'تجاري',  type: 'retail' },
-  { key: 'med',   label: 'طبي',    type: '' },
-  { key: 'hotel', label: 'فندقي',  type: '' },
-];
-
-const CITIES = ['الرياض', 'جدة', 'الدمام', 'مكة المكرمة', 'المدينة المنورة'];
-const STATUSES = [
-  { value: '', label: 'كل الحالات' },
-  { value: 'AVAILABLE', label: 'متاحة' },
-  { value: 'RESERVED', label: 'محجوزة' },
-  { value: 'SOLD', label: 'مباعة' },
-];
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 
 const SELECT_CLS =
   'h-12 w-full rounded-2xl border border-hairline bg-surface px-4 text-[15px] text-ink shadow-sm transition-colors duration-200 focus:border-gold-300 focus:outline-none focus:ring-2 focus:ring-gold-400/40';
 
-export function SearchPanel() {
+export function SearchPanel({ locale }: { locale: Locale }) {
   const router = useRouter();
-  const [tab, setTab] = useState(TABS[0]!.key);
+  const m = siteT(locale).home.search;
+
+  const [tab, setTab] = useState<string>(m.tabs[0]!.key);
   const [q, setQ] = useState('');
   const [city, setCity] = useState('');
   const [price, setPrice] = useState('');
@@ -42,11 +29,11 @@ export function SearchPanel() {
       return;
     }
     const params = new URLSearchParams();
-    const type = TABS.find((t) => t.key === tab)?.type ?? '';
+    const type = m.tabs.find((t) => t.key === tab)?.type ?? '';
     if (type) params.set('type', type);
     if (city) params.set('city', city);
     if (status) params.set('status', status);
-    const range = PRICE_RANGES.find((r) => r.value === price);
+    const range = m.priceRanges.find((r) => r.value === price);
     if (range?.min) params.set('priceMin', range.min);
     if (range?.max) params.set('priceMax', range.max);
     const qs = params.toString();
@@ -57,7 +44,7 @@ export function SearchPanel() {
     <div className="rounded-3xl border border-hairline bg-surface/95 shadow-[0_24px_64px_-24px_rgba(15,30,51,0.38)] backdrop-blur-md">
       {/* Property-type tabs */}
       <div className="flex flex-wrap gap-2 border-b border-hairline px-5 py-4">
-        {TABS.map((t) => (
+        {m.tabs.map((t) => (
           <button
             key={t.key}
             type="button"
@@ -89,8 +76,8 @@ export function SearchPanel() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث باسم المشروع أو المدينة..."
-            aria-label="بحث"
+            placeholder={m.placeholder}
+            aria-label={m.placeholder}
             className="h-12 pr-11"
           />
         </div>
@@ -99,12 +86,12 @@ export function SearchPanel() {
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
-          aria-label="المدينة"
+          aria-label={m.allCities}
           className={SELECT_CLS}
         >
-          <option value="">المدينة</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
+          <option value="">{m.allCities}</option>
+          {m.cities.map((c) => (
+            <option key={c.value} value={c.value}>{c.label}</option>
           ))}
         </select>
 
@@ -112,10 +99,10 @@ export function SearchPanel() {
         <select
           value={price}
           onChange={(e) => setPrice(e.target.value)}
-          aria-label="نطاق السعر"
+          aria-label={m.priceRanges[0]!.label}
           className={SELECT_CLS}
         >
-          {PRICE_RANGES.map((r) => (
+          {m.priceRanges.map((r) => (
             <option key={r.value} value={r.value}>{r.label}</option>
           ))}
         </select>
@@ -124,17 +111,17 @@ export function SearchPanel() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          aria-label="الحالة"
+          aria-label={m.statuses[0]!.label}
           className={SELECT_CLS}
         >
-          {STATUSES.map((s) => (
+          {m.statuses.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
         </select>
 
         <Button type="submit" size="md" className="h-12 w-full gap-2 lg:w-auto">
           <Search className="h-4 w-4" aria-hidden />
-          ابدأ البحث
+          {m.button}
         </Button>
       </form>
     </div>

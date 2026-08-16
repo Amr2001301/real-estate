@@ -12,6 +12,8 @@ import { PremiumFormPanel } from '@/components/premium';
 import type { DocumentCategory, DocumentOwnerType, DocumentVisibility } from '@/lib/types';
 import { CATEGORY_LABEL, OWNER_TYPE_LABEL, VISIBILITY_LABEL } from '@/components/documents/labels';
 import { DocumentUploader, type UploadResult } from '@/components/documents/document-uploader';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { createDocumentAction, type DocumentFormState } from '../actions';
 
 const OWNER_TYPES: DocumentOwnerType[] = [
@@ -59,9 +61,11 @@ interface Props {
   initialOwnerType: DocumentOwnerType | '';
   initialOwnerId: string;
   initialCategory: DocumentCategory;
+  locale?: Locale;
 }
 
-export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCategory }: Props) {
+export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCategory, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.documentsForm;
   const [mode, setMode] = useState<Mode>('upload');
   const [uploaded, setUploaded] = useState<UploadResult | null>(null);
   const [title, setTitle] = useState('');
@@ -82,33 +86,33 @@ export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCateg
         </div>
       )}
 
-      {/* ── Panel 01 — المالك والتصنيف ─────────────────────────────────── */}
+      {/* ── Panel 01 — Owner & Classification ─────────────────────────────── */}
       <PremiumFormPanel
         id="owner"
         number="01"
-        title="المالك والتصنيف"
-        description="حدد الكيان المرتبط بالمستند وتصنيفه وصلاحيات الرؤية."
+        title={m.panel01Title}
+        description={m.panel01Desc}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="نوع المالك" required>
+          <FormField label={m.labelOwnerType} required>
             <Select name="ownerType" defaultValue={initialOwnerType} required>
-              <option value="" disabled>اختر…</option>
+              <option value="" disabled>{m.optionChoose}</option>
               {OWNER_TYPES.map((t) => (
                 <option key={t} value={t}>{OWNER_TYPE_LABEL[t]}</option>
               ))}
             </Select>
           </FormField>
-          <FormField label="معرّف المالك (UUID)" required>
+          <FormField label={m.labelOwnerId} required>
             <Input name="ownerId" defaultValue={initialOwnerId} dir="ltr" required />
           </FormField>
-          <FormField label="التصنيف">
+          <FormField label={m.labelCategory}>
             <Select name="category" defaultValue={initialCategory}>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>
               ))}
             </Select>
           </FormField>
-          <FormField label="الرؤية">
+          <FormField label={m.labelVisibility}>
             <Select name="visibility" defaultValue="ADMIN_ONLY">
               {VISIBILITIES.map((v) => (
                 <option key={v} value={v}>{VISIBILITY_LABEL[v]}</option>
@@ -118,12 +122,12 @@ export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCateg
         </div>
       </PremiumFormPanel>
 
-      {/* ── Panel 02 — مصدر الملف ─────────────────────────────────────── */}
+      {/* ── Panel 02 — File Source ────────────────────────────────────────── */}
       <PremiumFormPanel
         id="source"
         number="02"
-        title="مصدر الملف"
-        description="ارفع ملفًا مباشرة من جهازك، أو ألصق رابطًا لملف موجود مسبقًا."
+        title={m.panel02Title}
+        description={m.panel02Desc}
       >
         <div className="space-y-5">
           {/* Mode toggle */}
@@ -138,7 +142,7 @@ export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCateg
               }`}
             >
               <Upload className="h-3.5 w-3.5" />
-              رفع ملف
+              {m.modeUpload}
             </button>
             <button
               type="button"
@@ -150,7 +154,7 @@ export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCateg
               }`}
             >
               <LinkIcon className="h-3.5 w-3.5" />
-              لصق رابط
+              {m.modeUrl}
             </button>
           </div>
 
@@ -171,20 +175,20 @@ export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCateg
           ) : (
             <div className="space-y-5">
               <FormField
-                label="رابط الملف"
+                label={m.labelFileUrl}
                 required
-                hint="يجب أن يبدأ الرابط بـ http:// أو https://. الروابط من نوع javascript: أو file: مرفوضة."
+                hint={m.hintFileUrl}
               >
                 <Input name="fileUrl" type="url" dir="ltr" required placeholder="https://…" />
               </FormField>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <FormField label="اسم الملف">
+                <FormField label={m.labelFileName}>
                   <Input name="fileName" dir="ltr" maxLength={255} />
                 </FormField>
-                <FormField label="MIME">
+                <FormField label={m.labelMime}>
                   <Input name="mimeType" dir="ltr" placeholder="application/pdf" maxLength={120} />
                 </FormField>
-                <FormField label="الحجم (بايت)">
+                <FormField label={m.labelSize}>
                   <Input name="sizeBytes" type="number" min={0} dir="ltr" />
                 </FormField>
               </div>
@@ -193,43 +197,43 @@ export function NewDocumentForm({ initialOwnerType, initialOwnerId, initialCateg
         </div>
       </PremiumFormPanel>
 
-      {/* ── Panel 03 — معلومات المستند ────────────────────────────────── */}
+      {/* ── Panel 03 — Document Info ──────────────────────────────────────── */}
       <PremiumFormPanel
         id="info"
         number="03"
-        title="معلومات المستند"
-        description="أدخل عنوانًا واضحًا للمستند ووصفًا اختياريًا يسهّل البحث لاحقًا."
+        title={m.panel03Title}
+        description={m.panel03Desc}
       >
         <div className="space-y-6">
-          <FormField label="العنوان" required>
+          <FormField label={m.labelTitle} required>
             <Input
               name="title"
               required
               maxLength={200}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="مثال: اتفاقية الوسيط 2026"
+              placeholder={m.titlePlaceholder}
             />
           </FormField>
 
           <div className="flex flex-col gap-1.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">الوصف</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">{m.labelDescription}</p>
             <Textarea name="description" rows={4} maxLength={2000} className="resize-none" />
           </div>
 
           <div className="flex items-center justify-between gap-4 pt-5 border-t border-hairline">
             <p className="text-[11px] text-slate-400 leading-snug max-w-xs">
               {mode === 'upload' && !ready
-                ? 'اختر ملفًا وانتظر اكتمال الرفع قبل الحفظ.'
-                : 'سيتم حفظ السجل في مركز المستندات وتدوين العملية في سجل التدقيق.'}
+                ? m.helperUploadWaiting
+                : m.helperReady}
             </p>
             <div className="flex items-center gap-2.5 shrink-0">
               <Link href="/dashboard/documents">
                 <Button type="button" variant="ghost" size="sm" leftIcon={<X className="h-4 w-4" />}>
-                  إلغاء
+                  {m.cancelBtn}
                 </Button>
               </Link>
-              <SubmitButton disabled={!ready}>حفظ المستند</SubmitButton>
+              <SubmitButton disabled={!ready}>{m.submitBtn}</SubmitButton>
             </div>
           </div>
         </div>

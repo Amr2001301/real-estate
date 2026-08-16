@@ -19,11 +19,12 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type {
   Paged,
   Reservation,
   Unit,
-  UnitStatus,
   UnitStatusHistoryEntry,
 } from '@/lib/types';
 import { tx, formatCurrency, formatDate, formatDateTime } from '@/lib/format';
@@ -45,12 +46,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const STATUS_LABEL: Record<UnitStatus, string> = {
-  AVAILABLE: 'متاحة',
-  RESERVED: 'محجوزة',
-  SOLD: 'مباعة',
-};
-
 const CMD_LINK =
   'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
 const CMD_ICON =
@@ -62,16 +57,19 @@ export default async function UnitDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const currency = await getReportsCurrency();
-  const [unitRes, reservationsRes] = await Promise.all([
+  const [unitRes, reservationsRes, currency, locale] = await Promise.all([
     safe(api.get<Unit>(`/units/${id}`)),
     safe(api.get<Paged<Reservation>>(`/reservations?unitId=${id}&pageSize=20`)),
+    getReportsCurrency(),
+    getLocale(),
   ]);
+
+  const m = uiT(locale).pages.units.detail;
 
   if (unitRes.error || !unitRes.data) {
     return (
       <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل الوحدة: {unitRes.error ?? 'غير موجودة'}
+        {m.errorLoad} {unitRes.error ?? m.errorNotFound}
       </div>
     );
   }
@@ -83,7 +81,7 @@ export default async function UnitDetailPage({
   const phaseName = tx(unit.building?.phase?.name);
   const buildingName = unit.building?.name;
   const city = unit.building?.phase?.project?.city;
-  const cover = unit.media?.find((m) => m.type === 'IMAGE')?.url;
+  const cover = unit.media?.find((med) => med.type === 'IMAGE')?.url;
   const history = unit.history ?? [];
   const reservations = reservationsRes.data?.data ?? [];
   const activeReservation = reservations.find(
@@ -94,18 +92,18 @@ export default async function UnitDetailPage({
   const locationParts = [
     projectName !== '—' ? projectName : null,
     phaseName !== '—' ? phaseName : null,
-    buildingName ? `مبنى ${buildingName}` : null,
+    buildingName ? m.buildingLabel(buildingName) : null,
     city || null,
   ].filter(Boolean) as string[];
 
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title={`الوحدة ${unit.code}`}
+        title={m.title(unit.code)}
         description={locationParts.join(' · ') || undefined}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوحدات', href: '/dashboard/units' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbList, href: '/dashboard/units' },
           { label: unit.code },
         ]}
         meta={
@@ -121,7 +119,7 @@ export default async function UnitDetailPage({
           isAdmin ? (
             <Link href={`/dashboard/units/${id}/edit` as never}>
               <Button variant="outline" size="md" leftIcon={<Pencil className="h-4 w-4" />}>
-                تعديل الوحدة
+                {m.editBtn}
               </Button>
             </Link>
           ) : undefined
@@ -136,7 +134,7 @@ export default async function UnitDetailPage({
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
           <div className="absolute bottom-4 start-5 end-5 flex items-end justify-between gap-3">
             <div>
-              <p className="text-[11px] text-white/60">السعر الإجمالي</p>
+              <p className="text-[11px] text-white/60">{m.coverPriceLabel}</p>
               <p className="mt-0.5 text-xl font-bold text-white tabular-nums">{formatCurrency(unit.price, currency)}</p>
             </div>
             <UnitStatusBadge status={unit.status} />
@@ -147,10 +145,10 @@ export default async function UnitDetailPage({
       {/* Metric cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'المساحة',      value: `${unit.area} م²`,                    icon: <Ruler /> },
-          { label: 'الغرف',        value: unit.bedrooms,                         icon: <BedDouble /> },
-          { label: 'دورات المياه', value: unit.bathrooms,                        icon: <Bath /> },
-          { label: 'الطابق',       value: unit.floor === 0 ? 'أرضي' : unit.floor, icon: <Layers /> },
+          { label: m.metrics.area,      value: `${unit.area} ${m.metrics.areaSuffix}`,                 icon: <Ruler /> },
+          { label: m.metrics.bedrooms,  value: unit.bedrooms,                                           icon: <BedDouble /> },
+          { label: m.metrics.bathrooms, value: unit.bathrooms,                                          icon: <Bath /> },
+          { label: m.metrics.floor,     value: unit.floor === 0 ? m.metrics.groundFloor : unit.floor,  icon: <Layers /> },
         ].map(({ label, value, icon }) => (
           <div key={label} className="relative overflow-hidden rounded-2xl border border-hairline bg-surface shadow-xs">
             <div className="h-[3px] w-full" style={{ background: 'linear-gradient(to left, #b8923e, #e6c46a, #b8923e)' }} />
@@ -171,22 +169,22 @@ export default async function UnitDetailPage({
         main={
           <>
             {/* Specifications */}
-            <PremiumSectionCard title="المواصفات الفنية" icon={<Ruler />}>
+            <PremiumSectionCard title={m.specsTitle} icon={<Ruler />}>
               <dl className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <KV label="كود الوحدة" value={<span className="font-mono">{unit.code}</span>} />
-                <KV label="النوع" value={unit.type} />
-                <KV label="الطابق" value={unit.floor === 0 ? 'أرضي' : unit.floor} />
-                <KV label="المساحة" value={`${unit.area} م²`} />
-                <KV label="الغرف" value={unit.bedrooms} />
-                <KV label="دورات المياه" value={unit.bathrooms} />
+                <KV label={m.fieldCode} value={<span className="font-mono">{unit.code}</span>} />
+                <KV label={m.fieldType} value={unit.type} />
+                <KV label={m.fieldFloor} value={unit.floor === 0 ? m.metrics.groundFloor : unit.floor} />
+                <KV label={m.fieldArea} value={`${unit.area} ${m.metrics.areaSuffix}`} />
+                <KV label={m.fieldBedrooms} value={unit.bedrooms} />
+                <KV label={m.fieldBathrooms} value={unit.bathrooms} />
               </dl>
             </PremiumSectionCard>
 
             {/* Project / Location */}
-            <PremiumSectionCard title="بيانات المشروع" icon={<Building2 />}>
+            <PremiumSectionCard title={m.projectTitle} icon={<Building2 />}>
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <KV
-                  label="المشروع"
+                  label={m.fieldProject}
                   value={
                     unit.building?.phase?.project ? (
                       <Link
@@ -200,10 +198,10 @@ export default async function UnitDetailPage({
                     )
                   }
                 />
-                <KV label="المرحلة" value={phaseName} />
-                <KV label="المبنى" value={buildingName ? `مبنى ${buildingName}` : '—'} />
+                <KV label={m.fieldPhase} value={phaseName} />
+                <KV label={m.fieldBuilding} value={buildingName ? m.buildingLabel(buildingName) : '—'} />
                 <KV
-                  label="المدينة"
+                  label={m.fieldCity}
                   value={
                     city ? (
                       <span className="inline-flex items-center gap-1.5">
@@ -219,16 +217,16 @@ export default async function UnitDetailPage({
             </PremiumSectionCard>
 
             {/* Status & reservation */}
-            <PremiumSectionCard title="حالة الحجز">
+            <PremiumSectionCard title={m.reservationTitle}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Stat
                   icon={<Bookmark className="h-4 w-4" />}
-                  label="الحالة الحالية"
+                  label={m.statCurrentStatus}
                   value={<UnitStatusBadge status={unit.status} />}
                 />
                 <Stat
                   icon={<CalendarClock className="h-4 w-4" />}
-                  label="انتهاء الحجز"
+                  label={m.statExpiresAt}
                   value={
                     unit.reservationExpiresAt
                       ? formatDate(unit.reservationExpiresAt)
@@ -237,7 +235,7 @@ export default async function UnitDetailPage({
                 />
                 <Stat
                   icon={<History className="h-4 w-4" />}
-                  label="آخر تحديث"
+                  label={m.statLastUpdated}
                   value={formatDate(unit.updatedAt)}
                 />
               </div>
@@ -247,20 +245,20 @@ export default async function UnitDetailPage({
                   <div className="flex items-center justify-between gap-3 flex-wrap mb-3">
                     <div className="flex items-center gap-2">
                       <BookmarkCheck className="h-5 w-5 text-warning-600" />
-                      <h3 className="text-sm font-semibold text-slate-900">الحجز النشط</h3>
+                      <h3 className="text-sm font-semibold text-slate-900">{m.activeReservationTitle}</h3>
                       <ReservationStatusBadge status={activeReservation.status} />
                     </div>
                     <Link
                       href={`/dashboard/reservations/${activeReservation.id}` as never}
                       className="text-xs font-semibold text-brand-700 hover:text-brand-800 inline-flex items-center gap-1"
                     >
-                      تفاصيل الحجز
+                      {m.reservationDetailsLink}
                       <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                     </Link>
                   </div>
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                     <KV
-                      label="رقم الحجز"
+                      label={m.fieldReservationNumber}
                       value={
                         <span className="font-mono">
                           {activeReservation.reservationNumber ??
@@ -269,7 +267,7 @@ export default async function UnitDetailPage({
                       }
                     />
                     <KV
-                      label="العميل"
+                      label={m.fieldClient}
                       value={
                         <span className="inline-flex items-center gap-1.5">
                           <UserIcon className="h-3.5 w-3.5 text-slate-400" />
@@ -280,7 +278,7 @@ export default async function UnitDetailPage({
                       }
                     />
                     <KV
-                      label="المندوب المسؤول"
+                      label={m.fieldSales}
                       value={
                         activeReservation.sales?.fullName ? (
                           <span className="inline-flex items-center gap-1.5">
@@ -293,7 +291,7 @@ export default async function UnitDetailPage({
                       }
                     />
                     <KV
-                      label="ينتهي في"
+                      label={m.fieldExpiresAt}
                       value={formatDate(activeReservation.expiresAt)}
                     />
                   </dl>
@@ -301,7 +299,7 @@ export default async function UnitDetailPage({
               ) : (
                 unit.status === 'AVAILABLE' && (
                   <p className="mt-4 text-xs text-slate-500">
-                    لا توجد حجوزات نشطة لهذه الوحدة حالياً. الوحدة جاهزة للعرض والبيع الفوري.
+                    {m.noActiveReservation}
                   </p>
                 )
               )}
@@ -310,10 +308,10 @@ export default async function UnitDetailPage({
             {/* Reservation history */}
             {pastReservations.length > 0 && (
               <PremiumSectionCard
-                title="سجل الحجوزات"
+                title={m.reservationHistoryTitle}
                 trailing={
                   <span className="text-xs text-slate-400 tabular-nums">
-                    {pastReservations.length} حجز
+                    {pastReservations.length} {m.reservationSuffix}
                   </span>
                 }
                 padded={false}
@@ -348,15 +346,15 @@ export default async function UnitDetailPage({
             )}
 
             {/* Maintenance / warranty items (ADMIN-only API) */}
-            {isAdmin && <MaintenanceItemsCard unitId={id} />}
+            {isAdmin && <MaintenanceItemsCard unitId={id} locale={locale} />}
 
             {/* Activity / history timeline */}
             <PremiumSectionCard
-              title="سجل النشاط"
+              title={m.activityTitle}
               trailing={
                 history.length > 0 ? (
                   <span className="text-xs text-slate-400 tabular-nums">
-                    {history.length} نشاط
+                    {history.length} {m.activitySuffix}
                   </span>
                 ) : undefined
               }
@@ -364,13 +362,19 @@ export default async function UnitDetailPage({
               {history.length === 0 ? (
                 <PremiumEmptyState
                   icon={<History />}
-                  title="لا توجد أحداث بعد"
-                  description="ستظهر هنا تغييرات الحالة وعمليات الحجز للوحدة."
+                  title={m.activityEmpty}
+                  description={m.activityEmptyDesc}
                 />
               ) : (
                 <ol className="relative ms-4 border-s-2 border-hairline ps-6 space-y-5">
                   {history.map((h) => (
-                    <HistoryItem key={h.id} entry={h} />
+                    <HistoryItem
+                      key={h.id}
+                      entry={h}
+                      statusLabels={m.statusLabels}
+                      historyChangeFrom={m.historyChangeFrom}
+                      historyChangedBy={m.historyChangedBy}
+                    />
                   ))}
                 </ol>
               )}
@@ -379,16 +383,16 @@ export default async function UnitDetailPage({
         }
         side={
           <>
-            <PremiumCommandPanel title="إجراءات سريعة">
+            <PremiumCommandPanel title={m.cmdTitle}>
                 {isAdmin && (
                   <Link href={`/dashboard/units/${id}/edit` as never} className={CMD_LINK}>
                     <span className={CMD_ICON}><Pencil /></span>
-                    <span>تعديل الوحدة</span>
+                    <span>{m.cmdEdit}</span>
                   </Link>
                 )}
                 <Link href="/dashboard/units" className={CMD_LINK}>
                   <span className={CMD_ICON}><ArrowLeft /></span>
-                  <span>قائمة الوحدات</span>
+                  <span>{m.cmdList}</span>
                 </Link>
                 {unit.building?.phase?.project && (
                   <Link
@@ -396,7 +400,7 @@ export default async function UnitDetailPage({
                     className={CMD_LINK}
                   >
                     <span className={CMD_ICON}><Building2 /></span>
-                    <span>عرض المشروع</span>
+                    <span>{m.cmdProject}</span>
                   </Link>
                 )}
                 <Link
@@ -404,21 +408,21 @@ export default async function UnitDetailPage({
                   className={CMD_LINK}
                 >
                   <span className={CMD_ICON}><Bookmark /></span>
-                  <span>حجوزات الوحدة</span>
+                  <span>{m.cmdReservations}</span>
                 </Link>
               </PremiumCommandPanel>
 
-            <UnitMediaPanel unit={unit} />
+            <UnitMediaPanel unit={unit} locale={locale} />
 
             {isAdmin && (
-              <PremiumSectionCard title="منطقة الخطر" tone="danger">
+              <PremiumSectionCard title={m.dangerTitle} tone="danger">
                 <div className="space-y-3">
                   <p className="text-xs text-slate-500">
-                    حذف الوحدة سيؤدي إلى إزالتها نهائياً. لا يمكن التراجع.
+                    {m.dangerDesc}
                   </p>
                   <ConfirmButton
-                    label="حذف الوحدة"
-                    confirm="هل أنت متأكد من حذف هذه الوحدة؟"
+                    label={m.deleteBtn}
+                    confirm={m.deleteConfirm}
                     action={deleteUnitAction.bind(null, id)}
                   />
                 </div>
@@ -468,7 +472,17 @@ function Stat({
   );
 }
 
-function HistoryItem({ entry }: { entry: UnitStatusHistoryEntry }) {
+function HistoryItem({
+  entry,
+  statusLabels,
+  historyChangeFrom,
+  historyChangedBy,
+}: {
+  entry: UnitStatusHistoryEntry;
+  statusLabels: Record<string, string>;
+  historyChangeFrom: string;
+  historyChangedBy: string;
+}) {
   const tone =
     entry.newStatus === 'SOLD'
       ? 'success'
@@ -490,9 +504,9 @@ function HistoryItem({ entry }: { entry: UnitStatusHistoryEntry }) {
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm text-slate-900">
-            تغيير الحالة من{' '}
+            {historyChangeFrom}{' '}
             <Badge tone="gray" variant="soft" size="sm">
-              {STATUS_LABEL[entry.oldStatus]}
+              {statusLabels[entry.oldStatus] ?? entry.oldStatus}
             </Badge>{' '}
             <ArrowRight className="inline h-3 w-3 text-slate-400 mx-1 rtl:rotate-180" />{' '}
             <span className="font-semibold text-slate-900">
@@ -504,7 +518,7 @@ function HistoryItem({ entry }: { entry: UnitStatusHistoryEntry }) {
           )}
           {entry.changedBy?.fullName && (
             <p className="mt-1 text-2xs text-slate-500">
-              بواسطة{' '}
+              {historyChangedBy}{' '}
               <span className="font-medium text-slate-700">{entry.changedBy.fullName}</span>
             </p>
           )}

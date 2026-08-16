@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { LeadStage, Project } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { createVisitAction, type VisitFormState } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
 
@@ -50,52 +52,16 @@ interface Props {
   leads: Lead[];
   clients: Client[];
   salesOptions: SalesUser[];
+  locale?: Locale;
 }
 
-const STAGE_LABELS: Record<LeadStage, string> = {
-  NEW: 'جديد',
-  INTERESTED: 'مهتم',
-  VISIT: 'زيارة',
-  NEGOTIATION: 'تفاوض',
-  WON: 'تم البيع',
-  LOST: 'خسارة',
-};
-
-const ROLE_LABELS: Record<'CLIENT' | 'CUSTOMER', string> = {
-  CLIENT: 'عميل مسجل',
-  CUSTOMER: 'عميل مشتري',
-};
-
-function formatLeadLabel(l: Lead): string {
-  const project = l.projectInterest?.name.ar ?? 'بدون تحديد مشروع';
-  const stage = STAGE_LABELS[l.stage] ?? l.stage;
-  return `${l.fullName} — ${project} — ${stage} — ${l.phone}`;
-}
-
-function formatClientLabel(c: Client): string {
-  const role = ROLE_LABELS[c.role];
-  const phone = c.phone ?? 'بدون هاتف';
-  return `${c.fullName} — ${role} — ${phone}`;
-}
-
-function getProjectName(p: Project): string {
-  return p.name?.ar ?? p.name?.en ?? '—';
-}
+type OwnerType = 'lead' | 'client' | 'walkin';
 
 function nowLocalInputValue(): string {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
 }
-
-const NAV_SECTIONS = [
-  { id: 'section-client',   num: '01', label: 'العميل',             sub: 'نوع العميل والمصدر' },
-  { id: 'section-project',  num: '02', label: 'المشروع والوحدة',    sub: 'المشروع الذي سيُزار' },
-  { id: 'section-schedule', num: '03', label: 'موعد الزيارة',       sub: 'التاريخ والوقت والموقع' },
-  { id: 'section-agent',    num: '04', label: 'المندوب والملاحظات', sub: 'المندوب المسؤول والملاحظات' },
-];
-
-type OwnerType = 'lead' | 'client' | 'walkin';
 
 export default function NewVisitForm({
   currentRole,
@@ -104,7 +70,31 @@ export default function NewVisitForm({
   leads,
   clients,
   salesOptions,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.visitsForm;
+
+  const STAGE_LABELS: Record<LeadStage, string> = {
+    NEW: m.stageNew, INTERESTED: m.stageInterested, VISIT: m.stageVisit,
+    NEGOTIATION: m.stageNegotiation, WON: m.stageWon, LOST: m.stageLost,
+  };
+  const ROLE_LABELS: Record<'CLIENT' | 'CUSTOMER', string> = {
+    CLIENT: m.roleClient, CUSTOMER: m.roleCustomer,
+  };
+  function formatLeadLabel(l: Lead): string {
+    const project = l.projectInterest?.name.ar ?? m.noProject;
+    const stage = STAGE_LABELS[l.stage] ?? l.stage;
+    return `${l.fullName} — ${project} — ${stage} — ${l.phone}`;
+  }
+  function formatClientLabel(c: Client): string {
+    const role = ROLE_LABELS[c.role];
+    const phone = c.phone ?? m.noPhone;
+    return `${c.fullName} — ${role} — ${phone}`;
+  }
+  function getProjectName(p: Project): string {
+    return p.name?.ar ?? p.name?.en ?? '—';
+  }
+
   const [state, formAction] = useActionState<VisitFormState, FormData>(createVisitAction, {});
   const [ownerType, setOwnerType] = useState<OwnerType>('lead');
   const [leadId, setLeadId] = useState('');
@@ -131,6 +121,19 @@ export default function NewVisitForm({
     ownerType === 'lead' ? selectedLead?.phone ?? '' :
     ownerType === 'client' ? selectedClient?.phone ?? '' : '';
 
+  const navSections = [
+    { id: 'section-client',   num: '01', label: m.nav01Label, sub: m.nav01Sub },
+    { id: 'section-project',  num: '02', label: m.nav02Label, sub: m.nav02Sub },
+    { id: 'section-schedule', num: '03', label: m.nav03Label, sub: m.nav03Sub },
+    { id: 'section-agent',    num: '04', label: m.nav04Label, sub: m.nav04Sub },
+  ];
+
+  const clientTypeOptions: { value: OwnerType; label: string }[] = [
+    { value: 'lead',   label: m.typeLeadLabel },
+    { value: 'client', label: m.typeClientLabel },
+    { value: 'walkin', label: m.typeWalkinLabel },
+  ];
+
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       {state.error && (
@@ -141,26 +144,20 @@ export default function NewVisitForm({
       )}
 
       <PremiumFormLayout
-        navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="الزيارة تُسجَّل بحالة مجدولة. يمكن تحديث حالتها بعد إنجازها من صفحة التفاصيل."
+        navSections={navSections}
+        sidebarBadge={m.sidebarBadge}
+        sidebarInfo={m.sidebarInfo}
       >
         <PremiumFormPanel
           id="section-client"
           number="01"
-          title="العميل"
-          description="اختر نوع العميل. الزيارة بدون حساب مخصصة للعملاء غير المسجلين الذين يحضرون مباشرة."
+          title={m.p1Title}
+          description={m.p1Desc}
         >
         <div className="flex flex-col gap-2">
-          <span className="text-sm font-medium text-foreground">نوع العميل</span>
+          <span className="text-sm font-medium text-foreground">{m.clientTypeLabel}</span>
           <div className="flex flex-wrap gap-3">
-            {(
-              [
-                { value: 'lead', label: 'عميل محتمل من CRM' },
-                { value: 'client', label: 'عميل مسجل' },
-                { value: 'walkin', label: 'بدون حساب (Walk-in)' },
-              ] as { value: OwnerType; label: string }[]
-            ).map((opt) => (
+            {clientTypeOptions.map((opt) => (
               <label
                 key={opt.value}
                 className={`flex cursor-pointer items-center gap-2 rounded-xl border px-4 py-2 text-sm transition ${
@@ -184,7 +181,7 @@ export default function NewVisitForm({
         </div>
 
         {ownerType === 'lead' && (
-          <Field label="العميل المحتمل" name="leadId" required>
+          <Field label={m.leadFieldLabel} name="leadId" required>
             <Select
               name="leadId"
               required
@@ -197,7 +194,7 @@ export default function NewVisitForm({
                 }
               }}
             >
-              <option value="">— اختر فرصة —</option>
+              <option value="">{m.leadOptionEmpty}</option>
               {leads.map((l) => (
                 <option key={l.id} value={l.id}>
                   {formatLeadLabel(l)}
@@ -208,14 +205,14 @@ export default function NewVisitForm({
         )}
 
         {ownerType === 'client' && (
-          <Field label="العميل المسجل" name="clientId" required>
+          <Field label={m.clientFieldLabel} name="clientId" required>
             <Select
               name="clientId"
               required
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
             >
-              <option value="">— اختر عميلاً مسجلاً —</option>
+              <option value="">{m.clientOptionEmpty}</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {formatClientLabel(c)}
@@ -228,11 +225,11 @@ export default function NewVisitForm({
         {(ownerType === 'lead' || ownerType === 'client') && (displayName || displayPhone) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-xl bg-surface-muted/40 border border-hairline p-3">
             <div>
-              <p className="text-xs text-slate-500 mb-0.5">الاسم</p>
+              <p className="text-xs text-slate-500 mb-0.5">{m.nameLabel}</p>
               <p className="text-sm font-medium">{displayName || '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-500 mb-0.5">رقم الهاتف</p>
+              <p className="text-xs text-slate-500 mb-0.5">{m.phoneLabelShort}</p>
               <p className="text-sm font-medium" dir="ltr">{displayPhone || '—'}</p>
             </div>
           </div>
@@ -240,14 +237,14 @@ export default function NewVisitForm({
 
         {ownerType === 'walkin' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="اسم العميل" name="customerName" required>
-              <Input name="customerName" required placeholder="مثال: عمرو خالد" />
+            <Field label={m.walkinNameLabel} name="customerName" required>
+              <Input name="customerName" required placeholder={m.walkinNamePlaceholder} />
             </Field>
-            <Field label="رقم الهاتف" name="customerPhone" required>
+            <Field label={m.walkinPhoneLabel} name="customerPhone" required>
               <Input
                 name="customerPhone"
                 required
-                placeholder="مثال: 01012345678"
+                placeholder={m.walkinPhonePlaceholder}
                 dir="ltr"
               />
             </Field>
@@ -258,17 +255,17 @@ export default function NewVisitForm({
         <PremiumFormPanel
           id="section-project"
           number="02"
-          title="المشروع والوحدة"
-          description="حدد المشروع الذي سيُزار. يمكنك اختياريًا تحديد وحدة معينة."
+          title={m.p2Title}
+          description={m.p2Desc}
         >
-        <Field label="المشروع" name="projectId" required>
+        <Field label={m.projectLabel} name="projectId" required>
           <Select
             name="projectId"
             required
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
           >
-            <option value="">— اختر مشروعاً —</option>
+            <option value="">{m.projectOptionEmpty}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {getProjectName(p)}
@@ -277,9 +274,9 @@ export default function NewVisitForm({
           </Select>
         </Field>
 
-        <Field label="الوحدة (اختياري)" name="unitId" hint="تظهر فقط وحدات المشروع المختار">
+        <Field label={m.unitLabel} name="unitId" hint={m.unitHint}>
           <Select name="unitId" disabled={!projectId}>
-            <option value="">— بدون تحديد وحدة —</option>
+            <option value="">{m.unitOptionNone}</option>
             {filteredUnits.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.code} — {u.type}
@@ -292,15 +289,11 @@ export default function NewVisitForm({
         <PremiumFormPanel
           id="section-schedule"
           number="03"
-          title="موعد الزيارة"
-          description={
-            isAdmin
-              ? 'حدد موعد الزيارة. كمدير يمكنك إدخال زيارة سابقة لتوثيقها بأثر رجعي.'
-              : 'حدد موعد الزيارة. لا يمكن جدولة زيارة في الماضي.'
-          }
+          title={m.p3Title}
+          description={isAdmin ? m.p3DescAdmin : m.p3DescSales}
         >
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="التاريخ والوقت" name="scheduledAt" required>
+          <Field label={m.dateTimeLabel} name="scheduledAt" required>
             <Input
               type="datetime-local"
               name="scheduledAt"
@@ -311,12 +304,12 @@ export default function NewVisitForm({
             />
           </Field>
 
-          <Field label="المدة (دقائق)" name="durationMinutes">
+          <Field label={m.durationLabel} name="durationMinutes">
             <Select name="durationMinutes" defaultValue="60">
-              <option value="30">30 دقيقة</option>
-              <option value="60">60 دقيقة</option>
-              <option value="90">90 دقيقة</option>
-              <option value="120">120 دقيقة</option>
+              <option value="30">{m.duration30}</option>
+              <option value="60">{m.duration60}</option>
+              <option value="90">{m.duration90}</option>
+              <option value="120">{m.duration120}</option>
             </Select>
           </Field>
         </div>
@@ -331,21 +324,19 @@ export default function NewVisitForm({
               className="mt-0.5 accent-brand-500"
             />
             <div>
-              <p className="font-medium">سيتم حفظ هذه الزيارة كمنفّذة</p>
-              <p className="text-xs mt-0.5">
-                التاريخ المختار في الماضي، لذلك ستُسجَّل الحالة تلقائياً كـ COMPLETED.
-              </p>
+              <p className="font-medium">{m.pastVisitNote}</p>
+              <p className="text-xs mt-0.5">{m.pastVisitDetail}</p>
             </div>
             <input type="hidden" name="status" value="COMPLETED" />
           </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="الموقع" name="location" hint="مثال: مكتب المبيعات بالقاهرة الجديدة">
-            <Input name="location" placeholder="الموقع…" />
+          <Field label={m.locationLabel} name="location" hint={m.locationHint}>
+            <Input name="location" placeholder={m.locationPlaceholder} />
           </Field>
-          <Field label="نقطة اللقاء" name="meetingPoint">
-            <Input name="meetingPoint" placeholder="نقطة اللقاء…" />
+          <Field label={m.meetingPointLabel} name="meetingPoint">
+            <Input name="meetingPoint" placeholder={m.meetingPointPlaceholder} />
           </Field>
         </div>
         </PremiumFormPanel>
@@ -353,17 +344,13 @@ export default function NewVisitForm({
         <PremiumFormPanel
           id="section-agent"
           number="04"
-          title="المندوب والملاحظات"
-          description={
-            isAdmin
-              ? 'حدد المندوب المسؤول عن الزيارة وأضف أي ملاحظات داخلية.'
-              : 'سيتم تعيينك تلقائيًا كمندوب مسؤول.'
-          }
+          title={m.p4Title}
+          description={isAdmin ? m.p4DescAdmin : m.p4DescSales}
         >
         {isAdmin && (
-          <Field label="المندوب المسؤول" name="assignedSalesId">
+          <Field label={m.agentLabel} name="assignedSalesId">
             <Select name="assignedSalesId">
-              <option value="">— بدون تعيين —</option>
+              <option value="">{m.agentOptionNone}</option>
               {salesOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {salesActorLabel(s)}
@@ -373,19 +360,19 @@ export default function NewVisitForm({
           </Field>
         )}
 
-        <Field label="ملاحظات داخلية" name="salesNotes">
-          <Textarea name="salesNotes" rows={3} placeholder="ملاحظات اختيارية…" />
+        <Field label={m.internalNotesLabel} name="salesNotes">
+          <Textarea name="salesNotes" rows={3} placeholder={m.internalNotesPlaceholder} />
         </Field>
         </PremiumFormPanel>
       </PremiumFormLayout>
 
       <FormFooter
         sticky
-        primary={<SubmitButton>إنشاء الزيارة</SubmitButton>}
+        primary={<SubmitButton>{m.submitCreate}</SubmitButton>}
         secondary={
           <Link href="/dashboard/visits">
             <Button variant="ghost" size="md" type="button">
-              إلغاء
+              {m.cancelBtn}
             </Button>
           </Link>
         }

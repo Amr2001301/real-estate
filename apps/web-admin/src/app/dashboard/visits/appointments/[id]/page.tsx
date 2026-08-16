@@ -10,11 +10,13 @@ import { AppointmentStatusBadge } from '@/components/badges';
 import { VisitTimelineCard } from '../../_components/visit-timeline';
 import { AppointmentDetailActions } from './_components/appointment-detail-actions';
 import { SalesFeedbackForm } from './_components/sales-feedback-form';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 /** Read-only star row for displaying a 1–5 rating. */
-function Stars({ value }: { value: number }) {
+function Stars({ value, ariaLabel }: { value: number; ariaLabel: string }) {
   return (
-    <span className="inline-flex items-center gap-0.5" aria-label={`${value} من 5`}>
+    <span className="inline-flex items-center gap-0.5" aria-label={ariaLabel}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star key={n} className={cn('h-4 w-4', n <= value ? 'fill-brand-500 text-brand-500' : 'text-slate-300')} />
       ))}
@@ -35,6 +37,8 @@ export default async function AppointmentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.visitsAppointmentDetail;
 
   const [apptRes, salesRes] = await Promise.all([
     safe(api.get<AppointmentDetail>(`/visits/appointments/${id}`)),
@@ -45,7 +49,7 @@ export default async function AppointmentDetailPage({
     return (
       <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
         <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-        <p>تعذر تحميل بيانات الزيارة: {apptRes.error ?? 'غير موجود'}</p>
+        <p>{m.loadError}{apptRes.error ?? m.notFound}</p>
       </div>
     );
   }
@@ -60,15 +64,15 @@ export default async function AppointmentDetailPage({
   return (
     <div className="space-y-6 lg:space-y-8">
       <PageHeader
-        title={`زيارة — ${appt.visitNumber}`}
+        title={m.titleVisit(appt.visitNumber)}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الزيارات', href: '/dashboard/visits?tab=appointments' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbVisits, href: '/dashboard/visits?tab=appointments' },
           { label: appt.visitNumber },
         ]}
         meta={<AppointmentStatusBadge status={appt.status} />}
         actions={
-          <AppointmentDetailActions appointment={appt} salesOptions={salesOptions} />
+          <AppointmentDetailActions appointment={appt} salesOptions={salesOptions} locale={locale} />
         }
       />
 
@@ -78,64 +82,64 @@ export default async function AppointmentDetailPage({
           {/* Appointment info */}
           <Card>
             <CardHeader>
-              <CardTitle>تفاصيل الزيارة</CardTitle>
+              <CardTitle>{m.cardDetailsTitle}</CardTitle>
             </CardHeader>
             <CardBody className="grid grid-cols-2 gap-4 text-sm">
               <div>
-                <p className="text-slate-500 mb-0.5">الموعد</p>
+                <p className="text-slate-500 mb-0.5">{m.fieldAppointment}</p>
                 <p className="font-medium">{formatDateTime(appt.scheduledAt)}</p>
               </div>
               {appt.durationMinutes && (
                 <div>
-                  <p className="text-slate-500 mb-0.5">المدة</p>
-                  <p className="font-medium">{appt.durationMinutes} دقيقة</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldDuration}</p>
+                  <p className="font-medium">{appt.durationMinutes} {m.fieldDurationUnit}</p>
                 </div>
               )}
               {appt.location && (
                 <div>
-                  <p className="text-slate-500 mb-0.5">الموقع</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldLocation}</p>
                   <p className="font-medium">{appt.location}</p>
                 </div>
               )}
               {appt.meetingPoint && (
                 <div>
-                  <p className="text-slate-500 mb-0.5">نقطة الالتقاء</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldMeetingPoint}</p>
                   <p className="font-medium">{appt.meetingPoint}</p>
                 </div>
               )}
               {appt.confirmedAt && (
                 <div>
-                  <p className="text-slate-500 mb-0.5">تاريخ التأكيد</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldConfirmedAt}</p>
                   <p className="font-medium">{formatDateTime(appt.confirmedAt)}</p>
                 </div>
               )}
               {appt.completedAt && (
                 <div>
-                  <p className="text-slate-500 mb-0.5">تاريخ الاكتمال</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldCompletedAt}</p>
                   <p className="font-medium">{formatDateTime(appt.completedAt)}</p>
                 </div>
               )}
               {appt.salesNotes && (
                 <div className="col-span-2">
-                  <p className="text-slate-500 mb-0.5">ملاحظات المندوب</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldSalesNotes}</p>
                   <p className="text-slate-700">{appt.salesNotes}</p>
                 </div>
               )}
               {appt.resultNotes && (
                 <div className="col-span-2">
-                  <p className="text-slate-500 mb-0.5">نتيجة الزيارة</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldResultNotes}</p>
                   <p className="text-slate-700">{appt.resultNotes}</p>
                 </div>
               )}
               {appt.cancellationReason && (
                 <div className="col-span-2">
-                  <p className="text-slate-500 mb-0.5">سبب الإلغاء</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldCancellationReason}</p>
                   <p className="text-slate-700">{appt.cancellationReason}</p>
                 </div>
               )}
               {appt.noShowReason && (
                 <div className="col-span-2">
-                  <p className="text-slate-500 mb-0.5">سبب الغياب</p>
+                  <p className="text-slate-500 mb-0.5">{m.fieldNoShowReason}</p>
                   <p className="text-slate-700">{appt.noShowReason}</p>
                 </div>
               )}
@@ -144,12 +148,11 @@ export default async function AppointmentDetailPage({
                   {/* Legacy free-text column. It carries the customer's
                       reschedule reason (PENDING_RESCHEDULE) or a manually-typed
                       note recorded at completion — NOT the structured customer
-                      rating below. Labeled honestly so it's never confused with
-                      the customer's own submitted feedback. */}
+                      rating below. */}
                   <p className="text-slate-500 mb-0.5">
                     {appt.status === 'PENDING_RESCHEDULE'
-                      ? 'سبب طلب العميل لإعادة الجدولة'
-                      : 'ملاحظة مُدخلة يدوياً'}
+                      ? m.fieldRescheduleReason
+                      : m.fieldManualNote}
                   </p>
                   <p className="text-slate-700 whitespace-pre-wrap">{appt.customerFeedback}</p>
                 </div>
@@ -157,49 +160,46 @@ export default async function AppointmentDetailPage({
             </CardBody>
           </Card>
 
-          {/* Gap 7 — Customer feedback (customer-submitted rating). Separate
-              from the staff note above so the two are never conflated. */}
+          {/* Gap 7 — Customer feedback (customer-submitted rating). */}
           <Card>
             <CardHeader>
-              <CardTitle>تقييم العميل للزيارة</CardTitle>
+              <CardTitle>{m.cardCustomerRatingTitle}</CardTitle>
             </CardHeader>
             <CardBody className="text-sm">
               {appt.customerRatingSubmittedAt && appt.customerRating ? (
                 <div className="space-y-2">
-                  <Stars value={appt.customerRating} />
+                  <Stars value={appt.customerRating} ariaLabel={m.starAriaLabel(String(appt.customerRating))} />
                   {appt.customerRatingText && (
                     <p className="text-slate-700 whitespace-pre-wrap">{appt.customerRatingText}</p>
                   )}
                   <p className="text-xs text-slate-400">
-                    أُرسل في {formatDateTime(appt.customerRatingSubmittedAt)}
+                    {m.customerRatingSubmittedAt(formatDateTime(appt.customerRatingSubmittedAt))}
                   </p>
                 </div>
               ) : (
                 <p className="text-slate-400">
                   {appt.status === 'COMPLETED'
-                    ? 'لم يقم العميل بتقييم الزيارة بعد.'
-                    : 'يُتاح تقييم العميل بعد اكتمال الزيارة.'}
+                    ? m.customerRatingNotYet
+                    : m.customerRatingNotAvailable}
                 </p>
               )}
             </CardBody>
           </Card>
 
-          {/* Gap 7 — Sales feedback (staff-submitted). Read-only history + a
-              form to add/update it once the visit is COMPLETED. The API gates
-              who may submit (assigned sales / manager / admin). */}
+          {/* Gap 7 — Sales feedback (staff-submitted). */}
           <Card>
             <CardHeader>
-              <CardTitle>ملاحظات وتقييم المندوب</CardTitle>
+              <CardTitle>{m.cardSalesFeedbackTitle}</CardTitle>
             </CardHeader>
             <CardBody className="space-y-3 text-sm">
               {appt.salesRatingSubmittedAt && (
                 <div className="space-y-2 rounded-xl bg-slate-50 p-3">
-                  {appt.salesRating ? <Stars value={appt.salesRating} /> : null}
+                  {appt.salesRating ? <Stars value={appt.salesRating} ariaLabel={m.starAriaLabel(String(appt.salesRating))} /> : null}
                   {appt.salesRatingText && (
                     <p className="text-slate-700 whitespace-pre-wrap">{appt.salesRatingText}</p>
                   )}
                   <p className="text-xs text-slate-400">
-                    آخر تحديث {formatDateTime(appt.salesRatingSubmittedAt)}
+                    {m.salesRatingLastUpdate(formatDateTime(appt.salesRatingSubmittedAt))}
                   </p>
                 </div>
               )}
@@ -208,10 +208,11 @@ export default async function AppointmentDetailPage({
                   appointmentId={appt.id}
                   initialRating={appt.salesRating}
                   initialNotes={appt.salesRatingText}
+                  locale={locale}
                 />
               ) : (
                 !appt.salesRatingSubmittedAt && (
-                  <p className="text-slate-400">يُتاح تقييم المندوب بعد اكتمال الزيارة.</p>
+                  <p className="text-slate-400">{m.salesFeedbackNotAvailable}</p>
                 )
               )}
             </CardBody>
@@ -220,7 +221,7 @@ export default async function AppointmentDetailPage({
           {/* Timeline */}
           <Card>
             <CardBody>
-              <VisitTimelineCard activities={activities} />
+              <VisitTimelineCard activities={activities} locale={locale} />
             </CardBody>
           </Card>
         </div>
@@ -232,7 +233,7 @@ export default async function AppointmentDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-4 w-4 text-brand-600" />
-                معلومات العميل
+                {m.cardCustomerInfoTitle}
               </CardTitle>
             </CardHeader>
             <CardBody className="space-y-3 text-sm">
@@ -258,7 +259,7 @@ export default async function AppointmentDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CalendarClock className="h-4 w-4 text-brand-600" />
-                  الطلب الأصلي
+                  {m.cardOriginalRequestTitle}
                 </CardTitle>
               </CardHeader>
               <CardBody className="text-sm">
@@ -277,7 +278,7 @@ export default async function AppointmentDetailPage({
           {appt.leadId && appt.lead && (
             <Card>
               <CardHeader>
-                <CardTitle>العميل المحتمل</CardTitle>
+                <CardTitle>{m.cardLeadTitle}</CardTitle>
               </CardHeader>
               <CardBody className="text-sm">
                 <Link
@@ -297,7 +298,7 @@ export default async function AppointmentDetailPage({
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-4 w-4 text-brand-600" />
-                  المشروع والوحدة
+                  {m.cardProjectTitle}
                 </CardTitle>
               </CardHeader>
               <CardBody className="space-y-2 text-sm">
@@ -308,7 +309,7 @@ export default async function AppointmentDetailPage({
                   {tx(appt.project?.name)}
                 </Link>
                 {appt.unit && (
-                  <p className="text-slate-600">وحدة: {appt.unit.code} — {appt.unit.type}</p>
+                  <p className="text-slate-600">{m.unitLabel}: {appt.unit.code} — {appt.unit.type}</p>
                 )}
               </CardBody>
             </Card>
@@ -319,7 +320,7 @@ export default async function AppointmentDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-4 w-4 text-brand-600" />
-                المندوب المسؤول
+                {m.cardSalesTitle}
               </CardTitle>
             </CardHeader>
             <CardBody className="text-sm">
@@ -334,7 +335,7 @@ export default async function AppointmentDetailPage({
                   )}
                 </div>
               ) : (
-                <p className="text-slate-400">غير محدد</p>
+                <p className="text-slate-400">{m.salesUnassigned}</p>
               )}
             </CardBody>
           </Card>
@@ -342,7 +343,7 @@ export default async function AppointmentDetailPage({
           {appt.createdBy && (
             <Card>
               <CardHeader>
-                <CardTitle>أُنشئ بواسطة</CardTitle>
+                <CardTitle>{m.cardCreatedByTitle}</CardTitle>
               </CardHeader>
               <CardBody className="text-sm">
                 <p>{appt.createdBy.fullName}</p>

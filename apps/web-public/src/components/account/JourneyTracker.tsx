@@ -1,5 +1,7 @@
 import { CheckCircle2, Circle, Clock } from 'lucide-react';
 import type { MeReservation, MeContract } from '@/lib/api-types';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 
 type MilestoneStatus = 'done' | 'active' | 'upcoming';
 
@@ -9,10 +11,30 @@ interface Milestone {
   status: MilestoneStatus;
 }
 
-function buildMilestones(
-  reservations: MeReservation[],
-  contracts: MeContract[],
-): Milestone[] {
+function formatDate(iso: string | null, locale: string): string {
+  if (!iso) return '';
+  try {
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'short' }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+}
+
+function ms(label: string, sub: string | undefined, done: boolean, prev: boolean): Milestone {
+  const status: MilestoneStatus = done ? 'done' : prev ? 'active' : 'upcoming';
+  return { label, sub, status };
+}
+
+export async function JourneyTracker({
+  reservations,
+  contracts,
+}: {
+  reservations: MeReservation[];
+  contracts: MeContract[];
+}) {
+  const locale = await getLocale();
+  const t = siteT(locale).accountPages.journeyTracker;
+
   const activeReservation = reservations.find(
     (r) => r.status === 'PENDING' || r.status === 'APPROVED' || r.status === 'CONVERTED',
   );
@@ -29,38 +51,35 @@ function buildMilestones(
   const signedDone = isSigned;
   const planDone = hasPlan;
 
-  function ms(label: string, sub: string | undefined, done: boolean, prev: boolean): Milestone {
-    const status: MilestoneStatus = done ? 'done' : prev ? 'active' : 'upcoming';
-    return { label, sub, status };
-  }
-
-  return [
-    ms('طلب الزيارة', visitDone ? 'تمت الزيارة' : undefined, visitDone, true),
-    ms('الحجز', reservedDone ? 'تم اعتماد الحجز' : activeReservation ? 'قيد المراجعة' : undefined, reservedDone, visitDone),
-    ms('توقيع العقد', signedDone ? formatDate(activeContract?.signedAt ?? null) : undefined, signedDone, reservedDone),
-    ms('الدفعة الأولى', contractDone && !planDone ? 'إجراءات الدفع' : planDone ? 'تم الترتيب' : undefined, planDone, contractDone),
-    ms('خطة التقسيط', hasPlan ? `${activeContract?.installmentPlan?.totalMonths ?? 0} شهرًا` : undefined, hasPlan, contractDone),
-    ms('استلام المفتاح', undefined, false, hasPlan),
+  const milestones: Milestone[] = [
+    ms(t.stepVisit, visitDone ? t.stepVisitDone : undefined, visitDone, true),
+    ms(
+      t.stepReservation,
+      reservedDone ? t.stepReservationDone : activeReservation ? t.stepReservationPending : undefined,
+      reservedDone,
+      visitDone,
+    ),
+    ms(
+      t.stepContract,
+      signedDone ? formatDate(activeContract?.signedAt ?? null, locale) : undefined,
+      signedDone,
+      reservedDone,
+    ),
+    ms(
+      t.stepDownPayment,
+      contractDone && !planDone ? t.stepDownPaymentPending : planDone ? t.stepDownPaymentDone : undefined,
+      planDone,
+      contractDone,
+    ),
+    ms(
+      t.stepPlan,
+      hasPlan ? `${activeContract?.installmentPlan?.totalMonths ?? 0} ${t.stepPlanSuffix}` : undefined,
+      hasPlan,
+      contractDone,
+    ),
+    ms(t.stepKey, undefined, false, hasPlan),
   ];
-}
 
-function formatDate(iso: string | null): string {
-  if (!iso) return '';
-  try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'short' }).format(new Date(iso));
-  } catch {
-    return '';
-  }
-}
-
-export function JourneyTracker({
-  reservations,
-  contracts,
-}: {
-  reservations: MeReservation[];
-  contracts: MeContract[];
-}) {
-  const milestones = buildMilestones(reservations, contracts);
   const doneCount = milestones.filter((m) => m.status === 'done').length;
   const pct = Math.round((doneCount / milestones.length) * 100);
 
@@ -69,8 +88,8 @@ export function JourneyTracker({
       {/* Header */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="font-bold text-base text-ink-strong">مسيرة شراء عقارك</h2>
-          <p className="text-xs text-ink-muted mt-0.5">{doneCount} من {milestones.length} مرحلة مكتملة</p>
+          <h2 className="font-bold text-base text-ink-strong">{t.title}</h2>
+          <p className="text-xs text-ink-muted mt-0.5">{t.stagesComplete(doneCount, milestones.length)}</p>
         </div>
         <div className="flex items-center gap-2">
           <div className="w-20 h-1.5 rounded-full bg-surface-soft overflow-hidden">

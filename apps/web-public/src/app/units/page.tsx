@@ -1,8 +1,9 @@
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
-import { formatNumber } from '@/lib/format';
 import type { Paginated, PublicUnit } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { Section } from '@/components/ui/Section';
 import { CtaBand } from '@/components/marketing/CtaBand';
 import { ButtonLink } from '@/components/ui/Button';
@@ -72,9 +73,11 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   if (areaMax) apiParams.set('areaMax', areaMax);
   if (sort) apiParams.set('sort', sort);
 
-  const result = await safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, {
-    revalidate: REVALIDATE,
-  });
+  const [result, locale] = await Promise.all([
+    safeFetch<Paginated<PublicUnit>>(`/public/units?${apiParams.toString()}`, { revalidate: REVALIDATE }),
+    getLocale(),
+  ]);
+  const m = siteT(locale);
 
   const units = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
@@ -106,41 +109,37 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
   return (
     <>
       <PageHero
-        eyebrow="الوحدات السكنية"
-        title="وحدات فاخرة جاهزة لاختيارك"
-        subtitle="اكتشف مجموعة مختارة من الشقق والفيلات المصممة لتناسب أسلوب حياتك واستثمارك."
+        eyebrow={m.units.eyebrow}
+        title={m.units.title}
+        subtitle={m.units.subtitle}
         overlap
       />
 
       {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
       <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <UnitsFilterBar initial={initialFilters} />
+        <UnitsFilterBar initial={initialFilters} locale={locale} />
       </Container>
 
       <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">
           {!result.ok ? (
             <ErrorState
-              title="لم نتمكن من تحميل الوحدات حاليًا"
-              message="يرجى المحاولة مرة أخرى بعد لحظات."
+              title={m.units.errorTitle}
+              message={m.units.errorMsg}
               className="mx-auto max-w-2xl"
             />
           ) : units.length === 0 ? (
             <EmptyState
-              title={hasFilters ? 'لا توجد وحدات مطابقة للفلاتر الحالية' : 'لا توجد وحدات متاحة حاليًا'}
-              message={
-                hasFilters
-                  ? 'جرّب تعديل الفلاتر أو مسحها لعرض جميع الوحدات.'
-                  : 'تواصل مع مستشار لمعرفة أحدث الإتاحات.'
-              }
+              title={hasFilters ? m.units.emptyFiltered : m.units.emptyAll}
+              message={hasFilters ? m.units.emptyFilteredMsg : m.units.emptyAllMsg}
               className="mx-auto max-w-2xl"
               action={
                 hasFilters ? (
                   <ButtonLink href={routes.units} variant="outline" size="md">
-                    مسح الفلاتر
+                    {m.units.clearFilters}
                   </ButtonLink>
                 ) : (
                   <ButtonLink href={routes.contact} variant="outline" size="md">
-                    تواصل مع مستشار
+                    {m.units.advisor}
                   </ButtonLink>
                 )
               }
@@ -149,7 +148,7 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
             <>
               {meta && (
                 <p className="mb-6 text-sm text-ink-muted">
-                  عرض {units.length} من أصل {formatNumber(meta.total)} وحدة
+                  {m.units.showing(units.length, meta.total)}
                 </p>
               )}
               <UnitsExplorer units={units} seedCompareIds={seedCompareIds} />
@@ -158,9 +157,9 @@ export default async function UnitsPage({ searchParams }: { searchParams: Search
           )}
       </Section>
 
-      <CtaBand eyebrow="بحاجة إلى مساعدة؟" title="دع مستشارينا يساعدونك في الاختيار">
+      <CtaBand eyebrow={m.units.helpEyebrow} title={m.units.helpTitle}>
         <ButtonLink href={routes.contact} variant="gold" size="lg">
-          تواصل مع مستشار
+          {m.units.advisor}
         </ButtonLink>
       </CtaBand>
     </>

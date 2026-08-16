@@ -8,6 +8,8 @@ import { scheduleVisitAction } from '../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
 import type { Translatable } from '@/lib/types';
 import { tx } from '@/lib/format';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 interface Props {
   requestId: string;
@@ -24,28 +26,27 @@ interface Props {
    *  to the time portion of `preferredDate` when null. */
   preferredTime?: string | null;
   /** Customer's free-text message — rendered read-only above the form so the
-   *  admin can see context without leaving the dialog. Mirrors the field on
-   *  the request detail view. */
+   *  admin can see context without leaving the dialog. */
   customerMessage?: string | null;
+  locale?: Locale;
 }
 
-// 30-minute Arabic time slots 06:00 – 22:00
-const TIME_SLOTS: { value: string; label: string }[] = (() => {
+function buildTimeSlots(am: string, pm: string): { value: string; label: string }[] {
   const slots: { value: string; label: string }[] = [];
   for (let h = 6; h <= 22; h++) {
-    for (const m of [0, 30]) {
-      if (h === 22 && m === 30) break;
+    for (const min of [0, 30]) {
+      if (h === 22 && min === 30) break;
       const hh = String(h).padStart(2, '0');
-      const mm = String(m).padStart(2, '0');
+      const mm = String(min).padStart(2, '0');
       const value = `${hh}:${mm}`;
-      const period = h < 12 ? 'ص' : 'م';
+      const period = h < 12 ? am : pm;
       const displayH = h % 12 === 0 ? 12 : h % 12;
       const label = `${displayH}:${mm} ${period}`;
       slots.push({ value, label });
     }
   }
   return slots;
-})();
+}
 
 const INITIAL = { error: null as string | null };
 
@@ -85,13 +86,14 @@ export function ScheduleModal({
   preferredDate,
   preferredTime,
   customerMessage,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.visitComponents;
+  const TIME_SLOTS = buildTimeSlots(m.timePeriodAM, m.timePeriodPM);
   const dateRef = useRef<HTMLInputElement>(null);
   const timeRef = useRef<HTMLSelectElement>(null);
 
-  // Seed the date+time pickers from what the customer asked for. Admin can
-  // edit either before submitting; if customer didn't supply anything (e.g.
-  // walk-in created by sales) both stay empty.
+  // Seed the date+time pickers from what the customer asked for.
   const defaultDate = dateInputValue(preferredDate);
   const defaultTime =
     (preferredTime && /^\d{2}:\d{2}$/.test(preferredTime) ? preferredTime : '') ||
@@ -102,7 +104,7 @@ export function ScheduleModal({
     async (_prev: typeof INITIAL, fd: FormData) => {
       const date = fd.get('_date') as string;
       const time = fd.get('_time') as string;
-      if (!date || !time) return { error: 'يرجى تحديد التاريخ والوقت' };
+      if (!date || !time) return { error: m.dateTimeRequired };
       fd.set('scheduledAt', `${date}T${time}:00`);
       try {
         await action(fd);
@@ -119,16 +121,16 @@ export function ScheduleModal({
     <Dialog
       open={open}
       onClose={onClose}
-      title="جدولة زيارة"
-      description="أدخل تفاصيل الموعد لتحويل الطلب إلى زيارة مجدولة"
+      title={m.scheduleTitle}
+      description={m.scheduleDesc}
       size="md"
       footer={
         <>
           <Button variant="outline" size="sm" type="button" onClick={onClose}>
-            إلغاء
+            {m.cancelModalBtn}
           </Button>
           <Button variant="primary" size="sm" type="submit" form="schedule-form" loading={pending}>
-            جدولة
+            {m.scheduleSubmitBtn}
           </Button>
         </>
       }
@@ -172,7 +174,7 @@ export function ScheduleModal({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              التاريخ <span className="text-danger-600">*</span>
+              {m.dateLabel} <span className="text-danger-600">*</span>
             </label>
             <input
               ref={dateRef}
@@ -185,7 +187,7 @@ export function ScheduleModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              الوقت <span className="text-danger-600">*</span>
+              {m.timeLabel} <span className="text-danger-600">*</span>
             </label>
             <select
               ref={timeRef}
@@ -194,7 +196,7 @@ export function ScheduleModal({
               defaultValue={defaultTime}
               className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30 bg-white"
             >
-              <option value="" disabled>اختر الوقت</option>
+              <option value="" disabled>{m.chooseTimePlaceholder}</option>
               {TIME_SLOTS.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
@@ -204,13 +206,13 @@ export function ScheduleModal({
 
         {salesOptions.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">المندوب</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{m.salesRepLabel}</label>
             <select
               name="assignedSalesId"
               defaultValue={defaultSalesId ?? ''}
               className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30 bg-white"
             >
-              <option value="">غير محدد</option>
+              <option value="">{m.unspecified}</option>
               {salesOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {salesActorLabel(s)}
@@ -222,7 +224,7 @@ export function ScheduleModal({
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">المدة (دقيقة)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{m.durationLabel}</label>
             <input
               name="durationMinutes"
               type="number"
@@ -232,11 +234,11 @@ export function ScheduleModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">الموقع</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">{m.locationFieldLabel}</label>
             <input
               name="location"
               type="text"
-              placeholder="عنوان موقع الزيارة"
+              placeholder={m.locationPlaceholder}
               defaultValue={project ? tx(project.name) : ''}
               className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30"
             />
@@ -244,17 +246,17 @@ export function ScheduleModal({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">نقطة الالتقاء</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{m.meetingPointLabel}</label>
           <input
             name="meetingPoint"
             type="text"
-            placeholder="مثال: مدخل المبنى الرئيسي"
+            placeholder={m.meetingPointPlaceholder}
             className="w-full rounded-xl border border-hairline px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/30"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">ملاحظات المندوب</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1">{m.salesNotesLabel}</label>
           <textarea
             name="salesNotes"
             rows={2}

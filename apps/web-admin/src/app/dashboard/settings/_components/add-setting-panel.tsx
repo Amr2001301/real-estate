@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog } from '@/components/ui/dialog';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { patchSettingAction } from '../actions';
 
 type FieldType = 'text' | 'number' | 'boolean' | 'json';
@@ -18,45 +20,45 @@ interface Template {
   placeholder?: string;
 }
 
-const TEMPLATES: Template[] = [
-  // company
-  { key: 'company.name',     label: 'اسم الشركة',                            type: 'text',    placeholder: 'ديفورا للتطوير العقاري' },
-  { key: 'company.email',    label: 'البريد الإلكتروني للشركة',             type: 'text',    placeholder: 'info@company.sa' },
-  { key: 'company.phone',    label: 'هاتف الشركة',                           type: 'text',    placeholder: '+966 11 000 0000' },
-  { key: 'company.address',  label: 'عنوان الشركة',                          type: 'text',    placeholder: 'الرياض، المملكة العربية السعودية' },
-  { key: 'company.website',  label: 'الموقع الإلكتروني',                    type: 'text',    placeholder: 'https://company.sa' },
-  { key: 'company.vatNumber',label: 'الرقم الضريبي',                         type: 'text',    placeholder: '300000000000003' },
-  // broker
-  { key: 'broker.defaultCommissionPct', label: 'نسبة عمولة الوسيط الافتراضية', type: 'number', placeholder: '2.5' },
-  { key: 'broker.payoutCycleDays',      label: 'دورة صرف مدفوعات الوسيط (أيام)', type: 'number', placeholder: '30' },
-  { key: 'broker.minPayoutAmount',      label: 'الحد الأدنى لصرف الوسيط',         type: 'number', placeholder: '1000' },
-  { key: 'broker.autoApproveLeads',     label: 'الموافقة التلقائية على العملاء',  type: 'boolean' },
-  // sales
-  { key: 'sales.leadExpireDays',        label: 'مدة صلاحية العميل المحتمل (أيام)', type: 'number', placeholder: '90' },
-  { key: 'sales.reservationExpireDays', label: 'مدة صلاحية الحجز (أيام)',           type: 'number', placeholder: '7' },
-  { key: 'sales.allowMultiReservation', label: 'السماح بحجوزات متعددة',            type: 'boolean' },
-  // notifications
-  { key: 'notifications.emailEnabled',  label: 'تفعيل البريد الإلكتروني',          type: 'boolean' },
-  { key: 'notifications.smsEnabled',    label: 'تفعيل الرسائل النصية',             type: 'boolean' },
-  { key: 'notifications.fromEmail',     label: 'بريد إرسال الإشعارات',             type: 'text',    placeholder: 'noreply@company.sa' },
-  // reports
-  { key: 'reports.currency',            label: 'عملة التقارير',                     type: 'text',    placeholder: 'SAR' },
-  { key: 'reports.dateFormat',          label: 'تنسيق التاريخ',                     type: 'text',    placeholder: 'DD/MM/YYYY' },
-  { key: 'reports.timezone',            label: 'المنطقة الزمنية',                   type: 'text',    placeholder: 'Asia/Riyadh' },
-  // security
-  { key: 'security.maxLoginAttempts',   label: 'محاولات الدخول القصوى',             type: 'number',  placeholder: '5' },
-  { key: 'security.sessionTimeoutMins', label: 'مهلة انتهاء الجلسة (دقيقة)',        type: 'number',  placeholder: '60' },
-  { key: 'security.requireMfa',         label: 'تفعيل المصادقة الثنائية',           type: 'boolean' },
+const TEMPLATE_CONFIGS: { key: string; type: FieldType; placeholder?: string }[] = [
+  { key: 'company.name',                 type: 'text',    placeholder: 'ديفورا للتطوير العقاري' },
+  { key: 'company.email',                type: 'text',    placeholder: 'info@company.sa' },
+  { key: 'company.phone',                type: 'text',    placeholder: '+966 11 000 0000' },
+  { key: 'company.address',              type: 'text',    placeholder: 'الرياض، المملكة العربية السعودية' },
+  { key: 'company.website',              type: 'text',    placeholder: 'https://company.sa' },
+  { key: 'company.vatNumber',            type: 'text',    placeholder: '300000000000003' },
+  { key: 'broker.defaultCommissionPct',  type: 'number',  placeholder: '2.5' },
+  { key: 'broker.payoutCycleDays',       type: 'number',  placeholder: '30' },
+  { key: 'broker.minPayoutAmount',       type: 'number',  placeholder: '1000' },
+  { key: 'broker.autoApproveLeads',      type: 'boolean' },
+  { key: 'sales.leadExpireDays',         type: 'number',  placeholder: '90' },
+  { key: 'sales.reservationExpireDays',  type: 'number',  placeholder: '7' },
+  { key: 'sales.allowMultiReservation',  type: 'boolean' },
+  { key: 'notifications.emailEnabled',   type: 'boolean' },
+  { key: 'notifications.smsEnabled',     type: 'boolean' },
+  { key: 'notifications.fromEmail',      type: 'text',    placeholder: 'noreply@company.sa' },
+  { key: 'reports.currency',             type: 'text',    placeholder: 'SAR' },
+  { key: 'reports.dateFormat',           type: 'text',    placeholder: 'DD/MM/YYYY' },
+  { key: 'reports.timezone',             type: 'text',    placeholder: 'Asia/Riyadh' },
+  { key: 'security.maxLoginAttempts',    type: 'number',  placeholder: '5' },
+  { key: 'security.sessionTimeoutMins',  type: 'number',  placeholder: '60' },
+  { key: 'security.requireMfa',          type: 'boolean' },
 ];
 
 const CUSTOM_KEY = '__custom__';
 
-export function AddSettingPanel() {
+export function AddSettingPanel({ locale = 'ar' }: { locale?: Locale }) {
+  const m = uiT(locale).pages.settings.addPanel;
   const [open, setOpen]             = useState(false);
   const [selectedKey, setSelectedKey] = useState('');
   const [customKey, setCustomKey]   = useState('');
 
-  const template   = TEMPLATES.find((t) => t.key === selectedKey);
+  const templates: Template[] = TEMPLATE_CONFIGS.map((c) => ({
+    ...c,
+    label: m.templateLabels[c.key] ?? c.key,
+  }));
+
+  const template   = templates.find((t) => t.key === selectedKey);
   const isCustom   = selectedKey === CUSTOM_KEY;
   const resolvedKey = isCustom ? customKey.trim() : (template?.key ?? '');
 
@@ -74,14 +76,14 @@ export function AddSettingPanel() {
         leftIcon={<Plus className="h-4 w-4" />}
         onClick={() => setOpen(true)}
       >
-        إضافة إعداد
+        {m.btnLabel}
       </Button>
 
       <Dialog
         open={open}
         onClose={handleClose}
-        title="إضافة إعداد جديد"
-        description="اختر نوع الإعداد من القائمة، أو أدخل مفتاحاً مخصصاً."
+        title={m.dialogTitle}
+        description={m.dialogDesc}
         size="sm"
       >
         <form action={patchSettingAction} className="space-y-4">
@@ -90,24 +92,24 @@ export function AddSettingPanel() {
           {/* ── Template selector ────────────────────────────────────── */}
           <div className="space-y-1.5">
             <label className="text-sm font-semibold text-slate-900 block">
-              نوع الإعداد
+              {m.fieldType}
             </label>
             <Select
               value={selectedKey}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedKey(e.target.value)}
               required
             >
-              <option value="" disabled>اختر من القائمة...</option>
-              {TEMPLATES.map((t) => (
+              <option value="" disabled>{m.selectPlaceholder}</option>
+              {templates.map((t) => (
                 <option key={t.key} value={t.key}>{t.label}</option>
               ))}
-              <option value={CUSTOM_KEY}>— إعداد مخصص (متقدم) —</option>
+              <option value={CUSTOM_KEY}>{m.customOption}</option>
             </Select>
 
             {/* Technical key chip — shown after template selection */}
             {template && (
               <p className="text-2xs text-slate-400">
-                المفتاح التقني:{' '}
+                {m.techKeyPrefix}{' '}
                 <span
                   className="font-mono text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded"
                   dir="ltr"
@@ -118,11 +120,11 @@ export function AddSettingPanel() {
             )}
           </div>
 
-          {/* ── Custom key — shown for إعداد مخصص only ───────────────── */}
+          {/* ── Custom key — shown for custom option only ─────────────── */}
           {isCustom && (
             <div className="space-y-1.5">
               <label className="text-sm font-semibold text-slate-900 block">
-                المفتاح التقني
+                {m.fieldCustomKey}
               </label>
               <Input
                 placeholder="group.fieldName"
@@ -131,9 +133,9 @@ export function AddSettingPanel() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomKey(e.target.value)}
               />
               <p className="text-2xs text-slate-400">
-                بالتنسيق{' '}
+                {m.customKeyHintFormat}{' '}
                 <span className="font-mono" dir="ltr">group.fieldName</span>
-                {' '}— مثال:{' '}
+                {' '}— {m.customKeyHintExample}{' '}
                 <span className="font-mono" dir="ltr">company.logoUrl</span>
               </p>
             </div>
@@ -142,13 +144,13 @@ export function AddSettingPanel() {
           {/* ── Value input — type-aware ──────────────────────────────── */}
           {(template || isCustom) && (
             <div className="space-y-1.5">
-              <label className="text-sm font-semibold text-slate-900 block">القيمة</label>
+              <label className="text-sm font-semibold text-slate-900 block">{m.fieldValue}</label>
 
               {template?.type === 'boolean' ? (
                 <Select name="value" required>
-                  <option value="">اختر القيمة...</option>
-                  <option value="true">نعم (مفعّل)</option>
-                  <option value="false">لا (معطّل)</option>
+                  <option value="">{m.boolPlaceholder}</option>
+                  <option value="true">{m.boolTrue}</option>
+                  <option value="false">{m.boolFalse}</option>
                 </Select>
               ) : template?.type === 'number' ? (
                 <Input
@@ -164,7 +166,7 @@ export function AddSettingPanel() {
                   name="value"
                   rows={3}
                   dir="ltr"
-                  placeholder={isCustom ? 'نص، رقم، أو JSON: {"key": "value"}' : ''}
+                  placeholder={isCustom ? m.jsonPlaceholder : ''}
                   className="text-xs font-mono resize-none"
                   required
                 />
@@ -182,7 +184,7 @@ export function AddSettingPanel() {
           {/* ── Actions ───────────────────────────────────────────────── */}
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-hairline">
             <Button type="button" variant="ghost" size="sm" onClick={handleClose}>
-              إلغاء
+              {m.btnCancel}
             </Button>
             <Button
               type="submit"
@@ -191,7 +193,7 @@ export function AddSettingPanel() {
               disabled={!resolvedKey}
               leftIcon={<Save className="h-3.5 w-3.5" />}
             >
-              حفظ الإعداد
+              {m.btnSave}
             </Button>
           </div>
         </form>

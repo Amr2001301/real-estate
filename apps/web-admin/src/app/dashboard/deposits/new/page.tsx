@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, Contract } from '@/lib/types';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import RecordDepositForm from './form';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,10 @@ export default async function NewDepositPage({
   searchParams: Promise<{ contractId?: string }>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale);
+  const n = m.pages.depositsNew;
+
   const [r, currency] = await Promise.all([
     safe(api.get<Paged<Contract>>('/contracts?pageSize=200')),
     getReportsCurrency(),
@@ -31,7 +37,7 @@ export default async function NewDepositPage({
                   href={'/dashboard' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  لوحة التحكم
+                  {m.common.breadcrumbHome}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -40,27 +46,27 @@ export default async function NewDepositPage({
                   href={'/dashboard/deposits' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  الدفعات
+                  {m.nav.items.deposits}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">تسجيل دفعة</span>
+                <span className="font-semibold text-slate-600">{n.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                تسجيل دفعة جديدة
+                {n.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                سجّل دفعة مرتبطة بعقد وقسط محدد وأرفق إيصال السداد.
+                {n.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              دفعة جديدة
+              {n.badge}
             </span>
           </div>
         </div>
@@ -71,7 +77,7 @@ export default async function NewDepositPage({
           <p className="font-medium">{r.error}</p>
         </div>
       ) : (
-        <RecordDepositForm contracts={r.data?.data ?? []} initialContractId={sp.contractId} currency={currency} />
+        <RecordDepositForm contracts={r.data?.data ?? []} initialContractId={sp.contractId} currency={currency} locale={locale} />
       )}
     </div>
   );

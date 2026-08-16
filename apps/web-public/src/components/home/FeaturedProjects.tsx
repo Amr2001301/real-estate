@@ -7,39 +7,46 @@ import { Section } from '@/components/ui/Section';
 import { EmptyState } from '@/components/states/EmptyState';
 import { ErrorState } from '@/components/states/ErrorState';
 import { Stagger } from '@/components/motion/Stagger';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { ProjectCard } from './ProjectCard';
 
-export function FeaturedProjects({ result }: { result: ApiResult<Paginated<PublicProjectListItem>> }) {
+export function FeaturedProjects({
+  result,
+  locale,
+}: {
+  result: ApiResult<Paginated<PublicProjectListItem>>;
+  locale: Locale;
+}) {
+  const m = siteT(locale).home.projects;
   const projects = result.ok ? result.data.data.slice(0, 3) : [];
 
   return (
     <Section tone="canvas" className="py-12 sm:py-14 lg:py-16">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl">
-          <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">المشاريع المختارة</h2>
-          <p className="mt-2 text-ink-muted">
-            مشاريع منتقاة تجمع بين الموقع، الجودة، وفرص الاستثمار الواعدة.
-          </p>
+          <h2 className="text-3xl font-bold text-ink-strong lg:text-4xl">{m.title}</h2>
+          <p className="mt-2 text-ink-muted">{m.sub}</p>
         </div>
         <Link
           href={routes.projects}
           className="shrink-0 text-sm font-semibold text-gold-600 underline-offset-4 transition-colors hover:text-gold-700 hover:underline"
         >
-          عرض جميع المشاريع
+          {m.viewAll}
         </Link>
       </div>
 
       <div className="mt-8">
         {!result.ok ? (
           <ErrorState
-            title="لم نتمكن من تحميل المشاريع حاليًا"
-            message="تأكد من تشغيل الخادم أو حاول مرة أخرى بعد لحظات."
+            title={m.errorTitle}
+            message={m.errorMsg}
             className="mx-auto max-w-2xl"
           />
         ) : projects.length === 0 ? (
           <EmptyState
-            title="لا توجد مشاريع منشورة حاليًا"
-            message="سيتم عرض المشاريع فور إتاحتها."
+            title={m.emptyTitle}
+            message={m.emptyMsg}
             icon={<Building2 className="h-6 w-6" aria-hidden />}
             className="mx-auto max-w-2xl"
           />

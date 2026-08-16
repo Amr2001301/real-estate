@@ -3,6 +3,8 @@
 import { useState, useTransition } from 'react';
 import { Check, AlertCircle, Loader2, ShieldCheck, ShieldOff, Clock } from 'lucide-react';
 import type { MaintenanceCategory, UnitMaintenanceItem } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { tx, formatDate } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { selectCategoryAction, setMaintenanceItemActiveAction } from './maintenance-items-actions';
@@ -14,11 +16,14 @@ export function MaintenanceItemsManager({
   unitId,
   items,
   categories,
+  locale = 'ar',
 }: {
   unitId: string;
   items: UnitMaintenanceItem[];
   categories: MaintenanceCategory[];
+  locale?: Locale;
 }) {
+  const m = uiT(locale).pages.units.maintenanceCard;
   const [error, setError] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -50,7 +55,7 @@ export function MaintenanceItemsManager({
   }
 
   if (categories.length === 0) {
-    return <p className="text-sm text-slate-500">لا توجد تصنيفات صيانة نشطة. أضِف تصنيفات من صفحة الصيانة أولاً.</p>;
+    return <p className="text-sm text-slate-500">{m.emptyCategories}</p>;
   }
 
   return (
@@ -94,24 +99,24 @@ export function MaintenanceItemsManager({
               </div>
               <div className="mt-2 text-[11px]">
                 {!selected ? (
-                  <span className="text-slate-400">غير محدد</span>
+                  <span className="text-slate-400">{m.statusNotSelected}</span>
                 ) : !warrantyStarted ? (
                   <span className="inline-flex items-center gap-1 text-slate-500">
-                    <Clock className="h-3 w-3" /> لم يبدأ الضمان بعد
+                    <Clock className="h-3 w-3" /> {m.statusWarrantyNotStarted}
                   </span>
                 ) : item!.warrantyStatus === 'IN_WARRANTY' ? (
                   <span className="inline-flex items-center gap-1 text-success-700">
                     <ShieldCheck className="h-3 w-3" />
-                    {item!.warrantyEnd ? `تحت الضمان حتى ${formatDate(item!.warrantyEnd)}` : 'تحت الضمان'}
+                    {item!.warrantyEnd ? m.statusUnderWarrantyUntil(formatDate(item!.warrantyEnd)) : m.statusUnderWarranty}
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-danger-600">
-                    <ShieldOff className="h-3 w-3" /> خارج الضمان
+                    <ShieldOff className="h-3 w-3" /> {m.statusOutOfWarranty}
                   </span>
                 )}
               </div>
               {selected && warrantyStarted && (
-                <p className="mt-1 text-[10px] text-slate-400">بدأ الضمان بالفعل بعد بيع الوحدة</p>
+                <p className="mt-1 text-[10px] text-slate-400">{m.warrantyStartedNote}</p>
               )}
             </button>
           );

@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { PremiumFormPanel } from '@/components/premium';
 import { tx, formatCurrency, formatDate } from '@/lib/format';
 import type { AdminEligibleCommission } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import {
   createBrokerPayoutAction,
   type BrokerPayoutActionState,
@@ -29,6 +31,7 @@ interface Props {
   brokerName:        string | null;
   eligible:          AdminEligibleCommission[];
   currency?:         string;
+  locale?:           Locale;
 }
 
 function FormField({
@@ -62,7 +65,9 @@ export default function CreatePayoutForm({
   brokerName,
   eligible,
   currency = 'SAR',
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.brokerPayoutsForm;
   const router = useRouter();
   const [state, formAction] = useActionState<BrokerPayoutActionState, FormData>(
     createBrokerPayoutAction,
@@ -105,6 +110,10 @@ export default function CreatePayoutForm({
     router.replace(`/dashboard/broker-payouts/new${qs}`);
   }
 
+  const panel03Desc = brokerName
+    ? `${m.panel03Title} — ${brokerName}.`
+    : m.hintPeriod;
+
   return (
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="brokerId" value={selectedBrokerId} />
@@ -120,16 +129,16 @@ export default function CreatePayoutForm({
       <PremiumFormPanel
         id="broker"
         number="01"
-        title="الوسيط"
-        description="اختر شركة الوساطة. ستُحمّل تلقائيًا العمولات المعتمدة المؤهلة لهذا الوسيط."
+        title={m.panel01Title}
+        description={m.panel01Desc}
       >
-        <FormField label="شركة الوساطة" required>
+        <FormField label={m.labelBroker} required>
           <Select
             value={selectedBrokerId}
             onChange={(e) => onBrokerChange(e.target.value)}
             required
           >
-            <option value="" disabled>اختر شركة الوساطة</option>
+            <option value="" disabled>{m.optionChooseBroker}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.companyName}
@@ -143,20 +152,17 @@ export default function CreatePayoutForm({
       <PremiumFormPanel
         id="commissions"
         number="02"
-        title="العمولات المؤهلة"
-        description="عمولات بحالة APPROVED غير مرتبطة بأي دفعة. حدد ما يدخل في هذه الدفعة."
+        title={m.panel02Title}
+        description={m.panel02Desc}
       >
         {!selectedBrokerId ? (
           <p className="text-sm text-slate-400 py-1">
-            اختر وسيطًا أولًا لعرض العمولات المؤهلة.
+            {m.noBrokerMsg}
           </p>
         ) : eligible.length === 0 ? (
           <div className="flex items-start gap-2.5 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3.5 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>
-              لا توجد عمولات معتمدة وغير مرتبطة بدفعة لهذا الوسيط.
-              اعتمد العمولات من صفحة العمولات أولًا.
-            </p>
+            <p>{m.noCommissionsMsg}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -166,10 +172,10 @@ export default function CreatePayoutForm({
               <div className="flex items-center gap-3 px-4 py-3 bg-canvas/40 border-b border-hairline">
                 <label className="inline-flex items-center gap-2 cursor-pointer select-none">
                   <Checkbox checked={allSelected} onChange={toggleAll} />
-                  <span className="text-[11px] font-semibold text-slate-600">تحديد الكل</span>
+                  <span className="text-[11px] font-semibold text-slate-600">{m.selectAll}</span>
                 </label>
                 <span className="ms-auto text-[11px] text-slate-400">
-                  {selected.size} من {eligible.length} محدد
+                  {selected.size} {m.fromCount} {eligible.length} {m.selectedCount}
                 </span>
               </div>
 
@@ -217,8 +223,8 @@ export default function CreatePayoutForm({
                           {c.project && <> · {tx(c.project.name)}</>}
                         </p>
                         <p className="text-[11px] text-slate-500 mt-1 tabular-nums">
-                          إجمالي {formatCurrency(c.grossAmount, currency)}
-                          {' · '}صافي{' '}
+                          {m.totalGross.split(' ')[0]} {formatCurrency(c.grossAmount, currency)}
+                          {' · '}{m.totalNet.split(' ')[0]}{' '}
                           <span className="font-bold text-success-700">
                             {formatCurrency(c.netAmount, currency)}
                           </span>
@@ -235,7 +241,7 @@ export default function CreatePayoutForm({
               <div className="grid grid-cols-2 sm:grid-cols-4 rounded-[16px] border border-hairline overflow-hidden divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline bg-canvas/30">
                 <div className="flex flex-col gap-0.5 px-4 py-3.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                    إجمالي قبل الخصم
+                    {m.totalGross}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(totals.gross, currency)}
@@ -243,7 +249,7 @@ export default function CreatePayoutForm({
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                    الضريبة
+                    {m.totalTax}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(totals.tax, currency)}
@@ -251,7 +257,7 @@ export default function CreatePayoutForm({
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                    حجز ضريبي
+                    {m.totalWithholding}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(totals.withholding, currency)}
@@ -259,7 +265,7 @@ export default function CreatePayoutForm({
                 </div>
                 <div className="flex flex-col gap-0.5 px-4 py-3.5 bg-success-50/40">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-success-600">
-                    الصافي المستحق
+                    {m.totalNet}
                   </p>
                   <p className="text-[14px] font-bold tabular-nums text-success-700">
                     {formatCurrency(totals.net, currency)}
@@ -275,18 +281,14 @@ export default function CreatePayoutForm({
       <PremiumFormPanel
         id="details"
         number="03"
-        title="بيانات الدفعة واعتمادها"
-        description={
-          brokerName
-            ? `الدفعة لشركة ${brokerName}. حدد الفترة المرجعية إن أردت ربطها بالتقارير الشهرية.`
-            : 'حدد الفترة المرجعية إن أردت ربطها بالتقارير الشهرية.'
-        }
+        title={m.panel03Title}
+        description={panel03Desc}
       >
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
-              label="الفترة"
-              hint="اختياري — صيغة YYYY-MM (مثل 2026-05)"
+              label={m.labelPeriod}
+              hint={m.hintPeriod}
             >
               <Input
                 id="period"
@@ -296,17 +298,17 @@ export default function CreatePayoutForm({
                 pattern="\d{4}-(0[1-9]|1[0-2])"
               />
             </FormField>
-            <FormField label="ملاحظات" hint="اختياري">
+            <FormField label={m.labelNotes} hint={m.hintNotes}>
               <Textarea id="notes" name="notes" rows={2} />
             </FormField>
           </div>
 
           <div className="flex items-center justify-between gap-4 pt-5 border-t border-hairline">
             <p className="text-[11px] text-slate-400 leading-snug max-w-xs">
-              ستُحفظ الدفعة كمسودة ويمكن مراجعتها قبل الاعتماد.
+              {m.helperDraft}
               {selected.size > 0 && (
                 <>
-                  {' '}عدد المحدد:{' '}
+                  {' '}{m.helperSelected}{' '}
                   <span className="font-semibold text-slate-600">{selected.size}</span>
                 </>
               )}
@@ -319,10 +321,10 @@ export default function CreatePayoutForm({
                   size="sm"
                   leftIcon={<X className="h-4 w-4" />}
                 >
-                  إلغاء
+                  {m.cancelBtn}
                 </Button>
               </Link>
-              <SubmitButton>إنشاء الدفعة (مسودة)</SubmitButton>
+              <SubmitButton>{m.submitBtn}</SubmitButton>
             </div>
           </div>
         </div>

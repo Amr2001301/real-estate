@@ -17,6 +17,8 @@ import type { Paged, Reservation, User as UserType } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency, currencySymbol } from '@/lib/currency';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import {
   ReservationStatusBadge,
   ReservationBookingPaymentBadge,
@@ -48,6 +50,8 @@ export default async function ReservationDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.reservationDetailPage;
 
   const res = await safe(api.get<Reservation>(`/reservations/${id}`));
 
@@ -55,7 +59,7 @@ export default async function ReservationDetailPage({
     return (
       <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
         <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-        <p>تعذر تحميل بيانات الحجز: {res.error ?? 'غير موجود'}</p>
+        <p>{m.errorLoad} {res.error ?? m.errorNotFound}</p>
       </div>
     );
   }
@@ -90,12 +94,12 @@ export default async function ReservationDetailPage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title={`حجز — ${reservation.reservationNumber ?? reservation.id.slice(0, 8)}`}
-        description={`العميل: ${clientName}${reservation.unit ? ` · الوحدة: ${reservation.unit.code}` : ''}`}
+        title={`${m.titlePrefix}${reservation.reservationNumber ?? reservation.id.slice(0, 8)}`}
+        description={`${m.clientPrefix} ${clientName}${reservation.unit ? ` · ${m.unitPrefix} ${reservation.unit.code}` : ''}`}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الحجوزات', href: '/dashboard/reservations' },
-          { label: reservation.reservationNumber ?? 'الحجز' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbReservations, href: '/dashboard/reservations' },
+          { label: reservation.reservationNumber ?? m.breadcrumbReservationFallback },
         ]}
         meta={
           <div className="flex items-center gap-2 flex-wrap">
@@ -103,7 +107,7 @@ export default async function ReservationDetailPage({
             {isExpired && (
               <span className="inline-flex items-center gap-1 text-xs text-danger-600 bg-danger-50 px-2 py-0.5 rounded-full">
                 <Clock className="h-3.5 w-3.5" />
-                انتهت الصلاحية
+                {m.expiredBadge}
               </span>
             )}
           </div>
@@ -121,6 +125,7 @@ export default async function ReservationDetailPage({
                 fullName: s.fullName,
               }))}
               canManage={isAdmin}
+              locale={locale}
             />
           </div>
         }
@@ -130,29 +135,29 @@ export default async function ReservationDetailPage({
         main={
           <>
             {/* Reservation details */}
-            <PremiumSectionCard title="تفاصيل الحجز">
+            <PremiumSectionCard title={m.sectionReservationDetails}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-                <Field label="رقم الحجز">
+                <Field label={m.fieldReservationNumber}>
                   <span className="font-mono text-[15px] font-bold text-slate-900">
                     {reservation.reservationNumber ?? reservation.id.slice(0, 8)}
                   </span>
                 </Field>
-                <Field label="الحالة">
+                <Field label={m.fieldStatus}>
                   <ReservationStatusBadge status={reservation.status} />
                 </Field>
-                <Field label="تاريخ الإنشاء">
+                <Field label={m.fieldCreatedAt}>
                   <span className="text-[13px] font-semibold text-slate-800">
                     {formatDateTime(reservation.createdAt)}
                   </span>
                 </Field>
-                <Field label="تاريخ الانتهاء">
+                <Field label={m.fieldExpiresAt}>
                   <span className={cn('text-[13px] font-semibold', isExpired ? 'text-danger-600' : 'text-slate-800')}>
                     {formatDateTime(reservation.expiresAt)}
                   </span>
                 </Field>
                 {reservation.approvedAt && (
                   <Field
-                    label="تاريخ الموافقة"
+                    label={m.fieldApprovedAt}
                     className={!reservation.rejectedAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-success-700">
@@ -162,7 +167,7 @@ export default async function ReservationDetailPage({
                 )}
                 {reservation.rejectedAt && (
                   <Field
-                    label="تاريخ الرفض"
+                    label={m.fieldRejectedAt}
                     className={!reservation.approvedAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-danger-600">
@@ -172,7 +177,7 @@ export default async function ReservationDetailPage({
                 )}
                 {reservation.cancelledAt && (
                   <Field
-                    label="تاريخ الإلغاء"
+                    label={m.fieldCancelledAt}
                     className={!reservation.convertedAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-danger-600">
@@ -182,7 +187,7 @@ export default async function ReservationDetailPage({
                 )}
                 {reservation.convertedAt && (
                   <Field
-                    label="تاريخ التحويل إلى عقد"
+                    label={m.fieldConvertedAt}
                     className={!reservation.cancelledAt ? 'col-span-2' : undefined}
                   >
                     <span className="text-[13px] font-semibold text-success-700">
@@ -191,12 +196,12 @@ export default async function ReservationDetailPage({
                   </Field>
                 )}
                 {reservation.reason && (
-                  <Field label="السبب" className="col-span-2">
+                  <Field label={m.fieldReason} className="col-span-2">
                     <span className="text-[13px] font-medium text-slate-700">{reservation.reason}</span>
                   </Field>
                 )}
                 {reservation.notes && (
-                  <Field label="ملاحظات الحجز" className="col-span-2">
+                  <Field label={m.fieldNotes} className="col-span-2">
                     <span className="text-[13px] font-medium text-slate-700">{reservation.notes}</span>
                   </Field>
                 )}
@@ -204,13 +209,13 @@ export default async function ReservationDetailPage({
             </PremiumSectionCard>
 
             {/* Booking amount */}
-            <PremiumSectionCard title="مبلغ الحجز">
+            <PremiumSectionCard title={m.sectionBookingAmount}>
               <div className="space-y-4">
                 {/* Installment plan / notes (rare) */}
                 {(reservation.installmentPlanTemplate || reservation.bookingNotes) && (
                   <div className="space-y-4">
                     {reservation.installmentPlanTemplate && (
-                      <Field label="خطة التقسيط">
+                      <Field label={m.fieldInstallmentPlan}>
                         <Link
                           href={`/dashboard/installments/${reservation.installmentPlanTemplate.id}` as never}
                           className="text-[13px] font-semibold text-brand-700 hover:underline"
@@ -220,7 +225,7 @@ export default async function ReservationDetailPage({
                       </Field>
                     )}
                     {reservation.bookingNotes && (
-                      <Field label="ملاحظات">
+                      <Field label={m.fieldBookingNotes}>
                         <span className="text-[13px] font-medium text-slate-700 whitespace-pre-wrap">
                           {reservation.bookingNotes}
                         </span>
@@ -233,7 +238,7 @@ export default async function ReservationDetailPage({
                 {bookingDeposits.length > 0 && (
                   <div className="space-y-2.5">
                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.12em]">
-                      دفعة مبلغ الحجز
+                      {m.depositLabel}
                     </p>
                     <ul className="flex flex-col gap-2">
                       {bookingDeposits.map((dep) => (
@@ -255,7 +260,7 @@ export default async function ReservationDetailPage({
                           {/* Status + links on the same line */}
                           <div className="flex items-center gap-3 shrink-0">
                             <span className={cn('text-[12px] font-semibold', dep.verified ? 'text-success-600' : 'text-amber-600')}>
-                              {dep.verified ? 'متحقق' : 'غير متحقق'}
+                              {dep.verified ? m.depositVerified : m.depositNotVerified}
                             </span>
                             {dep.receiptUrl && (
                               <a
@@ -264,14 +269,14 @@ export default async function ReservationDetailPage({
                                 rel="noopener noreferrer"
                                 className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1"
                               >
-                                <ExternalLink className="h-3 w-3" /> إيصال
+                                <ExternalLink className="h-3 w-3" /> {m.receiptLabel}
                               </a>
                             )}
                             <Link
                               href={`/dashboard/deposits/${dep.id}` as never}
                               className="text-xs font-semibold text-brand-700 hover:text-brand-800"
                             >
-                              تفاصيل
+                              {m.depositDetailsLabel}
                             </Link>
                           </div>
                         </li>
@@ -279,7 +284,7 @@ export default async function ReservationDetailPage({
                     </ul>
                     {bookingDeposits.length > 1 && (
                       <p className="text-2xs text-amber-700">
-                        تنبيه: يوجد أكثر من دفعة حجز مسجّلة لهذا الحجز.
+                        {m.depositMultipleWarning}
                       </p>
                     )}
                   </div>
@@ -291,6 +296,7 @@ export default async function ReservationDetailPage({
                     bookingPaymentStatus={reservation.bookingPaymentStatus}
                     reservationStatus={reservation.status}
                     bookingAmount={Number(reservation.bookingAmount)}
+                    locale={locale}
                   />
                 )}
               </div>
@@ -298,45 +304,45 @@ export default async function ReservationDetailPage({
 
             {/* Selected duration snapshot */}
             {reservation.selectedDurationMonths != null && (
-              <PremiumSectionCard title="خطة التقسيط المختارة">
+              <PremiumSectionCard title={m.sectionInstallmentPlan}>
                 <div className="space-y-5">
                   <p className="text-2xs text-slate-400">
-                    هذه القيم تم تجميدها عند إنشاء الحجز ولا تتأثر بأي تعديل لاحق على الخطة.
+                    {m.snapshotFrozenNote}
                   </p>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                    <Field label="مدة التقسيط المختارة">
+                    <Field label={m.fieldDuration}>
                       <span className="text-[14px] font-bold text-slate-900 tabular-nums">
-                        {reservation.selectedDurationMonths} شهر
+                        {reservation.selectedDurationMonths} {m.monthSuffix}
                       </span>
                     </Field>
-                    <Field label="نسبة الزيادة">
+                    <Field label={m.fieldIncreaseRate}>
                       <span className="text-[14px] font-bold text-slate-900 tabular-nums">
                         {Number(reservation.selectedIncreasePercentage ?? 0)}%
                       </span>
                     </Field>
                     {reservation.snapshotDownPaymentAmount != null && (
-                      <Field label="الدفعة الأولى">
+                      <Field label={m.fieldDownPayment}>
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
                           {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} {symbol}
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotRemainingAmount != null && (
-                      <Field label="المبلغ المتبقي">
+                      <Field label={m.fieldRemaining}>
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
                           {Number(reservation.snapshotRemainingAmount).toLocaleString('ar-SA')} {symbol}
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotFinancedAmount != null && (
-                      <Field label="المبلغ الممول">
+                      <Field label={m.fieldFinanced}>
                         <span className="text-[14px] font-bold text-slate-900 tabular-nums" dir="ltr">
                           {Number(reservation.snapshotFinancedAmount).toLocaleString('ar-SA')} {symbol}
                         </span>
                       </Field>
                     )}
                     {reservation.snapshotMonthlyInstallment != null && (
-                      <Field label="القسط الشهري">
+                      <Field label={m.fieldMonthly}>
                         <span className="text-[14px] font-bold text-brand-700 tabular-nums" dir="ltr">
                           {Number(reservation.snapshotMonthlyInstallment).toLocaleString('ar-SA', {
                             minimumFractionDigits: 2,
@@ -354,7 +360,7 @@ export default async function ReservationDetailPage({
                         style={{ background: 'linear-gradient(to left, transparent, #e6c46a 30%, #b8923e 50%, #e6c46a 70%, transparent)' }}
                       />
                       <div className="flex items-end justify-between gap-4">
-                        <Field label="إجمالي السداد">
+                        <Field label={m.fieldTotalPayable}>
                           <span className="text-[28px] font-black tabular-nums leading-none text-slate-900" dir="ltr">
                             {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')}
                             <span className="text-[15px] font-semibold text-slate-400 ms-1.5">{symbol}</span>
@@ -368,7 +374,7 @@ export default async function ReservationDetailPage({
             )}
 
             {/* Internal notes */}
-            <PremiumSectionCard title="الملاحظات الداخلية">
+            <PremiumSectionCard title={m.sectionInternalNotes}>
               <div className="space-y-4">
                 <AddNoteForm reservationId={reservation.id} />
                 {notes.length > 0 && (
@@ -382,7 +388,7 @@ export default async function ReservationDetailPage({
                         <p className="text-[13.5px] text-slate-800 leading-relaxed pe-3">{note.body}</p>
                         <p className="text-2xs text-slate-400 mt-1.5 inline-flex items-center gap-1.5">
                           <span className="font-medium text-slate-500">
-                            {note.author?.fullName ?? 'النظام'}
+                            {note.author?.fullName ?? m.noteAuthorSystem}
                           </span>
                           <span className="text-slate-300">·</span>
                           <span>{formatDateTime(note.createdAt)}</span>
@@ -395,7 +401,7 @@ export default async function ReservationDetailPage({
             </PremiumSectionCard>
 
             {/* Activity timeline — render ReservationTimeline directly to avoid duplicate header */}
-            <PremiumSectionCard title="سجل النشاط">
+            <PremiumSectionCard title={m.sectionActivity}>
               <ReservationTimeline activities={activities} />
             </PremiumSectionCard>
           </>
@@ -403,42 +409,42 @@ export default async function ReservationDetailPage({
         side={
           <>
             {/* Quick navigation */}
-            <PremiumCommandPanel title="إجراءات سريعة">
+            <PremiumCommandPanel title={m.sectionQuickActions}>
               {reservation.unit && (
                 <Link href={`/dashboard/units/${reservation.unitId}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><Home /></span>
-                  <span>عرض الوحدة</span>
+                  <span>{m.cmdViewUnit}</span>
                 </Link>
               )}
               {reservation.lead && (
                 <Link href={`/dashboard/leads/${reservation.leadId}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><User /></span>
-                  <span>عرض العميل المحتمل</span>
+                  <span>{m.cmdViewLead}</span>
                 </Link>
               )}
               {reservation.client && (
                 <Link href={`/dashboard/clients/${reservation.clientId}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><User /></span>
-                  <span>عرض ملف العميل</span>
+                  <span>{m.cmdViewClient}</span>
                 </Link>
               )}
               {project && (
                 <Link href={`/dashboard/projects/${project.id}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><Building2 /></span>
-                  <span>عرض المشروع</span>
+                  <span>{m.cmdViewProject}</span>
                 </Link>
               )}
               {reservation.status === 'CONVERTED' && reservation.contract && (
                 <Link href={`/dashboard/contracts/${reservation.contract.id}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><FileText /></span>
-                  <span>عرض العقد</span>
+                  <span>{m.cmdViewContract}</span>
                 </Link>
               )}
             </PremiumCommandPanel>
 
             {/* Linked contract */}
             {reservation.status === 'CONVERTED' && reservation.contract && (
-              <PremiumSectionCard title="العقد المرتبط" icon={<FileText />}>
+              <PremiumSectionCard title={m.sectionLinkedContract} icon={<FileText />}>
                 <div className="flex items-center gap-3">
                   <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-success-50 text-success-600 [&_svg]:h-5 [&_svg]:w-5">
                     <FileText />
@@ -453,7 +459,7 @@ export default async function ReservationDetailPage({
                     </Link>
                     {reservation.convertedAt && (
                       <p className="text-2xs text-slate-400 mt-0.5">
-                        في {formatDateTime(reservation.convertedAt)}
+                        {m.contractConvertedAtPrefix}{formatDateTime(reservation.convertedAt)}
                       </p>
                     )}
                   </div>
@@ -463,7 +469,7 @@ export default async function ReservationDetailPage({
 
             {/* Convert to contract */}
             {isAdmin && reservation.status === 'APPROVED' && (
-              <PremiumSectionCard title="تحويل إلى عقد" icon={<FileText />}>
+              <PremiumSectionCard title={m.sectionConvertToContract} icon={<FileText />}>
                 <ConvertReservationForm
                   reservation={{
                     id: reservation.id,
@@ -485,7 +491,7 @@ export default async function ReservationDetailPage({
             )}
 
             {/* Client / Lead */}
-            <PremiumSectionCard title="معلومات العميل" icon={<User />}>
+            <PremiumSectionCard title={m.sectionClientInfo} icon={<User />}>
               <div className="space-y-2.5">
                 <p className="text-[15px] font-bold text-slate-900">{clientName}</p>
                 {clientPhone && (
@@ -516,7 +522,7 @@ export default async function ReservationDetailPage({
                     className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    عرض العميل المحتمل
+                    {m.linkViewLead}
                   </Link>
                 )}
                 {reservation.client && (
@@ -525,7 +531,7 @@ export default async function ReservationDetailPage({
                     className="flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
-                    عرض ملف العميل
+                    {m.linkViewClient}
                   </Link>
                 )}
               </div>
@@ -533,7 +539,7 @@ export default async function ReservationDetailPage({
 
             {/* Unit */}
             {reservation.unit && (
-              <PremiumSectionCard title="معلومات الوحدة" icon={<Home />}>
+              <PremiumSectionCard title={m.sectionUnitInfo} icon={<Home />}>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <Link
@@ -548,22 +554,22 @@ export default async function ReservationDetailPage({
                     <p className="text-xs text-slate-400 -mt-2">{reservation.unit.type}</p>
                   )}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                    <Field label="المساحة">
+                    <Field label={m.fieldArea}>
                       <span className="text-[14px] font-bold text-slate-800 tabular-nums">
-                        {reservation.unit.area} م²
+                        {reservation.unit.area} {m.areaSuffix}
                       </span>
                     </Field>
-                    <Field label="الطابق">
+                    <Field label={m.fieldFloor}>
                       <span className="text-[14px] font-bold text-slate-800 tabular-nums">
                         {reservation.unit.floor}
                       </span>
                     </Field>
-                    <Field label="غرف النوم">
+                    <Field label={m.fieldBedrooms}>
                       <span className="text-[14px] font-bold text-slate-800 tabular-nums">
                         {reservation.unit.bedrooms}
                       </span>
                     </Field>
-                    <Field label="السعر">
+                    <Field label={m.fieldPrice}>
                       <span className="text-[14px] font-bold text-slate-800 tabular-nums" dir="ltr">
                         {Number(reservation.unit.price).toLocaleString('ar-SA')} {symbol}
                       </span>
@@ -575,7 +581,7 @@ export default async function ReservationDetailPage({
 
             {/* Project */}
             {project && (
-              <PremiumSectionCard title="المشروع" icon={<Building2 />}>
+              <PremiumSectionCard title={m.sectionProject} icon={<Building2 />}>
                 <div className="flex items-center gap-3">
                   <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 [&_svg]:h-5 [&_svg]:w-5">
                     <Building2 />
@@ -595,7 +601,7 @@ export default async function ReservationDetailPage({
 
             {/* Sales person */}
             {reservation.sales && (
-              <PremiumSectionCard title="المندوب المسؤول" icon={<User />}>
+              <PremiumSectionCard title={m.sectionSalesAgent} icon={<User />}>
                 <div className="flex items-center gap-3">
                   <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-5 [&_svg]:w-5">
                     <User />
@@ -603,7 +609,7 @@ export default async function ReservationDetailPage({
                   <div className="min-w-0">
                     <p className="text-[13.5px] font-bold text-slate-900">{reservation.sales.fullName}</p>
                     <p className="text-2xs text-slate-400 mt-0.5">
-                      أنشأ الحجز في {formatDate(reservation.createdAt)}
+                      {m.salesCreatedPrefix} {formatDate(reservation.createdAt)}
                     </p>
                   </div>
                 </div>

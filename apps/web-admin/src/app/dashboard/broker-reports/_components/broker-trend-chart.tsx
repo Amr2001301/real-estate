@@ -18,11 +18,14 @@ function formatK(v: number): string {
   return String(Math.round(v));
 }
 
-function CustomTooltip({ active, payload, label, fmt }: {
+function CustomTooltip({ active, payload, label, fmt, tooltipContracts, tooltipCommissions, tooltipPayouts }: {
   active?:  boolean;
   payload?: { name: string; value: number; color: string }[];
   label?:   string;
   fmt:      (v: number) => string;
+  tooltipContracts?: string;
+  tooltipCommissions?: string;
+  tooltipPayouts?: string;
 }) {
   if (!active || !payload?.length) return null;
   const contracts = (payload[0] as { payload?: { contractsSigned: number } })?.payload?.contractsSigned ?? 0;
@@ -31,7 +34,7 @@ function CustomTooltip({ active, payload, label, fmt }: {
       <p className="font-bold text-slate-800 mb-2 text-[13px]">{label}</p>
       {contracts > 0 && (
         <div className="flex items-center justify-between gap-4 pb-2 mb-2 border-b border-slate-100">
-          <span className="text-slate-400">عقود موقّعة</span>
+          <span className="text-slate-400">{tooltipContracts ?? 'عقود موقّعة'}</span>
           <span className="font-black text-slate-900 tabular-nums">{contracts}</span>
         </div>
       )}
@@ -40,7 +43,7 @@ function CustomTooltip({ active, payload, label, fmt }: {
           <div className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: entry.color }} />
             <span className="text-slate-500">
-              {entry.name === 'commissionsNet' ? 'العمولات' : 'المدفوع'}
+              {entry.name === 'commissionsNet' ? (tooltipCommissions ?? 'العمولات') : (tooltipPayouts ?? 'المدفوع')}
             </span>
           </div>
           <span className="font-bold tabular-nums text-slate-900" dir="ltr">
@@ -56,13 +59,23 @@ export function BrokerTrendChart({
   data,
   height = '100%',
   currency = 'SAR',
+  locale = 'ar',
+  tooltipContracts,
+  tooltipCommissions,
+  tooltipPayouts,
+  noDataLabel,
 }: {
-  data:      BrokerTrendBucket[];
-  height?:   number | `${number}%`;
-  currency?: string;
+  data:               BrokerTrendBucket[];
+  height?:            number | `${number}%`;
+  currency?:          string;
+  locale?:            string;
+  tooltipContracts?:  string;
+  tooltipCommissions?: string;
+  tooltipPayouts?:    string;
+  noDataLabel?:       string;
 }) {
   function fmt(v: number): string {
-    return new Intl.NumberFormat('ar-SA', {
+    return new Intl.NumberFormat(locale === 'ar' ? 'ar-SA' : 'en-US', {
       style: 'currency', currency, maximumFractionDigits: 0,
     }).format(v);
   }
@@ -86,7 +99,7 @@ export function BrokerTrendChart({
   if (isEmpty) {
     return (
       <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
-        <p className="text-sm text-slate-400">لا توجد عمولات في هذه الفترة</p>
+        <p className="text-sm text-slate-400">{noDataLabel ?? 'لا توجد عمولات في هذه الفترة'}</p>
       </div>
     );
   }
@@ -113,7 +126,7 @@ export function BrokerTrendChart({
           tickLine={false}
           width={32}
         />
-        <Tooltip content={<CustomTooltip fmt={fmt} />} cursor={{ fill: '#f8fafc', radius: 6 }} />
+        <Tooltip content={<CustomTooltip fmt={fmt} tooltipContracts={tooltipContracts} tooltipCommissions={tooltipCommissions} tooltipPayouts={tooltipPayouts} />} cursor={{ fill: '#f8fafc', radius: 6 }} />
 
         {/* Commissions Net — amber */}
         <Bar dataKey="commissionsNet" name="commissionsNet" radius={[6, 6, 0, 0]} maxBarSize={26} minPointSize={3}>

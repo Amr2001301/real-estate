@@ -1,19 +1,16 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 interface Props {
   collected: number;
   overdue: number;
   remaining: number;
   contractValue: number;
+  locale?: Locale;
 }
-
-const SEGMENTS = [
-  { key: 'collected', label: 'المحصّل', color: '#10b981' },
-  { key: 'overdue',   label: 'المتأخر', color: '#ef4444' },
-  { key: 'remaining', label: 'المتبقي', color: '#e2e8f0' },
-] as const;
 
 function DooltipContent({ active, payload }: {
   active?: boolean;
@@ -31,20 +28,23 @@ function DooltipContent({ active, payload }: {
   );
 }
 
-export function PaymentDonutChart({ collected, overdue, remaining, contractValue }: Props) {
+type Segment = { key: string; label: string; color: string; value: number };
+
+export function PaymentDonutChart({ collected, overdue, remaining, contractValue, locale = 'ar' }: Props) {
+  const m = uiT(locale).financialReportsPage.distribution;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
   const total = contractValue > 0 ? contractValue : collected + overdue + remaining;
   const collectedPct = total > 0 ? Math.round((collected / total) * 100) : 0;
 
-  const rawData = [
-    { ...SEGMENTS[0], value: collected },
-    { ...SEGMENTS[1], value: overdue },
-    { ...SEGMENTS[2], value: remaining },
+  const rawData: Segment[] = [
+    { key: 'collected', label: m.collectedLabel, color: '#10b981', value: collected },
+    { key: 'overdue',   label: m.overdueLabel,   color: '#ef4444', value: overdue },
+    { key: 'remaining', label: m.remainingLabel, color: '#e2e8f0', value: remaining },
   ].filter((d) => d.value > 0);
 
-  const data = rawData.length > 0 ? rawData : [{ key: 'empty' as const, label: 'لا يوجد', color: '#e2e8f0', value: 1 }];
+  const data: Segment[] = rawData.length > 0 ? rawData : [{ key: 'empty', label: m.emptyLabel, color: '#e2e8f0', value: 1 }];
 
   if (!mounted) {
     return (
@@ -77,8 +77,8 @@ export function PaymentDonutChart({ collected, overdue, remaining, contractValue
         </PieChart>
       </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-        <span className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{collectedPct}٪</span>
-        <span className="text-[10px] text-slate-400 mt-0.5">محصّل</span>
+        <span className="text-2xl font-bold text-slate-900 tabular-nums leading-none">{collectedPct}{m.centerPct}</span>
+        <span className="text-[10px] text-slate-400 mt-0.5">{m.centerLabel}</span>
       </div>
     </div>
   );

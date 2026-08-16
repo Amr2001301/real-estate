@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { PremiumPageHero, PremiumSectionCard, PremiumMetricStrip } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -71,15 +73,17 @@ async function createBannerAction(formData: FormData) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function CmsPage() {
-  const [pagesRes, bannersRes, articlesRes] = await Promise.all([
+  const [pagesRes, bannersRes, articlesRes, locale] = await Promise.all([
     safe(api.get<CmsPage[]>('/cms/pages')),
     safe(api.get<Banner[]>('/cms/banners')),
     safe(api.get<Article[]>('/cms/articles')),
+    getLocale(),
   ]);
 
   const pages = pagesRes.data ?? [];
   const banners = bannersRes.data ?? [];
   const articles = articlesRes.data ?? [];
+  const m = uiT(locale).cmsPage;
 
   const publishedPages = pages.filter((p) => p.published).length;
   const publishedArticles = articles.filter((a) => a.published).length;
@@ -88,11 +92,11 @@ export default async function CmsPage() {
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="إدارة المحتوى"
-        description="إدارة الصفحات، البانرات، والمقالات المنشورة على المنصة."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'إدارة المحتوى' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbCms },
         ]}
       />
 
@@ -100,10 +104,10 @@ export default async function CmsPage() {
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'الصفحات', value: pages.length, icon: <FileText /> },
-          { label: 'البانرات', value: banners.length, sub: `${activeBanners} نشط`, icon: <Image /> },
-          { label: 'المقالات', value: articles.length, sub: `${publishedArticles} منشور`, icon: <BookOpen /> },
-          { label: 'منشور', value: publishedPages, icon: <Globe />, tone: 'success' },
+          { label: m.metricPages, value: pages.length, icon: <FileText /> },
+          { label: m.metricBanners, value: banners.length, sub: `${activeBanners} ${m.metricActive}`, icon: <Image /> },
+          { label: m.metricArticles, value: articles.length, sub: `${publishedArticles} ${m.metricPublishedPages}`, icon: <BookOpen /> },
+          { label: m.metricPublishedPages, value: publishedPages, icon: <Globe />, tone: 'success' },
         ]}
       />
 
@@ -118,13 +122,13 @@ export default async function CmsPage() {
           <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors border-b border-hairline">
             <div className="flex items-center gap-2 min-w-0">
               <FileText className="h-4 w-4 text-brand-600 shrink-0" />
-              <h3 className="text-sm font-semibold text-slate-900">الصفحات</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{m.sectionPagesTitle}</h3>
               {pages.length > 0 && (
                 <CountChip count={pages.length} />
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0 text-brand-700">
-              <span className="text-xs font-medium hidden sm:inline">إنشاء صفحة</span>
+              <span className="text-xs font-medium hidden sm:inline">{m.createPageLabel}</span>
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-brand-600 transition-transform duration-200 group-open:rotate-45">
                 <Plus className="h-3.5 w-3.5" />
               </span>
@@ -135,13 +139,13 @@ export default async function CmsPage() {
           <div className="border-b border-hairline bg-surface-muted/20 px-5 py-4">
             <p className="text-2xs font-medium text-slate-500 mb-3 flex items-center gap-1.5">
               <Globe className="h-3.5 w-3.5 shrink-0" />
-              إنشاء صفحة جديدة أو تعديل صفحة موجودة
+              {m.createPageDesc}
             </p>
             <form action={upsertPageAction} className="space-y-3">
               {/* Slug */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-700">
-                  مسار الصفحة <span className="text-danger-500">*</span>
+                  {m.fieldSlug} <span className="text-danger-500">*</span>
                 </label>
                 <Input
                   name="slug"
@@ -151,13 +155,13 @@ export default async function CmsPage() {
                   inputSize="sm"
                   className="font-mono max-w-xs"
                 />
-                <p className="text-2xs text-slate-400">مثال: about → يصبح /about</p>
+                <p className="text-2xs text-slate-400">{m.hintSlug}</p>
               </div>
 
               {/* Bilingual titles */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-700">
-                  عنوان الصفحة <span className="text-danger-500">*</span>
+                  {m.fieldPageTitle} <span className="text-danger-500">*</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Input name="ar_title" required dir="rtl" placeholder="العنوان بالعربية" inputSize="sm" />
@@ -167,7 +171,7 @@ export default async function CmsPage() {
 
               {/* Bilingual body */}
               <div className="space-y-1">
-                <label className="block text-xs font-medium text-slate-700">المحتوى</label>
+                <label className="block text-xs font-medium text-slate-700">{m.fieldContent}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Textarea name="ar_body" dir="rtl" rows={3} placeholder="المحتوى بالعربية" />
                   <Textarea name="en_body" dir="ltr" rows={3} placeholder="Content in English" />
@@ -182,10 +186,10 @@ export default async function CmsPage() {
                     name="published"
                     className="h-4 w-4 rounded border-hairline text-brand-600 focus:ring-brand-500/30"
                   />
-                  <span className="text-xs text-slate-700">نشر فور الحفظ</span>
+                  <span className="text-xs text-slate-700">{m.checkPublish}</span>
                 </label>
                 <Button type="submit" variant="primary" size="sm">
-                  حفظ الصفحة
+                  {m.btnSavePage}
                 </Button>
               </div>
             </form>
@@ -196,18 +200,18 @@ export default async function CmsPage() {
         {pages.length === 0 ? (
           <CompactEmpty
             icon={<FileText />}
-            title="لا توجد صفحات بعد"
-            description="افتح قسم الإنشاء أعلاه لإضافة أول صفحة محتوى."
+            title={m.emptyPagesTitle}
+            description={m.emptyPagesDesc}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted/60 border-b border-hairline text-2xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="text-start font-semibold py-2.5 ps-5 pe-4">عنوان الصفحة</th>
-                  <th className="text-start font-semibold py-2.5 px-4">المسار</th>
-                  <th className="text-start font-semibold py-2.5 px-4">الحالة</th>
-                  <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">آخر تحديث</th>
+                  <th className="text-start font-semibold py-2.5 ps-5 pe-4">{m.colPageTitle}</th>
+                  <th className="text-start font-semibold py-2.5 px-4">{m.colPath}</th>
+                  <th className="text-start font-semibold py-2.5 px-4">{m.colStatus}</th>
+                  <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">{m.colLastUpdated}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -222,7 +226,7 @@ export default async function CmsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <PublishedBadge published={p.published} />
+                      <PublishedBadge published={p.published} publishedLabel={m.badgePublished} draftLabel={m.badgeDraft} />
                     </td>
                     <td className="py-3 px-4 text-2xs text-slate-400 whitespace-nowrap">
                       {formatDate(p.updatedAt)}
@@ -241,13 +245,13 @@ export default async function CmsPage() {
           <summary className="list-none [&::-webkit-details-marker]:hidden flex items-center justify-between gap-4 px-5 py-3.5 cursor-pointer select-none hover:bg-surface-muted/30 transition-colors border-b border-hairline">
             <div className="flex items-center gap-2 min-w-0">
               <Image className="h-4 w-4 text-brand-600 shrink-0" />
-              <h3 className="text-sm font-semibold text-slate-900">البانرات</h3>
+              <h3 className="text-sm font-semibold text-slate-900">{m.sectionBannersTitle}</h3>
               {banners.length > 0 && (
                 <CountChip count={banners.length} />
               )}
             </div>
             <div className="flex items-center gap-1.5 shrink-0 text-brand-700">
-              <span className="text-xs font-medium hidden sm:inline">إضافة بانر</span>
+              <span className="text-xs font-medium hidden sm:inline">{m.addBannerLabel}</span>
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-brand-50 text-brand-600 transition-transform duration-200 group-open:rotate-45">
                 <Plus className="h-3.5 w-3.5" />
               </span>
@@ -258,13 +262,13 @@ export default async function CmsPage() {
           <div className="border-b border-hairline bg-surface-muted/20 px-5 py-4">
             <p className="text-2xs font-medium text-slate-500 mb-3 flex items-center gap-1.5">
               <FileEdit className="h-3.5 w-3.5 shrink-0" />
-              إضافة بانر جديد إلى المنصة
+              {m.addBannerDesc}
             </p>
             <form action={createBannerAction} className="space-y-3">
               {/* Image URL */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-700">
-                  رابط الصورة <span className="text-danger-500">*</span>
+                  {m.fieldImageUrl} <span className="text-danger-500">*</span>
                 </label>
                 <Input name="imageUrl" required dir="ltr" placeholder="https://..." inputSize="sm" />
               </div>
@@ -272,7 +276,7 @@ export default async function CmsPage() {
               {/* Bilingual title */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-700">
-                  عنوان البانر <span className="text-danger-500">*</span>
+                  {m.fieldBannerTitle} <span className="text-danger-500">*</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <Input name="ar_title" required dir="rtl" placeholder="العنوان بالعربية" inputSize="sm" />
@@ -283,15 +287,15 @@ export default async function CmsPage() {
               {/* Link */}
               <div className="space-y-1">
                 <label className="block text-xs font-medium text-slate-700">
-                  رابط الوجهة{' '}
-                  <span className="text-slate-400 font-normal">(اختياري)</span>
+                  {m.fieldDestLink}{' '}
+                  <span className="text-slate-400 font-normal">({m.destLinkOptional})</span>
                 </label>
                 <Input name="link" dir="ltr" placeholder="https://..." inputSize="sm" />
               </div>
 
               <div className="flex justify-end pt-1">
                 <Button type="submit" variant="primary" size="sm">
-                  إضافة البانر
+                  {m.btnAddBanner}
                 </Button>
               </div>
             </form>
@@ -302,8 +306,8 @@ export default async function CmsPage() {
         {banners.length === 0 ? (
           <CompactEmpty
             icon={<Image />}
-            title="لا توجد بانرات بعد"
-            description="افتح قسم الإضافة أعلاه لرفع أول بانر."
+            title={m.emptyBannersTitle}
+            description={m.emptyBannersDesc}
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
@@ -317,7 +321,7 @@ export default async function CmsPage() {
                   <img src={b.imageUrl} alt="" className="w-full h-full object-cover" />
                   <div className="absolute top-2 start-2">
                     <Badge tone={b.active ? 'success' : 'gray'} size="sm" dot>
-                      {b.active ? 'نشط' : 'غير نشط'}
+                      {b.active ? m.badgeActive : m.badgeInactive}
                     </Badge>
                   </div>
                 </div>
@@ -337,7 +341,7 @@ export default async function CmsPage() {
                       size="sm"
                       className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
                     >
-                      حذف
+                      {m.btnDeleteBanner}
                     </Button>
                   </form>
                 </div>
@@ -354,25 +358,25 @@ export default async function CmsPage() {
        */}
       <PremiumSectionCard
         icon={<BookOpen />}
-        title="المقالات"
+        title={m.sectionArticlesTitle}
         trailing={articles.length > 0 ? <CountChip count={articles.length} /> : undefined}
         padded={false}
       >
         {articles.length === 0 ? (
           <CompactEmpty
             icon={<BookOpen />}
-            title="لا توجد مقالات بعد"
-            description="تُدار المقالات عبر قنوات النشر الخاصة بالمنصة."
+            title={m.emptyArticlesTitle}
+            description={m.emptyArticlesDesc}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface-muted/60 border-b border-hairline text-2xs font-semibold uppercase tracking-wide text-slate-500">
                 <tr>
-                  <th className="text-start font-semibold py-2.5 ps-5 pe-4">العنوان</th>
-                  <th className="text-start font-semibold py-2.5 px-4">المسار</th>
-                  <th className="text-start font-semibold py-2.5 px-4">الحالة</th>
-                  <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">تاريخ الإنشاء</th>
+                  <th className="text-start font-semibold py-2.5 ps-5 pe-4">{m.colArticleTitle}</th>
+                  <th className="text-start font-semibold py-2.5 px-4">{m.colArticlePath}</th>
+                  <th className="text-start font-semibold py-2.5 px-4">{m.colArticleStatus}</th>
+                  <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">{m.colCreatedAt}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -395,7 +399,7 @@ export default async function CmsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4">
-                      <PublishedBadge published={a.published} />
+                      <PublishedBadge published={a.published} publishedLabel={m.badgePublished} draftLabel={m.badgeDraft} />
                     </td>
                     <td className="py-3 px-4 text-2xs text-slate-400 whitespace-nowrap">
                       {formatDate(a.createdAt)}
@@ -413,11 +417,11 @@ export default async function CmsPage() {
 
 // ── Local helpers ─────────────────────────────────────────────────────────────
 
-function PublishedBadge({ published }: { published: boolean }) {
+function PublishedBadge({ published, publishedLabel, draftLabel }: { published: boolean; publishedLabel: string; draftLabel: string }) {
   return published ? (
-    <Badge tone="success" size="sm" dot>منشور</Badge>
+    <Badge tone="success" size="sm" dot>{publishedLabel}</Badge>
   ) : (
-    <Badge tone="gray" size="sm" dot>مسودة</Badge>
+    <Badge tone="gray" size="sm" dot>{draftLabel}</Badge>
   );
 }
 

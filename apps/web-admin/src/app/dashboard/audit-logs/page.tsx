@@ -3,6 +3,8 @@ import { Eye, ScrollText, Clock, Activity, ShieldAlert } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, Paged, UserRole } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Pagination } from '@/components/ui/pagination';
 import { cn } from '@/lib/cn';
@@ -29,17 +31,7 @@ interface Search {
 
 const PAGE_SIZE = 25;
 
-// ── Role display maps ─────────────────────────────────────────────────────────
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  ADMIN:                  'مدير النظام',
-  SALES:                  'مبيعات',
-  SALES_MANAGER:          'مدير مبيعات',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-  CLIENT:                 'متصفّح',
-  CUSTOMER:               'عميل',
-  BROKER:                 'وسيط',
-};
+// ── Role badge colors ─────────────────────────────────────────────────────────
 
 const ROLE_BADGE_CLS: Record<UserRole, string> = {
   ADMIN:                  'bg-purple-100 text-purple-700',
@@ -53,103 +45,103 @@ const ROLE_BADGE_CLS: Record<UserRole, string> = {
 
 // ── Event / area helpers ──────────────────────────────────────────────────────
 
-function eventLabel(action: string, entityType: string): string {
+function eventLabel(action: string, entityType: string, labels: ReturnType<typeof uiT>['auditLogsPage']['eventLabels']): string {
   const m  = action.toUpperCase();
   const et = entityType.toLowerCase();
   const c  = (kw: string) => et.includes(kw);
   const is = (methods: string[]) => methods.includes(m);
 
-  if (c('auth'))          return is(['POST']) ? 'محاولة دخول' : 'إجراء مصادقة';
-  if (c('permission'))    return is(['POST', 'PATCH', 'PUT']) ? 'تعديل صلاحيات' : 'إجراء صلاحية';
+  if (c('auth'))          return is(['POST']) ? labels.authPost : labels.authOther;
+  if (c('permission'))    return is(['POST', 'PATCH', 'PUT']) ? labels.permissionChange : labels.permissionOther;
   if (c('user')) {
-    if (is(['POST']))         return 'إنشاء مستخدم';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مستخدم';
-    if (is(['DELETE']))       return 'حذف مستخدم';
+    if (is(['POST']))         return labels.userCreate;
+    if (is(['PATCH', 'PUT'])) return labels.userEdit;
+    if (is(['DELETE']))       return labels.userDelete;
   }
   if (c('reservation')) {
-    if (is(['POST']))         return 'إنشاء حجز';
-    if (is(['PATCH', 'PUT'])) return 'تعديل حجز';
-    if (is(['DELETE']))       return 'إلغاء حجز';
+    if (is(['POST']))         return labels.reservationCreate;
+    if (is(['PATCH', 'PUT'])) return labels.reservationEdit;
+    if (is(['DELETE']))       return labels.reservationCancel;
   }
   if (c('contract')) {
-    if (is(['POST']))         return 'إنشاء عقد';
-    if (is(['PATCH', 'PUT'])) return 'تعديل عقد';
-    if (is(['DELETE']))       return 'حذف عقد';
+    if (is(['POST']))         return labels.contractCreate;
+    if (is(['PATCH', 'PUT'])) return labels.contractEdit;
+    if (is(['DELETE']))       return labels.contractDelete;
   }
   if (c('payout')) {
-    if (is(['POST']))         return 'تسجيل مدفوعات';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مدفوعات';
+    if (is(['POST']))         return labels.payoutCreate;
+    if (is(['PATCH', 'PUT'])) return labels.payoutEdit;
   }
   if (c('commission')) {
-    if (is(['POST']))         return 'تسجيل عمولة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل عمولة';
+    if (is(['POST']))         return labels.commissionCreate;
+    if (is(['PATCH', 'PUT'])) return labels.commissionEdit;
   }
   if (c('broker')) {
-    if (is(['POST']))         return 'إضافة وسيط';
-    if (is(['PATCH', 'PUT'])) return 'تعديل وسيط';
-    if (is(['DELETE']))       return 'حذف وسيط';
+    if (is(['POST']))         return labels.brokerCreate;
+    if (is(['PATCH', 'PUT'])) return labels.brokerEdit;
+    if (is(['DELETE']))       return labels.brokerDelete;
   }
   if (c('payment')) {
-    if (is(['POST']))         return 'تسجيل دفعة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل دفعة';
+    if (is(['POST']))         return labels.paymentCreate;
+    if (is(['PATCH', 'PUT'])) return labels.paymentEdit;
   }
   if (c('lead')) {
-    if (is(['POST']))         return 'إنشاء فرصة مبيعات';
-    if (is(['PATCH', 'PUT'])) return 'تعديل فرصة مبيعات';
-    if (is(['DELETE']))       return 'حذف فرصة مبيعات';
+    if (is(['POST']))         return labels.leadCreate;
+    if (is(['PATCH', 'PUT'])) return labels.leadEdit;
+    if (is(['DELETE']))       return labels.leadDelete;
   }
   if (c('project')) {
-    if (is(['POST']))         return 'إنشاء مشروع';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مشروع';
-    if (is(['DELETE']))       return 'حذف مشروع';
+    if (is(['POST']))         return labels.projectCreate;
+    if (is(['PATCH', 'PUT'])) return labels.projectEdit;
+    if (is(['DELETE']))       return labels.projectDelete;
   }
   if (c('unit')) {
-    if (is(['POST']))         return 'إنشاء وحدة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل وحدة';
-    if (is(['DELETE']))       return 'حذف وحدة';
+    if (is(['POST']))         return labels.unitCreate;
+    if (is(['PATCH', 'PUT'])) return labels.unitEdit;
+    if (is(['DELETE']))       return labels.unitDelete;
   }
   if (c('maintenance')) {
-    if (is(['POST']))         return 'طلب صيانة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل طلب صيانة';
+    if (is(['POST']))         return labels.maintenanceCreate;
+    if (is(['PATCH', 'PUT'])) return labels.maintenanceEdit;
   }
   if (c('document')) {
-    if (is(['POST']))   return 'رفع مستند';
-    if (is(['DELETE'])) return 'حذف مستند';
+    if (is(['POST']))   return labels.documentCreate;
+    if (is(['DELETE'])) return labels.documentDelete;
   }
   if (c('visit')) {
-    if (is(['POST']))         return 'إنشاء زيارة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل زيارة';
+    if (is(['POST']))         return labels.visitCreate;
+    if (is(['PATCH', 'PUT'])) return labels.visitEdit;
   }
-  if (c('notification')) return 'إرسال إشعار';
+  if (c('notification')) return labels.notificationSend;
 
-  if (is(['POST']))         return 'إنشاء سجل';
-  if (is(['PATCH', 'PUT'])) return 'تعديل سجل';
-  if (is(['DELETE']))       return 'حذف سجل';
-  return 'إجراء نظام';
+  if (is(['POST']))         return labels.recordCreate;
+  if (is(['PATCH', 'PUT'])) return labels.recordEdit;
+  if (is(['DELETE']))       return labels.recordDelete;
+  return labels.systemAction;
 }
 
-function areaLabel(entityType: string): string {
+function areaLabel(entityType: string, labels: ReturnType<typeof uiT>['auditLogsPage']['areaLabels']): string {
   const et = entityType.toLowerCase();
-  if (et.includes('auth'))               return 'المصادقة';
-  if (et.includes('permission'))         return 'الصلاحيات';
-  if (et.includes('broker-lead'))        return 'عملاء الوسطاء';
-  if (et.includes('broker-reservation')) return 'حجوزات الوسطاء';
-  if (et.includes('broker-contract'))    return 'عقود الوسطاء';
-  if (et.includes('broker-commission'))  return 'عمولات الوسطاء';
-  if (et.includes('broker-payout'))      return 'مدفوعات الوسطاء';
-  if (et.includes('broker'))             return 'الوسطاء';
-  if (et.includes('user'))               return 'المستخدمون';
-  if (et.includes('reservation'))        return 'الحجوزات';
-  if (et.includes('contract'))           return 'العقود';
-  if (et.includes('payment'))            return 'الدفعات';
-  if (et.includes('lead'))               return 'فرص المبيعات';
-  if (et.includes('project'))            return 'المشاريع';
-  if (et.includes('unit'))               return 'الوحدات';
-  if (et.includes('maintenance'))        return 'الصيانة';
-  if (et.includes('document'))           return 'المستندات';
-  if (et.includes('visit'))              return 'الزيارات';
-  if (et.includes('notification'))       return 'الإشعارات';
-  if (et.includes('audit'))             return 'سجلات التدقيق';
+  if (et.includes('auth'))               return labels.auth;
+  if (et.includes('permission'))         return labels.permission;
+  if (et.includes('broker-lead'))        return labels.brokerLead;
+  if (et.includes('broker-reservation')) return labels.brokerReservation;
+  if (et.includes('broker-contract'))    return labels.brokerContract;
+  if (et.includes('broker-commission'))  return labels.brokerCommission;
+  if (et.includes('broker-payout'))      return labels.brokerPayout;
+  if (et.includes('broker'))             return labels.broker;
+  if (et.includes('user'))               return labels.user;
+  if (et.includes('reservation'))        return labels.reservation;
+  if (et.includes('contract'))           return labels.contract;
+  if (et.includes('payment'))            return labels.payment;
+  if (et.includes('lead'))               return labels.lead;
+  if (et.includes('project'))            return labels.project;
+  if (et.includes('unit'))               return labels.unit;
+  if (et.includes('maintenance'))        return labels.maintenance;
+  if (et.includes('document'))           return labels.document;
+  if (et.includes('visit'))              return labels.visit;
+  if (et.includes('notification'))       return labels.notification;
+  if (et.includes('audit'))             return labels.audit;
   return entityType;
 }
 
@@ -170,10 +162,10 @@ function areaBadgeCls(entityType: string): string {
   return 'bg-slate-50 text-slate-600 border border-slate-200';
 }
 
-function formatIpLabel(ip: string | null): { label: string; isLocal: boolean } {
+function formatIpLabel(ip: string | null, localLabel: string): { label: string; isLocal: boolean } {
   if (!ip) return { label: '—', isLocal: false };
   if (ip === '::1' || ip === '127.0.0.1' || ip.toLowerCase() === 'localhost' || ip.startsWith('::ffff:127.')) {
-    return { label: 'محلي', isLocal: true };
+    return { label: localLabel, isLocal: true };
   }
   return { label: ip, isLocal: false };
 }
@@ -215,7 +207,9 @@ export default async function AuditLogsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
-  const sp = await searchParams;
+  const [sp, locale] = await Promise.all([searchParams, getLocale()]);
+  const m = uiT(locale).auditLogsPage;
+
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
@@ -234,9 +228,6 @@ export default async function AuditLogsPage({
     actionCounts.set(r.action, (actionCounts.get(r.action) ?? 0) + 1);
   }
   const topAction = [...actionCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
-  const topActionLabel: Record<string, string> = {
-    POST: 'إنشاء', PATCH: 'تعديل', PUT: 'تحديث', DELETE: 'حذف',
-  };
 
   const deleteCount = rows.filter((r) => r.action.toUpperCase() === 'DELETE').length;
   const authCount   = rows.filter((r) => r.entityType.toLowerCase().includes('auth')).length;
@@ -247,16 +238,16 @@ export default async function AuditLogsPage({
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="سجل التدقيق"
-        description="مراجعة الأنشطة والإجراءات الإدارية داخل المنصة."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'سجلات التدقيق' },
+          { label: m.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbSelf },
         ]}
         meta={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
             <ScrollText className="h-3.5 w-3.5" />
-            سجل النظام
+            {m.systemLogBadge}
           </span>
         }
       />
@@ -264,7 +255,7 @@ export default async function AuditLogsPage({
       {/* ── Error ───────────────────────────────────────────────────────────── */}
       {res.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل السجلات: {res.error}
+          {m.errorLoad}{res.error}
         </div>
       )}
 
@@ -274,7 +265,7 @@ export default async function AuditLogsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي السجلات',
+            label: m.kpi.total,
             value: meta
               ? meta.total.toLocaleString('ar-EG')
               : rows.length.toLocaleString('ar-EG'),
@@ -282,20 +273,20 @@ export default async function AuditLogsPage({
             tone: 'brand',
           },
           {
-            label: 'آخر نشاط',
+            label: m.kpi.lastActivity,
             value: rows[0] ? formatDateTime(rows[0].createdAt) : '—',
             icon: <Clock />,
             tone: 'neutral',
             valueSize: 'compact',
           },
           {
-            label: 'أكثر إجراء (الصفحة)',
-            value: topAction ? (topActionLabel[topAction] ?? topAction) : '—',
+            label: m.kpi.topAction,
+            value: topAction ? ((m.topActionLabels as Record<string, string>)[topAction] ?? topAction) : '—',
             icon: <Activity />,
             tone: 'neutral',
           },
           {
-            label: 'أحداث حساسة (الصفحة)',
+            label: m.kpi.sensitiveEvents,
             value: sensitiveCount.toLocaleString('ar-EG'),
             icon: <ShieldAlert />,
             tone: sensitiveCount > 0 ? 'warning' : 'neutral',
@@ -311,16 +302,17 @@ export default async function AuditLogsPage({
         defaultActorId={sp.actorId ?? ''}
         defaultFrom={sp.from ?? ''}
         defaultTo={sp.to ?? ''}
+        locale={locale}
       />
 
       {/* ── Audit log table ─────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<ScrollText />}
-        title="سجلات التدقيق"
+        title={m.sectionTitle}
         trailing={
           meta ? (
             <span className="text-[11px] font-semibold tabular-nums text-slate-400">
-              {meta.total.toLocaleString('ar-EG')} سجل
+              {meta.total.toLocaleString('ar-EG')} {m.recordSuffix}
             </span>
           ) : undefined
         }
@@ -329,16 +321,12 @@ export default async function AuditLogsPage({
         {rows.length === 0 ? (
           <PremiumEmptyState
             icon={<ScrollText />}
-            title={hasFilter ? 'لا توجد سجلات مطابقة' : 'لا توجد سجلات تدقيق'}
-            description={
-              hasFilter
-                ? 'جرّب تعديل الفلاتر أو مسحها للعرض الكامل.'
-                : 'ستظهر هنا العمليات التي تُنفَّذ على النظام تلقائيًا.'
-            }
+            title={hasFilter ? m.empty.filteredTitle : m.empty.defaultTitle}
+            description={hasFilter ? m.empty.filteredDesc : m.empty.defaultDesc}
             action={
               hasFilter ? (
                 <Link href="/dashboard/audit-logs">
-                  <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                  <Button variant="outline" size="sm">{m.empty.clearFilters}</Button>
                 </Link>
               ) : undefined
             }
@@ -347,15 +335,15 @@ export default async function AuditLogsPage({
           <>
             {/* Legend row */}
             <div className="flex items-center gap-4 px-5 py-2.5 border-b border-hairline bg-canvas/30">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">الألوان:</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.legend.label}</span>
               <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="h-2 w-2 rounded-full bg-success-500 shrink-0" />إنشاء
+                <span className="h-2 w-2 rounded-full bg-success-500 shrink-0" />{m.legend.create}
               </span>
               <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />تعديل
+                <span className="h-2 w-2 rounded-full bg-amber-400 shrink-0" />{m.legend.edit}
               </span>
               <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-500">
-                <span className="h-2 w-2 rounded-full bg-danger-500 shrink-0" />حذف
+                <span className="h-2 w-2 rounded-full bg-danger-500 shrink-0" />{m.legend.delete}
               </span>
             </div>
 
@@ -363,12 +351,12 @@ export default async function AuditLogsPage({
               <table className="w-full text-sm">
                 <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
                   <tr>
-                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">الوقت</th>
-                    <th className="text-start py-3 px-4">المستخدم</th>
-                    <th className="text-start py-3 px-4">الحدث</th>
-                    <th className="text-start py-3 px-4">القسم</th>
-                    <th className="text-start py-3 px-4 whitespace-nowrap">المعرّف</th>
-                    <th className="text-start py-3 px-4">IP</th>
+                    <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.time}</th>
+                    <th className="text-start py-3 px-4">{m.cols.user}</th>
+                    <th className="text-start py-3 px-4">{m.cols.event}</th>
+                    <th className="text-start py-3 px-4">{m.cols.area}</th>
+                    <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.entityId}</th>
+                    <th className="text-start py-3 px-4">{m.cols.ip}</th>
                     <th className="text-end py-3 ps-4 pe-5" />
                   </tr>
                 </thead>
@@ -404,12 +392,12 @@ export default async function AuditLogsPage({
                                 ROLE_BADGE_CLS[row.actor.role] ?? 'bg-slate-100 text-slate-600',
                               )}
                             >
-                              {ROLE_LABEL[row.actor.role] ?? row.actor.role}
+                              {m.roleLabels[row.actor.role] ?? row.actor.role}
                             </span>
                           </div>
                         ) : (
                           <span className="inline-flex items-center gap-1 text-[12px] text-slate-400 italic">
-                            نظام / غير معروف
+                            {m.systemActor}
                           </span>
                         )}
                       </td>
@@ -418,7 +406,7 @@ export default async function AuditLogsPage({
                       <td className="py-3 px-4">
                         <div className="min-w-0">
                           <p className="text-[13px] font-semibold text-slate-900 leading-tight whitespace-nowrap">
-                            {eventLabel(row.action, row.entityType)}
+                            {eventLabel(row.action, row.entityType, m.eventLabels)}
                           </p>
                           <span
                             className={cn(
@@ -441,7 +429,7 @@ export default async function AuditLogsPage({
                           )}
                           title={row.entityType}
                         >
-                          {areaLabel(row.entityType)}
+                          {areaLabel(row.entityType, m.areaLabels)}
                         </span>
                       </td>
 
@@ -465,7 +453,7 @@ export default async function AuditLogsPage({
                       {/* IP */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {(() => {
-                          const { label, isLocal } = formatIpLabel(row.ip);
+                          const { label, isLocal } = formatIpLabel(row.ip, m.localIp);
                           return isLocal ? (
                             <span
                               className="inline-block px-1.5 py-px rounded text-[10px] font-medium bg-slate-100 text-slate-500"
@@ -483,7 +471,7 @@ export default async function AuditLogsPage({
 
                       {/* View action */}
                       <td className="py-3 ps-4 pe-5 text-end">
-                        <Link href={`/dashboard/audit-logs/${row.id}`} aria-label="عرض تفاصيل الحدث">
+                        <Link href={`/dashboard/audit-logs/${row.id}`} aria-label={m.viewEventAriaLabel}>
                           <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-hairline bg-surface text-slate-500 shadow-xs hover:bg-canvas hover:text-slate-700 transition-colors">
                             <Eye className="h-3.5 w-3.5" />
                           </span>

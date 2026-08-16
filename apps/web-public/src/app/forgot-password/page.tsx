@@ -1,5 +1,7 @@
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { ForgotPasswordCard } from '@/components/auth/ForgotPasswordCard';
 
@@ -9,13 +11,16 @@ export const metadata = buildMetadata({
   robots: { index: false, follow: false },
 });
 
-export default function ForgotPasswordPage() {
+export default async function ForgotPasswordPage() {
+  const locale = await getLocale();
+  const m = siteT(locale);
+
   return (
     <AuthShell
-      title="إعادة تعيين كلمة المرور"
-      subtitle="أدخل بريدك الإلكتروني وسنرسل إليك رابطًا لإعادة تعيين كلمة المرور."
-      switchPrompt="تذكّرت كلمة المرور؟"
-      switchLabel="العودة إلى تسجيل الدخول"
+      title={m.auth.forgotPassword.title}
+      subtitle={m.auth.forgotPassword.subtitle}
+      switchPrompt={m.auth.forgotPassword.backPrompt}
+      switchLabel={m.auth.forgotPassword.backLabel}
       switchHref={routes.login}
     >
       <ForgotPasswordCard />

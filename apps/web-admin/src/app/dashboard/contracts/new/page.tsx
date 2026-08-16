@@ -3,9 +3,15 @@ import { AlertTriangle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import type { Paged, Unit, User } from '@/lib/types';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import ContractForm from './form';
 
 export default async function NewContractPage() {
+  const locale = await getLocale();
+  const m = uiT(locale);
+  const n = m.pages.contractsNew;
+
   const [unitsRes, customersRes, customersRes2, currency] = await Promise.all([
     safe(api.get<Paged<Unit>>('/units?status=AVAILABLE&pageSize=100')),
     safe(api.get<Paged<User>>('/users?role=CLIENT&pageSize=100')),
@@ -32,7 +38,7 @@ export default async function NewContractPage() {
                   href={'/dashboard' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  لوحة التحكم
+                  {m.common.breadcrumbHome}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -41,27 +47,27 @@ export default async function NewContractPage() {
                   href={'/dashboard/contracts' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  العقود
+                  {m.nav.items.contracts}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">عقد جديد</span>
+                <span className="font-semibold text-slate-600">{n.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                عقد يدوي جديد
+                {n.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                إنشاء عقد بيع يدوياً بدون حجز مسبق.
+                {n.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              عقد جديد
+              {n.badge}
             </span>
           </div>
         </div>
@@ -71,16 +77,11 @@ export default async function NewContractPage() {
       <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex gap-3">
         <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="text-sm text-amber-800 space-y-1">
-          <p className="font-semibold">الطريقة المُفضَّلة: تحويل حجز</p>
-          <p>
-            يُنصح بإنشاء العقود عبر تحويل حجز موافَق عليه — يضمن ذلك ربط الحجز بالعقد تلقائياً،
-            وتوليد خطة التقسيط من البيانات المحفوظة في الحجز.
-          </p>
-          <p>
-            استخدم هذه الصفحة فقط عند الحاجة لإنشاء عقد يدوي بدون حجز مسبق.
-          </p>
+          <p className="font-semibold">{n.advisoryTitle}</p>
+          <p>{n.advisoryBody}</p>
+          <p>{n.advisoryNote}</p>
           <Link href="/dashboard/reservations" className="font-medium underline">
-            الذهاب إلى الحجوزات ←
+            {n.advisoryLink}
           </Link>
         </div>
       </div>
@@ -89,6 +90,7 @@ export default async function NewContractPage() {
         units={unitsRes.data?.data ?? []}
         customers={customers}
         currency={currency}
+        locale={locale}
       />
     </div>
   );

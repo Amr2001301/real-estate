@@ -4,6 +4,8 @@ import { useState, useTransition } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 interface Props {
   open: boolean;
@@ -14,6 +16,7 @@ interface Props {
   confirmVariant?: 'danger' | 'primary';
   reasonRequired?: boolean;
   action: (formData: FormData) => Promise<void | { error?: string }>;
+  locale?: Locale;
 }
 
 export function StatusDialog({
@@ -25,7 +28,9 @@ export function StatusDialog({
   confirmVariant = 'danger',
   reasonRequired = false,
   action,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.reservationDetailPage;
   const [pending, startTransition] = useTransition();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +38,7 @@ export function StatusDialog({
   function handleSubmit() {
     setError(null);
     if (reasonRequired && !reason.trim()) {
-      setError('سبب الإلغاء مطلوب');
+      setError(m.statusReasonError);
       return;
     }
     const fd = new FormData();
@@ -60,7 +65,7 @@ export function StatusDialog({
       footer={
         <>
           <Button variant="outline" size="sm" onClick={onClose} disabled={pending}>
-            إلغاء
+            {m.statusCancelBtn}
           </Button>
           <Button
             variant={confirmVariant}
@@ -75,11 +80,11 @@ export function StatusDialog({
     >
       <div className="flex flex-col gap-1.5">
         <label className="text-xs font-medium text-slate-600">
-          {reasonRequired ? 'السبب (مطلوب)' : 'السبب (اختياري)'}
+          {reasonRequired ? m.statusReasonRequired : m.statusReasonOptional}
         </label>
         <Textarea
           rows={3}
-          placeholder="أدخل السبب…"
+          placeholder={m.statusReasonPH}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           disabled={pending}

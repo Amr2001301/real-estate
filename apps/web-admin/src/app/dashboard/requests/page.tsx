@@ -27,6 +27,8 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -38,32 +40,35 @@ interface Filters {
   status?: string;
 }
 
-function submitterBadge(req: AdminInfoRequest): { label: string; tone: 'gray' | 'info' | 'success' } {
-  if (!req.userId) return { label: 'زائر', tone: 'gray' };
-  if (req.user?.role === 'CUSTOMER') return { label: 'عميل (مالك)', tone: 'success' };
-  return { label: 'عميل (متصفّح)', tone: 'info' };
-}
-
-function contactOf(req: AdminInfoRequest): { name: string; phone: string | null; email: string | null } {
-  return {
-    name: req.user?.fullName ?? req.lead?.fullName ?? 'زائر بدون اسم',
-    phone: req.user?.phone ?? req.lead?.phone ?? null,
-    email: req.user?.email ?? req.lead?.email ?? null,
-  };
-}
-
-const STATUS_LABEL: Record<string, { label: string; tone: 'warning' | 'info' | 'gray' }> = {
-  OPEN: { label: 'مفتوح', tone: 'warning' },
-  RESPONDED: { label: 'تم الرد', tone: 'info' },
-  CLOSED: { label: 'مغلق', tone: 'gray' },
-};
-
 export default async function InfoRequestsPage({
   searchParams,
 }: {
   searchParams: Promise<Filters>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.requests;
+
+  function submitterBadge(req: AdminInfoRequest): { label: string; tone: 'gray' | 'info' | 'success' } {
+    if (!req.userId) return { label: m.submitterTypes.visitor, tone: 'gray' };
+    if (req.user?.role === 'CUSTOMER') return { label: m.submitterTypes.owner, tone: 'success' };
+    return { label: m.submitterTypes.browser, tone: 'info' };
+  }
+
+  function contactOf(req: AdminInfoRequest): { name: string; phone: string | null; email: string | null } {
+    return {
+      name: req.user?.fullName ?? req.lead?.fullName ?? m.noVisitorName,
+      phone: req.user?.phone ?? req.lead?.phone ?? null,
+      email: req.user?.email ?? req.lead?.email ?? null,
+    };
+  }
+
+  const STATUS_LABEL: Record<string, { label: string; tone: 'warning' | 'info' | 'gray' }> = {
+    OPEN:      { label: m.statusLabels.OPEN,    tone: 'warning' },
+    RESPONDED: { label: m.statusLabels.REPLIED, tone: 'info' },
+    CLOSED:    { label: m.statusLabels.CLOSED,  tone: 'gray' },
+  };
+
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
   const statusFilter = sp.status ?? '';
 
@@ -89,11 +94,11 @@ export default async function InfoRequestsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="الطلبات"
-        description="متابعة طلبات العملاء والاستفسارات التشغيلية المرتبطة بالمشاريع والوحدات."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الطلبات' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
       />
 
@@ -103,26 +108,26 @@ export default async function InfoRequestsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي الاستفسارات',
+            label: m.kpi.total,
             value: grandTotal,
             icon: <MessageSquareText />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'مفتوح',
+            label: m.kpi.open,
             value: openCount,
             icon: <Inbox />,
             tone: 'warning',
           },
           {
-            label: 'تم الرد',
+            label: m.kpi.replied,
             value: respondedCount,
             icon: <CheckCircle2 />,
             tone: 'success',
           },
           {
-            label: 'مغلق',
+            label: m.kpi.closed,
             value: closedCount,
             icon: <Archive />,
             tone: 'info',
@@ -134,26 +139,26 @@ export default async function InfoRequestsPage({
       {res.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذّر تحميل الاستفسارات: {res.error}</p>
+          <p className="font-medium">{m.errorPrefix} {res.error}</p>
         </div>
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/requests">
-        <PremiumFilterField label="الحالة" htmlFor="req-status">
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="req-status">
           <Select id="req-status" name="status" inputSize="sm" defaultValue={statusFilter} className="w-40 shrink-0">
-            <option value="">الكل</option>
-            <option value="OPEN">مفتوح</option>
-            <option value="RESPONDED">تم الرد</option>
-            <option value="CLOSED">مغلق</option>
+            <option value="">{m.filter.all}</option>
+            <option value="OPEN">{m.filter.open}</option>
+            <option value="RESPONDED">{m.filter.replied}</option>
+            <option value="CLOSED">{m.filter.closed}</option>
           </Select>
         </PremiumFilterField>
 
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {statusFilter && (
             <Link href={'/dashboard/requests' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
         </div>
@@ -162,20 +167,20 @@ export default async function InfoRequestsPage({
       {/* ── Requests table ───────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<MessageSquareText />}
-        title="سجل الاستفسارات"
-        description="رسائل الاستفسار الواردة من نموذج التواصل والموقع — من الزوّار والعملاء المسجّلين."
+        title={m.sectionTitle}
+        description={m.sectionDesc}
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {total.toLocaleString('ar-EG')} استفسار
+            {total.toLocaleString('ar-EG')} {m.inquirySuffix}
           </span>
         }
       >
         {rows.length === 0 && !res.error ? (
           <PremiumEmptyState
             icon={<MessageSquareText />}
-            title="لا توجد استفسارات بعد"
-            description="ستظهر هنا رسائل الاستفسار الواردة من نموذج التواصل في الموقع، سواء من الزوّار أو العملاء المسجّلين."
+            title={m.empty.title}
+            description={m.empty.description}
             className="py-12"
           />
         ) : (
@@ -183,13 +188,13 @@ export default async function InfoRequestsPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">المُرسِل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">النوع</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">بيانات الاتصال</th>
-                  <th className="text-start py-3 px-4">الرسالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">السياق</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 ps-4 pe-5 whitespace-nowrap">التاريخ</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.sender}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.type}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.contact}</th>
+                  <th className="text-start py-3 px-4">{m.cols.message}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.context}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.status}</th>
+                  <th className="text-start py-3 ps-4 pe-5 whitespace-nowrap">{m.cols.date}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -239,8 +244,8 @@ export default async function InfoRequestsPage({
                                   href={`https://wa.me/${waDigits}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  aria-label="واتساب"
-                                  title={`واتساب: ${contact.phone}`}
+                                  aria-label={m.whatsappLabel}
+                                  title={`${m.whatsappLabel}: ${contact.phone}`}
                                   className="shrink-0 text-success-600 hover:text-success-700 transition-colors"
                                 >
                                   <MessageCircle className="h-3.5 w-3.5" />
@@ -322,6 +327,7 @@ export default async function InfoRequestsPage({
           total={total}
           basePath="/dashboard/requests"
           params={{ status: statusFilter || undefined }}
+          locale={locale}
         />
       )}
     </div>

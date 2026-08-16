@@ -15,6 +15,8 @@ import {
 import { api, safe } from '@/lib/api';
 import type { Paged, User } from '@/lib/types';
 import { formatDate } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
@@ -33,17 +35,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
-
-const ROLE_LABEL: Record<'CLIENT' | 'CUSTOMER', { title: string; description: string }> = {
-  CLIENT: {
-    title: 'العملاء (متصفّحون)',
-    description: 'مستخدمون مسجّلون يتصفحون المشاريع والوحدات.',
-  },
-  CUSTOMER: {
-    title: 'العملاء (مالكون)',
-    description: 'عملاء أبرموا عقوداً ويملكون وحدات داخل المحفظة.',
-  },
-};
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -80,7 +71,12 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<Filters>;
 }) {
-  const sp = await searchParams;
+  const [sp, locale] = await Promise.all([
+    searchParams,
+    getLocale(),
+  ]);
+  const m = uiT(locale).pages.clients;
+
   const role: 'CLIENT' | 'CUSTOMER' = sp.role === 'CUSTOMER' ? 'CUSTOMER' : 'CLIENT';
   const q = (sp.q ?? '').trim();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
@@ -114,27 +110,27 @@ export default async function ClientsPage({
   const activeOnPage = rows.filter((u) => u.active).length;
   const inactiveOnPage = rows.length - activeOnPage;
 
-  const labels = ROLE_LABEL[role];
+  const labels = m.roleLabels[role];
 
   return (
     <div className="flex flex-col gap-5 lg:gap-6">
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="العملاء"
-        description="إدارة بيانات العملاء ومتابعة ارتباطهم بالفرص والحجوزات والعقود."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'العملاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <IconButton label="تصدير" variant="outline" size="md">
+            <IconButton label={m.exportBtn} variant="outline" size="md">
               <Download />
             </IconButton>
             <Link href={`/dashboard/clients/new?role=${role}` as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                إضافة عميل جديد
+                {m.addClient}
               </Button>
             </Link>
           </div>
@@ -147,61 +143,61 @@ export default async function ClientsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي العملاء',
+            label: m.kpi.total,
             value: clientTotal + customerTotal,
             icon: <Users />,
             tone: 'brand',
             primary: true,
-            sub: 'بكل أنواعهم',
+            sub: m.kpi.totalSub,
           },
           {
-            label: 'متصفّحون',
+            label: m.kpi.browsers,
             value: clientTotal,
             icon: <Users />,
             tone: 'info',
           },
           {
-            label: 'مالكون',
+            label: m.kpi.owners,
             value: customerTotal,
             icon: <UserCheck />,
             tone: 'success',
           },
           {
-            label: 'موقوفون (في هذه الصفحة)',
+            label: m.kpi.suspended,
             value: inactiveOnPage,
             icon: <ShieldAlert />,
             tone: 'warning',
-            sub: `من ${rows.length} ظاهر`,
+            sub: m.kpi.suspendedSub.replace('{n}', String(rows.length)),
           },
         ]}
       />
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/clients">
-        <PremiumFilterField label="النوع" htmlFor="cli-role">
+        <PremiumFilterField label={m.filter.typePlaceholder} htmlFor="cli-role">
           <Select id="cli-role" name="role" inputSize="sm" defaultValue={role} className="w-36 shrink-0">
-            <option value="CLIENT">متصفّحون</option>
-            <option value="CUSTOMER">مالكون</option>
+            <option value="CLIENT">{m.filter.browsers}</option>
+            <option value="CUSTOMER">{m.filter.owners}</option>
           </Select>
         </PremiumFilterField>
 
         <div className="flex-1 min-w-[180px]">
-          <label htmlFor="cli-q" className="sr-only">بحث</label>
+          <label htmlFor="cli-q" className="sr-only">{m.filter.searchLabel}</label>
           <Input
             id="cli-q"
             name="q"
             inputSize="sm"
             defaultValue={q}
-            placeholder="ابحث بالاسم، البريد، أو الهاتف…"
+            placeholder={m.filter.searchPlaceholder}
             leftAddon={<Search />}
             className="w-full"
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button type="submit" variant="primary" size="sm">بحث</Button>
+          <Button type="submit" variant="primary" size="sm">{m.filter.searchLabel}</Button>
           {(q || role !== 'CLIENT') && (
             <Link href={'/dashboard/clients' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
         </div>
@@ -211,7 +207,7 @@ export default async function ClientsPage({
       {currentRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل القائمة: {currentRes.error}</p>
+          <p className="font-medium">{m.errorPrefix} {currentRes.error}</p>
         </div>
       )}
 
@@ -223,7 +219,7 @@ export default async function ClientsPage({
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {total.toLocaleString('ar-EG')} عميل
+            {total.toLocaleString('ar-EG')} {m.clientSuffix}
           </span>
         }
       >
@@ -232,23 +228,23 @@ export default async function ClientsPage({
             icon={role === 'CUSTOMER' ? <UserCheck /> : <Users />}
             title={
               q
-                ? 'لا توجد نتائج'
+                ? m.empty.noResults
                 : role === 'CUSTOMER'
-                  ? 'لا يوجد مالكون بعد'
-                  : 'لا يوجد عملاء متصفّحون بعد'
+                  ? m.empty.noOwners
+                  : m.empty.noBrowsers
             }
             description={
               q
-                ? 'جرّب تعديل كلمات البحث أو تغيير التبويب.'
+                ? m.empty.queryDesc
                 : role === 'CUSTOMER'
-                  ? 'يتم ترقية العميل إلى مالك تلقائياً عند توقيع عقد.'
-                  : 'يظهر هنا كل من يسجّل في المنصة من المتصفحين.'
+                  ? m.empty.ownerDesc
+                  : m.empty.browserDesc
             }
             action={
               !q ? (
                 <Link href={`/dashboard/clients/new?role=${role}` as never}>
                   <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                    إضافة عميل
+                    {m.empty.addBtn}
                   </Button>
                 </Link>
               ) : undefined
@@ -260,12 +256,12 @@ export default async function ClientsPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">العميل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">بيانات الاتصال</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">النوع</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ التسجيل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">آخر دخول</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.client}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.contact}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.type}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.status}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.registered}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.lastLogin}</th>
                   <th className="text-start py-3 ps-4 pe-5 w-px"></th>
                 </tr>
               </thead>
@@ -333,17 +329,17 @@ export default async function ClientsPage({
                         variant="soft"
                         size="sm"
                       >
-                        {role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
+                        {role === 'CUSTOMER' ? m.typeBadge.owner : m.typeBadge.browser}
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
                       {u.active ? (
                         <Badge tone="success" variant="soft" size="sm" dot>
-                          نشط
+                          {m.statusBadge.active}
                         </Badge>
                       ) : (
                         <Badge tone="gray" variant="soft" size="sm" dot>
-                          موقوف
+                          {m.statusBadge.suspended}
                         </Badge>
                       )}
                     </td>
@@ -355,7 +351,7 @@ export default async function ClientsPage({
                     </td>
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/dashboard/clients/${u.id}` as never}>
-                        <IconButton label="عرض تفاصيل العميل" variant="outline" size="sm">
+                        <IconButton label={m.viewBtn} variant="outline" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
@@ -376,15 +372,15 @@ export default async function ClientsPage({
           total={total}
           basePath="/dashboard/clients"
           params={{ role }}
+          locale={locale}
         />
       )}
 
       {/* ── Footer audit hint ────────────────────────────────────────────────── */}
       <p className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
         <ShieldCheck className="h-3 w-3" />
-        تتبع جميع التغييرات على ملفات العملاء عبر سجل التدقيق المركزي.
+        {m.auditNote}
       </p>
     </div>
   );
 }
-

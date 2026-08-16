@@ -7,32 +7,37 @@ import { MediaUploader } from '@/components/media-uploader';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Unit, Media } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { deleteUnitMediaAction } from '../actions';
 
-export function UnitMediaPanel({ unit }: { unit: Unit }) {
+export function UnitMediaPanel({ unit, locale = 'ar' }: { unit: Unit; locale?: Locale }) {
+  const m = uiT(locale).pages.units.mediaPanel;
   const router = useRouter();
   const [pending, start] = useTransition();
   const media = unit.media ?? [];
-  const images = media.filter((m) => m.type !== 'FLOORPLAN');
-  const floorplans = media.filter((m) => m.type === 'FLOORPLAN');
+  const images = media.filter((item) => item.type !== 'FLOORPLAN');
+  const floorplans = media.filter((item) => item.type === 'FLOORPLAN');
 
   return (
     <Card className="p-5">
       <div className="flex items-center gap-2">
         <ImageIcon className="h-4 w-4 text-brand-600" />
         <h3 className="text-sm font-semibold text-slate-900 tracking-tight">
-          الوسائط والملفات
+          {m.title}
         </h3>
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        صور الوحدة والمخططات الهندسية المرفقة.
+        {m.description}
       </p>
 
       <MediaSection
-        title="صور الوحدة"
-        emptyText="لم يتم رفع أي صور بعد"
+        title={m.imagesSection}
+        emptyText={m.imagesEmpty}
         items={images}
         pending={pending}
+        deleteAria={m.deleteAria}
+        deleteConfirm={m.deleteConfirm}
         onDelete={(id) =>
           start(() =>
             deleteUnitMediaAction(unit.id, id).then(() => router.refresh()),
@@ -45,7 +50,7 @@ export function UnitMediaPanel({ unit }: { unit: Unit }) {
           folder="units"
           attach={{ type: 'unit', targetId: unit.id, mediaType: 'IMAGE' }}
           onUploaded={() => router.refresh()}
-          buttonLabel="+ رفع صورة"
+          buttonLabel={m.uploadImageBtn}
         />
       </div>
 
@@ -53,14 +58,16 @@ export function UnitMediaPanel({ unit }: { unit: Unit }) {
         <div className="flex items-center gap-2">
           <MapIcon className="h-4 w-4 text-info-600" />
           <h4 className="text-sm font-semibold text-slate-900 tracking-tight">
-            مخطط الطابق
+            {m.floorplanTitle}
           </h4>
         </div>
         <MediaSection
           title=""
-          emptyText="لم يُرفع أي مخطط بعد"
+          emptyText={m.floorplanEmpty}
           items={floorplans}
           pending={pending}
+          deleteAria={m.deleteAria}
+          deleteConfirm={m.deleteConfirm}
           onDelete={(id) =>
             start(() =>
               deleteUnitMediaAction(unit.id, id).then(() => router.refresh()),
@@ -73,7 +80,7 @@ export function UnitMediaPanel({ unit }: { unit: Unit }) {
             folder="units"
             attach={{ type: 'unit', targetId: unit.id, mediaType: 'FLOORPLAN' }}
             onUploaded={() => router.refresh()}
-            buttonLabel="+ رفع مخطط (PDF/صورة)"
+            buttonLabel={m.uploadFloorplanBtn}
           />
         </div>
       </div>
@@ -87,6 +94,8 @@ function MediaSection({
   items,
   pending,
   onDelete,
+  deleteAria,
+  deleteConfirm,
   dense,
 }: {
   title: string;
@@ -94,6 +103,8 @@ function MediaSection({
   items: Media[];
   pending: boolean;
   onDelete: (id: string) => void;
+  deleteAria: string;
+  deleteConfirm: string;
   dense?: boolean;
 }) {
   return (
@@ -109,31 +120,31 @@ function MediaSection({
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2">
-          {items.map((m) => (
+          {items.map((item) => (
             <div
-              key={m.id}
+              key={item.id}
               className="relative group rounded-xl overflow-hidden border border-hairline bg-surface-muted"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={m.url}
+                src={item.url}
                 alt=""
                 className="w-full h-24 object-cover transition-transform duration-200 group-hover:scale-[1.03]"
               />
               <span className="absolute bottom-1.5 start-1.5">
                 <Badge tone="gray" variant="solid" size="sm">
-                  {m.type}
+                  {item.type}
                 </Badge>
               </span>
               <button
                 type="button"
                 disabled={pending}
-                aria-label="حذف"
-                title="حذف"
+                aria-label={deleteAria}
+                title={deleteAria}
                 className="absolute top-1.5 end-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900/70 text-white opacity-0 group-hover:opacity-100 hover:bg-danger-600 transition-all disabled:opacity-50"
                 onClick={() => {
-                  if (!confirm('حذف هذا الملف؟')) return;
-                  onDelete(m.id);
+                  if (!confirm(deleteConfirm)) return;
+                  onDelete(item.id);
                 }}
               >
                 <Trash2 className="h-3.5 w-3.5" />

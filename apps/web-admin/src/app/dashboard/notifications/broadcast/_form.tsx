@@ -18,16 +18,8 @@ import {
   type BroadcastState,
   type BroadcastPreviewResult,
 } from '@/app/_actions/notifications';
-
-const TARGET_OPTIONS = [
-  { value: 'ALL_CUSTOMERS',               label: 'جميع العملاء (CUSTOMER)' },
-  { value: 'ALL_BROKERS',                 label: 'جميع الوسطاء (BROKER)' },
-  { value: 'ALL_SALES',                   label: 'جميع المبيعات (SALES)' },
-  { value: 'ALL_MAINTENANCE_SUPERVISORS', label: 'جميع المشرفين (MAINTENANCE_SUPERVISOR)' },
-  { value: 'ALL_ACTIVE',                  label: 'جميع المستخدمين النشطين' },
-  { value: 'ROLE',                        label: 'دور محدد…' },
-  { value: 'USER',                        label: 'مستخدم محدد (UUID)…' },
-];
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 const ROLE_OPTIONS = [
   { value: 'ADMIN',                  label: 'ADMIN' },
@@ -45,7 +37,13 @@ const MASS_TARGETS = new Set([
   'ALL_MAINTENANCE_SUPERVISORS', 'ALL_ACTIVE',
 ]);
 
-export default function BroadcastForm() {
+interface Props { locale?: Locale; }
+
+export default function BroadcastForm({ locale = 'ar' }: Props) {
+  const m = uiT(locale).notificationsBroadcast;
+
+  const TARGET_OPTIONS = Object.entries(m.targetOptions).map(([value, label]) => ({ value, label }));
+
   const [state, formAction] = useActionState<BroadcastState, FormData>(
     broadcastNotificationAction,
     {},
@@ -132,18 +130,28 @@ export default function BroadcastForm() {
       ? <CheckCircle2 className="h-5 w-5 shrink-0" />
       : <AlertCircle className="h-5 w-5 shrink-0" />;
 
+  const bt = m.bannerTitles;
   const bannerTitle =
-    inAppOk        ? 'تم إنشاء الإشعارات بنجاح' :
-    inAppPartial   ? 'تم الإنشاء جزئيًا' :
-    inAppAllFailed ? 'فشل إنشاء الإشعارات' :
-    pushOk         ? 'تم إرسال PUSH بنجاح' :
-    pushPartial    ? 'تم إرسال PUSH جزئيًا' :
-    pushNoDevices  ? 'PUSH أُرسل — لا يوجد جهاز مسجّل' :
-    pushAllFailed  ? 'فشل إرسال PUSH' :
-    dualOk         ? 'تم الإنشاء والإرسال بنجاح (IN_APP + PUSH)' :
-    dualPartial    ? 'اكتملت جزئيًا (IN_APP + PUSH)' :
-    dualAllFailed  ? 'فشل الإنشاء والإرسال' :
-    'اكتملت العملية';
+    inAppOk        ? bt.inAppOk :
+    inAppPartial   ? bt.inAppPartial :
+    inAppAllFailed ? bt.inAppAllFailed :
+    pushOk         ? bt.pushOk :
+    pushPartial    ? bt.pushPartial :
+    pushNoDevices  ? bt.pushNoDevices :
+    pushAllFailed  ? bt.pushAllFailed :
+    dualOk         ? bt.dualOk :
+    dualPartial    ? bt.dualPartial :
+    dualAllFailed  ? bt.dualAllFailed :
+    bt.default;
+
+  const rl = m.resultList;
+  const cs = m.contentSection;
+  const ch = m.channelSection;
+  const ps = m.pushStatus;
+  const au = m.audienceSection;
+  const dl = m.deepLinkSection;
+  const pv = m.previewSection;
+  const ft = m.footer;
 
   return (
     <form action={formAction} className="flex flex-col gap-6 lg:gap-8">
@@ -167,10 +175,10 @@ export default function BroadcastForm() {
           {/* IN_APP results */}
           {isInApp && (
             <ul className="ps-7 list-disc space-y-0.5">
-              <li>المستقبلون: <span className="font-bold tabular-nums">{state.recipientCount}</span></li>
-              <li>إشعارات أُنشئت: <span className="font-bold tabular-nums">{state.notificationRecordsCreated ?? 0}</span></li>
+              <li>{rl.recipients} <span className="font-bold tabular-nums">{state.recipientCount}</span></li>
+              <li>{rl.notificationsCreated} <span className="font-bold tabular-nums">{state.notificationRecordsCreated ?? 0}</span></li>
               {(state.failed ?? 0) > 0 && (
-                <li>فشل: <span className="font-bold tabular-nums">{state.failed}</span></li>
+                <li>{rl.failed} <span className="font-bold tabular-nums">{state.failed}</span></li>
               )}
               <li className="text-2xs font-mono opacity-60" dir="ltr">ID: {state.broadcastId}</li>
             </ul>
@@ -179,14 +187,14 @@ export default function BroadcastForm() {
           {/* PUSH results */}
           {isPush && (
             <ul className="ps-7 list-disc space-y-0.5">
-              <li>المستقبلون: <span className="font-bold tabular-nums">{state.recipientCount}</span></li>
-              <li>Push وصل للأجهزة: <span className="font-bold tabular-nums">{state.pushSent ?? 0}</span></li>
+              <li>{rl.recipients} <span className="font-bold tabular-nums">{state.recipientCount}</span></li>
+              <li>{rl.pushDelivered} <span className="font-bold tabular-nums">{state.pushSent ?? 0}</span></li>
               {(state.pushFailed ?? 0) > 0 && (
-                <li>Push فشل: <span className="font-bold tabular-nums">{state.pushFailed}</span></li>
+                <li>{rl.pushFailed} <span className="font-bold tabular-nums">{state.pushFailed}</span></li>
               )}
               {(state.noDeviceTokens ?? 0) > 0 && (
                 <li>
-                  بدون جهاز مسجّل:{' '}
+                  {rl.noDeviceTokens}{' '}
                   <span className="font-bold tabular-nums">{state.noDeviceTokens}</span>
                 </li>
               )}
@@ -197,18 +205,18 @@ export default function BroadcastForm() {
           {/* IN_APP_AND_PUSH results */}
           {isDual && (
             <ul className="ps-7 list-disc space-y-0.5">
-              <li>المستقبلون: <span className="font-bold tabular-nums">{state.recipientCount}</span></li>
-              <li>إشعارات أُنشئت (IN_APP): <span className="font-bold tabular-nums">{state.notificationRecordsCreated ?? 0}</span></li>
+              <li>{rl.recipients} <span className="font-bold tabular-nums">{state.recipientCount}</span></li>
+              <li>{rl.notificationsCreatedInApp} <span className="font-bold tabular-nums">{state.notificationRecordsCreated ?? 0}</span></li>
               {(state.failed ?? 0) > 0 && (
-                <li>فشل الإنشاء: <span className="font-bold tabular-nums">{state.failed}</span></li>
+                <li>{rl.createFailed} <span className="font-bold tabular-nums">{state.failed}</span></li>
               )}
-              <li>Push وصل للأجهزة: <span className="font-bold tabular-nums">{state.pushSent ?? 0}</span></li>
+              <li>{rl.pushDelivered} <span className="font-bold tabular-nums">{state.pushSent ?? 0}</span></li>
               {(state.pushFailed ?? 0) > 0 && (
-                <li>Push فشل: <span className="font-bold tabular-nums">{state.pushFailed}</span></li>
+                <li>{rl.pushFailed} <span className="font-bold tabular-nums">{state.pushFailed}</span></li>
               )}
               {(state.noDeviceTokens ?? 0) > 0 && (
                 <li>
-                  بدون جهاز مسجّل:{' '}
+                  {rl.noDeviceTokens}{' '}
                   <span className="font-bold tabular-nums">{state.noDeviceTokens}</span>
                 </li>
               )}
@@ -219,39 +227,34 @@ export default function BroadcastForm() {
           {/* Failure hints */}
           {state.failureHint && (
             <p className="mt-1 text-xs leading-relaxed ps-7 opacity-80">
-              {state.failureHint === 'database_error' && 'سبب محتمل: خطأ في قاعدة البيانات — راجع سجلات الخادم للتفاصيل.'}
-              {state.failureHint === 'no_device_tokens' && 'المستقبلون المحددون لا يملكون أجهزة مسجّلة. اطلب منهم تسجيل الدخول عبر التطبيق المحمول أولاً.'}
-              {state.failureHint === 'push_failed' && 'فشل إرسال بعض أو كل الإشعارات عبر FCM — راجع سجلات الخادم.'}
+              {m.failureHints[state.failureHint]}
             </p>
           )}
         </div>
       )}
 
       {/* ── Content ──────────────────────────────────────────────────────── */}
-      <FormSection
-        title="محتوى الإشعار"
-        description="يجب إدخال كلا النسختين (العربية والإنجليزية) — سيتلقى كل مستخدم الإشعار بلغته المفضلة."
-      >
+      <FormSection title={cs.title} description={cs.description}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="العنوان (عربي)" name="title_ar" required>
+          <Field label={cs.titleArLabel} name="title_ar" required>
             <Input
               id="title_ar"
               name="title_ar"
               required
               maxLength={200}
-              placeholder="مثال: تحديث مهم في المنصة"
+              placeholder={cs.titleArPlaceholder}
               dir="rtl"
               value={titleAr}
               onChange={(e) => setTitleAr(e.target.value)}
             />
           </Field>
-          <Field label="العنوان (إنجليزي)" name="title_en" required>
+          <Field label={cs.titleEnLabel} name="title_en" required>
             <Input
               id="title_en"
               name="title_en"
               required
               maxLength={200}
-              placeholder="e.g. Important platform update"
+              placeholder={cs.titleEnPlaceholder}
               dir="ltr"
               value={titleEn}
               onChange={(e) => setTitleEn(e.target.value)}
@@ -259,27 +262,27 @@ export default function BroadcastForm() {
           </Field>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-          <Field label="نص الرسالة (عربي)" name="body_ar" required>
+          <Field label={cs.bodyArLabel} name="body_ar" required>
             <Textarea
               id="body_ar"
               name="body_ar"
               required
               maxLength={500}
               rows={3}
-              placeholder="تفاصيل الإشعار بالعربية…"
+              placeholder={cs.bodyArPlaceholder}
               dir="rtl"
               value={bodyAr}
               onChange={(e) => setBodyAr(e.target.value)}
             />
           </Field>
-          <Field label="نص الرسالة (إنجليزي)" name="body_en" required>
+          <Field label={cs.bodyEnLabel} name="body_en" required>
             <Textarea
               id="body_en"
               name="body_en"
               required
               maxLength={500}
               rows={3}
-              placeholder="Notification body in English…"
+              placeholder={cs.bodyEnPlaceholder}
               dir="ltr"
             />
           </Field>
@@ -287,21 +290,18 @@ export default function BroadcastForm() {
       </FormSection>
 
       {/* ── Channel ──────────────────────────────────────────────────────── */}
-      <FormSection
-        title="قناة الإرسال"
-        description="IN_APP يُنشئ إشعارًا في قائمة إشعارات التطبيق. PUSH يرسل إشعار دفع للأجهزة عبر Firebase. IN_APP_AND_PUSH يفعل الاثنين معًا."
-      >
+      <FormSection title={ch.title} description={ch.description}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="القناة" name="channel" required>
+          <Field label={ch.fieldLabel} name="channel" required>
             <Select
               id="channel"
               name="channel"
               value={channel}
               onChange={(e) => handleChannelChange(e.target.value)}
             >
-              <option value="IN_APP">IN_APP — داخل التطبيق</option>
-              <option value="PUSH">PUSH — دفع للجوال (يتطلب Firebase)</option>
-              <option value="IN_APP_AND_PUSH">IN_APP_AND_PUSH — داخل التطبيق ودفع للجوال</option>
+              <option value="IN_APP">{ch.optionInApp}</option>
+              <option value="PUSH">{ch.optionPush}</option>
+              <option value="IN_APP_AND_PUSH">{ch.optionDual}</option>
             </Select>
           </Field>
         </div>
@@ -321,39 +321,28 @@ export default function BroadcastForm() {
             <div className="text-xs leading-relaxed">
               {estimate == null && (
                 <>
-                  <p className="font-semibold text-sm mb-0.5">قناة {channel} — اضغط «تقدير المستقبلين» أولاً</p>
-                  <p className="opacity-80">
-                    يتحقق التقدير من حالة Firebase ويعرض عدد الأجهزة المسجّلة قبل السماح بالإرسال.
-                  </p>
+                  <p className="font-semibold text-sm mb-0.5">{ps.checkFirstTitle(channel)}</p>
+                  <p className="opacity-80">{ps.checkFirstDesc}</p>
                 </>
               )}
               {estimate != null && !pushEnabled && (
                 <>
-                  <p className="font-semibold text-sm mb-0.5">Firebase غير مهيّأ — PUSH معطّل</p>
-                  <p className="opacity-80">
-                    أضف <code className="font-mono">FIREBASE_PROJECT_ID</code>،{' '}
-                    <code className="font-mono">FIREBASE_CLIENT_EMAIL</code>،{' '}
-                    <code className="font-mono">FIREBASE_PRIVATE_KEY</code> إلى ملف{' '}
-                    <code className="font-mono">.env</code> ثم أعد تشغيل الخادم.
-                    لا يمكن الإرسال عبر PUSH حالياً.
-                  </p>
+                  <p className="font-semibold text-sm mb-0.5">{ps.notConfiguredTitle}</p>
+                  <p className="opacity-80">{ps.notConfiguredDesc}</p>
                 </>
               )}
               {estimate != null && pushEnabled && hasDevices && (
                 <>
-                  <p className="font-semibold text-sm mb-0.5">Firebase مهيّأ — PUSH جاهز</p>
+                  <p className="font-semibold text-sm mb-0.5">{ps.readyTitle}</p>
                   <p className="opacity-80">
-                    {estimate.estimatedDeviceCount} جهاز مسجّل
-                    {(estimate.usersWithoutDevices ?? 0) > 0 && ` — ${estimate.usersWithoutDevices} مستقبل بدون جهاز`}
+                    {ps.readyDesc(estimate.estimatedDeviceCount ?? 0, estimate.usersWithoutDevices ?? undefined)}
                   </p>
                 </>
               )}
               {estimate != null && pushEnabled && noDevicesAtAll && (
                 <>
-                  <p className="font-semibold text-sm mb-0.5">Firebase مهيّأ — لا يوجد جهاز مسجّل</p>
-                  <p className="opacity-80">
-                    المستقبلون المحددون لا يملكون أجهزة مسجّلة. اطلب منهم تسجيل الدخول عبر التطبيق المحمول أولاً حتى يُسجَّل الجهاز.
-                  </p>
+                  <p className="font-semibold text-sm mb-0.5">{ps.noDevicesTitle}</p>
+                  <p className="opacity-80">{ps.noDevicesDesc}</p>
                 </>
               )}
             </div>
@@ -362,12 +351,9 @@ export default function BroadcastForm() {
       </FormSection>
 
       {/* ── Audience ─────────────────────────────────────────────────────── */}
-      <FormSection
-        title="الجمهور المستهدف"
-        description="حدد من يستقبل هذا الإشعار. اضغط «تقدير المستقبلين» أولاً للتحقق من العدد والأجهزة."
-      >
+      <FormSection title={au.title} description={au.description}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="نوع الجمهور" name="target" required>
+          <Field label={au.audienceTypeLabel} name="target" required>
             <Select
               id="target"
               name="target"
@@ -382,7 +368,7 @@ export default function BroadcastForm() {
           </Field>
 
           {target === 'ROLE' && (
-            <Field label="الدور" name="targetRole" required>
+            <Field label={au.roleLabel} name="targetRole" required>
               <Select
                 id="targetRole"
                 name="targetRole"
@@ -398,7 +384,7 @@ export default function BroadcastForm() {
           )}
 
           {target === 'USER' && (
-            <Field label="معرف المستخدم (UUID)" name="targetUserId" required>
+            <Field label={au.userIdLabel} name="targetUserId" required>
               <Input
                 id="targetUserId"
                 name="targetUserId"
@@ -424,17 +410,17 @@ export default function BroadcastForm() {
               disabled={estimating}
             >
               <Search className="h-3.5 w-3.5 me-1.5" />
-              {estimating ? 'جارٍ التقدير…' : 'تقدير المستقبلين'}
+              {estimating ? au.estimatingBtn : au.estimateBtn}
             </Button>
 
             {estimate && !estimate.error && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1 text-sm text-brand-700 font-semibold">
                 <Users className="h-3.5 w-3.5" />
-                {estimate.recipientCount} مستخدم
+                {estimate.recipientCount} {au.userSuffix}
                 {isPushChannel && estimate.estimatedDeviceCount != null && (
                   <span className="flex items-center gap-1 ms-1 text-brand-500 font-normal text-xs">
                     <Smartphone className="h-3 w-3" />
-                    {estimate.estimatedDeviceCount} جهاز
+                    {estimate.estimatedDeviceCount} {au.deviceSuffix}
                   </span>
                 )}
               </span>
@@ -448,9 +434,7 @@ export default function BroadcastForm() {
             )}
           </div>
 
-          <p className="text-xs text-slate-400 leading-relaxed">
-            هذا الزر يحسب فقط عدد المستقبلين وأجهزتهم — لن يُرسَل أي شيء حتى تضغط «إرسال».
-          </p>
+          <p className="text-xs text-slate-400 leading-relaxed">{au.estimateNote}</p>
 
           {/* Confirmation checkbox — mass targets only, after a successful estimate */}
           {isMass && estimate != null && !estimate.error && (
@@ -462,9 +446,7 @@ export default function BroadcastForm() {
                 onChange={(e) => setConfirmed(e.target.checked)}
               />
               <span className="text-warning-800 leading-snug">
-                أتأكد من أنني أريد إرسال هذا الإشعار إلى{' '}
-                <strong>{estimate.recipientCount}</strong> مستخدم.
-                هذا الإجراء لا يمكن التراجع عنه.
+                {au.confirmMass(estimate.recipientCount ?? 0)}
               </span>
             </label>
           )}
@@ -473,36 +455,31 @@ export default function BroadcastForm() {
           {(isMass && estimate == null) && (
             <p className="text-xs text-slate-500 flex items-center gap-1.5">
               <AlertCircle className="h-3.5 w-3.5 text-warning-500 shrink-0" />
-              {isPushChannel
-                ? 'قدِّر عدد المستقبلين أولاً للتحقق من حالة Firebase والأجهزة قبل الإرسال.'
-                : 'هذا الإرسال الجماعي يتطلب تقدير عدد المستقبلين والتأكيد قبل الإرسال.'}
+              {isPushChannel ? au.hintPushMassNeedEstimate : au.hintMassNeedEstimate}
             </p>
           )}
           {isPushChannel && estimate == null && !isMass && (
             <p className="text-xs text-slate-500 flex items-center gap-1.5">
               <AlertCircle className="h-3.5 w-3.5 text-warning-500 shrink-0" />
-              اضغط «تقدير المستقبلين» للتحقق من تهيئة Firebase قبل الإرسال عبر {channel}.
+              {au.hintPushNeedEstimate(channel)}
             </p>
           )}
         </div>
       </FormSection>
 
       {/* ── Optional deep link ───────────────────────────────────────────── */}
-      <FormSection
-        title="رابط عميق (اختياري)"
-        description="إذا كانت الرسالة تتعلق بكيان محدد، أضف نوعه ومعرفه لتمكين التنقل المباشر من الإشعار."
-      >
+      <FormSection title={dl.title} description={dl.description}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Field label="نوع الكيان" name="entityType" hint="مثال: maintenance, reservation, unit">
+          <Field label={dl.entityTypeLabel} name="entityType" hint={dl.entityTypeHint}>
             <Input
               id="entityType"
               name="entityType"
               maxLength={60}
-              placeholder="maintenance"
+              placeholder={dl.entityTypePlace}
               dir="ltr"
             />
           </Field>
-          <Field label="معرف الكيان (UUID)" name="entityId">
+          <Field label={dl.entityIdLabel} name="entityId">
             <Input
               id="entityId"
               name="entityId"
@@ -523,9 +500,9 @@ export default function BroadcastForm() {
         >
           <span className="flex items-center gap-2">
             {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            معاينة الإشعار
+            {pv.toggleShow}
           </span>
-          <span className="text-slate-400 text-xs">(محاكاة المظهر في القائمة)</span>
+          <span className="text-slate-400 text-xs">{pv.toggleHint}</span>
         </button>
         {showPreview && (
           <div className="border-t border-hairline px-4 py-4">
@@ -536,19 +513,17 @@ export default function BroadcastForm() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold text-slate-900 leading-snug">
-                    {titleAr || <span className="text-slate-400 italic">العنوان بالعربية…</span>}
+                    {titleAr || <span className="text-slate-400 italic">{pv.titlePlaceholder}</span>}
                   </p>
-                  <span className="shrink-0 text-xs text-slate-400 whitespace-nowrap" dir="ltr">الآن</span>
+                  <span className="shrink-0 text-xs text-slate-400 whitespace-nowrap" dir="ltr">{pv.now}</span>
                 </div>
                 <p className="mt-1 text-xs text-slate-500 leading-snug">
-                  {bodyAr || <span className="italic text-slate-300">نص الرسالة بالعربية…</span>}
+                  {bodyAr || <span className="italic text-slate-300">{pv.bodyPlaceholder}</span>}
                 </p>
               </div>
               <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand-500" />
             </div>
-            <p className="mt-2 text-2xs text-slate-400 text-center">
-              هذه محاكاة — المظهر الفعلي قد يختلف بحسب اللغة المفضلة للمستخدم
-            </p>
+            <p className="mt-2 text-2xs text-slate-400 text-center">{pv.simulationNote}</p>
           </div>
         )}
       </div>
@@ -557,17 +532,17 @@ export default function BroadcastForm() {
         sticky
         primary={
           <SubmitButton disabled={sendBlocked}>
-            إرسال الإشعار
+            {ft.submitBtn}
           </SubmitButton>
         }
         helper={
           pushUnavailable
-            ? `Firebase غير مهيّأ — لا يمكن الإرسال عبر ${channel}.`
+            ? ft.helperFirebaseUnavailable(channel)
             : pushNotReady
-              ? 'قدِّر المستقبلين أولاً للتحقق من تهيئة Firebase.'
+              ? ft.helperPushNotReady
               : massNotReady
-                ? 'قدِّر عدد المستقبلين وأكّد قبل الإرسال الجماعي.'
-                : 'لا يمكن التراجع عن الإرسال. تأكد من المحتوى والجمهور قبل الإرسال.'
+                ? ft.helperMassNotReady
+                : ft.helperDefault
         }
       />
     </form>

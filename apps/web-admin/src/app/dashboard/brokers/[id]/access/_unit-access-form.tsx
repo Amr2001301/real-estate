@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { Project, Unit } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
 import { tx } from '@/lib/format';
+import { uiT } from '@/messages/ui';
 
 function FormField({
   label,
@@ -29,9 +31,11 @@ interface Props {
   action: (formData: FormData) => void | Promise<void>;
   allUnits: Unit[];
   projects: Project[];
+  locale?: Locale;
 }
 
-export function UnitAccessGrantForm({ action, allUnits, projects }: Props) {
+export function UnitAccessGrantForm({ action, allUnits, projects, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.brokerAccessPage;
   const [projectId, setProjectId] = useState('');
   const [showAll, setShowAll] = useState(false);
 
@@ -53,14 +57,14 @@ export function UnitAccessGrantForm({ action, allUnits, projects }: Props) {
 
   return (
     <form action={action} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <FormField label="المشروع *">
+      <FormField label={m.unitProject}>
         <Select
           id="_project"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           required
         >
-          <option value="" disabled>اختر مشروعًا</option>
+          <option value="" disabled>{m.unitProjectPlaceholder}</option>
           {projects.map((p) => (
             <option key={p.id} value={p.id}>
               {tx(p.name)}{p.city ? ` — ${p.city}` : ''}
@@ -69,14 +73,14 @@ export function UnitAccessGrantForm({ action, allUnits, projects }: Props) {
         </Select>
       </FormField>
 
-      <FormField label="الوحدة *">
+      <FormField label={m.unitLabel}>
         <Select id="unitId" name="unitId" required defaultValue="" disabled={!projectId}>
           <option value="" disabled>
             {projectId
               ? selectable.length > 0
-                ? 'اختر وحدة متاحة'
-                : 'لا توجد وحدات متاحة'
-              : 'اختر مشروعًا أولًا'}
+                ? m.unitAvailablePlaceholder
+                : m.unitNoAvailable
+              : m.unitSelectProjectFirst}
           </option>
           {shownUnits.map((u) => (
             <option key={u.id} value={u.id} disabled={u.status !== 'AVAILABLE'}>
@@ -93,22 +97,22 @@ export function UnitAccessGrantForm({ action, allUnits, projects }: Props) {
         <div className="flex flex-wrap items-center gap-5">
           <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
             <Checkbox name="active" defaultChecked />
-            <span>مفعّل</span>
+            <span>{m.activeLabel}</span>
           </label>
           <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
             <Checkbox
               checked={showAll}
               onChange={(e) => setShowAll(e.currentTarget.checked)}
             />
-            <span>إظهار الوحدات غير المتاحة (للعرض فقط)</span>
+            <span>{m.showUnavailableLabel}</span>
           </label>
           {blocked.length > 0 && !showAll && (
             <span className="text-[11px] text-slate-400">
-              {blocked.length} وحدة محجوزة/مباعة مخفية
+              {m.hiddenUnitsNote(blocked.length)}
             </span>
           )}
         </div>
-        <Button type="submit" variant="primary" size="md">منح الصلاحية</Button>
+        <Button type="submit" variant="primary" size="md">{m.btnGrantUnit}</Button>
       </div>
     </form>
   );

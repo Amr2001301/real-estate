@@ -5,18 +5,15 @@ import {
   Tooltip, ResponsiveContainer,
 } from 'recharts';
 import type { CashflowTrendPoint } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 const COLLECTED_COLOR = '#10b981';
 const DUE_COLOR = '#f59e0b';
 
-function formatK(v: number): string {
-  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}م`;
-  if (v >= 1_000) return `${Math.round(v / 1_000)}ك`;
-  return String(Math.round(v));
-}
-
-function CustomTooltip({ active, payload, label }: {
+function CustomTooltip({ active, payload, label, collectedLabel, dueLabel }: {
   active?: boolean; payload?: { name: string; value: number; color: string }[]; label?: string;
+  collectedLabel: string; dueLabel: string;
 }) {
   if (!active || !payload?.length) return null;
   return (
@@ -29,7 +26,7 @@ function CustomTooltip({ active, payload, label }: {
         <div key={i} className="flex items-center justify-between gap-4 py-0.5">
           <div className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full shrink-0" style={{ background: entry.color }} />
-            <span className="text-slate-500">{entry.name === 'collected' ? 'المحصّل' : 'المستحق'}</span>
+            <span className="text-slate-500">{entry.name === 'collected' ? collectedLabel : dueLabel}</span>
           </div>
           <span className="font-semibold tabular-nums text-slate-800">
             {new Intl.NumberFormat('ar-EG', { maximumFractionDigits: 0 }).format(entry.value)}
@@ -40,9 +37,16 @@ function CustomTooltip({ active, payload, label }: {
   );
 }
 
-export function CashflowBarChart({ data }: { data: CashflowTrendPoint[] }) {
+export function CashflowBarChart({ data, locale = 'ar' }: { data: CashflowTrendPoint[]; locale?: Locale }) {
+  const m = uiT(locale).financialReportsPage.cashflow;
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  function formatK(v: number): string {
+    if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}${m.millionSuffix}`;
+    if (v >= 1_000) return `${Math.round(v / 1_000)}${m.thousandSuffix}`;
+    return String(Math.round(v));
+  }
 
   if (!mounted) {
     return (
@@ -67,8 +71,8 @@ export function CashflowBarChart({ data }: { data: CashflowTrendPoint[] }) {
   if (isEmpty) {
     return (
       <div className="h-52 flex flex-col items-center justify-center gap-2 text-center">
-        <p className="text-sm text-slate-400">لا توجد بيانات للفترة المحددة</p>
-        <p className="text-[11px] text-slate-300">تظهر البيانات حسب المدفوعات والمستحقات المسجلة</p>
+        <p className="text-sm text-slate-400">{m.emptyMsg}</p>
+        <p className="text-[11px] text-slate-300">{m.dataNote}</p>
       </div>
     );
   }
@@ -93,14 +97,17 @@ export function CashflowBarChart({ data }: { data: CashflowTrendPoint[] }) {
             tickLine={false}
             width={38}
           />
-          <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc', radius: 4 }} />
+          <Tooltip
+            content={<CustomTooltip collectedLabel={m.legendCollected} dueLabel={m.legendDue} />}
+            cursor={{ fill: '#f8fafc', radius: 4 }}
+          />
           <Bar dataKey="collected" name="collected" fill={COLLECTED_COLOR} radius={[4, 4, 0, 0]} minPointSize={3} />
           <Bar dataKey="due"       name="due"       fill={DUE_COLOR}       radius={[4, 4, 0, 0]} minPointSize={3} />
         </BarChart>
       </ResponsiveContainer>
       {activeMths <= 2 && (
         <p className="mt-1 text-center text-[11px] text-slate-300">
-          تظهر البيانات حسب المدفوعات والمستحقات المسجلة خلال الأشهر الستة الماضية
+          {m.dataNoteFull}
         </p>
       )}
     </div>

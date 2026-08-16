@@ -4,6 +4,8 @@ import { Building2, Home, MapPin, BedDouble, Maximize2, Heart, ArrowLeft, type L
 import { routes } from '@/lib/routes';
 import { formatPrice, formatNumber, pickAr, cityLabel, unitTypeLabel } from '@/lib/format';
 import type { FavoriteItem } from '@/lib/api-types';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { CoverImage } from '@/components/ui/CoverImage';
 import { removeFavoriteAction } from '@/lib/account-actions';
 
@@ -22,39 +24,6 @@ interface View {
   price: string | null;
 }
 
-/** Normalise a favorite (project OR unit) into one render shape. */
-function toView(fav: FavoriteItem): View | null {
-  if (fav.unit) {
-    const u = fav.unit;
-    const specs: Spec[] = [];
-    if (u.bedrooms > 0) specs.push({ Icon: BedDouble, text: `${formatNumber(u.bedrooms)} غرف` });
-    if (u.area > 0) specs.push({ Icon: Maximize2, text: `${formatNumber(u.area)} م²` });
-    return {
-      href: routes.unit(u.id) as Route,
-      thumb: u.media[0]?.url ?? null,
-      badge: 'وحدة',
-      BadgeIcon: Home,
-      title: `${unitTypeLabel(u.type)} · ${u.code}`,
-      specs,
-      price: u.price,
-    };
-  }
-  if (fav.project) {
-    const p = fav.project;
-    const city = cityLabel(p.city);
-    return {
-      href: routes.project(p.id) as Route,
-      thumb: p.media[0]?.url ?? null,
-      badge: 'مشروع',
-      BadgeIcon: Building2,
-      title: pickAr(p.name) || 'مشروع',
-      specs: city ? [{ Icon: MapPin, text: city }] : [],
-      price: null,
-    };
-  }
-  return null;
-}
-
 /**
  * Luxury favorite tile: a full-bleed cover image with a glass badge + a heart
  * "remove" control, over a tight content block (title · specs · price). The
@@ -62,7 +31,43 @@ function toView(fav: FavoriteItem): View | null {
  * SIBLING of that link (never nested — a button inside an <a> is invalid HTML)
  * positioned over the image. A gold chevron disc telegraphs the navigation.
  */
-export function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
+export async function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.favorites;
+
+  /** Normalise a favorite (project OR unit) into one render shape. */
+  function toView(fav: FavoriteItem): View | null {
+    if (fav.unit) {
+      const u = fav.unit;
+      const specs: Spec[] = [];
+      if (u.bedrooms > 0) specs.push({ Icon: BedDouble, text: `${formatNumber(u.bedrooms)} ${m.rooms}` });
+      if (u.area > 0) specs.push({ Icon: Maximize2, text: `${formatNumber(u.area)} ${m.sqm}` });
+      return {
+        href: routes.unit(u.id) as Route,
+        thumb: u.media[0]?.url ?? null,
+        badge: m.badgeUnit,
+        BadgeIcon: Home,
+        title: `${unitTypeLabel(u.type)} · ${u.code}`,
+        specs,
+        price: u.price,
+      };
+    }
+    if (fav.project) {
+      const p = fav.project;
+      const city = cityLabel(p.city);
+      return {
+        href: routes.project(p.id) as Route,
+        thumb: p.media[0]?.url ?? null,
+        badge: m.badgeProject,
+        BadgeIcon: Building2,
+        title: pickAr(p.name) || m.badgeProject,
+        specs: city ? [{ Icon: MapPin, text: city }] : [],
+        price: null,
+      };
+    }
+    return null;
+  }
+
   const v = toView(favorite);
   if (!v) return null;
   const { BadgeIcon } = v;
@@ -106,7 +111,7 @@ export function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
             {v.price ? (
               <div className="font-display text-lg font-extrabold text-ink-strong">{formatPrice(v.price)}</div>
             ) : (
-              <span className="text-sm font-medium text-gold-600">عرض المشروع</span>
+              <span className="text-sm font-medium text-gold-600">{m.viewProject}</span>
             )}
             <span
               className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy text-white transition-all duration-300 ease-smooth group-hover:scale-110 group-hover:bg-gold-400 group-hover:text-navy"
@@ -122,7 +127,7 @@ export function FavoriteCard({ favorite }: { favorite: FavoriteItem }) {
       <form action={removeFavoriteAction.bind(null, favorite.id)} className="absolute left-3 top-3 z-10">
         <button
           type="submit"
-          aria-label="إزالة من المفضلة"
+          aria-label={m.removeLabel}
           className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/30 backdrop-blur-md transition-all duration-200 hover:bg-error hover:text-white hover:ring-error"
         >
           <Heart className="h-4 w-4 fill-current" aria-hidden />

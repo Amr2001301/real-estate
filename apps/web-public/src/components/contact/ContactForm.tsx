@@ -12,6 +12,8 @@ import { Input, Textarea, Field } from '@/components/ui/Input';
 import { FormError } from '@/components/states/FormError';
 import { InlineNotice } from '@/components/states/InlineNotice';
 import { IconCircle } from '@/components/ui/IconCircle';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 
 export interface ContactContext {
   projectId?: string;
@@ -37,17 +39,6 @@ type Status = 'idle' | 'submitting' | 'success' | 'error';
 const PHONE_RE = /^[+\d][\d\s-]{6,}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const SUCCESS = 'تم إرسال طلبك بنجاح. سيتواصل معك أحد مستشارينا قريبًا.';
-
-/** Map an API failure to a calm, specific Arabic message — never raw detail. */
-function mapError(status: number, hasContext: boolean): string {
-  if (status === 0) return 'تعذر الاتصال بالخادم حاليًا. حاول مرة أخرى بعد لحظات.';
-  if ((status === 400 || status === 404) && hasContext)
-    return 'تعذر إرسال الطلب لهذا العقار حاليًا. اختر عقارًا آخر أو تواصل معنا مباشرة.';
-  if (status === 400) return 'برجاء مراجعة البيانات المطلوبة.';
-  return 'تعذر إرسال الطلب حاليًا. يرجى المحاولة مرة أخرى أو التواصل معنا مباشرة.';
-}
-
 /**
  * Local datetime string (YYYY-MM-DDTHH:mm) for tomorrow at 09:00 — used as the
  * `min` of the visit date/time picker. Computed after mount to avoid any
@@ -67,6 +58,7 @@ export function ContactForm({
   eyebrow,
   initialValues,
   isAuthenticatedCustomer = false,
+  locale = 'ar',
 }: {
   context: ContactContext;
   /** 'visit' switches the form to a visit-request (needs a project + date). */
@@ -88,7 +80,10 @@ export function ContactForm({
    * server-side from the session — guests render with the flag off.
    */
   isAuthenticatedCustomer?: boolean;
+  locale?: Locale;
 }) {
+  const cf = siteT(locale).contactForm;
+
   const [status, setStatus] = useState<Status>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -111,16 +106,24 @@ export function ContactForm({
     utmRef.current = captureUtm();
   }, []);
 
+  /** Map an API failure to a calm, specific message — never raw detail. */
+  function mapError(s: number, hasContext: boolean): string {
+    if (s === 0) return cf.serverError;
+    if ((s === 400 || s === 404) && hasContext) return cf.propertyError;
+    if (s === 400) return cf.validationError;
+    return cf.sendError;
+  }
+
   function validate(): boolean {
     const e: Record<string, string> = {};
-    if (!fullName.trim()) e.fullName = 'يرجى إدخال الاسم الكامل.';
-    if (!phone.trim()) e.phone = 'يرجى إدخال رقم الهاتف.';
-    else if (!PHONE_RE.test(phone.trim())) e.phone = 'يرجى إدخال رقم هاتف صحيح.';
-    if (email.trim() && !EMAIL_RE.test(email.trim())) e.email = 'صيغة البريد الإلكتروني غير صحيحة.';
-    if (message.trim().length < 2) e.message = 'يرجى كتابة رسالتك.';
+    if (!fullName.trim()) e.fullName = cf.nameRequired;
+    if (!phone.trim()) e.phone = cf.phoneRequired;
+    else if (!PHONE_RE.test(phone.trim())) e.phone = cf.phoneInvalid;
+    if (email.trim() && !EMAIL_RE.test(email.trim())) e.email = cf.emailInvalid;
+    if (message.trim().length < 2) e.message = cf.messageRequired;
     if (isVisit) {
-      if (!preferredDate) e.preferredDate = 'يرجى اختيار موعد الزيارة.';
-      else if (minDate && preferredDate < minDate) e.preferredDate = 'يرجى اختيار موعد ابتداءً من الغد.';
+      if (!preferredDate) e.preferredDate = cf.visitDateRequired;
+      else if (minDate && preferredDate < minDate) e.preferredDate = cf.visitDatePast;
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -196,15 +199,15 @@ export function ContactForm({
         <IconCircle tone="gold" className="mx-auto h-14 w-14">
           <CheckCircle2 className="h-7 w-7" aria-hidden />
         </IconCircle>
-        <h3 className="mt-5 text-2xl text-ink-strong">تم الإرسال بنجاح</h3>
-        <p className="mx-auto mt-3 max-w-md text-ink-muted">{SUCCESS}</p>
-        <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">سيتواصل معك مستشار خلال وقت قصير.</p>
+        <h3 className="mt-5 text-2xl text-ink-strong">{cf.successTitle}</h3>
+        <p className="mx-auto mt-3 max-w-md text-ink-muted">{cf.successMsg}</p>
+        <p className="mx-auto mt-2 max-w-md text-sm text-ink-muted">{cf.successSub}</p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <ButtonLink href={routes.projects} variant="primary" size="md">
-            استكشاف المشاريع
+            {cf.exploreProjects}
           </ButtonLink>
           <Button variant="outline" size="md" onClick={resetForAnother}>
-            إرسال طلب آخر
+            {cf.sendAnother}
           </Button>
         </div>
       </PremiumCard>
@@ -220,11 +223,11 @@ export function ContactForm({
       )}
 
       <h2 className={eyebrow ? 'mt-6 text-2xl text-ink-strong' : 'text-2xl text-ink-strong'}>
-        {isVisit ? 'احجز زيارة' : 'أرسل استفسارك'}
+        {isVisit ? cf.visitTitle : cf.infoTitle}
       </h2>
       <p className="mt-2 flex items-center gap-2 text-sm text-ink-muted">
         <Clock3 className="h-4 w-4 text-gold-500" aria-hidden />
-        {isVisit ? 'اختر الموعد المناسب وسنؤكّد زيارتك قريبًا.' : 'نرد عادةً خلال ساعة عمل واحدة.'}
+        {isVisit ? cf.visitSub : cf.infoSub}
       </p>
 
       {/* Context chip */}
@@ -232,9 +235,9 @@ export function ContactForm({
         <div className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-gold-100 px-3.5 py-2 text-sm text-gold-600">
           {context.unitId ? <HomeIcon className="h-4 w-4" aria-hidden /> : <Building2 className="h-4 w-4" aria-hidden />}
           <span>
-            طلب متعلق بـ{' '}
+            {cf.relatedTo}{' '}
             <span className="font-medium">
-              {context.unitLabel ?? (context.unitId ? 'وحدة محددة' : context.projectName ?? 'مشروع محدد')}
+              {context.unitLabel ?? (context.unitId ? cf.unitContext : context.projectName ?? cf.projectContext)}
             </span>
           </span>
         </div>
@@ -242,17 +245,17 @@ export function ContactForm({
 
       <form onSubmit={onSubmit} noValidate className="mt-6 space-y-5">
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="الاسم الكامل" required>
+          <Field label={cf.nameLabel} required>
             <Input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               invalid={!!errors.fullName}
-              placeholder="مثال: محمد الأحمد"
+              placeholder={cf.namePlaceholder}
               autoComplete="name"
             />
             <FormError>{errors.fullName}</FormError>
           </Field>
-          <Field label="رقم الهاتف" required>
+          <Field label={cf.phoneLabel} required>
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -266,7 +269,7 @@ export function ContactForm({
           </Field>
         </div>
 
-        <Field label="البريد الإلكتروني (اختياري)">
+        <Field label={cf.emailLabel}>
           <Input
             type="email"
             value={email}
@@ -278,18 +281,18 @@ export function ContactForm({
           />
           <FormError>{errors.email}</FormError>
         </Field>
-        <Field label="رسالتك" required>
+        <Field label={cf.messageLabel} required>
           <Textarea
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             invalid={!!errors.message}
-            placeholder="أخبرنا كيف يمكننا مساعدتك..."
+            placeholder={cf.messagePlaceholder}
           />
           <FormError>{errors.message}</FormError>
         </Field>
 
         {isVisit && (
-          <Field label="موعد الزيارة المفضل" required>
+          <Field label={cf.visitDateLabel} required>
             <Input
               type="datetime-local"
               value={preferredDate}
@@ -306,11 +309,11 @@ export function ContactForm({
 
         <Button type="submit" size="lg" className="w-full sm:w-auto" disabled={status === 'submitting'}>
           {status === 'submitting' ? (
-            'جارٍ الإرسال...'
+            cf.sending
           ) : (
             <>
               {isVisit ? <CalendarClock className="h-5 w-5" aria-hidden /> : <Send className="h-5 w-5" aria-hidden />}
-              {isVisit ? 'تأكيد طلب الزيارة' : 'إرسال الطلب'}
+              {isVisit ? cf.submitVisit : cf.submitInfo}
             </>
           )}
         </Button>

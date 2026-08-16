@@ -18,6 +18,8 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -39,6 +41,9 @@ export default async function AdminBrokerPayoutsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerPayoutsPage;
+
   const sp = await searchParams;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
@@ -107,17 +112,17 @@ export default async function AdminBrokerPayoutsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="مدفوعات الوسطاء"
-        description="إدارة مدفوعات الوسطاء ومراجعة عمليات الصرف."
+        title={m.heroTitle}
+        description={m.heroDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'مدفوعات الوسطاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
+          { label: m.breadcrumbSelf },
         ]}
         actions={
           <Link href={'/dashboard/broker-payouts/new' as never}>
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              دفعة جديدة
+              {m.newPayoutBtn}
             </Button>
           </Link>
         }
@@ -129,32 +134,32 @@ export default async function AdminBrokerPayoutsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي المدفوعات',
+            label: m.kpiTotal,
             value: totalPayouts,
             icon: <Wallet />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'مدفوعة',
+            label: m.kpiPaid,
             value: counts.paid,
             icon: <Wallet />,
             tone: 'success',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'إجمالي المدفوع',
+            label: m.kpiTotalPaid,
             value: totalNetPaid > 0 ? formatCurrency(totalNetPaid, currency) : '—',
             icon: <Wallet />,
             tone: 'neutral',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'قيد الصرف',
+            label: m.kpiPending,
             value: totalNetPending > 0 ? formatCurrency(totalNetPending, currency) : '—',
             icon: <Wallet />,
             tone: 'warning',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
         ]}
       />
@@ -163,7 +168,7 @@ export default async function AdminBrokerPayoutsPage({
       {payoutsRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل المدفوعات: {payoutsRes.error}</p>
+          <p className="font-medium">{m.errorLoad}{payoutsRes.error}</p>
         </div>
       )}
 
@@ -176,9 +181,9 @@ export default async function AdminBrokerPayoutsPage({
         {!showFilters && sp.to     && <input type="hidden" name="to"     value={sp.to} />}
 
         {/* ── Row 1: broker filter + actions (always visible) ───────────────── */}
-        <PremiumFilterField label="الوسيط" htmlFor="bpay-broker">
+        <PremiumFilterField label={m.filterBrokerLabel} htmlFor="bpay-broker">
           <Select id="bpay-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
-            <option value="">كل الوسطاء</option>
+            <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
             ))}
@@ -187,10 +192,10 @@ export default async function AdminBrokerPayoutsPage({
 
         {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {hasAnyFilter && (
             <Link href={'/dashboard/broker-payouts' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
@@ -203,7 +208,7 @@ export default async function AdminBrokerPayoutsPage({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filterHideFilters : m.filterAdvanced}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -217,33 +222,33 @@ export default async function AdminBrokerPayoutsPage({
           <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-status" className="text-[11px] font-medium text-slate-400">الحالة</label>
+                <label htmlFor="bpay-status" className="text-[11px] font-medium text-slate-400">{m.filterStatus}</label>
                 <Select id="bpay-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
-                  <option value="">كل الحالات</option>
-                  <option value="DRAFT">مسودة</option>
-                  <option value="APPROVED">موافق عليها</option>
-                  <option value="PROCESSING">قيد التنفيذ</option>
-                  <option value="PAID">مدفوعة</option>
-                  <option value="CANCELLED">ملغاة</option>
+                  <option value="">{m.filterAllStatuses}</option>
+                  <option value="DRAFT">{m.filterStatusDraft}</option>
+                  <option value="APPROVED">{m.filterStatusApproved}</option>
+                  <option value="PROCESSING">{m.filterStatusProcessing}</option>
+                  <option value="PAID">{m.filterStatusPaid}</option>
+                  <option value="CANCELLED">{m.filterStatusCancelled}</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-period" className="text-[11px] font-medium text-slate-400">الفترة</label>
+                <label htmlFor="bpay-period" className="text-[11px] font-medium text-slate-400">{m.filterPeriod}</label>
                 <Input
                   id="bpay-period"
                   name="period"
                   inputSize="sm"
-                  placeholder="مثال: 2026-05"
+                  placeholder={m.filterPeriodPlaceholder}
                   dir="ltr"
                   defaultValue={sp.period ?? ''}
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-from" className="text-[11px] font-medium text-slate-400">التاريخ من</label>
+                <label htmlFor="bpay-from" className="text-[11px] font-medium text-slate-400">{m.filterDateFrom}</label>
                 <Input id="bpay-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bpay-to" className="text-[11px] font-medium text-slate-400">التاريخ إلى</label>
+                <label htmlFor="bpay-to" className="text-[11px] font-medium text-slate-400">{m.filterDateTo}</label>
                 <Input id="bpay-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} />
               </div>
             </div>
@@ -254,24 +259,24 @@ export default async function AdminBrokerPayoutsPage({
       {/* ── Payouts table ────────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<Wallet />}
-        title="سجل المدفوعات"
-        description="دفعات عمولات معتمدة تصرفها الشركة للوسطاء."
+        title={m.tableTitle}
+        description={m.tableDescription}
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {totalPayouts.toLocaleString('ar-EG')} دفعة
+            {totalPayouts.toLocaleString('ar-EG')} {m.tableTrailingCount}
           </span>
         }
       >
         {rows.length === 0 && !payoutsRes.error ? (
           <PremiumEmptyState
             icon={<Wallet />}
-            title="لا توجد مدفوعات بعد"
-            description="أنشئ أول دفعة بعد اعتماد عمولات الوسطاء."
+            title={m.emptyTitle}
+            description={m.emptyDescription}
             action={
               <Link href={'/dashboard/broker-payouts/new' as never}>
                 <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                  دفعة جديدة
+                  {m.emptyNewBtn}
                 </Button>
               </Link>
             }
@@ -282,14 +287,14 @@ export default async function AdminBrokerPayoutsPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">رقم الدفعة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوسيط</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الفترة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">إجمالي</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">صافي</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الإنشاء</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الصرف</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colPayoutNumber}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colPeriod}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colGross}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colNet}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colCreatedAt}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colPaidAt}</th>
                   <th className="text-start py-3 ps-4 pe-5 w-px" />
                 </tr>
               </thead>
@@ -335,7 +340,7 @@ export default async function AdminBrokerPayoutsPage({
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          غير محدد
+                          {m.periodUnset}
                         </span>
                       )}
                     </td>
@@ -372,7 +377,7 @@ export default async function AdminBrokerPayoutsPage({
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          لم تُصرف بعد
+                          {m.notPaidYet}
                         </span>
                       )}
                     </td>
@@ -380,7 +385,7 @@ export default async function AdminBrokerPayoutsPage({
                     {/* Action */}
                     <td className="py-3 ps-4 pe-5">
                       <Link href={`/dashboard/broker-payouts/${p.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.actionView} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>

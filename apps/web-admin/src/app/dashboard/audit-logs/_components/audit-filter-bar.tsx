@@ -7,6 +7,8 @@ import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 const DATE_CLS =
   'h-8 w-full rounded-lg border border-hairline bg-white px-2.5 text-xs text-slate-700 ' +
@@ -19,6 +21,7 @@ interface Props {
   defaultActorId?: string;
   defaultFrom?: string;
   defaultTo?: string;
+  locale?: Locale;
 }
 
 export function AuditFilterBar({
@@ -28,7 +31,9 @@ export function AuditFilterBar({
   defaultActorId  = '',
   defaultFrom     = '',
   defaultTo       = '',
+  locale          = 'ar',
 }: Props) {
+  const m = uiT(locale).auditFilterBar;
   const router = useRouter();
 
   const [q,          setQ]          = useState(defaultQ);
@@ -80,7 +85,7 @@ export function AuditFilterBar({
               inputSize="sm"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="بحث: اسم مستخدم، إجراء، IP..."
+              placeholder={m.searchPlaceholder}
               leftAddon={<Search />}
             />
           </div>
@@ -91,22 +96,22 @@ export function AuditFilterBar({
             value={action}
             onChange={(e) => setAction(e.target.value)}
             className="w-44 shrink-0"
-            aria-label="الإجراء"
+            aria-label={m.actionAriaLabel}
           >
-            <option value="">كل الإجراءات</option>
-            <option value="POST">POST — إنشاء</option>
-            <option value="PATCH">PATCH — تعديل</option>
-            <option value="PUT">PUT — تحديث</option>
-            <option value="DELETE">DELETE — حذف</option>
+            <option value="">{m.allActions}</option>
+            <option value="POST">{m.actionPost}</option>
+            <option value="PATCH">{m.actionPatch}</option>
+            <option value="PUT">{m.actionPut}</option>
+            <option value="DELETE">{m.actionDelete}</option>
           </Select>
 
           <span className="h-5 w-px bg-hairline shrink-0 hidden sm:block" aria-hidden />
 
           {/* Apply + clear */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <Button type="submit" variant="primary" size="sm">تطبيق</Button>
+            <Button type="submit" variant="primary" size="sm">{m.applyBtn}</Button>
             {hasAny && (
-              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>مسح</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={handleClear}>{m.clearBtn}</Button>
             )}
           </div>
 
@@ -122,7 +127,7 @@ export function AuditFilterBar({
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showAdvanced ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showAdvanced ? m.advancedHide : m.advancedShow}
             {hasAdvanced && !showAdvanced && (
               <span className="inline-flex h-4 min-w-[16px] px-1 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -137,45 +142,45 @@ export function AuditFilterBar({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">المساحة</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.areaLabel}</label>
                 <Input
                   inputSize="sm"
                   value={entityType}
                   onChange={(e) => setEntityType(e.target.value)}
-                  placeholder="users، auth، reservations…"
+                  placeholder={m.areaPlaceholder}
                   dir="ltr"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">من تاريخ</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.fromDateLabel}</label>
                 <input
                   type="date"
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
                   className={DATE_CLS}
-                  aria-label="من تاريخ"
+                  aria-label={m.fromDateAriaLabel}
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-medium text-slate-400">إلى تاريخ</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.toDateLabel}</label>
                 <input
                   type="date"
                   value={to}
                   onChange={(e) => setTo(e.target.value)}
                   className={DATE_CLS}
-                  aria-label="إلى تاريخ"
+                  aria-label={m.toDateAriaLabel}
                 />
               </div>
 
               <div className="flex flex-col gap-1 sm:col-span-2 lg:col-span-1">
-                <label className="text-[11px] font-medium text-slate-400">معرّف المستخدم (UUID)</label>
+                <label className="text-[11px] font-medium text-slate-400">{m.actorIdLabel}</label>
                 <Input
                   inputSize="sm"
                   value={actorId}
                   onChange={(e) => setActorId(e.target.value)}
-                  placeholder="xxxxxxxx-xxxx-…"
+                  placeholder={m.actorIdPlaceholder}
                   dir="ltr"
                 />
               </div>

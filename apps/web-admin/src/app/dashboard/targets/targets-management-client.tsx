@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Target } from 'lucide-react';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { TargetFormDialog, type SalesUser, type SalesTarget } from './target-form-dialog';
 import {
   fmtAmt,
@@ -36,41 +38,10 @@ interface Props {
   hasFilters: boolean;
   error?: string;
   symbol?: string;
+  locale?: Locale;
 }
 
 // ── Inline sub-components ──────────────────────────────────────────────────
-
-function PerfBadge({ pct }: { pct: number | null }) {
-  if (pct === null)
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-medium bg-slate-100 text-slate-400">
-        لا يوجد أداء بعد
-      </span>
-    );
-  if (pct >= 100)
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100">
-        متقدم
-      </span>
-    );
-  if (pct >= 75)
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
-        على المسار
-      </span>
-    );
-  if (pct >= 50)
-    return (
-      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100">
-        يحتاج دعم
-      </span>
-    );
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-red-50 text-red-700 ring-1 ring-inset ring-red-100">
-      يحتاج متابعة
-    </span>
-  );
-}
 
 function PctCell({ pct }: { pct: number | null }) {
   if (pct === null) return <span className="text-slate-300 text-xs">—</span>;
@@ -111,7 +82,9 @@ export function TargetsManagementClient({
   hasFilters,
   error,
   symbol = 'ج.م',
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).targetsPage;
   const router = useRouter();
   const toast = useToast();
 
@@ -128,15 +101,47 @@ export function TargetsManagementClient({
     setDialog({ open: false });
     toast.show({
       tone: 'success',
-      title: dialog.open && dialog.mode === 'edit' ? 'تم تحديث الهدف بنجاح' : 'تم حفظ الهدف بنجاح',
+      title: dialog.open && dialog.mode === 'edit' ? m.toastUpdated : m.toastSaved,
     });
     router.refresh();
-  }, [dialog, toast, router]);
+  }, [dialog, toast, router, m]);
 
   // Build perfMap from the serializable perfRows array
   const perfMap = new Map<string, PerformanceRow>(
     perfRows.map((r) => [`${r.salesId}|${r.period}`, r]),
   );
+
+  function PerfBadge({ pct }: { pct: number | null }) {
+    if (pct === null)
+      return (
+        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-medium bg-slate-100 text-slate-400">
+          {m.perfNoData}
+        </span>
+      );
+    if (pct >= 100)
+      return (
+        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-100">
+          {m.perfAdvanced}
+        </span>
+      );
+    if (pct >= 75)
+      return (
+        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-brand-50 text-brand-700 ring-1 ring-inset ring-brand-100">
+          {m.perfOnTrack}
+        </span>
+      );
+    if (pct >= 50)
+      return (
+        <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-100">
+          {m.perfNeedsSupport}
+        </span>
+      );
+    return (
+      <span className="inline-flex items-center rounded-full px-2 py-0.5 text-2xs font-semibold bg-red-50 text-red-700 ring-1 ring-inset ring-red-100">
+        {m.perfNeedsFollowup}
+      </span>
+    );
+  }
 
   return (
     <>
@@ -144,14 +149,12 @@ export function TargetsManagementClient({
       <Card>
         <CardHeader className="px-5 py-3">
           <div className="flex items-center justify-between gap-3 w-full">
-            {/* Right side: title + count */}
             <div className="flex items-center gap-2 min-w-0">
-              <CardTitle className="text-sm">الأهداف المسجّلة</CardTitle>
+              <CardTitle className="text-sm">{m.tableTitle}</CardTitle>
               <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-surface-muted text-slate-500 text-2xs font-bold px-1.5 tabular-nums">
                 {targets.length}
               </span>
             </div>
-            {/* Left side: primary action */}
             {canManage && (
               <Button
                 variant="primary"
@@ -159,7 +162,7 @@ export function TargetsManagementClient({
                 leftIcon={<Plus className="h-3.5 w-3.5" />}
                 onClick={openAdd}
               >
-                إضافة هدف
+                {m.btnAddTarget}
               </Button>
             )}
           </div>
@@ -174,13 +177,13 @@ export function TargetsManagementClient({
           ) : targets.length === 0 ? (
             <EmptyState
               icon={<Target />}
-              title={hasFilters ? 'لا توجد أهداف مطابقة' : 'لا توجد أهداف مسجّلة'}
+              title={hasFilters ? m.emptyMatchTitle : m.emptyNoneTitle}
               description={
                 hasFilters
-                  ? 'لا توجد أهداف تطابق الفلاتر المختارة.'
+                  ? m.emptyMatchDesc
                   : canManage
-                    ? 'ابدأ بإضافة هدف شهري للمندوبين.'
-                    : 'لم تُسجَّل أهداف بعد لهذا الشهر.'
+                    ? m.emptyNoneDescAdmin
+                    : m.emptyNoneDescView
               }
               action={
                 canManage ? (
@@ -190,7 +193,7 @@ export function TargetsManagementClient({
                     leftIcon={<Plus className="h-3.5 w-3.5" />}
                     onClick={openAdd}
                   >
-                    إضافة هدف
+                    {m.btnAddTarget}
                   </Button>
                 ) : undefined
               }
@@ -200,14 +203,14 @@ export function TargetsManagementClient({
               <table className="w-full text-sm min-w-[860px]">
                 <thead className="bg-surface-muted/60 text-2xs font-semibold uppercase tracking-wide text-slate-500 border-b border-hairline">
                   <tr>
-                    <th className="px-5 py-2.5 text-start whitespace-nowrap">المندوب</th>
-                    <th className="px-4 py-2.5 text-start whitespace-nowrap">الشهر</th>
-                    <th className="px-4 py-2.5 text-end whitespace-nowrap">هدف القيمة</th>
-                    <th className="px-4 py-2.5 text-end whitespace-nowrap">المحقق</th>
-                    <th className="px-4 py-2.5 text-start whitespace-nowrap">نسبة القيمة</th>
-                    <th className="px-4 py-2.5 text-center whitespace-nowrap">الوحدات</th>
-                    <th className="px-4 py-2.5 text-start whitespace-nowrap">نسبة الوحدات</th>
-                    <th className="px-4 py-2.5 text-start whitespace-nowrap">الأداء</th>
+                    <th className="px-5 py-2.5 text-start whitespace-nowrap">{m.colAgent}</th>
+                    <th className="px-4 py-2.5 text-start whitespace-nowrap">{m.colMonth}</th>
+                    <th className="px-4 py-2.5 text-end whitespace-nowrap">{m.colAmountTarget}</th>
+                    <th className="px-4 py-2.5 text-end whitespace-nowrap">{m.colAchieved}</th>
+                    <th className="px-4 py-2.5 text-start whitespace-nowrap">{m.colAmountPct}</th>
+                    <th className="px-4 py-2.5 text-center whitespace-nowrap">{m.colUnits}</th>
+                    <th className="px-4 py-2.5 text-start whitespace-nowrap">{m.colUnitsPct}</th>
+                    <th className="px-4 py-2.5 text-start whitespace-nowrap">{m.colPerformance}</th>
                     {canManage && <th className="px-4 py-2.5" />}
                   </tr>
                 </thead>
@@ -225,7 +228,6 @@ export function TargetsManagementClient({
                         key={t.id}
                         className="hover:bg-surface-muted/30 transition-colors"
                       >
-                        {/* المندوب */}
                         <td className="px-5 py-2.5 whitespace-nowrap">
                           <div className="flex items-center gap-2.5">
                             {name && <Initials name={name} />}
@@ -235,21 +237,18 @@ export function TargetsManagementClient({
                           </div>
                         </td>
 
-                        {/* الشهر */}
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           <span className="text-xs font-medium text-slate-600">
-                            {periodLabel(t.period)}
+                            {periodLabel(t.period, locale)}
                           </span>
                         </td>
 
-                        {/* هدف القيمة */}
                         <td className="px-4 py-2.5 whitespace-nowrap text-end">
                           <span className="tabular-nums font-semibold text-slate-800 text-xs">
                             {fmtAmt(t.amountTarget, symbol)}
                           </span>
                         </td>
 
-                        {/* المحقق */}
                         <td className="px-4 py-2.5 whitespace-nowrap text-end">
                           {perf ? (
                             <span
@@ -267,12 +266,10 @@ export function TargetsManagementClient({
                           )}
                         </td>
 
-                        {/* نسبة القيمة */}
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           <PctCell pct={amtPct} />
                         </td>
 
-                        {/* الوحدات */}
                         <td className="px-4 py-2.5 whitespace-nowrap text-center">
                           <span className="tabular-nums text-xs text-slate-600">
                             {num(t.unitsTarget)}
@@ -291,28 +288,25 @@ export function TargetsManagementClient({
                           )}
                         </td>
 
-                        {/* نسبة الوحدات */}
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           <PctCell pct={unitPct} />
                         </td>
 
-                        {/* الأداء badge */}
                         <td className="px-4 py-2.5 whitespace-nowrap">
                           <PerfBadge pct={amtPct} />
                         </td>
 
-                        {/* Edit action */}
                         {canManage && (
                           <td className="px-4 py-2.5 whitespace-nowrap">
                             {t.salesId && (
                               <button
                                 type="button"
                                 onClick={() => openEdit(t)}
-                                aria-label="تعديل الهدف"
+                                aria-label={m.ariaEdit}
                                 className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-brand-700 transition-colors"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
-                                <span>تعديل</span>
+                                <span>{m.btnEdit}</span>
                               </button>
                             )}
                           </td>
@@ -323,24 +317,23 @@ export function TargetsManagementClient({
                 </tbody>
               </table>
               <p className="px-5 py-2.5 text-2xs text-slate-400 border-t border-hairline">
-                القيم المحققة محسوبة من العقود الموقّعة خلال الشهر لكل مندوب.
+                {m.tableFootnote}
               </p>
             </div>
           )}
         </CardBody>
       </Card>
 
-      {/* ── Dialog (controlled by state, no URL params) ─────────────────── */}
+      {/* ── Dialog ─────────────────────────────────────────────────────────── */}
       {canManage && (
         <TargetFormDialog
-          // key forces a clean remount when switching targets so useState
-          // initial values are always derived from the current prefillTarget.
           key={dialog.open && dialog.mode === 'edit' ? dialog.target.id : 'add'}
           open={dialog.open}
           mode={dialog.open ? dialog.mode : 'add'}
           prefillTarget={dialog.open && dialog.mode === 'edit' ? dialog.target : undefined}
           salesUsers={salesUsers}
           symbol={symbol}
+          locale={locale}
           onClose={closeDialog}
           onSuccess={handleSuccess}
         />

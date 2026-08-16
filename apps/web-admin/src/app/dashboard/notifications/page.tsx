@@ -6,6 +6,8 @@ import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { NotificationList } from '@/components/notifications/notification-list';
 import { PremiumPageHero, PremiumMetricStrip } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -29,9 +31,12 @@ function extractItems(value: unknown): NotificationItem[] {
 }
 
 export default async function AdminNotificationsInboxPage() {
-  const res = await safe(
-    api.get<Paged<NotificationItem> | NotificationItem[]>('/me/notifications'),
-  );
+  const [locale, res] = await Promise.all([
+    getLocale(),
+    safe(api.get<Paged<NotificationItem> | NotificationItem[]>('/me/notifications')),
+  ]);
+  const m = uiT(locale).pages.notifications;
+
   const items = extractItems(res.data);
 
   const unreadCount = items.filter((n) => !n.read).length;
@@ -42,22 +47,22 @@ export default async function AdminNotificationsInboxPage() {
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="الإشعارات"
-        description="متابعة تنبيهات النظام ورسائل المستخدمين وقوالب الإشعارات."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الإشعارات' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <div className="flex items-center gap-2">
             <Link href="/dashboard/notifications/broadcast">
               <Button variant="primary" size="sm" leftIcon={<Megaphone className="h-3.5 w-3.5" />}>
-                إرسال يدوي
+                {m.sendBtn}
               </Button>
             </Link>
             <Link href="/dashboard/notifications/templates">
               <Button variant="outline" size="sm" leftIcon={<FileEdit className="h-3.5 w-3.5" />}>
-                قوالب الإشعارات
+                {m.templatesBtn}
               </Button>
             </Link>
           </div>
@@ -68,24 +73,24 @@ export default async function AdminNotificationsInboxPage() {
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'الإجمالي', value: items.length, icon: <Inbox /> },
+          { label: m.kpi.total, value: items.length, icon: <Inbox /> },
           {
-            label: 'غير مقروءة',
+            label: m.kpi.unread,
             value: unreadCount,
             icon: <Bell />,
             tone: unreadCount > 0 ? 'brand' : 'neutral',
             primary: unreadCount > 0,
           },
-          { label: 'مقروءة', value: readCount, icon: <CheckCheck /> },
+          { label: m.kpi.read, value: readCount, icon: <CheckCheck /> },
           ...(lastDate
-            ? [{ label: 'آخر إشعار', value: formatDate(lastDate), icon: <Clock />, valueSize: 'compact' as const }]
+            ? [{ label: m.kpi.lastNotif, value: formatDate(lastDate), icon: <Clock />, valueSize: 'compact' as const }]
             : []),
         ]}
       />
 
       {res.error && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل الإشعارات: {res.error}
+          {m.errorPrefix} {res.error}
         </div>
       )}
 

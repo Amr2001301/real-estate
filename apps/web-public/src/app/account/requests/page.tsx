@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { MessageSquareText } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { Paginated, MeInfoRequest } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
@@ -25,29 +27,30 @@ function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 }
 
-function Header() {
-  return (
+export default async function AccountRequestsPage({ searchParams }: { searchParams: SearchParams }) {
+  const sp = await searchParams;
+  const page = Math.max(1, Number(firstStr(sp.page)) || 1);
+
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.requests;
+
+  const header = (
     <AccountPageHeader
-      title="طلبات الاستفسار"
+      title={m.title}
       description={
         <>
-          رسائل الاستفسار التي أرسلتها فقط — طلبات الزيارة تظهر في{' '}
+          {m.sectionNote}{' '}
           <a
             href={routes.accountVisits}
             className="font-medium text-gold-600 underline decoration-gold-300 underline-offset-2 hover:text-gold-500"
           >
-            صفحة الزيارات
+            {m.visitsLink}
           </a>
           .
         </>
       }
     />
   );
-}
-
-export default async function AccountRequestsPage({ searchParams }: { searchParams: SearchParams }) {
-  const sp = await searchParams;
-  const page = Math.max(1, Number(firstStr(sp.page)) || 1);
 
   let result: Paginated<MeInfoRequest>;
   try {
@@ -58,10 +61,10 @@ export default async function AccountRequestsPage({ searchParams }: { searchPara
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <Header />
+        {header}
         <ErrorState
-          title="تعذّر تحميل الطلبات حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -76,23 +79,23 @@ export default async function AccountRequestsPage({ searchParams }: { searchPara
 
   return (
     <div className="space-y-8">
-      <Header />
+      {header}
 
       {requests.length === 0 ? (
         <EmptyState
-          title="لا توجد رسائل استفسار بعد"
-          message="تصفّح المشاريع والوحدات وأرسل استفسارك، وستظهر هنا. إن كنت تبحث عن طلبات زيارة، انتقل إلى صفحة الزيارات."
+          title={m.emptyTitle}
+          message={m.emptyMsg}
           icon={<MessageSquareText className="h-6 w-6" aria-hidden />}
           action={
             <div className="flex flex-wrap items-center justify-center gap-3">
               <ButtonLink href={routes.accountVisits} variant="primary" size="md">
-                عرض طلبات الزيارة
+                {m.viewVisits}
               </ButtonLink>
               <ButtonLink href={routes.projects} variant="outline" size="md">
-                تصفّح المشاريع
+                {m.browseProjects}
               </ButtonLink>
               <ButtonLink href={routes.contact} variant="ghost" size="md">
-                تواصل معنا
+                {m.contactUs}
               </ButtonLink>
             </div>
           }

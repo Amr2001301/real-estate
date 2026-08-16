@@ -6,6 +6,8 @@ import {
   CheckCircle2, XCircle, ClipboardList, Star, ShieldCheck, Phone, Mail,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type {
   MaintenancePriority, MaintenanceResolutionConfirmedBy, MaintenanceReviewStatus,
   MaintenanceStatus, MaintenanceRequestItem, Paged, User,
@@ -65,13 +67,6 @@ const NEXT_TRANSITIONS: Record<MaintenanceStatus, MaintenanceStatus[]> = {
   RESOLVED: ['CLOSED', 'IN_PROGRESS'],
   CLOSED: [],
 };
-const ACTION_LABEL: Record<MaintenanceStatus, string> = {
-  ASSIGNED: 'تحديد كمسند',
-  IN_PROGRESS: 'بدء التنفيذ',
-  RESOLVED: 'تم الحل',
-  CLOSED: 'إغلاق الطلب',
-  OPEN: 'إعادة فتح',
-};
 const ACTION_VARIANT: Record<MaintenanceStatus, 'primary' | 'outline'> = {
   RESOLVED: 'primary',
   CLOSED: 'primary',
@@ -79,10 +74,6 @@ const ACTION_VARIANT: Record<MaintenanceStatus, 'primary' | 'outline'> = {
   IN_PROGRESS: 'primary',
   OPEN: 'outline',
 };
-
-function assigneeRoleLabel(role: string): string {
-  return role === 'MAINTENANCE_SUPERVISOR' ? 'مشرف الصيانة' : 'مدير النظام';
-}
 
 function back(id: string, err?: string): never {
   redirect(err ? `/dashboard/maintenance/${id}?err=${encodeURIComponent(err)}` : `/dashboard/maintenance/${id}`);
@@ -97,8 +88,10 @@ async function setStatusAction(id: string, next: MaintenanceStatus) {
 
 async function assignAction(id: string, formData: FormData) {
   'use server';
+  const locale = await getLocale();
+  const m = uiT(locale).maintenanceDetailPage;
   const assignedAdminId = String(formData.get('assignedAdminId') ?? '');
-  if (!assignedAdminId) back(id, 'يجب اختيار مسؤول.');
+  if (!assignedAdminId) back(id, m.assignment.mustChoose);
   const res = await safe(api.post(`/maintenance-requests/${id}/assign`, { assignedAdminId }));
   if (res.error) back(id, res.error);
   revalidatePath(`/dashboard/maintenance/${id}`);
@@ -130,6 +123,9 @@ export default async function MaintenanceDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ err?: string }>;
 }) {
+  const locale = await getLocale();
+  const m = uiT(locale).maintenanceDetailPage;
+
   const { id } = await params;
   const sp = await searchParams;
 
@@ -141,71 +137,71 @@ export default async function MaintenanceDetailPage({
   if (detailRes.error?.includes('404') || detailRes.error?.toLowerCase().includes('not found')) {
     notFound();
   }
-  const m = detailRes.data;
+  const req = detailRes.data;
   const admins = adminsRes.data?.data ?? [];
 
-  if (!m) {
+  if (!req) {
     return (
       <div className="space-y-5">
         <PremiumPageHero
-          title="طلب صيانة"
+          title={m.requestTitle}
           breadcrumbs={[
-            { label: 'لوحة التحكم', href: '/dashboard' },
-            { label: 'الصيانة', href: '/dashboard/maintenance' },
-            { label: 'التفاصيل' },
+            { label: m.breadcrumbHome, href: '/dashboard' },
+            { label: m.breadcrumbMaintenance, href: '/dashboard/maintenance' },
+            { label: m.breadcrumbDetail },
           ]}
         />
         <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-4 py-3 text-sm">
-          تعذّر تحميل الطلب: {detailRes.error}
+          {m.errorLoad} {detailRes.error}
         </div>
       </div>
     );
   }
 
-  const approved = m.reviewStatus === 'APPROVED';
-  const pending = m.reviewStatus === 'PENDING';
-  const rejected = m.reviewStatus === 'REJECTED';
-  const transitions = NEXT_TRANSITIONS[m.status];
-  const overdue = approved && !!m.dueAt && m.status !== 'CLOSED' && new Date(m.dueAt).getTime() < Date.now();
-  const items = m.items ?? [];
+  const approved = req.reviewStatus === 'APPROVED';
+  const pending = req.reviewStatus === 'PENDING';
+  const rejected = req.reviewStatus === 'REJECTED';
+  const transitions = NEXT_TRANSITIONS[req.status];
+  const overdue = approved && !!req.dueAt && req.status !== 'CLOSED' && new Date(req.dueAt).getTime() < Date.now();
+  const items = req.items ?? [];
   const slaResult: 'within' | 'after' | null =
-    m.resolvedAt && m.dueAt
-      ? new Date(m.resolvedAt).getTime() <= new Date(m.dueAt).getTime()
+    req.resolvedAt && req.dueAt
+      ? new Date(req.resolvedAt).getTime() <= new Date(req.dueAt).getTime()
         ? 'within'
         : 'after'
       : null;
 
-  const heroTitle = m.category
-    ? tx(m.category.name)
-    : `طلب صيانة #${m.id.slice(0, 8).toUpperCase()}`;
+  const heroTitle = req.category
+    ? tx(req.category.name)
+    : `${m.requestTitle} #${req.id.slice(0, 8).toUpperCase()}`;
 
   const resolvedByLabel =
-    m.resolvedBy === 'BOTH' ? 'أكد الطرفان الحل'
-    : m.resolvedBy === 'CUSTOMER' ? 'أكد العميل الحل'
-    : m.resolvedBy === 'SUPERVISOR' ? 'أكد مشرف الصيانة الحل'
-    : 'لم يتم التأكيد بعد';
+    req.resolvedBy === 'BOTH' ? m.resolution.bothConfirmed
+    : req.resolvedBy === 'CUSTOMER' ? m.resolution.customerConfirmed
+    : req.resolvedBy === 'SUPERVISOR' ? m.resolution.supervisorConfirmed
+    : m.resolution.notConfirmed;
   const resolvedByCls =
-    m.resolvedBy === 'BOTH' ? 'bg-success-50 text-success-700'
-    : m.resolvedBy ? 'bg-info-50 text-info-700'
+    req.resolvedBy === 'BOTH' ? 'bg-success-50 text-success-700'
+    : req.resolvedBy ? 'bg-info-50 text-info-700'
     : 'bg-canvas border border-hairline text-slate-500';
 
   return (
     <div className="space-y-5">
       <PremiumPageHero
         title={heroTitle}
-        description={`رقم الطلب: ${m.id.slice(0, 8).toUpperCase()}`}
+        description={`${m.requestNumberPrefix} ${req.id.slice(0, 8).toUpperCase()}`}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الصيانة', href: '/dashboard/maintenance' },
-          { label: 'التفاصيل' },
+          { label: m.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbMaintenance, href: '/dashboard/maintenance' },
+          { label: m.breadcrumbDetail },
         ]}
         meta={
           <>
-            <MaintenanceReviewStatusBadge status={m.reviewStatus} />
-            {approved && <MaintenanceStatusBadge status={m.status} />}
+            <MaintenanceReviewStatusBadge status={req.reviewStatus} />
+            {approved && <MaintenanceStatusBadge status={req.status} />}
             {overdue && (
               <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 border border-danger-100 px-2.5 py-0.5 text-xs font-semibold">
-                متأخر
+                {m.overdueLabel}
               </span>
             )}
           </>
@@ -216,7 +212,7 @@ export default async function MaintenanceDetailPage({
         <div className="rounded-xl bg-warning-50 border border-warning-100 text-warning-700 px-4 py-3 text-sm flex items-start gap-2">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">تعذّر تنفيذ العملية</p>
+            <p className="font-semibold">{m.errorAction}</p>
             <p className="text-xs mt-0.5 text-warning-700/80">{sp.err}</p>
           </div>
         </div>
@@ -227,34 +223,34 @@ export default async function MaintenanceDetailPage({
         main={
           <div className="space-y-5">
             {/* Overview */}
-            <PremiumSectionCard title="نظرة عامة" icon={<Wrench />}>
+            <PremiumSectionCard title={m.sections.overview} icon={<Wrench />}>
               <div className="space-y-5">
                 {/* Key fields — 3 columns */}
                 <div className="grid grid-cols-3 gap-x-6">
-                  <Field label="التصنيف">
+                  <Field label={m.fields.category}>
                     <span className="text-[14px] font-bold text-slate-900">
-                      {m.category ? tx(m.category.name) : '—'}
+                      {req.category ? tx(req.category.name) : '—'}
                     </span>
                   </Field>
-                  <Field label="الأولوية">
-                    {m.priority
-                      ? <MaintenancePriorityBadge priority={m.priority} />
+                  <Field label={m.fields.priority}>
+                    {req.priority
+                      ? <MaintenancePriorityBadge priority={req.priority} />
                       : <span className="text-[13px] text-slate-400">—</span>}
                   </Field>
-                  <Field label="الموعد المستهدف">
+                  <Field label={m.fields.targetDate}>
                     {!approved ? (
                       <span className="text-[11px] text-slate-400">
-                        {pending ? 'بعد الاعتماد' : '—'}
+                        {pending ? m.fields.pendingApproval : '—'}
                       </span>
-                    ) : m.dueAt ? (
+                    ) : req.dueAt ? (
                       <span className={cn(
                         'text-[12px] font-semibold tabular-nums inline-flex items-center gap-1',
                         overdue ? 'text-danger-600' : 'text-slate-900',
                       )}>
-                        {formatDate(m.dueAt)}
+                        {formatDate(req.dueAt)}
                         {overdue && (
                           <span className="rounded-full bg-danger-50 text-danger-700 text-[10px] font-semibold px-1.5 py-0.5">
-                            متأخر
+                            {m.overdueLabel}
                           </span>
                         )}
                       </span>
@@ -267,10 +263,10 @@ export default async function MaintenanceDetailPage({
                 {/* Description box */}
                 <div className="rounded-xl bg-canvas/50 border border-hairline px-4 py-3.5">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-2">
-                    الوصف
+                    {m.fields.description}
                   </p>
                   <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">
-                    {m.description}
+                    {req.description}
                   </p>
                 </div>
 
@@ -278,15 +274,15 @@ export default async function MaintenanceDetailPage({
                 {slaResult && (
                   <div className="flex items-center gap-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 shrink-0">
-                      نتيجة المدة المستهدفة
+                      {m.fields.slaResult}
                     </p>
                     {slaResult === 'within' ? (
                       <span className="inline-flex items-center rounded-full bg-success-50 text-success-700 text-[11px] font-semibold px-2.5 py-0.5">
-                        تم الحل ضمن المدة
+                        {m.fields.slaWithin}
                       </span>
                     ) : (
                       <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 text-[11px] font-semibold px-2.5 py-0.5">
-                        تم الحل بعد الموعد
+                        {m.fields.slaAfter}
                       </span>
                     )}
                   </div>
@@ -294,47 +290,47 @@ export default async function MaintenanceDetailPage({
 
                 {/* Dates — full-width rows, no orphan grid issues */}
                 <div className="rounded-xl border border-hairline overflow-hidden divide-y divide-hairline">
-                  <DateRow label="تاريخ الإنشاء" value={formatDateTime(m.createdAt)} />
-                  <DateRow label="آخر تحديث" value={formatDateTime(m.updatedAt)} />
-                  {m.approvedAt && (
-                    <DateRow label="تاريخ الاعتماد" value={formatDateTime(m.approvedAt)} valueCls="text-success-700" />
+                  <DateRow label={m.fields.createdAt} value={formatDateTime(req.createdAt)} />
+                  <DateRow label={m.fields.updatedAt} value={formatDateTime(req.updatedAt)} />
+                  {req.approvedAt && (
+                    <DateRow label={m.fields.approvedAt} value={formatDateTime(req.approvedAt)} valueCls="text-success-700" />
                   )}
-                  {m.rejectedAt && (
-                    <DateRow label="تاريخ الرفض" value={formatDateTime(m.rejectedAt)} valueCls="text-danger-700" />
+                  {req.rejectedAt && (
+                    <DateRow label={m.fields.rejectedAt} value={formatDateTime(req.rejectedAt)} valueCls="text-danger-700" />
                   )}
-                  {m.resolvedAt && (
-                    <DateRow label="تاريخ الحل" value={formatDateTime(m.resolvedAt)} valueCls="text-success-700" />
+                  {req.resolvedAt && (
+                    <DateRow label={m.fields.resolvedAt} value={formatDateTime(req.resolvedAt)} valueCls="text-success-700" />
                   )}
-                  {m.closedAt && (
-                    <DateRow label="تاريخ الإغلاق" value={formatDateTime(m.closedAt)} />
+                  {req.closedAt && (
+                    <DateRow label={m.fields.closedAt} value={formatDateTime(req.closedAt)} />
                   )}
                 </div>
               </div>
             </PremiumSectionCard>
 
             {/* Review */}
-            <PremiumSectionCard title="المراجعة" icon={<ClipboardList />}>
+            <PremiumSectionCard title={m.sections.review} icon={<ClipboardList />}>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 shrink-0">
-                    حالة المراجعة
+                    {m.fields.reviewStatus}
                   </p>
-                  <MaintenanceReviewStatusBadge status={m.reviewStatus} />
+                  <MaintenanceReviewStatusBadge status={req.reviewStatus} />
                 </div>
                 {pending && (
                   <>
                     <p className="text-[12px] text-slate-500">
-                      هذا الطلب بانتظار مراجعة المسؤول. يبدأ احتساب مدة المعالجة (الموعد المستهدف) بعد الاعتماد.
+                      {m.review.pending}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <form action={approveAction.bind(null, m.id)}>
+                      <form action={approveAction.bind(null, req.id)}>
                         <Button type="submit" variant="primary" size="sm" leftIcon={<CheckCircle2 className="h-4 w-4" />}>
-                          اعتماد الطلب
+                          {m.review.approveBtn}
                         </Button>
                       </form>
-                      <form action={rejectAction.bind(null, m.id)}>
+                      <form action={rejectAction.bind(null, req.id)}>
                         <Button type="submit" variant="outline" size="sm" leftIcon={<XCircle className="h-4 w-4" />}>
-                          رفض الطلب
+                          {m.review.rejectBtn}
                         </Button>
                       </form>
                     </div>
@@ -342,22 +338,23 @@ export default async function MaintenanceDetailPage({
                 )}
                 {rejected && (
                   <div className="rounded-xl bg-danger-50 border border-danger-100 text-danger-700 px-3 py-2.5 text-[13px]">
-                    تم رفض الطلب ولا يمكن تنفيذه.
+                    {m.review.rejectedMsg}
                   </div>
                 )}
                 {approved && (
                   <p className="text-[12px] text-slate-500">
-                    تم اعتماد الطلب
-                    {m.maxHandlingSlaMinutesSnapshot != null
-                      && ` · مدة المعالجة المستهدفة: ${maintenanceSlaLabel(m.maxHandlingSlaMinutesSnapshot)}`}
-                    .
+                    {m.review.approvedMsg(
+                      req.maxHandlingSlaMinutesSnapshot != null
+                        ? maintenanceSlaLabel(req.maxHandlingSlaMinutesSnapshot) ?? undefined
+                        : undefined
+                    )}
                   </p>
                 )}
               </div>
             </PremiumSectionCard>
 
             {/* Resolution & rating */}
-            <PremiumSectionCard title="متابعة الحل والتقييم" icon={<ShieldCheck />}>
+            <PremiumSectionCard title={m.sections.resolutionRating} icon={<ShieldCheck />}>
               <div className="space-y-5">
                 {/* Status badges */}
                 <div className="flex flex-wrap items-center gap-2">
@@ -366,74 +363,74 @@ export default async function MaintenanceDetailPage({
                   </span>
                   {overdue && (
                     <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2.5 py-0.5 text-[11px] font-semibold">
-                      متأخر عن SLA
+                      {m.resolution.overdueLabel}
                     </span>
                   )}
-                  {m.complaintAt && (
+                  {req.complaintAt && (
                     <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2.5 py-0.5 text-[11px] font-semibold">
-                      تم تقديم شكوى
+                      {m.resolution.complaintLabel}
                     </span>
                   )}
-                  {m.unresolvedAt && (
+                  {req.unresolvedAt && (
                     <span className="inline-flex items-center rounded-full bg-danger-50 text-danger-700 px-2.5 py-0.5 text-[11px] font-semibold">
-                      لم تُحل
+                      {m.resolution.unresolvedLabel}
                     </span>
                   )}
                 </div>
 
                 {/* Confirmation dates */}
                 <div className="grid grid-cols-2 gap-x-6 gap-y-5 pt-4 border-t border-hairline sm:grid-cols-4">
-                  <Field label="تأكيد العميل">
+                  <Field label={m.fields.customerConfirmation}>
                     <span className={cn(
                       'text-[12px] font-medium tabular-nums',
-                      m.customerConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
+                      req.customerConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
                     )}>
-                      {m.customerConfirmedResolutionAt ? formatDateTime(m.customerConfirmedResolutionAt) : 'لم يؤكد بعد'}
+                      {req.customerConfirmedResolutionAt ? formatDateTime(req.customerConfirmedResolutionAt) : m.fields.notConfirmedYet}
                     </span>
                   </Field>
-                  <Field label="تأكيد مشرف الصيانة">
+                  <Field label={m.fields.supervisorConfirmation}>
                     <span className={cn(
                       'text-[12px] font-medium tabular-nums',
-                      m.supervisorConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
+                      req.supervisorConfirmedResolutionAt ? 'text-success-700' : 'text-slate-400',
                     )}>
-                      {m.supervisorConfirmedResolutionAt ? formatDateTime(m.supervisorConfirmedResolutionAt) : 'لم يؤكد بعد'}
+                      {req.supervisorConfirmedResolutionAt ? formatDateTime(req.supervisorConfirmedResolutionAt) : m.fields.notConfirmedYet}
                     </span>
                   </Field>
-                  <Field label="تاريخ الشكوى">
+                  <Field label={m.fields.complaintAt}>
                     <span className={cn(
                       'text-[12px] font-medium tabular-nums',
-                      m.complaintAt ? 'text-warning-700' : 'text-slate-400',
+                      req.complaintAt ? 'text-warning-700' : 'text-slate-400',
                     )}>
-                      {m.complaintAt ? formatDateTime(m.complaintAt) : '—'}
+                      {req.complaintAt ? formatDateTime(req.complaintAt) : '—'}
                     </span>
                   </Field>
-                  <Field label="تاريخ عدم الحل">
+                  <Field label={m.fields.unresolvedAt}>
                     <span className={cn(
                       'text-[12px] font-medium tabular-nums',
-                      m.unresolvedAt ? 'text-danger-700' : 'text-slate-400',
+                      req.unresolvedAt ? 'text-danger-700' : 'text-slate-400',
                     )}>
-                      {m.unresolvedAt ? formatDateTime(m.unresolvedAt) : '—'}
+                      {req.unresolvedAt ? formatDateTime(req.unresolvedAt) : '—'}
                     </span>
                   </Field>
                 </div>
 
                 {/* Customer rating */}
                 <div className="pt-4 border-t border-hairline">
-                  <Field label="تقييم العميل">
-                    {m.customerRating ? (
+                  <Field label={m.fields.customerRating}>
+                    {req.customerRating ? (
                       <div className="space-y-2 mt-0.5">
-                        <Stars value={m.customerRating} />
-                        {m.customerRatingText && (
-                          <p className="text-[13px] text-slate-700 whitespace-pre-wrap">{m.customerRatingText}</p>
+                        <Stars value={req.customerRating} />
+                        {req.customerRatingText && (
+                          <p className="text-[13px] text-slate-700 whitespace-pre-wrap">{req.customerRatingText}</p>
                         )}
-                        {m.customerRatingSubmittedAt && (
+                        {req.customerRatingSubmittedAt && (
                           <p className="text-[11px] text-slate-400">
-                            أُرسل في {formatDateTime(m.customerRatingSubmittedAt)}
+                            {m.fields.ratedAt(formatDateTime(req.customerRatingSubmittedAt))}
                           </p>
                         )}
                       </div>
                     ) : (
-                      <p className="text-[12px] text-slate-400 mt-0.5">لم يقم العميل بتقييم الخدمة بعد.</p>
+                      <p className="text-[12px] text-slate-400 mt-0.5">{m.fields.noRatingYet}</p>
                     )}
                   </Field>
                 </div>
@@ -442,16 +439,16 @@ export default async function MaintenanceDetailPage({
 
             {/* Items table */}
             {items.length > 0 && (
-              <PremiumSectionCard title="العناصر المحددة" padded={false}>
+              <PremiumSectionCard title={m.sections.items} padded={false}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm min-w-[640px]">
                     <thead className="bg-canvas/50 border-b border-hairline">
                       <tr>
-                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">التصنيف</th>
-                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الأولوية</th>
-                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">مدة المعالجة</th>
-                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الضمان</th>
-                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">نهاية الضمان</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.items.colCategory}</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.items.colPriority}</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.items.colSla}</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.items.colWarranty}</th>
+                        <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.items.colWarrantyEnd}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-hairline">
@@ -482,19 +479,19 @@ export default async function MaintenanceDetailPage({
 
             {/* Workflow */}
             {approved && (
-              <PremiumSectionCard title="سير العمل">
-                {m.status === 'CLOSED' ? (
-                  <p className="text-[13px] text-slate-500">تم إغلاق الطلب ولا توجد إجراءات متاحة.</p>
+              <PremiumSectionCard title={m.sections.workflow}>
+                {req.status === 'CLOSED' ? (
+                  <p className="text-[13px] text-slate-500">{m.workflow.closedMsg}</p>
                 ) : (
                   <div className="space-y-3">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-                      الإجراءات المتاحة من الحالة الحالية
+                      {m.workflow.availableActions}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       {transitions.map((next) => (
-                        <form key={next} action={setStatusAction.bind(null, m.id, next)}>
+                        <form key={next} action={setStatusAction.bind(null, req.id, next)}>
                           <Button type="submit" variant={ACTION_VARIANT[next]} size="sm">
-                            {ACTION_LABEL[next]}
+                            {m.workflow.actionLabels[next]}
                           </Button>
                         </form>
                       ))}
@@ -507,27 +504,27 @@ export default async function MaintenanceDetailPage({
         }
         side={
           <div className="space-y-5">
-            <PremiumCommandPanel title="روابط سريعة">
-              {m.customer && (
-                <Link href={`/dashboard/customers/${m.customer.id}` as never} className={CMD_LINK}>
+            <PremiumCommandPanel title={m.sections.quickLinks}>
+              {req.customer && (
+                <Link href={`/dashboard/customers/${req.customer.id}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><UserIcon /></span>
-                  ملف العميل
+                  {m.quickLinks.clientProfile}
                 </Link>
               )}
-              {m.unit && (
-                <Link href={`/dashboard/units/${m.unit.id}` as never} className={CMD_LINK}>
+              {req.unit && (
+                <Link href={`/dashboard/units/${req.unit.id}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><Home /></span>
-                  تفاصيل الوحدة
+                  {m.quickLinks.unitDetails}
                 </Link>
               )}
               <Link href="/dashboard/maintenance" className={CMD_LINK}>
                 <span className={CMD_ICON}><ArrowLeft /></span>
-                قائمة الصيانة
+                {m.quickLinks.backToList}
               </Link>
             </PremiumCommandPanel>
 
             {/* Customer and unit */}
-            <PremiumSectionCard title="العميل والوحدة" icon={<Home />}>
+            <PremiumSectionCard title={m.sections.clientUnit} icon={<Home />}>
               <div className="space-y-4">
                 {/* Customer */}
                 <div className="space-y-2.5">
@@ -536,25 +533,25 @@ export default async function MaintenanceDetailPage({
                       <UserIcon />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">العميل</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.client.label}</p>
                       <p className="text-[13.5px] font-bold text-slate-900 truncate">
-                        {m.customer?.fullName ?? '—'}
+                        {req.customer?.fullName ?? '—'}
                       </p>
                     </div>
                   </div>
-                  {m.customer?.phone && (
-                    <a href={`tel:${m.customer.phone}`} className={CONTACT_TILE}>
+                  {req.customer?.phone && (
+                    <a href={`tel:${req.customer.phone}`} className={CONTACT_TILE}>
                       <span className={CONTACT_ICON}><Phone /></span>
                       <span className="text-[13px] font-medium text-slate-700 flex-1 truncate" dir="ltr">
-                        {m.customer.phone}
+                        {req.customer.phone}
                       </span>
                     </a>
                   )}
-                  {m.customer?.email && (
-                    <a href={`mailto:${m.customer.email}`} className={CONTACT_TILE}>
+                  {req.customer?.email && (
+                    <a href={`mailto:${req.customer.email}`} className={CONTACT_TILE}>
                       <span className={CONTACT_ICON}><Mail /></span>
                       <span className="text-[13px] font-medium text-slate-700 flex-1 truncate" dir="ltr">
-                        {m.customer.email}
+                        {req.customer.email}
                       </span>
                     </a>
                   )}
@@ -567,15 +564,15 @@ export default async function MaintenanceDetailPage({
                       <Home />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">الوحدة</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.client.unit}</p>
                       <p className="text-[16px] font-black text-brand-700 font-mono leading-none">
-                        {m.unit?.code ?? '—'}
+                        {req.unit?.code ?? '—'}
                       </p>
                     </div>
                   </div>
-                  {m.unit && (
+                  {req.unit && (
                     <p className="text-[12px] text-slate-500 ms-12">
-                      {m.unit.type} · الطابق {m.unit.floor}
+                      {req.unit.type} · {m.client.floorLabel} {req.unit.floor}
                     </p>
                   )}
                 </div>
@@ -584,47 +581,47 @@ export default async function MaintenanceDetailPage({
 
             {/* Assignment */}
             {approved && (
-              <PremiumSectionCard title="الإسناد" icon={<UserCog />}>
+              <PremiumSectionCard title={m.sections.assignment} icon={<UserCog />}>
                 <div className="space-y-4">
                   {/* Current assignee */}
-                  {m.assignedAdmin ? (
+                  {req.assignedAdmin ? (
                     <div className="flex items-center gap-3 rounded-xl bg-canvas/60 px-3 py-2.5 ring-1 ring-inset ring-hairline">
                       <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 [&_svg]:h-3.5 [&_svg]:w-3.5">
                         <UserCog />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">المسؤول الحالي</p>
-                        <p className="text-[13px] font-semibold text-slate-900 truncate">{m.assignedAdmin.fullName}</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.assignment.currentLabel}</p>
+                        <p className="text-[13px] font-semibold text-slate-900 truncate">{req.assignedAdmin.fullName}</p>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-[12px] text-slate-400">غير مسند بعد.</p>
+                    <p className="text-[12px] text-slate-400">{m.assignment.notAssigned}</p>
                   )}
 
-                  {m.status !== 'CLOSED' ? (
-                    <form action={assignAction.bind(null, m.id)} className="space-y-2.5">
+                  {req.status !== 'CLOSED' ? (
+                    <form action={assignAction.bind(null, req.id)} className="space-y-2.5">
                       <Select
                         name="assignedAdminId"
                         inputSize="sm"
-                        defaultValue={m.assignedAdminId ?? ''}
+                        defaultValue={req.assignedAdminId ?? ''}
                         required
                       >
-                        <option value="">— اختر مسؤولاً —</option>
+                        <option value="">{m.assignment.choosePlaceholder}</option>
                         {admins.map((a) => (
                           <option key={a.id} value={a.id}>
-                            {a.fullName} — {assigneeRoleLabel(a.role)}
+                            {a.fullName} — {m.assignment.roleLabels[a.role as keyof typeof m.assignment.roleLabels] ?? a.role}
                           </option>
                         ))}
                       </Select>
-                      {m.status === 'OPEN' && (
+                      {req.status === 'OPEN' && (
                         <p className="text-[11px] text-slate-400">
-                          سيتم تغيير الحالة إلى «مسند» تلقائياً عند الإسناد.
+                          {m.assignment.autoAssignNote}
                         </p>
                       )}
-                      <Button type="submit" variant="outline" size="sm">حفظ الإسناد</Button>
+                      <Button type="submit" variant="outline" size="sm">{m.assignment.saveBtn}</Button>
                     </form>
                   ) : (
-                    <p className="text-[12px] text-slate-400">الطلب مغلق — لا يمكن تعديل الإسناد.</p>
+                    <p className="text-[12px] text-slate-400">{m.assignment.closedMsg}</p>
                   )}
                 </div>
               </PremiumSectionCard>
@@ -632,8 +629,8 @@ export default async function MaintenanceDetailPage({
 
             <OwnerDocumentsCard
               ownerType="MAINTENANCE_REQUEST"
-              ownerId={m.id}
-              title="مستندات وصور الصيانة"
+              ownerId={req.id}
+              title={m.sections.documents}
             />
           </div>
         }
@@ -645,7 +642,7 @@ export default async function MaintenanceDetailPage({
 
 function Stars({ value }: { value: number }) {
   return (
-    <span className="inline-flex items-center gap-0.5" aria-label={`${value} من 5`}>
+    <span className="inline-flex items-center gap-0.5" aria-label={`${value} / 5`}>
       {[1, 2, 3, 4, 5].map((n) => (
         <Star
           key={n}

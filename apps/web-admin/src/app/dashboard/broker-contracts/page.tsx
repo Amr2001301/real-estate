@@ -10,6 +10,8 @@ import type {
 } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Input } from '@/components/ui/input';
@@ -46,6 +48,8 @@ export default async function AdminBrokerContractsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerContractsPage;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -117,12 +121,12 @@ export default async function AdminBrokerContractsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="عقود الوسطاء"
-        description="إدارة العقود المرتبطة بالوسطاء ومتابعة حالاتها."
+        title={m.heroTitle}
+        description={m.heroDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'عقود الوسطاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
+          { label: m.breadcrumbSelf },
         ]}
         actions={
           <Link href={'/dashboard/broker-reservations?status=APPROVED' as never}>
@@ -131,7 +135,7 @@ export default async function AdminBrokerContractsPage({
               size="md"
               leftIcon={<ArrowRightLeft className="h-4 w-4" />}
             >
-              تحويل حجز وسيط إلى عقد
+              {m.convertBtn}
             </Button>
           </Link>
         }
@@ -143,32 +147,32 @@ export default async function AdminBrokerContractsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي العقود',
+            label: m.kpiTotal,
             value: totalContracts,
             icon: <FileText />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'موقّعة',
+            label: m.kpiSigned,
             value: counts.signed,
             icon: <CheckCircle2 />,
             tone: 'success',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'قيد التوقيع',
+            label: m.kpiPending,
             value: counts.pending,
             icon: <FileText />,
             tone: 'warning',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'إجمالي قيمة العقود',
+            label: m.kpiTotalValue,
             value: totalValue > 0 ? formatCurrency(totalValue, currency) : '—',
             icon: <FileText />,
             tone: 'neutral',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
         ]}
       />
@@ -177,7 +181,7 @@ export default async function AdminBrokerContractsPage({
       {contractsRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل العقود: {contractsRes.error}</p>
+          <p className="font-medium">{m.errorLoad}{contractsRes.error}</p>
         </div>
       )}
 
@@ -191,9 +195,9 @@ export default async function AdminBrokerContractsPage({
         {!showFilters && sp.dateTo    && <input type="hidden" name="dateTo"    value={sp.dateTo} />}
 
         {/* ── Row 1: main filter + actions (always visible) ─────────────────── */}
-        <PremiumFilterField label="الوسيط" htmlFor="bc-broker">
+        <PremiumFilterField label={m.filterBrokerLabel} htmlFor="bc-broker">
           <Select id="bc-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
-            <option value="">كل الوسطاء</option>
+            <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
             ))}
@@ -202,10 +206,10 @@ export default async function AdminBrokerContractsPage({
 
         {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {hasAnyFilter && (
             <Link href={'/dashboard/broker-contracts' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
@@ -218,7 +222,7 @@ export default async function AdminBrokerContractsPage({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filterHideFilters : m.filterAdvanced}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -232,37 +236,37 @@ export default async function AdminBrokerContractsPage({
           <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="bc-project" className="text-[11px] font-medium text-slate-400">المشروع</label>
+                <label htmlFor="bc-project" className="text-[11px] font-medium text-slate-400">{m.filterProject}</label>
                 <Select id="bc-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
-                  <option value="">كل المشاريع</option>
+                  <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bc-sales" className="text-[11px] font-medium text-slate-400">المندوب</label>
+                <label htmlFor="bc-sales" className="text-[11px] font-medium text-slate-400">{m.filterSalesRep}</label>
                 <Select id="bc-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
-                  <option value="">كل المندوبين</option>
+                  <option value="">{m.filterAllSalesReps}</option>
                   {salesUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.fullName}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bc-signed" className="text-[11px] font-medium text-slate-400">الحالة</label>
+                <label htmlFor="bc-signed" className="text-[11px] font-medium text-slate-400">{m.filterStatus}</label>
                 <Select id="bc-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''}>
-                  <option value="">كل العقود</option>
-                  <option value="yes">موقّعة</option>
-                  <option value="no">قيد التوقيع</option>
+                  <option value="">{m.filterAllContracts}</option>
+                  <option value="yes">{m.filterStatusSigned}</option>
+                  <option value="no">{m.filterStatusPending}</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bc-datefrom" className="text-[11px] font-medium text-slate-400">التاريخ من</label>
+                <label htmlFor="bc-datefrom" className="text-[11px] font-medium text-slate-400">{m.filterDateFrom}</label>
                 <Input id="bc-datefrom" name="dateFrom" inputSize="sm" type="date" defaultValue={sp.dateFrom ?? ''} />
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bc-dateto" className="text-[11px] font-medium text-slate-400">التاريخ إلى</label>
+                <label htmlFor="bc-dateto" className="text-[11px] font-medium text-slate-400">{m.filterDateTo}</label>
                 <Input id="bc-dateto" name="dateTo" inputSize="sm" type="date" defaultValue={sp.dateTo ?? ''} />
               </div>
             </div>
@@ -273,17 +277,17 @@ export default async function AdminBrokerContractsPage({
       {/* ── Contracts table ──────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<FileText />}
-        title="سجل العقود"
-        description="عقود بيع العملاء الناتجة عن حجوزات أرسلها الوسطاء."
+        title={m.tableTitle}
+        description={m.tableDescription}
         padded={false}
         trailing={
           totalCommission > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              عمولة مقفلة: {formatCurrency(totalCommission, currency)}
+              {m.tableTrailingCommission}{formatCurrency(totalCommission, currency)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
-              {totalContracts.toLocaleString('ar-EG')} عقد
+              {totalContracts.toLocaleString('ar-EG')} {m.tableTrailingCount}
             </span>
           )
         }
@@ -291,8 +295,8 @@ export default async function AdminBrokerContractsPage({
         {rows.length === 0 && !contractsRes.error ? (
           <PremiumEmptyState
             icon={<FileText />}
-            title="لا توجد عقود من الوسطاء"
-            description="ستظهر هنا عقود البيع التي تم إنشاؤها من حجوزات ناتجة عن الوسطاء."
+            title={m.emptyTitle}
+            description={m.emptyDescription}
             action={
               <Link href={'/dashboard/broker-reservations?status=APPROVED' as never}>
                 <Button
@@ -300,7 +304,7 @@ export default async function AdminBrokerContractsPage({
                   size="sm"
                   leftIcon={<ArrowRightLeft className="h-4 w-4" />}
                 >
-                  تحويل حجز وسيط إلى عقد
+                  {m.emptyConvertBtn}
                 </Button>
               </Link>
             }
@@ -311,15 +315,15 @@ export default async function AdminBrokerContractsPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">رقم العقد</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوسيط</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">العميل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">القيمة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المندوب</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">العمولة المُقفلة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">التاريخ</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colContractNumber}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colClient}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colUnit}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colValue}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colSalesRep}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colLockedCommission}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colDate}</th>
                   <th className="text-start py-3 ps-4 pe-5 w-px" />
                 </tr>
               </thead>
@@ -410,11 +414,11 @@ export default async function AdminBrokerContractsPage({
                       {c.signedAt ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-success-50 text-success-700 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap">
                           <CheckCircle2 className="h-3 w-3 shrink-0" />
-                          موقّع
+                          {m.statusSigned}
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-full bg-warning-50 text-warning-700 px-2.5 py-0.5 text-xs font-medium whitespace-nowrap">
-                          قيد التوقيع
+                          {m.statusPending}
                         </span>
                       )}
                     </td>
@@ -427,7 +431,7 @@ export default async function AdminBrokerContractsPage({
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          غير معيّن
+                          {m.unassigned}
                         </span>
                       )}
                     </td>
@@ -456,7 +460,7 @@ export default async function AdminBrokerContractsPage({
                           return (
                             <>
                               <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-2xs font-medium text-teal-700">
-                                مبلغ ثابت
+                                {m.commissionFixed}
                               </span>
                               <p className="text-2xs text-slate-400 tabular-nums mt-0.5 whitespace-nowrap" dir="ltr">
                                 {formatCurrency(amt, currency)}
@@ -466,7 +470,7 @@ export default async function AdminBrokerContractsPage({
                         }
                         return (
                           <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                            غير محددة
+                            {m.commissionUnset}
                           </span>
                         );
                       })()}
@@ -480,7 +484,7 @@ export default async function AdminBrokerContractsPage({
                     {/* Action */}
                     <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/contracts/${c.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.actionView} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>

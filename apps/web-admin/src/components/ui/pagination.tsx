@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
 
 export interface PaginationProps {
   /** 1-based current page */
@@ -11,6 +12,7 @@ export interface PaginationProps {
   /** Existing search params to preserve (excluding "page") */
   params?: Record<string, string | undefined>;
   className?: string;
+  locale?: Locale;
 }
 
 export function Pagination({
@@ -20,6 +22,7 @@ export function Pagination({
   basePath,
   params,
   className,
+  locale = 'ar',
 }: PaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   if (totalPages <= 1) return null;
@@ -47,18 +50,18 @@ export function Pagination({
       )}
     >
       <p className="text-xs text-slate-500">
-        {from}–{to} <span className="text-slate-400">من</span>{' '}
+        {from}–{to} <span className="text-slate-400">{locale === 'en' ? 'of' : 'من'}</span>{' '}
         <span className="font-medium text-slate-700">{total}</span>
       </p>
       <div className="flex items-center gap-1.5">
         <PageLink href={buildHref(prev)} disabled={page <= 1}>
-          السابق
+          {locale === 'en' ? 'Previous' : 'السابق'}
         </PageLink>
         <span className="text-xs font-medium text-brand-700 bg-brand-50 border border-brand-200 rounded-lg px-2.5 h-8 inline-flex items-center tabular-nums">
           {page} <span className="text-brand-400 mx-1">/</span> {totalPages}
         </span>
         <PageLink href={buildHref(next)} disabled={page >= totalPages}>
-          التالي
+          {locale === 'en' ? 'Next' : 'التالي'}
         </PageLink>
       </div>
     </nav>

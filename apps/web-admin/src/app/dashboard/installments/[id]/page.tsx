@@ -3,7 +3,9 @@ import Link from 'next/link';
 import { Pencil, Building2, Home, ChevronLeft } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
-import type { InstallmentPlanTemplate, PlanPaymentType } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
+import type { InstallmentPlanTemplate } from '@/lib/types';
 import { formatCurrency, formatDate, formatDateTime, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Button } from '@/components/ui/button';
@@ -17,31 +19,11 @@ import {
   PremiumCommandPanel,
 } from '@/components/premium';
 
-const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
-  RESERVATION: 'دفعة حجز',
-  DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط',
-  FINAL_PAYMENT: 'دفعة أخيرة',
-};
-
-const PAYMENT_TYPE_BADGE: Record<PlanPaymentType, string> = {
+const PAYMENT_TYPE_BADGE: Record<string, string> = {
   RESERVATION: 'bg-blue-50 text-blue-700',
   DOWN_PAYMENT: 'bg-amber-50 text-amber-700',
   INSTALLMENT: 'bg-slate-50 text-slate-700',
   FINAL_PAYMENT: 'bg-purple-50 text-purple-700',
-};
-
-const FREQUENCY_LABELS: Record<string, string> = {
-  MONTHLY: 'شهري',
-  QUARTERLY: 'ربع سنوي',
-  SEMI_ANNUAL: 'نصف سنوي',
-  YEARLY: 'سنوي',
-};
-
-const START_DATE_RULE_LABELS: Record<string, string> = {
-  MANUAL: 'تاريخ محدد يدوياً',
-  AFTER_RESERVATION: 'بعد تاريخ الحجز',
-  AFTER_CONTRACT: 'بعد تاريخ التعاقد',
 };
 
 const CMD_LINK = 'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
@@ -53,16 +35,17 @@ export default async function InstallmentPlanDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const currency = await getReportsCurrency();
-
-  const [planRes, session] = await Promise.all([
+  const [planRes, session, currency, locale] = await Promise.all([
     safe(api.get<InstallmentPlanTemplate>(`/installment-plan-templates/${id}`)),
     getSession(),
+    getReportsCurrency(),
+    getLocale(),
   ]);
 
   if (planRes.error || !planRes.data) notFound();
 
   const plan = planRes.data;
+  const m = uiT(locale).pages.installments.detail;
   const isAdmin = session?.role === 'ADMIN';
   const scheduleItems = plan.scheduleItems ?? [];
   const durationOptions = plan.durationOptions ?? [];
@@ -72,10 +55,10 @@ export default async function InstallmentPlanDetailPage({
     <div className="space-y-5 pb-2">
       <PremiumPageHero
         title={plan.name}
-        description={plan.description ?? 'خطة تقسيط'}
+        description={plan.description ?? m.defaultDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'خطط التقسيط', href: '/dashboard/installments' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbList, href: '/dashboard/installments' },
           { label: plan.name },
         ]}
         meta={<PlanTemplateStatusBadge status={plan.status} />}
@@ -83,14 +66,14 @@ export default async function InstallmentPlanDetailPage({
           isAdmin ? (
             <div className="flex items-center gap-2">
               {plan.status !== 'ACTIVE' && (
-                <PlanDetailActions planId={plan.id} action="activate" />
+                <PlanDetailActions planId={plan.id} action="activate" locale={locale} />
               )}
               {plan.status === 'ACTIVE' && (
-                <PlanDetailActions planId={plan.id} action="deactivate" />
+                <PlanDetailActions planId={plan.id} action="deactivate" locale={locale} />
               )}
               <Link href={`/dashboard/installments/${id}/edit`}>
                 <Button variant="outline" size="md" leftIcon={<Pencil className="h-4 w-4" />}>
-                  تعديل
+                  {m.btnEdit}
                 </Button>
               </Link>
             </div>
@@ -102,38 +85,38 @@ export default async function InstallmentPlanDetailPage({
         main={
           <div className="space-y-5">
             {/* Plan details */}
-            <PremiumSectionCard title="تفاصيل الخطة">
+            <PremiumSectionCard title={m.sectionPlanTitle}>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5">
-                <Field label="صافي السعر">
+                <Field label={m.fieldNetPrice}>
                   <span className="text-[15px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(plan.netPrice, currency)}
                   </span>
                 </Field>
-                <Field label="السعر الإجمالي">
+                <Field label={m.fieldTotalPrice}>
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(plan.totalPrice, currency)}
                   </span>
                 </Field>
                 {Number(plan.discountAmount) > 0 && (
-                  <Field label="الخصم">
+                  <Field label={m.fieldDiscount}>
                     <span className="text-[14px] font-bold tabular-nums text-success-700">
                       − {formatCurrency(plan.discountAmount, currency)}
                     </span>
                   </Field>
                 )}
-                <Field label="دفعة الحجز">
+                <Field label={m.fieldReservation}>
                   <div>
                     <span className={`text-[14px] font-bold tabular-nums ${Number(plan.reservationAmount) > 0 ? 'text-slate-900' : 'text-warning-600'}`}>
                       {formatCurrency(plan.reservationAmount, currency)}
                     </span>
                     {Number(plan.reservationAmount) <= 0 && (
                       <p className="text-[10px] text-warning-700 mt-0.5">
-                        يجب تحديد دفعة الحجز قبل استخدام الخطة
+                        {m.reservationWarning}
                       </p>
                     )}
                   </div>
                 </Field>
-                <Field label="الدفعة الأولى">
+                <Field label={m.fieldDownPayment}>
                   <span className="text-[14px] font-bold tabular-nums text-slate-900">
                     {formatCurrency(plan.downPaymentAmount, currency)}
                     {plan.downPaymentType === 'PERCENTAGE' && (
@@ -143,34 +126,34 @@ export default async function InstallmentPlanDetailPage({
                     )}
                   </span>
                 </Field>
-                <Field label={hasDurationOptions ? 'خيارات المدة' : 'عدد الأقساط'}>
+                <Field label={hasDurationOptions ? m.fieldDurationOptions : m.fieldInstallmentsCount}>
                   <span className="text-[14px] font-bold text-slate-900">
                     {hasDurationOptions
-                      ? `${durationOptions.length} خيار`
+                      ? m.durationOptionsLabel(durationOptions.length)
                       : plan.installmentsCount != null
-                        ? `${plan.installmentsCount} قسط`
+                        ? m.installmentsLabel(plan.installmentsCount)
                         : '—'}
                   </span>
                 </Field>
-                <Field label="تكرار القسط">
+                <Field label={m.fieldFrequency}>
                   <span className="text-[14px] font-bold text-slate-900">
-                    {FREQUENCY_LABELS[plan.frequency] ?? plan.frequency}
+                    {m.frequencyLabels[plan.frequency] ?? plan.frequency}
                   </span>
                 </Field>
-                <Field label="قاعدة البدء">
+                <Field label={m.fieldStartRule}>
                   <span className="text-[14px] font-bold text-slate-900">
-                    {START_DATE_RULE_LABELS[plan.startDateRule] ?? plan.startDateRule}
+                    {m.startRuleLabels[plan.startDateRule] ?? plan.startDateRule}
                   </span>
                 </Field>
                 {plan.manualStartDate && (
-                  <Field label="تاريخ البدء">
+                  <Field label={m.fieldStartDate}>
                     <span className="text-[14px] font-bold text-slate-900">
                       {formatDate(plan.manualStartDate)}
                     </span>
                   </Field>
                 )}
                 {plan.finalPaymentAmount && Number(plan.finalPaymentAmount) > 0 && (
-                  <Field label="الدفعة الأخيرة">
+                  <Field label={m.fieldFinalPayment}>
                     <span className="text-[14px] font-bold tabular-nums text-slate-900">
                       {formatCurrency(plan.finalPaymentAmount, currency)}
                     </span>
@@ -181,7 +164,7 @@ export default async function InstallmentPlanDetailPage({
 
             {/* Duration options or schedule table */}
             {hasDurationOptions ? (
-              <PremiumSectionCard title={`خيارات مدة التقسيط (${durationOptions.length})`}>
+              <PremiumSectionCard title={m.durationOptionsSectionTitle(durationOptions.length)}>
                 <DurationSelector
                   options={durationOptions}
                   netPrice={Number(plan.netPrice)}
@@ -189,25 +172,26 @@ export default async function InstallmentPlanDetailPage({
                   downPaymentAmount={Number(plan.downPaymentAmount)}
                   totalPrice={Number(plan.totalPrice)}
                   currency={currency}
+                  locale={locale}
                 />
               </PremiumSectionCard>
             ) : (
               <PremiumSectionCard
-                title={`جدول السداد (${scheduleItems.length} دفعة)`}
+                title={m.scheduleTitle(scheduleItems.length)}
                 padded={false}
               >
                 {scheduleItems.length === 0 ? (
-                  <p className="text-sm text-slate-400 p-5">لا يوجد جدول سداد محفوظ لهذه الخطة.</p>
+                  <p className="text-sm text-slate-400 p-5">{m.emptySchedule}</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead className="bg-canvas/50 border-b border-hairline">
                         <tr>
                           <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">#</th>
-                          <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">نوع الدفعة</th>
-                          <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">تاريخ الاستحقاق</th>
-                          <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">المبلغ</th>
-                          <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">الرصيد المتبقي</th>
+                          <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.colPaymentType}</th>
+                          <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.colDueDate}</th>
+                          <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.colAmount}</th>
+                          <th className="px-4 py-3 text-end text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.colBalance}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-hairline">
@@ -217,8 +201,8 @@ export default async function InstallmentPlanDetailPage({
                               {item.paymentNumber}
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PAYMENT_TYPE_BADGE[item.paymentType]}`}>
-                                {PAYMENT_TYPE_LABELS[item.paymentType]}
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${PAYMENT_TYPE_BADGE[item.paymentType] ?? ''}`}>
+                                {m.paymentTypeLabels[item.paymentType] ?? item.paymentType}
                               </span>
                             </td>
                             <td className="px-4 py-3 text-[12px] text-slate-600">
@@ -236,7 +220,7 @@ export default async function InstallmentPlanDetailPage({
                       <tfoot className="bg-canvas/50 border-t-2 border-hairline">
                         <tr>
                           <td colSpan={3} className="px-4 py-3 text-[13px] font-bold text-slate-700">
-                            الإجمالي
+                            {m.scheduleTotal}
                           </td>
                           <td className="px-4 py-3 text-end text-[13px] font-bold text-slate-900 tabular-nums">
                             {formatCurrency(
@@ -257,49 +241,49 @@ export default async function InstallmentPlanDetailPage({
         side={
           <div className="space-y-5">
             {isAdmin && (
-              <PremiumCommandPanel title="إجراءات">
+              <PremiumCommandPanel title={m.sideActions}>
                 {plan.status !== 'ACTIVE' && (
-                  <PlanDetailActions planId={plan.id} action="activate" commandRow />
+                  <PlanDetailActions planId={plan.id} action="activate" commandRow locale={locale} />
                 )}
                 {plan.status === 'ACTIVE' && (
-                  <PlanDetailActions planId={plan.id} action="deactivate" commandRow />
+                  <PlanDetailActions planId={plan.id} action="deactivate" commandRow locale={locale} />
                 )}
                 <Link href={`/dashboard/installments/${id}/edit`} className={CMD_LINK}>
                   <span className={CMD_ICON}><Pencil /></span>
-                  تعديل الخطة
+                  {m.cmdEditPlan}
                 </Link>
                 <Link href="/dashboard/installments" className={CMD_LINK}>
                   <span className={CMD_ICON}><ChevronLeft /></span>
-                  قائمة خطط التقسيط
+                  {m.cmdBackToList}
                 </Link>
               </PremiumCommandPanel>
             )}
 
             {!isAdmin && (
-              <PremiumCommandPanel title="التنقل">
+              <PremiumCommandPanel title={m.cmdNavigate}>
                 <Link href="/dashboard/installments" className={CMD_LINK}>
                   <span className={CMD_ICON}><ChevronLeft /></span>
-                  قائمة خطط التقسيط
+                  {m.cmdBackToList}
                 </Link>
               </PremiumCommandPanel>
             )}
 
             {/* Status and scope */}
-            <PremiumSectionCard title="الحالة والصلاحية" padded={false}>
+            <PremiumSectionCard title={m.sideStatusTitle} padded={false}>
               <div className="divide-y divide-hairline">
-                <SideRow label="الحالة">
+                <SideRow label={m.labelStatus}>
                   <PlanTemplateStatusBadge status={plan.status} />
                 </SideRow>
-                <SideRow label="الصلاحية">
+                <SideRow label={m.labelScope}>
                   <span className="text-[11px] font-semibold bg-canvas text-slate-600 rounded-full px-2.5 py-0.5 border border-hairline">
-                    مبيعات فقط
+                    {m.scopeSalesOnly}
                   </span>
                 </SideRow>
               </div>
             </PremiumSectionCard>
 
             {/* Project and unit */}
-            <PremiumSectionCard title="المشروع والوحدة">
+            <PremiumSectionCard title={m.sideProjectTitle}>
               <div className="space-y-4">
                 {plan.project && (
                   <div className="flex items-center gap-3">
@@ -307,7 +291,7 @@ export default async function InstallmentPlanDetailPage({
                       <Building2 />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">المشروع</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.labelProject}</p>
                       <p className="text-[13.5px] font-bold text-slate-900 truncate">{tx(plan.project.name)}</p>
                     </div>
                   </div>
@@ -318,7 +302,7 @@ export default async function InstallmentPlanDetailPage({
                       <Home />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">الوحدة</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-0.5">{m.labelUnit}</p>
                       <p className="text-[13.5px] font-bold text-slate-900">{plan.unit.code}</p>
                       {plan.unit.type && (
                         <p className="text-[11px] text-slate-400 mt-0.5">{plan.unit.type}</p>
@@ -326,23 +310,23 @@ export default async function InstallmentPlanDetailPage({
                     </div>
                   </div>
                 ) : (
-                  <p className="text-[12px] text-slate-400">تنطبق على كامل المشروع</p>
+                  <p className="text-[12px] text-slate-400">{m.allProjectScope}</p>
                 )}
               </div>
             </PremiumSectionCard>
 
             {/* Creation info */}
-            <PremiumSectionCard title="معلومات الإنشاء" padded={false}>
+            <PremiumSectionCard title={m.sideCreatedTitle} padded={false}>
               <div className="divide-y divide-hairline">
                 {plan.createdBy && (
-                  <SideRow label="أنشئ بواسطة">
+                  <SideRow label={m.labelCreatedBy}>
                     <span className="text-[12px] font-semibold text-slate-800">{plan.createdBy.fullName}</span>
                   </SideRow>
                 )}
-                <SideRow label="تاريخ الإنشاء">
+                <SideRow label={m.labelCreatedAt}>
                   <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.createdAt)}</span>
                 </SideRow>
-                <SideRow label="آخر تعديل">
+                <SideRow label={m.labelUpdatedAt}>
                   <span className="text-[12px] font-medium text-slate-700">{formatDateTime(plan.updatedAt)}</span>
                 </SideRow>
               </div>

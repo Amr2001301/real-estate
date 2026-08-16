@@ -3,6 +3,8 @@ import { api, safe } from '@/lib/api';
 import type { MaintenanceReportSummary } from '@/lib/types';
 import { tx } from '@/lib/format';
 import { PremiumMetricStrip, PremiumSectionCard } from '@/components/premium';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 interface Filters {
   status?: string;
@@ -13,7 +15,8 @@ interface Filters {
   to?: string;
 }
 
-export async function MaintenanceReports({ filters }: { filters: Filters }) {
+export async function MaintenanceReports({ filters, locale = 'ar' }: { filters: Filters; locale?: Locale }) {
+  const m = uiT(locale).pages.maintenance.reports;
   const qs = new URLSearchParams();
   if (filters.status) qs.set('status', filters.status);
   if (filters.reviewStatus) qs.set('reviewStatus', filters.reviewStatus);
@@ -26,13 +29,14 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
   if (res.error || !res.data) {
     return (
       <div className="rounded-2xl bg-warning-50 border border-warning-100 text-warning-700 px-4 py-2.5 text-xs">
-        تعذّر تحميل تقرير الصيانة: {res.error ?? 'غير متاح'}
+        {m.loadError(res.error ?? 'Unavailable')}
       </div>
     );
   }
 
   const r = res.data;
-  const num = (n: number) => (n === 0 ? '0' : n.toLocaleString('ar-EG'));
+  const numFmt = locale === 'ar' ? 'ar-EG' : 'en-US';
+  const num = (n: number) => (n === 0 ? '0' : n.toLocaleString(numFmt));
   const maxCategoryCount = r.byCategory[0]?.count ?? 1;
   const maxAssigneeCount = r.byAssignee[0]?.count ?? 1;
 
@@ -43,10 +47,10 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
         variant="compact"
         cols={4}
         metrics={[
-          { label: 'قيد المراجعة', value: num(r.pendingReviewCount), icon: <ClipboardClock />, tone: 'warning' },
-          { label: 'متأخرة',       value: num(r.overdueCount),       icon: <AlarmClock />,     tone: 'danger'  },
-          { label: 'قيد التنفيذ',  value: num(r.inProgressCount),    icon: <Loader2 />,        tone: 'info'    },
-          { label: 'تم الإنجاز',   value: num(r.resolvedCount),      icon: <CheckCircle2 />,   tone: 'success' },
+          { label: m.kpiPendingReview, value: num(r.pendingReviewCount), icon: <ClipboardClock />, tone: 'warning' },
+          { label: m.kpiOverdue,       value: num(r.overdueCount),       icon: <AlarmClock />,     tone: 'danger'  },
+          { label: m.kpiInProgress,    value: num(r.inProgressCount),    icon: <Loader2 />,        tone: 'info'    },
+          { label: m.kpiResolved,      value: num(r.resolvedCount),      icon: <CheckCircle2 />,   tone: 'success' },
         ]}
       />
 
@@ -54,12 +58,12 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {/* Top requested categories */}
         <PremiumSectionCard
-          title="التصنيفات الأكثر طلباً"
+          title={m.sectionCategories}
           icon={<BarChart3 />}
           trailing={
             r.byCategory.length > 0 ? (
               <span className="text-xs text-slate-400 tabular-nums">
-                أعلى {Math.min(5, r.byCategory.length)}
+                {m.topN(Math.min(5, r.byCategory.length))}
               </span>
             ) : undefined
           }
@@ -68,7 +72,7 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
           {r.byCategory.length === 0 ? (
             <div className="py-10 flex flex-col items-center gap-2">
               <BarChart3 className="h-8 w-8 text-slate-200" />
-              <p className="text-xs text-slate-400">لا توجد بيانات</p>
+              <p className="text-xs text-slate-400">{m.emptyCategories}</p>
             </div>
           ) : (
             <ul className="divide-y divide-hairline">
@@ -83,11 +87,11 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-canvas border border-hairline text-slate-600 text-[11px] font-semibold tabular-nums">
-                        {num(c.count)} طلب
+                        {num(c.count)} {m.countSuffix}
                       </span>
                       {c.overdueCount > 0 && (
                         <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-danger-50 text-danger-600 text-[11px] font-semibold tabular-nums">
-                          {num(c.overdueCount)} متأخر
+                          {num(c.overdueCount)} {m.overdueSuffix}
                         </span>
                       )}
                     </div>
@@ -106,11 +110,11 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
 
         {/* Supervisor workload */}
         <PremiumSectionCard
-          title="الأعباء على مشرفي الصيانة"
+          title={m.sectionSupervisors}
           icon={<Users2 />}
           trailing={
             r.byAssignee.length > 0 ? (
-              <span className="text-xs text-slate-400 tabular-nums">{r.byAssignee.length} مشرف</span>
+              <span className="text-xs text-slate-400 tabular-nums">{m.supervisorCount(r.byAssignee.length)}</span>
             ) : undefined
           }
           padded={false}
@@ -118,7 +122,7 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
           {r.byAssignee.length === 0 ? (
             <div className="py-10 flex flex-col items-center gap-2">
               <Users2 className="h-8 w-8 text-slate-200" />
-              <p className="text-xs text-slate-400">لا توجد طلبات مُسندة</p>
+              <p className="text-xs text-slate-400">{m.emptyAssignees}</p>
             </div>
           ) : (
             <ul className="divide-y divide-hairline">
@@ -133,16 +137,16 @@ export async function MaintenanceReports({ filters }: { filters: Filters }) {
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-canvas border border-hairline text-slate-600 text-[11px] font-semibold tabular-nums">
-                        {num(a.count)} طلب
+                        {num(a.count)} {m.countSuffix}
                       </span>
                       {a.inProgressCount > 0 && (
                         <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-info-50 text-info-600 text-[11px] font-semibold tabular-nums">
-                          {num(a.inProgressCount)} جارٍ
+                          {num(a.inProgressCount)} {m.inProgressSuffix}
                         </span>
                       )}
                       {a.overdueCount > 0 && (
                         <span className="inline-flex items-center rounded-full px-2 py-0.5 bg-danger-50 text-danger-600 text-[11px] font-semibold tabular-nums">
-                          {num(a.overdueCount)} متأخر
+                          {num(a.overdueCount)} {m.overdueSuffix}
                         </span>
                       )}
                     </div>

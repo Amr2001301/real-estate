@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import { ArrowRight, Home, Clock, RefreshCw, Wrench, type LucideIcon } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { MeMaintenanceRequestDetail } from '@/lib/api-types';
@@ -58,8 +60,17 @@ function formatDate(iso: string | null): string {
   }
 }
 
-function BackLink() {
-  return (
+export default async function AccountMaintenanceDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.maintenanceDetail;
+
+  const backLink = (
     <Link
       href={routes.accountMaintenance}
       className="group inline-flex items-center gap-2 text-sm font-medium text-ink-muted transition-colors hover:text-ink-strong"
@@ -67,17 +78,9 @@ function BackLink() {
       <span className="flex h-7 w-7 items-center justify-center rounded-full border border-hairline bg-surface transition-colors group-hover:border-gold-200 group-hover:bg-gold-50 group-hover:text-gold-600">
         <ArrowRight className="h-3.5 w-3.5" aria-hidden />
       </span>
-      العودة إلى الصيانة
+      {m.backLabel}
     </Link>
   );
-}
-
-export default async function AccountMaintenanceDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
 
   let req: MeMaintenanceRequestDetail;
   try {
@@ -86,15 +89,15 @@ export default async function AccountMaintenanceDetailPage({
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-6">
-        <BackLink />
+        {backLink}
         <ErrorState
-          title="تعذّر العثور على طلب الصيانة"
-          message="قد يكون الطلب غير موجود أو لا يخصّك. عُد إلى قائمة الصيانة وحاول مجددًا."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
         <div className="flex justify-center">
           <ButtonLink href={routes.accountMaintenance} variant="outline" size="md">
-            العودة إلى الصيانة
+            {m.backFromError}
           </ButtonLink>
         </div>
       </div>
@@ -106,7 +109,7 @@ export default async function AccountMaintenanceDetailPage({
 
   return (
     <div className="space-y-6">
-      <BackLink />
+      {backLink}
 
       <PremiumCard className="p-6 sm:p-8">
         {/* Header — ticket meta (start) ⟷ status pills (end) */}
@@ -116,7 +119,7 @@ export default async function AccountMaintenanceDetailPage({
               <Wrench className="h-6 w-6" aria-hidden />
             </span>
             <div className="min-w-0">
-              <h1 className="text-xl font-black text-ink-strong">طلب صيانة: {categoryName || '—'}</h1>
+              <h1 className="text-xl font-black text-ink-strong">{m.requestPrefix} {categoryName || '—'}</h1>
               {req.description && <p className="mt-1 text-sm font-semibold text-ink-muted">{req.description}</p>}
             </div>
           </div>
@@ -129,9 +132,9 @@ export default async function AccountMaintenanceDetailPage({
 
         {/* Details — architectural micro-card grid */}
         <div className="grid grid-cols-1 gap-6 pt-6 sm:grid-cols-3">
-          <InfoCard icon={Home} label="الوحدة" value={unitLabel} />
-          <InfoCard icon={Clock} label="تاريخ الإنشاء" value={formatDate(req.createdAt)} mono />
-          <InfoCard icon={RefreshCw} label="آخر تحديث" value={formatDate(req.updatedAt)} mono />
+          <InfoCard icon={Home} label={m.unitLabel} value={unitLabel} />
+          <InfoCard icon={Clock} label={m.createdLabel} value={formatDate(req.createdAt)} mono />
+          <InfoCard icon={RefreshCw} label={m.updatedLabel} value={formatDate(req.updatedAt)} mono />
         </div>
       </PremiumCard>
 
@@ -140,9 +143,9 @@ export default async function AccountMaintenanceDetailPage({
 
       {/* Customer-visible documents — read/download only (upload is a later chunk) */}
       <PremiumCard className="p-6 sm:p-8">
-        <h2 className="text-lg font-bold text-ink-strong">المرفقات</h2>
+        <h2 className="text-lg font-bold text-ink-strong">{m.attachmentsTitle}</h2>
         {req.documents.length === 0 ? (
-          <p className="mt-2 text-sm text-ink-muted">لا توجد مرفقات متاحة لهذا الطلب.</p>
+          <p className="mt-2 text-sm text-ink-muted">{m.noAttachments}</p>
         ) : (
           <ul className="mt-4 space-y-2">
             {req.documents.map((doc) => (
@@ -150,7 +153,7 @@ export default async function AccountMaintenanceDetailPage({
                 {/* Signed-download — Phase 7E. The customer-facing detail
                     endpoint no longer embeds `fileUrl`; the client mints a
                     short-lived signed URL just-in-time on click. */}
-                <DocumentDownloadById documentId={doc.id} title={doc.title || doc.fileName || 'مرفق'} />
+                <DocumentDownloadById documentId={doc.id} title={doc.title || doc.fileName || m.attachmentLabel} />
               </li>
             ))}
           </ul>

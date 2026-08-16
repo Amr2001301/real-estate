@@ -11,20 +11,19 @@ import { MediaUploader } from '@/components/media-uploader';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { Contract, ContractInstallment } from '@/lib/types';
 import { formatCurrency, formatDate } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { recordDepositAction, type DepositFormState } from '../actions';
-
-const NAV_SECTIONS = [
-  { id: 'section-contract', num: '01', label: 'العقد والقسط',   sub: 'تحديد العقد والقسط المستحق' },
-  { id: 'section-payment',  num: '02', label: 'المبلغ والإيصال', sub: 'المبلغ وتاريخ الدفع والمرفق' },
-];
 
 interface Props {
   contracts:          Contract[];
   initialContractId?: string;
   currency?:          string;
+  locale?:            Locale;
 }
 
-export default function RecordDepositForm({ contracts, initialContractId, currency = 'SAR' }: Props) {
+export default function RecordDepositForm({ contracts, initialContractId, currency = 'SAR', locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.depositsForm;
   const [state, formAction] = useActionState<DepositFormState, FormData>(
     recordDepositAction,
     {},
@@ -63,6 +62,11 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
 
   const selectedInstallment = installments.find((i) => i.id === selectedInstallmentId);
 
+  const NAV_SECTIONS = [
+    { id: 'section-contract', num: '01', label: m.navContract.label, sub: m.navContract.sub },
+    { id: 'section-payment',  num: '02', label: m.navPayment.label,  sub: m.navPayment.sub },
+  ];
+
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
       <input type="hidden" name="receiptUrl" value={receiptUrl} />
@@ -76,17 +80,17 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
 
       <PremiumFormLayout
         navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="سيتم تسجيل الدفعة وربطها بالقسط المستحق في العقد المختار."
+        sidebarBadge={m.sidebarBadge}
+        sidebarInfo={m.sidebarInfo}
       >
         <PremiumFormPanel
           id="section-contract"
           number="01"
-          title="العقد والقسط"
-          description="اختر العقد أولاً، ثم حدد القسط المستحق للدفع."
+          title={m.panelContractTitle}
+          description={m.panelContractDesc}
         >
           <div className="flex flex-col gap-5">
-            <Field label="العقد" name="contractId">
+            <Field label={m.labelContract} name="contractId">
               <select
                 id="contractId"
                 name="contractId"
@@ -98,7 +102,7 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
                 }}
                 className={inputClass}
               >
-                <option value="" disabled>— اختر —</option>
+                <option value="" disabled>{m.optionChoose}</option>
                 {contracts.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.contractNumber ?? `#${c.id.slice(0, 8)}`} · {c.customer?.fullName ?? '—'} ·{' '}
@@ -109,11 +113,11 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
             </Field>
 
             {contractId && (
-              <Field label="القسط" name="installmentId">
+              <Field label={m.labelInstallment} name="installmentId">
                 {loadingInst ? (
-                  <p className="text-sm text-slate-400 py-2">جاري التحميل…</p>
+                  <p className="text-sm text-slate-400 py-2">{m.loadingInstallments}</p>
                 ) : installments.length === 0 ? (
-                  <p className="text-sm text-amber-600 py-2">لا توجد أقساط معلقة لهذا العقد</p>
+                  <p className="text-sm text-amber-600 py-2">{m.noInstallments}</p>
                 ) : (
                   <select
                     id="installmentId"
@@ -128,11 +132,11 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
                     }}
                     className={inputClass}
                   >
-                    <option value="" disabled>— اختر القسط —</option>
+                    <option value="" disabled>{m.optionChooseInstallment}</option>
                     {installments.map((inst) => (
                       <option key={inst.id} value={inst.id}>
                         {formatDate(inst.dueDate)} — {formatCurrency(inst.amount, currency)} —{' '}
-                        {inst.status === 'OVERDUE' ? 'متأخر' : 'قيد الانتظار'}
+                        {inst.status === 'OVERDUE' ? m.statusOverdue : m.statusPending}
                       </option>
                     ))}
                   </select>
@@ -145,12 +149,12 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
         <PremiumFormPanel
           id="section-payment"
           number="02"
-          title="المبلغ والإيصال"
-          description="أدخل مبلغ الدفعة وتاريخها، وأرفق إيصال السداد."
+          title={m.panelPaymentTitle}
+          description={m.panelPaymentDesc}
         >
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="المبلغ" name="amount">
+              <Field label={m.labelAmount} name="amount">
                 <input
                   id="amount"
                   name="amount"
@@ -166,7 +170,7 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
                   className={`${inputClass} ${selectedInstallment ? 'bg-slate-50 text-slate-500' : ''}`}
                 />
               </Field>
-              <Field label="تاريخ الدفع" name="paidAt">
+              <Field label={m.labelPaidAt} name="paidAt">
                 <input
                   id="paidAt"
                   name="paidAt"
@@ -177,7 +181,7 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
               </Field>
             </div>
 
-            <Field label="إيصال الدفع (PDF)" name="receiptUrl_display">
+            <Field label={m.labelReceipt} name="receiptUrl_display">
               {receiptUrl ? (
                 <div className="flex items-center gap-2">
                   <a
@@ -186,21 +190,21 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
                     rel="noopener noreferrer"
                     className="text-sm text-brand-600 hover:underline"
                   >
-                    معاينة الإيصال
+                    {m.previewReceipt}
                   </a>
                   <button
                     type="button"
                     onClick={() => setReceiptUrl('')}
                     className="text-xs text-red-600 hover:underline"
                   >
-                    إزالة
+                    {m.removeReceipt}
                   </button>
                 </div>
               ) : (
                 <MediaUploader
                   folder="receipts"
                   accept="application/pdf,image/*"
-                  buttonLabel="+ رفع إيصال"
+                  buttonLabel={m.uploadReceipt}
                   onUploaded={(url) => setReceiptUrl(url)}
                 />
               )}
@@ -215,13 +219,13 @@ export default function RecordDepositForm({ contracts, initialContractId, curren
           <>
             <Link href={'/dashboard/deposits' as never}>
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {m.cancelBtn}
               </Button>
             </Link>
-            <SubmitButton>تسجيل الدفعة</SubmitButton>
+            <SubmitButton>{m.submitBtn}</SubmitButton>
           </>
         }
-        helper="سيتم تسجيل الدفعة وتحديث حالة القسط فور الحفظ."
+        helper={m.footerHelper}
       />
     </form>
   );

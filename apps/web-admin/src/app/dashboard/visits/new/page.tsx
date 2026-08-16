@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, User, LeadStage, Project } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import NewVisitForm from './_form';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +23,10 @@ interface LeadOption {
 }
 
 export default async function NewVisitPage() {
+  const locale = await getLocale();
+  const m = uiT(locale);
+  const n = m.pages.visitsNew;
+
   const [meRes, projectsRes, unitsRes, leadsRes, clientsRes, customersRes, salesRes] =
     await Promise.all([
       safe(api.get<User>('/users/me')),
@@ -58,7 +64,7 @@ export default async function NewVisitPage() {
                   href={'/dashboard' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  لوحة التحكم
+                  {m.common.breadcrumbHome}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -67,27 +73,27 @@ export default async function NewVisitPage() {
                   href={'/dashboard/visits' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  الزيارات
+                  {m.nav.items.visits}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">زيارة جديدة</span>
+                <span className="font-semibold text-slate-600">{n.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                إنشاء زيارة جديدة
+                {n.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                أنشئ زيارة جديدة مباشرة. يمكن ربطها بعميل محتمل، عميل مسجل، أو حفظها كزيارة بدون حساب.
+                {n.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              زيارة جديدة
+              {n.badge}
             </span>
           </div>
         </div>
@@ -100,6 +106,7 @@ export default async function NewVisitPage() {
         leads={leadsRes.data?.data ?? []}
         clients={clients}
         salesOptions={salesRes.data?.data ?? []}
+        locale={locale}
       />
     </div>
   );

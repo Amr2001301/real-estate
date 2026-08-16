@@ -6,14 +6,18 @@ import { useRouter } from 'next/navigation';
 import { Eye, Pencil, CheckCircle2, PauseCircle, Trash2 } from 'lucide-react';
 import { IconButton } from '@/components/ui/icon-button';
 import type { InstallmentPlanTemplate } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { activatePlanAction, deactivatePlanAction, deletePlanAction } from '../actions';
 
 interface Props {
   plan: InstallmentPlanTemplate;
   isAdmin: boolean;
+  locale?: Locale;
 }
 
-export function PlanActions({ plan, isAdmin }: Props) {
+export function PlanActions({ plan, isAdmin, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.installments.planActions;
   const [isPending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const router = useRouter();
@@ -47,7 +51,7 @@ export function PlanActions({ plan, isAdmin }: Props) {
   return (
     <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
       <Link href={`/dashboard/installments/${plan.id}`}>
-        <IconButton label="عرض تفاصيل خطة التقسيط" variant="outline" size="sm">
+        <IconButton label={m.ariaView} variant="outline" size="sm">
           <Eye />
         </IconButton>
       </Link>
@@ -57,14 +61,14 @@ export function PlanActions({ plan, isAdmin }: Props) {
           <span className="w-px h-4 bg-hairline shrink-0" aria-hidden />
 
           <Link href={`/dashboard/installments/${plan.id}/edit`}>
-            <IconButton label="تعديل خطة التقسيط" variant="outline" size="sm">
+            <IconButton label={m.ariaEdit} variant="outline" size="sm">
               <Pencil />
             </IconButton>
           </Link>
 
           {plan.status !== 'ACTIVE' && (
             <IconButton
-              label="تفعيل خطة التقسيط"
+              label={m.ariaActivate}
               variant="ghost"
               size="sm"
               disabled={isPending}
@@ -77,7 +81,7 @@ export function PlanActions({ plan, isAdmin }: Props) {
 
           {plan.status === 'ACTIVE' && (
             <IconButton
-              label="إيقاف خطة التقسيط"
+              label={m.ariaDeactivate}
               variant="ghost"
               size="sm"
               disabled={isPending}
@@ -90,7 +94,7 @@ export function PlanActions({ plan, isAdmin }: Props) {
 
           {plan.status === 'DRAFT' && (
             <IconButton
-              label={confirmDelete ? 'تأكيد الحذف' : 'حذف خطة التقسيط'}
+              label={confirmDelete ? m.ariaConfirmDelete : m.ariaDelete}
               variant="ghost"
               size="sm"
               disabled={isPending}

@@ -23,6 +23,8 @@ import {
   PremiumMetricStrip,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,30 +51,11 @@ interface BonusEntry {
   rule?: { name: string };
 }
 
-const SOURCE_LABEL: Record<EntrySource, string> = {
-  MANUAL: 'يدوي',
-  CONTRACT_AUTO: 'تلقائي من عقد',
-};
 interface SalesUser {
   id: string;
   fullName: string;
   role?: 'SALES' | 'SALES_MANAGER';
 }
-
-function salesActorLabel(u: SalesUser): string {
-  return u.role === 'SALES_MANAGER' ? `${u.fullName} — مدير` : `${u.fullName} — مبيعات`;
-}
-
-const STATUS_LABEL: Record<EntryStatus, string> = {
-  PENDING: 'معلق',
-  APPROVED: 'معتمد',
-  PAID: 'مدفوع',
-};
-const STATUS_TONE: Record<EntryStatus, 'warning' | 'info' | 'success'> = {
-  PENDING: 'warning',
-  APPROVED: 'info',
-  PAID: 'success',
-};
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function buildEntriesUrl(sp: Record<string, string | undefined>): string {
@@ -153,9 +136,32 @@ export default async function BonusPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const sp = await searchParams;
-  const currency = await getReportsCurrency();
+  const [sp, locale, currency] = await Promise.all([
+    searchParams,
+    getLocale(),
+    getReportsCurrency(),
+  ]);
+  const m = uiT(locale).bonusPage;
   const symbol = currencySymbol(currency);
+
+  const STATUS_LABEL: Record<EntryStatus, string> = {
+    PENDING: m.statusPending,
+    APPROVED: m.statusApproved,
+    PAID: m.statusPaid,
+  };
+  const STATUS_TONE: Record<EntryStatus, 'warning' | 'info' | 'success'> = {
+    PENDING: 'warning',
+    APPROVED: 'info',
+    PAID: 'success',
+  };
+  const SOURCE_LABEL: Record<EntrySource, string> = {
+    MANUAL: m.sourceManual,
+    CONTRACT_AUTO: m.sourceAuto,
+  };
+
+  function salesActorLabel(u: SalesUser): string {
+    return u.role === 'SALES_MANAGER' ? `${u.fullName} — ${m.roleManager}` : `${u.fullName} — ${m.roleSales}`;
+  }
 
   const [rulesRes, entriesRes, salesRes] = await Promise.all([
     safe(api.get<BonusRule[]>('/bonus-rules')),
@@ -191,11 +197,11 @@ export default async function BonusPage({
   return (
     <div className="space-y-5">
       <PremiumPageHero
-        title="عمولات ومكافآت المبيعات"
-        description="إدارة يدوية لمستحقات العمولات والمكافآت. تُنشأ المستحقات يدوياً ثم تُعتمد وتُدفع."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'العمولات' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbBonus },
         ]}
         actions={
           <ExportMenu
@@ -211,7 +217,7 @@ export default async function BonusPage({
         <div className="flex items-start gap-3 rounded-2xl bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold">تعذّر تنفيذ العملية</p>
+            <p className="font-semibold">{m.opError}</p>
             <p className="text-xs mt-0.5 opacity-80">{sp.err}</p>
           </div>
         </div>
@@ -222,10 +228,10 @@ export default async function BonusPage({
         variant="compact"
         cols={4}
         metrics={[
-          { label: 'إجمالي المعلق',  value: pendingTotal === 0 ? `0 ${symbol}` : formatCurrency(pendingTotal, currency),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
-          { label: 'إجمالي المعتمد', value: approvedTotal === 0 ? `0 ${symbol}` : formatCurrency(approvedTotal, currency), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
-          { label: 'إجمالي المدفوع', value: paidTotal === 0 ? `0 ${symbol}` : formatCurrency(paidTotal, currency),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
-          { label: 'عدد المستحقات',  value: entryCount,                                                      icon: <Hash />,         tone: 'brand'   },
+          { label: m.metricPending,  value: pendingTotal === 0 ? `0 ${symbol}` : formatCurrency(pendingTotal, currency),   icon: <Clock />,        tone: 'warning', valueSize: 'compact' },
+          { label: m.metricApproved, value: approvedTotal === 0 ? `0 ${symbol}` : formatCurrency(approvedTotal, currency), icon: <CheckCircle2 />, tone: 'info',    valueSize: 'compact' },
+          { label: m.metricPaid,     value: paidTotal === 0 ? `0 ${symbol}` : formatCurrency(paidTotal, currency),         icon: <Banknote />,     tone: 'success', valueSize: 'compact' },
+          { label: m.metricCount,    value: entryCount,                                                                    icon: <Hash />,         tone: 'brand'   },
         ]}
       />
 
@@ -235,68 +241,68 @@ export default async function BonusPage({
         action="/dashboard/bonus"
         trailing={
           <div className="flex items-center gap-2">
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{m.btnFilter}</Button>
             {hasFilters && (
               <Link href="/dashboard/bonus">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{m.btnClear}</Button>
               </Link>
             )}
           </div>
         }
       >
-        <PremiumFilterField label="المندوب" htmlFor="bonus-sales">
+        <PremiumFilterField label={m.filterAgent} htmlFor="bonus-sales">
           <Select id="bonus-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''} className="w-48">
-            <option value="">كل المندوبين</option>
+            <option value="">{m.filterAgentAll}</option>
             {salesUsers.map((u) => (
               <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="الشهر" htmlFor="bonus-period">
+        <PremiumFilterField label={m.filterMonth} htmlFor="bonus-period">
           <Input id="bonus-period" name="period" type="month" inputSize="sm" defaultValue={sp.period ?? ''} className="w-40" />
         </PremiumFilterField>
-        <PremiumFilterField label="الحالة" htmlFor="bonus-status">
+        <PremiumFilterField label={m.filterStatus} htmlFor="bonus-status">
           <Select id="bonus-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-32">
-            <option value="">كل الحالات</option>
-            <option value="PENDING">معلق</option>
-            <option value="APPROVED">معتمد</option>
-            <option value="PAID">مدفوع</option>
+            <option value="">{m.filterStatusAll}</option>
+            <option value="PENDING">{m.filterStatusPending}</option>
+            <option value="APPROVED">{m.filterStatusApproved}</option>
+            <option value="PAID">{m.filterStatusPaid}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
 
       {/* Manual entry */}
-      <PremiumSectionCard title="إضافة مستحق يدوي" icon={<Plus />}>
+      <PremiumSectionCard title={m.sectionManualEntry} icon={<Plus />}>
         {rules.length === 0 || salesUsers.length === 0 ? (
           <p className="text-[12px] text-slate-400">
-            يلزم وجود قاعدة عمولة ومندوب مبيعات واحد على الأقل قبل إنشاء مستحق.
+            {m.manualEntryNoData}
           </p>
         ) : (
           <form action={createEntryAction}>
             <input type="hidden" name="returnTo" value={returnTo} />
             <div className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-4 items-end">
-              <FormField label="المندوب">
+              <FormField label={m.fieldAgent}>
                 <Select id="be-salesId" name="salesId" inputSize="sm" required className="w-full">
                   {salesUsers.map((u) => (
                     <option key={u.id} value={u.id}>{salesActorLabel(u)}</option>
                   ))}
                 </Select>
               </FormField>
-              <FormField label="القاعدة">
+              <FormField label={m.fieldRule}>
                 <Select id="be-ruleId" name="ruleId" inputSize="sm" required className="w-full">
                   {rules.map((r) => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
                 </Select>
               </FormField>
-              <FormField label={`المبلغ (${symbol})`}>
+              <FormField label={`${m.metricPaid} (${symbol})`}>
                 <Input id="be-amount" name="amount" type="number" step="any" min={0} required inputSize="sm" className="w-full" placeholder="0" />
               </FormField>
-              <FormField label="شهر الاستحقاق">
+              <FormField label={m.fieldMonth}>
                 <Input id="be-period" name="period" type="month" required inputSize="sm" className="w-full" />
               </FormField>
               <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} className="shrink-0">
-                إضافة المستحق
+                {m.btnAddEntry}
               </Button>
             </div>
           </form>
@@ -305,9 +311,9 @@ export default async function BonusPage({
 
       {/* Commission rules */}
       <PremiumSectionCard
-        title="قواعد العمولة"
+        title={m.sectionRules}
         icon={<BadgePercent />}
-        trailing={<span className="text-xs text-slate-400 tabular-nums">{rules.length} قاعدة</span>}
+        trailing={<span className="text-xs text-slate-400 tabular-nums">{rules.length} {m.rulesCount}</span>}
         padded={false}
       >
         {/* Auto-rule status banner */}
@@ -325,10 +331,10 @@ export default async function BonusPage({
           }
           <span>
             {activeAutoRules.length === 0
-              ? 'لن يتم إنشاء عمولات تلقائية عند توقيع العقود حتى يتم تفعيل قاعدة واحدة.'
+              ? m.autoRuleNone
               : activeAutoRules.length === 1
-                ? `العمولات التلقائية مفعّلة باستخدام قاعدة: ${activeAutoRules[0]!.name}`
-                : 'يوجد أكثر من قاعدة تلقائية مفعّلة. لن يتم إنشاء عمولات تلقائية حتى يتم إصلاح الإعداد.'}
+                ? `${m.autoRuleOk}: ${activeAutoRules[0]!.name}`
+                : m.autoRuleMultiple}
           </span>
         </div>
 
@@ -352,23 +358,23 @@ export default async function BonusPage({
                     </span>
                     <span className="text-[13px] font-semibold text-slate-900 truncate">{r.name}</span>
                     {r.autoApplyOnSignedContract && (
-                      <Badge tone="info" size="sm" className="shrink-0">تلقائي عند التوقيع</Badge>
+                      <Badge tone="info" size="sm" className="shrink-0">{m.badgeAutoSign}</Badge>
                     )}
                     {!r.active && (
-                      <Badge tone="gray" size="sm" className="shrink-0">موقوفة</Badge>
+                      <Badge tone="gray" size="sm" className="shrink-0">{m.badgeStopped}</Badge>
                     )}
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
                     <form action={toggleRuleAction.bind(null, r.id, 'active', !r.active)}>
                       <input type="hidden" name="returnTo" value={returnTo} />
                       <Button type="submit" variant="outline" size="sm">
-                        {r.active ? 'إيقاف' : 'تفعيل'}
+                        {r.active ? m.btnStop : m.btnActivate}
                       </Button>
                     </form>
                     <form action={toggleRuleAction.bind(null, r.id, 'autoApplyOnSignedContract', !r.autoApplyOnSignedContract)}>
                       <input type="hidden" name="returnTo" value={returnTo} />
                       <Button type="submit" variant={r.autoApplyOnSignedContract ? 'secondary' : 'outline'} size="sm">
-                        {r.autoApplyOnSignedContract ? 'إلغاء التلقائي' : 'تفعيل التلقائي'}
+                        {r.autoApplyOnSignedContract ? m.btnCancelAuto : m.btnActivateAuto}
                       </Button>
                     </form>
                   </div>
@@ -377,38 +383,38 @@ export default async function BonusPage({
             })}
           </ul>
         ) : (
-          <p className="px-5 py-4 text-[12px] text-slate-400">لا توجد قواعد بعد.</p>
+          <p className="px-5 py-4 text-[12px] text-slate-400">{m.noRules}</p>
         )}
 
         {/* Add rule footer */}
         <div className="border-t border-hairline bg-canvas/30 px-5 py-4 mt-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400 mb-3">
-            إضافة قاعدة جديدة
+            {m.addRuleTitle}
           </p>
           <form action={createRuleAction}>
             <input type="hidden" name="returnTo" value={returnTo} />
             <div className="flex flex-wrap items-center gap-2">
-              <Input name="name" required placeholder="اسم القاعدة" inputSize="sm" className="flex-1 min-w-[160px]" />
-              <Input name="percentage" type="number" step="any" min={0} required inputSize="sm" placeholder="النسبة %" className="w-28" />
+              <Input name="name" required placeholder={m.addRuleNamePlaceholder} inputSize="sm" className="flex-1 min-w-[160px]" />
+              <Input name="percentage" type="number" step="any" min={0} required inputSize="sm" placeholder={m.addRulePercentPlaceholder} className="w-28" />
               <Button type="submit" variant="primary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />}>
-                إضافة
+                {m.btnAddRule}
               </Button>
             </div>
             <label className="flex items-center gap-2 text-[12px] text-slate-600 mt-2.5 cursor-pointer">
               <input type="checkbox" name="autoApplyOnSignedContract" className="rounded border-hairline" />
-              تطبيق تلقائي عند توقيع العقد
+              {m.addRuleAutoLabel}
             </label>
           </form>
           <p className="text-[11px] text-slate-400 mt-2.5">
-            يجب أن تكون هناك قاعدة واحدة فقط مفعّلة للتطبيق التلقائي. تغيير القاعدة لا يؤثر على المستحقات المنشأة مسبقاً.
+            {m.addRuleNote}
           </p>
         </div>
       </PremiumSectionCard>
 
       {/* Entries table */}
       <PremiumSectionCard
-        title="سجلّات المستحقات"
-        trailing={<span className="text-xs text-slate-400 tabular-nums">{entryCount} مستحق</span>}
+        title={m.sectionEntries}
+        trailing={<span className="text-xs text-slate-400 tabular-nums">{entryCount} {m.entriesCount}</span>}
         padded={false}
       >
         {entriesRes.error ? (
@@ -419,12 +425,12 @@ export default async function BonusPage({
         ) : entries.length === 0 ? (
           <PremiumEmptyState
             icon={<BadgePercent />}
-            title="لا توجد مستحقات"
-            description={hasFilters ? 'لا توجد مستحقات تطابق الفلاتر المختارة' : 'لم يتم إنشاء أي مستحقات بعد'}
+            title={m.emptyTitle}
+            description={hasFilters ? m.emptyDescFiltered : m.emptyDescNone}
             action={
               hasFilters ? (
                 <Link href="/dashboard/bonus">
-                  <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                  <Button variant="outline" size="sm">{m.btnClearFilters}</Button>
                 </Link>
               ) : undefined
             }
@@ -434,14 +440,14 @@ export default async function BonusPage({
             <table className="w-full text-sm min-w-[820px]">
               <thead className="bg-canvas/50 border-b border-hairline">
                 <tr>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">المندوب</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">الفترة</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">القاعدة</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">المصدر</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">المبلغ</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">الحالة</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">تاريخ الدفع</th>
-                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">الإجراءات</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colAgent}</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colPeriod}</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colRule}</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colSource}</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colAmount}</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colStatus}</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colPaidAt}</th>
+                  <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400 whitespace-nowrap">{m.colActions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -475,7 +481,7 @@ export default async function BonusPage({
                             href={`/dashboard/contracts/${e.contractId}` as never}
                             className="text-[11px] font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
                           >
-                            عرض العقد
+                            {m.viewContract}
                           </Link>
                         )}
                       </div>
@@ -501,7 +507,7 @@ export default async function BonusPage({
                           <form action={entryTransitionAction.bind(null, e.id, 'approve')}>
                             <input type="hidden" name="returnTo" value={returnTo} />
                             <Button type="submit" variant="primary" size="sm" leftIcon={<CheckCircle2 className="h-3.5 w-3.5" />}>
-                              اعتماد
+                              {m.btnApprove}
                             </Button>
                           </form>
                         )}
@@ -510,13 +516,13 @@ export default async function BonusPage({
                             <form action={entryTransitionAction.bind(null, e.id, 'pay')}>
                               <input type="hidden" name="returnTo" value={returnTo} />
                               <Button type="submit" variant="primary" size="sm" leftIcon={<Banknote className="h-3.5 w-3.5" />}>
-                                تحديد كمدفوع
+                                {m.btnMarkPaid}
                               </Button>
                             </form>
                             <form action={entryTransitionAction.bind(null, e.id, 'revert')}>
                               <input type="hidden" name="returnTo" value={returnTo} />
                               <Button type="submit" variant="outline" size="sm" leftIcon={<Undo2 className="h-3.5 w-3.5" />}>
-                                إرجاع لمعلّق
+                                {m.btnRevertPending}
                               </Button>
                             </form>
                           </>
@@ -525,7 +531,7 @@ export default async function BonusPage({
                           <form action={entryTransitionAction.bind(null, e.id, 'revert')}>
                             <input type="hidden" name="returnTo" value={returnTo} />
                             <Button type="submit" variant="outline" size="sm" leftIcon={<RotateCcw className="h-3.5 w-3.5" />}>
-                              إرجاع لمعلّق
+                              {m.btnRevertPending}
                             </Button>
                           </form>
                         )}

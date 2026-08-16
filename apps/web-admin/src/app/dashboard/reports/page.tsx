@@ -32,6 +32,8 @@ import { ExportMenu } from '@/components/export-menu';
 import { ReportFilterBar } from '@/components/reports/report-filter-bar';
 import { ReportsTabs } from './_components/reports-tabs';
 import { SalesTrendChart } from './_components/sales-trend-chart';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 // ── API shapes ────────────────────────────────────────────────────────────────
 interface Sales {
@@ -66,14 +68,6 @@ interface ProjectOption { id: string; name: { ar: string; en: string } }
 interface PagedProjects { data: ProjectOption[] }
 
 // ── Status maps ────────────────────────────────────────────────────────────────
-const RESERVATION_STATUS_LABEL: Record<string, string> = {
-  PENDING:   'قيد الانتظار',
-  CONFIRMED: 'مؤكد',
-  APPROVED:  'معتمد',
-  CONVERTED: 'محوّل',
-  CANCELLED: 'ملغى',
-  EXPIRED:   'منتهٍ',
-};
 const RESERVATION_STATUS_TONE: Record<string, BadgeTone> = {
   PENDING:   'warning',
   CONFIRMED: 'success',
@@ -118,7 +112,17 @@ export default async function ReportsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
-  const currency = await getReportsCurrency();
+  const [currency, locale] = await Promise.all([getReportsCurrency(), getLocale()]);
+  const m = uiT(locale).pages.reports;
+
+  const RESERVATION_STATUS_LABEL: Record<string, string> = {
+    PENDING:   m.reservationStatus.statusLabels.PENDING,
+    CONFIRMED: m.reservationStatus.statusLabels.CONFIRMED,
+    APPROVED:  m.reservationStatus.statusLabels.APPROVED,
+    CONVERTED: m.reservationStatus.statusLabels.CONVERTED,
+    CANCELLED: m.reservationStatus.statusLabels.CANCELLED,
+    EXPIRED:   m.reservationStatus.statusLabels.EXPIRED,
+  };
 
   const resolved = resolveReportDateRange(sp);
   const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
@@ -170,7 +174,7 @@ export default async function ReportsPage({
     : null;
 
   const topProject = byProject[0]
-    ? { name: projectMap.get(byProject[0].projectId) ?? 'غير معروف', total: byProject[0].total, count: byProject[0].count }
+    ? { name: projectMap.get(byProject[0].projectId) ?? m.projectRankings.unknownProject, total: byProject[0].total, count: byProject[0].count }
     : null;
 
   const overallConvRate = pct(funnel?.contracts ?? 0, funnel?.leads ?? 0);
@@ -190,10 +194,10 @@ export default async function ReportsPage({
 
   // Funnel stages
   const funnelStages = funnel ? [
-    { label: 'الفرص',    icon: UserPlus,      value: funnel.leads,        color: 'bg-brand-500',   labelColor: 'text-brand-700',   conv: null,                                            pctOfLeads: 100 },
-    { label: 'الزيارات', icon: MapPin,        value: funnel.visits,       color: 'bg-blue-500',    labelColor: 'text-blue-700',    conv: pctStr(funnel.visits, funnel.leads),             pctOfLeads: pct(funnel.visits, funnel.leads) },
-    { label: 'الحجوزات', icon: BookmarkCheck, value: funnel.reservations, color: 'bg-violet-500',  labelColor: 'text-violet-700',  conv: pctStr(funnel.reservations, funnel.visits),      pctOfLeads: pct(funnel.reservations, funnel.leads) },
-    { label: 'العقود',   icon: FileText,      value: funnel.contracts,    color: 'bg-emerald-500', labelColor: 'text-emerald-700', conv: pctStr(funnel.contracts, funnel.reservations),   pctOfLeads: pct(funnel.contracts, funnel.leads) },
+    { label: m.funnel.stages.leads,        icon: UserPlus,      value: funnel.leads,        color: 'bg-brand-500',   labelColor: 'text-brand-700',   conv: null,                                            pctOfLeads: 100 },
+    { label: m.funnel.stages.visits,       icon: MapPin,        value: funnel.visits,       color: 'bg-blue-500',    labelColor: 'text-blue-700',    conv: pctStr(funnel.visits, funnel.leads),             pctOfLeads: pct(funnel.visits, funnel.leads) },
+    { label: m.funnel.stages.reservations, icon: BookmarkCheck, value: funnel.reservations, color: 'bg-violet-500',  labelColor: 'text-violet-700',  conv: pctStr(funnel.reservations, funnel.visits),      pctOfLeads: pct(funnel.reservations, funnel.leads) },
+    { label: m.funnel.stages.contracts,    icon: FileText,      value: funnel.contracts,    color: 'bg-emerald-500', labelColor: 'text-emerald-700', conv: pctStr(funnel.contracts, funnel.reservations),   pctOfLeads: pct(funnel.contracts, funnel.leads) },
   ] : [];
 
   return (
@@ -201,22 +205,22 @@ export default async function ReportsPage({
 
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="التقارير"
-        description="تقرير المبيعات والعمليات — أداء العقود والدفعات والحجوزات خلال الفترة المحددة."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'التقارير' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <ExportMenu label="تصدير المبيعات"   xlsxPath="/reports/sales/export.xlsx"       csvPath="/reports/sales/export.csv"       filenameBase="sales-report"       params={exportParams} />
-            <ExportMenu label="تصدير المالية"    xlsxPath="/reports/financial/export.xlsx"   csvPath="/reports/financial/export.csv"   filenameBase="financial-report"   params={exportParams} />
-            <ExportMenu label="تصدير التشغيلي"  xlsxPath="/reports/operational/export.xlsx" csvPath="/reports/operational/export.csv" filenameBase="operational-report" />
+            <ExportMenu label={m.exportSales}       xlsxPath="/reports/sales/export.xlsx"       csvPath="/reports/sales/export.csv"       filenameBase="sales-report"       params={exportParams} />
+            <ExportMenu label={m.exportFinancial}   xlsxPath="/reports/financial/export.xlsx"   csvPath="/reports/financial/export.csv"   filenameBase="financial-report"   params={exportParams} />
+            <ExportMenu label={m.exportOperational} xlsxPath="/reports/operational/export.xlsx" csvPath="/reports/operational/export.csv" filenameBase="operational-report" />
           </div>
         }
       />
 
-      <ReportsTabs active="sales" />
+      <ReportsTabs active="sales" locale={locale} />
       <ReportFilterBar
         defaultMode={mode as PeriodMode}
         defaultMonth={month}
@@ -226,6 +230,7 @@ export default async function ReportsPage({
         defaultDateTo={dateTo}
         defaultCompare={compare}
         basePath="/dashboard/reports"
+        locale={locale}
       />
 
       {anyError && (
@@ -240,47 +245,47 @@ export default async function ReportsPage({
         cols={5}
         metrics={[
           {
-            label:     'إجمالي المبيعات',
+            label:     m.kpi.totalSales,
             icon:      <Wallet />,
             value:     formatCurrency(salesTotal, currency),
             tone:      'neutral',
             valueSize: 'compact',
-            sub:       `${contractsCount} عقد`,
-            trend:     salesDelta ? `${salesDelta.direction === 'up' ? '▲' : salesDelta.direction === 'down' ? '▼' : '•'} ${salesDelta.value} مقارنة بالسابق` : undefined,
+            sub:       `${contractsCount} ${m.salesTrend.contractSuffix}`,
+            trend:     salesDelta ? `${salesDelta.direction === 'up' ? '▲' : salesDelta.direction === 'down' ? '▼' : '•'} ${salesDelta.value} ${m.trendCompare}` : undefined,
             trendCls:  salesDelta?.direction === 'up' ? 'text-success-600' : salesDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
-            label:    'العقود المبرمة',
+            label:    m.kpi.contractsSigned,
             icon:     <FileText />,
             value:    contractsCount.toLocaleString('ar-EG'),
             tone:     'neutral',
-            sub:      `متوسط ${formatCurrency(avgContract, currency)}`,
+            sub:      `${m.kpi.avgPrefix} ${formatCurrency(avgContract, currency)}`,
             trend:    contractsDelta ? `${contractsDelta.direction === 'up' ? '▲' : contractsDelta.direction === 'down' ? '▼' : '•'} ${contractsDelta.value}` : undefined,
             trendCls: contractsDelta?.direction === 'up' ? 'text-success-600' : contractsDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
-            label:     'الدفعات المحصّلة',
+            label:     m.kpi.collected,
             icon:      <CircleDollarSign />,
             value:     formatCurrency(financialTotal, currency),
             tone:      'success',
             valueSize: 'compact',
-            sub:       `${depositsCount} دفعة · ${verifiedCount} مؤكدة`,
+            sub:       `${depositsCount} ${m.kpi.depositSuffix} · ${verifiedCount} ${m.kpi.verifiedSuffix}`,
             trend:     financialDelta ? `${financialDelta.direction === 'up' ? '▲' : financialDelta.direction === 'down' ? '▼' : '•'} ${financialDelta.value}` : undefined,
             trendCls:  financialDelta?.direction === 'up' ? 'text-success-600' : financialDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
-            label: 'معدل التحويل',
+            label: m.kpi.conversionRate,
             icon:  <TrendingUp />,
             value: overallConvStr ?? '—',
             tone:  overallConvRate >= 50 ? 'success' : overallConvRate >= 25 ? 'warning' : 'purple',
-            sub:   'فرصة → عقد',
+            sub:   m.kpi.conversionSub,
           },
           {
-            label: 'أفضل مشروع',
+            label: m.kpi.topProject,
             icon:  <Trophy />,
             value: topProject?.name ?? '—',
             tone:  'neutral',
-            sub:   topProject ? `${topProject.count} عقد · ${formatCurrency(topProject.total, currency)}` : undefined,
+            sub:   topProject ? `${topProject.count} ${m.salesTrend.contractSuffix} · ${formatCurrency(topProject.total, currency)}` : undefined,
           },
         ]}
       />
@@ -294,16 +299,16 @@ export default async function ReportsPage({
         <PremiumSectionCard
           className="lg:col-span-3"
           icon={<BarChart3 />}
-          title="اتجاه المبيعات الشهري"
-          description={`أداء العقود خلال ${year}`}
+          title={m.salesTrend.title}
+          description={`${m.salesTrend.descriptionPrefix} ${year}`}
           trailing={
             <div className="text-end">
               <p className="text-base font-black tabular-nums text-slate-900 leading-none">
-                {trendData.reduce((s, d) => s + d.contracts, 0).toLocaleString('ar-EG')} عقد
+                {trendData.reduce((s, d) => s + d.contracts, 0).toLocaleString('ar-EG')} {m.salesTrend.contractSuffix}
               </p>
               {bestTrendMonth && bestTrendMonth.contracts > 0 && (
                 <p className="text-[11px] text-slate-400 mt-0.5 whitespace-nowrap">
-                  الذروة: <span className="font-semibold text-slate-700">{bestTrendMonth.label}</span>
+                  {m.salesTrend.peakLabel} <span className="font-semibold text-slate-700">{bestTrendMonth.label}</span>
                 </p>
               )}
             </div>
@@ -311,7 +316,7 @@ export default async function ReportsPage({
           padded={false}
         >
           <div className="px-5 py-5">
-            <SalesTrendChart data={trendData} highlightMonths={highlightMonths} currency={currency} />
+            <SalesTrendChart data={trendData} highlightMonths={highlightMonths} currency={currency} locale={locale} />
           </div>
         </PremiumSectionCard>
 
@@ -319,7 +324,7 @@ export default async function ReportsPage({
         <PremiumSectionCard
           className="lg:col-span-2"
           icon={<TrendingUp />}
-          title="مسار التحويل"
+          title={m.funnel.title}
           trailing={
             overallConvStr
               ? <span className={cn(
@@ -328,14 +333,14 @@ export default async function ReportsPage({
                   overallConvRate >= 25 ? 'bg-amber-50 border-amber-200 text-amber-700' :
                   'bg-violet-50 border-violet-200 text-violet-700',
                 )}>
-                  {overallConvStr} إجمالي
+                  {overallConvStr} {m.funnel.totalSuffix}
                 </span>
               : undefined
           }
           padded={false}
         >
           {funnelStages.length === 0 ? (
-            <EmptyState icon={<TrendingUp />} title="لا توجد بيانات" description="لا يوجد بيانات للمسار في الفترة المحددة." />
+            <EmptyState icon={<TrendingUp />} title={m.funnel.empty.title} description={m.funnel.empty.description} />
           ) : (
             <div className="px-5 py-5 space-y-0">
               {funnelStages.map((stage, i) => {
@@ -350,7 +355,7 @@ export default async function ReportsPage({
                         {stage.conv && (
                           <span className={cn('text-[11px] font-bold', stage.labelColor)}>{stage.conv}</span>
                         )}
-                        <span className="text-[10px] text-slate-300">من المرحلة السابقة</span>
+                        <span className="text-[10px] text-slate-300">{m.funnel.fromPrev}</span>
                       </div>
                     )}
                     {/* Stage row */}
@@ -386,9 +391,9 @@ export default async function ReportsPage({
             <div className="border-t border-hairline bg-canvas/40 px-5 py-3">
               <div className="grid grid-cols-3 gap-2 text-center">
                 {[
-                  { label: 'فرصة → زيارة', value: pctStr(funnel.visits, funnel.leads) },
-                  { label: 'زيارة → حجز',  value: pctStr(funnel.reservations, funnel.visits) },
-                  { label: 'حجز → عقد',    value: pctStr(funnel.contracts, funnel.reservations) },
+                  { label: m.funnel.transitions.leadVisit,           value: pctStr(funnel.visits, funnel.leads) },
+                  { label: m.funnel.transitions.visitReservation,    value: pctStr(funnel.reservations, funnel.visits) },
+                  { label: m.funnel.transitions.reservationContract, value: pctStr(funnel.contracts, funnel.reservations) },
                 ].map((r) => (
                   <div key={r.label} className="space-y-0.5">
                     <p className={cn('text-[13px] font-black tabular-nums', r.value ? 'text-slate-800' : 'text-slate-300')}>
@@ -410,11 +415,11 @@ export default async function ReportsPage({
       {reservationEntries.length > 0 && (
         <PremiumSectionCard
           icon={<BookmarkCheck />}
-          title="حالة الحجوزات"
-          description="توزيع الحجوزات حسب الحالة خلال الفترة"
+          title={m.reservationStatus.title}
+          description={m.reservationStatus.description}
           trailing={
             <span className="text-sm font-black tabular-nums text-slate-900 shrink-0">
-              {reservationTotal.toLocaleString('ar-EG')} حجز
+              {reservationTotal.toLocaleString('ar-EG')} {m.reservationStatus.reservationSuffix}
             </span>
           }
           padded={false}
@@ -463,23 +468,23 @@ export default async function ReportsPage({
         {/* Project Rankings */}
         <PremiumSectionCard
           icon={<BarChart3 />}
-          title="أداء المشاريع"
-          description="مرتبة حسب إجمالي قيمة العقود"
+          title={m.projectRankings.title}
+          description={m.projectRankings.description}
           trailing={
             byProject.length > 0
-              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{byProject.length} مشروع</span>
+              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{byProject.length} {m.projectRankings.projectSuffix}</span>
               : undefined
           }
           padded={false}
         >
           {byProject.length === 0 ? (
-            <EmptyState icon={<FileText />} title="لا توجد مبيعات" description="لا توجد بيانات مبيعات للفترة المحددة." />
+            <EmptyState icon={<FileText />} title={m.projectRankings.empty.title} description={m.projectRankings.empty.description} />
           ) : (
             <div className="divide-y divide-hairline">
               {byProject.map((p, idx) => {
                 const sharePct = salesTotal > 0 ? (Number(p.total) / salesTotal) * 100 : 0;
                 const isTop    = idx === 0;
-                const name     = projectMap.get(p.projectId) ?? 'غير معروف';
+                const name     = projectMap.get(p.projectId) ?? m.projectRankings.unknownProject;
                 return (
                   <div key={p.projectId} className={cn('flex items-center gap-3 px-5 py-3 hover:bg-surface-muted/40 transition-colors', isTop && 'bg-amber-50/40')}>
                     <RankBadge rank={idx + 1} />
@@ -493,7 +498,7 @@ export default async function ReportsPage({
                           />
                         </div>
                         <span className="text-[10px] text-slate-400">{sharePct.toFixed(0)}%</span>
-                        <span className="text-[10px] text-slate-400">{p.count} عقد</span>
+                        <span className="text-[10px] text-slate-400">{p.count} {m.projectRankings.contractSuffix}</span>
                       </div>
                     </div>
                     <div className="text-end shrink-0">
@@ -511,17 +516,17 @@ export default async function ReportsPage({
         {/* Broker Leaderboard */}
         <PremiumSectionCard
           icon={<Users />}
-          title="أداء الوسطاء"
-          description="مرتبون حسب العمولات المعتمدة"
+          title={m.brokerLeaderboard.title}
+          description={m.brokerLeaderboard.description}
           trailing={
             brokers.length > 0
-              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{brokers.length} وسيط</span>
+              ? <span className="text-xs text-slate-400 tabular-nums shrink-0">{brokers.length} {m.brokerLeaderboard.brokerSuffix}</span>
               : undefined
           }
           padded={false}
         >
           {brokers.length === 0 ? (
-            <EmptyState icon={<Users />} title="لا يوجد وسطاء" description="لا توجد بيانات وسطاء للفترة المحددة." />
+            <EmptyState icon={<Users />} title={m.brokerLeaderboard.empty.title} description={m.brokerLeaderboard.empty.description} />
           ) : (
             <div className="divide-y divide-hairline">
               {brokers.map((b, idx) => {
@@ -539,7 +544,7 @@ export default async function ReportsPage({
                           />
                         </div>
                         <span className="text-[10px] text-slate-400">{sharePct.toFixed(0)}%</span>
-                        <span className="text-[10px] text-slate-400">{b.count} عمولة</span>
+                        <span className="text-[10px] text-slate-400">{b.count} {m.brokerLeaderboard.commissionSuffix}</span>
                       </div>
                     </div>
                     <div className="text-end shrink-0">
@@ -562,33 +567,33 @@ export default async function ReportsPage({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
           {
-            label: 'أفضل شهر',
+            label: m.insights.bestMonth,
             icon: <CalendarDays className="h-3.5 w-3.5" />,
             iconBg: 'bg-brand-50 text-brand-600',
             value: bestTrendMonth?.contracts ? bestTrendMonth.label : '—',
-            sub:   bestTrendMonth?.contracts ? `${bestTrendMonth.contracts} عقد` : 'لا توجد بيانات',
+            sub:   bestTrendMonth?.contracts ? `${bestTrendMonth.contracts} ${m.salesTrend.contractSuffix}` : m.insights.noData,
           },
           {
-            label: 'أفضل مشروع',
+            label: m.insights.bestProject,
             icon: <Trophy className="h-3.5 w-3.5" />,
             iconBg: 'bg-amber-50 text-amber-600',
             value: topProject?.name ?? '—',
-            sub:   topProject ? `${topProject.count} عقد` : 'لا توجد بيانات',
+            sub:   topProject ? `${topProject.count} ${m.salesTrend.contractSuffix}` : m.insights.noData,
           },
           {
-            label: 'أعلى وسيط',
+            label: m.insights.topBroker,
             icon: <Star className="h-3.5 w-3.5" />,
             iconBg: 'bg-violet-50 text-violet-600',
             value: brokers[0]?.brokerName ?? '—',
-            sub:   brokers[0] ? formatCurrency(brokers[0].commissionAmount, currency) : 'لا توجد بيانات',
+            sub:   brokers[0] ? formatCurrency(brokers[0].commissionAmount, currency) : m.insights.noData,
             subDir: 'ltr' as const,
           },
           {
-            label: 'المبيعات / الدفعات',
+            label: m.insights.salesPayments,
             icon: <ArrowRight className="h-3.5 w-3.5" />,
             iconBg: 'bg-emerald-50 text-emerald-600',
             value: salesTotal > 0 ? `${Math.round((financialTotal / salesTotal) * 100)}%` : '—',
-            sub:   'نسبة التحصيل من المبيعات',
+            sub:   m.insights.salesPaymentsSub,
           },
         ].map((item) => (
           <div key={item.label} className="bg-surface rounded-[20px] border border-hairline shadow-soft p-4">
@@ -625,4 +630,3 @@ function RankBadge({ rank }: { rank: number }) {
     </div>
   );
 }
-

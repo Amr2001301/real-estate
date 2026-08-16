@@ -8,6 +8,8 @@ import {
 import { api, safe } from '@/lib/api';
 import type { AuditLogItem, UserRole } from '@/lib/types';
 import { formatDateTime } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import {
@@ -20,17 +22,7 @@ import {
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-// ── Role display maps ─────────────────────────────────────────────────────────
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  ADMIN:                  'مدير النظام',
-  SALES:                  'مبيعات',
-  SALES_MANAGER:          'مدير مبيعات',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-  CLIENT:                 'متصفّح',
-  CUSTOMER:               'عميل',
-  BROKER:                 'وسيط',
-};
+// ── Role badge colors ─────────────────────────────────────────────────────────
 
 const ROLE_BADGE_CLS: Record<UserRole, string> = {
   ADMIN:                  'bg-purple-100 text-purple-700',
@@ -44,102 +36,102 @@ const ROLE_BADGE_CLS: Record<UserRole, string> = {
 
 // ── Human-readable helpers ────────────────────────────────────────────────────
 
-function eventLabel(action: string, entityType: string): string {
-  const m  = action.toUpperCase();
+function eventLabel(action: string, entityType: string, labels: ReturnType<typeof uiT>['auditLogsPage']['eventLabels']): string {
+  const mt = action.toUpperCase();
   const et = entityType.toLowerCase();
   const c  = (kw: string) => et.includes(kw);
-  const is = (methods: string[]) => methods.includes(m);
+  const is = (methods: string[]) => methods.includes(mt);
 
-  if (c('auth'))        return is(['POST']) ? 'محاولة دخول' : 'إجراء مصادقة';
-  if (c('permission'))  return is(['POST', 'PATCH', 'PUT']) ? 'تعديل صلاحيات' : 'إجراء صلاحية';
+  if (c('auth'))        return is(['POST']) ? labels.authPost : labels.authOther;
+  if (c('permission'))  return is(['POST', 'PATCH', 'PUT']) ? labels.permissionChange : labels.permissionOther;
   if (c('user')) {
-    if (is(['POST']))         return 'إنشاء مستخدم';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مستخدم';
-    if (is(['DELETE']))       return 'حذف مستخدم';
+    if (is(['POST']))         return labels.userCreate;
+    if (is(['PATCH', 'PUT'])) return labels.userEdit;
+    if (is(['DELETE']))       return labels.userDelete;
   }
   if (c('reservation')) {
-    if (is(['POST']))         return 'إنشاء حجز';
-    if (is(['PATCH', 'PUT'])) return 'تعديل حجز';
-    if (is(['DELETE']))       return 'إلغاء حجز';
+    if (is(['POST']))         return labels.reservationCreate;
+    if (is(['PATCH', 'PUT'])) return labels.reservationEdit;
+    if (is(['DELETE']))       return labels.reservationCancel;
   }
   if (c('contract')) {
-    if (is(['POST']))         return 'إنشاء عقد';
-    if (is(['PATCH', 'PUT'])) return 'تعديل عقد';
-    if (is(['DELETE']))       return 'حذف عقد';
+    if (is(['POST']))         return labels.contractCreate;
+    if (is(['PATCH', 'PUT'])) return labels.contractEdit;
+    if (is(['DELETE']))       return labels.contractDelete;
   }
   if (c('payout')) {
-    if (is(['POST']))         return 'تسجيل مدفوعات';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مدفوعات';
+    if (is(['POST']))         return labels.payoutCreate;
+    if (is(['PATCH', 'PUT'])) return labels.payoutEdit;
   }
   if (c('commission')) {
-    if (is(['POST']))         return 'تسجيل عمولة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل عمولة';
+    if (is(['POST']))         return labels.commissionCreate;
+    if (is(['PATCH', 'PUT'])) return labels.commissionEdit;
   }
   if (c('broker')) {
-    if (is(['POST']))         return 'إضافة وسيط';
-    if (is(['PATCH', 'PUT'])) return 'تعديل وسيط';
-    if (is(['DELETE']))       return 'حذف وسيط';
+    if (is(['POST']))         return labels.brokerCreate;
+    if (is(['PATCH', 'PUT'])) return labels.brokerEdit;
+    if (is(['DELETE']))       return labels.brokerDelete;
   }
   if (c('payment')) {
-    if (is(['POST']))         return 'تسجيل دفعة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل دفعة';
+    if (is(['POST']))         return labels.paymentCreate;
+    if (is(['PATCH', 'PUT'])) return labels.paymentEdit;
   }
   if (c('lead')) {
-    if (is(['POST']))         return 'إنشاء فرصة مبيعات';
-    if (is(['PATCH', 'PUT'])) return 'تعديل فرصة مبيعات';
-    if (is(['DELETE']))       return 'حذف فرصة مبيعات';
+    if (is(['POST']))         return labels.leadCreate;
+    if (is(['PATCH', 'PUT'])) return labels.leadEdit;
+    if (is(['DELETE']))       return labels.leadDelete;
   }
   if (c('project')) {
-    if (is(['POST']))         return 'إنشاء مشروع';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مشروع';
-    if (is(['DELETE']))       return 'حذف مشروع';
+    if (is(['POST']))         return labels.projectCreate;
+    if (is(['PATCH', 'PUT'])) return labels.projectEdit;
+    if (is(['DELETE']))       return labels.projectDelete;
   }
   if (c('unit')) {
-    if (is(['POST']))         return 'إنشاء وحدة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل وحدة';
-    if (is(['DELETE']))       return 'حذف وحدة';
+    if (is(['POST']))         return labels.unitCreate;
+    if (is(['PATCH', 'PUT'])) return labels.unitEdit;
+    if (is(['DELETE']))       return labels.unitDelete;
   }
   if (c('maintenance')) {
-    if (is(['POST']))         return 'طلب صيانة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل طلب صيانة';
+    if (is(['POST']))         return labels.maintenanceCreate;
+    if (is(['PATCH', 'PUT'])) return labels.maintenanceEdit;
   }
   if (c('document')) {
-    if (is(['POST']))   return 'رفع مستند';
-    if (is(['DELETE'])) return 'حذف مستند';
+    if (is(['POST']))   return labels.documentCreate;
+    if (is(['DELETE'])) return labels.documentDelete;
   }
   if (c('visit')) {
-    if (is(['POST']))         return 'إنشاء زيارة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل زيارة';
+    if (is(['POST']))         return labels.visitCreate;
+    if (is(['PATCH', 'PUT'])) return labels.visitEdit;
   }
-  if (c('notification')) return 'إرسال إشعار';
-  if (is(['POST']))         return 'إنشاء سجل';
-  if (is(['PATCH', 'PUT'])) return 'تعديل سجل';
-  if (is(['DELETE']))       return 'حذف سجل';
-  return 'إجراء نظام';
+  if (c('notification')) return labels.notificationSend;
+  if (is(['POST']))         return labels.recordCreate;
+  if (is(['PATCH', 'PUT'])) return labels.recordEdit;
+  if (is(['DELETE']))       return labels.recordDelete;
+  return labels.systemAction;
 }
 
-function areaLabel(entityType: string): string {
+function areaLabel(entityType: string, labels: ReturnType<typeof uiT>['auditLogsPage']['areaLabels']): string {
   const et = entityType.toLowerCase();
-  if (et.includes('auth'))               return 'المصادقة';
-  if (et.includes('permission'))         return 'الصلاحيات';
-  if (et.includes('broker-lead'))        return 'عملاء الوسطاء';
-  if (et.includes('broker-reservation')) return 'حجوزات الوسطاء';
-  if (et.includes('broker-contract'))    return 'عقود الوسطاء';
-  if (et.includes('broker-commission'))  return 'عمولات الوسطاء';
-  if (et.includes('broker-payout'))      return 'مدفوعات الوسطاء';
-  if (et.includes('broker'))             return 'الوسطاء';
-  if (et.includes('user'))               return 'المستخدمون';
-  if (et.includes('reservation'))        return 'الحجوزات';
-  if (et.includes('contract'))           return 'العقود';
-  if (et.includes('payment'))            return 'الدفعات';
-  if (et.includes('lead'))               return 'فرص المبيعات';
-  if (et.includes('project'))            return 'المشاريع';
-  if (et.includes('unit'))               return 'الوحدات';
-  if (et.includes('maintenance'))        return 'الصيانة';
-  if (et.includes('document'))           return 'المستندات';
-  if (et.includes('visit'))              return 'الزيارات';
-  if (et.includes('notification'))       return 'الإشعارات';
-  if (et.includes('audit'))             return 'سجلات التدقيق';
+  if (et.includes('auth'))               return labels.auth;
+  if (et.includes('permission'))         return labels.permission;
+  if (et.includes('broker-lead'))        return labels.brokerLead;
+  if (et.includes('broker-reservation')) return labels.brokerReservation;
+  if (et.includes('broker-contract'))    return labels.brokerContract;
+  if (et.includes('broker-commission'))  return labels.brokerCommission;
+  if (et.includes('broker-payout'))      return labels.brokerPayout;
+  if (et.includes('broker'))             return labels.broker;
+  if (et.includes('user'))               return labels.user;
+  if (et.includes('reservation'))        return labels.reservation;
+  if (et.includes('contract'))           return labels.contract;
+  if (et.includes('payment'))            return labels.payment;
+  if (et.includes('lead'))               return labels.lead;
+  if (et.includes('project'))            return labels.project;
+  if (et.includes('unit'))               return labels.unit;
+  if (et.includes('maintenance'))        return labels.maintenance;
+  if (et.includes('document'))           return labels.document;
+  if (et.includes('visit'))              return labels.visit;
+  if (et.includes('notification'))       return labels.notification;
+  if (et.includes('audit'))             return labels.audit;
   return entityType;
 }
 
@@ -192,7 +184,7 @@ function actionIcon(action: string, entityType: string): ReactNode {
   }
 }
 
-function formatIpLabel(ip: string | null): { label: string; isLocal: boolean } {
+function formatIpLabel(ip: string | null, localLabel: string): { label: string; isLocal: boolean } {
   if (!ip) return { label: '—', isLocal: false };
   if (
     ip === '::1' ||
@@ -200,57 +192,31 @@ function formatIpLabel(ip: string | null): { label: string; isLocal: boolean } {
     ip.toLowerCase() === 'localhost' ||
     ip.startsWith('::ffff:127.')
   ) {
-    return { label: 'محلي', isLocal: true };
+    return { label: localLabel, isLocal: true };
   }
   return { label: ip, isLocal: false };
 }
 
 // ── Change-diff helpers ───────────────────────────────────────────────────────
 
-const FIELD_LABELS: Record<string, string> = {
-  fullName: 'الاسم الكامل', email: 'البريد', phone: 'الجوال', role: 'الدور',
-  active: 'الحالة', status: 'الحالة', amount: 'المبلغ', paidAt: 'تاريخ الدفع',
-  createdAt: 'تاريخ الإنشاء', updatedAt: 'تاريخ التحديث', notes: 'ملاحظات',
-  name: 'الاسم', description: 'الوصف', price: 'السعر', type: 'النوع',
-  date: 'التاريخ', title: 'العنوان', total: 'الإجمالي', currency: 'العملة',
-  approved: 'معتمد', id: 'المعرّف', floor: 'الطابق', area: 'المساحة',
-  bedrooms: 'غرف النوم', bathrooms: 'دورات المياه', category: 'التصنيف',
-  contractDate: 'تاريخ العقد', startDate: 'تاريخ البدء', endDate: 'تاريخ الانتهاء',
-  managerId: 'معرّف المدير', projectId: 'معرّف المشروع',
-  unitId: 'معرّف الوحدة', customerId: 'معرّف العميل', brokerId: 'معرّف الوسيط',
-  user: 'بيانات المستخدم', assigned: 'الصلاحيات المسندة', available: 'الصلاحيات المتاحة',
-  data: 'البيانات', permissions: 'الصلاحيات', meta: 'بيانات وصفية',
-  tokens: 'رموز الجلسة', password: 'كلمة المرور', passwordHash: 'هاش كلمة المرور',
-};
-
-const ENUM_LABELS: Record<string, string> = {
-  ADMIN: 'مدير النظام', SALES: 'مبيعات', SALES_MANAGER: 'مدير مبيعات',
-  CLIENT: 'متصفّح', CUSTOMER: 'عميل', BROKER: 'وسيط',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-  PENDING: 'قيد الانتظار', APPROVED: 'معتمد', REJECTED: 'مرفوض',
-  ACTIVE: 'نشط', INACTIVE: 'غير نشط', true: 'نعم', false: 'لا',
-};
-
-function fieldLabel(key: string): string { return FIELD_LABELS[key] ?? key; }
-
 function isRedactedValue(v: unknown): boolean {
   return typeof v === 'string' && v.includes('REDACTED');
 }
 
-function formatFieldValue(v: unknown): string {
+function formatFieldValue(v: unknown, m: ReturnType<typeof uiT>['auditLogDetail']): string {
   if (v === null || v === undefined) return '—';
-  if (typeof v === 'boolean') return v ? 'نعم' : 'لا';
-  if (Array.isArray(v)) return `${v.length} ${v.length === 1 ? 'عنصر' : 'عناصر'}`;
-  if (typeof v === 'object') return 'بيانات مركّبة';
+  if (typeof v === 'boolean') return v ? m.boolTrue : m.boolFalse;
+  if (Array.isArray(v)) return m.arrayCount(v.length);
+  if (typeof v === 'object') return m.complexData;
   const s = String(v);
-  return ENUM_LABELS[s] ?? s;
+  return m.enumLabels[s] ?? s;
 }
 
 interface DiffRow   { key: string; before: string; after: string; beforeRedacted: boolean; afterRedacted: boolean }
 interface ScalarRow { key: string; value: string; redacted: boolean }
 interface KeyRow    { key: string; summary: string; redacted: boolean }
 
-function computeDiff(before: unknown, after: unknown): DiffRow[] | null {
+function computeDiff(before: unknown, after: unknown, m: ReturnType<typeof uiT>['auditLogDetail']): DiffRow[] | null {
   if (typeof before !== 'object' || typeof after !== 'object') return null;
   if (!before || !after) return null;
   const b = before as Record<string, unknown>;
@@ -258,8 +224,8 @@ function computeDiff(before: unknown, after: unknown): DiffRow[] | null {
   const allKeys = new Set([...Object.keys(b), ...Object.keys(a)]);
   const diffs: DiffRow[] = [];
   for (const key of allKeys) {
-    const bv = formatFieldValue(b[key]);
-    const av = formatFieldValue(a[key]);
+    const bv = formatFieldValue(b[key], m);
+    const av = formatFieldValue(a[key], m);
     if (bv !== av) diffs.push({
       key,
       before: bv, after: av,
@@ -270,21 +236,21 @@ function computeDiff(before: unknown, after: unknown): DiffRow[] | null {
   return diffs.length > 0 ? diffs : null;
 }
 
-function extractScalars(value: unknown): ScalarRow[] | null {
+function extractScalars(value: unknown, m: ReturnType<typeof uiT>['auditLogDetail']): ScalarRow[] | null {
   if (typeof value !== 'object' || !value) return null;
   const obj = value as Record<string, unknown>;
   const rows = Object.entries(obj)
     .filter(([, v]) => v === null || typeof v !== 'object')
-    .map(([k, v]) => ({ key: k, value: formatFieldValue(v), redacted: isRedactedValue(v) }));
+    .map(([k, v]) => ({ key: k, value: formatFieldValue(v, m), redacted: isRedactedValue(v) }));
   return rows.length > 0 ? rows : null;
 }
 
-function extractKeySummary(value: unknown): KeyRow[] | null {
+function extractKeySummary(value: unknown, m: ReturnType<typeof uiT>['auditLogDetail']): KeyRow[] | null {
   if (typeof value !== 'object' || !value) return null;
   const obj = value as Record<string, unknown>;
   return Object.entries(obj).map(([key, v]) => ({
     key,
-    summary: formatFieldValue(v),
+    summary: formatFieldValue(v, m),
     redacted: isRedactedValue(v),
   }));
 }
@@ -326,7 +292,10 @@ export default async function AuditLogDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, locale] = await Promise.all([params, getLocale()]);
+  const m  = uiT(locale).auditLogDetail;
+  const ml = uiT(locale).auditLogsPage;
+
   const res = await safe(api.get<AuditLogItem>(`/audit-logs/${id}`));
   if (res.error || !res.data) notFound();
   const log = res.data;
@@ -334,25 +303,30 @@ export default async function AuditLogDetailPage({
   const link       = relatedHref(log.entityType, log.entityId);
   const beforeJson = jsonPreview(log.before);
   const afterJson  = jsonPreview(log.after);
-  const ipFmt      = formatIpLabel(log.ip);
+  const ipFmt      = formatIpLabel(log.ip, m.localIp);
 
-  const diffs        = computeDiff(log.before, log.after);
-  const afterScalars = !diffs ? extractScalars(log.after) : null;
-  const keySummary   = !diffs && !afterScalars ? extractKeySummary(log.after) : null;
+  const diffs        = computeDiff(log.before, log.after, m);
+  const afterScalars = !diffs ? extractScalars(log.after, m) : null;
+  const keySummary   = !diffs && !afterScalars ? extractKeySummary(log.after, m) : null;
 
   const isAuth     = log.entityType.toLowerCase().includes('auth');
   const isDelete   = log.action.toUpperCase() === 'DELETE';
+
+  const evLabel   = eventLabel(log.action, log.entityType, ml.eventLabels);
+  const arLabel   = areaLabel(log.entityType, ml.areaLabels);
+
+  function fieldLabel(key: string): string { return m.fieldLabels[key] ?? key; }
 
   return (
     <div className="space-y-4">
 
       {/* ── Page header ──────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title={eventLabel(log.action, log.entityType)}
-        description={`${areaLabel(log.entityType)} · ${log.actor?.fullName ?? 'نظام / غير معروف'}`}
+        title={evLabel}
+        description={`${arLabel} · ${log.actor?.fullName ?? m.systemActor}`}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'سجلات التدقيق', href: '/dashboard/audit-logs' },
+          { label: m.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbLogs, href: '/dashboard/audit-logs' },
           { label: id.slice(0, 8) },
         ]}
         meta={
@@ -393,11 +367,11 @@ export default async function AuditLogDetailPage({
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="text-xl font-bold text-slate-900 leading-tight">
-                  {eventLabel(log.action, log.entityType)}
+                  {evLabel}
                 </p>
                 <p className="text-sm text-slate-500 mt-0.5 leading-snug">
                   {log.actor?.fullName ?? (
-                    <span className="italic text-slate-400">نظام / غير معروف</span>
+                    <span className="italic text-slate-400">{m.systemActor}</span>
                   )}
                 </p>
               </div>
@@ -420,7 +394,7 @@ export default async function AuditLogDetailPage({
                   areaBadgeCls(log.entityType),
                 )}
               >
-                {areaLabel(log.entityType)}
+                {arLabel}
               </span>
 
               <span className="text-xs text-slate-500 tabular-nums">
@@ -434,7 +408,7 @@ export default async function AuditLogDetailPage({
                     className="inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-100 text-slate-500 border border-hairline"
                     title={log.ip ?? ''}
                   >
-                    محلي
+                    {ipFmt.label}
                   </span>
                 ) : (
                   <span
@@ -455,7 +429,7 @@ export default async function AuditLogDetailPage({
                     : 'bg-purple-50 text-purple-700 border border-purple-100',
                 )}>
                   <Shield className="h-3 w-3 shrink-0" />
-                  {isDelete ? 'حدث حذف' : 'حدث مصادقة'}
+                  {isDelete ? m.deleteEvent : m.authEvent}
                 </span>
               )}
             </div>
@@ -466,14 +440,14 @@ export default async function AuditLogDetailPage({
         {log.entityId && (
           <div className="border-t border-hairline bg-canvas/40 px-5 py-2.5 flex items-center gap-3 flex-wrap">
             <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide shrink-0">
-              معرّف الكيان:
+              {m.entityIdLabel}
             </span>
             <span className="font-mono text-[11px] text-slate-600 flex-1 break-all" dir="ltr">
               {log.entityId}
             </span>
             {link && (
               <Link href={link as never} className="shrink-0">
-                <Button variant="outline" size="sm">فتح السجل</Button>
+                <Button variant="outline" size="sm">{m.openRecord}</Button>
               </Link>
             )}
           </div>
@@ -485,17 +459,17 @@ export default async function AuditLogDetailPage({
         main={
           <div className="space-y-4">
 
-            {/* ── ملخص الحدث ─────────────────────────────────────────────── */}
+            {/* ── Event summary ───────────────────────────────────────────── */}
             <PremiumSectionCard
               icon={<Activity />}
-              title="ملخص الحدث"
+              title={m.eventSummaryTitle}
               padded={false}
             >
               {/* Row 1: actor | event type | area */}
               <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-hairline border-b border-hairline">
                 <div className="px-5 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
-                    من قام بالإجراء
+                    {m.actorLabel}
                   </p>
                   {log.actor ? (
                     <div className="space-y-1.5">
@@ -508,7 +482,7 @@ export default async function AuditLogDetailPage({
                           ROLE_BADGE_CLS[log.actor.role] ?? 'bg-slate-100 text-slate-600',
                         )}
                       >
-                        {ROLE_LABEL[log.actor.role] ?? log.actor.role}
+                        {ml.roleLabels[log.actor.role] ?? log.actor.role}
                       </span>
                       {log.actor.email && (
                         <p className="text-[11px] text-slate-500 font-mono" dir="ltr">
@@ -521,18 +495,18 @@ export default async function AuditLogDetailPage({
                       <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-400 shrink-0">
                         <User className="h-4 w-4" />
                       </span>
-                      <span className="text-[13px] text-slate-400 italic">نظام / غير معروف</span>
+                      <span className="text-[13px] text-slate-400 italic">{m.systemActor}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="px-5 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
-                    نوع الإجراء
+                    {m.actionTypeLabel}
                   </p>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[14px] font-bold text-slate-900 leading-tight">
-                      {eventLabel(log.action, log.entityType)}
+                      {evLabel}
                     </span>
                     <span
                       className={cn(
@@ -548,7 +522,7 @@ export default async function AuditLogDetailPage({
 
                 <div className="px-5 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
-                    القسم
+                    {m.areaColLabel}
                   </p>
                   <span
                     className={cn(
@@ -556,7 +530,7 @@ export default async function AuditLogDetailPage({
                       areaBadgeCls(log.entityType),
                     )}
                   >
-                    {areaLabel(log.entityType)}
+                    {arLabel}
                   </span>
                 </div>
               </div>
@@ -565,7 +539,7 @@ export default async function AuditLogDetailPage({
               <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x sm:divide-x-reverse divide-hairline">
                 <div className="px-5 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
-                    وقت التنفيذ
+                    {m.executionTimeLabel}
                   </p>
                   <p className="text-[13px] font-semibold text-slate-900 tabular-nums" dir="ltr">
                     {formatDateTime(log.createdAt)}
@@ -574,11 +548,11 @@ export default async function AuditLogDetailPage({
 
                 <div className="px-5 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
-                    عنوان IP
+                    {m.ipLabel}
                   </p>
                   {ipFmt.isLocal ? (
                     <span className="inline-block px-2.5 py-1 rounded-lg text-[13px] font-semibold bg-slate-100 text-slate-600">
-                      محلي
+                      {ipFmt.label}
                     </span>
                   ) : ipFmt.label !== '—' ? (
                     <span className="font-mono text-[13px] font-semibold text-slate-900" dir="ltr">
@@ -591,7 +565,7 @@ export default async function AuditLogDetailPage({
 
                 <div className="px-5 py-4">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-2">
-                    معرّف الكيان المستهدف
+                    {m.targetEntityLabel}
                   </p>
                   {log.entityId ? (
                     <div className="space-y-2">
@@ -604,7 +578,7 @@ export default async function AuditLogDetailPage({
                       {link && (
                         <div>
                           <Link href={link as never}>
-                            <Button variant="outline" size="sm">فتح السجل</Button>
+                            <Button variant="outline" size="sm">{m.openRecord}</Button>
                           </Link>
                         </div>
                       )}
@@ -616,10 +590,10 @@ export default async function AuditLogDetailPage({
               </div>
             </PremiumSectionCard>
 
-            {/* ── ما الذي تغير؟ ───────────────────────────────────────────── */}
+            {/* ── What changed? ─────────────────────────────────────────── */}
             <PremiumSectionCard
               icon={<ArrowRightLeft />}
-              title="ما الذي تغير؟"
+              title={m.changesTitle}
               trailing={
                 diffs ? (
                   <span className="inline-flex h-5 min-w-[28px] px-1.5 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold tabular-nums">
@@ -635,9 +609,9 @@ export default async function AuditLogDetailPage({
                   <table className="w-full">
                     <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">
                       <tr>
-                        <th className="text-start py-2.5 ps-5 pe-4 whitespace-nowrap">الحقل</th>
-                        <th className="text-start py-2.5 px-4 w-[38%]">القيمة السابقة</th>
-                        <th className="text-start py-2.5 px-4 w-[38%]">القيمة الجديدة</th>
+                        <th className="text-start py-2.5 ps-5 pe-4 whitespace-nowrap">{m.fieldCol}</th>
+                        <th className="text-start py-2.5 px-4 w-[38%]">{m.beforeCol}</th>
+                        <th className="text-start py-2.5 px-4 w-[38%]">{m.afterCol}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-hairline">
@@ -651,7 +625,7 @@ export default async function AuditLogDetailPage({
                             {d.beforeRedacted ? (
                               <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-400 italic">
                                 <Lock className="h-3 w-3 text-amber-500 shrink-0" />
-                                مُخفى لأسباب أمنية
+                                {m.redacted}
                               </span>
                             ) : (
                               <span className="text-[12px] text-danger-700 line-through">{d.before}</span>
@@ -661,7 +635,7 @@ export default async function AuditLogDetailPage({
                             {d.afterRedacted ? (
                               <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-400 italic">
                                 <Lock className="h-3 w-3 text-amber-500 shrink-0" />
-                                مُخفى لأسباب أمنية
+                                {m.redacted}
                               </span>
                             ) : (
                               <span className="text-[12px] text-success-700 font-semibold">{d.after}</span>
@@ -677,7 +651,7 @@ export default async function AuditLogDetailPage({
                 <div>
                   <div className="flex items-start gap-2.5 px-5 py-3 bg-amber-50/60 border-b border-amber-100 text-[12px] text-amber-700">
                     <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                    <span>القيمة قبل التغيير غير متوفرة. يُعرض أدناه الوضع بعد تنفيذ الحدث.</span>
+                    <span>{m.noBeforeNote}</span>
                   </div>
                   <div className="divide-y divide-hairline">
                     {afterScalars.map((f) => (
@@ -694,7 +668,7 @@ export default async function AuditLogDetailPage({
                         {f.redacted ? (
                           <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-400 italic pt-0.5">
                             <Lock className="h-3 w-3 text-amber-500 shrink-0" />
-                            مُخفى لأسباب أمنية
+                            {m.redacted}
                           </span>
                         ) : (
                           <span className="text-[13px] text-slate-800 flex-1 pt-0.5">{f.value}</span>
@@ -708,7 +682,7 @@ export default async function AuditLogDetailPage({
                 <div>
                   <div className="flex items-start gap-2.5 px-5 py-3 bg-amber-50/60 border-b border-amber-100 text-[12px] text-amber-700">
                     <Info className="h-4 w-4 shrink-0 mt-0.5 text-amber-500" />
-                    <span>القيمة قبل التغيير غير متوفرة. فيما يلي ملخص البيانات المحدَّثة.</span>
+                    <span>{m.noBeforeNoteSummary}</span>
                   </div>
                   <div className="divide-y divide-hairline">
                     {keySummary.map((f) => (
@@ -723,7 +697,7 @@ export default async function AuditLogDetailPage({
                         {f.redacted ? (
                           <span className="inline-flex items-center gap-1.5 text-[12px] text-slate-400 italic pt-0.5">
                             <Lock className="h-3 w-3 text-amber-500 shrink-0" />
-                            مُخفى لأسباب أمنية
+                            {m.redacted}
                           </span>
                         ) : (
                           <span className="text-[12px] text-slate-500 flex-1 pt-0.5">{f.summary}</span>
@@ -735,22 +709,22 @@ export default async function AuditLogDetailPage({
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 gap-2">
                   <ArrowRightLeft className="h-8 w-8 text-slate-200" />
-                  <p className="text-[13px] text-slate-400">لا تتوفر بيانات تغيير لهذا الحدث.</p>
+                  <p className="text-[13px] text-slate-400">{m.noChangesDesc}</p>
                 </div>
               )}
             </PremiumSectionCard>
 
-            {/* ── البيانات التقنية الخام ──────────────────────────────────── */}
+            {/* ── Raw technical data ──────────────────────────────────────── */}
             {(beforeJson || afterJson) && (
               <PremiumSectionCard
                 icon={<ScrollText />}
-                title="البيانات التقنية الخام"
+                title={m.rawDataTitle}
                 padded={false}
               >
                 {/* Technical path row */}
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-5 py-3 border-b border-hairline bg-canvas/30">
                   <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 shrink-0">
-                    المسار التقني
+                    {m.technicalPath}
                   </span>
                   <span className="font-mono text-[12px] text-slate-600 flex-1" dir="ltr">
                     {log.entityType}
@@ -771,16 +745,16 @@ export default async function AuditLogDetailPage({
                   <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer select-none hover:bg-canvas/40 transition-colors list-none">
                     <div className="flex items-center gap-2.5">
                       <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-danger-50 text-danger-600 text-[10px] font-bold shrink-0">
-                        ق
+                        {m.beforeDataIcon}
                       </span>
                       <span className="text-[13px] font-semibold text-slate-700">
-                        البيانات قبل التغيير
+                        {m.beforeData}
                       </span>
                       {!beforeJson && (
-                        <span className="text-[11px] text-slate-400">(غير متوفر)</span>
+                        <span className="text-[11px] text-slate-400">({m.notAvailable})</span>
                       )}
                     </div>
-                    <span className="text-[11px] text-slate-400 shrink-0">انقر للتوسيع</span>
+                    <span className="text-[11px] text-slate-400 shrink-0">{m.clickToExpand}</span>
                   </summary>
                   <div className="border-t border-hairline">
                     {beforeJson ? (
@@ -792,7 +766,7 @@ export default async function AuditLogDetailPage({
                       </pre>
                     ) : (
                       <p className="px-5 py-3 text-[12px] text-slate-500">
-                        غير متوفر — المعترض الحالي لا يلتقط القيمة السابقة.
+                        {m.notAvailableNote}
                       </p>
                     )}
                   </div>
@@ -803,16 +777,16 @@ export default async function AuditLogDetailPage({
                   <summary className="flex items-center justify-between px-5 py-3.5 cursor-pointer select-none hover:bg-canvas/40 transition-colors list-none">
                     <div className="flex items-center gap-2.5">
                       <span className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-success-50 text-success-600 text-[10px] font-bold shrink-0">
-                        ب
+                        {m.afterDataIcon}
                       </span>
                       <span className="text-[13px] font-semibold text-slate-700">
-                        البيانات بعد التغيير
+                        {m.afterData}
                       </span>
                       {!afterJson && (
-                        <span className="text-[11px] text-slate-400">(غير متوفر)</span>
+                        <span className="text-[11px] text-slate-400">({m.notAvailable})</span>
                       )}
                     </div>
-                    <span className="text-[11px] text-slate-400 shrink-0">انقر للتوسيع</span>
+                    <span className="text-[11px] text-slate-400 shrink-0">{m.clickToExpand}</span>
                   </summary>
                   <div className="border-t border-hairline">
                     {afterJson ? (
@@ -823,7 +797,7 @@ export default async function AuditLogDetailPage({
                         {afterJson}
                       </pre>
                     ) : (
-                      <p className="px-5 py-3 text-[12px] text-slate-500">غير متوفر</p>
+                      <p className="px-5 py-3 text-[12px] text-slate-500">{m.notAvailable}</p>
                     )}
                   </div>
                 </details>
@@ -836,36 +810,36 @@ export default async function AuditLogDetailPage({
           <div className="space-y-4">
 
             {/* Navigation */}
-            <PremiumCommandPanel title="التنقل">
+            <PremiumCommandPanel title={m.navTitle}>
               {link && (
                 <Link href={link as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><Activity /></span>
-                  فتح السجل المرتبط
+                  {m.openRelatedRecord}
                 </Link>
               )}
               <Link href="/dashboard/audit-logs" className={CMD_LINK}>
                 <span className={CMD_ICON}><ScrollText /></span>
-                قائمة سجلات التدقيق
+                {m.logsList}
               </Link>
             </PremiumCommandPanel>
 
             {/* Actor card */}
             <PremiumSectionCard
               icon={<User />}
-              title={log.actor ? 'المنفّذ' : 'المنفّذ'}
+              title={m.actorTitle}
               padded
             >
               {log.actor ? (
                 <dl className="flex flex-col gap-3 text-sm">
                   <div>
                     <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-                      الاسم
+                      {m.actorNameLabel}
                     </dt>
                     <dd className="text-[14px] font-bold text-slate-900">{log.actor.fullName}</dd>
                   </div>
                   <div>
                     <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-                      الدور
+                      {m.actorRoleLabel}
                     </dt>
                     <dd>
                       <span
@@ -874,14 +848,14 @@ export default async function AuditLogDetailPage({
                           ROLE_BADGE_CLS[log.actor.role] ?? 'bg-slate-100 text-slate-600',
                         )}
                       >
-                        {ROLE_LABEL[log.actor.role] ?? log.actor.role}
+                        {ml.roleLabels[log.actor.role] ?? log.actor.role}
                       </span>
                     </dd>
                   </div>
                   {log.actor.email && (
                     <div>
                       <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-                        البريد
+                        {m.actorEmailLabel}
                       </dt>
                       <dd className="text-[12px] font-mono text-slate-700 break-all" dir="ltr">
                         {log.actor.email}
@@ -895,8 +869,8 @@ export default async function AuditLogDetailPage({
                     <User className="h-5 w-5" />
                   </span>
                   <div>
-                    <p className="text-[13px] font-semibold text-slate-700">نظام / غير معروف</p>
-                    <p className="text-[11px] text-slate-400 mt-0.5">إجراء آلي أو غير مصادق</p>
+                    <p className="text-[13px] font-semibold text-slate-700">{m.systemActor}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{m.actorUnknownDesc}</p>
                   </div>
                 </div>
               )}
@@ -905,13 +879,13 @@ export default async function AuditLogDetailPage({
             {/* Event details */}
             <PremiumSectionCard
               icon={<Clock />}
-              title="تفاصيل الحدث"
+              title={m.eventDetailsTitle}
               padded
             >
               <dl className="flex flex-col gap-3 text-sm">
                 <div>
                   <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-                    القسم
+                    {m.eventAreaLabel}
                   </dt>
                   <dd>
                     <span
@@ -920,13 +894,13 @@ export default async function AuditLogDetailPage({
                         areaBadgeCls(log.entityType),
                       )}
                     >
-                      {areaLabel(log.entityType)}
+                      {arLabel}
                     </span>
                   </dd>
                 </div>
                 <div>
                   <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-                    الوقت
+                    {m.eventTimeLabel}
                   </dt>
                   <dd className="text-[12px] text-slate-700 tabular-nums" dir="ltr">
                     {formatDateTime(log.createdAt)}
@@ -934,12 +908,12 @@ export default async function AuditLogDetailPage({
                 </div>
                 <div>
                   <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-                    عنوان IP
+                    {m.eventIpLabel}
                   </dt>
                   <dd>
                     {ipFmt.isLocal ? (
                       <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[12px] font-medium">
-                        محلي
+                        {ipFmt.label}
                       </span>
                     ) : ipFmt.label !== '—' ? (
                       <span className="font-mono text-[12px] text-slate-700" dir="ltr">{ipFmt.label}</span>
@@ -951,7 +925,7 @@ export default async function AuditLogDetailPage({
                 {log.entityId && (
                   <div>
                     <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mb-1">
-                      معرّف الكيان
+                      {m.eventEntityLabel}
                     </dt>
                     <dd
                       className="font-mono text-[11px] text-slate-600 break-all bg-canvas border border-hairline px-2 py-1.5 rounded-md"

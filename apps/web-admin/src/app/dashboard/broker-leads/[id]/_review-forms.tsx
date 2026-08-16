@@ -6,6 +6,8 @@ import { SubmitButton } from '@/components/form/submit-button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PermissionDeniedState } from '@/components/permission-denied';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import {
   approveBrokerLeadAction,
   rejectBrokerLeadAction,
@@ -44,9 +46,11 @@ function FormField({
 function Banner({
   state,
   deniedTitle,
+  savedOk,
 }: {
   state: BrokerLeadActionState;
   deniedTitle?: string;
+  savedOk: string;
 }) {
   if (state.error) {
     if (state.missingPermission) {
@@ -69,7 +73,7 @@ function Banner({
     return (
       <div className="flex items-start gap-2 rounded-xl bg-success-50 border border-success-100 text-success-700 p-3 text-sm">
         <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
-        <p className="font-medium">تم الحفظ بنجاح</p>
+        <p className="font-medium">{savedOk}</p>
       </div>
     );
   }
@@ -81,20 +85,23 @@ function Banner({
 export function ApproveBrokerLeadForm({
   leadId,
   salesUsers,
+  locale = 'ar',
 }: {
   leadId: string;
   salesUsers: SalesUser[];
+  locale?: Locale;
 }) {
+  const m = uiT(locale).pages.brokerLeadDetail;
   const [state, formAction] = useActionState<BrokerLeadActionState, FormData>(
     approveBrokerLeadAction.bind(null, leadId),
     {},
   );
   return (
     <form action={formAction} className="flex flex-col flex-1 gap-4">
-      <Banner state={state} deniedTitle="تحتاج صلاحية لاعتماد هذه الفرصة" />
-      <FormField label="تعيين مندوب مبيعات" hint="اختياري">
+      <Banner state={state} deniedTitle={m.deniedApprove} savedOk={m.savedOk} />
+      <FormField label={m.formAssignSalesLabel} hint={m.formDuplicateNoteHint}>
         <Select id={`assigned-${leadId}`} name="assignedSalesId" defaultValue="">
-          <option value="">— لا تعيين الآن —</option>
+          <option value="">{m.formNoAssignOption}</option>
           {salesUsers.map((s) => (
             <option key={s.id} value={s.id}>
               {s.fullName}
@@ -102,11 +109,11 @@ export function ApproveBrokerLeadForm({
           ))}
         </Select>
       </FormField>
-      <FormField label="ملاحظة" hint="اختياري — ستُحفظ كملاحظة مرتبطة بالفرصة">
+      <FormField label={m.formNoteLabel} hint={m.formNoteHint}>
         <Textarea id={`approve-note-${leadId}`} name="note" rows={3} />
       </FormField>
       <div className="mt-auto pt-4 border-t border-hairline">
-        <SubmitButton className="w-full">اعتماد الفرصة</SubmitButton>
+        <SubmitButton className="w-full">{m.btnApprove}</SubmitButton>
       </div>
     </form>
   );
@@ -114,17 +121,24 @@ export function ApproveBrokerLeadForm({
 
 // ── Reject ──────────────────────────────────────────────────────────────────
 
-export function RejectBrokerLeadForm({ leadId }: { leadId: string }) {
+export function RejectBrokerLeadForm({
+  leadId,
+  locale = 'ar',
+}: {
+  leadId: string;
+  locale?: Locale;
+}) {
+  const m = uiT(locale).pages.brokerLeadDetail;
   const [state, formAction] = useActionState<BrokerLeadActionState, FormData>(
     rejectBrokerLeadAction.bind(null, leadId),
     {},
   );
   return (
     <form action={formAction} className="flex flex-col flex-1 gap-4">
-      <Banner state={state} deniedTitle="تحتاج صلاحية لرفض هذه الفرصة" />
+      <Banner state={state} deniedTitle={m.deniedReject} savedOk={m.savedOk} />
       <div className="flex flex-col flex-1 gap-1.5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-          سبب الرفض <span className="text-danger-500 ms-1">*</span>
+          {m.formRejectReasonLabel} <span className="text-danger-500 ms-1">*</span>
         </p>
         <Textarea
           id={`reject-${leadId}`}
@@ -134,7 +148,7 @@ export function RejectBrokerLeadForm({ leadId }: { leadId: string }) {
         />
       </div>
       <div className="pt-4 border-t border-hairline">
-        <SubmitButton variant="danger" className="w-full">رفض الفرصة</SubmitButton>
+        <SubmitButton variant="danger" className="w-full">{m.btnReject}</SubmitButton>
       </div>
     </form>
   );
@@ -142,19 +156,26 @@ export function RejectBrokerLeadForm({ leadId }: { leadId: string }) {
 
 // ── Duplicate ────────────────────────────────────────────────────────────────
 
-export function MarkDuplicateBrokerLeadForm({ leadId }: { leadId: string }) {
+export function MarkDuplicateBrokerLeadForm({
+  leadId,
+  locale = 'ar',
+}: {
+  leadId: string;
+  locale?: Locale;
+}) {
+  const m = uiT(locale).pages.brokerLeadDetail;
   const [state, formAction] = useActionState<BrokerLeadActionState, FormData>(
     markBrokerLeadDuplicateAction.bind(null, leadId),
     {},
   );
   return (
     <form action={formAction} className="flex flex-col flex-1 gap-4">
-      <Banner state={state} deniedTitle="تحتاج صلاحية لتعليم هذه الفرصة كمكررة" />
+      <Banner state={state} deniedTitle={m.deniedDuplicate} savedOk={m.savedOk} />
       <div className="flex flex-col flex-1 gap-1.5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-          ملاحظة على التكرار
+          {m.formDuplicateNoteLabel}
         </p>
-        <p className="text-[11px] text-slate-400 -mt-0.5">اختياري</p>
+        <p className="text-[11px] text-slate-400 -mt-0.5">{m.formDuplicateNoteHint}</p>
         <Textarea
           id={`dup-${leadId}`}
           name="reason"
@@ -162,7 +183,7 @@ export function MarkDuplicateBrokerLeadForm({ leadId }: { leadId: string }) {
         />
       </div>
       <div className="pt-4 border-t border-hairline">
-        <SubmitButton variant="secondary" className="w-full">تعليم كمكرر</SubmitButton>
+        <SubmitButton variant="secondary" className="w-full">{m.btnDuplicate}</SubmitButton>
       </div>
     </form>
   );

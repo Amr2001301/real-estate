@@ -34,6 +34,8 @@ import {
   CancelCommissionForm,
 } from './_review-forms';
 import { cn } from '@/lib/cn';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -89,6 +91,8 @@ export default async function AdminBrokerCommissionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerCommissionDetail;
   const currency = await getReportsCurrency();
   const r = await safe(api.get<AdminBrokerCommission>(`/broker-commissions/${id}`));
   if (r.error || !r.data) notFound();
@@ -111,18 +115,18 @@ export default async function AdminBrokerCommissionDetailPage({
     <div className="space-y-5">
       <PremiumPageHero
         title={c.commissionNumber}
-        description={`عمولة العقد ${c.contract?.contractNumber ?? '—'}`}
+        description={`${m.descriptionPrefix}${c.contract?.contractNumber ?? '—'}`}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'عمولات الوسطاء', href: '/dashboard/broker-commissions' },
+          { label: m.breadcrumbDashboard, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
+          { label: m.breadcrumbCommissions, href: '/dashboard/broker-commissions' },
           { label: c.commissionNumber },
         ]}
         meta={<BrokerCommissionStatusBadge status={c.status} />}
         actions={
           <Link href="/dashboard/broker-commissions">
             <Button variant="outline" size="sm" leftIcon={<ChevronLeft className="h-4 w-4" />}>
-              العودة للقائمة
+              {m.backBtn}
             </Button>
           </Link>
         }
@@ -133,11 +137,11 @@ export default async function AdminBrokerCommissionDetailPage({
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-5">
           <AlertTriangle className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-sm">سبب الرفض</p>
+            <p className="font-semibold text-sm">{m.rejectionTitle}</p>
             <p className="mt-1 text-sm leading-relaxed">{c.rejectionReason}</p>
             {c.rejectedBy && (
               <p className="text-[11px] text-danger-500 mt-1.5">
-                بواسطة {c.rejectedBy.fullName} · {formatDateTime(c.rejectedAt)}
+                {m.rejectedBy} {c.rejectedBy.fullName} · {formatDateTime(c.rejectedAt)}
               </p>
             )}
           </div>
@@ -149,9 +153,9 @@ export default async function AdminBrokerCommissionDetailPage({
         <div className="flex items-start gap-3 rounded-2xl bg-success-50 border border-success-100 text-success-700 p-5">
           <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-sm">تم اعتماد العمولة</p>
+            <p className="font-semibold text-sm">{m.approvedTitle}</p>
             <p className="text-[11px] text-success-600 mt-1">
-              بواسطة {c.approvedBy.fullName} · {formatDateTime(c.approvedAt)}
+              {m.approvedBy} {c.approvedBy.fullName} · {formatDateTime(c.approvedAt)}
             </p>
           </div>
         </div>
@@ -161,9 +165,9 @@ export default async function AdminBrokerCommissionDetailPage({
         main={
           <>
             {/* Contract + Reservation */}
-            <PremiumSectionCard title="العقد والحجز" icon={<FileText />} padded={false}>
+            <PremiumSectionCard title={m.sectionContract} icon={<FileText />} padded={false}>
               <SideRow
-                label="رقم العقد"
+                label={m.labelContractNumber}
                 value={
                   c.contract ? (
                     <Link
@@ -177,7 +181,7 @@ export default async function AdminBrokerCommissionDetailPage({
                 }
               />
               <SideRow
-                label="رقم الحجز"
+                label={m.labelReservationNumber}
                 value={
                   c.reservation ? (
                     <Link
@@ -191,20 +195,20 @@ export default async function AdminBrokerCommissionDetailPage({
                 }
               />
               <SideRow
-                label="العميل"
+                label={m.labelClient}
                 value={c.contract?.customer?.fullName ?? c.reservation?.lead?.fullName ?? '—'}
               />
               <SideRow
-                label="المندوب الداخلي"
+                label={m.labelInternalRep}
                 value={c.reservation?.sales?.fullName ?? '—'}
               />
             </PremiumSectionCard>
 
             {/* Unit + Project */}
-            <PremiumSectionCard title="الوحدة والمشروع" icon={<Building2 />} padded={false}>
-              <SideRow label="المشروع" value={c.project ? tx(c.project.name) : '—'} />
+            <PremiumSectionCard title={m.sectionUnit} icon={<Building2 />} padded={false}>
+              <SideRow label={m.labelProject} value={c.project ? tx(c.project.name) : '—'} />
               <SideRow
-                label="الوحدة"
+                label={m.labelUnit}
                 value={
                   c.unit ? (
                     <span dir="ltr" className="font-mono">
@@ -213,36 +217,36 @@ export default async function AdminBrokerCommissionDetailPage({
                   ) : '—'
                 }
               />
-              <SideRow label="تاريخ الاستحقاق" value={formatDate(c.earnedAt)} />
+              <SideRow label={m.labelDueDate} value={formatDate(c.earnedAt)} />
             </PremiumSectionCard>
 
             {/* Financials */}
-            <PremiumSectionCard title="الحساب" icon={<Banknote />} padded={false}>
+            <PremiumSectionCard title={m.sectionFinancials} icon={<Banknote />} padded={false}>
               <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline border-b border-hairline">
-                <MetricCell label="قيمة الأساس" value={formatCurrency(c.basisAmount, currency)} />
+                <MetricCell label={m.labelBasis} value={formatCurrency(c.basisAmount, currency)} />
                 <MetricCell
-                  label="النسبة"
+                  label={m.labelRate}
                   value={
                     c.commissionPct != null
                       ? `${Number(c.commissionPct).toFixed(2)}%`
                       : '—'
                   }
                 />
-                <MetricCell label="الإجمالي قبل الخصم" value={formatCurrency(c.grossAmount, currency)} />
+                <MetricCell label={m.labelGross} value={formatCurrency(c.grossAmount, currency)} />
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 divide-y sm:divide-y-0 divide-x-0 sm:divide-x sm:divide-x-reverse divide-hairline">
                 <MetricCell
-                  label="الضريبة"
+                  label={m.labelTax}
                   value={`${Number(c.taxPct).toFixed(2)}%`}
                   sub={formatCurrency(c.taxAmount, currency)}
                 />
                 <MetricCell
-                  label="حجز ضريبي"
+                  label={m.labelWithholding}
                   value={`${Number(c.withholdingPct).toFixed(2)}%`}
                   sub={formatCurrency(c.withholdingAmount, currency)}
                 />
                 <MetricCell
-                  label="الصافي المستحق"
+                  label={m.labelNet}
                   value={formatCurrency(c.netAmount, currency)}
                   highlight
                 />
@@ -253,7 +257,7 @@ export default async function AdminBrokerCommissionDetailPage({
         side={
           <>
             {/* Broker card */}
-            <PremiumSectionCard title="الوسيط" icon={<Briefcase />}>
+            <PremiumSectionCard title={m.sectionBroker} icon={<Briefcase />}>
               {c.broker ? (
                 <div className="space-y-3">
                   <div>
@@ -274,7 +278,7 @@ export default async function AdminBrokerCommissionDetailPage({
                   {c.brokerAgent && (
                     <div className="pt-3 border-t border-hairline space-y-2">
                       <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                        جهة الاتصال
+                        {m.labelContact}
                       </p>
                       <p className="text-[13.5px] font-semibold text-slate-800">
                         {c.brokerAgent.fullName}
@@ -299,7 +303,7 @@ export default async function AdminBrokerCommissionDetailPage({
 
             {/* Notes (if any) */}
             {c.notes && (
-              <PremiumSectionCard title="الملاحظات">
+              <PremiumSectionCard title={m.sectionNotes}>
                 <p className="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap">
                   {c.notes}
                 </p>
@@ -311,30 +315,30 @@ export default async function AdminBrokerCommissionDetailPage({
 
       {/* Review forms */}
       {showReview && (
-        <PremiumSectionCard title="مراجعة العمولة" padded={false}>
+        <PremiumSectionCard title={m.sectionReview} padded={false}>
           <div className={cn('grid grid-cols-1 gap-0 divide-y lg:divide-y-0 lg:divide-x lg:divide-x-reverse divide-hairline', reviewGridCols)}>
             {canApprove && (
               <div className="flex flex-col p-5 sm:p-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-success-600 mb-4">
-                  اعتماد
+                  {m.reviewApproveLabel}
                 </p>
-                <ApproveCommissionForm id={c.id} />
+                <ApproveCommissionForm id={c.id} locale={locale} />
               </div>
             )}
             {canReject && (
               <div className="flex flex-col p-5 sm:p-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-danger-600 mb-4">
-                  رفض
+                  {m.reviewRejectLabel}
                 </p>
-                <RejectCommissionForm id={c.id} />
+                <RejectCommissionForm id={c.id} locale={locale} />
               </div>
             )}
             {canCancel && (
               <div className="flex flex-col p-5 sm:p-6">
                 <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-slate-400 mb-4">
-                  إلغاء
+                  {m.reviewCancelLabel}
                 </p>
-                <CancelCommissionForm id={c.id} />
+                <CancelCommissionForm id={c.id} locale={locale} />
               </div>
             )}
           </div>

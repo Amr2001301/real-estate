@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Search, Star, X, ArrowDownUp, ChevronDown, MapPin } from 'lucide-react';
+import { Search, Star, X, ChevronDown, MapPin, ArrowDownUp } from 'lucide-react';
 import { routes } from '@/lib/routes';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Input';
-import { PROJECT_SORT_OPTIONS } from '@/lib/sort-options';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 
 interface ProjectsFilterBarProps {
   initialQ: string;
@@ -15,6 +16,7 @@ interface ProjectsFilterBarProps {
   initialFeatured: boolean;
   initialSort: string;
   cities: string[];
+  locale: Locale;
 }
 
 export function ProjectsFilterBar({
@@ -23,8 +25,12 @@ export function ProjectsFilterBar({
   initialFeatured,
   initialSort,
   cities,
+  locale,
 }: ProjectsFilterBarProps) {
   const router = useRouter();
+  const t = siteT(locale).projectsFilter;
+  const sortOptions = siteT(locale).sortOptions.project;
+
   const [q, setQ] = useState(initialQ);
   const [city, setCity] = useState(initialCity);
   const [featured, setFeatured] = useState(initialFeatured);
@@ -68,8 +74,8 @@ export function ProjectsFilterBar({
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="ابحث عن اسم المشروع..."
-            aria-label="بحث"
+            placeholder={t.searchPlaceholder}
+            aria-label={t.searchLabel}
             className="pr-12"
           />
         </div>
@@ -83,10 +89,10 @@ export function ProjectsFilterBar({
                 setCity(e.target.value);
                 apply({ city: e.target.value });
               }}
-              aria-label="المدينة"
+              aria-label={t.cityLabel}
               className="h-12 pr-11 pl-9"
             >
-              <option value="">كل المدن</option>
+              <option value="">{t.allCities}</option>
               {cities.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -111,7 +117,7 @@ export function ProjectsFilterBar({
           )}
         >
           <Star className={cn('h-4 w-4', featured && 'fill-gold-400 text-gold-500')} aria-hidden />
-          مشاريع مميزة
+          {t.featured}
         </button>
 
         <div className="relative">
@@ -122,10 +128,10 @@ export function ProjectsFilterBar({
               setSort(e.target.value);
               apply({ sort: e.target.value });
             }}
-            aria-label="ترتيب حسب"
+            aria-label={t.sortBy}
             className="h-12 pr-11 pl-9"
           >
-            {PROJECT_SORT_OPTIONS.map((o) => (
+            {sortOptions.map((o) => (
               <option key={o.value || 'default'} value={o.value}>{o.label}</option>
             ))}
           </Select>
@@ -134,7 +140,7 @@ export function ProjectsFilterBar({
 
         <div className="flex items-center gap-3">
           <Button type="submit" size="md">
-            تحديث النتائج
+            {t.applyFilters}
           </Button>
           {hasFilters && (
             <button
@@ -143,7 +149,7 @@ export function ProjectsFilterBar({
               className="inline-flex items-center gap-1 text-sm text-ink-muted transition-colors hover:text-ink-strong"
             >
               <X className="h-4 w-4" aria-hidden />
-              مسح الفلاتر
+              {t.clearFilters}
             </button>
           )}
         </div>

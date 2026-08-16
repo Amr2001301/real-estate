@@ -12,8 +12,8 @@ interface EmptyStateProps {
 
 /** Warm, inviting empty state — not a cold grey blank. */
 export function EmptyState({
-  title = 'لا يوجد محتوى لعرضه حاليًا',
-  message = 'سنضيف المزيد قريبًا — تابعنا لاكتشاف الجديد.',
+  title = 'Nothing here yet',
+  message = 'Check back soon.',
   icon,
   action,
   className,

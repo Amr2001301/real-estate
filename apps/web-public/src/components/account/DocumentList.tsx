@@ -12,39 +12,29 @@ import {
   File,
 } from 'lucide-react';
 import type { MeDocument } from '@/lib/api-types';
+import type { Locale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { cn } from '@/lib/cn';
 import { routes } from '@/lib/routes';
 
-const OWNER_LABELS: Record<MeDocument['ownerType'], { label: string; icon: typeof FileText }> = {
-  CONTRACT:            { label: 'عقود', icon: FileText },
-  DEPOSIT:             { label: 'دفعات وإيصالات', icon: Receipt },
-  MAINTENANCE_REQUEST: { label: 'طلبات صيانة', icon: Wrench },
-};
-
-const TABS: Array<{ key: string; label: string }> = [
-  { key: 'all', label: 'الكل' },
-  { key: 'CONTRACT', label: 'العقود' },
-  { key: 'DEPOSIT', label: 'الدفعات' },
-  { key: 'MAINTENANCE_REQUEST', label: 'الصيانة' },
-];
-
-function mimeIcon(mimeType: string | null): string {
-  if (!mimeType) return '📄';
-  if (mimeType === 'application/pdf') return '📕';
-  if (mimeType.startsWith('image/')) return '🖼';
-  return '📄';
-}
-
-function formatDate(iso: string): string {
+function formatDate(iso: string, locale: Locale): string {
   try {
-    return new Intl.DateTimeFormat('ar', { dateStyle: 'medium' }).format(new Date(iso));
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
   } catch {
     return '';
   }
 }
 
-function DocumentRow({ doc }: { doc: MeDocument }) {
+function DocumentRow({ doc, locale }: { doc: MeDocument; locale: Locale }) {
+  const m = siteT(locale).accountPages.documents;
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+
+  const OWNER_LABELS: Record<MeDocument['ownerType'], { label: string; icon: typeof FileText }> = {
+    CONTRACT:            { label: m.catContracts, icon: FileText },
+    DEPOSIT:             { label: m.catDeposits, icon: Receipt },
+    MAINTENANCE_REQUEST: { label: m.catMaintenance, icon: Wrench },
+  };
+
   const { icon: TypeIcon, label: typeLabel } = OWNER_LABELS[doc.ownerType];
 
   async function handleDownload() {
@@ -71,7 +61,7 @@ function DocumentRow({ doc }: { doc: MeDocument }) {
       {/* Meta */}
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-sm text-ink-strong truncate">
-          {doc.title ?? doc.fileName ?? 'مستند'}
+          {doc.title ?? doc.fileName ?? m.docFallback}
         </p>
         <div className="mt-0.5 flex items-center gap-2 flex-wrap">
           <span className="inline-flex items-center gap-1 text-[11px] text-ink-muted">
@@ -81,7 +71,7 @@ function DocumentRow({ doc }: { doc: MeDocument }) {
           {doc.category && (
             <span className="text-[11px] text-ink-muted/70">· {doc.category}</span>
           )}
-          <span className="text-[11px] text-ink-muted/60">· {formatDate(doc.createdAt)}</span>
+          <span className="text-[11px] text-ink-muted/60">· {formatDate(doc.createdAt, locale)}</span>
         </div>
       </div>
 
@@ -104,22 +94,39 @@ function DocumentRow({ doc }: { doc: MeDocument }) {
         ) : (
           <Download className="h-3.5 w-3.5" aria-hidden />
         )}
-        {status === 'error' ? 'خطأ، أعد المحاولة' : 'تحميل'}
+        {status === 'error' ? m.downloadError : m.download}
       </button>
     </div>
   );
+}
+
+function mimeIcon(mimeType: string | null): string {
+  if (!mimeType) return '📄';
+  if (mimeType === 'application/pdf') return '📕';
+  if (mimeType.startsWith('image/')) return '🖼';
+  return '📄';
 }
 
 export function DocumentList({
   documents,
   all,
   activeFilter,
+  locale,
 }: {
   documents: MeDocument[];
   all: MeDocument[];
   activeFilter: string;
+  locale: Locale;
 }) {
+  const m = siteT(locale).accountPages.documents;
   const router = useRouter();
+
+  const TABS: Array<{ key: string; label: string }> = [
+    { key: 'all', label: m.tabAll },
+    { key: 'CONTRACT', label: m.tabContracts },
+    { key: 'DEPOSIT', label: m.tabDeposits },
+    { key: 'MAINTENANCE_REQUEST', label: m.tabMaintenance },
+  ];
 
   const counts: Record<string, number> = { all: all.length };
   for (const d of all) {
@@ -170,18 +177,18 @@ export function DocumentList({
       {documents.length === 0 ? (
         <div className="rounded-2xl border border-hairline bg-surface p-8 text-center">
           <File className="mx-auto h-8 w-8 text-ink-muted/40 mb-3" aria-hidden />
-          <p className="text-sm text-ink-muted">لا توجد مستندات في هذا التصنيف بعد.</p>
+          <p className="text-sm text-ink-muted">{m.emptyCategory}</p>
         </div>
       ) : (
         <div className="rounded-2xl border border-hairline bg-surface px-5 shadow-soft">
           {documents.map((doc) => (
-            <DocumentRow key={doc.id} doc={doc} />
+            <DocumentRow key={doc.id} doc={doc} locale={locale} />
           ))}
         </div>
       )}
 
       <p className="text-xs text-ink-muted text-center">
-        {documents.length} مستند · روابط التحميل صالحة لمدة 5 دقائق فقط لأسباب أمنية.
+        {m.downloadNote(documents.length)}
       </p>
     </div>
   );

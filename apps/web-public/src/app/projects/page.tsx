@@ -1,8 +1,9 @@
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
-import { formatNumber } from '@/lib/format';
 import type { Paginated, PublicProjectListItem } from '@/lib/api-types';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { Section } from '@/components/ui/Section';
 import { ButtonLink } from '@/components/ui/Button';
 import { CtaBand } from '@/components/marketing/CtaBand';
@@ -45,13 +46,15 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   if (featured) params.set('featured', 'true');
   if (sort) params.set('sort', sort);
 
-  const [result, citiesResult] = await Promise.all([
+  const [result, citiesResult, locale] = await Promise.all([
     safeFetch<Paginated<PublicProjectListItem>>(
       `/public/projects?${params.toString()}`,
       { revalidate: REVALIDATE },
     ),
     safeFetch<{ cities: string[] }>('/public/projects/cities', { revalidate: 300 }),
+    getLocale(),
   ]);
+  const m = siteT(locale);
 
   const projects = result.ok ? result.data.data : [];
   const meta = result.ok ? result.data.meta : null;
@@ -72,37 +75,33 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
   return (
     <>
       <PageHero
-        eyebrow="مشاريع مختارة"
-        title="اكتشف مشاريعنا الاستثنائية"
-        subtitle="مجموعة منتقاة من المشاريع السكنية والتجارية المصممة لأسلوب حياة أرقى."
+        eyebrow={m.projects.eyebrow}
+        title={m.projects.title}
+        subtitle={m.projects.subtitle}
         overlap
       />
 
       {/* Filter bar overlapping the hero's lower edge — unified with the homepage. */}
       <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <ProjectsFilterBar initialQ={q} initialCity={city} initialFeatured={featured} initialSort={sort} cities={cities} />
+        <ProjectsFilterBar initialQ={q} initialCity={city} initialFeatured={featured} initialSort={sort} cities={cities} locale={locale} />
       </Container>
 
       <Section tone="canvas" className="pt-12 pb-12 sm:pt-14 lg:pb-16">
           {!result.ok ? (
             <ErrorState
-              title="لم نتمكن من تحميل المشاريع حاليًا"
-              message="تأكد من تشغيل الخادم أو حاول مرة أخرى بعد لحظات."
+              title={m.projects.errorTitle}
+              message={m.projects.errorMsg}
               className="mx-auto max-w-2xl"
             />
           ) : projects.length === 0 ? (
             <EmptyState
-              title={hasFilters ? 'لا توجد مشاريع مطابقة للبحث حاليًا' : 'لا توجد مشاريع منشورة حاليًا'}
-              message={
-                hasFilters
-                  ? 'جرّب تعديل كلمات البحث أو إزالة الفلاتر لعرض جميع المشاريع.'
-                  : 'سيتم عرض المشاريع فور إتاحتها.'
-              }
+              title={hasFilters ? m.projects.emptyFiltered : m.projects.emptyAll}
+              message={hasFilters ? m.projects.emptyFilteredMsg : m.projects.emptyAllMsg}
               className="mx-auto max-w-2xl"
               action={
                 hasFilters ? (
                   <ButtonLink href={routes.projects} variant="outline" size="md">
-                    مسح الفلاتر
+                    {m.projects.clearFilters}
                   </ButtonLink>
                 ) : undefined
               }
@@ -111,7 +110,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
             <>
               {meta && (
                 <p className="mb-6 text-sm text-ink-muted">
-                  عرض {projects.length} من أصل {formatNumber(meta.total)} مشروع
+                  {m.projects.showing(projects.length, meta.total)}
                 </p>
               )}
               <Stagger className="grid gap-7 md:grid-cols-2 lg:grid-cols-3" childClassName="h-full" step={80}>
@@ -124,9 +123,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
           )}
       </Section>
 
-      <CtaBand eyebrow="بحاجة إلى مساعدة؟" title="دع مستشارينا يرشدونك إلى المشروع الأنسب">
+      <CtaBand eyebrow={m.projects.helpEyebrow} title={m.projects.helpTitle}>
         <ButtonLink href={routes.contact} variant="gold" size="lg">
-          تواصل مع مستشار
+          {m.projects.helpCta}
         </ButtonLink>
       </CtaBand>
     </>

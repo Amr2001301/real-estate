@@ -1,4 +1,6 @@
 import { buildMetadata } from '@/lib/seo';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { Section } from '@/components/ui/Section';
 import { Container } from '@/components/ui/Container';
 import { PremiumCard } from '@/components/ui/PremiumCard';
@@ -12,12 +14,15 @@ export const metadata = buildMetadata({
   robots: { index: false, follow: false },
 });
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const locale = await getLocale();
+  const m = siteT(locale);
+
   return (
     <>
       <PageHero
-        eyebrow="سياسة الخصوصية"
-        title="خصوصيتك تهمنا"
+        eyebrow={m.privacy.eyebrow}
+        title={m.privacy.title}
         subtitle="نوضح هنا كيف نتعامل مع بياناتك. هذه نسخة مبدئية وسيتم تحديثها بالنص النهائي قريبًا."
       />
 
@@ -25,34 +30,20 @@ export default function PrivacyPage() {
         <Container>
           <div className="mx-auto max-w-3xl">
             <InlineNotice tone="info">
-              هذا المحتوى مبدئي لأغراض العرض، وسيتم استبداله بالنص القانوني النهائي لاحقًا.
+              {m.privacy.notice}
             </InlineNotice>
 
             <PremiumCard className="mt-6 space-y-5 p-8 leading-relaxed text-ink-muted sm:p-10">
-              <p>
-                تحترم ديفورا خصوصية زوّارها وعملائها، وتلتزم بحماية البيانات الشخصية التي تتم
-                مشاركتها معنا عبر الموقع.
-              </p>
-              <div>
-                <h2 className="text-lg font-semibold text-ink-strong">البيانات التي نجمعها</h2>
-                <p className="mt-2">
-                  قد نجمع بيانات أساسية مثل الاسم ورقم الهاتف والبريد الإلكتروني عند تعبئة نماذج
-                  التواصل أو طلب المعلومات أو حجز الزيارات.
-                </p>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-ink-strong">كيف نستخدم بياناتك</h2>
-                <p className="mt-2">
-                  نستخدم البيانات للرد على استفساراتك وتنسيق الزيارات وتحسين خدماتنا، ولا نشاركها مع
-                  أطراف خارجية إلا بالقدر اللازم لتقديم الخدمة.
-                </p>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-ink-strong">التواصل معنا</h2>
-                <p className="mt-2">
-                  لأي استفسار يتعلق بالخصوصية، يمكنك التواصل معنا عبر صفحة «تواصل معنا».
-                </p>
-              </div>
+              {m.privacy.sections.map((section, i) => (
+                i === 0 ? (
+                  <p key={i}>{section.body}</p>
+                ) : (
+                  <div key={i}>
+                    <h2 className="text-lg font-semibold text-ink-strong">{section.title}</h2>
+                    <p className="mt-2">{section.body}</p>
+                  </div>
+                )
+              ))}
             </PremiumCard>
           </div>
         </Container>

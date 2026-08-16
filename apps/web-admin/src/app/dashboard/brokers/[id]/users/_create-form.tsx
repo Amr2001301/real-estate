@@ -5,6 +5,8 @@ import { AlertCircle, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { SubmitButton } from '@/components/form/submit-button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { createBrokerUserAction, type BrokerUserFormState } from '../../actions';
 
 function FormField({
@@ -32,9 +34,11 @@ function FormField({
 
 interface Props {
   brokerId: string;
+  locale?: Locale;
 }
 
-export default function CreateBrokerUserForm({ brokerId }: Props) {
+export default function CreateBrokerUserForm({ brokerId, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.brokerUsersPage;
   const action = createBrokerUserAction.bind(null, brokerId);
   const [state, formAction] = useActionState<BrokerUserFormState, FormData>(action, {});
   const formRef = useRef<HTMLFormElement>(null);
@@ -55,29 +59,29 @@ export default function CreateBrokerUserForm({ brokerId }: Props) {
       {state.ok && (
         <div className="flex items-start gap-2 rounded-xl bg-success-50 border border-success-100 text-success-700 p-3.5 text-sm">
           <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
-          <p className="font-medium">تمت إضافة الموظف بنجاح</p>
+          <p className="font-medium">{m.createFormSuccess}</p>
         </div>
       )}
 
-      {/* بيانات الموظف — 2-col grid */}
+      {/* Employee fields — 2-col grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="الاسم الكامل" required>
+        <FormField label={m.createFormFullNameLabel} required>
           <Input id="fullName" name="fullName" required />
         </FormField>
-        <FormField label="الوظيفة">
+        <FormField label={m.createFormJobLabel}>
           <Input id="jobTitle" name="jobTitle" />
         </FormField>
-        <FormField label="البريد الإلكتروني" hint="مطلوب البريد أو الجوال على الأقل">
+        <FormField label={m.createFormEmailLabel} hint={m.createFormEmailHint}>
           <Input id="email" name="email" type="email" dir="ltr" />
         </FormField>
-        <FormField label="رقم الجوال">
+        <FormField label={m.createFormPhoneLabel}>
           <Input id="phone" name="phone" dir="ltr" />
         </FormField>
 
-        {/* كلمة المرور — half width + eye toggle */}
+        {/* Password — half width + eye toggle */}
         <FormField
-          label="كلمة المرور المؤقتة"
-          hint="اختياري — إذا تُركت فارغة سيسجل الموظف عبر OTP"
+          label={m.createFormPasswordLabel}
+          hint={m.createFormPasswordHint}
         >
           <div className="relative">
             <Input
@@ -93,7 +97,7 @@ export default function CreateBrokerUserForm({ brokerId }: Props) {
               onClick={() => setShowPwd((v) => !v)}
               className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 transition-colors"
               tabIndex={-1}
-              aria-label={showPwd ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
+              aria-label={showPwd ? m.hidePasswordLabel : m.showPasswordLabel}
             >
               {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -101,28 +105,28 @@ export default function CreateBrokerUserForm({ brokerId }: Props) {
         </FormField>
       </div>
 
-      {/* الصلاحيات + زر الإرسال — نفس الصف */}
+      {/* Permissions + submit button — same row */}
       <div className="flex flex-wrap items-end justify-between gap-4 pt-4 border-t border-hairline">
         <div className="flex flex-col gap-2.5">
           <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-400">
-            الصلاحيات والإعدادات
+            {m.createFormPermissionsLabel}
           </p>
           <div className="flex flex-wrap items-center gap-5">
             <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
               <Checkbox name="isPrimaryContact" />
-              <span>جهة الاتصال الرئيسية</span>
+              <span>{m.createFormIsPrimary}</span>
             </label>
             <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
               <Checkbox name="canManageBrokerUsers" />
-              <span>صلاحية إدارة الموظفين</span>
+              <span>{m.createFormCanManage}</span>
             </label>
             <label className="inline-flex items-center gap-2 text-[13px] text-slate-700 cursor-pointer select-none">
               <Checkbox name="canViewCommissions" defaultChecked />
-              <span>عرض العمولات</span>
+              <span>{m.createFormCanView}</span>
             </label>
           </div>
         </div>
-        <SubmitButton>إضافة الموظف</SubmitButton>
+        <SubmitButton>{m.createFormSubmitBtn}</SubmitButton>
       </div>
     </form>
   );

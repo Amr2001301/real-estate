@@ -1,12 +1,8 @@
 import { Maximize, BedDouble, Bath, Building2, Home, BadgeCheck } from 'lucide-react';
 import { formatArea, formatNumber, unitTypeLabel } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import type { PublicUnit } from '@/lib/api-types';
-
-const STATUS_LABEL: Record<string, string> = {
-  AVAILABLE: 'متاحة',
-  RESERVED: 'محجوزة',
-  SOLD: 'مباعة',
-};
 
 interface Spec {
   icon: React.ComponentType<{ className?: string }>;
@@ -14,16 +10,22 @@ interface Spec {
   value: string;
 }
 
-export function UnitSpecs({ unit }: { unit: PublicUnit }) {
+export async function UnitSpecs({ unit }: { unit: PublicUnit }) {
+  const locale = await getLocale();
+  const m = siteT(locale);
+  const s = m.unitSpecs;
+  const statusMap = m.unitDetail.status;
+  const statusValue = statusMap[unit.status as keyof typeof statusMap] ?? unit.status;
+
   const specs: Spec[] = [];
   if (Number.isFinite(unit.area) && unit.area > 0)
-    specs.push({ icon: Maximize,   label: 'المساحة',      value: formatArea(unit.area) });
-  specs.push({ icon: BedDouble,  label: 'غرف النوم',    value: formatNumber(unit.bedrooms) });
-  specs.push({ icon: Bath,       label: 'دورات المياه', value: formatNumber(unit.bathrooms) });
-  specs.push({ icon: Building2,  label: 'الطابق',       value: formatNumber(unit.floor) });
+    specs.push({ icon: Maximize,   label: s.area,      value: formatArea(unit.area) });
+  specs.push({ icon: BedDouble,  label: s.bedrooms,   value: formatNumber(unit.bedrooms) });
+  specs.push({ icon: Bath,       label: s.bathrooms,  value: formatNumber(unit.bathrooms) });
+  specs.push({ icon: Building2,  label: s.floor,      value: formatNumber(unit.floor) });
   if (unit.type)
-    specs.push({ icon: Home,     label: 'نوع الوحدة',   value: unitTypeLabel(unit.type) });
-  specs.push({ icon: BadgeCheck, label: 'الحالة',       value: STATUS_LABEL[unit.status] ?? unit.status });
+    specs.push({ icon: Home,     label: s.unitType,   value: unitTypeLabel(unit.type) });
+  specs.push({ icon: BadgeCheck, label: s.status,     value: statusValue });
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

@@ -3,9 +3,11 @@
 import { useState, useTransition } from 'react';
 import { CheckCircle2, X, Ban, Pencil } from 'lucide-react';
 import type { ReservationStatus } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
 import { Button } from '@/components/ui/button';
 import { PermissionDeniedState } from '@/components/permission-denied';
 import { StatusDialog } from '../../_components/status-dialog';
+import { uiT } from '@/messages/ui';
 import {
   approveReservationAction,
   rejectReservationAction,
@@ -28,6 +30,7 @@ interface Props {
   /** Approve/reject/cancel are admin/finance actions (strict permissions).
    *  When false (e.g. SALES), only the edit action is offered. */
   canManage?: boolean;
+  locale?: Locale;
 }
 
 export function ReservationDetailActions({
@@ -37,7 +40,9 @@ export function ReservationDetailActions({
   currentNotes,
   salesOptions,
   canManage = false,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.reservationDetailPage;
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -52,7 +57,7 @@ export function ReservationDetailActions({
   if (!isPending && !isApproved) return null;
 
   function handleApprove() {
-    if (!window.confirm('هل أنت متأكد من الموافقة على هذا الحجز؟')) return;
+    if (!window.confirm(m.actionApproveConfirm)) return;
     startApprove(async () => {
       const result = await approveReservationAction(reservationId);
       setApproveResult(result?.error ? result : null);
@@ -74,7 +79,7 @@ export function ReservationDetailActions({
               disabled={approveDenied}
               onClick={handleApprove}
             >
-              موافقة
+              {m.actionBtnApprove}
             </Button>
 
             <Button
@@ -84,7 +89,7 @@ export function ReservationDetailActions({
               onClick={() => setRejectOpen(true)}
               className="text-danger-600 border-danger-200 hover:bg-danger-50"
             >
-              رفض
+              {m.actionBtnReject}
             </Button>
           </>
         )}
@@ -96,7 +101,7 @@ export function ReservationDetailActions({
             leftIcon={<Ban className="h-4 w-4" />}
             onClick={() => setCancelOpen(true)}
           >
-            إلغاء الحجز
+            {m.actionBtnCancel}
           </Button>
         )}
 
@@ -107,7 +112,7 @@ export function ReservationDetailActions({
             leftIcon={<Pencil className="h-4 w-4" />}
             onClick={() => setEditOpen(true)}
           >
-            تعديل
+            {m.actionBtnEdit}
           </Button>
         )}
       </div>
@@ -120,8 +125,8 @@ export function ReservationDetailActions({
             <PermissionDeniedState
               variant="inline"
               permissions={approveResult.permissions ?? []}
-              title="ليست لديك صلاحية اعتماد الحجز"
-              description="اطلب من مدير النظام منحك الصلاحية من صفحة الصلاحيات."
+              title={m.permissionDeniedTitle}
+              description={m.permissionDeniedDesc}
             />
           </div>
         ) : (
@@ -132,9 +137,9 @@ export function ReservationDetailActions({
       <StatusDialog
         open={rejectOpen}
         onClose={() => setRejectOpen(false)}
-        title="رفض الحجز"
-        description="هل أنت متأكد من رفض هذا الحجز؟ سيتم إعادة الوحدة إلى حالة متاحة."
-        confirmLabel="تأكيد الرفض"
+        title={m.rejectDialogTitle}
+        description={m.rejectDialogDesc}
+        confirmLabel={m.rejectConfirmLabel}
         confirmVariant="danger"
         action={rejectReservationAction.bind(null, reservationId)}
       />
@@ -142,13 +147,13 @@ export function ReservationDetailActions({
       <StatusDialog
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
-        title="إلغاء الحجز"
+        title={m.cancelDialogTitle}
         description={
           isApproved
-            ? 'سيتم إلغاء هذا الحجز المعتمد قبل التعاقد. يُلزم ذكر السبب للأرشيف.'
-            : 'سيتم إلغاء هذا الحجز. يُلزم ذكر السبب للأرشيف.'
+            ? m.cancelDialogDescApproved
+            : m.cancelDialogDescPending
         }
-        confirmLabel="تأكيد الإلغاء"
+        confirmLabel={m.cancelConfirmLabel}
         confirmVariant="danger"
         reasonRequired
         action={cancelReservationAction.bind(null, reservationId)}
@@ -162,6 +167,7 @@ export function ReservationDetailActions({
           currentSalesId={currentSalesId}
           currentNotes={currentNotes}
           salesOptions={salesOptions}
+          locale={locale}
         />
       )}
     </div>

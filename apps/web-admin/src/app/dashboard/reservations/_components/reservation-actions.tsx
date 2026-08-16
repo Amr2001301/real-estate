@@ -4,8 +4,10 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { Eye, CheckCircle2, X, Ban } from 'lucide-react';
 import type { Reservation } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
+import { uiT } from '@/messages/ui';
 import { StatusDialog } from './status-dialog';
 import {
   approveReservationAction,
@@ -15,9 +17,11 @@ import {
 
 interface Props {
   reservation: Reservation;
+  locale?: Locale;
 }
 
-export function ReservationActions({ reservation }: Props) {
+export function ReservationActions({ reservation, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.reservationDetailPage;
   const [rejectOpen, setRejectOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [approvePending, startApprove] = useTransition();
@@ -27,7 +31,7 @@ export function ReservationActions({ reservation }: Props) {
   const canCancel = isPending || isApproved;
 
   function handleApprove() {
-    if (!window.confirm('هل أنت متأكد من الموافقة على هذا الحجز؟')) return;
+    if (!window.confirm(m.actionApproveConfirm)) return;
     startApprove(async () => {
       await approveReservationAction(reservation.id);
     });
@@ -37,7 +41,7 @@ export function ReservationActions({ reservation }: Props) {
     <div className="flex items-center gap-1">
       {/* View */}
       <Link href={`/dashboard/reservations/${reservation.id}`}>
-        <IconButton label="عرض تفاصيل الحجز" variant="outline" size="sm">
+        <IconButton label={m.listViewLabel} variant="outline" size="sm">
           <Eye />
         </IconButton>
       </Link>
@@ -50,7 +54,7 @@ export function ReservationActions({ reservation }: Props) {
           {isPending && (
             <>
               <IconButton
-                label="موافقة على الحجز"
+                label={m.listApproveLabel}
                 variant="ghost"
                 size="sm"
                 disabled={approvePending}
@@ -60,7 +64,7 @@ export function ReservationActions({ reservation }: Props) {
                 <CheckCircle2 />
               </IconButton>
               <IconButton
-                label="رفض الحجز"
+                label={m.listRejectLabel}
                 variant="ghost"
                 size="sm"
                 onClick={() => setRejectOpen(true)}
@@ -79,7 +83,7 @@ export function ReservationActions({ reservation }: Props) {
             className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:text-danger-600 hover:bg-danger-50 transition-colors duration-100 whitespace-nowrap shrink-0"
           >
             <Ban className="h-3 w-3 shrink-0" />
-            إلغاء
+            {m.listCancelLabel}
           </button>
         </>
       )}
@@ -87,9 +91,9 @@ export function ReservationActions({ reservation }: Props) {
       <StatusDialog
         open={rejectOpen}
         onClose={() => setRejectOpen(false)}
-        title="رفض الحجز"
-        description="هل أنت متأكد من رفض هذا الحجز؟ سيتم إعادة الوحدة إلى حالة متاحة."
-        confirmLabel="تأكيد الرفض"
+        title={m.rejectDialogTitle}
+        description={m.rejectDialogDesc}
+        confirmLabel={m.rejectConfirmLabel}
         confirmVariant="danger"
         action={rejectReservationAction.bind(null, reservation.id)}
       />
@@ -97,13 +101,13 @@ export function ReservationActions({ reservation }: Props) {
       <StatusDialog
         open={cancelOpen}
         onClose={() => setCancelOpen(false)}
-        title="إلغاء الحجز"
+        title={m.cancelDialogTitle}
         description={
           isApproved
-            ? 'سيتم إلغاء هذا الحجز المعتمد قبل التعاقد. يُلزم ذكر السبب للأرشيف.'
-            : 'سيتم إلغاء هذا الحجز. يُلزم ذكر السبب للأرشيف.'
+            ? m.cancelDialogDescApproved
+            : m.cancelDialogDescPending
         }
-        confirmLabel="تأكيد الإلغاء"
+        confirmLabel={m.cancelConfirmLabel}
         confirmVariant="danger"
         reasonRequired
         action={cancelReservationAction.bind(null, reservation.id)}

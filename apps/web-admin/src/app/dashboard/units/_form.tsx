@@ -10,15 +10,10 @@ import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
 import { BuildingPicker } from './_building-picker';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { Project, Unit } from '@/lib/types';
 import { createUnitAction, updateUnitAction, type UnitFormState } from './actions';
-
-const NAV_SECTIONS = [
-  { id: 'section-location', num: '01', label: 'الموقع داخل المشروع', sub: 'المشروع والمرحلة والمبنى', Icon: MapPin },
-  { id: 'section-basic', num: '02', label: 'المعلومات الأساسية', sub: 'الكود والنوع والطابق', Icon: Tag },
-  { id: 'section-specs', num: '03', label: 'المواصفات الفنية', sub: 'المساحة والغرف ودورات المياه', Icon: Ruler },
-  { id: 'section-financial', num: '04', label: 'التفاصيل المالية والحالة', sub: 'السعر والحالة', Icon: DollarSign },
-];
 
 function PanelHeader({ number, title, description }: { number: string; title: string; description: string }) {
   return (
@@ -40,16 +35,25 @@ function PanelHeader({ number, title, description }: { number: string; title: st
 interface Props {
   unit?: Unit;
   projects: Project[];
+  locale?: Locale;
 }
 
 const UNIT_TYPES = ['Studio', '1BR', '2BR', '3BR', '4BR', 'Villa', 'Duplex', 'Penthouse'];
 
-export default function UnitForm({ unit, projects }: Props) {
+export default function UnitForm({ unit, projects, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.unitsForm;
   const action = unit ? updateUnitAction.bind(null, unit.id) : createUnitAction;
   const [state, formAction] = useActionState<UnitFormState, FormData>(action, {});
 
   const isEdit = Boolean(unit);
   const cancelHref = isEdit ? `/dashboard/units/${unit!.id}` : '/dashboard/units';
+
+  const navSections = [
+    { id: 'section-location',  num: '01', label: m.navLocation.label,  sub: m.navLocation.sub,  Icon: MapPin },
+    { id: 'section-basic',     num: '02', label: m.navBasic.label,     sub: m.navBasic.sub,     Icon: Tag },
+    { id: 'section-specs',     num: '03', label: m.navSpecs.label,     sub: m.navSpecs.sub,     Icon: Ruler },
+    { id: 'section-financial', num: '04', label: m.navFinancial.label, sub: m.navFinancial.sub, Icon: DollarSign },
+  ];
 
   return (
     <form action={formAction}>
@@ -66,7 +70,7 @@ export default function UnitForm({ unit, projects }: Props) {
           {state.ok && (
             <div className="flex items-start gap-3 rounded-2xl bg-success-50 border border-success-100 text-success-700 p-4 text-sm">
               <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-              <p className="font-medium">تم حفظ التغييرات بنجاح</p>
+              <p className="font-medium">{m.saveOk}</p>
             </div>
           )}
         </div>
@@ -75,7 +79,7 @@ export default function UnitForm({ unit, projects }: Props) {
       {/* ── Mobile section chips ── */}
       <nav className="lg:hidden -mx-4 sm:-mx-6 px-4 sm:px-6 overflow-x-auto scrollbar-none pb-1 mb-4">
         <div className="flex gap-2 min-w-max">
-          {NAV_SECTIONS.map((s) => (
+          {navSections.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
@@ -102,17 +106,17 @@ export default function UnitForm({ unit, projects }: Props) {
             {/* Sidebar header */}
             <div className="px-5 py-4 border-b border-hairline flex items-center justify-between gap-2">
               <span className="text-[13px] font-bold text-navy">
-                {isEdit ? 'تعديل الوحدة' : 'ملخص الإنشاء'}
+                {isEdit ? m.sidebarTitleEdit : m.sidebarTitleNew}
               </span>
               <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700 leading-none">
                 <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-                {isEdit ? 'تعديل' : 'جديد'}
+                {isEdit ? m.badgeEdit : m.badgeNew}
               </span>
             </div>
 
             {/* Section nav links */}
             <div className="px-3 py-3 flex flex-col gap-0.5">
-              {NAV_SECTIONS.map((s) => (
+              {navSections.map((s) => (
                 <a
                   key={s.id}
                   href={`#${s.id}`}
@@ -133,9 +137,7 @@ export default function UnitForm({ unit, projects }: Props) {
             <div className="mx-3 mb-3 rounded-xl bg-brand-50/60 border border-brand-100 p-3.5 flex gap-2.5">
               <Info className="h-4 w-4 text-brand-400 shrink-0 mt-0.5" />
               <p className="text-[11.5px] text-slate-500 leading-relaxed">
-                {isEdit
-                  ? 'سيتم تحديث بيانات الوحدة فور الحفظ.'
-                  : 'بعد الإنشاء سيتم توجيهك إلى صفحة الوحدة لإضافة الوسائط.'}
+                {isEdit ? m.sidebarInfoEdit : m.sidebarInfoNew}
               </p>
             </div>
           </div>
@@ -144,15 +146,15 @@ export default function UnitForm({ unit, projects }: Props) {
         {/* ── Form panels (left in RTL) ── */}
         <div className="flex-1 min-w-0 flex flex-col gap-4 lg:gap-5 pb-24">
 
-          {/* 01 — الموقع داخل المشروع */}
+          {/* 01 */}
           <section
             id="section-location"
             className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="01"
-              title="الموقع داخل المشروع"
-              description="حدّد المشروع، ثم المرحلة، ثم المبنى الذي تنتمي إليه الوحدة."
+              title={m.panelLocationTitle}
+              description={m.panelLocationDesc}
             />
             <div className="px-7 sm:px-8 py-7">
               <BuildingPicker
@@ -160,23 +162,24 @@ export default function UnitForm({ unit, projects }: Props) {
                 initialProjectId={unit?.building?.phase?.projectId}
                 initialPhaseId={unit?.building?.phaseId}
                 initialBuildingId={unit?.buildingId}
+                locale={locale}
               />
             </div>
           </section>
 
-          {/* 02 — المعلومات الأساسية */}
+          {/* 02 */}
           <section
             id="section-basic"
             className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="02"
-              title="المعلومات الأساسية"
-              description="رمز التعريف ونوع الوحدة والطابق."
+              title={m.panelBasicTitle}
+              description={m.panelBasicDesc}
             />
             <div className="px-7 sm:px-8 py-7">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Field label="كود الوحدة" name="code" hint="مثال: A-101" required>
+                <Field label={m.labelCode} name="code" hint={m.hintCode} required>
                   <Input
                     id="code"
                     name="code"
@@ -186,7 +189,7 @@ export default function UnitForm({ unit, projects }: Props) {
                   />
                 </Field>
 
-                <Field label="نوع الوحدة" name="type">
+                <Field label={m.labelType} name="type">
                   <Select id="type" name="type" defaultValue={unit?.type ?? '1BR'}>
                     {UNIT_TYPES.map((t) => (
                       <option key={t} value={t}>
@@ -196,7 +199,7 @@ export default function UnitForm({ unit, projects }: Props) {
                   </Select>
                 </Field>
 
-                <Field label="الطابق" name="floor" hint="0 يعني الطابق الأرضي">
+                <Field label={m.labelFloor} name="floor" hint={m.hintFloor}>
                   <Input
                     id="floor"
                     name="floor"
@@ -209,19 +212,19 @@ export default function UnitForm({ unit, projects }: Props) {
             </div>
           </section>
 
-          {/* 03 — المواصفات الفنية */}
+          {/* 03 */}
           <section
             id="section-specs"
             className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="03"
-              title="المواصفات الفنية"
-              description="المساحة وتوزيع الغرف ودورات المياه."
+              title={m.panelSpecsTitle}
+              description={m.panelSpecsDesc}
             />
             <div className="px-7 sm:px-8 py-7">
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <Field label="المساحة (م²)" name="area" required>
+                <Field label={m.labelArea} name="area" required>
                   <Input
                     id="area"
                     name="area"
@@ -233,7 +236,7 @@ export default function UnitForm({ unit, projects }: Props) {
                     defaultValue={unit?.area}
                   />
                 </Field>
-                <Field label="غرف النوم" name="bedrooms">
+                <Field label={m.labelBedrooms} name="bedrooms">
                   <Input
                     id="bedrooms"
                     name="bedrooms"
@@ -242,7 +245,7 @@ export default function UnitForm({ unit, projects }: Props) {
                     defaultValue={unit?.bedrooms ?? 1}
                   />
                 </Field>
-                <Field label="دورات المياه" name="bathrooms">
+                <Field label={m.labelBathrooms} name="bathrooms">
                   <Input
                     id="bathrooms"
                     name="bathrooms"
@@ -255,19 +258,19 @@ export default function UnitForm({ unit, projects }: Props) {
             </div>
           </section>
 
-          {/* 04 — التفاصيل المالية والحالة */}
+          {/* 04 */}
           <section
             id="section-financial"
             className="bg-surface border border-hairline rounded-[20px] overflow-hidden shadow-[0_1px_4px_rgb(0_0_0/_0.06)]"
           >
             <PanelHeader
               number="04"
-              title="التفاصيل المالية والحالة"
-              description="السعر الإجمالي وحالة الوحدة الحالية في النظام."
+              title={m.panelFinancialTitle}
+              description={m.panelFinancialDesc}
             />
             <div className="px-7 sm:px-8 py-7">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Field label="السعر الإجمالي" name="price" hint="بالعملة الافتراضية للنظام" required>
+                <Field label={m.labelPrice} name="price" hint={m.hintPrice} required>
                   <Input
                     id="price"
                     name="price"
@@ -279,11 +282,11 @@ export default function UnitForm({ unit, projects }: Props) {
                     defaultValue={unit?.price as number | undefined}
                   />
                 </Field>
-                <Field label="حالة الوحدة" name="status">
+                <Field label={m.labelStatus} name="status">
                   <Select id="status" name="status" defaultValue={unit?.status ?? 'AVAILABLE'}>
-                    <option value="AVAILABLE">متاحة</option>
-                    <option value="RESERVED">محجوزة</option>
-                    <option value="SOLD">مباعة</option>
+                    <option value="AVAILABLE">{m.optionAvailable}</option>
+                    <option value="RESERVED">{m.optionReserved}</option>
+                    <option value="SOLD">{m.optionSold}</option>
                   </Select>
                 </Field>
               </div>
@@ -299,17 +302,13 @@ export default function UnitForm({ unit, projects }: Props) {
           <>
             <Link href={cancelHref as never}>
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {m.cancelBtn}
               </Button>
             </Link>
-            <SubmitButton>{isEdit ? 'حفظ التغييرات' : 'إنشاء الوحدة'}</SubmitButton>
+            <SubmitButton>{isEdit ? m.submitEdit : m.submitNew}</SubmitButton>
           </>
         }
-        helper={
-          isEdit
-            ? 'سيتم تحديث بيانات الوحدة فور الحفظ.'
-            : 'بعد الإنشاء سيتم توجيهك إلى صفحة الوحدة لإضافة الوسائط.'
-        }
+        helper={isEdit ? m.footerHelperEdit : m.footerHelperNew}
       />
     </form>
   );

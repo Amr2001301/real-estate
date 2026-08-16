@@ -33,6 +33,8 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -52,6 +54,9 @@ export default async function BrokersPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokers;
+
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
   const qs = new URLSearchParams({
@@ -86,16 +91,16 @@ export default async function BrokersPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="الوسطاء"
-        description="إدارة شركات وفرق الوساطة ومتابعة أدائهم داخل المنصة."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <Link href={'/dashboard/brokers/new' as never}>
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              إضافة وسيط
+              {m.addBtn}
             </Button>
           </Link>
         }
@@ -107,26 +112,26 @@ export default async function BrokersPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي الوسطاء',
+            label: m.kpi.total,
             value: total,
             icon: <Briefcase />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'نشط',
+            label: m.kpi.active,
             value: active,
             icon: <CheckCircle2 />,
             tone: 'success',
           },
           {
-            label: 'قيد الانضمام',
+            label: m.kpi.pending,
             value: pending,
             icon: <Hourglass />,
             tone: 'warning',
           },
           {
-            label: 'موقوف',
+            label: m.kpi.suspended,
             value: suspended,
             icon: <PauseCircle />,
             tone: 'danger',
@@ -138,36 +143,36 @@ export default async function BrokersPage({
       {pagedRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل قائمة الوسطاء: {pagedRes.error}</p>
+          <p className="font-medium">{m.errorPrefix} {pagedRes.error}</p>
         </div>
       )}
 
       {/* ── Filter bar ───────────────────────────────────────────────────────── */}
       <PremiumFilterBar method="get" action="/dashboard/brokers">
         <div className="flex-1 min-w-[180px]">
-          <label htmlFor="brk-q" className="sr-only">بحث</label>
+          <label htmlFor="brk-q" className="sr-only">{m.filter.searchLabel}</label>
           <Input
             id="brk-q"
             name="q"
             inputSize="sm"
-            placeholder="بحث: اسم / رمز / بريد / هاتف"
+            placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             leftAddon={<Search />}
             className="w-full"
           />
         </div>
-        <PremiumFilterField label="الحالة" htmlFor="brk-status">
+        <PremiumFilterField label={m.filter.statusLabel} htmlFor="brk-status">
           <Select id="brk-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''} className="w-40 shrink-0">
-            <option value="">كل الحالات</option>
-            <option value="PENDING">قيد الانضمام</option>
-            <option value="ACTIVE">نشط</option>
-            <option value="SUSPENDED">موقوف</option>
-            <option value="TERMINATED">منتهي</option>
+            <option value="">{m.filter.allStatuses}</option>
+            <option value="PENDING">{m.filter.pending}</option>
+            <option value="ACTIVE">{m.filter.active}</option>
+            <option value="SUSPENDED">{m.filter.suspended}</option>
+            <option value="TERMINATED">{m.filter.expired}</option>
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="المدينة" htmlFor="brk-city">
+        <PremiumFilterField label={m.filter.cityLabel} htmlFor="brk-city">
           <Select id="brk-city" name="city" inputSize="sm" defaultValue={sp.city ?? ''} className="w-40 shrink-0">
-            <option value="">كل المدن</option>
+            <option value="">{uiT(locale).common.allCities}</option>
             {cities.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -175,10 +180,10 @@ export default async function BrokersPage({
         </PremiumFilterField>
 
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {(sp.status || sp.city || sp.q) && (
             <Link href={'/dashboard/brokers' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
         </div>
@@ -187,24 +192,24 @@ export default async function BrokersPage({
       {/* ── Brokers table ────────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<Briefcase />}
-        title="سجل الوسطاء"
-        description="شركات الوساطة المسجّلة في المنصة وصلاحياتها على المشاريع."
+        title={m.sectionTitle}
+        description={m.sectionDesc}
         padded={false}
         trailing={
           <span className="text-xs text-slate-400 tabular-nums">
-            {total.toLocaleString('ar-EG')} وسيط
+            {total.toLocaleString('ar-EG')} {m.brokerSuffix}
           </span>
         }
       >
         {rows.length === 0 && !pagedRes.error ? (
           <PremiumEmptyState
             icon={<Briefcase />}
-            title="لا يوجد وسطاء بعد"
-            description="ابدأ بإضافة أول شركة وساطة عقارية."
+            title={m.empty.title}
+            description={m.empty.description}
             action={
               <Link href={'/dashboard/brokers/new' as never}>
                 <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                  إضافة وسيط
+                  {m.empty.addBtn}
                 </Button>
               </Link>
             }
@@ -215,13 +220,13 @@ export default async function BrokersPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">الشركة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المدينة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الموظفون</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المشاريع</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدات</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الإضافة</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.company}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.status}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.city}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.staff}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.projects}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.units}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.cols.added}</th>
                   <th className="text-start py-3 ps-4 pe-5 w-px" />
                 </tr>
               </thead>
@@ -258,7 +263,7 @@ export default async function BrokersPage({
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <BrokerStatusBadge status={b.status as BrokerStatus} />
+                        <BrokerStatusBadge status={b.status as BrokerStatus} locale={locale} />
                       </td>
 
                       <td className="py-3.5 px-4">
@@ -289,22 +294,22 @@ export default async function BrokersPage({
                       <td className="py-3.5 ps-4 pe-5">
                         <div className="flex items-center gap-0.5">
                           <Link href={`/dashboard/brokers/${b.id}` as never}>
-                            <IconButton label="عرض" variant="ghost" size="sm">
+                            <IconButton label={m.actionBtns.view} variant="ghost" size="sm">
                               <Eye />
                             </IconButton>
                           </Link>
                           <Link href={`/dashboard/brokers/${b.id}/edit` as never}>
-                            <IconButton label="تعديل" variant="ghost" size="sm">
+                            <IconButton label={m.actionBtns.edit} variant="ghost" size="sm">
                               <Pencil />
                             </IconButton>
                           </Link>
                           <Link href={`/dashboard/brokers/${b.id}/users` as never}>
-                            <IconButton label="الموظفون" variant="ghost" size="sm">
+                            <IconButton label={m.actionBtns.staff} variant="ghost" size="sm">
                               <UsersIcon />
                             </IconButton>
                           </Link>
                           <Link href={`/dashboard/brokers/${b.id}/access` as never}>
-                            <IconButton label="الصلاحيات" variant="ghost" size="sm">
+                            <IconButton label={m.actionBtns.access} variant="ghost" size="sm">
                               <ShieldCheck />
                             </IconButton>
                           </Link>
@@ -327,6 +332,7 @@ export default async function BrokersPage({
           total={paged.meta.total}
           basePath="/dashboard/brokers"
           params={{ status: sp.status, city: sp.city, q: sp.q }}
+          locale={locale}
         />
       )}
     </div>

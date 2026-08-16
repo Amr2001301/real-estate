@@ -6,6 +6,8 @@ import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { pickAr, formatPrice, formatArea, unitTypeLabel } from '@/lib/format';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import type { PublicUnit, Paginated } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
@@ -32,13 +34,13 @@ const REVALIDATE = 60;
 
 type StatusMeta = { label: string; tone: 'success' | 'warning' | 'neutral' };
 
-const STATUS: Record<string, StatusMeta> = {
-  AVAILABLE: { label: 'متاحة',  tone: 'success' },
-  RESERVED:  { label: 'محجوزة', tone: 'warning' },
-  SOLD:      { label: 'مباعة',  tone: 'neutral' },
+const STATUS_TONES: Record<string, StatusMeta['tone']> = {
+  AVAILABLE: 'success',
+  RESERVED:  'warning',
+  SOLD:      'neutral',
 };
 
-const DEFAULT_STATUS: StatusMeta = { label: 'متاحة', tone: 'success' };
+const DEFAULT_STATUS_TONE: StatusMeta['tone'] = 'success';
 
 type Params = Promise<{ id: string }>;
 
@@ -46,8 +48,8 @@ function fetchUnit(id: string) {
   return safeFetch<PublicUnit>(`/public/units/${id}`, { revalidate: REVALIDATE });
 }
 
-function unitTitle(unit: PublicUnit): string {
-  return unit.type ? unitTypeLabel(unit.type) : `وحدة ${unit.code}`;
+function unitTitle(unit: PublicUnit, fallbackPrefix = 'وحدة'): string {
+  return unit.type ? unitTypeLabel(unit.type) : `${fallbackPrefix} ${unit.code}`;
 }
 
 /**
@@ -81,33 +83,35 @@ function SectionHead({
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { id } = await params;
-  const result = await fetchUnit(id);
-  if (!result.ok) return buildMetadata({ title: 'تفاصيل الوحدة' });
+  const [result, locale] = await Promise.all([fetchUnit(id), getLocale()]);
+  const m = siteT(locale);
+  if (!result.ok) return buildMetadata({ title: m.unitDetail.errorTitle });
 
   const unit = result.data;
   const project = unit.project ? pickAr(unit.project.name) : '';
-  const title = [unitTitle(unit), project].filter(Boolean).join(' · ');
-  const description = `${unitTitle(unit)}${project ? ` ضمن ${project}` : ''} — ${formatArea(unit.area)} · ${formatPrice(unit.price)}.`;
+  const title = [unitTitle(unit, m.unitDetail.projectFallback), project].filter(Boolean).join(' · ');
+  const description = `${unitTitle(unit, m.unitDetail.projectFallback)}${project ? ` ${m.unitDetail.projectPrefix} ${project}` : ''} — ${formatArea(unit.area)} · ${formatPrice(unit.price)}.`;
   const image = unit.coverImage ?? unit.media?.[0]?.url;
   return buildMetadata({ title, description, path: `/units/${id}`, ...(image ? { image } : {}) });
 }
 
 export default async function UnitDetailPage({ params }: { params: Params }) {
   const { id } = await params;
-  const result = await fetchUnit(id);
+  const [result, locale] = await Promise.all([fetchUnit(id), getLocale()]);
+  const m = siteT(locale);
 
   if (!result.ok) {
     if (result.error.status === 404) notFound();
     return (
       <Section tone="canvas" className="pt-36">
         <ErrorState
-          title="تعذر تحميل تفاصيل الوحدة"
-          message="حاول مرة أخرى بعد لحظات، أو تصفح بقية الوحدات."
+          title={m.unitDetail.errorTitle}
+          message={m.unitDetail.errorMsg}
           className="mx-auto max-w-2xl"
         />
         <div className="mt-8 text-center">
           <ButtonLink href={routes.units} variant="outline" size="md">
-            العودة إلى الوحدات
+            {m.unitDetail.backToUnits}
           </ButtonLink>
         </div>
       </Section>
@@ -115,12 +119,13 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
   }
 
   const unit = result.data;
-  const title = unitTitle(unit);
-  const status = STATUS[unit.status] ?? DEFAULT_STATUS;
+  const title = unitTitle(unit, m.unitDetail.projectFallback);
+  const statusLabel = m.unitDetail.status[unit.status as keyof typeof m.unitDetail.status] ?? m.unitDetail.status.AVAILABLE;
+  const status: StatusMeta = { label: statusLabel, tone: STATUS_TONES[unit.status] ?? DEFAULT_STATUS_TONE };
   const projectName = unit.project ? pickAr(unit.project.name) : '';
   const compareItem: CompareItem = {
     id: unit.id,
-    label: [unit.type, projectName].filter(Boolean).join(' · ') || `وحدة ${unit.code}`,
+    label: [unit.type, projectName].filter(Boolean).join(' · ') || `${m.unitDetail.projectFallback} ${unit.code}`,
     price: unit.price,
     coverImage: unit.coverImage,
   };
@@ -141,9 +146,9 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       <ViewTracker event="unit_view" params={{ unit_id: unit.id, unit_status: unit.status }} />
       <JsonLd
         data={breadcrumbLd([
-          { name: 'الرئيسية', path: '/' },
-          { name: 'الوحدات',  path: '/units' },
-          { name: ldName,     path: `/units/${unit.id}` },
+          { name: m.unitDetail.breadHome,  path: '/' },
+          { name: m.unitDetail.breadUnits, path: '/units' },
+          { name: ldName,                  path: `/units/${unit.id}` },
         ])}
       />
       <JsonLd
@@ -160,14 +165,14 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
           {/* Breadcrumb — matches project details page pattern */}
-          <nav aria-label="مسار التنقل" className="mb-5">
+          <nav aria-label={m.unitDetail.breadNav} className="mb-5">
             <ol className="flex items-center gap-1.5 text-sm">
               <li>
                 <Link
                   href={routes.units}
                   className="text-ink-muted transition-colors hover:text-ink-strong focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
                 >
-                  الوحدات
+                  {m.unitDetail.breadUnits}
                 </Link>
               </li>
               <li className="select-none text-ink-muted/40" aria-hidden>/</li>
@@ -238,7 +243,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                     variant="gold"
                     size="md"
                   >
-                    طلب معلومات
+                    {m.unitDetail.ctaInfo}
                   </ButtonLink>
                   <ButtonLink
                     href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route}
@@ -246,7 +251,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                     size="md"
                     className="border-white/25 text-white backdrop-blur-sm hover:border-white/50 hover:bg-white/10"
                   >
-                    طلب زيارة
+                    {m.unitDetail.ctaVisit}
                   </ButtonLink>
                   <CompareToggle item={compareItem} />
                   <ShareButton title={[title, projectName].filter(Boolean).join(' · ')} />
@@ -266,7 +271,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
 
             {/* Unit specifications */}
             <div>
-              <SectionHead label="المواصفات" title="تفاصيل الوحدة" />
+              <SectionHead label={m.unitDetail.specsLabel} title={m.unitDetail.specsTitle} />
               <div className="mt-8">
                 <UnitSpecs unit={unit} />
               </div>
@@ -274,16 +279,16 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
 
             {/* About the unit */}
             <div>
-              <SectionHead label="نبذة" title="عن الوحدة" />
+              <SectionHead label={m.unitDetail.aboutLabel} title={m.unitDetail.aboutTitle} />
               <p className="mt-6 text-lg leading-loose text-ink-muted">
-                وحدة مختارة بعناية ضمن مشروع مميز، صُممت لتمنحك توازنًا بين الراحة والقيمة والموقع.
+                {m.unitDetail.aboutDefault}
               </p>
             </div>
 
             {/* Project relation — premium card matching the page's design language */}
             {unit.project && (
               <div>
-                <SectionHead label="المشروع" title="ضمن مشروع" />
+                <SectionHead label={m.unitDetail.projectLabel} title={m.unitDetail.projectPrefix} />
                 <div className="mt-8 overflow-hidden rounded-3xl border border-hairline bg-surface shadow-card">
                   {/* Gold accent stripe */}
                   <div
@@ -300,7 +305,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                         </span>
                         <div>
                           <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-gold-500">
-                            مشروع
+                            {m.unitDetail.projectFallback}
                           </p>
                           <h3 className="mt-0.5 text-lg font-bold text-ink-strong">
                             {projectName}
@@ -319,14 +324,14 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                           variant="primary"
                           size="sm"
                         >
-                          عرض المشروع
+                          {m.unitDetail.viewProject}
                         </ButtonLink>
                         <ButtonLink
                           href={`${routes.units}?projectId=${unit.project.id}` as Route}
                           variant="outline"
                           size="sm"
                         >
-                          وحدات المشروع
+                          {m.unitDetail.relatedLabel}
                         </ButtonLink>
                       </div>
                     </div>
@@ -337,7 +342,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
 
             {/* Floor plan */}
             <div>
-              <SectionHead label="المخطط" title="مخطط الوحدة" />
+              <SectionHead label={m.unitDetail.relatedTitle} title={m.unitDetail.floorplanTitle} />
               <PremiumCard className="mt-8 overflow-hidden">
                 {/* Blueprint-style graphic */}
                 <div
@@ -359,14 +364,14 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 </div>
                 <div className="flex flex-col items-center gap-4 p-7 text-center sm:flex-row sm:justify-between sm:text-start">
                   <p className="text-ink-muted">
-                    المخطط التفصيلي متاح عند الطلب — تواصل معنا للحصول عليه.
+                    {m.unitDetail.floorplanEmpty}
                   </p>
                   <ButtonLink
                     href={`${routes.contact}?unitId=${unit.id}` as Route}
                     variant="outline"
                     size="sm"
                   >
-                    اطلب المخطط
+                    {m.unitDetail.floorplanCta}
                   </ButtonLink>
                 </div>
               </PremiumCard>
@@ -381,6 +386,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
                 price={unit.price}
                 unitCode={unit.code}
                 projectName={unit.project ? pickAr(unit.project.name) : ''}
+                locale={locale}
               />
             </div>
           </aside>
@@ -391,13 +397,13 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
       {unit.project && similarUnits.length > 0 && (
         <Section tone="soft">
           <div className="flex flex-wrap items-end justify-between gap-4">
-            <SectionHead label="وحدات ذات صلة" title="وحدات أخرى في المشروع" />
-            {/* Premium gold text-link — matches project page "عرض كل الوحدات" */}
+            <SectionHead label={m.unitDetail.moreUnitsLabel} title={m.unitDetail.moreUnitsTitle} />
+            {/* Premium gold text-link — matches project page */}
             <Link
               href={`${routes.units}?projectId=${unit.project.id}` as Route}
               className="group mb-0.5 flex shrink-0 items-center gap-2 text-sm font-medium text-gold-600 transition-colors hover:text-gold-700"
             >
-              عرض كل الوحدات
+              {m.unitDetail.viewAllUnits}
               <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gold-200 bg-gold-50 transition-colors group-hover:border-gold-300 group-hover:bg-gold-100">
                 <ArrowLeft className="h-3.5 w-3.5" />
               </span>
@@ -415,13 +421,13 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
         </Section>
       )}
 
-      <CtaBand eyebrow="خطوتك التالية" title="هل ترغب في معاينة هذه الوحدة؟">
+      <CtaBand eyebrow={m.unitDetail.ctaBandTitle} title={m.unitDetail.ctaBandSub}>
         <ButtonLink
           href={`${routes.contact}?type=visit&unitId=${unit.id}` as Route}
           variant="gold"
           size="lg"
         >
-          طلب زيارة
+          {m.unitDetail.ctaVisit}
         </ButtonLink>
         <ButtonLink
           href={`${routes.contact}?unitId=${unit.id}` as Route}
@@ -429,7 +435,7 @@ export default async function UnitDetailPage({ params }: { params: Params }) {
           size="lg"
           className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
         >
-          تواصل مع مستشار
+          {m.unitDetail.ctaBandCta}
         </ButtonLink>
       </CtaBand>
 

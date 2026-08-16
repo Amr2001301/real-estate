@@ -38,8 +38,8 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={toggle}
-      aria-label={theme === 'dark' ? 'التبديل إلى الوضع الفاتح' : 'التبديل إلى الوضع الداكن'}
-      title={theme === 'dark' ? 'الوضع الفاتح' : 'الوضع الداكن'}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
       className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-slate-400/70 transition-colors duration-150 hover:bg-slate-100/70 hover:text-slate-600 dark:hover:bg-white/[0.06] dark:hover:text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/45"
     >
       {theme === 'dark' ? (

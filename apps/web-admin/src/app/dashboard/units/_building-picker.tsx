@@ -4,6 +4,8 @@ import { useEffect, useState, useTransition } from 'react';
 import type { Phase, Project } from '@/lib/types';
 import { Field } from '@/components/form/field';
 import { Select } from '@/components/ui/select';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { getProjectPhasesAction } from './actions';
 
 interface Props {
@@ -14,6 +16,7 @@ interface Props {
   initialPhaseId?: string;
   /** Prepopulate for the edit case — pass from unit.buildingId */
   initialBuildingId?: string;
+  locale?: Locale;
 }
 
 export function BuildingPicker({
@@ -21,7 +24,9 @@ export function BuildingPicker({
   initialProjectId = '',
   initialPhaseId = '',
   initialBuildingId = '',
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.buildingPicker;
   const [projectId, setProjectId] = useState(initialProjectId);
   const [phaseId, setPhaseId] = useState(initialPhaseId);
   const [buildingId, setBuildingId] = useState(initialBuildingId);
@@ -58,13 +63,13 @@ export function BuildingPicker({
       <input type="hidden" name="buildingId" value={buildingId} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Field label="المشروع" name="project" required>
+        <Field label={m.fieldProject} name="project" required>
           <Select
             id="project"
             value={projectId}
             onChange={(e) => handleProjectChange(e.target.value)}
           >
-            <option value="">اختر مشروعًا…</option>
+            <option value="">{m.placeholderProject}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name?.ar ?? p.name?.en ?? p.city}
@@ -73,7 +78,7 @@ export function BuildingPicker({
           </Select>
         </Field>
 
-        <Field label="المرحلة" name="phase" required>
+        <Field label={m.fieldPhase} name="phase" required>
           <Select
             id="phase"
             value={phaseId}
@@ -85,10 +90,10 @@ export function BuildingPicker({
           >
             <option value="">
               {isPending
-                ? 'جارٍ التحميل…'
+                ? m.loadingPhases
                 : phases.length === 0 && projectId
-                  ? 'لا توجد مراحل'
-                  : 'اختر مرحلة…'}
+                  ? m.noPhasesOption
+                  : m.placeholderPhase}
             </option>
             {phases.map((ph) => (
               <option key={ph.id} value={ph.id}>
@@ -98,12 +103,12 @@ export function BuildingPicker({
           </Select>
           {phases.length === 0 && projectId && !isPending && (
             <p className="mt-1 text-xs text-slate-500">
-              لا توجد مراحل لهذا المشروع. أضفها من صفحة المشروع أولاً.
+              {m.noPhasesHint}
             </p>
           )}
         </Field>
 
-        <Field label="المبنى" name="buildingId" required>
+        <Field label={m.fieldBuilding} name="buildingId" required>
           <Select
             id="buildingId"
             value={buildingId}
@@ -111,17 +116,17 @@ export function BuildingPicker({
             disabled={!phaseId}
           >
             <option value="">
-              {buildings.length === 0 && phaseId ? 'لا توجد مبانٍ' : 'اختر مبنى…'}
+              {buildings.length === 0 && phaseId ? m.noBuildingsOption : m.placeholderBuilding}
             </option>
             {buildings.map((b) => (
               <option key={b.id} value={b.id}>
-                مبنى {b.name}
+                {m.buildingLabel(b.name)}
               </option>
             ))}
           </Select>
           {buildings.length === 0 && phaseId && (
             <p className="mt-1 text-xs text-slate-500">
-              لا توجد مبانٍ لهذه المرحلة. أضفها من صفحة المشروع أولاً.
+              {m.noBuildingsHint}
             </p>
           )}
         </Field>
@@ -129,8 +134,7 @@ export function BuildingPicker({
 
       {!projectId && (
         <p className="text-xs text-slate-500">
-          يجب اختيار المشروع، ثم المرحلة، ثم المبنى. إذا لم تكن لديك مراحل أو مبانٍ بعد، يمكنك
-          إنشاؤها من صفحة المشروع.
+          {m.projectFirstHint}
         </p>
       )}
     </div>

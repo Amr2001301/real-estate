@@ -22,6 +22,8 @@ import type {
 } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { ExportMenu } from '@/components/export-menu';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
@@ -55,21 +57,13 @@ interface MonthlyTrendBucket {
   payoutsNet: string;
 }
 
-// ── Constants ─────────────────────────────────────────────────────────────────
-const METRIC_LABEL: Record<string, string> = {
-  leads:         'فرص',
-  reservations:  'حجوزات',
-  contracts:     'عقود',
-  salesGross:    'إجمالي المبيعات',
-  commissionNet: 'صافي العمولات',
-  payoutNet:     'صافي المدفوعات',
-};
-
 const AR_MONTHS = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+const EN_MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function shortMonth(label: string): string {
+function shortMonth(label: string, locale: string): string {
   const mm = parseInt(label.split('-')[1] ?? '1', 10) - 1;
-  return (AR_MONTHS[mm] ?? label).slice(0, 3);
+  const months = locale === 'ar' ? AR_MONTHS : EN_MONTHS;
+  return (months[mm] ?? label).slice(0, 3);
 }
 
 
@@ -80,6 +74,8 @@ export default async function AdminBrokerReportsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerReportsPage;
   const currency = await getReportsCurrency();
 
   const summaryQs = new URLSearchParams();
@@ -120,18 +116,17 @@ export default async function AdminBrokerReportsPage({
   const realizationRate = commissionsNet > 0 ? Math.min(payoutsPaidNet / commissionsNet, 1) : 0;
 
   // ── Monthly trend derived ─────────────────────────────────────────────────
-  const maxContracts   = trend.reduce((m, b) => Math.max(m, b.contractsSigned), 0);
-  const totalTrendContracts = trend.reduce((s, b) => s + b.contractsSigned, 0);
+  const totalTrendContracts = trend.reduce((acc, b) => acc + b.contractsSigned, 0);
 
   // ── Funnel stages ─────────────────────────────────────────────────────────
   const funnelStages: FunnelStage[] = s ? (() => {
     const raw = [
-      { label: 'فرص مُرسلة',   value: s.leadsSubmitted,      color: 'bg-brand-500',   bg: 'bg-brand-100',   text: 'text-brand-700',   dot: 'bg-brand-500' },
-      { label: 'فرص معتمدة',   value: s.leadsApproved,       color: 'bg-sky-500',     bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
-      { label: 'حجوزات',       value: s.reservationsCreated, color: 'bg-violet-500',  bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500' },
-      { label: 'عقود',         value: s.contractsCreated,    color: 'bg-amber-500',   bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500' },
-      { label: 'عقود موقّعة',  value: s.contractsSigned,     color: 'bg-emerald-500', bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-      { label: 'دفعات مُنجزة', value: s.payoutsPaid,         color: 'bg-teal-500',    bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500' },
+      { label: m.funnelStageLeadsSubmitted,  value: s.leadsSubmitted,      color: 'bg-brand-500',   bg: 'bg-brand-100',   text: 'text-brand-700',   dot: 'bg-brand-500' },
+      { label: m.funnelStageLeadsApproved,   value: s.leadsApproved,       color: 'bg-sky-500',     bg: 'bg-sky-100',     text: 'text-sky-700',     dot: 'bg-sky-500' },
+      { label: m.funnelStageReservations,    value: s.reservationsCreated, color: 'bg-violet-500',  bg: 'bg-violet-100',  text: 'text-violet-700',  dot: 'bg-violet-500' },
+      { label: m.funnelStageContracts,       value: s.contractsCreated,    color: 'bg-amber-500',   bg: 'bg-amber-100',   text: 'text-amber-700',   dot: 'bg-amber-500' },
+      { label: m.funnelStageContractsSigned, value: s.contractsSigned,     color: 'bg-emerald-500', bg: 'bg-emerald-100', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+      { label: m.funnelStagePayoutsPaid,     value: s.payoutsPaid,         color: 'bg-teal-500',    bg: 'bg-teal-100',    text: 'text-teal-700',    dot: 'bg-teal-500' },
     ];
     const first = raw[0]?.value ?? 1;
     return raw.map((r, i) => ({
@@ -158,24 +153,24 @@ export default async function AdminBrokerReportsPage({
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="تقارير الوسطاء"
-        description="أداء الوسطاء، التحويلات، تحليل المبيعات والعمولات، وترتيب المشاريع."
+        title={m.heroTitle}
+        description={m.heroDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'تقارير الوسطاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
+          { label: m.breadcrumbSelf },
         ]}
         actions={
           <div className="flex items-center gap-2">
             <ExportMenu
-              label="تصدير الملخص"
+              label={m.exportSummaryBtn}
               xlsxPath="/broker-reports/export/summary.xlsx"
               csvPath="/broker-reports/export/summary.csv"
               filenameBase="broker-summary"
               params={{ brokerId: sp.brokerId, projectId: sp.projectId, from: sp.from, to: sp.to }}
             />
             <ExportMenu
-              label="تصدير أعلى الوسطاء"
+              label={m.exportTopBrokersBtn}
               xlsxPath="/broker-reports/export/top-brokers.xlsx"
               csvPath="/broker-reports/export/top-brokers.csv"
               filenameBase="top-brokers"
@@ -187,7 +182,7 @@ export default async function AdminBrokerReportsPage({
 
       {anyError && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل بعض البيانات: {anyError}
+          {m.errorLoad}{anyError}
         </div>
       )}
 
@@ -197,42 +192,42 @@ export default async function AdminBrokerReportsPage({
         action="/dashboard/broker-reports"
         trailing={
           <>
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{m.filterBtn}</Button>
             {hasFilter && (
               <Link href="/dashboard/broker-reports">
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{m.clearBtn}</Button>
               </Link>
             )}
           </>
         }
       >
-        <PremiumFilterField label="الوسيط" htmlFor="br-broker">
+        <PremiumFilterField label={m.filterBroker} htmlFor="br-broker">
           <Select id="br-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44">
-            <option value="">كل الوسطاء</option>
+            <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="المشروع" htmlFor="br-project">
+        <PremiumFilterField label={m.filterProject} htmlFor="br-project">
           <Select id="br-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''} className="w-40">
-            <option value="">كل المشاريع</option>
+            <option value="">{m.filterAllProjects}</option>
             {projList.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="ترتيب حسب" htmlFor="br-metric">
+        <PremiumFilterField label={m.filterRankBy} htmlFor="br-metric">
           <Select id="br-metric" name="metric" inputSize="sm" defaultValue={sp.metric ?? 'salesGross'} className="w-48">
-            {Object.entries(METRIC_LABEL).map(([v, l]) => (
+            {Object.entries(m.metricLabels).map(([v, l]) => (
               <option key={v} value={v}>{l}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="من" htmlFor="br-from">
+        <PremiumFilterField label={m.filterFrom} htmlFor="br-from">
           <Input id="br-from" name="from" inputSize="sm" type="date" defaultValue={sp.from ?? ''} className="w-36" />
         </PremiumFilterField>
-        <PremiumFilterField label="إلى" htmlFor="br-to">
+        <PremiumFilterField label={m.filterTo} htmlFor="br-to">
           <Input id="br-to" name="to" inputSize="sm" type="date" defaultValue={sp.to ?? ''} className="w-36" />
         </PremiumFilterField>
       </PremiumFilterBar>
@@ -243,40 +238,40 @@ export default async function AdminBrokerReportsPage({
           cols={5}
           metrics={[
             {
-              label:     'إجمالي المبيعات',
+              label:     m.metricTotalSales,
               value:     formatCurrency(s.salesGross, currency),
               icon:      <Wallet />,
               tone:      'brand',
               primary:   true,
-              sub:       `${s.contractsSigned} عقد موقّع`,
+              sub:       m.metricTotalSalesSub(s.contractsSigned),
               valueSize: 'compact',
             },
             {
-              label:     'صافي العمولات',
+              label:     m.metricCommissionsNet,
               value:     formatCurrency(s.commissionsNet, currency),
               icon:      <BadgePercent />,
               tone:      'success',
-              sub:       `${s.commissionsApproved} عمولة معتمدة`,
+              sub:       m.metricCommissionsNetSub(s.commissionsApproved),
               valueSize: 'compact',
             },
             {
-              label:     'المدفوع للوسطاء',
+              label:     m.metricPayoutsPaid,
               value:     formatCurrency(s.payoutsTotalNet, currency),
               icon:      <CircleDollarSign />,
               tone:      'purple',
-              sub:       `${s.payoutsPaid} دفعة مكتملة`,
+              sub:       m.metricPayoutsPaidSub(s.payoutsPaid),
               valueSize: 'compact',
             },
             {
-              label:     'قيد الصرف',
+              label:     m.metricPendingPayout,
               value:     pendingPayout > 0 ? formatCurrency(pendingPayout, currency) : '—',
               icon:      <TrendingUp />,
               tone:      pendingPayout > 0 ? 'warning' : 'neutral',
-              sub:       `${(realizationRate * 100).toFixed(0)}% محصّل`,
+              sub:       m.metricPendingPayoutSub((realizationRate * 100).toFixed(0)),
               valueSize: 'compact',
             },
             {
-              label:     'أعلى وسيط',
+              label:     m.metricTopBroker,
               value:     topBroker?.companyName ?? '—',
               icon:      <Trophy />,
               tone:      'neutral',
@@ -296,13 +291,13 @@ export default async function AdminBrokerReportsPage({
         {s ? (
           <div className="space-y-5">
             <PremiumSectionCard
-              title="الاتجاه الشهري للعمولات"
-              description="العمولات المعتمدة مقابل المدفوع آخر 6 أشهر"
+              title={m.chartTrendTitle}
+              description={m.chartTrendDesc}
               icon={<BarChart3 />}
               trailing={
                 <div className="text-end">
                   <p className="text-[13px] font-black tabular-nums text-slate-900 leading-none">
-                    {totalTrendContracts.toLocaleString('ar-EG')} عقد
+                    {totalTrendContracts.toLocaleString('ar-EG')} {m.chartTrendContractSuffix}
                   </p>
                   <p className="text-[11px] text-slate-400 mt-0.5" dir="ltr">
                     {formatCurrency(trend.reduce((acc, b) => acc + Number(b.commissionsNet), 0), currency)}
@@ -313,34 +308,44 @@ export default async function AdminBrokerReportsPage({
               <div className="h-[230px]">
                 <BrokerTrendChart
                   data={trend.map((b) => ({
-                    label: shortMonth(b.label),
+                    label: shortMonth(b.label, locale),
                     commissionsNet: Number(b.commissionsNet),
                     payoutsNet: Number(b.payoutsNet),
                     contractsSigned: b.contractsSigned,
                   }))}
                   height={230}
                   currency={currency}
+                  locale={locale}
+                  tooltipContracts={m.tooltipContracts}
+                  tooltipCommissions={m.tooltipCommissions}
+                  tooltipPayouts={m.tooltipPayouts}
+                  noDataLabel={m.chartNoCommissions}
                 />
               </div>
               <div className="flex items-center gap-5 mt-3 pt-3 border-t border-hairline">
                 <div className="flex items-center gap-1.5">
                   <span className="h-2.5 w-5 rounded-sm bg-amber-300 inline-block" />
-                  <span className="text-[10px] text-slate-400">العمولات المعتمدة</span>
+                  <span className="text-[10px] text-slate-400">{m.legendCommissions}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="h-2.5 w-5 rounded-sm bg-emerald-400 inline-block" />
-                  <span className="text-[10px] text-slate-400">المدفوع للوسطاء</span>
+                  <span className="text-[10px] text-slate-400">{m.legendPayouts}</span>
                 </div>
-                <span className="text-[10px] text-slate-300 ms-auto">الأرقام = عقود موقّعة</span>
+                <span className="text-[10px] text-slate-300 ms-auto">{m.legendContractNote}</span>
               </div>
             </PremiumSectionCard>
 
             <PremiumSectionCard
-              title="قمع التحويل"
-              description="من الفرصة إلى الدفعة المُنجزة"
+              title={m.chartFunnelTitle}
+              description={m.chartFunnelDesc}
               icon={<TrendingUp />}
             >
-              <BrokerFunnelChart stages={funnelStages} overallConv={overallConv} />
+              <BrokerFunnelChart
+                stages={funnelStages}
+                overallConv={overallConv}
+                overallLabel={m.funnelOverallLabel}
+                noDataLabel={m.chartNoData}
+              />
             </PremiumSectionCard>
           </div>
         ) : (
@@ -352,13 +357,13 @@ export default async function AdminBrokerReportsPage({
 
           {/* Top Brokers */}
           <PremiumSectionCard
-            title="أعلى الوسطاء أداءً"
-            description={`مرتبون حسب: ${METRIC_LABEL[sp.metric ?? 'salesGross']}`}
+            title={m.sectionTopBrokersTitle}
+            description={m.sectionTopBrokersDesc(m.metricLabels[sp.metric ?? 'salesGross'] ?? '')}
             icon={<TrendingUp />}
             trailing={
               (top?.data.length ?? 0) > 0 ? (
                 <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
-                  {top?.data.length} وسيط
+                  {top?.data.length} {m.sectionTopBrokersBrokerSuffix}
                 </span>
               ) : undefined
             }
@@ -366,7 +371,7 @@ export default async function AdminBrokerReportsPage({
           >
             {(top?.data ?? []).length === 0 ? (
               <div className="p-6">
-                <EmptyState icon={<Briefcase />} title="لا توجد بيانات" description="لا توجد عمولات في النطاق المختار." />
+                <EmptyState icon={<Briefcase />} title={m.noTopBrokersTitle} description={m.noTopBrokersDesc} />
               </div>
             ) : (
               <div className="divide-y divide-hairline">
@@ -390,7 +395,7 @@ export default async function AdminBrokerReportsPage({
                               style={{ width: `${barW}%` }}
                             />
                           </div>
-                          <span className="text-[10px] text-slate-400">{r.contractsSigned} عقد</span>
+                          <span className="text-[10px] text-slate-400">{r.contractsSigned} {m.brokerContractSuffix}</span>
                           <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md" dir="ltr">
                             {r.code}
                           </span>
@@ -401,7 +406,7 @@ export default async function AdminBrokerReportsPage({
                           {formatCurrency(r.salesGross, currency)}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                          عمولة: {formatCurrency(r.commissionNet, currency)}
+                          {m.brokerCommissionLabel}{formatCurrency(r.commissionNet, currency)}
                         </p>
                       </div>
                     </div>
@@ -413,13 +418,13 @@ export default async function AdminBrokerReportsPage({
 
           {/* Project Performance */}
           <PremiumSectionCard
-            title="أداء المشاريع"
-            description="مرتبة حسب إجمالي المبيعات"
+            title={m.sectionProjectsTitle}
+            description={m.sectionProjectsDesc}
             icon={<BarChart3 />}
             trailing={
               projects.length > 0 ? (
                 <span className="inline-flex items-center rounded-lg bg-canvas px-2.5 py-1 text-[11px] font-semibold text-slate-500 ring-1 ring-inset ring-hairline">
-                  {projects.length} مشروع
+                  {projects.length} {m.sectionProjectsSuffix}
                 </span>
               ) : undefined
             }
@@ -427,7 +432,7 @@ export default async function AdminBrokerReportsPage({
           >
             {projects.length === 0 ? (
               <div className="p-6">
-                <EmptyState icon={<BarChart3 />} title="لا توجد بيانات" description="ستظهر هنا عند وجود عمولات على أي مشروع." />
+                <EmptyState icon={<BarChart3 />} title={m.noProjectsTitle} description={m.noProjectsDesc} />
               </div>
             ) : (
               <div className="divide-y divide-hairline">
@@ -452,7 +457,7 @@ export default async function AdminBrokerReportsPage({
                               style={{ width: `${barW}%` }}
                             />
                           </div>
-                          <span className="text-[10px] text-slate-400">{p.contractsSigned}/{p.contracts} عقد</span>
+                          <span className="text-[10px] text-slate-400">{p.contractsSigned}/{p.contracts} {m.projectContractSuffix}</span>
                           {p.city && (
                             <span className="text-[10px] text-slate-400 truncate max-w-[50px]">{p.city}</span>
                           )}
@@ -463,7 +468,7 @@ export default async function AdminBrokerReportsPage({
                           {formatCurrency(p.salesGross, currency)}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5" dir="ltr">
-                          عمولة: {formatCurrency(p.commissionNet, currency)}
+                          {m.projectCommissionLabel}{formatCurrency(p.commissionNet, currency)}
                         </p>
                       </div>
                     </div>

@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Field } from '@/components/form/field';
 import { updateReservationAction } from '../../actions';
 import { salesActorLabel } from '@/lib/sales-actor';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 interface SalesUser {
   id: string;
@@ -22,6 +24,7 @@ interface Props {
   currentSalesId: string;
   currentNotes: string | null;
   salesOptions: SalesUser[];
+  locale?: Locale;
 }
 
 export function EditReservationDialog({
@@ -31,7 +34,9 @@ export function EditReservationDialog({
   currentSalesId,
   currentNotes,
   salesOptions,
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.reservationDetailPage;
   const [pending, startTransition] = useTransition();
   const [salesId, setSalesId] = useState(currentSalesId);
   const [expiresInHours, setExpiresInHours] = useState('');
@@ -46,7 +51,7 @@ export function EditReservationDialog({
     if (notes !== (currentNotes ?? '')) fd.set('notes', notes);
 
     if (![...fd.keys()].length) {
-      setError('لا يوجد تعديل لحفظه');
+      setError(m.editNoChangeError);
       return;
     }
 
@@ -66,22 +71,22 @@ export function EditReservationDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="تعديل الحجز"
-      description="يمكن تعديل المندوب وصلاحية الحجز والملاحظات أثناء حالة قيد المراجعة فقط."
+      title={m.editDialogTitle}
+      description={m.editDialogDesc}
       size="md"
       footer={
         <>
           <Button variant="outline" size="sm" onClick={onClose} disabled={pending}>
-            إلغاء
+            {m.editCancelBtn}
           </Button>
           <Button variant="primary" size="sm" loading={pending} onClick={handleSubmit}>
-            حفظ التعديلات
+            {m.editSaveBtn}
           </Button>
         </>
       }
     >
       <div className="flex flex-col gap-4">
-        <Field label="المندوب المسؤول" name="salesId">
+        <Field label={m.editSalesLabel} name="salesId">
           <Select
             name="salesId"
             value={salesId}
@@ -97,9 +102,9 @@ export function EditReservationDialog({
         </Field>
 
         <Field
-          label="تمديد الصلاحية"
+          label={m.editExpiryLabel}
           name="expiresInHours"
-          hint="اختر مدة جديدة محسوبة من الآن. اتركها فارغة لعدم التغيير."
+          hint={m.editExpiryHint}
         >
           <Select
             name="expiresInHours"
@@ -107,23 +112,23 @@ export function EditReservationDialog({
             onChange={(e) => setExpiresInHours(e.target.value)}
             disabled={pending}
           >
-            <option value="">— بدون تغيير —</option>
-            <option value="24">24 ساعة (يوم)</option>
-            <option value="48">48 ساعة (يومان)</option>
-            <option value="72">72 ساعة (3 أيام)</option>
-            <option value="120">120 ساعة (5 أيام)</option>
-            <option value="168">168 ساعة (أسبوع)</option>
-            <option value="336">336 ساعة (أسبوعان)</option>
+            <option value="">{m.editExpiryNoChange}</option>
+            <option value="24">{m.editHour24}</option>
+            <option value="48">{m.editHour48}</option>
+            <option value="72">{m.editHour72}</option>
+            <option value="120">{m.editHour120}</option>
+            <option value="168">{m.editHour168}</option>
+            <option value="336">{m.editHour336}</option>
           </Select>
         </Field>
 
-        <Field label="ملاحظات داخلية" name="notes">
+        <Field label={m.editNotesLabel} name="notes">
           <Textarea
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             disabled={pending}
-            placeholder="ملاحظات الحجز…"
+            placeholder={m.editNotesPH}
           />
         </Field>
 

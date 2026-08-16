@@ -7,6 +7,8 @@ import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
 import { pickAr, formatNumber } from '@/lib/format';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import type { PublicProjectDetail, Paginated, PublicUnit } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Section } from '@/components/ui/Section';
@@ -34,17 +36,8 @@ const REVALIDATE = 60;
 
 type Params = Promise<{ id: string }>;
 
-const PROJECT_STATUS_LABELS: Record<string, string> = {
-  ACTIVE: 'متاح',
-  PUBLISHED: 'متاح',
-  SOLD_OUT: 'مكتمل البيع',
-  UNDER_CONSTRUCTION: 'قيد الإنشاء',
-  UPCOMING: 'قريبًا',
-  COMPLETED: 'مكتمل',
-};
-
-function projectStatusLabel(status: string): string {
-  return PROJECT_STATUS_LABELS[status] ?? status;
+function projectStatusLabel(status: string, labels: Record<string, string>): string {
+  return labels[status] ?? status;
 }
 
 /**
@@ -113,11 +106,12 @@ function fetchProjectUnits(id: string) {
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { id } = await params;
-  const result = await fetchProject(id);
+  const [result, locale] = await Promise.all([fetchProject(id), getLocale()]);
+  const m = siteT(locale);
   if (!result.ok) {
-    return buildMetadata({ title: 'تفاصيل المشروع' });
+    return buildMetadata({ title: m.projectDetail.errorTitle });
   }
-  const name = pickAr(result.data.name, 'مشروع');
+  const name = pickAr(result.data.name, m.projectDetail.breadProjects);
   const description = pickAr(result.data.description) || undefined;
   const image = result.data.media?.[0]?.url;
   return buildMetadata({
@@ -130,7 +124,8 @@ export async function generateMetadata({ params }: { params: Params }) {
 
 export default async function ProjectDetailPage({ params }: { params: Params }) {
   const { id } = await params;
-  const result = await fetchProject(id);
+  const [result, locale] = await Promise.all([fetchProject(id), getLocale()]);
+  const m = siteT(locale);
 
   // 404 → dedicated not-found page; other failures → friendly inline error.
   if (!result.ok) {
@@ -138,13 +133,13 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
     return (
       <Section tone="canvas" className="pt-36">
         <ErrorState
-          title="تعذر تحميل تفاصيل المشروع"
-          message="حاول مرة أخرى بعد لحظات، أو تصفح بقية المشاريع."
+          title={m.projectDetail.errorTitle}
+          message={m.projectDetail.errorMsg}
           className="mx-auto max-w-2xl"
         />
         <div className="mt-8 text-center">
           <ButtonLink href={routes.projects} variant="outline" size="md">
-            العودة إلى المشاريع
+            {m.projectDetail.backToProjects}
           </ButtonLink>
         </div>
       </Section>
@@ -152,7 +147,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
   }
 
   const project = result.data;
-  const name = pickAr(project.name, 'مشروع');
+  const name = pickAr(project.name, m.projectDetail.breadProjects);
   const description = pickAr(project.description);
   const hasCoords = project.lat !== 0 || project.lng !== 0;
 
@@ -165,8 +160,8 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
       <ViewTracker event="project_view" params={{ project_id: project.id, city: project.city }} />
       <JsonLd
         data={breadcrumbLd([
-          { name: 'الرئيسية', path: '/' },
-          { name: 'المشاريع', path: '/projects' },
+          { name: m.projectDetail.breadHome, path: '/' },
+          { name: m.projectDetail.breadProjects, path: '/projects' },
           { name, path: `/projects/${project.id}` },
         ])}
       />
@@ -186,14 +181,14 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
       <section className="bg-canvas pt-24 sm:pt-28">
         <Container>
           {/* Breadcrumb */}
-          <nav aria-label="مسار التنقل" className="mb-5">
+          <nav aria-label={m.projectDetail.breadNav} className="mb-5">
             <ol className="flex items-center gap-1.5 text-sm">
               <li>
                 <Link
                   href={routes.projects}
                   className="text-ink-muted transition-colors hover:text-ink-strong focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-400/50 focus-visible:ring-offset-2"
                 >
-                  المشاريع
+                  {m.projectDetail.breadProjects}
                 </Link>
               </li>
               <li className="select-none text-ink-muted/40" aria-hidden>/</li>
@@ -220,7 +215,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                       className="shadow-[0_2px_10px_rgba(200,162,75,0.40)]"
                     >
                       <Star className="h-3 w-3" aria-hidden />
-                      مشروع مميز
+                      {m.projectDetail.featured}
                     </Badge>
                   </div>
                 )}
@@ -242,9 +237,9 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                       {project.city}
                     </span>
                   )}
-                  {project.status && PROJECT_STATUS_LABELS[project.status] && (
+                  {project.status && m.projectDetail.status[project.status as keyof typeof m.projectDetail.status] && (
                     <span className="inline-flex items-center rounded-full bg-black/30 px-3 py-1 text-xs font-medium text-white/80 backdrop-blur-md ring-1 ring-white/10">
-                      {PROJECT_STATUS_LABELS[project.status]}
+                      {m.projectDetail.status[project.status as keyof typeof m.projectDetail.status]}
                     </span>
                   )}
                 </div>
@@ -256,7 +251,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                     variant="gold"
                     size="md"
                   >
-                    طلب معلومات
+                    {m.projectDetail.ctaInfo}
                   </ButtonLink>
                   <ButtonLink
                     href={`${routes.contact}?type=visit&projectId=${project.id}` as Route}
@@ -264,7 +259,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                     size="md"
                     className="border-white/25 text-white backdrop-blur-sm hover:border-white/50 hover:bg-white/10"
                   >
-                    طلب زيارة
+                    {m.projectDetail.ctaVisit}
                   </ButtonLink>
                   <ShareButton title={name} />
                 </div>
@@ -284,11 +279,11 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
 
             {/* About */}
             <div>
-              <SectionHead label="نظرة عامة" title="عن المشروع" />
+              <SectionHead label={m.projectDetail.overviewLabel} title={m.projectDetail.aboutTitle} />
               {description ? (
                 <p className="mt-6 text-lg leading-loose text-ink-muted">{description}</p>
               ) : (
-                <p className="mt-6 text-ink-muted">سيتم إضافة وصف تفصيلي لهذا المشروع قريبًا.</p>
+                <p className="mt-6 text-ink-muted">{m.projectDetail.aboutEmpty}</p>
               )}
             </div>
 
@@ -299,14 +294,14 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                 sticky and visible while the buyer browses units. */}
             <div>
               <div className="flex flex-wrap items-end justify-between gap-4">
-                <SectionHead label="وحدات المشروع" title="الوحدات المتاحة" />
+                <SectionHead label={m.projectDetail.unitsLabel} title={m.projectDetail.unitsTitle} />
 
                 {/* Premium text-link style — not a plain outline button */}
                 <Link
                   href={`${routes.units}?projectId=${project.id}` as Route}
                   className="group mb-0.5 flex shrink-0 items-center gap-2 text-sm font-medium text-gold-600 transition-colors hover:text-gold-700"
                 >
-                  عرض كل الوحدات
+                  {m.projectDetail.viewAllUnits}
                   <span className="flex h-7 w-7 items-center justify-center rounded-full border border-gold-200 bg-gold-50 transition-colors group-hover:border-gold-300 group-hover:bg-gold-100">
                     <ArrowLeft className="h-3.5 w-3.5" />
                   </span>
@@ -316,7 +311,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
               {!unitsResult.ok ? (
                 <div className="mt-8">
                   <InlineNotice tone="warning">
-                    تعذر تحميل وحدات المشروع حاليًا، يمكنك استعراضها من صفحة الوحدات.
+                    {m.projectDetail.unitsError}
                   </InlineNotice>
                 </div>
               ) : previewUnits.length === 0 ? (
@@ -326,8 +321,8 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                       <Home className="h-6 w-6" aria-hidden />
                     </IconCircle>
                     <div>
-                      <h3 className="text-base font-semibold text-ink-strong">لا توجد وحدات متاحة لهذا المشروع حاليًا</h3>
-                      <p className="mt-1 text-sm text-ink-muted">تواصل مع مستشار لمعرفة أحدث الإتاحات.</p>
+                      <h3 className="text-base font-semibold text-ink-strong">{m.projectDetail.unitsEmpty}</h3>
+                      <p className="mt-1 text-sm text-ink-muted">{m.projectDetail.unitsEmptyMsg}</p>
                     </div>
                   </div>
                   <ButtonLink
@@ -336,7 +331,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
                     size="md"
                     className="w-full shrink-0 sm:w-auto"
                   >
-                    تواصل مع مستشار
+                    {m.projectDetail.unitsAdvisor}
                   </ButtonLink>
                 </div>
               ) : (
@@ -366,7 +361,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
 
             {/* FAQ */}
             <div>
-              <SectionHead label="الأسئلة الشائعة" title="إجابات سريعة قد تهمّك" />
+              <SectionHead label={m.projectDetail.faqLabel} title={m.projectDetail.faqTitle} />
               <div className="mt-8">
                 <Accordion items={projectFaq(name)} defaultOpenFirst />
               </div>
@@ -388,9 +383,9 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
         </div>
       </Section>
 
-      <CtaBand eyebrow="خطوتك التالية" title="هل ترغب في معرفة المزيد عن هذا المشروع؟">
+      <CtaBand eyebrow={m.projectDetail.ctaBandTitle} title={m.projectDetail.ctaBandSub}>
         <ButtonLink href={`${routes.contact}?projectId=${project.id}` as Route} variant="gold" size="lg">
-          تواصل مع مستشار
+          {m.projectDetail.unitsAdvisor}
         </ButtonLink>
         <ButtonLink
           href={`${routes.units}?projectId=${project.id}` as Route}
@@ -398,7 +393,7 @@ export default async function ProjectDetailPage({ params }: { params: Params }) 
           size="lg"
           className="border-white/25 text-white hover:border-white/50 hover:bg-white/5"
         >
-          استكشف الوحدات
+          {m.projectDetail.ctaBandExplore}
         </ButtonLink>
       </CtaBand>
 

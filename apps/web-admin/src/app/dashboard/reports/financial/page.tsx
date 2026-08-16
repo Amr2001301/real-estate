@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type {
   FinancialDashboard,
   FinancialInstallmentRow,
@@ -53,27 +55,6 @@ interface Search {
 }
 interface ProjectOption { id: string; name: { ar: string; en: string } }
 
-// ── Label / tone maps ─────────────────────────────────────────────────────────
-const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = {
-  RESERVATION: 'مبلغ الحجز', DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط شهري',   FINAL_PAYMENT: 'دفعة أخيرة',
-};
-const PAYMENT_TYPE_CLS: Record<PlanPaymentType, string> = {
-  RESERVATION: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
-  INSTALLMENT: 'bg-slate-100 text-slate-600',   FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
-};
-const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'مبلغ الحجز', DOWN_PAYMENT: 'دفعة أولى',
-  INSTALLMENT: 'قسط شهري',      FINAL_PAYMENT: 'دفعة أخيرة',
-};
-const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
-  BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
-  INSTALLMENT:    'bg-slate-100 text-slate-600',    FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
-};
-const AGING_LABELS: Record<string, string> = {
-  '1-30': '1–30 يوم', '31-60': '31–60 يوم', '61-90': '61–90 يوم', '90+': '+90 يوم',
-};
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function num(v: string | number | null | undefined): number {
   if (v == null) return 0;
@@ -82,12 +63,6 @@ function num(v: string | number | null | undefined): number {
 }
 function daysOverdue(dueDate: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(dueDate).getTime()) / 86_400_000));
-}
-function daysLabel(d: number): string {
-  if (d === 0) return 'اليوم';
-  if (d === 1) return 'يوم واحد';
-  if (d <= 10) return `${d} أيام`;
-  return `${d} يوم`;
 }
 function getDepositLabel(d: FinancialDepositRow): string {
   return d.contract?.customer?.fullName ?? d.reservation?.client?.fullName ?? d.reservation?.lead?.fullName ?? '—';
@@ -102,12 +77,33 @@ export default async function FinancialReportsPage({
 }: {
   searchParams: Promise<Search>;
 }) {
+  const locale = await getLocale();
+  const m = uiT(locale).financialReportsPage;
+
   const sp = await searchParams;
   const currency = await getReportsCurrency();
   const resolved = resolveReportDateRange(sp);
   const { dateFrom, dateTo, year, mode, month, quarter } = resolved;
   const compare  = (sp.compare ?? 'none') as CompareMode;
   const cmpRange = resolveComparisonDateRange(resolved, compare);
+
+  const PAYMENT_TYPE_LABELS: Record<PlanPaymentType, string> = m.paymentTypeLabels;
+  const PAYMENT_TYPE_CLS: Record<PlanPaymentType, string> = {
+    RESERVATION: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
+    INSTALLMENT: 'bg-slate-100 text-slate-600',   FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+  };
+  const DEPOSIT_TYPE_LABELS: Record<DepositType, string> = m.depositTypeLabels;
+  const DEPOSIT_TYPE_CLS: Record<DepositType, string> = {
+    BOOKING_AMOUNT: 'bg-indigo-100 text-indigo-700', DOWN_PAYMENT: 'bg-amber-100 text-amber-700',
+    INSTALLMENT:    'bg-slate-100 text-slate-600',    FINAL_PAYMENT: 'bg-purple-100 text-purple-700',
+  };
+
+  function daysLabel(d: number): string {
+    if (d === 0) return m.overdueTable.daysToday;
+    if (d === 1) return m.overdueTable.daysOne;
+    if (d <= 10) return m.overdueTable.daysShort(d);
+    return m.overdueTable.daysLong(d);
+  }
 
   function apiUrl(params: Record<string, string | undefined>): string {
     const p = new URLSearchParams();
@@ -163,17 +159,17 @@ export default async function FinancialReportsPage({
 
       {/* ─── Header ──────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="التقارير المالية"
-        description="رقابة التحصيل — المحصّل، المتبقي، المتأخر، والمستحقات القادمة."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'التقارير',    href: '/dashboard/reports' },
-          { label: 'المالي' },
+          { label: m.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbReports, href: '/dashboard/reports' },
+          { label: m.breadcrumbSelf },
         ]}
         actions={
           <div className="flex items-center gap-2">
             <ExportMenu
-              label="تصدير"
+              label={m.exportBtn}
               xlsxPath="/reports/financial-dashboard/export.xlsx"
               csvPath="/reports/financial-dashboard/export.csv"
               filenameBase="financial-dashboard"
@@ -183,7 +179,7 @@ export default async function FinancialReportsPage({
         }
       />
 
-      <ReportsTabs active="financial" />
+      <ReportsTabs active="financial" locale={locale} />
       <FinancialFilterBar
         defaultMode={mode as PeriodMode}
         defaultMonth={month}
@@ -197,6 +193,7 @@ export default async function FinancialReportsPage({
         defaultType={sp.type ?? ''}
         defaultShowFilters={showFilters}
         projects={projectOptions}
+        locale={locale}
       />
 
       {dashRes.error && (
@@ -213,42 +210,42 @@ export default async function FinancialReportsPage({
         cols={4}
         metrics={[
           {
-            label:     'إجمالي قيمة العقود',
+            label:     m.kpi.contractValue,
             icon:      <FileText />,
             value:     formatCurrency(contractVal, currency),
             tone:      'neutral',
             valueSize: 'compact',
-            sub:       `${contractCount} عقد · ${depositCount} دفعة`,
+            sub:       m.kpi.contractValueSub(contractCount, depositCount),
             trend:     contractDelta ? `${contractDelta.direction === 'up' ? '▲' : contractDelta.direction === 'down' ? '▼' : '•'} ${contractDelta.value}` : undefined,
             trendCls:  contractDelta?.direction === 'up' ? 'text-success-600' : contractDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
-            label:     'المحصّل المؤكد',
+            label:     m.kpi.collected,
             icon:      <DollarSign />,
             value:     formatCurrency(collectedVerif, currency),
             tone:      'success',
             valueSize: 'compact',
-            sub:       `${collectionRate}% محصّل · إجمالي: ${formatCurrency(collectedAll, currency)}`,
+            sub:       m.kpi.collectedSub(collectionRate, formatCurrency(collectedAll, currency)),
             trend:     collectedDelta ? `${collectedDelta.direction === 'up' ? '▲' : collectedDelta.direction === 'down' ? '▼' : '•'} ${collectedDelta.value}` : undefined,
             trendCls:  collectedDelta?.direction === 'up' ? 'text-success-600' : collectedDelta?.direction === 'down' ? 'text-danger-600' : undefined,
           },
           {
-            label:     'المتبقي للتحصيل',
+            label:     m.kpi.outstanding,
             icon:      <Clock />,
             value:     formatCurrency(outstanding, currency),
             tone:      'neutral',
             valueSize: 'compact',
-            sub:       `مستحق خلال 7 أيام: ${formatCurrency(dueSoon, currency)}`,
+            sub:       m.kpi.outstandingSub(formatCurrency(dueSoon, currency)),
             trend:     outstandDelta ? `${outstandDelta.direction === 'up' ? '▲' : outstandDelta.direction === 'down' ? '▼' : '•'} ${outstandDelta.value}` : undefined,
             trendCls:  outstandDelta?.direction === 'up' ? 'text-danger-600' : outstandDelta?.direction === 'down' ? 'text-success-600' : undefined,
           },
           {
-            label:     'المتأخر المحسوب',
+            label:     m.kpi.overdue,
             icon:      <AlertTriangle />,
             value:     formatCurrency(overdueAmt, currency),
             tone:      overdueAmt > 0 ? 'danger' : 'neutral',
             valueSize: 'compact',
-            sub:       `${overdueCount} قسط متأخر · ${overdueRate}%`,
+            sub:       m.kpi.overdueSub(overdueCount, overdueRate),
             trend:     overdueDelta ? `${overdueDelta.direction === 'up' ? '▲' : overdueDelta.direction === 'down' ? '▼' : '•'} ${overdueDelta.value}` : undefined,
             trendCls:  overdueDelta?.direction === 'up' ? 'text-danger-600' : overdueDelta?.direction === 'down' ? 'text-success-600' : undefined,
           },
@@ -259,18 +256,18 @@ export default async function FinancialReportsPage({
         variant="compact"
         cols={5}
         metrics={[
-          { label: 'المحصّل هذا الشهر', icon: <TrendingUp />,    value: formatCurrency(collectedMonth, currency),                  tone: 'success' },
-          { label: 'المستحق هذا الشهر', icon: <CalendarDays />,  value: formatCurrency(dueMonth, currency),                        tone: 'warning' },
-          { label: 'عدد العقود',        icon: <FileText />,      value: contractCount.toLocaleString('ar-EG'),           tone: 'neutral' },
-          { label: 'عدد الدفعات',       icon: <Receipt />,       value: depositCount.toLocaleString('ar-EG'),            tone: 'neutral' },
-          { label: 'أقساط متأخرة',     icon: <AlertTriangle />, value: overdueCount.toLocaleString('ar-EG'), tone: overdueCount > 0 ? 'danger' : 'neutral' },
+          { label: m.kpi.collectedMonth, icon: <TrendingUp />,    value: formatCurrency(collectedMonth, currency),                  tone: 'success' },
+          { label: m.kpi.dueMonth,       icon: <CalendarDays />,  value: formatCurrency(dueMonth, currency),                        tone: 'warning' },
+          { label: m.kpi.contractCount,  icon: <FileText />,      value: contractCount.toLocaleString('ar-EG'),           tone: 'neutral' },
+          { label: m.kpi.depositCount,   icon: <Receipt />,       value: depositCount.toLocaleString('ar-EG'),            tone: 'neutral' },
+          { label: m.kpi.overdueCount,   icon: <AlertTriangle />, value: overdueCount.toLocaleString('ar-EG'), tone: overdueCount > 0 ? 'danger' : 'neutral' },
         ]}
       />
 
       {contractVal > 0 && (
         <PremiumSectionCard
           icon={<TrendingUp />}
-          title="كفاءة التحصيل"
+          title={m.collectionEfficiency.title}
           trailing={
             <span className={cn(
               'text-[22px] font-black tabular-nums',
@@ -294,12 +291,12 @@ export default async function FinancialReportsPage({
             </div>
             <div className="flex items-center gap-6 shrink-0">
               <div className="text-end">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">متأخر</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{m.collectionEfficiency.overdueLabel}</p>
                 <p className={cn('text-[18px] font-black tabular-nums', overdueRate > 0 ? 'text-danger-700' : 'text-slate-300')}>{overdueRate}%</p>
               </div>
               <div className="w-px h-8 bg-hairline" />
               <div className="text-end">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">متبقي</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{m.collectionEfficiency.remainingLabel}</p>
                 <p className="text-[18px] font-black tabular-nums text-slate-700">{contractVal > 0 ? (100 - collectionRate) : 0}%</p>
               </div>
             </div>
@@ -316,22 +313,22 @@ export default async function FinancialReportsPage({
         <PremiumSectionCard
           className="xl:col-span-3"
           icon={<BarChart3 />}
-          title="اتجاهات التدفق النقدي"
-          description="المحصّل والمستحق خلال الأشهر الستة الماضية"
+          title={m.cashflow.title}
+          description={m.cashflow.description}
           trailing={
             <div className="flex items-center gap-3 shrink-0">
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                <span className="h-2 w-2 rounded-sm bg-emerald-500" />المحصّل
+                <span className="h-2 w-2 rounded-sm bg-emerald-500" />{m.cashflow.legendCollected}
               </span>
               <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
-                <span className="h-2 w-2 rounded-sm bg-amber-400" />المستحق
+                <span className="h-2 w-2 rounded-sm bg-amber-400" />{m.cashflow.legendDue}
               </span>
             </div>
           }
           padded={false}
         >
           <div className="px-5 py-5">
-            <CashflowBarChart data={dash?.cashflowTrend ?? []} />
+            <CashflowBarChart data={dash?.cashflowTrend ?? []} locale={locale} />
           </div>
         </PremiumSectionCard>
 
@@ -339,8 +336,8 @@ export default async function FinancialReportsPage({
         <PremiumSectionCard
           className="xl:col-span-2"
           icon={<CreditCard />}
-          title="توزيع قيمة العقود"
-          description="محصّل · متأخر · متبقي"
+          title={m.distribution.title}
+          description={m.distribution.description}
           padded={false}
         >
           {/* Stacked bar */}
@@ -360,10 +357,10 @@ export default async function FinancialReportsPage({
             {((): { label: string; amount: number; pct: string; dot: string; valCls: string }[] => {
               const base = contractVal > 0 ? contractVal : 1;
               return [
-                { label: 'إجمالي قيمة العقود',  amount: contractVal,    pct: '100%',                                          dot: 'bg-slate-300',   valCls: 'text-slate-900' },
-                { label: 'المحصّل المؤكد',        amount: collectedVerif, pct: `${collectionRate}%`,                            dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
-                { label: 'المتأخر',               amount: overdueAmt,     pct: `${((overdueAmt / base) * 100).toFixed(1)}%`,   dot: 'bg-danger-500',  valCls: 'text-danger-700' },
-                { label: 'المتبقي للتحصيل',       amount: outstanding,    pct: `${((outstanding  / base) * 100).toFixed(1)}%`, dot: 'bg-slate-200',   valCls: 'text-slate-700' },
+                { label: m.distribution.rows.contractValue, amount: contractVal,    pct: '100%',                                          dot: 'bg-slate-300',   valCls: 'text-slate-900' },
+                { label: m.distribution.rows.collected,     amount: collectedVerif, pct: `${collectionRate}%`,                            dot: 'bg-emerald-500', valCls: 'text-emerald-700' },
+                { label: m.distribution.rows.overdue,       amount: overdueAmt,     pct: `${((overdueAmt / base) * 100).toFixed(1)}%`,   dot: 'bg-danger-500',  valCls: 'text-danger-700' },
+                { label: m.distribution.rows.outstanding,   amount: outstanding,    pct: `${((outstanding  / base) * 100).toFixed(1)}%`, dot: 'bg-slate-200',   valCls: 'text-slate-700' },
               ];
             })().map((r) => (
               <div key={r.label} className="flex items-center gap-3 px-5 py-3.5">
@@ -380,11 +377,11 @@ export default async function FinancialReportsPage({
           {/* Month footer */}
           <div className="grid grid-cols-2 gap-px bg-hairline border-t border-hairline mt-1">
             <div className="bg-surface px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">محصّل هذا الشهر</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{m.distribution.collectedMonthLabel}</p>
               <p className="text-[15px] font-black tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(collectedMonth, currency)}</p>
             </div>
             <div className="bg-surface px-5 py-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">مستحق هذا الشهر</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">{m.distribution.dueMonthLabel}</p>
               <p className="text-[15px] font-black tabular-nums text-amber-600 whitespace-nowrap" dir="ltr">{formatCurrency(dueMonth, currency)}</p>
             </div>
           </div>
@@ -397,15 +394,15 @@ export default async function FinancialReportsPage({
       {forecast && (forecast.next30 > 0 || forecast.next3160 > 0 || forecast.next6190 > 0) && (
         <PremiumSectionCard
           icon={<CalendarDays />}
-          title="توقعات التحصيل القادمة"
-          description="الأقساط PENDING المستحقة في الفترات القادمة"
+          title={m.forecast.title}
+          description={m.forecast.description}
           padded={false}
         >
           <div className="grid grid-cols-3 gap-px bg-hairline">
             {[
-              { label: 'خلال 30 يومًا',  amount: forecast.next30,   pctCls: 'bg-brand-500',  valCls: 'text-brand-700',  bg: 'bg-surface' },
-              { label: '31 – 60 يومًا',  amount: forecast.next3160, pctCls: 'bg-amber-400',  valCls: 'text-amber-700',  bg: 'bg-surface' },
-              { label: '61 – 90 يومًا',  amount: forecast.next6190, pctCls: 'bg-violet-400', valCls: 'text-violet-700', bg: 'bg-surface' },
+              { label: m.forecast.next30,   amount: forecast.next30,   pctCls: 'bg-brand-500',  valCls: 'text-brand-700',  bg: 'bg-surface' },
+              { label: m.forecast.next3160, amount: forecast.next3160, pctCls: 'bg-amber-400',  valCls: 'text-amber-700',  bg: 'bg-surface' },
+              { label: m.forecast.next6190, amount: forecast.next6190, pctCls: 'bg-violet-400', valCls: 'text-violet-700', bg: 'bg-surface' },
             ].map((b) => {
               const total = forecast.next30 + forecast.next3160 + forecast.next6190;
               const pct   = total > 0 ? Math.round((b.amount / total) * 100) : 0;
@@ -418,7 +415,7 @@ export default async function FinancialReportsPage({
                   <div className="mt-3 h-1.5 rounded-full bg-white/70 overflow-hidden">
                     <div className={cn('h-full rounded-full', b.pctCls)} style={{ width: `${pct}%` }} />
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-1">{pct}% من إجمالي التوقعات</p>
+                  <p className="text-[10px] text-slate-400 mt-1">{m.forecast.pctOfTotal(pct)}</p>
                 </div>
               );
             })}
@@ -433,11 +430,11 @@ export default async function FinancialReportsPage({
         <PremiumSectionCard
           tone="danger"
           icon={<AlertTriangle />}
-          title="أعمار المتأخرات"
-          description="توزيع المبالغ المتأخرة حسب عمر الدين"
+          title={m.aging.title}
+          description={m.aging.description}
           trailing={
             <span className="text-xs font-bold tabular-nums text-slate-700 whitespace-nowrap" dir="ltr">
-              {formatCurrency(aging.reduce((s, b) => s + num(b.amount), 0), currency)} إجمالي
+              {formatCurrency(aging.reduce((s, b) => s + num(b.amount), 0), currency)} {m.aging.totalSuffix}
             </span>
           }
           padded={false}
@@ -451,7 +448,7 @@ export default async function FinancialReportsPage({
               return (
                 <div key={b.label} className={cn('bg-surface px-5 py-4', !active && 'opacity-50')}>
                   <div className="flex items-start justify-between gap-2 mb-3">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{AGING_LABELS[b.label] ?? b.label}</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{m.aging.labels[b.label as keyof typeof m.aging.labels] ?? b.label}</p>
                     <span className={cn(
                       'inline-flex h-5 min-w-[20px] px-1.5 items-center justify-center rounded-full text-[10px] font-bold shrink-0',
                       active && isHigh  ? 'bg-danger-100 text-danger-700' :
@@ -492,11 +489,11 @@ export default async function FinancialReportsPage({
       <PremiumSectionCard
         tone="danger"
         icon={<AlertTriangle />}
-        title="الأقساط المتأخرة"
-        description={overdueCount > 0 ? `${overdueCount} قسط متأخر محسوب` : undefined}
+        title={m.overdueTable.title}
+        description={overdueCount > 0 ? m.overdueTable.overdueSuffix(overdueCount) : undefined}
         trailing={
           <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap flex items-center gap-1">
-            عرض الكل <ArrowUpRight className="h-3 w-3" />
+            {m.overdueTable.viewAll} <ArrowUpRight className="h-3 w-3" />
           </Link>
         }
         padded={false}
@@ -504,20 +501,20 @@ export default async function FinancialReportsPage({
         {(!dash?.overdue || dash.overdue.length === 0) ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <BadgeCheck className="h-7 w-7 text-slate-200" />
-            <p className="text-sm text-slate-400">لا توجد أقساط متأخرة</p>
+            <p className="text-sm text-slate-400">{m.overdueTable.emptyTitle}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[640px]">
               <thead className="bg-surface-muted/60 text-[10px] font-bold tracking-wide text-slate-500 border-b border-hairline">
                 <tr>
-                  <th className="text-start py-2.5 ps-5 pe-4">العميل</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">رقم العقد</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">الوحدة</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">النوع</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">الاستحقاق</th>
-                  <th className="text-right py-2.5 px-4 whitespace-nowrap">المبلغ</th>
-                  <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">التأخر</th>
+                  <th className="text-start py-2.5 ps-5 pe-4">{m.overdueTable.cols.client}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.contract}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.unit}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.type}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.dueDate}</th>
+                  <th className="text-right py-2.5 px-4 whitespace-nowrap">{m.overdueTable.cols.amount}</th>
+                  <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">{m.overdueTable.cols.delay}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -565,8 +562,8 @@ export default async function FinancialReportsPage({
       ════════════════════════════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {[
-          { title: 'المستحقات هذا الأسبوع',  rows: dash?.upcomingThisWeek  ?? [], empty: 'لا توجد مستحقات هذا الأسبوع' },
-          { title: 'بقية مستحقات الشهر',    rows: dash?.upcomingThisMonth ?? [], empty: 'لا توجد مستحقات إضافية هذا الشهر' },
+          { title: m.upcoming.thisWeekTitle,  rows: dash?.upcomingThisWeek  ?? [], empty: m.upcoming.thisWeekEmpty },
+          { title: m.upcoming.thisMonthTitle, rows: dash?.upcomingThisMonth ?? [], empty: m.upcoming.thisMonthEmpty },
         ].map((panel) => (
           <PremiumSectionCard
             key={panel.title}
@@ -611,16 +608,16 @@ export default async function FinancialReportsPage({
       {(dash?.collectionByType ?? []).length > 0 && (
         <PremiumSectionCard
           icon={<Wallet />}
-          title="التحصيل حسب نوع الدفعة"
-          description="توزيع الدفعات المسجلة والمؤكدة"
+          title={m.collectionByType.title}
+          description={m.collectionByType.description}
           padded={false}
         >
           {/* Header */}
           <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-2.5 bg-canvas/50 border-b border-hairline">
-            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">نوع الدفعة</span>
-            <span className="w-36 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">إجمالي مسجل</span>
-            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">مؤكد</span>
-            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">غير مؤكد</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colType}</span>
+            <span className="w-36 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colTotal}</span>
+            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colVerified}</span>
+            <span className="w-32 text-right text-[10px] font-bold uppercase tracking-wide text-slate-400">{m.collectionByType.colUnverified}</span>
           </div>
           <div className="divide-y divide-hairline">
             {(dash?.collectionByType ?? []).map((c) => (
@@ -629,7 +626,7 @@ export default async function FinancialReportsPage({
                   <span className={cn('inline-block px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0', DEPOSIT_TYPE_CLS[c.type] ?? 'bg-slate-100 text-slate-600')}>
                     {DEPOSIT_TYPE_LABELS[c.type] ?? c.type}
                   </span>
-                  <span className="text-[11px] text-slate-400 tabular-nums">{c.count.toLocaleString('ar-EG')} دفعة</span>
+                  <span className="text-[11px] text-slate-400 tabular-nums">{c.count.toLocaleString('ar-EG')} {m.collectionByType.depositSuffix}</span>
                 </div>
                 <p className="w-36 text-right text-[13px] font-bold tabular-nums text-slate-900 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalAll, currency)}</p>
                 <p className="w-32 text-right text-[13px] tabular-nums text-success-700 whitespace-nowrap" dir="ltr">{formatCurrency(c.totalVerified, currency)}</p>
@@ -649,16 +646,16 @@ export default async function FinancialReportsPage({
         {dash?.booking && (
           <PremiumSectionCard
             icon={<Receipt />}
-            title="خط الحجوزات"
-            description="مبالغ الحجز قبل التحول لعقود"
+            title={m.booking.title}
+            description={m.booking.description}
             padded={false}
           >
             <div className="divide-y divide-hairline">
               {[
-                { label: 'حجوزات قيد المراجعة', value: `${dash.booking.pendingReservationsCount} · ${formatCurrency(dash.booking.pendingReservationsBookingAmount, currency)}`, cls: 'text-amber-700' },
-                { label: 'حجوزات معتمدة',       value: `${dash.booking.approvedReservationsCount} · ${formatCurrency(dash.booking.approvedReservationsBookingAmount, currency)}`, cls: 'text-slate-900' },
-                { label: 'مبالغ الحجز المؤكدة', value: formatCurrency(dash.booking.bookingCollectedVerified, currency), cls: 'text-success-700' },
-                { label: 'تقدير غير المحصّل',   value: formatCurrency(dash.booking.bookingUncollectedEstimate, currency), cls: 'text-slate-600' },
+                { label: m.booking.pendingReservations,  value: `${dash.booking.pendingReservationsCount} · ${formatCurrency(dash.booking.pendingReservationsBookingAmount, currency)}`, cls: 'text-amber-700' },
+                { label: m.booking.approvedReservations, value: `${dash.booking.approvedReservationsCount} · ${formatCurrency(dash.booking.approvedReservationsBookingAmount, currency)}`, cls: 'text-slate-900' },
+                { label: m.booking.bookingCollected,     value: formatCurrency(dash.booking.bookingCollectedVerified, currency), cls: 'text-success-700' },
+                { label: m.booking.bookingUncollected,   value: formatCurrency(dash.booking.bookingUncollectedEstimate, currency), cls: 'text-slate-600' },
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-3">
                   <span className="text-sm text-slate-500">{row.label}</span>
@@ -673,16 +670,16 @@ export default async function FinancialReportsPage({
         {dash?.liabilities && (
           <PremiumSectionCard
             icon={<Coins />}
-            title="الالتزامات غير المدفوعة"
-            description="العمولات والمستحقات المعلقة"
+            title={m.liabilities.title}
+            description={m.liabilities.description}
             padded={false}
           >
             <div className="divide-y divide-hairline">
               {[
-                { label: 'إجمالي الالتزامات غير المدفوعة', value: formatCurrency(dash.liabilities.totalUnpaidLiabilities, currency),                      cls: 'text-danger-700 font-black' },
-                { label: 'مستحقات المبيعات غير المدفوعة',  value: formatCurrency(dash.liabilities.salesBonus.unpaidAmount, currency),                     cls: 'text-amber-700' },
-                { label: 'عمولات الوسطاء غير المدفوعة',   value: formatCurrency(dash.liabilities.brokerCommissions.unpaidAmount, currency),              cls: 'text-amber-700' },
-                { label: 'المدفوع من العمولات',            value: formatCurrency(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount), currency), cls: 'text-success-700' },
+                { label: m.liabilities.total,            value: formatCurrency(dash.liabilities.totalUnpaidLiabilities, currency),                      cls: 'text-danger-700 font-black' },
+                { label: m.liabilities.salesBonus,       value: formatCurrency(dash.liabilities.salesBonus.unpaidAmount, currency),                     cls: 'text-amber-700' },
+                { label: m.liabilities.brokerCommissions, value: formatCurrency(dash.liabilities.brokerCommissions.unpaidAmount, currency),              cls: 'text-amber-700' },
+                { label: m.liabilities.paid,             value: formatCurrency(num(dash.liabilities.salesBonus.paidAmount) + num(dash.liabilities.brokerCommissions.paidAmount), currency), cls: 'text-success-700' },
               ].map((row) => (
                 <div key={row.label} className="flex items-center justify-between gap-3 px-5 py-3">
                   <span className="text-sm text-slate-500">{row.label}</span>
@@ -699,11 +696,11 @@ export default async function FinancialReportsPage({
       ════════════════════════════════════════════════════════════════════ */}
       <PremiumSectionCard
         icon={<CircleDollarSign />}
-        title="آخر الدفعات"
-        description="أحدث الدفعات المسجلة حسب الفلاتر المختارة"
+        title={m.recentDeposits.title}
+        description={m.recentDeposits.description}
         trailing={
           <Link href="/dashboard/deposits" className="text-xs text-brand-600 hover:underline whitespace-nowrap flex items-center gap-1">
-            عرض الكل <ArrowUpRight className="h-3 w-3" />
+            {m.recentDeposits.viewAll} <ArrowUpRight className="h-3 w-3" />
           </Link>
         }
         padded={false}
@@ -711,20 +708,20 @@ export default async function FinancialReportsPage({
         {(!dash || dash.recentDeposits.length === 0) ? (
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <CircleDollarSign className="h-7 w-7 text-slate-200" />
-            <p className="text-sm text-slate-400">لا توجد دفعات مسجلة</p>
+            <p className="text-sm text-slate-400">{m.recentDeposits.empty}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[580px]">
               <thead className="bg-surface-muted/60 text-[10px] font-bold tracking-wide text-slate-500 border-b border-hairline">
                 <tr>
-                  <th className="text-start py-2.5 ps-5 pe-4 whitespace-nowrap">النوع</th>
-                  <th className="text-start py-2.5 px-4">العميل</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">الوحدة</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">المرجع</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">تاريخ الدفع</th>
-                  <th className="text-start py-2.5 px-4 whitespace-nowrap">المبلغ</th>
-                  <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">التحقق</th>
+                  <th className="text-start py-2.5 ps-5 pe-4 whitespace-nowrap">{m.recentDeposits.cols.type}</th>
+                  <th className="text-start py-2.5 px-4">{m.recentDeposits.cols.client}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.unit}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.ref}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.paidAt}</th>
+                  <th className="text-start py-2.5 px-4 whitespace-nowrap">{m.recentDeposits.cols.amount}</th>
+                  <th className="text-start py-2.5 ps-4 pe-5 whitespace-nowrap">{m.recentDeposits.cols.verified}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -755,11 +752,11 @@ export default async function FinancialReportsPage({
                     <td className="py-2.5 ps-4 pe-5 whitespace-nowrap">
                       {d.verified ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-success-700">
-                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />متحقق
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.verifiedLabel}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600">
-                          <XCircle className="h-3.5 w-3.5 shrink-0" />معلّق
+                          <XCircle className="h-3.5 w-3.5 shrink-0" />{m.recentDeposits.pendingLabel}
                         </span>
                       )}
                     </td>
@@ -774,4 +771,3 @@ export default async function FinancialReportsPage({
     </div>
   );
 }
-

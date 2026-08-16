@@ -32,6 +32,8 @@ import {
   PremiumSectionCard,
   PremiumEmptyState,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -66,10 +68,14 @@ export default async function InventoryPage({
   searchParams: Promise<Filters>;
 }) {
   const sp         = await searchParams;
-  const currency   = await getReportsCurrency();
-  const session    = await getSession();
-  const isAdmin    = session?.role === 'ADMIN';
-  const q          = (sp.q ?? '').trim();
+  const [currency, locale, session] = await Promise.all([
+    getReportsCurrency(),
+    getLocale(),
+    getSession(),
+  ]);
+  const m       = uiT(locale).pages.inventory;
+  const isAdmin = session?.role === 'ADMIN';
+  const q       = (sp.q ?? '').trim();
   const status: StatusFilter =
     sp.status === 'AVAILABLE' || sp.status === 'RESERVED' || sp.status === 'SOLD'
       ? sp.status : 'all';
@@ -162,20 +168,20 @@ export default async function InventoryPage({
 
       {/* ── 1. Hero ─────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="لوحة المخزون"
-        description="نظرة شاملة على توفر الوحدات وقيمة المخزون عبر المشاريع والمراحل."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'المخزون' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <IconButton label="تصدير البيانات" variant="outline" size="md" type="button">
+            <IconButton label={m.exportBtn} variant="outline" size="md" type="button">
               <Download />
             </IconButton>
             <Link href={unitsHref({}) as never}>
               <Button variant="primary" size="md" leftIcon={<SlidersHorizontal className="h-4 w-4" />}>
-                {isAdmin ? 'إدارة الوحدات' : 'عرض الوحدات'}
+                {isAdmin ? m.manageUnitsAdmin : m.manageUnitsStaff}
               </Button>
             </Link>
           </div>
@@ -188,26 +194,26 @@ export default async function InventoryPage({
         cols={4}
         metrics={[
           {
-            label: 'قيمة المخزون الإجمالية',
+            label: m.kpi.totalValue,
             value: formatCurrency(inventoryValue, currency),
             icon: <CircleDollarSign />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'إجمالي الوحدات',
+            label: m.kpi.totalUnits,
             value: total,
             icon: <Boxes />,
             tone: 'neutral',
           },
           {
-            label: 'المشاريع النشطة',
+            label: m.kpi.activeProjects,
             value: projectBuckets.length,
             icon: <Building2 />,
             tone: 'info',
           },
           {
-            label: 'متوسط سعر الوحدة',
+            label: m.kpi.avgPrice,
             value: avgPrice > 0 ? formatCurrency(avgPrice, currency) : '—',
             icon: <Calculator />,
             tone: 'success',
@@ -221,19 +227,20 @@ export default async function InventoryPage({
         available={available}
         reserved={reserved}
         sold={sold}
+        labels={{ title: m.availCard.title, description: m.availCard.description, available: m.availCard.available, reserved: m.availCard.reserved, sold: m.availCard.sold }}
       />
 
       {/* ── Error banners ─────────────────────────────────────────────────── */}
       {loadError && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل المخزون: {loadError}</p>
+          <p className="font-medium">{m.errorPrefix} {loadError}</p>
         </div>
       )}
       {projectsError && !loadError && (
         <div className="flex items-start gap-3 rounded-2xl bg-warning-50 border border-warning-100 text-warning-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل قائمة المشاريع: {projectsError}</p>
+          <p className="font-medium">{m.projectsErrorPrefix} {projectsError}</p>
         </div>
       )}
 
@@ -244,20 +251,20 @@ export default async function InventoryPage({
 
         {/* Search — grows to fill available space */}
         <div className="flex-1 min-w-[180px]">
-          <label htmlFor="inv-q" className="sr-only">بحث</label>
+          <label htmlFor="inv-q" className="sr-only">{m.filter.searchLabel}</label>
           <Input
             id="inv-q"
             name="q"
             inputSize="sm"
             defaultValue={q}
-            placeholder="ابحث باسم المشروع، المبنى، أو كود الوحدة…"
+            placeholder={m.filter.searchPlaceholder}
             leftAddon={<Search />}
             className="w-full"
           />
         </div>
 
         {/* Project filter */}
-        <PremiumFilterField label="المشروع" htmlFor="projectId">
+        <PremiumFilterField label={uiT(locale).common.allProjects} htmlFor="projectId">
           <Select
             id="projectId"
             name="projectId"
@@ -265,7 +272,7 @@ export default async function InventoryPage({
             defaultValue={projectId}
             className="w-40 shrink-0"
           >
-            <option value="">كل المشاريع</option>
+            <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>{tx(p.name)}</option>
             ))}
@@ -279,27 +286,27 @@ export default async function InventoryPage({
           <StatusChip
             href={`/dashboard/inventory${qs({ status: undefined })}`}
             active={status === 'all'}
-            label="الكل"
+            label={m.filter.allChip}
             count={total}
           />
           <StatusChip
             href={`/dashboard/inventory${qs({ status: 'AVAILABLE' })}`}
             active={status === 'AVAILABLE'}
-            label="متاحة"
+            label={m.filter.availableChip}
             count={available}
             tone="success"
           />
           <StatusChip
             href={`/dashboard/inventory${qs({ status: 'RESERVED' })}`}
             active={status === 'RESERVED'}
-            label="محجوزة"
+            label={m.filter.reservedChip}
             count={reserved}
             tone="brand"
           />
           <StatusChip
             href={`/dashboard/inventory${qs({ status: 'SOLD' })}`}
             active={status === 'SOLD'}
-            label="مباعة"
+            label={m.filter.soldChip}
             count={sold}
             tone="slate"
           />
@@ -312,10 +319,10 @@ export default async function InventoryPage({
               href={resetHref as never}
               className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
             >
-              مسح
+              {m.filter.clearBtn}
             </Link>
           )}
-          <Button type="submit" variant="primary" size="sm">تطبيق</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.applyBtn}</Button>
         </div>
       </PremiumFilterBar>
 
@@ -324,16 +331,16 @@ export default async function InventoryPage({
         <div className="bg-surface border border-hairline rounded-[20px] shadow-soft">
           <PremiumEmptyState
             icon={<Boxes />}
-            title={q || projectId || status !== 'all' ? 'لا توجد نتائج لمعايير البحث' : 'لا توجد وحدات بعد'}
+            title={q || projectId || status !== 'all' ? m.empty.filteredTitle : m.empty.emptyTitle}
             description={
               q || projectId || status !== 'all'
-                ? 'جرّب تعديل الفلاتر أو مسح كلمات البحث.'
-                : 'ابدأ بإضافة المشاريع والمباني والوحدات لتعبئة المخزون.'
+                ? m.empty.filteredDesc
+                : m.empty.emptyDesc
             }
             action={
               !q && !projectId && status === 'all' ? (
                 <Link href={'/dashboard/units/new' as never}>
-                  <Button variant="primary" size="sm">إضافة وحدة</Button>
+                  <Button variant="primary" size="sm">{m.empty.addBtn}</Button>
                 </Link>
               ) : undefined
             }
@@ -342,18 +349,16 @@ export default async function InventoryPage({
       ) : (
         <div className="flex flex-col gap-4">
           {projectBuckets.map((proj) => (
-            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} currency={currency} />
+            <ProjectMatrixCard key={proj.id} proj={proj} unitsHref={unitsHref} currency={currency} matrixLabels={m.matrix} />
           ))}
         </div>
       )}
 
       <p className="flex items-center justify-center gap-1.5 text-2xs text-slate-400">
         <Boxes className="h-3 w-3" />
-        تُحسب القيم على لقطة فورية لأحدث {SNAPSHOT_SIZE} وحدة — للتفاصيل انتقل إلى{' '}
         <Link href={'/dashboard/units' as never} className="font-semibold text-brand-700 hover:text-brand-800">
-          إدارة الوحدات
+          {m.manageUnitsAdmin}
         </Link>
-        .
       </p>
     </div>
   );
@@ -369,8 +374,8 @@ export default async function InventoryPage({
 // ── InventoryAvailCard ───────────────────────────────────────────────────────
 
 function InventoryAvailCard({
-  total, available, reserved, sold,
-}: { total: number; available: number; reserved: number; sold: number }) {
+  total, available, reserved, sold, labels,
+}: { total: number; available: number; reserved: number; sold: number; labels: { title: string; description: string; available: string; reserved: string; sold: string } }) {
   const avPct = total > 0 ? Math.round((available / total) * 100) : 0;
   const rsPct = total > 0 ? Math.round((reserved  / total) * 100) : 0;
   const slPct = total > 0 ? Math.round((sold      / total) * 100) : 0;
@@ -378,12 +383,12 @@ function InventoryAvailCard({
   return (
     <PremiumSectionCard
       icon={<BarChart3 />}
-      title="توزيع الوحدات"
-      description="نسب التوفر عبر إجمالي المخزون"
+      title={labels.title}
+      description={labels.description}
     >
       <div className="flex flex-col gap-5">
         <AvailBar
-          label="متاحة"
+          label={labels.available}
           count={available}
           pct={avPct}
           barClass="bg-success-500"
@@ -391,7 +396,7 @@ function InventoryAvailCard({
           countClass="text-success-700"
         />
         <AvailBar
-          label="محجوزة"
+          label={labels.reserved}
           count={reserved}
           pct={rsPct}
           barClass="bg-brand-400"
@@ -399,7 +404,7 @@ function InventoryAvailCard({
           countClass="text-brand-700"
         />
         <AvailBar
-          label="مباعة"
+          label={labels.sold}
           count={sold}
           pct={slPct}
           barClass="bg-slate-400"
@@ -439,14 +444,23 @@ function AvailBar({ label, count, pct, barClass, dotClass, countClass }: {
 
 // ── ProjectMatrixCard ─────────────────────────────────────────────────────────
 
+type MatrixLabels = {
+  viewDetails: string;
+  unitSuffix: string;
+  cols: { phase: string; total: string; available: string; reserved: string; sold: string; value: string; availability: string };
+  phaseBadge: string;
+};
+
 function ProjectMatrixCard({
   proj,
   unitsHref,
   currency,
+  matrixLabels,
 }: {
   proj: ProjectBucket;
   unitsHref: (overrides: Record<string, string | undefined>) => string;
   currency: string;
+  matrixLabels: MatrixLabels;
 }) {
   const phases = [...proj.phases.values()].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   const av = proj.total > 0 ? (proj.available / proj.total) * 100 : 0;
@@ -483,13 +497,13 @@ function ProjectMatrixCard({
           )}
           <div className="flex items-center gap-3">
             <span className="text-[12px] text-slate-400">
-              <span className="font-semibold text-slate-600">{proj.total}</span> وحدة
+              <span className="font-semibold text-slate-600">{proj.total}</span> {matrixLabels.unitSuffix}
             </span>
             <Link
               href={unitsHref({ projectId: proj.id }) as never}
               className="inline-flex items-center gap-0.5 text-[12px] font-semibold text-brand-600 hover:text-brand-700 transition-colors"
             >
-              عرض التفاصيل
+              {matrixLabels.viewDetails}
               <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
@@ -502,7 +516,7 @@ function ProjectMatrixCard({
           <div
             className="h-3 w-full rounded-full overflow-hidden flex bg-canvas"
             role="img"
-            aria-label={`متاحة ${proj.available} • محجوزة ${proj.reserved} • مباعة ${proj.sold}`}
+            aria-label={`${matrixLabels.cols.available} ${proj.available} • ${matrixLabels.cols.reserved} ${proj.reserved} • ${matrixLabels.cols.sold} ${proj.sold}`}
           >
             {av > 0 && <span className="h-full bg-success-500 transition-all duration-500 shrink-0" style={{ width: `${av}%` }} />}
             {rs > 0 && <span className="h-full bg-brand-400  transition-all duration-500 shrink-0" style={{ width: `${rs}%` }} />}
@@ -512,19 +526,19 @@ function ProjectMatrixCard({
             {av > 0 && (
               <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-success-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-success-500 shrink-0" />
-                متاح {proj.available} ({Math.round(av)}%)
+                {matrixLabels.cols.available} {proj.available} ({Math.round(av)}%)
               </span>
             )}
             {rs > 0 && (
               <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-brand-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-                محجوز {proj.reserved} ({Math.round(rs)}%)
+                {matrixLabels.cols.reserved} {proj.reserved} ({Math.round(rs)}%)
               </span>
             )}
             {sl > 0 && (
               <span className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
                 <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />
-                مباع {proj.sold} ({Math.round(sl)}%)
+                {matrixLabels.cols.sold} {proj.sold} ({Math.round(sl)}%)
               </span>
             )}
           </div>
@@ -536,19 +550,19 @@ function ProjectMatrixCard({
         <table className="w-full text-sm">
           <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
             <tr>
-              <th className="text-start py-3 ps-6 pe-4">المرحلة / المبنى</th>
-              <th className="text-center py-3 px-3">إجمالي</th>
-              <th className="text-center py-3 px-3">متاحة</th>
-              <th className="text-center py-3 px-3">محجوزة</th>
-              <th className="text-center py-3 px-3">مباعة</th>
-              <th className="text-start py-3 px-3">القيمة</th>
-              <th className="text-start py-3 ps-3 pe-6">التوفر</th>
+              <th className="text-start py-3 ps-6 pe-4">{matrixLabels.cols.phase}</th>
+              <th className="text-center py-3 px-3">{matrixLabels.cols.total}</th>
+              <th className="text-center py-3 px-3">{matrixLabels.cols.available}</th>
+              <th className="text-center py-3 px-3">{matrixLabels.cols.reserved}</th>
+              <th className="text-center py-3 px-3">{matrixLabels.cols.sold}</th>
+              <th className="text-start py-3 px-3">{matrixLabels.cols.value}</th>
+              <th className="text-start py-3 ps-3 pe-6">{matrixLabels.cols.availability}</th>
             </tr>
           </thead>
           <tbody>
             {phases.map((ph) => {
               const buildings = [...ph.buildings.values()].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} currency={currency} />;
+              return <PhaseRows key={ph.id} ph={ph} buildings={buildings} currency={currency} phaseBadgeLabel={matrixLabels.phaseBadge} />;
             })}
           </tbody>
         </table>
@@ -559,7 +573,7 @@ function ProjectMatrixCard({
 
 // ── PhaseRows ─────────────────────────────────────────────────────────────────
 
-function PhaseRows({ ph, buildings, currency }: { ph: PhaseBucket; buildings: BuildingBucket[]; currency: string }) {
+function PhaseRows({ ph, buildings, currency, phaseBadgeLabel }: { ph: PhaseBucket; buildings: BuildingBucket[]; currency: string; phaseBadgeLabel: string }) {
   return (
     <>
       <tr className="border-t border-hairline bg-canvas/60">
@@ -568,7 +582,7 @@ function PhaseRows({ ph, buildings, currency }: { ph: PhaseBucket; buildings: Bu
             <Layers className="h-3.5 w-3.5 text-brand-500 shrink-0" />
             <span className="text-[13px] font-bold text-slate-800">{ph.name}</span>
             <span className="inline-flex items-center h-[18px] px-1.5 rounded-full bg-brand-50 border border-brand-100 text-[9px] font-bold text-brand-700 uppercase tracking-wide">
-              مرحلة
+              {phaseBadgeLabel}
             </span>
           </div>
         </td>
@@ -640,7 +654,7 @@ function RowAvailBar({ available, reserved, sold, total }: {
       <div
         className="h-2 flex-1 max-w-[100px] rounded-full overflow-hidden flex bg-canvas"
         role="img"
-        aria-label={`متاحة ${available} • محجوزة ${reserved} • مباعة ${sold}`}
+        aria-label={`${available} • ${reserved} • ${sold}`}
       >
         {av > 0 && <span className="h-full bg-success-500 shrink-0" style={{ width: `${av}%` }} />}
         {rs > 0 && <span className="h-full bg-brand-400  shrink-0" style={{ width: `${rs}%` }} />}

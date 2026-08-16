@@ -8,6 +8,8 @@ import { Field } from '@/components/form/field';
 import { DocumentUploader, type UploadResult } from '@/components/documents/document-uploader';
 import { convertReservationAction } from '../../actions';
 import type { Reservation } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 interface Props {
   reservation: Pick<
@@ -27,9 +29,11 @@ interface Props {
     unitCode: string;
   };
   symbol?: string;
+  locale?: Locale;
 }
 
-export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props) {
+export function ConvertReservationForm({ reservation, symbol = 'ج.م', locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.reservationDetailPage;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,10 +85,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
     return (
       <div className="flex items-start gap-2 rounded-xl bg-danger-50 border border-danger-100 text-danger-700 p-3 text-sm">
         <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-        <p>
-          هذا الحجز قديم ولا يحتوي على مدة تقسيط محفوظة، لذلك لا يمكن تحويله إلى عقد حتى يتم تحديد مدة التقسيط.
-          تواصل مع المسؤول لإضافة بيانات التقسيط يدوياً أو أعد إنشاء الحجز بالخطة المحدثة.
-        </p>
+        <p>{m.convertSnapshotMissing}</p>
       </div>
     );
   }
@@ -101,14 +102,14 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
           disabled={paymentBlocking}
           leftIcon={<ArrowLeftRight className="h-4 w-4" />}
         >
-          تحويل إلى عقد
+          {m.convertBtn}
         </Button>
       ) : null}
 
       {paymentBlocking && !open && (
         <div className="flex items-start gap-2 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3 text-xs">
           <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>يجب تأكيد استلام مبلغ الحجز أو إعفاؤه قبل التحويل إلى عقد.</p>
+          <p>{m.convertPaymentBlockWarning}</p>
         </div>
       )}
 
@@ -116,22 +117,22 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
         <div className="rounded-2xl border border-brand-100 bg-brand-50/40 p-4 space-y-4">
           <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
             <ArrowLeftRight className="h-4 w-4 text-brand-600" />
-            تحويل الحجز إلى عقد
+            {m.convertTitle}
           </h3>
 
           {/* Read-only summary */}
           <dl className="grid grid-cols-1 gap-2 text-xs">
             <div className="flex justify-between">
-              <dt className="text-slate-500">العميل</dt>
+              <dt className="text-slate-500">{m.convertClientLabel}</dt>
               <dd className="font-medium text-slate-800">{reservation.clientName}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-slate-500">الوحدة</dt>
+              <dt className="text-slate-500">{m.convertUnitLabel}</dt>
               <dd className="font-medium text-slate-800">{reservation.unitCode}</dd>
             </div>
             {bookingAmount > 0 && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">مبلغ الحجز</dt>
+                <dt className="text-slate-500">{m.convertBookingAmountLabel}</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
                   {bookingAmount.toLocaleString('ar-SA')} {symbol}
                   <span className="mr-1 text-slate-400">({reservation.bookingPaymentStatus})</span>
@@ -140,7 +141,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
             )}
             {reservation.snapshotDownPaymentAmount != null && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">الدفعة الأولى</dt>
+                <dt className="text-slate-500">{m.convertDownPaymentLabel}</dt>
                 <dd className="font-medium tabular-nums" dir="ltr">
                   {Number(reservation.snapshotDownPaymentAmount).toLocaleString('ar-SA')} {symbol}
                 </dd>
@@ -148,17 +149,17 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
             )}
             {reservation.selectedDurationMonths != null && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">مدة التقسيط</dt>
+                <dt className="text-slate-500">{m.convertDurationLabel}</dt>
                 <dd className="font-medium tabular-nums">
-                  {reservation.selectedDurationMonths} شهر
+                  {reservation.selectedDurationMonths} {m.convertDurationLabel}
                   {reservation.selectedIncreasePercentage != null &&
-                    ` — زيادة ${Number(reservation.selectedIncreasePercentage)}%`}
+                    ` — ${m.convertIncreaseLabel} ${Number(reservation.selectedIncreasePercentage)}%`}
                 </dd>
               </div>
             )}
             {reservation.snapshotMonthlyInstallment != null && (
               <div className="flex justify-between">
-                <dt className="text-slate-500">القسط الشهري</dt>
+                <dt className="text-slate-500">{m.convertMonthlyLabel}</dt>
                 <dd className="font-bold tabular-nums text-brand-700" dir="ltr">
                   {Number(reservation.snapshotMonthlyInstallment).toLocaleString('ar-SA', {
                     minimumFractionDigits: 2,
@@ -170,7 +171,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
             )}
             {reservation.snapshotTotalPayable != null && (
               <div className="flex justify-between border-t border-hairline pt-2 mt-1">
-                <dt className="text-slate-500">إجمالي السداد</dt>
+                <dt className="text-slate-500">{m.convertTotalLabel}</dt>
                 <dd className="font-bold tabular-nums text-slate-900" dir="ltr">
                   {Number(reservation.snapshotTotalPayable).toLocaleString('ar-SA')} {symbol}
                 </dd>
@@ -182,10 +183,10 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
           <form action={handleSubmit} className="space-y-3">
             {needsStartDate && (
               <Field
-                label="تاريخ بدء التقسيط"
+                label={m.convertStartDateLabel}
                 name="startsAt"
                 required
-                hint="سيُطبَّق على جميع أقساط العقد"
+                hint={m.convertStartDateHint}
               >
                 <input
                   name="startsAt"
@@ -196,7 +197,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
               </Field>
             )}
 
-            <Field label="تاريخ توقيع العقد (اختياري)" name="signedAt">
+            <Field label={m.convertSignedAtLabel} name="signedAt">
               <input
                 name="signedAt"
                 type="datetime-local"
@@ -210,9 +211,9 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
                 so the contracts service can register the CONTRACT document.
                 Customers never receive this raw URL — see /me/contracts. */}
             <Field
-              label="ملف العقد (PDF أو صورة)"
+              label={m.convertContractDocLabel}
               name="contractDocument"
-              hint="ارفع نسخة العقد المحوّل. يتم التحقق من النوع والحجم على الخادم قبل الرفع."
+              hint={m.convertContractDocHint}
             >
               <DocumentUploader
                 onUploaded={setUploaded}
@@ -243,7 +244,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
                 disabled={isPending}
                 className="flex-1"
               >
-                {isPending ? 'جارٍ التحويل…' : 'تأكيد التحويل'}
+                {isPending ? m.convertInProgressBtn : m.convertConfirmBtn}
               </Button>
               <Button
                 type="button"
@@ -252,7 +253,7 @@ export function ConvertReservationForm({ reservation, symbol = 'ج.م' }: Props)
                 onClick={() => { setOpen(false); setError(null); }}
                 disabled={isPending}
               >
-                إلغاء
+                {m.convertCancelBtn}
               </Button>
             </div>
           </form>

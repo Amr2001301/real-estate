@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { PremiumFormPanel } from '@/components/premium';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import {
   createAdminBrokerReservationAction,
   type AdminBrokerReservationFormState,
@@ -53,6 +55,7 @@ interface Props {
   selectedProjectId: string;
   units: UnitOption[];
   symbol?: string;
+  locale?: Locale;
 }
 
 function FormField({
@@ -94,7 +97,9 @@ export function AdminBrokerReservationForm({
   selectedProjectId,
   units,
   symbol = 'ج.م',
+  locale = 'ar',
 }: Props) {
+  const m = uiT(locale).pages.brokerReservationsForm;
   const router = useRouter();
   const [state, formAction] = useActionState<AdminBrokerReservationFormState, FormData>(
     createAdminBrokerReservationAction,
@@ -124,16 +129,16 @@ export function AdminBrokerReservationForm({
       <PremiumFormPanel
         id="broker"
         number="01"
-        title="الوسيط ووكيله"
-        description="اختر شركة الوساطة ثم الوكيل الذي قدّم طلب الحجز. الوكيل اختياري إن كان الطلب مباشرًا من الشركة."
+        title={m.panel01Title}
+        description={m.panel01Desc}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
-            label="الوسيط"
+            label={m.labelBroker}
             required
             hint={
               broker
-                ? `نسبة العمولة الافتراضية: ${broker.defaultCommissionPct.toFixed(2)}%`
+                ? `${m.hintBrokerCommission} ${broker.defaultCommissionPct.toFixed(2)}%`
                 : undefined
             }
           >
@@ -143,7 +148,7 @@ export function AdminBrokerReservationForm({
               value={selectedBrokerId}
               onChange={(e) => pushSearch({ brokerId: e.target.value })}
             >
-              <option value="" disabled>اختر وسيطًا…</option>
+              <option value="" disabled>{m.optionChooseBroker}</option>
               {brokers.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.companyName} ({b.code})
@@ -153,8 +158,8 @@ export function AdminBrokerReservationForm({
           </FormField>
 
           <FormField
-            label="الوكيل"
-            hint="اختياري — اتركه فارغًا إن طلب الوسيط مباشرةً"
+            label={m.labelAgent}
+            hint={m.hintAgent}
           >
             <Select
               name="brokerAgentId"
@@ -168,7 +173,7 @@ export function AdminBrokerReservationForm({
               }
               disabled={!selectedBrokerId}
             >
-              <option value="">— بدون وكيل —</option>
+              <option value="">{m.optionNoAgent}</option>
               {brokerAgents.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.fullName}{a.email ? ` — ${a.email}` : ''}
@@ -183,29 +188,26 @@ export function AdminBrokerReservationForm({
       <PremiumFormPanel
         id="lead"
         number="02"
-        title="الفرصة (Lead)"
-        description="اربط هذا الحجز بفرصة معتمدة للوسيط. يجب أن تكون الفرصة في حالة APPROVED ولديها مسؤول مبيعات داخلي."
+        title={m.panel02Title}
+        description={m.panel02Desc}
       >
         {!selectedBrokerId ? (
           <p className="text-sm text-slate-400 py-1">
-            اختر وسيطًا أولًا لعرض الفرص المعتمدة.
+            {m.noBrokerMsg}
           </p>
         ) : approvedLeads.length === 0 ? (
           <div className="flex items-start gap-2.5 rounded-xl bg-warning-50 border border-warning-100 text-warning-700 p-3.5 text-sm">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-            <p>
-              لا توجد فرص معتمدة لهذا الوسيط بمسؤول مبيعات معيّن.
-              اعتمد الفرص أولًا من «فرص من الوسطاء».
-            </p>
+            <p>{m.noLeadsMsg}</p>
           </div>
         ) : (
           <FormField
-            label="الفرصة المعتمدة"
+            label={m.labelLead}
             required
-            hint="تُعرض فقط الفرص المعتمدة (APPROVED) ولديها مسؤول مبيعات داخلي معيّن."
+            hint={m.hintLead}
           >
             <Select name="leadId" required defaultValue="">
-              <option value="" disabled>اختر فرصة…</option>
+              <option value="" disabled>{m.optionChooseLead}</option>
               {approvedLeads.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.fullName} — {l.phone}
@@ -221,11 +223,11 @@ export function AdminBrokerReservationForm({
       <PremiumFormPanel
         id="unit"
         number="03"
-        title="الوحدة"
-        description="اختر المشروع أولًا ثم الوحدة المتاحة. تُعرض فقط الوحدات بحالة AVAILABLE."
+        title={m.panel03Title}
+        description={m.panel03Desc}
       >
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField label="المشروع" required>
+          <FormField label={m.labelProject} required>
             <Select
               value={selectedProjectId}
               onChange={(e) =>
@@ -237,7 +239,7 @@ export function AdminBrokerReservationForm({
               }
               required
             >
-              <option value="" disabled>اختر مشروعًا…</option>
+              <option value="" disabled>{m.optionChooseProject}</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}{p.city ? ` — ${p.city}` : ''}
@@ -247,18 +249,18 @@ export function AdminBrokerReservationForm({
           </FormField>
 
           <FormField
-            label="الوحدة"
+            label={m.labelUnit}
             required
             hint={
               selectedProjectId && units.length === 0
-                ? 'لا توجد وحدات متاحة في هذا المشروع.'
-                : 'إن لم تكن الوحدة في صلاحيات الوسيط، سيُرفض الإنشاء عند الحفظ.'
+                ? m.hintUnitNoUnits
+                : m.hintUnitAccess
             }
             hintTone={selectedProjectId && units.length === 0 ? 'warning' : 'default'}
           >
             <Select name="unitId" required defaultValue="" disabled={!selectedProjectId}>
               <option value="" disabled>
-                {selectedProjectId ? 'اختر وحدة…' : 'اختر مشروعًا أولًا'}
+                {selectedProjectId ? m.optionChooseUnit : m.optionChooseProjectFirst}
               </option>
               {units.map((u) => (
                 <option key={u.id} value={u.id}>
@@ -276,22 +278,22 @@ export function AdminBrokerReservationForm({
       <PremiumFormPanel
         id="notes"
         number="04"
-        title="ملاحظات واعتماد"
-        description="أضف أي ملاحظات داخلية ثم احفظ الحجز. سيتم تثبيت نسبة عمولة الوسيط لحظة الإنشاء."
+        title={m.panel04Title}
+        description={m.panel04Desc}
       >
         <div className="space-y-6">
-          <FormField label="ملاحظات داخلية" hint="اختياري — ستُحفظ كملاحظة مرتبطة بالحجز">
+          <FormField label={m.labelNotes} hint={m.hintNotes}>
             <Textarea
               name="notes"
               rows={3}
               maxLength={2000}
-              placeholder="ملاحظات داخلية على الحجز"
+              placeholder={m.notesPlaceholder}
             />
           </FormField>
 
           <div className="flex items-center justify-between gap-4 pt-5 border-t border-hairline">
             <p className="text-[11px] text-slate-400 leading-snug max-w-sm">
-              سيتم تثبيت ملف عمولة الوسيط لحظة الإنشاء — حسب وصول الوسيط للمشروع أو نسبته الافتراضية.
+              {m.footerNote}
             </p>
             <Button
               type="submit"
@@ -299,7 +301,7 @@ export function AdminBrokerReservationForm({
               size="md"
               leftIcon={<Save className="h-4 w-4" />}
             >
-              حفظ الحجز
+              {m.submitBtn}
             </Button>
           </div>
         </div>

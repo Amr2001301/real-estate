@@ -7,15 +7,19 @@ import { Button } from '@/components/ui/button';
 import { RescheduleModal } from '../../../_components/reschedule-modal';
 import { AssignSalesModal } from '../../../_components/assign-sales-modal';
 import { updateAppointmentStatusAction } from '../actions';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 const FINAL: AppointmentStatus[] = ['COMPLETED', 'CANCELLED', 'NO_SHOW', 'RESCHEDULED'];
 
 interface Props {
   appointment: VisitAppointment;
   salesOptions: { id: string; fullName: string }[];
+  locale?: Locale;
 }
 
-export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
+export function AppointmentDetailActions({ appointment, salesOptions, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.visitComponents;
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
 
@@ -28,12 +32,12 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
         <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
           <input type="hidden" name="status" value="CONFIRMED" />
           <Button type="submit" variant="subtle" size="md" leftIcon={<CheckCircle className="h-4 w-4" />}>
-            تأكيد الزيارة
+            {m.confirmVisitBtn}
           </Button>
         </form>
       )}
 
-      {/* "تمت الزيارة" — backend guard requires CONFIRMED first. */}
+      {/* Complete — backend guard requires CONFIRMED first. */}
       {appointment.status === 'CONFIRMED' && (
         <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
           <input type="hidden" name="status" value="COMPLETED" />
@@ -43,7 +47,7 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
             size="md"
             className="bg-success-600 hover:bg-success-700"
           >
-            تمت الزيارة
+            {m.completeVisitBtn}
           </Button>
         </form>
       )}
@@ -54,7 +58,7 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
         leftIcon={<RefreshCw className="h-4 w-4" />}
         onClick={() => setRescheduleOpen(true)}
       >
-        إعادة جدولة
+        {m.rescheduleBtn}
       </Button>
 
       <Button
@@ -63,10 +67,10 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
         leftIcon={<UserCheck className="h-4 w-4" />}
         onClick={() => setAssignOpen(true)}
       >
-        تغيير المندوب
+        {m.changeSalesRepBtn}
       </Button>
 
-      {/* "لم يحضر" — backend rejects no-show before scheduledAt. */}
+      {/* No-show — backend rejects before scheduledAt. */}
       {new Date(appointment.scheduledAt).getTime() <= Date.now() && (
         <form action={updateAppointmentStatusAction.bind(null, appointment.id)} className="contents">
           <input type="hidden" name="status" value="NO_SHOW" />
@@ -77,7 +81,7 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
             leftIcon={<UserX className="h-4 w-4" />}
             className="text-amber-600 border-amber-200 hover:bg-amber-50"
           >
-            لم يحضر
+            {m.noShowBtn}
           </Button>
         </form>
       )}
@@ -91,7 +95,7 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
           leftIcon={<X className="h-4 w-4" />}
           className="text-danger-600 border-danger-200 hover:bg-danger-50"
         >
-          إلغاء
+          {m.cancelBtn}
         </Button>
       </form>
 
@@ -102,6 +106,7 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
         currentScheduledAt={appointment.scheduledAt}
         open={rescheduleOpen}
         onClose={() => setRescheduleOpen(false)}
+        locale={locale}
       />
 
       <AssignSalesModal
@@ -110,6 +115,7 @@ export function AppointmentDetailActions({ appointment, salesOptions }: Props) {
         currentSalesId={appointment.assignedSalesId}
         open={assignOpen}
         onClose={() => setAssignOpen(false)}
+        locale={locale}
       />
     </>
   );

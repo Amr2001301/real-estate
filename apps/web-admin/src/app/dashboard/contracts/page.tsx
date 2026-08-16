@@ -5,6 +5,8 @@ import { getSession } from '@/lib/session';
 import type { Paged } from '@/lib/types';
 import { formatCurrency, formatDate, tx } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
@@ -56,6 +58,8 @@ export default async function ContractsPage({
     page?: string;
   }>;
 }) {
+  const locale = await getLocale();
+  const m = uiT(locale).pages.contracts;
   const sp = await searchParams;
   const currency = await getReportsCurrency();
   const page = Number(sp.page ?? 1);
@@ -89,17 +93,17 @@ export default async function ContractsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="العقود"
-        description="إدارة عقود البيع ومتابعة حالاتها المالية والتشغيلية."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'العقود' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           isAdmin ? (
             <Link href="/dashboard/contracts/new">
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                عقد يدوي
+                {m.addBtn}
               </Button>
             </Link>
           ) : undefined
@@ -112,25 +116,25 @@ export default async function ContractsPage({
         cols={3}
         metrics={[
           {
-            label: 'إجمالي العقود',
+            label: m.kpi.total,
             value: totalContracts,
             icon: <FileText />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'عقود موقّعة (الصفحة الحالية)',
+            label: m.kpi.signed,
             value: signedCount,
             icon: <CheckCircle2 />,
             tone: 'success',
-            sub: `من ${contracts.length} عقد في هذه الصفحة`,
+            sub: m.kpi.signedSub.replace('{n}', String(contracts.length)),
           },
           {
-            label: 'محوّلة من حجز (الصفحة الحالية)',
+            label: m.kpi.fromReservation,
             value: withReservationCount,
             icon: <Link2 />,
             tone: 'info',
-            sub: `من ${contracts.length} عقد في هذه الصفحة`,
+            sub: m.kpi.signedSub.replace('{n}', String(contracts.length)),
           },
         ]}
       />
@@ -139,38 +143,38 @@ export default async function ContractsPage({
       <PremiumFilterBar method="get" action="/dashboard/contracts">
         {/* Search */}
         <div className="flex-1 min-w-[160px]">
-          <label htmlFor="con-q" className="sr-only">بحث</label>
+          <label htmlFor="con-q" className="sr-only">{m.filter.searchLabel}</label>
           <Input
             id="con-q"
             name="q"
             inputSize="sm"
-            placeholder="رقم العقد، العميل، الوحدة…"
+            placeholder={m.filter.searchPlaceholder}
             defaultValue={sp.q ?? ''}
             className="w-full"
           />
         </div>
 
-        <PremiumFilterField label="التوقيع" htmlFor="con-signed">
+        <PremiumFilterField label={m.filter.signedLabel} htmlFor="con-signed">
           <Select id="con-signed" name="signed" inputSize="sm" defaultValue={sp.signed ?? ''} className="w-36 shrink-0">
-            <option value="">كل التوقيع</option>
-            <option value="yes">موقّع</option>
-            <option value="no">غير موقّع</option>
+            <option value="">{m.filter.allSigned}</option>
+            <option value="yes">{m.filter.signed}</option>
+            <option value="no">{m.filter.unsigned}</option>
           </Select>
         </PremiumFilterField>
 
-        <PremiumFilterField label="المصدر" htmlFor="con-hasReservation">
+        <PremiumFilterField label={m.filter.sourceLabel} htmlFor="con-hasReservation">
           <Select id="con-hasReservation" name="hasReservation" inputSize="sm" defaultValue={sp.hasReservation ?? ''} className="w-36 shrink-0">
-            <option value="">كل المصادر</option>
-            <option value="yes">من حجز</option>
-            <option value="no">يدوي</option>
+            <option value="">{m.filter.allSources}</option>
+            <option value="yes">{m.filter.fromReservation}</option>
+            <option value="no">{m.filter.manual}</option>
           </Select>
         </PremiumFilterField>
 
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {(sp.q || sp.signed || sp.hasReservation) && (
             <Link href="/dashboard/contracts">
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
         </div>
@@ -187,15 +191,15 @@ export default async function ContractsPage({
       <DataTable
         rowKey={(c) => c.id}
         rows={contracts}
-        emptyMessage="لا توجد عقود تطابق الفلاتر الحالية"
+        emptyMessage={m.empty}
         columns={[
           {
             key: 'number',
-            header: 'رقم العقد',
+            header: m.cols.id,
             cell: (c) => (
               <Link
                 href={`/dashboard/contracts/${c.id}`}
-                title="عرض تفاصيل العقد"
+                title={m.viewBtn}
                 className="font-mono text-xs font-semibold text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 transition-colors"
               >
                 {c.contractNumber ?? c.id.slice(0, 8)}
@@ -204,7 +208,7 @@ export default async function ContractsPage({
           },
           {
             key: 'customer',
-            header: 'العميل',
+            header: m.cols.client,
             cell: (c) => (
               <div>
                 <p className="font-medium text-slate-900">{c.customer?.fullName ?? '—'}</p>
@@ -216,7 +220,7 @@ export default async function ContractsPage({
           },
           {
             key: 'unit',
-            header: 'الوحدة',
+            header: m.cols.unit,
             cell: (c) => (
               <div>
                 <p className="font-medium">{c.unit?.code ?? '—'} · {c.unit?.type ?? ''}</p>
@@ -228,24 +232,24 @@ export default async function ContractsPage({
           },
           {
             key: 'amounts',
-            header: 'الإجمالي / المقدم',
+            header: m.cols.total,
             cell: (c) => (
               <div className="tabular-nums text-sm">
                 <p className="font-semibold">{formatCurrency(c.totalAmount, currency)}</p>
                 {Number(c.downPayment) > 0 && (
-                  <p className="text-xs text-slate-400">مقدم: {formatCurrency(c.downPayment, currency)}</p>
+                  <p className="text-xs text-slate-400">{m.downPaymentPrefix} {formatCurrency(c.downPayment, currency)}</p>
                 )}
               </div>
             ),
           },
           {
             key: 'plan',
-            header: 'خطة التقسيط',
+            header: m.cols.plan,
             cell: (c) =>
               c.installmentPlan ? (
                 <span className="inline-flex items-center gap-1 text-xs text-success-700 bg-success-50 px-2 py-0.5 rounded-full">
                   <CheckCircle2 className="h-3 w-3" />
-                  {c.installmentPlan.totalMonths} شهر
+                  {c.installmentPlan.totalMonths} {m.monthsSuffix}
                 </span>
               ) : (
                 <span className="text-xs text-slate-400">—</span>
@@ -253,7 +257,7 @@ export default async function ContractsPage({
           },
           {
             key: 'source',
-            header: 'المصدر',
+            header: m.cols.source,
             cell: (c) =>
               c.reservation ? (
                 <Link
@@ -266,23 +270,23 @@ export default async function ContractsPage({
               ) : (
                 <span className="inline-flex items-center gap-1 text-xs text-slate-400">
                   <Unlink className="h-3 w-3" />
-                  يدوي
+                  {m.manualBadge}
                 </span>
               ),
           },
           {
             key: 'signed',
-            header: 'التوقيع',
+            header: m.cols.signed,
             cell: (c) =>
               c.signedAt ? (
                 <span className="text-xs text-success-700">{formatDate(c.signedAt)}</span>
               ) : (
-                <span className="text-xs text-slate-400">غير موقّع</span>
+                <span className="text-xs text-slate-400">{m.unsignedLabel}</span>
               ),
           },
           {
             key: 'created',
-            header: 'تاريخ الإنشاء',
+            header: m.cols.created,
             cell: (c) => <span className="text-xs text-slate-500">{formatDate(c.createdAt)}</span>,
           },
           {
@@ -290,7 +294,7 @@ export default async function ContractsPage({
             header: '',
             cell: (c) => (
               <Link href={`/dashboard/contracts/${c.id}`}>
-                <IconButton label="عرض تفاصيل العقد" variant="outline" size="sm">
+                <IconButton label={m.viewBtn} variant="outline" size="sm">
                   <Eye />
                 </IconButton>
               </Link>
@@ -307,6 +311,7 @@ export default async function ContractsPage({
           total={meta.total}
           basePath="/dashboard/contracts"
           params={{ q: sp.q, signed: sp.signed, hasReservation: sp.hasReservation }}
+          locale={locale}
         />
       )}
     </div>

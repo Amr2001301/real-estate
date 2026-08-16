@@ -31,6 +31,8 @@ import type {
   VisitAppointment,
 } from '@/lib/types';
 import { formatDate, formatDateTime, tx } from '@/lib/format';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -60,15 +62,6 @@ interface LeadDetail extends Lead {
 const STAGES: LeadStage[] = ['NEW', 'INTERESTED', 'VISIT', 'NEGOTIATION', 'WON', 'LOST'];
 
 // ── Stage style maps ──────────────────────────────────────────────────────────
-
-const STAGE_LABEL: Record<LeadStage, string> = {
-  NEW: 'جديد',
-  INTERESTED: 'مهتم',
-  VISIT: 'زيارة',
-  NEGOTIATION: 'تفاوض',
-  WON: 'فاز',
-  LOST: 'خسارة',
-};
 
 const STAGE_BADGE_CLS: Record<LeadStage, string> = {
   NEW:         'bg-slate-100   text-slate-700  border-slate-200',
@@ -120,6 +113,26 @@ export default async function LeadDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
+  const m = uiT(locale).leadDetailPage;
+
+  const STAGE_LABEL: Record<LeadStage, string> = {
+    NEW:         m.stageNew,
+    INTERESTED:  m.stageInterested,
+    VISIT:       m.stageVisit,
+    NEGOTIATION: m.stageNegotiation,
+    WON:         m.stageWon,
+    LOST:        m.stageLost,
+  };
+
+  const RESERVATION_LABELS: Record<string, string> = {
+    CREATED:   m.activityReservationCreated,
+    APPROVED:  m.activityReservationApproved,
+    REJECTED:  m.activityReservationRejected,
+    CANCELLED: m.activityReservationCancelled,
+    EXPIRED:   m.activityReservationExpired,
+  };
+
   const [leadRes, salesRes, visitRequestsRes, appointmentsRes, reservationsRes] =
     await Promise.all([
       safe(api.get<LeadDetail>(`/leads/${id}`)),
@@ -132,7 +145,7 @@ export default async function LeadDetailPage({
   if (leadRes.error || !leadRes.data) {
     return (
       <div className="flex items-start gap-3 rounded-[20px] bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل بيانات الفرصة: {leadRes.error ?? 'غير موجود'}
+        {m.errorLoad} {leadRes.error ?? m.errorNotFound}
       </div>
     );
   }
@@ -142,12 +155,51 @@ export default async function LeadDetailPage({
   const appointments = appointmentsRes.data?.data ?? [];
   const reservations = reservationsRes.data?.data ?? [];
 
-  const displayName  = lead.client?.fullName ?? lead.fullName ?? 'فرصة غير مُعرَّفة';
+  const displayName  = lead.client?.fullName ?? lead.fullName ?? m.unknownLead;
   const displayPhone = lead.client?.phone ?? lead.phone ?? null;
   const displayEmail = lead.client?.email ?? lead.email ?? null;
   const isBrokerLead = !!lead.brokerId;
   const brokerName   = lead.broker?.commercialName || lead.broker?.companyName || lead.broker?.code || null;
   const notesCount   = lead.notes?.length ?? 0;
+
+  function renderLeadActivity(type: string, payload: unknown): ActivityMeta {
+    const p = (payload ?? {}) as Record<string, unknown>;
+
+    if (type === 'reservation') {
+      const status = typeof p.status === 'string' ? p.status : '';
+      const reservationId = typeof p.reservationId === 'string' ? p.reservationId : undefined;
+      const reservationNumber = typeof p.reservationNumber === 'string' ? p.reservationNumber : undefined;
+      return {
+        label: RESERVATION_LABELS[status] ?? m.activityReservationDefault,
+        dotColor:
+          status === 'APPROVED'
+            ? 'bg-emerald-400'
+            : status === 'REJECTED' || status === 'CANCELLED'
+              ? 'bg-rose-400'
+              : status === 'EXPIRED'
+                ? 'bg-amber-400'
+                : 'bg-brand-400',
+        link: reservationId ? `/dashboard/reservations/${reservationId}` : undefined,
+        linkLabel: reservationNumber ?? reservationId?.slice(0, 8),
+      };
+    }
+
+    if (type === 'status_change') {
+      const from = typeof p.from === 'string' ? p.from : '';
+      const to   = typeof p.to   === 'string' ? p.to   : '';
+      return { label: `${from} ← ${to}`, dotColor: 'bg-amber-400' };
+    }
+
+    if (type === 'note') {
+      return { label: m.activityNoteAdded, dotColor: 'bg-slate-400' };
+    }
+
+    if (type === 'broker_submitted') {
+      return { label: m.activityBrokerSubmitted, dotColor: 'bg-indigo-400' };
+    }
+
+    return { label: type.replace(/_/g, ' '), dotColor: 'bg-brand-400' };
+  }
 
   return (
     <div className="space-y-5">
@@ -157,8 +209,8 @@ export default async function LeadDetailPage({
         title={displayName}
         description={[displayPhone, displayEmail].filter(Boolean).join(' · ') || undefined}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'فرص المبيعات (CRM)', href: '/dashboard/leads' },
+          { label: m.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbLeads, href: '/dashboard/leads' },
           { label: displayName },
         ]}
         meta={
@@ -175,21 +227,21 @@ export default async function LeadDetailPage({
             {lead.client?.id && (
               <Link href={`/dashboard/clients/${lead.client.id}` as never}>
                 <Button variant="outline" size="md" leftIcon={<ExternalLink className="h-4 w-4" />}>
-                  ملف العميل
+                  {m.btnClientProfile}
                 </Button>
               </Link>
             )}
             {displayPhone && (
               <a href={`tel:${displayPhone}`}>
                 <Button variant="outline" size="md" leftIcon={<Phone className="h-4 w-4" />}>
-                  اتصال
+                  {m.btnCall}
                 </Button>
               </a>
             )}
             {displayEmail && (
               <a href={`mailto:${displayEmail}`}>
                 <Button variant="primary" size="md" leftIcon={<Mail className="h-4 w-4" />}>
-                  إرسال بريد
+                  {m.btnEmail}
                 </Button>
               </a>
             )}
@@ -204,8 +256,8 @@ export default async function LeadDetailPage({
             {/* Stage card with colored top border */}
             <PremiumSectionCard
               icon={<TrendingUp />}
-              title="مرحلة الفرصة"
-              description="انقل الفرصة بين مراحل البيع المختلفة"
+              title={m.stageSectionTitle}
+              description={m.stageSectionDesc}
               trailing={
                 <span className={cn(
                   'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] font-bold',
@@ -223,8 +275,8 @@ export default async function LeadDetailPage({
             {/* Notes */}
             <PremiumSectionCard
               icon={<MessageSquare />}
-              title="الملاحظات"
-              description="سجّل تفاعلاتك مع العميل وتحديثات المتابعة"
+              title={m.notesSectionTitle}
+              description={m.notesSectionDesc}
               trailing={
                 <span className="inline-flex h-5 min-w-[22px] px-1.5 items-center justify-center rounded-full bg-slate-100 text-[10px] font-bold text-slate-500 tabular-nums">
                   {notesCount}
@@ -239,12 +291,12 @@ export default async function LeadDetailPage({
                     name="body"
                     required
                     rows={3}
-                    placeholder="اكتب ملاحظة جديدة عن آخر تفاعل مع العميل…"
+                    placeholder={m.notesPlaceholder}
                     className="text-[13px]"
                   />
                   <div className="flex justify-start">
                     <Button type="submit" variant="primary" size="sm">
-                      حفظ الملاحظة
+                      {m.btnSaveNote}
                     </Button>
                   </div>
                 </form>
@@ -257,8 +309,8 @@ export default async function LeadDetailPage({
                     <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                       <MessageSquare className="h-5 w-5" />
                     </span>
-                    <p className="text-[13px] font-semibold text-slate-600">لا توجد ملاحظات بعد</p>
-                    <p className="text-[11px] text-slate-400">ابدأ بتدوين أول ملاحظة لتتبع تفاعلاتك مع العميل.</p>
+                    <p className="text-[13px] font-semibold text-slate-600">{m.emptyNotesTitle}</p>
+                    <p className="text-[11px] text-slate-400">{m.emptyNotesDesc}</p>
                   </div>
                 ) : (
                   <ul className="flex flex-col gap-2.5">
@@ -274,7 +326,7 @@ export default async function LeadDetailPage({
                         <p className="text-[13px] text-slate-800 leading-relaxed">{n.body}</p>
                         <p className="mt-2 flex items-center gap-1.5 text-[11px] text-slate-400">
                           <UserCog className="h-3 w-3 shrink-0" />
-                          <span className="font-medium text-slate-500">{n.sales?.fullName ?? 'مجهول'}</span>
+                          <span className="font-medium text-slate-500">{n.sales?.fullName ?? m.unknownNoteAuthor}</span>
                           <span className="text-slate-300">·</span>
                           <span dir="ltr">{formatDateTime(n.createdAt)}</span>
                         </p>
@@ -289,8 +341,8 @@ export default async function LeadDetailPage({
             {(visitRequests.length > 0 || appointments.length > 0) && (
               <PremiumSectionCard
                 icon={<CalendarClock />}
-                title="الزيارات"
-                description="طلبات الزيارة والمواعيد المجدولة"
+                title={m.visitsSectionTitle}
+                description={m.visitsSectionDesc}
                 trailing={
                   <span className="inline-flex h-5 min-w-[22px] px-1.5 items-center justify-center rounded-full bg-violet-100 text-[10px] font-bold text-violet-600 tabular-nums">
                     {visitRequests.length + appointments.length}
@@ -302,7 +354,7 @@ export default async function LeadDetailPage({
                   {visitRequests.length > 0 && (
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] mb-2.5">
-                        طلبات الزيارة
+                        {m.visitRequestsSubTitle}
                       </p>
                       <ul className="flex flex-col gap-2">
                         {visitRequests.map((r) => (
@@ -328,7 +380,7 @@ export default async function LeadDetailPage({
                   {appointments.length > 0 && (
                     <div>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.12em] mb-2.5">
-                        الزيارات المجدولة
+                        {m.scheduledVisitsSubTitle}
                       </p>
                       <ul className="flex flex-col gap-2">
                         {appointments.map((a) => (
@@ -359,7 +411,7 @@ export default async function LeadDetailPage({
             {reservations.length > 0 && (
               <PremiumSectionCard
                 icon={<BookmarkCheck />}
-                title="الحجوزات المرتبطة"
+                title={m.reservationsSectionTitle}
                 trailing={
                   <span className="inline-flex h-5 min-w-[22px] px-1.5 items-center justify-center rounded-full bg-brand-100 text-[10px] font-bold text-brand-700 tabular-nums">
                     {reservations.length}
@@ -399,7 +451,7 @@ export default async function LeadDetailPage({
                     href={`/dashboard/reservations?leadId=${lead.id}` as never}
                     className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-800"
                   >
-                    عرض كل الحجوزات
+                    {m.linkAllReservations}
                     <ArrowLeft className="h-3.5 w-3.5 rtl:rotate-180" />
                   </Link>
                 </div>
@@ -409,16 +461,16 @@ export default async function LeadDetailPage({
             {/* Timeline */}
             <PremiumSectionCard
               icon={<Activity />}
-              title="سجل النشاط"
-              description="التغييرات والتفاعلات على هذه الفرصة"
+              title={m.activitySectionTitle}
+              description={m.activitySectionDesc}
             >
               {(!lead.activities || lead.activities.length === 0) ? (
                 <div className="flex flex-col items-center gap-2 py-4 text-center">
                   <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
                     <Activity className="h-5 w-5" />
                   </span>
-                  <p className="text-[13px] font-semibold text-slate-600">لا يوجد نشاط بعد</p>
-                  <p className="text-[11px] text-slate-400">ستظهر التغييرات والتفاعلات هنا تلقائياً.</p>
+                  <p className="text-[13px] font-semibold text-slate-600">{m.emptyActivityTitle}</p>
+                  <p className="text-[11px] text-slate-400">{m.emptyActivityDesc}</p>
                 </div>
               ) : (
                 <ul className="relative space-y-0 ps-5 before:absolute before:start-2 before:top-2 before:bottom-2 before:w-px before:bg-hairline">
@@ -457,11 +509,11 @@ export default async function LeadDetailPage({
         side={
           <>
             {/* Quick actions */}
-            <PremiumCommandPanel title="إجراءات سريعة" icon={<Zap />}>
+            <PremiumCommandPanel title={m.quickActionsTitle} icon={<Zap />}>
               {lead.client?.id && (
                 <Link href={`/dashboard/clients/${lead.client.id}` as never} className={CMD_LINK}>
                   <span className={CMD_ICON}><User /></span>
-                  <span>ملف العميل</span>
+                  <span>{m.cmdClientProfile}</span>
                 </Link>
               )}
               {displayPhone && (
@@ -479,7 +531,7 @@ export default async function LeadDetailPage({
             </PremiumCommandPanel>
 
             {/* Assignment */}
-            <PremiumSectionCard icon={<UserCog />} title="إسناد المبيعات" padded={false}>
+            <PremiumSectionCard icon={<UserCog />} title={m.assignmentTitle} padded={false}>
               <div className="p-5 space-y-3">
                 {/* Current assignee chip */}
                 <div className="flex items-center gap-3 rounded-xl bg-canvas/60 ring-1 ring-inset ring-hairline px-3.5 py-3">
@@ -492,12 +544,12 @@ export default async function LeadDetailPage({
                         <p className="text-[13px] font-semibold text-slate-900 truncate leading-tight">
                           {lead.assignedSales.fullName}
                         </p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">المسؤول الحالي</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{m.currentAssigneeLabel}</p>
                       </div>
                       <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
                     </>
                   ) : (
-                    <p className="text-[12px] text-slate-400 italic">— غير مسند —</p>
+                    <p className="text-[12px] text-slate-400 italic">{m.unassigned}</p>
                   )}
                 </div>
 
@@ -508,20 +560,20 @@ export default async function LeadDetailPage({
                     defaultValue={lead.assignedSalesId ?? ''}
                     inputSize="sm"
                   >
-                    <option value="">— اختر مندوب —</option>
+                    <option value="">{m.selectSalesPlaceholder}</option>
                     {salesRes.data?.data.map((s) => (
                       <option key={s.id} value={s.id}>{salesActorLabel(s)}</option>
                     ))}
                   </Select>
                   <Button type="submit" variant="secondary" size="sm" className="w-full">
-                    تحديث الإسناد
+                    {m.btnUpdateAssignment}
                   </Button>
                 </form>
               </div>
             </PremiumSectionCard>
 
             {/* Client */}
-            <PremiumSectionCard icon={<User />} title="معلومات العميل">
+            <PremiumSectionCard icon={<User />} title={m.clientSectionTitle}>
               <div className="space-y-2.5">
                 {lead.client ? (
                   <p className="text-[15px] font-bold text-slate-900">{lead.client.fullName}</p>
@@ -561,13 +613,13 @@ export default async function LeadDetailPage({
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                         : 'bg-slate-100 text-slate-600 border-slate-200',
                     )}>
-                      {lead.client.role === 'CUSTOMER' ? 'مالك' : 'متصفّح'}
+                      {lead.client.role === 'CUSTOMER' ? m.clientRoleOwner : m.clientRoleBrowser}
                     </span>
                     <Link
                       href={`/dashboard/clients/${lead.client.id}` as never}
                       className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-700 hover:text-brand-800"
                     >
-                      ملف كامل
+                      {m.linkFullProfile}
                       <ArrowLeft className="h-3 w-3 rtl:rotate-180" />
                     </Link>
                   </div>
@@ -577,32 +629,32 @@ export default async function LeadDetailPage({
 
             {/* Ad Attribution — only shown when at least one UTM field is set */}
             {(lead.utmSource || lead.utmMedium || lead.utmCampaign || lead.utmContent || lead.fbclid) && (
-              <PremiumSectionCard icon={<BarChart2 />} title="مصدر الإعلان" padded={false}>
+              <PremiumSectionCard icon={<BarChart2 />} title={m.adAttributionTitle} padded={false}>
                 <dl className="divide-y divide-hairline/60">
                   {lead.utmSource && (
-                    <InfoRow label="المصدر (Source)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                    <InfoRow label={m.fieldSource} icon={<BarChart2 className="h-3.5 w-3.5" />}>
                       <span className="font-mono text-[12px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg">
                         {lead.utmSource}
                       </span>
                     </InfoRow>
                   )}
                   {lead.utmMedium && (
-                    <InfoRow label="الوسيلة (Medium)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                    <InfoRow label={m.fieldMedium} icon={<BarChart2 className="h-3.5 w-3.5" />}>
                       <span className="font-mono text-[12px] text-slate-700">{lead.utmMedium}</span>
                     </InfoRow>
                   )}
                   {lead.utmCampaign && (
-                    <InfoRow label="الحملة (Campaign)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                    <InfoRow label={m.fieldCampaign} icon={<BarChart2 className="h-3.5 w-3.5" />}>
                       <span className="font-mono text-[12px] text-slate-700 text-end">{lead.utmCampaign}</span>
                     </InfoRow>
                   )}
                   {lead.utmContent && (
-                    <InfoRow label="المحتوى (Content)" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                    <InfoRow label={m.fieldContent} icon={<BarChart2 className="h-3.5 w-3.5" />}>
                       <span className="font-mono text-[12px] text-slate-700 text-end">{lead.utmContent}</span>
                     </InfoRow>
                   )}
                   {lead.fbclid && (
-                    <InfoRow label="Facebook Click ID" icon={<BarChart2 className="h-3.5 w-3.5" />}>
+                    <InfoRow label={m.fieldFbclid} icon={<BarChart2 className="h-3.5 w-3.5" />}>
                       <span className="font-mono text-[10px] text-slate-500 truncate max-w-[140px]">{lead.fbclid}</span>
                     </InfoRow>
                   )}
@@ -611,11 +663,11 @@ export default async function LeadDetailPage({
             )}
 
             {/* Info fields */}
-            <PremiumSectionCard icon={<Building2 />} title="معلومات الفرصة" padded={false}>
+            <PremiumSectionCard icon={<Building2 />} title={m.opportunityInfoTitle} padded={false}>
               <dl className="divide-y divide-hairline/60">
 
                 {/* Project */}
-                <InfoRow label="المشروع المهتم" icon={<Building2 className="h-3.5 w-3.5" />}>
+                <InfoRow label={m.fieldProjectInterest} icon={<Building2 className="h-3.5 w-3.5" />}>
                   {lead.projectInterest ? (
                     <span className="text-[13px] font-semibold text-slate-900 text-end leading-snug">
                       {tx(lead.projectInterest.name)}
@@ -627,7 +679,7 @@ export default async function LeadDetailPage({
 
                 {/* Unit */}
                 {lead.unitInterest && (
-                  <InfoRow label="الوحدة" icon={<DoorOpen className="h-3.5 w-3.5" />}>
+                  <InfoRow label={m.fieldUnit} icon={<DoorOpen className="h-3.5 w-3.5" />}>
                     <div className="flex items-center gap-1.5 flex-wrap justify-end">
                       <span className="font-mono text-[12px] font-bold text-brand-700 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-lg">
                         {lead.unitInterest.code}
@@ -642,17 +694,17 @@ export default async function LeadDetailPage({
                 )}
 
                 {/* Source */}
-                <InfoRow label="مصدر الفرصة" icon={<ArrowLeft className="h-3.5 w-3.5" />}>
+                <InfoRow label={m.fieldLeadSource} icon={<ArrowLeft className="h-3.5 w-3.5" />}>
                   {lead.brokerId ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                      من وسيط
+                      {m.sourceBroker}
                     </span>
                   ) : lead.source ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-100">
                       {tx(lead.source.name)}
                     </span>
                   ) : (
-                    <span className="text-[12px] text-slate-500">مباشر</span>
+                    <span className="text-[12px] text-slate-500">{m.sourceDirect}</span>
                   )}
                 </InfoRow>
 
@@ -666,7 +718,7 @@ export default async function LeadDetailPage({
                           <Briefcase className="h-4 w-4" />
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wide">الوسيط</p>
+                          <p className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wide">{m.brokerLabel}</p>
                           <p className="text-[13px] font-bold text-indigo-900 truncate leading-tight">
                             {brokerName ?? '—'}
                           </p>
@@ -677,7 +729,7 @@ export default async function LeadDetailPage({
                         <div className="flex items-center gap-2.5 ps-[42px]">
                           <UserCog className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
                           <div className="min-w-0">
-                            <p className="text-[10px] text-indigo-400">مندوب الوسيط</p>
+                            <p className="text-[10px] text-indigo-400">{m.brokerAgentLabel}</p>
                             <p className="text-[12px] font-semibold text-indigo-700 truncate">
                               {lead.brokerAgent.fullName}
                             </p>
@@ -689,14 +741,14 @@ export default async function LeadDetailPage({
                 )}
 
                 {/* Created */}
-                <InfoRow label="تاريخ الإنشاء" icon={<Calendar className="h-3.5 w-3.5" />}>
+                <InfoRow label={m.fieldCreatedAt} icon={<Calendar className="h-3.5 w-3.5" />}>
                   <span className="text-[12px] font-semibold text-slate-700 tabular-nums" dir="ltr">
                     {formatDateTime(lead.createdAt)}
                   </span>
                 </InfoRow>
 
                 {/* ID */}
-                <InfoRow label="معرّف الفرصة" icon={<Hash className="h-3.5 w-3.5" />}>
+                <InfoRow label={m.fieldLeadId} icon={<Hash className="h-3.5 w-3.5" />}>
                   <span className="font-mono text-[13px] font-bold text-slate-600 tracking-wide">
                     #{lead.id.slice(0, 8).toUpperCase()}
                   </span>
@@ -740,51 +792,4 @@ interface ActivityMeta {
   dotColor: string;
   link?: string;
   linkLabel?: string;
-}
-
-const RESERVATION_LABELS: Record<string, string> = {
-  CREATED:   'تم إنشاء حجز',
-  APPROVED:  'تمت الموافقة على الحجز',
-  REJECTED:  'تم رفض الحجز',
-  CANCELLED: 'تم إلغاء الحجز',
-  EXPIRED:   'انتهت صلاحية الحجز',
-};
-
-function renderLeadActivity(type: string, payload: unknown): ActivityMeta {
-  const p = (payload ?? {}) as Record<string, unknown>;
-
-  if (type === 'reservation') {
-    const status = typeof p.status === 'string' ? p.status : '';
-    const reservationId = typeof p.reservationId === 'string' ? p.reservationId : undefined;
-    const reservationNumber = typeof p.reservationNumber === 'string' ? p.reservationNumber : undefined;
-    return {
-      label: RESERVATION_LABELS[status] ?? 'تحديث على الحجز',
-      dotColor:
-        status === 'APPROVED'
-          ? 'bg-emerald-400'
-          : status === 'REJECTED' || status === 'CANCELLED'
-            ? 'bg-rose-400'
-            : status === 'EXPIRED'
-              ? 'bg-amber-400'
-              : 'bg-brand-400',
-      link: reservationId ? `/dashboard/reservations/${reservationId}` : undefined,
-      linkLabel: reservationNumber ?? reservationId?.slice(0, 8),
-    };
-  }
-
-  if (type === 'status_change') {
-    const from = typeof p.from === 'string' ? p.from : '';
-    const to   = typeof p.to   === 'string' ? p.to   : '';
-    return { label: `تغيير المرحلة: ${from} ← ${to}`, dotColor: 'bg-amber-400' };
-  }
-
-  if (type === 'note') {
-    return { label: 'تم إضافة ملاحظة', dotColor: 'bg-slate-400' };
-  }
-
-  if (type === 'broker_submitted') {
-    return { label: 'تم إرسال الفرصة من وسيط', dotColor: 'bg-indigo-400' };
-  }
-
-  return { label: type.replace(/_/g, ' '), dotColor: 'bg-brand-400' };
 }

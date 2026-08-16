@@ -5,20 +5,28 @@ export const MONTH_NAMES = [
   'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر',
 ];
 
-export const MONTH_OPTIONS = MONTH_NAMES.map((label, i) => ({
-  value: String(i + 1).padStart(2, '0'),
-  label,
-}));
+const MONTH_NAMES_EN = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+export function getMonthOptions(locale: 'ar' | 'en' = 'ar') {
+  const names = locale === 'ar' ? MONTH_NAMES : MONTH_NAMES_EN;
+  return names.map((label, i) => ({ value: String(i + 1).padStart(2, '0'), label }));
+}
+
+export const MONTH_OPTIONS = getMonthOptions('ar');
 
 export const YEAR_OPTIONS = (() => {
   const y = new Date().getFullYear();
   return [y - 2, y - 1, y, y + 1].map(String);
 })();
 
-export function periodLabel(period: string): string {
+export function periodLabel(period: string, locale: 'ar' | 'en' = 'ar'): string {
   const [year, month] = period.split('-');
   if (!year || !month) return period;
-  return `${MONTH_NAMES[Number(month) - 1] ?? ''} ${year}`;
+  const names = locale === 'ar' ? MONTH_NAMES : MONTH_NAMES_EN;
+  return `${names[Number(month) - 1] ?? ''} ${year}`;
 }
 
 // RTL-safe: "700,000 ر.س" — Latin digits + Arabic suffix

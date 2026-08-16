@@ -39,6 +39,8 @@ import {
   createBuildingAction,
 } from '../actions';
 import { ProjectMediaPanel } from './media-panel';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export default async function ProjectDetailPage({
   params,
@@ -46,7 +48,8 @@ export default async function ProjectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const currency = await getReportsCurrency();
+  const [currency, locale] = await Promise.all([getReportsCurrency(), getLocale()]);
+  const m = uiT(locale).projectDetailPage;
 
   const [projectRes, unitsRes] = await Promise.all([
     safe(api.get<Project>(`/projects/${id}`)),
@@ -56,7 +59,7 @@ export default async function ProjectDetailPage({
   if (projectRes.error || !projectRes.data) {
     return (
       <div className="rounded-[18px] bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل المشروع: {projectRes.error ?? 'غير موجود'}
+        {m.loadError(projectRes.error ?? m.loadErrorDefault)}
       </div>
     );
   }
@@ -88,19 +91,19 @@ export default async function ProjectDetailPage({
   const assetActions: AssetAction[] = [
     {
       key: 'units',
-      label: 'الوحدات',
+      label: m.assetUnits,
       icon: <Building2 />,
       href: `/dashboard/units?projectId=${project.id}`,
     },
     {
       key: 'media',
-      label: 'مكتبة الوسائط',
+      label: m.assetMedia,
       icon: <ImageIcon />,
       href: `/dashboard/projects/${project.id}#media`,
     },
     {
       key: 'map',
-      label: 'عرض الموقع على الخريطة',
+      label: m.assetMap,
       icon: <MapIcon />,
       href: `https://www.google.com/maps/search/?api=1&query=${project.lat},${project.lng}`,
       external: true,
@@ -109,7 +112,7 @@ export default async function ProjectDetailPage({
       ? [
           {
             key: 'edit',
-            label: 'تعديل بيانات المشروع',
+            label: m.assetEdit,
             icon: <Pencil />,
             href: `/dashboard/projects/${project.id}/edit`,
           } as AssetAction,
@@ -119,7 +122,7 @@ export default async function ProjectDetailPage({
 
   const snapshots = [
     {
-      label: 'إجمالي الوحدات',
+      label: m.statTotalUnits,
       value: totalUnits || 0,
       icon: <Building2 className="h-[17px] w-[17px]" />,
       iconCls: 'bg-brand-50 text-brand-600 ring-brand-100',
@@ -127,21 +130,21 @@ export default async function ProjectDetailPage({
       primary: true,
     },
     {
-      label: 'المراحل',
+      label: m.statPhases,
       value: phaseCount,
       icon: <Layers className="h-[17px] w-[17px]" />,
       iconCls: 'bg-info-50 text-info-600 ring-info-100',
       valueCls: 'text-info-700',
     },
     {
-      label: 'المباني',
+      label: m.statBuildings,
       value: buildingCount,
       icon: <Home className="h-[17px] w-[17px]" />,
       iconCls: 'bg-success-50 text-success-600 ring-success-100',
       valueCls: 'text-success-700',
     },
     {
-      label: 'نسبة الإشغال',
+      label: m.statOccupancy,
       value: occupancyPct !== null ? `${occupancyPct}%` : '—',
       icon: <TrendingUp className="h-[17px] w-[17px]" />,
       iconCls: 'bg-amber-50 text-amber-600 ring-amber-100',
@@ -165,7 +168,7 @@ export default async function ProjectDetailPage({
                   href={'/dashboard' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  لوحة التحكم
+                  {m.breadcrumbDashboard}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -174,7 +177,7 @@ export default async function ProjectDetailPage({
                   href={'/dashboard/projects' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  المشاريع
+                  {m.breadcrumbProjects}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -195,7 +198,7 @@ export default async function ProjectDetailPage({
                 </h1>
                 <ProjectStatusBadge status={project.status} />
                 {project.featured && (
-                  <Badge tone="accent" variant="soft">مميز</Badge>
+                  <Badge tone="accent" variant="soft">{m.badgeFeatured}</Badge>
                 )}
               </div>
               <p className="text-sm text-slate-500">
@@ -212,7 +215,7 @@ export default async function ProjectDetailPage({
                 <div className="flex flex-wrap items-center gap-2.5 mt-6 pt-5 border-t border-hairline">
                   <Link href={`/dashboard/projects/${id}/edit` as never}>
                     <Button variant="outline" size="sm" leftIcon={<Pencil className="h-4 w-4" />}>
-                      تعديل المشروع
+                      {m.btnEditProject}
                     </Button>
                   </Link>
                   {project.status !== 'PUBLISHED' && (
@@ -223,7 +226,7 @@ export default async function ProjectDetailPage({
                         size="sm"
                         leftIcon={<Send className="h-4 w-4" />}
                       >
-                        نشر المشروع
+                        {m.btnPublishProject}
                       </Button>
                     </form>
                   )}
@@ -288,11 +291,11 @@ export default async function ProjectDetailPage({
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
                 <span className="block h-[3px] w-4 rounded-full bg-brand-500" />
               </span>
-              <h2 className="text-[14px] font-bold text-navy">وصف المشروع</h2>
+              <h2 className="text-[14px] font-bold text-navy">{m.sectionDescription}</h2>
             </div>
             <div className="px-6 py-5">
               <p className="text-[13.5px] text-slate-700 leading-relaxed">
-                {tx(project.description) || 'لا يوجد وصف لهذا المشروع.'}
+                {tx(project.description) || m.noDescription}
               </p>
               {project.services && project.services.length > 0 && (
                 <div className="mt-6">
@@ -309,18 +312,18 @@ export default async function ProjectDetailPage({
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
                   <Layers className="h-[15px] w-[15px] text-brand-600" />
                 </span>
-                <h2 className="text-[14px] font-bold text-navy">مراحل المشروع</h2>
+                <h2 className="text-[14px] font-bold text-navy">{m.sectionPhases}</h2>
               </div>
               <span className="text-[11px] font-semibold text-slate-400 shrink-0">
-                {phaseCount} مرحلة · {buildingCount} مبنى
+                {m.phasesCountLabel(phaseCount, buildingCount)}
               </span>
             </div>
             <div className="px-6 py-5">
               {phaseCount === 0 ? (
                 <EmptyState
                   icon={<Layers />}
-                  title="لا توجد مراحل بعد"
-                  description="ابدأ بإضافة المرحلة الأولى للمشروع."
+                  title={m.emptyPhasesTitle}
+                  description={m.emptyPhasesDesc}
                 />
               ) : (
                 <div className="space-y-3">
@@ -344,7 +347,7 @@ export default async function ProjectDetailPage({
                             <p className="text-[13.5px] font-bold text-navy">{tx(ph.name)}</p>
                           </div>
                           <p className="text-xs text-slate-500 mt-1">
-                            {buildingsCount} مبنى · {totalPhaseUnits} وحدة
+                            {m.phaseBuildingsUnitsLabel(buildingsCount, totalPhaseUnits)}
                           </p>
                           {ph.buildings && ph.buildings.length > 0 && (
                             <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
@@ -353,9 +356,9 @@ export default async function ProjectDetailPage({
                                   key={b.id}
                                   className="flex items-center justify-between text-xs text-slate-600 bg-surface rounded-[10px] px-3 py-1.5 ring-1 ring-inset ring-hairline"
                                 >
-                                  <span className="font-medium text-slate-700">مبنى {b.name}</span>
+                                  <span className="font-medium text-slate-700">{m.buildingLabel(b.name)}</span>
                                   <span className="text-slate-400">
-                                    {b.totalFloors} طوابق · {b._count?.units ?? 0} وحدة
+                                    {m.buildingFloorsUnitsLabel(b.totalFloors, b._count?.units ?? 0)}
                                   </span>
                                 </li>
                               ))}
@@ -364,7 +367,7 @@ export default async function ProjectDetailPage({
                           {isAdmin && (
                             <details className="mt-3 group">
                               <summary className="text-[11px] font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1 hover:text-brand-800">
-                                <Plus className="h-3 w-3" /> إضافة مبنى
+                                <Plus className="h-3 w-3" /> {m.addBuildingLabel}
                               </summary>
                               <form
                                 action={createBuildingAction.bind(null, project.id)}
@@ -374,7 +377,7 @@ export default async function ProjectDetailPage({
                                 <input
                                   name="name"
                                   required
-                                  placeholder="اسم المبنى (A)"
+                                  placeholder={m.buildingNamePlaceholder}
                                   className="text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
                                 />
                                 <input
@@ -382,10 +385,10 @@ export default async function ProjectDetailPage({
                                   type="number"
                                   min={1}
                                   defaultValue={1}
-                                  placeholder="الطوابق"
+                                  placeholder={m.floorsPlaceholder}
                                   className="w-24 text-xs h-8 rounded-lg border border-hairline bg-surface px-2.5 focus:outline-none focus:border-brand-500"
                                 />
-                                <Button type="submit" variant="outline" size="sm">حفظ</Button>
+                                <Button type="submit" variant="outline" size="sm">{m.btnSave}</Button>
                               </form>
                             </details>
                           )}
@@ -399,7 +402,7 @@ export default async function ProjectDetailPage({
               {isAdmin && (
                 <details className="mt-4 group">
                   <summary className="text-sm font-semibold text-brand-700 cursor-pointer inline-flex items-center gap-1.5 hover:text-brand-800">
-                    <Plus className="h-4 w-4" /> إضافة مرحلة جديدة
+                    <Plus className="h-4 w-4" /> {m.addPhaseLabel}
                   </summary>
                   <form
                     action={createPhaseAction.bind(null, project.id)}
@@ -409,7 +412,7 @@ export default async function ProjectDetailPage({
                       name="name_ar"
                       required
                       dir="rtl"
-                      placeholder="اسم المرحلة (بالعربية)"
+                      placeholder={m.phaseNameArPlaceholder}
                       className="text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
                     />
                     <input
@@ -425,7 +428,7 @@ export default async function ProjectDetailPage({
                       defaultValue={phaseCount}
                       className="w-20 text-sm h-9 rounded-lg border border-hairline bg-surface px-3 focus:outline-none focus:border-brand-500"
                     />
-                    <Button type="submit" variant="primary" size="sm">إضافة</Button>
+                    <Button type="submit" variant="primary" size="sm">{m.btnAdd}</Button>
                   </form>
                 </details>
               )}
@@ -440,9 +443,9 @@ export default async function ProjectDetailPage({
                   <Building2 className="h-[15px] w-[15px] text-brand-600" />
                 </span>
                 <div>
-                  <h2 className="text-[14px] font-bold text-navy leading-none">الوحدات المتاحة</h2>
+                  <h2 className="text-[14px] font-bold text-navy leading-none">{m.sectionAvailableUnits}</h2>
                   <p className="text-[11px] text-slate-400 mt-0.5">
-                    نظرة سريعة على الوحدات المعروضة للبيع حالياً
+                    {m.availableUnitsSub}
                   </p>
                 </div>
               </div>
@@ -450,7 +453,7 @@ export default async function ProjectDetailPage({
                 href={`/dashboard/units?projectId=${project.id}` as never}
                 className="text-[12px] font-semibold text-brand-700 hover:text-brand-800 shrink-0 transition-colors"
               >
-                عرض الكل
+                {m.viewAllUnits}
               </Link>
             </div>
 
@@ -458,8 +461,8 @@ export default async function ProjectDetailPage({
               <div className="px-6 py-4">
                 <EmptyState
                   icon={<Building2 />}
-                  title="لا توجد وحدات بعد"
-                  description="أضف وحدات إلى المباني داخل المشروع."
+                  title={m.emptyUnitsTitle}
+                  description={m.emptyUnitsDesc}
                 />
               </div>
             ) : (
@@ -467,11 +470,11 @@ export default async function ProjectDetailPage({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="bg-canvas/40 border-b border-hairline">
-                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 ps-6 pe-3">رقم الوحدة</th>
-                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">النوع</th>
-                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">المساحة</th>
-                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">السعر</th>
-                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">الحالة</th>
+                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 ps-6 pe-3">{m.colUnitNumber}</th>
+                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">{m.colType}</th>
+                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">{m.colArea}</th>
+                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">{m.colPrice}</th>
+                      <th className="text-start text-[10.5px] font-bold uppercase tracking-[0.08em] text-slate-400 py-3 px-3">{m.colStatus}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -482,7 +485,7 @@ export default async function ProjectDetailPage({
                         </td>
                         <td className="py-3.5 px-3 text-[13px] text-slate-600">{u.type}</td>
                         <td className="py-3.5 px-3 text-[13px] text-slate-700 tabular-nums">
-                          {u.area} م²
+                          {u.area} {m.areaSuffix}
                         </td>
                         <td className="py-3.5 px-3 text-[13px] font-semibold text-brand-700 tabular-nums">
                           {formatCurrency(u.price, currency)}
@@ -504,19 +507,19 @@ export default async function ProjectDetailPage({
 
           {/* Asset management — dark navy */}
           <AssetActionCard
-            title={isAdmin ? 'إدارة الأصول' : 'الأصول'}
+            title={isAdmin ? m.panelAssetAdmin : m.panelAsset}
             actions={[
               ...assetActions,
               ...(isAdmin
                 ? [
                     {
                       key: 'archive-or-publish',
-                      label: project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر',
+                      label: project.status === 'ARCHIVED' ? m.btnRepublish : m.btnUnpublish,
                       icon: <Archive />,
                       tone: 'danger' as const,
                       form: (
                         <AssetActionForm
-                          label={project.status === 'ARCHIVED' ? 'إعادة النشر' : 'إلغاء النشر'}
+                          label={project.status === 'ARCHIVED' ? m.btnRepublish : m.btnUnpublish}
                           icon={<Archive />}
                           tone="danger"
                           action={
@@ -538,7 +541,7 @@ export default async function ProjectDetailPage({
               <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-brand-50 ring-1 ring-brand-100 shrink-0">
                 <MapIcon className="h-[15px] w-[15px] text-brand-600" />
               </span>
-              <h3 className="text-[13.5px] font-bold text-navy">الموقع على الخريطة</h3>
+              <h3 className="text-[13.5px] font-bold text-navy">{m.sectionMap}</h3>
             </div>
             <div className="p-4">
               <ProjectMap
@@ -555,7 +558,7 @@ export default async function ProjectDetailPage({
 
           {/* Media library */}
           <div id="media">
-            <ProjectMediaPanel project={project} />
+            <ProjectMediaPanel project={project} locale={locale} />
           </div>
 
           {/* Danger zone */}
@@ -565,15 +568,15 @@ export default async function ProjectDetailPage({
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-danger-50 ring-1 ring-danger-100 shrink-0">
                   <AlertTriangle className="h-[15px] w-[15px] text-danger-600" />
                 </span>
-                <h3 className="text-[13.5px] font-bold text-danger-700">منطقة الخطر</h3>
+                <h3 className="text-[13.5px] font-bold text-danger-700">{m.sectionDanger}</h3>
               </div>
               <div className="px-5 py-4">
                 <p className="text-[12.5px] text-slate-500 mb-4 leading-relaxed">
-                  حذف المشروع سيؤدي إلى إزالته نهائياً مع جميع المراحل والمباني المرتبطة. لا يمكن التراجع.
+                  {m.dangerDesc}
                 </p>
                 <ConfirmButton
-                  label="حذف المشروع"
-                  confirm="هل أنت متأكد من حذف هذا المشروع؟ لا يمكن التراجع."
+                  label={m.btnDeleteProject}
+                  confirm={m.deleteConfirm}
                   action={deleteProjectAction.bind(null, id)}
                 />
               </div>

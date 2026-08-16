@@ -10,24 +10,28 @@ import { FormFooter } from '@/components/ui/form-footer';
 import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 import type { Unit, User } from '@/lib/types';
 import { tx, formatCurrency } from '@/lib/format';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { createContractAction, type ContractFormState } from '../actions';
-
-const NAV_SECTIONS = [
-  { id: 'section-parties',   num: '01', label: 'العميل والوحدة',            sub: 'الطرفان الرئيسيان في العقد' },
-  { id: 'section-financial', num: '02', label: 'القيم المالية والتوقيع',    sub: 'المبالغ والتواريخ والمرفق' },
-];
 
 interface Props {
   units:     Unit[];
   customers: User[];
   currency?: string;
+  locale?:   Locale;
 }
 
-export default function ContractForm({ units, customers, currency = 'SAR' }: Props) {
+export default function ContractForm({ units, customers, currency = 'SAR', locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.contractsForm;
   const [state, formAction] = useActionState<ContractFormState, FormData>(
     createContractAction,
     {},
   );
+
+  const NAV_SECTIONS = [
+    { id: 'section-parties',   num: '01', label: m.navParties.label,   sub: m.navParties.sub },
+    { id: 'section-financial', num: '02', label: m.navFinancial.label, sub: m.navFinancial.sub },
+  ];
 
   return (
     <form action={formAction} className="flex flex-col gap-4 lg:gap-5">
@@ -40,19 +44,19 @@ export default function ContractForm({ units, customers, currency = 'SAR' }: Pro
 
       <PremiumFormLayout
         navSections={NAV_SECTIONS}
-        sidebarBadge="جديد"
-        sidebarInfo="إنشاء العقد سيرقّي العميل إلى Customer ويحوّل حالة الوحدة إلى مباعة."
+        sidebarBadge={m.sidebarBadge}
+        sidebarInfo={m.sidebarInfo}
       >
         <PremiumFormPanel
           id="section-parties"
           number="01"
-          title="العميل والوحدة"
-          description="حدد الطرفين الرئيسيين في العقد: العميل والوحدة العقارية."
+          title={m.panelPartiesTitle}
+          description={m.panelPartiesDesc}
         >
           <div className="flex flex-col gap-5">
-            <Field label="العميل (Client / Customer)" name="customerId">
+            <Field label={m.labelCustomer} name="customerId">
               <select id="customerId" name="customerId" required defaultValue="" className={inputClass}>
-                <option value="" disabled>— اختر —</option>
+                <option value="" disabled>{m.optionChoose}</option>
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.fullName} ({c.role}) {c.phone ? `· ${c.phone}` : ''}
@@ -61,9 +65,9 @@ export default function ContractForm({ units, customers, currency = 'SAR' }: Pro
               </select>
             </Field>
 
-            <Field label="الوحدة" name="unitId" hint="فقط الوحدات المتاحة تظهر هنا">
+            <Field label={m.labelUnit} name="unitId" hint={m.hintUnit}>
               <select id="unitId" name="unitId" required defaultValue="" className={inputClass}>
-                <option value="" disabled>— اختر —</option>
+                <option value="" disabled>{m.optionChoose}</option>
                 {units.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.code} · {tx(u.building?.phase?.project?.name)} · {formatCurrency(u.price, currency)}
@@ -77,12 +81,12 @@ export default function ContractForm({ units, customers, currency = 'SAR' }: Pro
         <PremiumFormPanel
           id="section-financial"
           number="02"
-          title="القيم المالية والتوقيع"
-          description="أدخل إجمالي العقد والدفعة الأولى وتاريخ التوقيع ورابط ملف العقد."
+          title={m.panelFinancialTitle}
+          description={m.panelFinancialDesc}
         >
           <div className="flex flex-col gap-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field label="إجمالي العقد" name="totalAmount">
+              <Field label={m.labelTotal} name="totalAmount">
                 <input
                   id="totalAmount"
                   name="totalAmount"
@@ -93,7 +97,7 @@ export default function ContractForm({ units, customers, currency = 'SAR' }: Pro
                   className={inputClass}
                 />
               </Field>
-              <Field label="الدفعة المقدمة" name="downPayment">
+              <Field label={m.labelDownPayment} name="downPayment">
                 <input
                   id="downPayment"
                   name="downPayment"
@@ -106,11 +110,11 @@ export default function ContractForm({ units, customers, currency = 'SAR' }: Pro
               </Field>
             </div>
 
-            <Field label="تاريخ التوقيع (اختياري)" name="signedAt">
+            <Field label={m.labelSignedAt} name="signedAt">
               <input id="signedAt" name="signedAt" type="datetime-local" className={inputClass} />
             </Field>
 
-            <Field label="رابط ملف العقد PDF (اختياري — يمكن رفعه لاحقًا)" name="pdfUrl">
+            <Field label={m.labelPdfUrl} name="pdfUrl">
               <input
                 id="pdfUrl"
                 name="pdfUrl"
@@ -120,9 +124,7 @@ export default function ContractForm({ units, customers, currency = 'SAR' }: Pro
               />
             </Field>
 
-            <p className="text-xs text-slate-500">
-              ملاحظة: إنشاء العقد سيقوم بترقية العميل إلى Customer وتغيير حالة الوحدة إلى مباعة.
-            </p>
+            <p className="text-xs text-slate-500">{m.noteUpgrade}</p>
           </div>
         </PremiumFormPanel>
       </PremiumFormLayout>
@@ -133,13 +135,13 @@ export default function ContractForm({ units, customers, currency = 'SAR' }: Pro
           <>
             <Link href={'/dashboard/contracts' as never}>
               <Button type="button" variant="ghost" leftIcon={<X className="h-4 w-4" />}>
-                إلغاء
+                {m.cancelBtn}
               </Button>
             </Link>
-            <SubmitButton>إنشاء العقد</SubmitButton>
+            <SubmitButton>{m.submitBtn}</SubmitButton>
           </>
         }
-        helper="سيتم إنشاء العقد فور الحفظ وتحديث حالة الوحدة والعميل."
+        helper={m.footerHelper}
       />
     </form>
   );

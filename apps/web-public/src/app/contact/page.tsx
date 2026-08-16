@@ -4,6 +4,8 @@ import { pickAr, unitTypeLabel } from '@/lib/format';
 import type { PublicUnit, PublicProjectDetail } from '@/lib/api-types';
 import { resolveContactPrefill } from '@/lib/contact-prefill';
 import { getSession, isPortalRole } from '@/lib/session';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { Section } from '@/components/ui/Section';
 import { PageHero } from '@/components/layout/PageHero';
 import { ContactForm, type ContactContext } from '@/components/contact/ContactForm';
@@ -56,11 +58,13 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
   // Context resolution, the profile prefill, and the session lookup have no
   // dependency on each other — run them in parallel so logged-in users don't
   // pay extra RTTs.
-  const [context, initialValues, session] = await Promise.all([
+  const [context, initialValues, session, locale] = await Promise.all([
     resolveContext(firstStr(sp.projectId), firstStr(sp.unitId)),
     resolveContactPrefill(),
     getSession(),
+    getLocale(),
   ]);
+  const m = siteT(locale);
   const mode = firstStr(sp.type) === 'visit' ? 'visit' : 'info';
   // Only portal roles (CLIENT/CUSTOMER) can call /me/* — staff roles browsing
   // /contact stay on the public path so they don't 403.
@@ -69,9 +73,9 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHero
-        eyebrow="تواصل معنا"
-        title="اترك لنا رسالة، وسنتولى الباقي"
-        subtitle="فريقنا جاهز لمساعدتك في اختيار المشروع أو الوحدة الأنسب لاحتياجك."
+        eyebrow={m.contactPage.eyebrow}
+        title={m.contactPage.title}
+        subtitle={m.contactPage.subtitle}
       />
 
       <Section tone="canvas">
@@ -82,6 +86,7 @@ export default async function ContactPage({ searchParams }: { searchParams: Sear
               mode={mode}
               initialValues={initialValues}
               isAuthenticatedCustomer={isAuthenticatedCustomer}
+              locale={locale}
             />
           </div>
           <aside className="lg:col-span-1">

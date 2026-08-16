@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import { cn } from '@/lib/cn';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
-const TABS = [
-  { key: 'sales' as const, href: '/dashboard/reports', label: 'المبيعات والحجوزات' },
-  { key: 'financial' as const, href: '/dashboard/reports/financial', label: 'المالي' },
-];
+export function ReportsTabs({ active, locale = 'ar' }: { active: 'sales' | 'financial'; locale?: Locale }) {
+  const m = uiT(locale).pages.reports;
+  const TABS = [
+    { key: 'sales' as const, href: '/dashboard/reports', label: m.tabSalesLabel },
+    { key: 'financial' as const, href: '/dashboard/reports/financial', label: m.tabFinancialLabel },
+  ];
 
-export function ReportsTabs({ active }: { active: 'sales' | 'financial' }) {
   return (
     <div className="flex gap-0 border-b border-hairline">
       {TABS.map((tab) => (

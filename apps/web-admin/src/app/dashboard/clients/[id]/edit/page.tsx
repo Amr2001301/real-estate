@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { User } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import ClientForm from '../../_form';
 
 export const dynamic = 'force-dynamic';
@@ -11,12 +13,17 @@ export default async function EditClientPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const r = await safe(api.get<User>(`/users/${id}`));
+  const [r, locale] = await Promise.all([
+    safe(api.get<User>(`/users/${id}`)),
+    getLocale(),
+  ]);
+  const m = uiT(locale);
+  const n = m.pages.clientsEdit;
 
   if (r.error || !r.data) {
     return (
       <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-6 text-sm">
-        تعذر تحميل العميل: {r.error ?? 'غير موجود'}
+        {n.errorPrefix} {r.error ?? n.notFound}
       </div>
     );
   }
@@ -32,27 +39,27 @@ export default async function EditClientPage({
         <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-brand-200 via-brand-500 to-brand-200" />
         <div className="px-7 sm:px-9 pt-8 pb-7">
           <nav className="flex items-center gap-1.5 text-[12px] text-slate-400 mb-3">
-            <Link href="/dashboard" className="hover:text-navy transition-colors">لوحة التحكم</Link>
+            <Link href="/dashboard" className="hover:text-navy transition-colors">{m.common.breadcrumbHome}</Link>
             <span>/</span>
-            <Link href={`/dashboard/clients?role=${role}` as never} className="hover:text-navy transition-colors">العملاء</Link>
+            <Link href={`/dashboard/clients?role=${role}` as never} className="hover:text-navy transition-colors">{m.nav.items.clients}</Link>
             <span>/</span>
             <Link href={`/dashboard/clients/${id}` as never} className="hover:text-navy transition-colors">{user.fullName}</Link>
             <span>/</span>
-            <span className="text-navy font-medium">تعديل</span>
+            <span className="text-navy font-medium">{n.breadcrumb}</span>
           </nav>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-navy">{`تعديل ملف ${user.fullName}`}</h1>
-              <p className="text-sm text-slate-500 mt-1">تحديث البيانات الشخصية ومعلومات التواصل المسموح بها.</p>
+              <h1 className="text-2xl font-bold text-navy">{`${n.titlePrefix} ${user.fullName}`}</h1>
+              <p className="text-sm text-slate-500 mt-1">{n.description}</p>
             </div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400" />
-              تعديل
+              {n.badge}
             </span>
           </div>
         </div>
       </div>
-      <ClientForm user={user} />
+      <ClientForm user={user} locale={locale} />
     </div>
   );
 }

@@ -16,6 +16,8 @@ import {
   PremiumFilterBar,
   PremiumFilterField,
 } from '@/components/premium';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 
 export const dynamic    = 'force-dynamic';
 export const fetchCache = 'force-no-store';
@@ -56,26 +58,9 @@ async function assignManagerAction(userId: string, formData: FormData) {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const CREATABLE_ROLES: { value: string; label: string }[] = [
-  { value: 'ADMIN',                  label: 'مدير النظام' },
-  { value: 'SALES',                  label: 'مبيعات' },
-  { value: 'SALES_MANAGER',          label: 'مدير مبيعات' },
-  { value: 'MAINTENANCE_SUPERVISOR', label: 'مشرف الصيانة' },
-];
-
 const FILTERABLE_ROLES: UserRole[] = [
   'ADMIN', 'SALES', 'SALES_MANAGER', 'MAINTENANCE_SUPERVISOR', 'CLIENT', 'CUSTOMER',
 ];
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  ADMIN:                  'مدير النظام',
-  SALES:                  'مبيعات',
-  SALES_MANAGER:          'مدير مبيعات',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-  CLIENT:                 'متصفّح',
-  CUSTOMER:               'عميل',
-  BROKER:                 'وسيط',
-};
 
 const ROLE_BADGE_CLS: Record<UserRole, string> = {
   ADMIN:                  'bg-purple-100 text-purple-700',
@@ -125,6 +110,25 @@ export default async function UsersPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.users;
+
+  const CREATABLE_ROLES: { value: string; label: string }[] = [
+    { value: 'ADMIN',                  label: m.roleLabels.ADMIN },
+    { value: 'SALES',                  label: m.roleLabels.SALES },
+    { value: 'SALES_MANAGER',          label: m.roleLabels.SALES_MANAGER },
+    { value: 'MAINTENANCE_SUPERVISOR', label: m.roleLabels.MAINTENANCE_SUPERVISOR },
+  ];
+
+  const ROLE_LABEL: Record<UserRole, string> = {
+    ADMIN:                  m.roleLabels.ADMIN,
+    SALES:                  m.roleLabels.SALES,
+    SALES_MANAGER:          m.roleLabels.SALES_MANAGER,
+    MAINTENANCE_SUPERVISOR: m.roleLabels.MAINTENANCE_SUPERVISOR,
+    CLIENT:                 m.roleLabels.CLIENT,
+    CUSTOMER:               m.roleLabels.CUSTOMER,
+    BROKER:                 m.roleLabels.BROKER,
+  };
 
   const qs = new URLSearchParams({ pageSize: '100' });
   if (sp.role) qs.set('role', sp.role);
@@ -193,17 +197,17 @@ export default async function UsersPage({
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="المستخدمون"
-        description="إدارة حسابات المستخدمين، الأدوار، حالة التفعيل، وربط فرق المبيعات."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'المستخدمون' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumb },
         ]}
         actions={
           !showCreate ? (
             <Link href={showCreateUrl as never}>
               <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-                إضافة مستخدم
+                {m.addBtn}
               </Button>
             </Link>
           ) : undefined
@@ -214,13 +218,13 @@ export default async function UsersPage({
       <PremiumMetricStrip
         variant="compact"
         metrics={[
-          { label: 'إجمالي المستخدمين', value: total, icon: <Users />, tone: 'info' },
-          { label: 'المستخدمون النشطون', value: active, icon: <UserCheck />, tone: 'success' },
-          { label: 'معطلون', value: inactive, icon: <UserX />, tone: 'neutral' },
+          { label: m.kpi.total, value: total, icon: <Users />, tone: 'info' },
+          { label: m.kpi.active, value: active, icon: <UserCheck />, tone: 'success' },
+          { label: m.kpi.inactive, value: inactive, icon: <UserX />, tone: 'neutral' },
           {
-            label: 'أدوار إدارية',
+            label: m.kpi.adminRoles,
             value: adminRoles,
-            sub: lastLogin ? `آخر دخول: ${formatDate(lastLogin)}` : undefined,
+            sub: lastLogin ? `${m.kpi.lastLoginPrefix} ${formatDate(lastLogin)}` : undefined,
             icon: <Shield />,
             tone: 'brand',
           },
@@ -230,13 +234,13 @@ export default async function UsersPage({
       {/* ── Create user (collapsible via showCreate=1) ──────────────────── */}
       {showCreate && (
         <PremiumSectionCard
-          title="إضافة مستخدم جديد"
+          title={m.createCard.title}
           trailing={
             <Link
               href={cancelCreateUrl as never}
               className="text-xs text-slate-500 hover:text-slate-700 transition-colors"
             >
-              إلغاء
+              {m.createCard.cancelLink}
             </Link>
           }
         >
@@ -245,7 +249,7 @@ export default async function UsersPage({
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3"
           >
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">الدور</label>
+              <label className="text-xs font-medium text-slate-600">{m.createCard.roleLabel}</label>
               <Select name="role" inputSize="sm" defaultValue="SALES">
                 {CREATABLE_ROLES.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
@@ -253,39 +257,39 @@ export default async function UsersPage({
               </Select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">الاسم الكامل</label>
+              <label className="text-xs font-medium text-slate-600">{m.createCard.nameLabel}</label>
               <Input
                 name="fullName"
                 inputSize="sm"
                 required
-                placeholder="الاسم الكامل"
+                placeholder={m.createCard.namePlaceholder}
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">البريد الإلكتروني</label>
+              <label className="text-xs font-medium text-slate-600">{m.createCard.emailLabel}</label>
               <Input
                 name="email"
                 type="email"
                 inputSize="sm"
                 required
-                placeholder="user@example.com"
+                placeholder={m.createCard.emailPlaceholder}
                 dir="ltr"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">كلمة مرور مؤقتة</label>
+              <label className="text-xs font-medium text-slate-600">{m.createCard.passwordLabel}</label>
               <Input
                 name="password"
                 type="password"
                 inputSize="sm"
                 required
                 minLength={8}
-                placeholder="٨ أحرف على الأقل"
+                placeholder={m.createCard.passwordPlaceholder}
               />
             </div>
             <div className="flex items-end">
               <Button type="submit" variant="primary" size="sm" fullWidth>
-                إنشاء الحساب
+                {m.createCard.submitBtn}
               </Button>
             </div>
           </form>
@@ -298,50 +302,50 @@ export default async function UsersPage({
         action="/dashboard/users"
         trailing={
           <>
-            <Button type="submit" variant="primary" size="sm">تصفية</Button>
+            <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
             {hasFilter && (
               <Link href={clearFilterUrl as never}>
-                <Button type="button" variant="ghost" size="sm">مسح</Button>
+                <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
               </Link>
             )}
           </>
         }
       >
         {showCreate && <input type="hidden" name="showCreate" value="1" />}
-        <PremiumFilterField label="بحث">
+        <PremiumFilterField label={m.filter.searchLabel}>
           <div className="w-60">
             <Input
               name="q"
               inputSize="sm"
-              placeholder="بحث باسم أو بريد أو هاتف…"
+              placeholder={m.filter.searchPlaceholder}
               defaultValue={sp.q ?? ''}
               leftAddon={<Search />}
             />
           </div>
         </PremiumFilterField>
-        <PremiumFilterField label="الدور">
+        <PremiumFilterField label={m.filter.roleLabel}>
           <Select
             name="role"
             inputSize="sm"
             defaultValue={sp.role ?? ''}
             className="w-40"
           >
-            <option value="">كل الأدوار</option>
+            <option value="">{m.filter.allRoles}</option>
             {FILTERABLE_ROLES.map((r) => (
               <option key={r} value={r}>{ROLE_LABEL[r]}</option>
             ))}
           </Select>
         </PremiumFilterField>
-        <PremiumFilterField label="الحالة">
+        <PremiumFilterField label={m.filter.statusLabel}>
           <Select
             name="status"
             inputSize="sm"
             defaultValue={sp.status ?? ''}
             className="w-36"
           >
-            <option value="">كل الحالات</option>
-            <option value="active">نشط فقط</option>
-            <option value="inactive">معطل فقط</option>
+            <option value="">{m.filter.allStatuses}</option>
+            <option value="active">{m.filter.activeOnly}</option>
+            <option value="inactive">{m.filter.inactiveOnly}</option>
           </Select>
         </PremiumFilterField>
       </PremiumFilterBar>
@@ -356,28 +360,28 @@ export default async function UsersPage({
       {/* ── Users table ─────────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<Users />}
-        title="قائمة المستخدمين"
-        description={`${rows.length} مستخدم`}
+        title={m.sectionTitle}
+        description={`${rows.length} ${m.userSuffix}`}
         padded={false}
       >
         {rows.length === 0 ? (
           <EmptyState
             icon={<Users />}
-            title={hasFilter ? 'لا توجد نتائج مطابقة' : 'لا يوجد مستخدمون بعد'}
+            title={hasFilter ? m.empty.filteredTitle : m.empty.emptyTitle}
             description={
               hasFilter
-                ? 'جرّب تعديل معايير البحث أو مسح الفلاتر.'
-                : 'ابدأ بإضافة أول مستخدم من خلال زر "إضافة مستخدم".'
+                ? m.empty.filteredDesc
+                : m.empty.emptyDesc
             }
             action={
               hasFilter ? (
                 <Link href={clearFilterUrl as never}>
-                  <Button variant="outline" size="sm">مسح الفلاتر</Button>
+                  <Button variant="outline" size="sm">{m.empty.clearBtn}</Button>
                 </Link>
               ) : (
                 <Link href={showCreateUrl as never}>
                   <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                    إضافة مستخدم
+                    {m.empty.addBtn}
                   </Button>
                 </Link>
               )
@@ -388,13 +392,13 @@ export default async function UsersPage({
             <table className="w-full text-sm">
               <thead className="bg-surface-muted/60 text-xs text-slate-500 border-b border-hairline">
                 <tr>
-                  <th className="text-start font-semibold py-3 ps-5 pe-4 whitespace-nowrap">المستخدم</th>
-                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">الدور</th>
-                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">التواصل</th>
-                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">مدير المبيعات</th>
-                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">انضم</th>
-                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">آخر دخول</th>
-                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">الحالة</th>
+                  <th className="text-start font-semibold py-3 ps-5 pe-4 whitespace-nowrap">{m.cols.user}</th>
+                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">{m.cols.role}</th>
+                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">{m.cols.contact}</th>
+                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">{m.cols.manager}</th>
+                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">{m.cols.joined}</th>
+                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">{m.cols.lastLogin}</th>
+                  <th className="text-start font-semibold py-3 px-4 whitespace-nowrap">{m.cols.status}</th>
                   <th className="py-3 ps-4 pe-5 w-px" />
                 </tr>
               </thead>
@@ -454,16 +458,16 @@ export default async function UsersPage({
                             inputSize="sm"
                             className="w-40"
                           >
-                            <option value="">بدون مدير</option>
-                            {managers.map((m) => (
-                              <option key={m.id} value={m.id}>{m.fullName}</option>
+                            <option value="">{m.noManager}</option>
+                            {managers.map((mgr) => (
+                              <option key={mgr.id} value={mgr.id}>{mgr.fullName}</option>
                             ))}
                           </Select>
                           <button
                             type="submit"
                             className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium rounded-lg border border-hairline bg-surface text-slate-700 shadow-xs hover:bg-brand-50 hover:border-brand-200 hover:text-brand-700 transition-colors shrink-0"
                           >
-                            حفظ
+                            {m.saveBtn}
                           </button>
                         </form>
                       ) : (
@@ -486,12 +490,12 @@ export default async function UsersPage({
                       {u.active ? (
                         <span className="inline-flex items-center gap-1 rounded-full bg-success-50 text-success-700 px-2.5 py-0.5 text-[11px] font-medium">
                           <span className="h-1.5 w-1.5 rounded-full bg-success-500 shrink-0" aria-hidden />
-                          نشط
+                          {m.statusBadge.active}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-[11px] font-medium">
                           <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" aria-hidden />
-                          معطل
+                          {m.statusBadge.inactive}
                         </span>
                       )}
                     </td>
@@ -506,13 +510,13 @@ export default async function UsersPage({
                             size="sm"
                             className="text-danger-600 hover:bg-danger-50 hover:text-danger-700"
                           >
-                            تعطيل
+                            {m.actionBtns.deactivate}
                           </Button>
                         </form>
                       ) : (
                         <form action={activateAction.bind(null, u.id)}>
                           <Button type="submit" variant="outline" size="sm">
-                            تفعيل
+                            {m.actionBtns.activate}
                           </Button>
                         </form>
                       )}

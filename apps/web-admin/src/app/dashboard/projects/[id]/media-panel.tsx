@@ -6,12 +6,15 @@ import { Trash2, Image as ImageIcon } from 'lucide-react';
 import { MediaUploader } from '@/components/media-uploader';
 import { EmptyState } from '@/components/ui/empty-state';
 import type { Project, Media } from '@/lib/types';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { deleteProjectMediaAction } from '../actions';
 
-export function ProjectMediaPanel({ project }: { project: Project }) {
+export function ProjectMediaPanel({ project, locale = 'ar' }: { project: Project; locale?: Locale }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const media = project.media ?? [];
+  const m = uiT(locale).projectDetailPage;
 
   return (
     <div className="bg-surface border border-hairline rounded-[20px] shadow-soft overflow-hidden">
@@ -22,9 +25,9 @@ export function ProjectMediaPanel({ project }: { project: Project }) {
             <ImageIcon className="h-[15px] w-[15px] text-brand-600" />
           </span>
           <div>
-            <h3 className="text-[13.5px] font-bold text-navy leading-none">مكتبة الوسائط</h3>
+            <h3 className="text-[13.5px] font-bold text-navy leading-none">{m.mediaLibraryTitle}</h3>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              {media.length > 0 ? `${media.length} عنصر` : 'لم يتم رفع أي وسائط بعد'}
+              {media.length > 0 ? m.mediaCountLabel(media.length) : m.mediaEmpty}
             </p>
           </div>
         </div>
@@ -32,7 +35,7 @@ export function ProjectMediaPanel({ project }: { project: Project }) {
           folder="projects"
           attach={{ type: 'project', targetId: project.id, mediaType: 'IMAGE' }}
           onUploaded={() => router.refresh()}
-          buttonLabel="+ رفع صورة"
+          buttonLabel={m.mediaBtnUpload}
         />
       </div>
 
@@ -41,22 +44,22 @@ export function ProjectMediaPanel({ project }: { project: Project }) {
         {media.length === 0 ? (
           <EmptyState
             icon={<ImageIcon />}
-            title="لا توجد وسائط"
-            description="أضف صوراً ومقاطع فيديو لإبراز المشروع."
+            title={m.mediaEmptyTitle}
+            description={m.mediaEmptyDesc}
           />
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {media.map((m: Media) => (
+            {media.map((item: Media) => (
               <div
-                key={m.id}
+                key={item.id}
                 className="relative group rounded-[14px] overflow-hidden ring-1 ring-inset ring-hairline aspect-[4/3] bg-canvas/60"
               >
-                {m.type === 'VIDEO' ? (
-                  <video src={m.url} className="absolute inset-0 h-full w-full object-cover" />
+                {item.type === 'VIDEO' ? (
+                  <video src={item.url} className="absolute inset-0 h-full w-full object-cover" />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={m.url}
+                    src={item.url}
                     alt=""
                     className="absolute inset-0 h-full w-full object-cover"
                   />
@@ -65,13 +68,13 @@ export function ProjectMediaPanel({ project }: { project: Project }) {
                 <button
                   type="button"
                   disabled={pending}
-                  aria-label="حذف"
-                  title="حذف"
+                  aria-label={m.mediaDeleteAriaLabel}
+                  title={m.mediaDeleteAriaLabel}
                   className="absolute top-2 start-2 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-slate-900/80 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity hover:bg-danger-600 disabled:opacity-40"
                   onClick={() => {
-                    if (!confirm('حذف هذه الوسائط؟')) return;
+                    if (!confirm(m.mediaDeleteConfirm)) return;
                     start(() =>
-                      deleteProjectMediaAction(project.id, m.id).then(() => router.refresh()),
+                      deleteProjectMediaAction(project.id, item.id).then(() => router.refresh()),
                     );
                   }}
                 >

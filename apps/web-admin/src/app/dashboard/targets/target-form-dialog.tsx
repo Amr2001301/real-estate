@@ -6,8 +6,10 @@ import { Dialog } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import type { Locale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { upsertTarget } from './actions';
-import { MONTH_OPTIONS, YEAR_OPTIONS, periodLabel } from './utils';
+import { getMonthOptions, YEAR_OPTIONS, periodLabel } from './utils';
 
 export interface SalesUser {
   id: string;
@@ -30,6 +32,7 @@ interface Props {
   prefillTarget?: SalesTarget;
   salesUsers: SalesUser[];
   symbol?: string;
+  locale?: Locale;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -40,16 +43,16 @@ export function TargetFormDialog({
   prefillTarget,
   salesUsers,
   symbol = 'ج.م',
+  locale = 'ar',
   onClose,
   onSuccess,
 }: Props) {
+  const m = uiT(locale).targetsPage;
+  const monthOptions = getMonthOptions(locale);
+
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  // Initial values come directly from prefillTarget so the first render is
-  // already correct — no useEffect flicker. The parent forces a remount via
-  // `key` whenever the target changes, so stale state is never an issue.
-  // Use salesId FK (always present) as primary; fall back to sales.id relation.
   const [salesId, setSalesId] = useState(
     prefillTarget?.salesId ?? prefillTarget?.sales?.id ?? '',
   );
@@ -68,18 +71,18 @@ export function TargetFormDialog({
     e.preventDefault();
     setError(null);
 
-    if (!salesId) { setError('يرجى اختيار المندوب.'); return; }
-    if (!month) { setError('يرجى اختيار الشهر.'); return; }
-    if (!year) { setError('يرجى اختيار السنة.'); return; }
+    if (!salesId) { setError(m.validationAgent); return; }
+    if (!month)   { setError(m.validationMonth); return; }
+    if (!year)    { setError(m.validationYear); return; }
 
     const amtNum = Number(amountTarget);
     const unitsNum = Number(unitsTarget);
     if (!amountTarget || isNaN(amtNum) || amtNum < 0) {
-      setError('يرجى إدخال هدف القيمة بشكل صحيح.');
+      setError(m.validationAmount);
       return;
     }
     if (!unitsTarget || isNaN(unitsNum) || unitsNum < 0) {
-      setError('يرجى إدخال هدف الوحدات بشكل صحيح.');
+      setError(m.validationUnits);
       return;
     }
 
@@ -104,8 +107,8 @@ export function TargetFormDialog({
     '';
   const title =
     mode === 'edit' && prefillTarget
-      ? `تعديل هدف: ${salesName} · ${periodLabel(prefillTarget.period)}`
-      : 'إضافة هدف جديد';
+      ? `${m.dialogEditPrefix}: ${salesName} · ${periodLabel(prefillTarget.period, locale)}`
+      : m.dialogAddTitle;
 
   return (
     <Dialog
@@ -121,7 +124,7 @@ export function TargetFormDialog({
             onClick={onClose}
             disabled={isPending}
           >
-            إلغاء
+            {m.dialogBtnCancel}
           </Button>
           <Button
             form="target-form"
@@ -135,13 +138,11 @@ export function TargetFormDialog({
                 : <Plus className="h-3.5 w-3.5" />
             }
           >
-            {isPending ? 'جارٍ الحفظ…' : mode === 'edit' ? 'حفظ التعديل' : 'حفظ الهدف'}
+            {isPending ? m.dialogBtnSaving : mode === 'edit' ? m.dialogBtnSaveEdit : m.dialogBtnSaveNew}
           </Button>
         </>
       }
     >
-      {/* Dialog title is rendered here because we don't pass `title` to Dialog
-          (that would add a separate header area). We render a compact title ourselves. */}
       <div className="flex items-center gap-2 mb-4">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand-50 ring-1 ring-brand-100">
           {mode === 'edit'
@@ -161,14 +162,12 @@ export function TargetFormDialog({
       )}
 
       <form id="target-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {/* المندوب */}
+        {/* Agent */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-slate-600">
-            المندوب {mode === 'add' && <span className="text-red-400">*</span>}
+            {m.dialogFieldAgent} {mode === 'add' && <span className="text-red-400">*</span>}
           </label>
           {mode === 'edit' ? (
-            // In edit mode show the name as read-only text; salesId is already
-            // captured in state (from prefillTarget.salesId) for submission.
             <div className="flex h-8 items-center rounded-lg border border-hairline bg-surface-muted px-2.5 text-xs font-medium text-slate-700">
               {salesName || salesId}
             </div>
@@ -179,23 +178,23 @@ export function TargetFormDialog({
               inputSize="sm"
               disabled={isPending}
             >
-              <option value="">اختر المندوب</option>
+              <option value="">{m.dialogChooseAgent}</option>
               {salesUsers.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.role === 'SALES_MANAGER'
-                    ? `${u.fullName} — مدير مبيعات`
-                    : `${u.fullName} — مبيعات`}
+                    ? `${u.fullName} — ${m.roleManager}`
+                    : `${u.fullName} — ${m.roleSales}`}
                 </option>
               ))}
             </Select>
           )}
         </div>
 
-        {/* الشهر + السنة — two Arabic selects, no browser "month" chrome */}
+        {/* Month + Year */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-slate-600">
-              الشهر <span className="text-red-400">*</span>
+              {m.dialogFieldMonth} <span className="text-red-400">*</span>
             </label>
             <Select
               value={month}
@@ -203,15 +202,15 @@ export function TargetFormDialog({
               inputSize="sm"
               disabled={isPending}
             >
-              <option value="">اختر الشهر</option>
-              {MONTH_OPTIONS.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
+              <option value="">{m.dialogChooseMonth}</option>
+              {monthOptions.map((mo) => (
+                <option key={mo.value} value={mo.value}>{mo.label}</option>
               ))}
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-medium text-slate-600">
-              السنة <span className="text-red-400">*</span>
+              {m.dialogFieldYear} <span className="text-red-400">*</span>
             </label>
             <Select
               value={year}
@@ -219,7 +218,7 @@ export function TargetFormDialog({
               inputSize="sm"
               disabled={isPending}
             >
-              <option value="">اختر السنة</option>
+              <option value="">{m.dialogChooseYear}</option>
               {YEAR_OPTIONS.map((y) => (
                 <option key={y} value={y}>{y}</option>
               ))}
@@ -227,33 +226,33 @@ export function TargetFormDialog({
           </div>
         </div>
 
-        {/* هدف القيمة */}
+        {/* Amount target */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-slate-600">
-            هدف القيمة ({symbol}) <span className="text-red-400">*</span>
+            {m.dialogFieldAmountTarget} ({symbol}) <span className="text-red-400">*</span>
           </label>
           <Input
             type="number"
             step="any"
             min={0}
             inputSize="sm"
-            placeholder="مثال: 500000"
+            placeholder={m.dialogAmountPlaceholder}
             value={amountTarget}
             onChange={(e) => setAmountTarget(e.target.value)}
             disabled={isPending}
           />
         </div>
 
-        {/* هدف الوحدات */}
+        {/* Units target */}
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-medium text-slate-600">
-            هدف الوحدات <span className="text-red-400">*</span>
+            {m.dialogFieldUnitsTarget} <span className="text-red-400">*</span>
           </label>
           <Input
             type="number"
             min={0}
             inputSize="sm"
-            placeholder="مثال: 4"
+            placeholder={m.dialogUnitsPlaceholder}
             value={unitsTarget}
             onChange={(e) => setUnitsTarget(e.target.value)}
             disabled={isPending}
@@ -261,9 +260,7 @@ export function TargetFormDialog({
         </div>
 
         <p className="text-2xs text-slate-400">
-          {mode === 'edit'
-            ? 'التعديل يُحدّث الهدف الحالي دون تكراره.'
-            : 'حفظ هدف لنفس المندوب والشهر يُحدّث الهدف الموجود تلقائيًا.'}
+          {mode === 'edit' ? m.dialogNoteEdit : m.dialogNoteAdd}
         </p>
       </form>
     </Dialog>

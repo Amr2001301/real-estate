@@ -6,15 +6,19 @@ import type { VisitRequest, VisitRequestStatus } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ScheduleModal } from '../../../_components/schedule-modal';
 import { updateRequestStatusAction } from '../actions';
+import { uiT } from '@/messages/ui';
+import type { Locale } from '@/lib/locale';
 
 const FINAL: VisitRequestStatus[] = ['CONVERTED', 'REJECTED', 'CANCELLED'];
 
 interface Props {
   request: VisitRequest;
   salesOptions: { id: string; fullName: string }[];
+  locale?: Locale;
 }
 
-export function RequestDetailActions({ request, salesOptions }: Props) {
+export function RequestDetailActions({ request, salesOptions, locale = 'ar' }: Props) {
+  const m = uiT(locale).pages.visitComponents;
   const [scheduleOpen, setScheduleOpen] = useState(false);
 
   const status = request.requestStatus ?? null;
@@ -30,7 +34,7 @@ export function RequestDetailActions({ request, salesOptions }: Props) {
         leftIcon={<CalendarPlus className="h-4 w-4" />}
         onClick={() => setScheduleOpen(true)}
       >
-        جدولة زيارة
+        {m.scheduleVisitBtn}
       </Button>
 
       <form action={updateRequestStatusAction.bind(null, request.id)} className="contents">
@@ -42,7 +46,7 @@ export function RequestDetailActions({ request, salesOptions }: Props) {
           leftIcon={<X className="h-4 w-4" />}
           className="text-danger-600 border-danger-200 hover:bg-danger-50"
         >
-          رفض
+          {m.rejectBtn}
         </Button>
       </form>
 
@@ -54,7 +58,7 @@ export function RequestDetailActions({ request, salesOptions }: Props) {
           size="md"
           leftIcon={<Ban className="h-4 w-4" />}
         >
-          إلغاء
+          {m.cancelBtn}
         </Button>
       </form>
 
@@ -70,6 +74,7 @@ export function RequestDetailActions({ request, salesOptions }: Props) {
         preferredDate={request.preferredDate}
         preferredTime={request.preferredTime}
         customerMessage={request.requestNotes ?? request.notes ?? null}
+        locale={locale}
       />
     </>
   );

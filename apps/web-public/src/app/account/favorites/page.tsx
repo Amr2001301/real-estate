@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { FavoriteItem } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
@@ -17,6 +19,9 @@ export const metadata = buildMetadata({
 });
 
 export default async function AccountFavoritesPage() {
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.favorites;
+
   let favorites: FavoriteItem[];
   try {
     // GET /v1/me/favorites returns a plain array (not paginated).
@@ -25,10 +30,10 @@ export default async function AccountFavoritesPage() {
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <AccountPageHeader title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
+        <AccountPageHeader title={m.title} description={m.description} />
         <ErrorState
-          title="تعذّر تحميل المفضلة حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -37,20 +42,20 @@ export default async function AccountFavoritesPage() {
 
   return (
     <div className="space-y-8">
-      <AccountPageHeader title="المفضلة" description="المشاريع والوحدات التي حفظتها للرجوع إليها لاحقًا." />
+      <AccountPageHeader title={m.title} description={m.description} />
 
       {favorites.length === 0 ? (
         <EmptyState
-          title="لا توجد عناصر محفوظة بعد"
-          message="تصفّح المشاريع والوحدات واحفظ ما يهمّك للعودة إليه بسهولة."
+          title={m.emptyTitle}
+          message={m.emptyMsg}
           icon={<Heart className="h-6 w-6" aria-hidden />}
           action={
             <div className="flex flex-wrap items-center justify-center gap-3">
               <ButtonLink href={routes.projects} variant="primary" size="md">
-                تصفّح المشاريع
+                {m.browseProjects}
               </ButtonLink>
               <ButtonLink href={routes.units} variant="outline" size="md">
-                استكشف الوحدات
+                {m.exploreUnits}
               </ButtonLink>
             </div>
           }

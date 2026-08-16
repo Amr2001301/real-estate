@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { api, safe } from '@/lib/api';
 import type { Paged, Project, LeadSource, User, Unit } from '@/lib/types';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import LeadForm from '../_form';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +14,9 @@ export default async function NewLeadPage({
   searchParams: Promise<{ clientId?: string }>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale);
+  const n = m.pages.leadsNew;
 
   const [projectsRes, sourcesRes, salesRes, clientRes, unitsRes] = await Promise.all([
     safe(api.get<Paged<Project>>('/projects?pageSize=100')),
@@ -46,7 +51,7 @@ export default async function NewLeadPage({
                   href={'/dashboard' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  لوحة التحكم
+                  {m.common.breadcrumbHome}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
@@ -55,27 +60,27 @@ export default async function NewLeadPage({
                   href={'/dashboard/leads' as never}
                   className="font-medium hover:text-brand-600 transition-colors duration-150"
                 >
-                  فرص المبيعات (CRM)
+                  {m.nav.items.leads}
                 </Link>
                 <span className="text-slate-300 text-sm select-none">›</span>
               </li>
               <li>
-                <span className="font-semibold text-slate-600">فرصة جديدة</span>
+                <span className="font-semibold text-slate-600">{n.breadcrumb}</span>
               </li>
             </ol>
           </nav>
           <div className="flex items-start justify-between gap-6">
             <div className="min-w-0">
               <h1 className="text-[28px] sm:text-[34px] font-bold tracking-tight text-navy leading-tight">
-                إضافة فرصة CRM جديدة
+                {n.title}
               </h1>
               <p className="mt-2 text-sm text-slate-500 leading-relaxed max-w-md">
-                سجّل فرصة بيع جديدة مرتبطة بعميل قائم أو جديد، وأسندها إلى مندوب لمتابعتها في خط الأنابيب.
+                {n.description}
               </p>
             </div>
             <span className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-3 py-1.5 text-xs font-bold text-brand-700 tracking-wide mt-1 select-none">
               <span className="h-1.5 w-1.5 rounded-full bg-brand-400 shrink-0" />
-              جديد
+              {n.badge}
             </span>
           </div>
         </div>
@@ -87,6 +92,7 @@ export default async function NewLeadPage({
         sales={salesRes.data?.data ?? []}
         initialClient={clientRes.data ?? null}
         units={unitOptions}
+        locale={locale}
       />
     </div>
   );

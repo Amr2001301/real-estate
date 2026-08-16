@@ -20,6 +20,8 @@ import {
   Zap,
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import type { AuditLogItem, OperationsSummary, Paged } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { PremiumMetricStrip, PremiumPageHero, PremiumSectionCard } from '@/components/premium';
@@ -31,115 +33,119 @@ export const fetchCache = 'force-no-store';
 
 // ── Area / event helpers ──────────────────────────────────────────────────────
 
-function areaLabel(entityType: string): string {
+type AreaLabels = ReturnType<typeof uiT>['operationsPage']['areaLabels'];
+type EventLabels = ReturnType<typeof uiT>['operationsPage']['eventLabels'];
+type MethodLabels = ReturnType<typeof uiT>['operationsPage']['methodLabels'];
+
+function areaLabel(entityType: string, labels: AreaLabels): string {
   const et = entityType.toLowerCase();
-  if (et.includes('auth'))               return 'المصادقة';
-  if (et.includes('permission'))         return 'الصلاحيات';
-  if (et.includes('broker-lead'))        return 'عملاء الوسطاء';
-  if (et.includes('broker-reservation')) return 'حجوزات الوسطاء';
-  if (et.includes('broker-contract'))    return 'عقود الوسطاء';
-  if (et.includes('broker-commission'))  return 'عمولات الوسطاء';
-  if (et.includes('broker-payout'))      return 'مدفوعات الوسطاء';
-  if (et.includes('broker'))             return 'الوسطاء';
-  if (et.includes('user'))               return 'المستخدمون';
-  if (et.includes('reservation'))        return 'الحجوزات';
-  if (et.includes('contract'))           return 'العقود';
-  if (et.includes('payment'))            return 'الدفعات';
-  if (et.includes('lead'))               return 'فرص المبيعات';
-  if (et.includes('project'))            return 'المشاريع';
-  if (et.includes('unit'))               return 'الوحدات';
-  if (et.includes('maintenance'))        return 'الصيانة';
-  if (et.includes('document'))           return 'المستندات';
-  if (et.includes('visit'))              return 'الزيارات';
-  if (et.includes('notification'))       return 'الإشعارات';
-  if (et.includes('audit'))              return 'سجلات التدقيق';
-  if (et.includes('setting'))            return 'الإعدادات';
-  if (et.includes('sales-target'))       return 'أهداف المبيعات';
-  if (et.includes('bonus'))              return 'المكافآت';
-  if (et.includes('report'))             return 'التقارير';
-  if (et.includes('installment'))        return 'الأقساط';
-  if (et.includes('deposit'))            return 'الودائع';
-  if (et.includes('balance'))            return 'الأرصدة';
-  if (et.includes('target'))             return 'الأهداف';
-  return 'نشاط غير مصنف';
+  if (et.includes('auth'))               return labels.auth;
+  if (et.includes('permission'))         return labels.permission;
+  if (et.includes('broker-lead'))        return labels.brokerLead;
+  if (et.includes('broker-reservation')) return labels.brokerReservation;
+  if (et.includes('broker-contract'))    return labels.brokerContract;
+  if (et.includes('broker-commission'))  return labels.brokerCommission;
+  if (et.includes('broker-payout'))      return labels.brokerPayout;
+  if (et.includes('broker'))             return labels.broker;
+  if (et.includes('user'))               return labels.user;
+  if (et.includes('reservation'))        return labels.reservation;
+  if (et.includes('contract'))           return labels.contract;
+  if (et.includes('payment'))            return labels.payment;
+  if (et.includes('lead'))               return labels.lead;
+  if (et.includes('project'))            return labels.project;
+  if (et.includes('unit'))               return labels.unit;
+  if (et.includes('maintenance'))        return labels.maintenance;
+  if (et.includes('document'))           return labels.document;
+  if (et.includes('visit'))              return labels.visit;
+  if (et.includes('notification'))       return labels.notification;
+  if (et.includes('audit'))              return labels.auditLog;
+  if (et.includes('setting'))            return labels.setting;
+  if (et.includes('sales-target'))       return labels.salesTarget;
+  if (et.includes('bonus'))              return labels.bonus;
+  if (et.includes('report'))             return labels.report;
+  if (et.includes('installment'))        return labels.installment;
+  if (et.includes('deposit'))            return labels.deposit;
+  if (et.includes('balance'))            return labels.balance;
+  if (et.includes('target'))             return labels.target;
+  return labels.unclassified;
 }
 
-function eventLabel(action: string, entityType: string): string {
+function eventLabel(action: string, entityType: string, labels: EventLabels): string {
   const m  = action.toUpperCase();
   const et = entityType.toLowerCase();
   const c  = (kw: string) => et.includes(kw);
   const is = (methods: string[]) => methods.includes(m);
 
-  if (c('auth'))         return is(['POST']) ? 'محاولة دخول' : 'إجراء مصادقة';
-  if (c('permission'))   return is(['POST', 'PATCH', 'PUT']) ? 'تعديل صلاحيات' : 'إجراء صلاحية';
+  if (c('auth'))         return is(['POST']) ? labels.authPost : labels.authOther;
+  if (c('permission'))   return is(['POST', 'PATCH', 'PUT']) ? labels.permissionChange : labels.permissionOther;
   if (c('user')) {
-    if (is(['POST']))         return 'إنشاء مستخدم';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مستخدم';
-    if (is(['DELETE']))       return 'حذف مستخدم';
+    if (is(['POST']))         return labels.userCreate;
+    if (is(['PATCH', 'PUT'])) return labels.userEdit;
+    if (is(['DELETE']))       return labels.userDelete;
   }
   if (c('reservation')) {
-    if (is(['POST']))         return 'إنشاء حجز';
-    if (is(['PATCH', 'PUT'])) return 'تعديل حجز';
-    if (is(['DELETE']))       return 'إلغاء حجز';
+    if (is(['POST']))         return labels.reservationCreate;
+    if (is(['PATCH', 'PUT'])) return labels.reservationEdit;
+    if (is(['DELETE']))       return labels.reservationCancel;
   }
   if (c('contract')) {
-    if (is(['POST']))         return 'إنشاء عقد';
-    if (is(['PATCH', 'PUT'])) return 'تعديل عقد';
-    if (is(['DELETE']))       return 'حذف عقد';
+    if (is(['POST']))         return labels.contractCreate;
+    if (is(['PATCH', 'PUT'])) return labels.contractEdit;
+    if (is(['DELETE']))       return labels.contractDelete;
   }
   if (c('payout')) {
-    if (is(['POST']))         return 'تسجيل مدفوعات';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مدفوعات';
+    if (is(['POST']))         return labels.payoutCreate;
+    if (is(['PATCH', 'PUT'])) return labels.payoutEdit;
   }
   if (c('commission')) {
-    if (is(['POST']))         return 'تسجيل عمولة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل عمولة';
+    if (is(['POST']))         return labels.commissionCreate;
+    if (is(['PATCH', 'PUT'])) return labels.commissionEdit;
   }
   if (c('broker')) {
-    if (is(['POST']))         return 'إضافة وسيط';
-    if (is(['PATCH', 'PUT'])) return 'تعديل وسيط';
-    if (is(['DELETE']))       return 'حذف وسيط';
+    if (is(['POST']))         return labels.brokerCreate;
+    if (is(['PATCH', 'PUT'])) return labels.brokerEdit;
+    if (is(['DELETE']))       return labels.brokerDelete;
   }
   if (c('payment')) {
-    if (is(['POST']))         return 'تسجيل دفعة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل دفعة';
+    if (is(['POST']))         return labels.paymentCreate;
+    if (is(['PATCH', 'PUT'])) return labels.paymentEdit;
   }
   if (c('lead')) {
-    if (is(['POST']))         return 'إنشاء فرصة مبيعات';
-    if (is(['PATCH', 'PUT'])) return 'تعديل فرصة مبيعات';
-    if (is(['DELETE']))       return 'حذف فرصة مبيعات';
+    if (is(['POST']))         return labels.leadCreate;
+    if (is(['PATCH', 'PUT'])) return labels.leadEdit;
+    if (is(['DELETE']))       return labels.leadDelete;
   }
   if (c('project')) {
-    if (is(['POST']))         return 'إنشاء مشروع';
-    if (is(['PATCH', 'PUT'])) return 'تعديل مشروع';
-    if (is(['DELETE']))       return 'حذف مشروع';
+    if (is(['POST']))         return labels.projectCreate;
+    if (is(['PATCH', 'PUT'])) return labels.projectEdit;
+    if (is(['DELETE']))       return labels.projectDelete;
   }
   if (c('unit')) {
-    if (is(['POST']))         return 'إنشاء وحدة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل وحدة';
-    if (is(['DELETE']))       return 'حذف وحدة';
+    if (is(['POST']))         return labels.unitCreate;
+    if (is(['PATCH', 'PUT'])) return labels.unitEdit;
+    if (is(['DELETE']))       return labels.unitDelete;
   }
   if (c('maintenance')) {
-    if (is(['POST']))         return 'طلب صيانة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل طلب صيانة';
+    if (is(['POST']))         return labels.maintenanceCreate;
+    if (is(['PATCH', 'PUT'])) return labels.maintenanceEdit;
   }
   if (c('document')) {
-    if (is(['POST']))   return 'رفع مستند';
-    if (is(['DELETE'])) return 'حذف مستند';
+    if (is(['POST']))   return labels.documentUpload;
+    if (is(['DELETE'])) return labels.documentDelete;
   }
   if (c('visit')) {
-    if (is(['POST']))         return 'إنشاء زيارة';
-    if (is(['PATCH', 'PUT'])) return 'تعديل زيارة';
+    if (is(['POST']))         return labels.visitCreate;
+    if (is(['PATCH', 'PUT'])) return labels.visitEdit;
   }
-  if (c('notification')) return 'إرسال إشعار';
+  if (c('notification')) return labels.notificationSend;
   if (c('setting')) {
-    if (is(['POST', 'PATCH', 'PUT'])) return 'تعديل إعداد نظام';
-    if (is(['DELETE']))               return 'حذف إعداد نظام';
+    if (is(['POST', 'PATCH', 'PUT'])) return labels.settingChange;
+    if (is(['DELETE']))               return labels.settingDelete;
   }
-  if (is(['POST']))         return 'إنشاء سجل';
-  if (is(['PATCH', 'PUT'])) return 'تعديل سجل';
-  if (is(['DELETE']))       return 'حذف سجل';
-  return 'إجراء نظام';
+  if (is(['POST']))         return labels.recordCreate;
+  if (is(['PATCH', 'PUT'])) return labels.recordEdit;
+  if (is(['DELETE']))       return labels.recordDelete;
+  return labels.systemAction;
 }
 
 function methodBadgeCls(action: string): string {
@@ -172,15 +178,9 @@ function methodBarCls(action: string): string {
   }
 }
 
-function methodLabel(action: string): string {
-  switch (action.toUpperCase()) {
-    case 'POST':   return 'إنشاء';
-    case 'PATCH':
-    case 'PUT':    return 'تعديل';
-    case 'DELETE': return 'حذف';
-    case 'GET':    return 'عرض';
-    default:       return action;
-  }
+function methodLabel(action: string, labels: MethodLabels): string {
+  const key = action.toUpperCase() as keyof MethodLabels;
+  return labels[key] ?? action;
 }
 
 type LucideIcon = React.ComponentType<{ className?: string }>;
@@ -194,15 +194,15 @@ function methodIcon(action: string): LucideIcon {
   }
 }
 
-function relativeTime(date: string): string {
+function relativeTime(date: string, rt: ReturnType<typeof uiT>['operationsPage']['relativeTime']): string {
   const diff = Date.now() - new Date(date).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1)  return 'الآن';
-  if (mins < 60) return `منذ ${mins} دقيقة`;
+  if (mins < 1)  return rt.now;
+  if (mins < 60) return rt.minutes(mins);
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24)  return `منذ ${hrs} ساعة`;
+  if (hrs < 24)  return rt.hours(hrs);
   const days = Math.floor(hrs / 24);
-  if (days < 7)  return `منذ ${days} يوم`;
+  if (days < 7)  return rt.days(days);
   return new Date(date).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' });
 }
 
@@ -242,38 +242,12 @@ function groupRecentEvents(events: AuditLogItem[]): EventGroup[] {
   return groups;
 }
 
-// ── Role labels ───────────────────────────────────────────────────────────────
-
-const ROLE_LABEL: Record<string, string> = {
-  ADMIN:                  'مدير النظام',
-  SALES_MANAGER:          'مدير مبيعات',
-  SALES:                  'مبيعات',
-  BROKER:                 'وسيط',
-  CLIENT:                 'متصفّح',
-  CUSTOMER:               'عميل',
-  MAINTENANCE_SUPERVISOR: 'مشرف الصيانة',
-};
-
-// ── Quick links ───────────────────────────────────────────────────────────────
-
-const QUICK_LINKS: Array<{
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  desc: string;
-}> = [
-  { href: '/dashboard/audit-logs',         label: 'سجلات التدقيق',  icon: ScrollText,   desc: 'متابعة جميع أحداث النظام' },
-  { href: '/dashboard/notifications',      label: 'الإشعارات',       icon: Bell,         desc: 'مراجعة الإشعارات والقوالب' },
-  { href: '/dashboard/broker-reports',     label: 'تقارير الوسطاء',  icon: BarChart3,    desc: 'متابعة أداء الوسطاء' },
-  { href: '/dashboard/broker-payouts',     label: 'المدفوعات',       icon: Wallet,       desc: 'مراجعة المدفوعات' },
-  { href: '/dashboard/broker-commissions', label: 'العمولات',        icon: BadgePercent, desc: 'مراجعة العمولات' },
-  { href: '/dashboard/broker-leads',       label: 'فرص الوسطاء',    icon: Briefcase,    desc: 'متابعة فرص الوسطاء' },
-  { href: '/dashboard/settings',           label: 'الإعدادات',       icon: Settings,     desc: 'إدارة إعدادات النظام' },
-];
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function OperationsCenterPage() {
+  const locale = await getLocale();
+  const m = uiT(locale).operationsPage;
+
   const [summaryRes, recentRes] = await Promise.all([
     safe(api.get<OperationsSummary>('/operations/summary')),
     safe(api.get<Paged<AuditLogItem>>('/audit-logs?pageSize=10')),
@@ -293,28 +267,42 @@ export default async function OperationsCenterPage() {
   const permCount     = summary?.topEntities.find((e) => e.entityType.toLowerCase().includes('permission'))?.count ?? 0;
   const recentGroups  = groupRecentEvents(recent);
 
+  const QUICK_LINKS = [
+    { href: '/dashboard/audit-logs',         key: 'auditLogs'        as const, icon: ScrollText   },
+    { href: '/dashboard/notifications',      key: 'notifications'    as const, icon: Bell         },
+    { href: '/dashboard/broker-reports',     key: 'brokerReports'    as const, icon: BarChart3    },
+    { href: '/dashboard/broker-payouts',     key: 'brokerPayouts'    as const, icon: Wallet       },
+    { href: '/dashboard/broker-commissions', key: 'brokerCommissions' as const, icon: BadgePercent },
+    { href: '/dashboard/broker-leads',       key: 'brokerLeads'      as const, icon: Briefcase    },
+    { href: '/dashboard/settings',           key: 'settings'         as const, icon: Settings     },
+  ] satisfies Array<{
+    href: string;
+    key: keyof typeof m.quickLinks;
+    icon: LucideIcon;
+  }>;
+
   return (
     <div className="flex flex-col gap-5 pb-2">
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="مركز العمليات"
-        description="نظرة تشغيلية على نشاط النظام — أكثر المناطق استخدامًا، أكثر المستخدمين نشاطًا، وآخر الأحداث."
+        title={m.title}
+        description={m.description}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'مركز العمليات' },
+          { label: m.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbSelf },
         ]}
         meta={
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 border border-brand-200 px-2.5 py-1 text-[11px] font-bold text-brand-700">
             <Activity className="h-3.5 w-3.5" />
-            لحظي
+            {m.liveBadge}
           </span>
         }
       />
 
       {(summaryRes.error || recentRes.error) && (
         <div className="rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
-          تعذر تحميل بعض البيانات: {summaryRes.error ?? recentRes.error}
+          {m.errorPartial} {summaryRes.error ?? recentRes.error}
         </div>
       )}
 
@@ -326,34 +314,34 @@ export default async function OperationsCenterPage() {
             cols={4}
             metrics={[
               {
-                label: 'أحداث اليوم',
+                label: m.kpi.todayEvents,
                 value: summary.totals.today.toLocaleString('ar-EG'),
                 icon: <Activity />,
                 tone: 'brand',
-                sub: 'خلال الـ٢٤ ساعة الماضية',
+                sub: m.kpi.todayEventsSub,
               },
               {
-                label: 'أحداث الأسبوع',
+                label: m.kpi.weekEvents,
                 value: summary.totals.last7Days.toLocaleString('ar-EG'),
                 icon: <TrendingUp />,
                 tone: 'info',
-                sub: 'آخر ٧ أيام',
+                sub: m.kpi.weekEventsSub,
               },
               {
-                label: 'أكثر مستخدم نشاطًا',
+                label: m.kpi.topUser,
                 value: topActor?.fullName ?? '—',
                 icon: <UsersIcon />,
                 tone: 'success',
                 valueSize: 'compact',
-                sub: topActor ? (ROLE_LABEL[topActor.role] ?? topActor.role) : undefined,
+                sub: topActor ? (m.roleLabels[topActor.role as keyof typeof m.roleLabels] ?? topActor.role) : undefined,
               },
               {
-                label: 'أكثر مساحة نشاطًا',
-                value: topEntityEntry ? areaLabel(topEntityEntry.entityType) : '—',
+                label: m.kpi.topArea,
+                value: topEntityEntry ? areaLabel(topEntityEntry.entityType, m.areaLabels) : '—',
                 icon: <Activity />,
                 tone: 'purple',
                 valueSize: 'compact',
-                sub: topEntityEntry ? `${topEntityEntry.count} حدث في ٧ أيام` : undefined,
+                sub: topEntityEntry ? m.kpi.topAreaSub(topEntityEntry.count) : undefined,
               },
             ]}
           />
@@ -364,29 +352,29 @@ export default async function OperationsCenterPage() {
             cols={4}
             metrics={[
               {
-                label: 'أكثر إجراء متكرر',
+                label: m.kpi.topAction,
                 value: topActionEntry
-                  ? `${methodLabel(topActionEntry.action)} · ${topActionEntry.action}`
+                  ? `${methodLabel(topActionEntry.action, m.methodLabels)} · ${topActionEntry.action}`
                   : '—',
                 icon: <Zap />,
                 tone: 'warning',
-                sub: topActionEntry ? `${topActionEntry.count} مرة` : undefined,
+                sub: topActionEntry ? m.kpi.topActionSub(topActionEntry.count) : undefined,
               },
               {
-                label: 'آخر نشاط',
-                value: recent[0] ? relativeTime(recent[0].createdAt) : '—',
+                label: m.kpi.lastActivity,
+                value: recent[0] ? relativeTime(recent[0].createdAt, m.relativeTime) : '—',
                 icon: <Clock />,
                 tone: 'brand',
               },
               {
-                label: 'إجمالي ٣٠ يومًا',
+                label: m.kpi.total30,
                 value: summary.totals.last30Days.toLocaleString('ar-EG'),
                 icon: <TrendingUp />,
                 tone: 'success',
               },
               {
-                label: 'عمليات الحذف',
-                value: deleteCount === 0 ? 'لا توجد' : deleteCount.toLocaleString('ar-EG'),
+                label: m.kpi.deletions,
+                value: deleteCount === 0 ? m.kpi.deletionsNone : deleteCount.toLocaleString('ar-EG'),
                 icon: <Shield />,
                 tone: deleteCount > 0 ? 'danger' : 'neutral',
               },
@@ -400,8 +388,8 @@ export default async function OperationsCenterPage() {
             <PremiumSectionCard
               className="lg:col-span-2"
               icon={<ScrollText />}
-              title="أحدث الأحداث"
-              description="آخر نشاط تشغيلي مهم داخل النظام"
+              title={m.sections.latestEvents}
+              description={m.sections.latestEventsDesc}
               trailing={
                 <Link href="/dashboard/audit-logs">
                   <Button
@@ -409,7 +397,7 @@ export default async function OperationsCenterPage() {
                     size="sm"
                     leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
                   >
-                    فتح سجل التدقيق
+                    {m.sections.openAuditLog}
                   </Button>
                 </Link>
               }
@@ -419,8 +407,8 @@ export default async function OperationsCenterPage() {
                 <div className="py-12">
                   <EmptyState
                     icon={<ScrollText />}
-                    title="لا توجد أحداث بعد"
-                    description="ستظهر هنا فور وقوع أول إجراء مُسجّل."
+                    title={m.emptyEvents}
+                    description={m.emptyEventsDesc}
                   />
                 </div>
               ) : (
@@ -429,7 +417,7 @@ export default async function OperationsCenterPage() {
                   {recentGroups.length > 0 && (
                     <>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline bg-canvas/40">
-                        آخر النشاط
+                        {m.sections.recentActivity}
                       </p>
                       <ul className="divide-y divide-hairline">
                         {recentGroups.map((g) => {
@@ -455,23 +443,23 @@ export default async function OperationsCenterPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <p className="text-[13px] font-semibold text-slate-900 truncate">
-                                      {eventLabel(g.action, g.entityType)}
+                                      {eventLabel(g.action, g.entityType, m.eventLabels)}
                                     </p>
                                     {g.count > 1 && (
                                       <span className="shrink-0 text-[10px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-full tabular-nums whitespace-nowrap">
-                                        {g.count} مرة
+                                        {m.timesCount(g.count)}
                                       </span>
                                     )}
                                   </div>
                                   <p className="text-[12px] text-slate-500 mt-0.5 truncate">
-                                    بواسطة{' '}
+                                    {m.byLabel}{' '}
                                     <span className="font-medium text-slate-700">
-                                      {g.actor?.fullName ?? 'النظام'}
+                                      {g.actor?.fullName ?? m.systemActor}
                                     </span>
                                     {' · '}
-                                    {areaLabel(g.entityType)}
+                                    {areaLabel(g.entityType, m.areaLabels)}
                                     {' · '}
-                                    {relativeTime(g.latestAt)}
+                                    {relativeTime(g.latestAt, m.relativeTime)}
                                   </p>
                                 </div>
 
@@ -505,7 +493,7 @@ export default async function OperationsCenterPage() {
                         'text-[10px] font-bold uppercase tracking-widest text-slate-400 px-5 py-2.5 border-b border-hairline bg-canvas/40',
                         recentGroups.length > 0 && 'border-t',
                       )}>
-                        نشاط الأسبوع حسب المساحة
+                        {m.sections.weekByArea}
                       </p>
                       <ul className="divide-y divide-hairline">
                         {summary.topEntities.map((e) => (
@@ -519,10 +507,10 @@ export default async function OperationsCenterPage() {
                               </span>
                               <div className="flex-1 min-w-0">
                                 <p className="text-[13px] font-semibold text-slate-900 truncate">
-                                  {areaLabel(e.entityType)}
+                                  {areaLabel(e.entityType, m.areaLabels)}
                                 </p>
                                 <p className="text-[12px] text-slate-500 mt-0.5">
-                                  {e.count} حدث · آخر ٧ أيام
+                                  {m.sections.weekByAreaSub(e.count)}
                                 </p>
                               </div>
                               <span className="shrink-0 text-[13px] font-bold tabular-nums bg-slate-100 text-slate-700 px-3 py-1 rounded-full">
@@ -547,23 +535,26 @@ export default async function OperationsCenterPage() {
               {/* Quick links */}
               <PremiumSectionCard
                 icon={<Zap />}
-                title="روابط سريعة"
+                title={m.sections.quickLinks}
                 padded={false}
               >
                 <div className="grid grid-cols-2 gap-3 p-4">
-                  {QUICK_LINKS.map((q) => (
-                    <Link key={q.href} href={q.href} className="flex">
-                      <div className="flex flex-col gap-2 p-3.5 rounded-xl border border-hairline hover:border-brand-200 hover:bg-brand-50/40 transition-all duration-150 flex-1">
-                        <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-surface-muted text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
-                          <q.icon className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="text-[12px] font-semibold text-slate-900 leading-tight">{q.label}</p>
-                          <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{q.desc}</p>
+                  {QUICK_LINKS.map((q) => {
+                    const ql = m.quickLinks[q.key];
+                    return (
+                      <Link key={q.href} href={q.href} className="flex">
+                        <div className="flex flex-col gap-2 p-3.5 rounded-xl border border-hairline hover:border-brand-200 hover:bg-brand-50/40 transition-all duration-150 flex-1">
+                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-surface-muted text-brand-600 [&_svg]:h-4 [&_svg]:w-4">
+                            <q.icon className="h-4 w-4" />
+                          </span>
+                          <div>
+                            <p className="text-[12px] font-semibold text-slate-900 leading-tight">{ql.label}</p>
+                            <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{ql.desc}</p>
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                      </Link>
+                    );
+                  })}
                 </div>
               </PremiumSectionCard>
 
@@ -576,15 +567,15 @@ export default async function OperationsCenterPage() {
             {/* Sensitive activity */}
             <PremiumSectionCard
               icon={<Shield />}
-              title="نشاط حساس"
+              title={m.sections.sensitiveActivity}
               tone="warning"
               padded={false}
             >
               <div className="divide-y divide-hairline">
                 {[
-                  { label: 'عمليات الحذف',      count: deleteCount, warn: deleteCount > 0, icon: <Trash2 className="h-4 w-4" /> },
-                  { label: 'أحداث المصادقة',     count: authCount,   warn: false,           icon: <Shield className="h-4 w-4" /> },
-                  { label: 'تغييرات الصلاحيات',  count: permCount,   warn: permCount > 0,   icon: <UsersIcon className="h-4 w-4" /> },
+                  { label: m.sensitiveRows.deletions,  count: deleteCount, warn: deleteCount > 0, icon: <Trash2 className="h-4 w-4" /> },
+                  { label: m.sensitiveRows.authEvents,  count: authCount,   warn: false,           icon: <Shield className="h-4 w-4" /> },
+                  { label: m.sensitiveRows.permChanges, count: permCount,   warn: permCount > 0,   icon: <UsersIcon className="h-4 w-4" /> },
                 ].map(({ label, count, warn, icon }) => (
                   <div key={label} className="flex items-center gap-3.5 px-5 py-4">
                     <span className={cn(
@@ -608,11 +599,11 @@ export default async function OperationsCenterPage() {
             {/* By action */}
             <PremiumSectionCard
               icon={<Activity />}
-              title="توزيع حسب الإجراء (٧ أيام)"
+              title={m.sections.byAction}
               padded={false}
             >
               {summary.topActions.length === 0 ? (
-                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">لا توجد بيانات</p>
+                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">{m.sections.noData}</p>
               ) : (
                 <div className="divide-y divide-hairline">
                   {summary.topActions.map((a) => {
@@ -621,7 +612,7 @@ export default async function OperationsCenterPage() {
                       <div key={a.action} className="flex items-center gap-4 px-5 py-4">
                         <div className="flex items-center gap-2.5 shrink-0 w-28">
                           <span className="text-[13px] font-semibold text-slate-800">
-                            {methodLabel(a.action)}
+                            {methodLabel(a.action, m.methodLabels)}
                           </span>
                           <span
                             className={cn(
@@ -652,11 +643,11 @@ export default async function OperationsCenterPage() {
             {/* By area */}
             <PremiumSectionCard
               icon={<BarChart3 />}
-              title="توزيع حسب المساحة (٧ أيام)"
+              title={m.sections.byArea}
               padded={false}
             >
               {summary.topEntities.length === 0 ? (
-                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">لا توجد بيانات</p>
+                <p className="text-[12px] text-slate-400 px-5 py-8 text-center">{m.sections.noData}</p>
               ) : (
                 <div className="divide-y divide-hairline">
                   {summary.topEntities.map((e) => {
@@ -664,7 +655,7 @@ export default async function OperationsCenterPage() {
                     return (
                       <div key={e.entityType} className="flex items-center gap-4 px-5 py-4">
                         <span className="text-[13px] font-semibold text-slate-800 shrink-0 w-28 truncate">
-                          {areaLabel(e.entityType)}
+                          {areaLabel(e.entityType, m.areaLabels)}
                         </span>
                         <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                           <div

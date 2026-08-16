@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { CalendarClock } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import type { Paginated, MeVisitRequest } from '@/lib/api-types';
 import { ButtonLink } from '@/components/ui/Button';
@@ -25,18 +27,19 @@ function firstStr(v: string | string[] | undefined): string {
   return Array.isArray(v) ? (v[0] ?? '') : (v ?? '');
 }
 
-function Header() {
-  return (
-    <AccountPageHeader
-      title="الزيارات"
-      description="تابع حالة طلبات الزيارة الخاصة بك ومواعيدها."
-    />
-  );
-}
-
 export default async function AccountVisitsPage({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(firstStr(sp.page)) || 1);
+
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.visits;
+
+  const header = (
+    <AccountPageHeader
+      title={m.title}
+      description={m.description}
+    />
+  );
 
   let result: Paginated<MeVisitRequest>;
   try {
@@ -47,10 +50,10 @@ export default async function AccountVisitsPage({ searchParams }: { searchParams
     if (e instanceof AuthError) redirect('/login');
     return (
       <div className="space-y-8">
-        <Header />
+        {header}
         <ErrorState
-          title="تعذّر تحميل الزيارات حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -65,20 +68,20 @@ export default async function AccountVisitsPage({ searchParams }: { searchParams
 
   return (
     <div className="space-y-8">
-      <Header />
+      {header}
 
       {visits.length === 0 ? (
         <EmptyState
-          title="لا توجد طلبات زيارة بعد"
-          message="تصفّح المشاريع والوحدات واطلب زيارة لما يهمّك، وستظهر هنا لمتابعتها."
+          title={m.emptyTitle}
+          message={m.emptyMsg}
           icon={<CalendarClock className="h-6 w-6" aria-hidden />}
           action={
             <div className="flex flex-wrap items-center justify-center gap-3">
               <ButtonLink href={routes.projects} variant="primary" size="md">
-                تصفّح المشاريع
+                {m.browseProjects}
               </ButtonLink>
               <ButtonLink href={routes.units} variant="outline" size="md">
-                استكشف الوحدات
+                {m.exploreUnits}
               </ButtonLink>
             </div>
           }

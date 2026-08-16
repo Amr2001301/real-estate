@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { buildMetadata } from '@/lib/seo';
 import { routes } from '@/lib/routes';
+import { getLocale } from '@/lib/locale';
+import { siteT } from '@/messages/site';
 import { authFetch, AuthError } from '@/lib/api-auth';
 import { pickAr, unitTypeLabel, formatPrice } from '@/lib/format';
 import type { MeInstallment, MeInstallmentsResponse } from '@/lib/api-types';
@@ -35,13 +37,6 @@ const STATUS_TONE_CLS: Record<'success' | 'accent' | 'muted' | 'error', string> 
   muted: 'bg-surface-soft text-ink-muted',
   error: 'bg-error/10 text-error ring-1 ring-error/20',
 };
-
-const FILTERS = [
-  { key: 'all', label: 'الكل', status: undefined },
-  { key: 'PAID', label: 'مدفوع', status: 'PAID' as const },
-  { key: 'PENDING', label: 'قيد الاستحقاق', status: 'PENDING' as const },
-  { key: 'OVERDUE', label: 'متأخر', status: 'OVERDUE' as const },
-];
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -87,6 +82,16 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
   const activeStatus = (['PAID', 'PENDING', 'OVERDUE'] as const).find((s) => s === statusParam);
   const activeContractId = firstStr(sp.contractId) || undefined;
 
+  const locale = await getLocale();
+  const m = siteT(locale).accountPages.installments;
+
+  const FILTERS = [
+    { key: 'all', label: m.filterAll, status: undefined },
+    { key: 'PAID', label: m.filterPaid, status: 'PAID' as const },
+    { key: 'PENDING', label: m.filterDue, status: 'PENDING' as const },
+    { key: 'OVERDUE', label: m.filterLate, status: 'OVERDUE' as const },
+  ];
+
   const qs = new URLSearchParams({ page: '1', pageSize: '200' });
   if (activeStatus) qs.set('status', activeStatus);
   if (activeContractId) qs.set('contractId', activeContractId);
@@ -99,12 +104,12 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
     return (
       <div className="space-y-8">
         <AccountPageHeader
-          title="جدول الأقساط"
-          description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع."
+          title={m.title}
+          description={m.description}
         />
         <ErrorState
-          title="تعذّر تحميل الأقساط حاليًا"
-          message="يرجى المحاولة مرة أخرى بعد لحظات."
+          title={m.errorTitle}
+          message={m.errorMsg}
           className="mx-auto max-w-2xl"
         />
       </div>
@@ -148,24 +153,24 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
   return (
     <div className="space-y-8">
       <AccountPageHeader
-        title="جدول الأقساط"
-        description="مواعيد دفع الأقساط، الحالة، وإمكانية إرسال إثبات الدفع للأقساط غير المدفوعة."
+        title={m.title}
+        description={m.description}
       />
 
       {scheduleEmpty ? (
         <EmptyState
-          title="لا توجد أقساط بعد"
-          message="ستظهر هنا أقساط عقدك مع تاريخ كل قسط وحالته."
+          title={m.emptyAll}
+          message={m.emptyAllMsg}
           icon={<CalendarClock className="h-6 w-6" aria-hidden />}
           action={
             <ButtonLink href={routes.accountContracts} variant="outline" size="md">
-              عرض عقودي
+              {m.viewContracts}
             </ButtonLink>
           }
         />
       ) : (
         <>
-          {summary && <SummaryStrip summary={summary} />}
+          {summary && <SummaryStrip summary={summary} m={m} />}
 
           {/* Filter row */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -213,19 +218,19 @@ export default async function AccountInstallmentsPage({ searchParams }: { search
 
           {installments.length === 0 ? (
             <EmptyState
-              title="لا توجد أقساط بهذا التصنيف"
-              message="جرّب تصفية مختلفة لعرض بقية الأقساط."
+              title={m.emptyFilter}
+              message={m.emptyFilterMsg}
               icon={<CalendarClock className="h-6 w-6" aria-hidden />}
               action={
                 <ButtonLink href={routes.accountInstallments} variant="outline" size="md">
-                  عرض كل الأقساط
+                  {m.viewAll}
                 </ButtonLink>
               }
             />
           ) : (
             <div className="space-y-4">
               {installments.map((inst) => (
-                <InstallmentCard key={inst.id} installment={inst} />
+                <InstallmentCard key={inst.id} installment={inst} m={m} />
               ))}
             </div>
           )}
@@ -261,6 +266,7 @@ function SummaryBlock({
   sub,
   separator,
   overdue,
+  currency,
 }: {
   icon: typeof CheckCircle2;
   label: string;
@@ -268,6 +274,7 @@ function SummaryBlock({
   sub?: string;
   separator?: boolean;
   overdue?: boolean;
+  currency: string;
 }) {
   return (
     <div className={cn('min-w-0', separator && 'sm:border-s sm:border-hairline/70 sm:ps-8')}>
@@ -284,7 +291,7 @@ function SummaryBlock({
       >
         {value}
         {value !== '—' && (
-          <span className="ms-1.5 text-xs font-semibold text-ink-muted/60">ج.م</span>
+          <span className="ms-1.5 text-xs font-semibold text-ink-muted/60">{currency}</span>
         )}
       </div>
       {sub && <div className="mt-1 text-[11px] text-ink-muted/70">{sub}</div>}
@@ -292,43 +299,49 @@ function SummaryBlock({
   );
 }
 
+type InstallmentsMessages = ReturnType<typeof siteT>['accountPages']['installments'];
+
 /** Single AccountCard containing all four financial KPIs in one horizontal row. */
-function SummaryStrip({ summary }: { summary: NonNullable<MeInstallmentsResponse['summary']> }) {
+function SummaryStrip({ summary, m }: { summary: NonNullable<MeInstallmentsResponse['summary']>; m: InstallmentsMessages }) {
   const hasOverdue = Number(summary.overdue) > 0;
   return (
     <AccountCard accent="gold" className="p-5 sm:p-7">
       <div className="grid grid-cols-2 gap-y-6 gap-x-4 sm:grid-cols-4">
         <SummaryBlock
           icon={CheckCircle2}
-          label="إجمالي المدفوع"
+          label={m.totalPaid}
           value={fmtAmt(summary.totalPaid)}
-          sub={`${summary.counts.paid} قسط مدفوع`}
+          sub={`${summary.counts.paid} ${m.paidCount}`}
+          currency={m.currency}
         />
         <SummaryBlock
           icon={Wallet}
-          label="المتبقي"
+          label={m.remaining}
           value={fmtAmt(summary.remaining)}
-          sub={`${summary.counts.pending + summary.counts.overdue} قسط غير مدفوع`}
+          sub={`${summary.counts.pending + summary.counts.overdue} ${m.unpaidCount}`}
           separator
+          currency={m.currency}
         />
         <SummaryBlock
           icon={AlertCircle}
-          label="المتأخرات"
+          label={m.overdue}
           value={fmtAmt(summary.overdue)}
-          sub={`${summary.counts.overdue} قسط متأخر`}
+          sub={`${summary.counts.overdue} ${m.overdueCount}`}
           separator
           overdue={hasOverdue}
+          currency={m.currency}
         />
         <SummaryBlock
           icon={CalendarClock}
-          label="القسط القادم"
+          label={m.nextDue}
           value={fmtAmt(summary.nextDue?.amount ?? null)}
           sub={
             summary.nextDue
-              ? `الاستحقاق: ${formatDate(summary.nextDue.dueDate)}`
-              : 'لا يوجد مستحق'
+              ? `${m.duePrefix} ${formatDate(summary.nextDue.dueDate)}`
+              : m.noDue
           }
           separator
+          currency={m.currency}
         />
       </div>
     </AccountCard>
@@ -336,7 +349,7 @@ function SummaryStrip({ summary }: { summary: NonNullable<MeInstallmentsResponse
 }
 
 /** Single installment — mirrors the ReservationCard layout. */
-function InstallmentCard({ installment }: { installment: MeInstallment }) {
+function InstallmentCard({ installment, m }: { installment: MeInstallment; m: InstallmentsMessages }) {
   const contract = installment.plan?.contract ?? null;
   const project = contract?.unit?.building?.phase?.project ?? null;
   const projectName = project ? pickAr(project.name) : '';
@@ -360,7 +373,7 @@ function InstallmentCard({ installment }: { installment: MeInstallment }) {
           </AccountCardIcon>
           <div className="min-w-0">
             <h3 className="line-clamp-1 text-base font-semibold text-ink-strong">
-              قسط {fmtMonthYear(installment.dueDate)}
+              {m.installmentLabel} {fmtMonthYear(installment.dueDate)}
             </h3>
             {subtitle && (
               <p className="mt-0.5 line-clamp-1 flex items-center gap-1.5 text-xs text-ink-muted">
@@ -386,17 +399,17 @@ function InstallmentCard({ installment }: { installment: MeInstallment }) {
 
       {/* ── Three balanced data blocks ── */}
       <div className="mt-5 grid grid-cols-1 gap-6 border-t border-hairline pt-5 sm:grid-cols-3 sm:items-center sm:gap-0">
-        <Block label="مبلغ القسط">
+        <Block label={m.amountCol}>
           <div className="text-sm font-semibold text-ink-strong" dir="auto">
             {formatPrice(installment.amount)}
           </div>
         </Block>
-        <Block label="تاريخ الاستحقاق" separator>
+        <Block label={m.dateCol} separator>
           <div className="text-sm font-semibold text-ink-strong" dir="auto">
             {formatDate(installment.dueDate)}
           </div>
         </Block>
-        <Block label={installment.paidAt ? 'تاريخ السداد' : 'الحالة'} separator>
+        <Block label={installment.paidAt ? m.paidDateCol : m.statusCol} separator>
           {installment.paidAt ? (
             <div className="text-sm font-semibold text-ink-strong" dir="auto">
               {formatDate(installment.paidAt)}
@@ -431,12 +444,12 @@ function InstallmentCard({ installment }: { installment: MeInstallment }) {
             className="inline-flex items-center gap-2 rounded-xl bg-navy px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-navy/90 active:scale-95"
           >
             <Upload className="h-3.5 w-3.5" aria-hidden />
-            إرسال إثبات الدفع
+            {m.submitProof}
           </Link>
         ) : (
           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-success">
             <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-            تم السداد والتحقق
+            {m.verifiedStatus}
           </span>
         )}
         {contract?.contractNumber && (

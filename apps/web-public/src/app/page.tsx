@@ -1,5 +1,6 @@
 import { buildMetadata } from '@/lib/seo';
 import { safeFetch } from '@/lib/api';
+import { getLocale } from '@/lib/locale';
 import type { Paginated, PublicProjectListItem, PublicUnit } from '@/lib/api-types';
 import { Container } from '@/components/ui/Container';
 import { Hero } from '@/components/home/Hero';
@@ -27,7 +28,8 @@ export const metadata = buildMetadata({
 const REVALIDATE = 60;
 
 export default async function HomePage() {
-  const [projects, units] = await Promise.all([
+  const [locale, projects, units] = await Promise.all([
+    getLocale(),
     // No `featured` filter: the API already orders featured-first, so this one
     // request returns featured projects first then fills with normal published
     // ones (single source ⇒ inherently deduped) — up to 8 for the carousel.
@@ -48,22 +50,22 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd data={organizationLd()} />
-      <Hero image={heroImage} projectsCount={projectsCount} unitsCount={unitsCount} />
+      <Hero image={heroImage} projectsCount={projectsCount} unitsCount={unitsCount} locale={locale} />
 
       {/* Premium search panel overlapping the hero's lower edge. */}
       <Container className="relative z-10 -mt-12 sm:-mt-14">
-        <SearchPanel />
+        <SearchPanel locale={locale} />
       </Container>
 
-      <InvestmentCategories />
-      <FeaturedProjects result={projects} />
-      <HomeBanner />
-      <FeaturedUnits result={units} />
-      <WhyChooseUs />
+      <InvestmentCategories locale={locale} />
+      <FeaturedProjects result={projects} locale={locale} />
+      <HomeBanner locale={locale} />
+      <FeaturedUnits result={units} locale={locale} />
+      <WhyChooseUs locale={locale} />
       <MobileAppPromo />
-      <HowWeHelp />
-      <HomeContact />
-      <LeadCtaBand />
+      <HowWeHelp locale={locale} />
+      <HomeContact locale={locale} />
+      <LeadCtaBand locale={locale} />
     </>
   );
 }

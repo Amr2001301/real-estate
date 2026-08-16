@@ -10,6 +10,8 @@ import type {
 } from '@/lib/types';
 import { tx, formatDate, formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
+import { getLocale } from '@/lib/locale';
+import { uiT } from '@/messages/ui';
 import { Button } from '@/components/ui/button';
 import { IconButton } from '@/components/ui/icon-button';
 import { Select } from '@/components/ui/select';
@@ -44,6 +46,8 @@ export default async function AdminBrokerReservationsPage({
   searchParams: Promise<Search>;
 }) {
   const sp = await searchParams;
+  const locale = await getLocale();
+  const m = uiT(locale).pages.brokerReservationsPage;
   const currency = await getReportsCurrency();
   const page = Math.max(1, Number(sp.page ?? '1') || 1);
 
@@ -114,17 +118,17 @@ export default async function AdminBrokerReservationsPage({
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
       <PremiumPageHero
-        title="حجوزات الوسطاء"
-        description="متابعة الحجوزات المرتبطة بالوسطاء وحالاتها عبر المشاريع والوحدات."
+        title={m.heroTitle}
+        description={m.heroDescription}
         breadcrumbs={[
-          { label: 'لوحة التحكم', href: '/dashboard' },
-          { label: 'الوسطاء', href: '/dashboard/brokers' },
-          { label: 'حجوزات الوسطاء' },
+          { label: uiT(locale).common.breadcrumbHome, href: '/dashboard' },
+          { label: m.breadcrumbBrokers, href: '/dashboard/brokers' },
+          { label: m.breadcrumbSelf },
         ]}
         actions={
           <Link href={'/dashboard/broker-reservations/new' as never}>
             <Button variant="primary" size="md" leftIcon={<Plus className="h-4 w-4" />}>
-              إنشاء حجز نيابة عن وسيط
+              {m.newReservationBtn}
             </Button>
           </Link>
         }
@@ -136,32 +140,32 @@ export default async function AdminBrokerReservationsPage({
         cols={4}
         metrics={[
           {
-            label: 'إجمالي الحجوزات',
+            label: m.kpiTotal,
             value: totalReservations,
             icon: <BookmarkCheck />,
             tone: 'brand',
             primary: true,
           },
           {
-            label: 'قيد المراجعة',
+            label: m.kpiPending,
             value: counts.pending,
             icon: <BookmarkCheck />,
             tone: 'warning',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'تمت الموافقة',
+            label: m.kpiApproved,
             value: counts.approved,
             icon: <BookmarkCheck />,
             tone: 'success',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
           {
-            label: 'محوّل إلى عقد',
+            label: m.kpiConverted,
             value: counts.converted,
             icon: <BookmarkCheck />,
             tone: 'info',
-            sub: 'في هذه الصفحة',
+            sub: m.kpiThisPage,
           },
         ]}
       />
@@ -170,7 +174,7 @@ export default async function AdminBrokerReservationsPage({
       {resRes.error && (
         <div className="flex items-start gap-3 rounded-2xl bg-danger-50 border border-danger-100 text-danger-700 p-4 text-sm">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <p className="font-medium">تعذر تحميل الحجوزات: {resRes.error}</p>
+          <p className="font-medium">{m.errorLoad}{resRes.error}</p>
         </div>
       )}
 
@@ -182,9 +186,9 @@ export default async function AdminBrokerReservationsPage({
         {!showFilters && sp.salesId   && <input type="hidden" name="salesId"   value={sp.salesId} />}
 
         {/* ── Row 1: broker filter + actions (always visible) ───────────────── */}
-        <PremiumFilterField label="الوسيط" htmlFor="bres-broker">
+        <PremiumFilterField label={m.filterBrokerLabel} htmlFor="bres-broker">
           <Select id="bres-broker" name="brokerId" inputSize="sm" defaultValue={sp.brokerId ?? ''} className="w-44 shrink-0">
-            <option value="">كل الوسطاء</option>
+            <option value="">{m.filterAllBrokers}</option>
             {brokers.map((b) => (
               <option key={b.id} value={b.id}>{b.companyName}</option>
             ))}
@@ -193,10 +197,10 @@ export default async function AdminBrokerReservationsPage({
 
         {/* Action buttons — BEFORE the basis-full panel so ms-auto keeps them in row 1 */}
         <div className="flex items-center gap-2 ms-auto shrink-0">
-          <Button type="submit" variant="primary" size="sm">تصفية</Button>
+          <Button type="submit" variant="primary" size="sm">{uiT(locale).common.filterBtn}</Button>
           {hasAnyFilter && (
             <Link href={'/dashboard/broker-reservations' as never}>
-              <Button type="button" variant="ghost" size="sm">مسح</Button>
+              <Button type="button" variant="ghost" size="sm">{uiT(locale).common.clearBtn}</Button>
             </Link>
           )}
           <span className="hidden sm:block h-5 w-px bg-hairline shrink-0" />
@@ -209,7 +213,7 @@ export default async function AdminBrokerReservationsPage({
             }`}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />
-            {showFilters ? 'إخفاء الفلاتر' : 'فلاتر متقدمة'}
+            {showFilters ? m.filterHideFilters : m.filterAdvanced}
             {hasAdvancedFilters && !showFilters && (
               <span className="inline-flex items-center justify-center h-4 min-w-[16px] px-1 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold">
                 !
@@ -223,30 +227,30 @@ export default async function AdminBrokerReservationsPage({
           <div className="w-full basis-full border-t border-hairline pt-3.5 mt-0.5">
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1">
-                <label htmlFor="bres-status" className="text-[11px] font-medium text-slate-400">الحالة</label>
+                <label htmlFor="bres-status" className="text-[11px] font-medium text-slate-400">{m.filterStatus}</label>
                 <Select id="bres-status" name="status" inputSize="sm" defaultValue={sp.status ?? ''}>
-                  <option value="">كل الحالات</option>
-                  <option value="PENDING">قيد المراجعة</option>
-                  <option value="APPROVED">تمت الموافقة</option>
-                  <option value="REJECTED">مرفوض</option>
-                  <option value="CANCELLED">ملغى</option>
-                  <option value="EXPIRED">منتهي</option>
-                  <option value="CONVERTED">محوّل إلى عقد</option>
+                  <option value="">{m.filterAllStatuses}</option>
+                  <option value="PENDING">{m.filterStatusPending}</option>
+                  <option value="APPROVED">{m.filterStatusApproved}</option>
+                  <option value="REJECTED">{m.filterStatusRejected}</option>
+                  <option value="CANCELLED">{m.filterStatusCancelled}</option>
+                  <option value="EXPIRED">{m.filterStatusExpired}</option>
+                  <option value="CONVERTED">{m.filterStatusConverted}</option>
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bres-project" className="text-[11px] font-medium text-slate-400">المشروع</label>
+                <label htmlFor="bres-project" className="text-[11px] font-medium text-slate-400">{m.filterProject}</label>
                 <Select id="bres-project" name="projectId" inputSize="sm" defaultValue={sp.projectId ?? ''}>
-                  <option value="">كل المشاريع</option>
+                  <option value="">{m.filterAllProjects}</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{tx(p.name)}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex flex-col gap-1">
-                <label htmlFor="bres-sales" className="text-[11px] font-medium text-slate-400">المندوب الداخلي</label>
+                <label htmlFor="bres-sales" className="text-[11px] font-medium text-slate-400">{m.filterInternalRep}</label>
                 <Select id="bres-sales" name="salesId" inputSize="sm" defaultValue={sp.salesId ?? ''}>
-                  <option value="">كل المندوبين</option>
+                  <option value="">{m.filterAllReps}</option>
                   {salesUsers.map((u) => (
                     <option key={u.id} value={u.id}>{u.fullName}</option>
                   ))}
@@ -260,17 +264,17 @@ export default async function AdminBrokerReservationsPage({
       {/* ── Reservations table ───────────────────────────────────────────────── */}
       <PremiumSectionCard
         icon={<BookmarkCheck />}
-        title="قائمة الحجوزات"
-        description="حجوزات عملاء نشأت من بوابة الوسيط وتحتاج إلى مراجعة داخلية."
+        title={m.tableTitle}
+        description={m.tableDescription}
         padded={false}
         trailing={
           totalCommission > 0 ? (
             <span className="text-xs text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
-              عمولة مقفلة: {formatCurrency(totalCommission, currency)}
+              {m.tableTrailingCommission}{formatCurrency(totalCommission, currency)}
             </span>
           ) : (
             <span className="text-xs text-slate-400 tabular-nums">
-              {totalReservations.toLocaleString('ar-EG')} حجز
+              {totalReservations.toLocaleString('ar-EG')} {m.tableTrailingCount}
             </span>
           )
         }
@@ -278,12 +282,12 @@ export default async function AdminBrokerReservationsPage({
         {rows.length === 0 && !resRes.error ? (
           <PremiumEmptyState
             icon={<BookmarkCheck />}
-            title="لا توجد حجوزات من الوسطاء"
-            description="ستظهر هنا فور إرسال الوسطاء أول حجز."
+            title={m.emptyTitle}
+            description={m.emptyDescription}
             action={
               <Link href={'/dashboard/broker-reservations/new' as never}>
                 <Button variant="primary" size="sm" leftIcon={<Plus className="h-4 w-4" />}>
-                  إنشاء حجز نيابة عن وسيط
+                  {m.emptyNewBtn}
                 </Button>
               </Link>
             }
@@ -294,14 +298,14 @@ export default async function AdminBrokerReservationsPage({
             <table className="w-full text-sm">
               <thead className="bg-canvas/40 border-b border-hairline text-[11px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 <tr>
-                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">رقم الحجز</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوسيط</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">العميل</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الوحدة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">الحالة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">المندوب الداخلي</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">العمولة المُقفلة</th>
-                  <th className="text-start py-3 px-4 whitespace-nowrap">تاريخ الإنشاء</th>
+                  <th className="text-start py-3 ps-5 pe-4 whitespace-nowrap">{m.colReservationNumber}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colBroker}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colClient}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colUnit}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colStatus}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colInternalRep}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colLockedCommission}</th>
+                  <th className="text-start py-3 px-4 whitespace-nowrap">{m.colCreatedAt}</th>
                   <th className="text-start py-3 ps-4 pe-5 w-px" />
                 </tr>
               </thead>
@@ -391,7 +395,7 @@ export default async function AdminBrokerReservationsPage({
                         </span>
                       ) : (
                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-0.5 text-2xs font-medium text-slate-400">
-                          غير معيّن
+                          {m.unassigned}
                         </span>
                       )}
                     </td>
@@ -412,14 +416,14 @@ export default async function AdminBrokerReservationsPage({
                       ) : r.commissionLockedAmount != null ? (
                         <>
                           <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-2xs font-medium text-teal-700">
-                            مبلغ ثابت
+                            {m.commissionFixed}
                           </span>
                           <p className="text-2xs text-slate-400 tabular-nums mt-0.5">
                             {formatCurrency(r.commissionLockedAmount, currency)}
                           </p>
                         </>
                       ) : (
-                        <span className="text-slate-400 text-xs">غير محددة</span>
+                        <span className="text-slate-400 text-xs">{m.commissionUnset}</span>
                       )}
                     </td>
 
@@ -431,7 +435,7 @@ export default async function AdminBrokerReservationsPage({
                     {/* Action */}
                     <td className="py-3.5 ps-4 pe-5">
                       <Link href={`/dashboard/reservations/${r.id}` as never}>
-                        <IconButton label="عرض" variant="ghost" size="sm">
+                        <IconButton label={m.actionView} variant="ghost" size="sm">
                           <Eye />
                         </IconButton>
                       </Link>
