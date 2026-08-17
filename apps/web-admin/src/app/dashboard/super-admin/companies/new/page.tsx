@@ -10,8 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { FormFooter } from '@/components/ui/form-footer';
-import { PageHeader } from '@/components/ui/page-header';
-import { PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
+import { PremiumPageHero, PremiumFormLayout, PremiumFormPanel } from '@/components/premium';
 
 export default function NewCompanyPage() {
   const router = useRouter();
@@ -68,9 +67,10 @@ export default function NewCompanyPage() {
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      <PageHeader
+      <PremiumPageHero
         title={m.title}
         description={m.description}
+        badge={{ label: m.breadcrumbs.new }}
         breadcrumbs={[
           { label: m.breadcrumbs.platform, href: '/dashboard/super-admin' },
           { label: m.breadcrumbs.companies, href: '/dashboard/super-admin/companies' },
