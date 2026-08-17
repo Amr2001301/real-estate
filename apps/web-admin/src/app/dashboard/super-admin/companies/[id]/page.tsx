@@ -4,8 +4,8 @@ import { useEffect, useState, useTransition, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ArrowRight, Users, CheckCircle2, XCircle, PauseCircle,
-  RotateCcw, AlertTriangle, UserPlus, Building2, Settings,
+  ArrowLeft, Users, CheckCircle2, XCircle, PauseCircle,
+  RotateCcw, AlertTriangle, UserPlus, Building2, Settings, Globe,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,13 +14,24 @@ import { Field } from '@/components/form/field';
 import { formatDate } from '@/lib/format';
 import { getClientLocale } from '@/lib/locale-client';
 import { saT, type SaStrings } from '@/messages/super-admin';
-import { PremiumPageHero, PremiumDetailLayout, PremiumSectionCard, PremiumCommandPanel } from '@/components/premium';
+import {
+  PremiumPageHero,
+  PremiumDetailLayout,
+  PremiumSectionCard,
+  PremiumCommandPanel,
+} from '@/components/premium';
 
-const STATUS_BADGE: Record<string, string> = {
-  TRIAL: 'bg-blue-100 text-blue-700', ACTIVE: 'bg-emerald-100 text-emerald-700',
-  CANCELLING: 'bg-amber-100 text-amber-700', CANCELLED: 'bg-slate-100 text-slate-500',
-  EXPIRED: 'bg-red-100 text-red-700', SUSPENDED: 'bg-red-200 text-red-800',
+const STATUS_CLS: Record<string, string> = {
+  TRIAL:      'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  ACTIVE:     'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
+  CANCELLING: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
+  CANCELLED:  'bg-slate-100 text-slate-500 ring-1 ring-slate-200',
+  EXPIRED:    'bg-red-50 text-red-700 ring-1 ring-red-200',
+  SUSPENDED:  'bg-red-100 text-red-800 ring-1 ring-red-300',
 };
+
+const CMD_LINK = 'group flex items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-canvas/40 transition-colors duration-150';
+const CMD_ICON = 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 [&_svg]:h-[15px] [&_svg]:w-[15px]';
 
 interface CompanyDetail {
   id: string; name: string; slug: string; country: string | null;
@@ -30,7 +41,10 @@ interface CompanyDetail {
   maxUsers: number | null; cancelledAt: string | null; cancelReason: string | null;
   createdAt: string; updatedAt: string;
   _count: { users: number };
-  users: Array<{ id: string; fullName: string; email: string | null; role: string; active: boolean; lastLoginAt: string | null; createdAt: string }>;
+  users: Array<{
+    id: string; fullName: string; email: string | null;
+    role: string; active: boolean; lastLoginAt: string | null; createdAt: string;
+  }>;
 }
 
 async function fetchCompany(id: string): Promise<CompanyDetail | null> {
@@ -54,8 +68,7 @@ export default function CompanyDetailPage() {
 
   async function reload() {
     setLoading(true);
-    const data = await fetchCompany(id);
-    setCompany(data);
+    setCompany(await fetchCompany(id));
     setLoading(false);
   }
 
@@ -93,15 +106,19 @@ export default function CompanyDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-sm text-slate-400">
-        {m.detail.loading}
+      <div className="space-y-5 animate-pulse">
+        <div className="h-40 rounded-[20px] bg-slate-100" />
+        <div className="grid xl:grid-cols-3 gap-5">
+          <div className="xl:col-span-2 h-64 rounded-[20px] bg-slate-100" />
+          <div className="h-40 rounded-[20px] bg-slate-100" />
+        </div>
       </div>
     );
   }
 
   if (!company) {
     return (
-      <div className="flex items-center justify-center py-20 text-sm text-red-500">
+      <div className="rounded-2xl border border-danger-100 bg-danger-50 px-5 py-4 text-sm text-danger-700">
         {m.detail.notFound}
       </div>
     );
@@ -109,215 +126,299 @@ export default function CompanyDetailPage() {
 
   const isCancellable = ['ACTIVE', 'TRIAL'].includes(company.subscriptionStatus);
   const isActivatable = ['CANCELLED', 'EXPIRED', 'SUSPENDED'].includes(company.subscriptionStatus);
+  const statusCls = STATUS_CLS[company.subscriptionStatus] ?? 'bg-slate-100 text-slate-600';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PremiumPageHero
         title={company.name}
-        description={`${company.slug} · ${company.id}`}
+        description={`${company.slug} · ${company.id.slice(0, 8).toUpperCase()}`}
         breadcrumbs={[
           { label: m.detail.breadcrumbs.platform, href: '/dashboard/super-admin' },
+          { label: m.companies.title, href: '/dashboard/super-admin/companies' },
           { label: company.name },
         ]}
-        badge={{
-          label: m.status[company.subscriptionStatus] ?? company.subscriptionStatus,
-          dot: false,
-        }}
-        actions={
-          <span className={`inline-flex px-3 py-1.5 rounded-full text-[12px] font-bold ${STATUS_BADGE[company.subscriptionStatus] ?? 'bg-slate-100 text-slate-600'}`}>
-            {m.plan[company.subscriptionPlan] ?? company.subscriptionPlan}
-          </span>
+        meta={
+          <>
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${statusCls}`}>
+              {m.status[company.subscriptionStatus] ?? company.subscriptionStatus}
+            </span>
+            <span className="inline-flex items-center rounded-full bg-brand-50 text-brand-700 ring-1 ring-brand-200 px-2.5 py-0.5 text-[11px] font-semibold">
+              {m.plan[company.subscriptionPlan] ?? company.subscriptionPlan}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-500 px-2.5 py-0.5 text-[11px] font-semibold">
+              <Users className="h-3 w-3" />
+              {company._count.users}{company.maxUsers ? ` / ${company.maxUsers}` : ''}
+            </span>
+          </>
         }
       />
 
       {actionError && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-red-100 bg-red-50/40 px-5 py-3.5 text-sm text-red-700">
+        <div className="flex items-center gap-2.5 rounded-xl border border-danger-100 bg-danger-50 px-4 py-3 text-sm text-danger-700">
           <XCircle className="h-4 w-4 shrink-0" />
           {actionError}
         </div>
       )}
 
       {company.subscriptionStatus === 'CANCELLING' && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3.5 text-sm text-amber-800">
+        <div className="flex items-center gap-2.5 rounded-xl border border-warning-100 bg-warning-50 px-4 py-3 text-sm text-warning-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
           {m.detail.cancellingBanner(company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—')}
         </div>
       )}
 
       <PremiumDetailLayout
-        main={<>
-
-
-          <PremiumSectionCard
-            title={m.detail.detailsTitle}
-            icon={<Building2 />}
-            trailing={
-              <Button variant="ghost" size="sm" onClick={() => setEditMode(!editMode)}>
-                {editMode ? m.detail.cancelBtn : m.detail.editBtn}
-              </Button>
-            }
-          >
-            {editMode ? (
-              <EditForm
-                company={company}
-                m={m.detail}
-                onSave={async (data) => {
-                  startTransition(async () => {
-                    if (await patchCompany(data)) { setEditMode(false); await reload(); }
-                  });
-                }}
-                pending={pending}
-              />
-            ) : (
-              <dl className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
-                {[
-                  [m.detail.fields.name,     company.name],
-                  [m.detail.fields.country,  company.country ?? '—'],
-                  [m.detail.fields.currency, company.currency],
-                  [m.detail.fields.timezone, company.timezone],
-                  [m.detail.fields.plan,     m.detail.planOptions[company.subscriptionPlan] ?? company.subscriptionPlan],
-                  [m.detail.fields.startAt,  company.subscriptionStartAt ? formatDate(company.subscriptionStartAt) : '—'],
-                  [m.detail.fields.endAt,    company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—'],
-                  [m.detail.fields.maxUsers, company.maxUsers?.toString() ?? m.detail.unlimitedUsers],
-                  [m.detail.fields.usersCount, `${company._count.users}${company.maxUsers ? ` / ${company.maxUsers}` : ''}`],
-                  [m.detail.fields.createdAt, formatDate(company.createdAt)],
-                ].map(([k, v]) => (
-                  <div key={k}>
-                    <dt className="text-slate-400 text-[11px] font-semibold uppercase tracking-wide mb-1">{k}</dt>
-                    <dd className="text-slate-900 font-semibold">{v}</dd>
-                  </div>
-                ))}
-                {company.cancelReason && (
-                  <div className="col-span-2">
-                    <dt className="text-slate-400 text-[11px] font-semibold uppercase tracking-wide mb-1">{m.detail.fields.cancelReason}</dt>
-                    <dd className="text-slate-700">{company.cancelReason}</dd>
-                  </div>
-                )}
-              </dl>
-            )}
-          </PremiumSectionCard>
-
-          <PremiumSectionCard
-            title={`${m.detail.usersTitle} (${company._count.users})`}
-            icon={<Users />}
-            trailing={
-              <Button variant="outline" size="sm" onClick={() => setShowAddAdmin(true)}>
-                <UserPlus className="h-3.5 w-3.5 me-1" />
-                {m.detail.newAdminBtn}
-              </Button>
-            }
-            padded={false}
-          >
-            {showAddAdmin && (
-              <div className="p-5 border-b border-hairline">
-                <AddAdminForm
-                  m={m.detail.addAdminForm}
-                  cancelLabel={m.detail.cancelBtn}
-                  onSubmit={async (data) => {
+        main={
+          <div className="space-y-5">
+            {/* Company details */}
+            <PremiumSectionCard
+              title={m.detail.detailsTitle}
+              icon={<Building2 />}
+              trailing={
+                <Button variant="outline" size="sm" onClick={() => setEditMode(!editMode)}>
+                  {editMode ? m.detail.cancelBtn : m.detail.editBtn}
+                </Button>
+              }
+            >
+              {editMode ? (
+                <EditForm
+                  company={company}
+                  m={m.detail}
+                  onSave={async (data) => {
                     startTransition(async () => {
-                      if (await callAction('admin', data)) { setShowAddAdmin(false); await reload(); }
+                      if (await patchCompany(data)) { setEditMode(false); await reload(); }
                     });
                   }}
-                  onCancel={() => setShowAddAdmin(false)}
                   pending={pending}
                 />
-              </div>
-            )}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-right text-xs text-slate-400 border-b border-hairline bg-canvas/40">
-                  <tr>
-                    <th className="px-5 py-3 font-semibold">{m.detail.userCols.name}</th>
-                    <th className="px-4 py-3 font-semibold">{m.detail.userCols.role}</th>
-                    <th className="px-4 py-3 font-semibold">{m.detail.userCols.lastLogin}</th>
-                    <th className="px-4 py-3 font-semibold">{m.detail.userCols.status}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {company.users.map((u) => (
-                    <tr key={u.id} className="border-b border-hairline hover:bg-canvas/40 transition-colors">
-                      <td className="px-5 py-3">
-                        <p className="font-medium text-slate-900">{u.fullName}</p>
-                        <p className="text-[11px] text-slate-400">{u.email}</p>
-                      </td>
-                      <td className="px-4 py-3 text-slate-600 text-[13px]">{u.role}</td>
-                      <td className="px-4 py-3 text-slate-500 text-[12px]">
-                        {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${u.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                          {u.active ? m.detail.userActive : m.detail.userInactive}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {company.users.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="px-5 py-8 text-center text-slate-400 text-sm">
-                        {m.detail.noUsers}
-                      </td>
-                    </tr>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+                  <Field label={m.detail.fields.name}>
+                    <span className="text-[14px] font-bold text-slate-900">{company.name}</span>
+                  </Field>
+                  <Field label={m.detail.fields.plan}>
+                    <span className="text-[14px] font-bold text-slate-900">
+                      {m.detail.planOptions[company.subscriptionPlan] ?? company.subscriptionPlan}
+                    </span>
+                  </Field>
+                  <Field label={m.detail.fields.country}>
+                    <span className="text-[13px] text-slate-700">{company.country ?? '—'}</span>
+                  </Field>
+                  <Field label={m.detail.fields.currency}>
+                    <span className="text-[13px] font-mono text-slate-700">{company.currency}</span>
+                  </Field>
+                  <Field label={m.detail.fields.timezone}>
+                    <span className="text-[13px] font-mono text-slate-700 flex items-center gap-1.5">
+                      <Globe className="h-3.5 w-3.5 text-slate-400" />
+                      {company.timezone}
+                    </span>
+                  </Field>
+                  <Field label={m.detail.fields.maxUsers}>
+                    <span className="text-[13px] text-slate-700">
+                      {company.maxUsers?.toString() ?? m.detail.unlimitedUsers}
+                    </span>
+                  </Field>
+                  <Field label={m.detail.fields.startAt}>
+                    <span className="text-[13px] tabular-nums text-slate-700">
+                      {company.subscriptionStartAt ? formatDate(company.subscriptionStartAt) : '—'}
+                    </span>
+                  </Field>
+                  <Field label={m.detail.fields.endAt}>
+                    <span className="text-[13px] tabular-nums text-slate-700">
+                      {company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—'}
+                    </span>
+                  </Field>
+                  <Field label={m.detail.fields.usersCount}>
+                    <span className="text-[13px] tabular-nums text-slate-700">
+                      {company._count.users}
+                      {company.maxUsers ? ` / ${company.maxUsers}` : ''}
+                    </span>
+                  </Field>
+                  <Field label={m.detail.fields.createdAt}>
+                    <span className="text-[13px] tabular-nums text-slate-700">{formatDate(company.createdAt)}</span>
+                  </Field>
+                  {company.cancelReason && (
+                    <div className="col-span-2">
+                      <Field label={m.detail.fields.cancelReason}>
+                        <span className="text-[13px] text-slate-700">{company.cancelReason}</span>
+                      </Field>
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </div>
-          </PremiumSectionCard>
-        </>}
-        side={<>
-          <PremiumCommandPanel title={m.detail.actionsTitle} icon={<Settings />}>
-            <div className="p-4 space-y-2">
+                </div>
+              )}
+            </PremiumSectionCard>
+
+            {/* Users */}
+            <PremiumSectionCard
+              title={`${m.detail.usersTitle} (${company._count.users})`}
+              icon={<Users />}
+              trailing={
+                !showAddAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<UserPlus className="h-3.5 w-3.5" />}
+                    onClick={() => setShowAddAdmin(true)}
+                  >
+                    {m.detail.newAdminBtn}
+                  </Button>
+                )
+              }
+              padded={false}
+            >
+              {showAddAdmin && (
+                <div className="px-5 pt-5 pb-4 border-b border-hairline bg-canvas/40">
+                  <AddAdminForm
+                    m={m.detail.addAdminForm}
+                    cancelLabel={m.detail.cancelBtn}
+                    onSubmit={async (data) => {
+                      startTransition(async () => {
+                        if (await callAction('admin', data)) { setShowAddAdmin(false); await reload(); }
+                      });
+                    }}
+                    onCancel={() => setShowAddAdmin(false)}
+                    pending={pending}
+                  />
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm min-w-[500px]">
+                  <thead className="bg-canvas/50 border-b border-hairline">
+                    <tr>
+                      <th className="px-5 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.detail.userCols.name}</th>
+                      <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.detail.userCols.role}</th>
+                      <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.detail.userCols.lastLogin}</th>
+                      <th className="px-4 py-3 text-start text-[11px] font-bold uppercase tracking-[0.06em] text-slate-400">{m.detail.userCols.status}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-hairline">
+                    {company.users.map((u) => (
+                      <tr key={u.id} className="hover:bg-canvas/40 transition-colors duration-100">
+                        <td className="px-5 py-3">
+                          <p className="font-semibold text-slate-900">{u.fullName}</p>
+                          <p className="text-[11px] text-slate-400 font-mono">{u.email}</p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex rounded-full bg-slate-100 text-slate-600 px-2 py-0.5 text-[11px] font-semibold">
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-[12px] text-slate-500 tabular-nums">
+                          {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${u.active ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-slate-100 text-slate-500'}`}>
+                            {u.active ? m.detail.userActive : m.detail.userInactive}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {company.users.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-5 py-10 text-center text-slate-400 text-sm">
+                          {m.detail.noUsers}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </PremiumSectionCard>
+          </div>
+        }
+        side={
+          <div className="space-y-4">
+            <PremiumCommandPanel title={m.detail.actionsTitle} icon={<Settings />}>
+              {/* Subscription actions */}
               {isActivatable && (
-                <Button variant="primary" size="sm" className="w-full" loading={pending}
-                  onClick={() => startTransition(async () => { if (await callAction('activate')) await reload(); })}>
-                  <CheckCircle2 className="h-4 w-4 me-1.5" />
-                  {m.detail.actions.activate}
-                </Button>
-              )}
-              {isCancellable && !showCancelForm && (
-                <Button variant="outline" size="sm" className="w-full"
-                  onClick={() => setShowCancelForm(true)}>
-                  <XCircle className="h-4 w-4 me-1.5" />
-                  {m.detail.actions.cancelSub}
-                </Button>
-              )}
-              {isCancellable && !showCancelForm && (
-                <Button variant="outline" size="sm" className="w-full text-red-600 border-red-200 hover:bg-red-50" loading={pending}
-                  onClick={() => startTransition(async () => { if (await callAction('suspend')) await reload(); })}>
-                  <PauseCircle className="h-4 w-4 me-1.5" />
-                  {m.detail.actions.suspend}
-                </Button>
+                <button
+                  disabled={pending}
+                  onClick={() => startTransition(async () => { if (await callAction('activate')) await reload(); })}
+                  className="group flex w-full items-center gap-3 px-5 py-3.5 text-sm text-slate-700 hover:bg-emerald-50 transition-colors duration-150 disabled:opacity-50"
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <CheckCircle2 />
+                  </span>
+                  <div className="text-start">
+                    <p className="font-semibold text-slate-900 text-[13px]">{m.detail.actions.activate}</p>
+                  </div>
+                </button>
               )}
               {company.subscriptionStatus === 'SUSPENDED' && (
-                <Button variant="ghost" size="sm" className="w-full" loading={pending}
-                  onClick={() => startTransition(async () => { if (await callAction('activate')) await reload(); })}>
-                  <RotateCcw className="h-4 w-4 me-1.5" />
-                  {m.detail.actions.unsuspend}
-                </Button>
+                <button
+                  disabled={pending}
+                  onClick={() => startTransition(async () => { if (await callAction('activate')) await reload(); })}
+                  className="group flex w-full items-center gap-3 px-5 py-3.5 text-sm hover:bg-emerald-50 transition-colors duration-150 disabled:opacity-50"
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <RotateCcw />
+                  </span>
+                  <div className="text-start">
+                    <p className="font-semibold text-slate-900 text-[13px]">{m.detail.actions.unsuspend}</p>
+                  </div>
+                </button>
               )}
-              <div className="pt-1">
-                <Link href="/dashboard/super-admin/companies" className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-slate-500 hover:bg-canvas/50 transition-colors">
-                  <ArrowRight className="h-4 w-4" />
-                  {m.detail.breadcrumbs.platform}
-                </Link>
-              </div>
-            </div>
-          </PremiumCommandPanel>
+              {isCancellable && !showCancelForm && (
+                <button
+                  onClick={() => setShowCancelForm(true)}
+                  className="group flex w-full items-center gap-3 px-5 py-3.5 text-sm hover:bg-amber-50 transition-colors duration-150"
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <XCircle />
+                  </span>
+                  <div className="text-start">
+                    <p className="font-semibold text-slate-900 text-[13px]">{m.detail.actions.cancelSub}</p>
+                  </div>
+                </button>
+              )}
+              {isCancellable && !showCancelForm && (
+                <button
+                  disabled={pending}
+                  onClick={() => startTransition(async () => { if (await callAction('suspend')) await reload(); })}
+                  className="group flex w-full items-center gap-3 px-5 py-3.5 text-sm hover:bg-red-50 transition-colors duration-150 disabled:opacity-50"
+                >
+                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600 [&_svg]:h-[15px] [&_svg]:w-[15px]">
+                    <PauseCircle />
+                  </span>
+                  <div className="text-start">
+                    <p className="font-semibold text-red-700 text-[13px]">{m.detail.actions.suspend}</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">{m.detail.actions.cancelSub}</p>
+                  </div>
+                </button>
+              )}
 
-          {showCancelForm && (
-            <CancelForm
-              m={m.detail.cancelForm}
-              cancelLabel={m.detail.cancelBtn}
-              onSubmit={async (data) => {
-                startTransition(async () => {
-                  if (await callAction('cancel', data)) { setShowCancelForm(false); await reload(); }
-                });
-              }}
-              onClose={() => setShowCancelForm(false)}
-              pending={pending}
-              subscriptionEndAt={company.subscriptionEndAt}
-            />
-          )}
-        </>}
+              {/* Divider */}
+              <div className="border-t border-hairline" />
+
+              {/* Nav links */}
+              <Link href="/dashboard/super-admin/companies" className={CMD_LINK}>
+                <span className={CMD_ICON}><ArrowLeft /></span>
+                {m.companies.title}
+              </Link>
+              <Link href="/dashboard/super-admin" className={CMD_LINK}>
+                <span className={CMD_ICON}><Building2 /></span>
+                {m.detail.breadcrumbs.platform}
+              </Link>
+            </PremiumCommandPanel>
+
+            {/* Cancel form */}
+            {showCancelForm && (
+              <CancelForm
+                m={m.detail.cancelForm}
+                cancelLabel={m.detail.cancelBtn}
+                onSubmit={async (data) => {
+                  startTransition(async () => {
+                    if (await callAction('cancel', data)) { setShowCancelForm(false); await reload(); }
+                  });
+                }}
+                onClose={() => setShowCancelForm(false)}
+                pending={pending}
+                subscriptionEndAt={company.subscriptionEndAt}
+              />
+            )}
+          </div>
+        }
       />
     </div>
   );
@@ -378,7 +479,7 @@ function EditForm({ company, m, onSave, pending }: {
             defaultValue={company.subscriptionEndAt ? company.subscriptionEndAt.slice(0, 10) : ''} />
         </Field>
       </div>
-      <div className="flex justify-end gap-2 pt-2">
+      <div className="flex justify-end gap-2 pt-2 border-t border-hairline">
         <Button type="submit" variant="primary" size="sm" loading={pending}>{m.saveBtn}</Button>
       </div>
     </form>
@@ -404,21 +505,21 @@ function CancelForm({ m, cancelLabel, onSubmit, onClose, pending, subscriptionEn
             <input type="radio" className="mt-0.5" checked={!immediate} onChange={() => setImmediate(false)} />
             <span>{m.endOfPeriodFn(subscriptionEndAt ? formatDate(subscriptionEndAt) : '—')}</span>
           </label>
-          <label className="flex items-start gap-2.5 text-sm cursor-pointer text-red-700">
+          <label className="flex items-start gap-2.5 text-sm cursor-pointer text-danger-700">
             <input type="radio" className="mt-0.5" checked={immediate} onChange={() => setImmediate(true)} />
             <span>{m.immediate}</span>
           </label>
         </div>
         <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.reasonLabel}</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-[0.06em] mb-1.5">{m.reasonLabel}</label>
           <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+            className="w-full rounded-xl border border-hairline bg-surface px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600/15 resize-none"
             placeholder={m.reasonPlaceholder} />
         </div>
-        <div className="flex gap-2 justify-end">
+        <div className="flex gap-2 justify-end pt-1">
           <Button variant="ghost" size="sm" onClick={onClose}>{cancelLabel}</Button>
           <Button variant="primary" size="sm" loading={pending}
-            className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+            className="bg-danger-600 hover:bg-danger-700 focus:ring-danger-500"
             onClick={() => onSubmit({ immediate, reason: reason || undefined })}>
             {m.confirm}
           </Button>
@@ -446,12 +547,18 @@ function AddAdminForm({ m, cancelLabel, onSubmit, onCancel, pending }: {
   }
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      <p className="text-[13px] font-bold text-slate-700">{m.title}</p>
+      <p className="text-[12px] font-bold text-slate-700 uppercase tracking-[0.06em]">{m.title}</p>
       <div className="grid grid-cols-2 gap-3">
-        <Input name="fullName" required placeholder={m.fullName} />
-        <Input name="email" type="email" required placeholder="admin@company.com" dir="ltr" />
+        <Field label={m.fullName} name="fullName">
+          <Input name="fullName" required placeholder={m.fullName} />
+        </Field>
+        <Field label={m.email} name="adminEmail">
+          <Input name="email" type="email" required placeholder="admin@company.com" dir="ltr" />
+        </Field>
       </div>
-      <Input name="password" type="password" required placeholder={m.password} dir="ltr" />
+      <Field label={m.password} name="adminPassword">
+        <Input name="password" type="password" required placeholder="••••••••" dir="ltr" />
+      </Field>
       <div className="flex gap-2 justify-end">
         <Button type="button" variant="ghost" size="sm" onClick={onCancel}>{cancelLabel}</Button>
         <Button type="submit" variant="primary" size="sm" loading={pending}>{m.addBtn}</Button>
