@@ -9,10 +9,12 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Field } from '@/components/form/field';
 import { formatDate } from '@/lib/format';
 import { getClientLocale } from '@/lib/locale-client';
 import { saT, type SaStrings } from '@/messages/super-admin';
-import { PremiumPageHero, PremiumSectionCard, PremiumCommandPanel } from '@/components/premium';
+import { PremiumPageHero, PremiumDetailLayout, PremiumSectionCard, PremiumCommandPanel } from '@/components/premium';
 
 const STATUS_BADGE: Record<string, string> = {
   TRIAL: 'bg-blue-100 text-blue-700', ACTIVE: 'bg-emerald-100 text-emerald-700',
@@ -142,10 +144,9 @@ export default function CompanyDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <PremiumDetailLayout
+        main={<>
 
-        {/* Left: details + users */}
-        <div className="lg:col-span-2 space-y-5">
 
           <PremiumSectionCard
             title={m.detail.detailsTitle}
@@ -261,10 +262,8 @@ export default function CompanyDetailPage() {
               </table>
             </div>
           </PremiumSectionCard>
-        </div>
-
-        {/* Right: actions */}
-        <div className="space-y-4">
+        </>}
+        side={<>
           <PremiumCommandPanel title={m.detail.actionsTitle} icon={<Settings />}>
             <div className="p-4 space-y-2">
               {isActivatable && (
@@ -318,9 +317,8 @@ export default function CompanyDetailPage() {
               subscriptionEndAt={company.subscriptionEndAt}
             />
           )}
-        </div>
-
-      </div>
+        </>}
+      />
     </div>
   );
 }
@@ -346,49 +344,39 @@ function EditForm({ company, m, onSave, pending }: {
     });
   }
 
-  const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400';
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.name}</label>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Field label={m.fields.name} name="name" required>
           <Input name="name" defaultValue={company.name} required />
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.country}</label>
+        </Field>
+        <Field label={m.fields.country} name="country">
           <Input name="country" defaultValue={company.country ?? ''} dir="ltr" />
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.currency}</label>
+        </Field>
+        <Field label={m.fields.currency} name="currency">
           <Input name="currency" defaultValue={company.currency} dir="ltr" />
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.timezone}</label>
+        </Field>
+        <Field label={m.fields.timezone} name="timezone">
           <Input name="timezone" defaultValue={company.timezone} dir="ltr" />
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.plan}</label>
-          <select name="subscriptionPlan" defaultValue={company.subscriptionPlan} className={inputCls}>
+        </Field>
+        <Field label={m.fields.plan} name="subscriptionPlan">
+          <Select name="subscriptionPlan" defaultValue={company.subscriptionPlan}>
             {Object.entries(m.planOptions).map(([k, v]) => (
               <option key={k} value={k}>{v}</option>
             ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.maxUsers}</label>
+          </Select>
+        </Field>
+        <Field label={m.fields.maxUsers} name="maxUsers">
           <Input name="maxUsers" type="number" defaultValue={company.maxUsers ?? ''} dir="ltr" />
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.startAt}</label>
+        </Field>
+        <Field label={m.fields.startAt} name="subscriptionStartAt">
           <Input name="subscriptionStartAt" type="date" dir="ltr"
             defaultValue={company.subscriptionStartAt ? company.subscriptionStartAt.slice(0, 10) : ''} />
-        </div>
-        <div>
-          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.endAt}</label>
+        </Field>
+        <Field label={m.fields.endAt} name="subscriptionEndAt">
           <Input name="subscriptionEndAt" type="date" dir="ltr"
             defaultValue={company.subscriptionEndAt ? company.subscriptionEndAt.slice(0, 10) : ''} />
-        </div>
+        </Field>
       </div>
       <div className="flex justify-end gap-2 pt-2">
         <Button type="submit" variant="primary" size="sm" loading={pending}>{m.saveBtn}</Button>
