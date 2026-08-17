@@ -59,15 +59,6 @@
     --border-radius-xl: 1.5rem;
   }
 
-  /* ── Dark mode token overrides — navy-branded palette ───── */
-  .dark {
-    --tw-canvas:         11 17 33;    /* #0B1121 — deep navy-black */
-    --tw-surface:        18 28 50;    /* #121C32 — navy card bg */
-    --tw-surface-muted:  24 37 64;    /* #182540 */
-    --tw-surface-sunken: 8  13 26;    /* #080D1A — deepest inset */
-    --tw-hairline:       34 52 85;    /* #223455 — navy border */
-  }
-
   html,
   body {
     height: 100%;
@@ -80,17 +71,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-  }
-
-  .dark body {
-    @apply text-slate-200;
-  }
-
-  .dark h1,
-  .dark h2,
-  .dark h3,
-  .dark h4 {
-    @apply text-slate-100;
   }
 
   html[dir='rtl'] body {

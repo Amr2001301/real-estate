@@ -5,7 +5,6 @@ import { uiT } from '@/messages/ui';
 import { IconButton } from '@/components/ui/icon-button';
 import { UserMenu } from './user-menu';
 import { NotificationBell } from './notification-bell';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { LangToggle } from '@/components/ui/lang-toggle';
 import { api } from '@/lib/api';
 
@@ -64,8 +63,6 @@ export async function Topbar({ user, locale, notificationsHref, leading }: Props
           </IconButton>
 
           <LangToggle current={locale} />
-
-          <ThemeToggle />
 
           <NotificationBell href={notificationsHref} initialCount={unread} />
 
