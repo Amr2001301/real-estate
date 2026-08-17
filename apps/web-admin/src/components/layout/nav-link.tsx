@@ -15,7 +15,7 @@ interface Props {
 export function NavLink({ href, label, icon, onNavigate }: Props) {
   const pathname = usePathname() ?? '';
   const isExact = pathname === href;
-  const isWorkspaceRoot = href === '/dashboard' || href === '/portal';
+  const isWorkspaceRoot = href === '/dashboard' || href === '/portal' || href === '/dashboard/super-admin';
   const isPrefix = !isWorkspaceRoot && pathname.startsWith(href + '/');
   const active = isExact || isPrefix;
 

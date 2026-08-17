@@ -1,28 +1,23 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition, useMemo } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ArrowRight, Users, CheckCircle2, XCircle, PauseCircle,
-  RotateCcw, AlertTriangle, UserPlus,
+  RotateCcw, AlertTriangle, UserPlus, Building2, Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardBody } from '@/components/ui/card';
 import { formatDate } from '@/lib/format';
+import { getClientLocale } from '@/lib/locale-client';
+import { saT, type SaStrings } from '@/messages/super-admin';
+import { PremiumPageHero, PremiumSectionCard, PremiumCommandPanel } from '@/components/premium';
 
 const STATUS_BADGE: Record<string, string> = {
   TRIAL: 'bg-blue-100 text-blue-700', ACTIVE: 'bg-emerald-100 text-emerald-700',
   CANCELLING: 'bg-amber-100 text-amber-700', CANCELLED: 'bg-slate-100 text-slate-500',
   EXPIRED: 'bg-red-100 text-red-700', SUSPENDED: 'bg-red-200 text-red-800',
-};
-const STATUS_LABEL: Record<string, string> = {
-  TRIAL: 'تجريبي', ACTIVE: 'نشط', CANCELLING: 'قيد الإلغاء',
-  CANCELLED: 'ملغي', EXPIRED: 'منتهي', SUSPENDED: 'موقوف',
-};
-const PLAN_LABEL: Record<string, string> = {
-  TRIAL: 'تجريبي', STARTER: 'أساسي', PROFESSIONAL: 'احترافي', ENTERPRISE: 'مؤسسي',
 };
 
 interface CompanyDetail {
@@ -44,7 +39,9 @@ async function fetchCompany(id: string): Promise<CompanyDetail | null> {
 
 export default function CompanyDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
+  const locale = getClientLocale();
+  const m = useMemo(() => saT(locale), [locale]);
+
   const [company, setCompany] = useState<CompanyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -71,7 +68,7 @@ export default function CompanyDetailPage() {
     });
     if (!res.ok) {
       const d = (await res.json()) as { message?: string };
-      setActionError(d.message ?? 'حدث خطأ');
+      setActionError(d.message ?? m.detail.error);
       return false;
     }
     return true;
@@ -86,185 +83,231 @@ export default function CompanyDetailPage() {
     });
     if (!res.ok) {
       const d = (await res.json()) as { message?: string };
-      setActionError(d.message ?? 'حدث خطأ');
+      setActionError(d.message ?? m.detail.error);
       return false;
     }
     return true;
   }
 
-  if (loading) return <div className="p-8 text-sm text-slate-400">جارٍ التحميل…</div>;
-  if (!company) return <div className="p-8 text-sm text-red-500">لم يتم العثور على الشركة.</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-slate-400">
+        {m.detail.loading}
+      </div>
+    );
+  }
 
-  const isCancellable = company.subscriptionStatus === 'ACTIVE' || company.subscriptionStatus === 'TRIAL';
+  if (!company) {
+    return (
+      <div className="flex items-center justify-center py-20 text-sm text-red-500">
+        {m.detail.notFound}
+      </div>
+    );
+  }
+
+  const isCancellable = ['ACTIVE', 'TRIAL'].includes(company.subscriptionStatus);
   const isActivatable = ['CANCELLED', 'EXPIRED', 'SUSPENDED'].includes(company.subscriptionStatus);
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link href="/dashboard/super-admin" className="text-slate-400 hover:text-slate-600">
-          <ArrowRight className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">{company.name}</h1>
-          <p className="text-xs font-mono text-slate-400">{company.slug} · {company.id}</p>
-        </div>
-        <span className={`ms-auto inline-flex px-2.5 py-1 rounded-full text-[11px] font-bold ${STATUS_BADGE[company.subscriptionStatus] ?? ''}`}>
-          {STATUS_LABEL[company.subscriptionStatus] ?? company.subscriptionStatus}
-        </span>
-      </div>
+    <div className="space-y-6">
+      <PremiumPageHero
+        title={company.name}
+        description={`${company.slug} · ${company.id}`}
+        breadcrumbs={[
+          { label: m.detail.breadcrumbs.platform, href: '/dashboard/super-admin' },
+          { label: company.name },
+        ]}
+        badge={{
+          label: m.status[company.subscriptionStatus] ?? company.subscriptionStatus,
+          dot: false,
+        }}
+        actions={
+          <span className={`inline-flex px-3 py-1.5 rounded-full text-[12px] font-bold ${STATUS_BADGE[company.subscriptionStatus] ?? 'bg-slate-100 text-slate-600'}`}>
+            {m.plan[company.subscriptionPlan] ?? company.subscriptionPlan}
+          </span>
+        }
+      />
 
       {actionError && (
-        <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-700">{actionError}</div>
+        <div className="flex items-center gap-2.5 rounded-2xl border border-red-100 bg-red-50/40 px-5 py-3.5 text-sm text-red-700">
+          <XCircle className="h-4 w-4 shrink-0" />
+          {actionError}
+        </div>
       )}
 
-      {/* CANCELLING banner */}
       {company.subscriptionStatus === 'CANCELLING' && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="flex items-center gap-2.5 rounded-2xl border border-amber-100 bg-amber-50 px-5 py-3.5 text-sm text-amber-800">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          الاشتراك قيد الإلغاء — الوصول يستمر حتى {company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—'}
+          {m.detail.cancellingBanner(company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—')}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-        {/* Left — details + edit */}
+        {/* Left: details + users */}
         <div className="lg:col-span-2 space-y-5">
 
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>تفاصيل الشركة</CardTitle>
+          <PremiumSectionCard
+            title={m.detail.detailsTitle}
+            icon={<Building2 />}
+            trailing={
               <Button variant="ghost" size="sm" onClick={() => setEditMode(!editMode)}>
-                {editMode ? 'إلغاء' : 'تعديل'}
+                {editMode ? m.detail.cancelBtn : m.detail.editBtn}
               </Button>
-            </CardHeader>
-            <CardBody>
-              {editMode ? (
-                <EditForm company={company} onSave={async (data) => {
+            }
+          >
+            {editMode ? (
+              <EditForm
+                company={company}
+                m={m.detail}
+                onSave={async (data) => {
                   startTransition(async () => {
                     if (await patchCompany(data)) { setEditMode(false); await reload(); }
                   });
-                }} pending={pending} />
-              ) : (
-                <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
-                  {[
-                    ['الاسم', company.name],
-                    ['الدولة', company.country ?? '—'],
-                    ['العملة', company.currency],
-                    ['المنطقة الزمنية', company.timezone],
-                    ['خطة الاشتراك', PLAN_LABEL[company.subscriptionPlan] ?? company.subscriptionPlan],
-                    ['تاريخ البدء', company.subscriptionStartAt ? formatDate(company.subscriptionStartAt) : '—'],
-                    ['تاريخ الانتهاء', company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—'],
-                    ['الحد الأقصى للمستخدمين', company.maxUsers?.toString() ?? 'غير محدود'],
-                    ['المستخدمون', `${company._count.users}${company.maxUsers ? ` / ${company.maxUsers}` : ''}`],
-                    ['تاريخ الإنشاء', formatDate(company.createdAt)],
-                  ].map(([k, v]) => (
-                    <div key={k}>
-                      <dt className="text-slate-500 text-[11px] font-medium">{k}</dt>
-                      <dd className="text-slate-900 font-semibold">{v}</dd>
-                    </div>
-                  ))}
-                  {company.cancelReason && (
-                    <div className="col-span-2">
-                      <dt className="text-slate-500 text-[11px] font-medium">سبب الإلغاء</dt>
-                      <dd className="text-slate-700">{company.cancelReason}</dd>
-                    </div>
-                  )}
-                </dl>
-              )}
-            </CardBody>
-          </Card>
+                }}
+                pending={pending}
+              />
+            ) : (
+              <dl className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                {[
+                  [m.detail.fields.name,     company.name],
+                  [m.detail.fields.country,  company.country ?? '—'],
+                  [m.detail.fields.currency, company.currency],
+                  [m.detail.fields.timezone, company.timezone],
+                  [m.detail.fields.plan,     m.detail.planOptions[company.subscriptionPlan] ?? company.subscriptionPlan],
+                  [m.detail.fields.startAt,  company.subscriptionStartAt ? formatDate(company.subscriptionStartAt) : '—'],
+                  [m.detail.fields.endAt,    company.subscriptionEndAt ? formatDate(company.subscriptionEndAt) : '—'],
+                  [m.detail.fields.maxUsers, company.maxUsers?.toString() ?? m.detail.unlimitedUsers],
+                  [m.detail.fields.usersCount, `${company._count.users}${company.maxUsers ? ` / ${company.maxUsers}` : ''}`],
+                  [m.detail.fields.createdAt, formatDate(company.createdAt)],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <dt className="text-slate-400 text-[11px] font-semibold uppercase tracking-wide mb-1">{k}</dt>
+                    <dd className="text-slate-900 font-semibold">{v}</dd>
+                  </div>
+                ))}
+                {company.cancelReason && (
+                  <div className="col-span-2">
+                    <dt className="text-slate-400 text-[11px] font-semibold uppercase tracking-wide mb-1">{m.detail.fields.cancelReason}</dt>
+                    <dd className="text-slate-700">{company.cancelReason}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+          </PremiumSectionCard>
 
-          {/* Users list */}
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                المستخدمون ({company._count.users})
-              </CardTitle>
+          <PremiumSectionCard
+            title={`${m.detail.usersTitle} (${company._count.users})`}
+            icon={<Users />}
+            trailing={
               <Button variant="outline" size="sm" onClick={() => setShowAddAdmin(true)}>
-                <UserPlus className="h-4 w-4 me-1" /> مدير جديد
+                <UserPlus className="h-3.5 w-3.5 me-1" />
+                {m.detail.newAdminBtn}
               </Button>
-            </CardHeader>
-            <CardBody>
-              {showAddAdmin && (
-                <AddAdminForm onSubmit={async (data) => {
-                  startTransition(async () => {
-                    if (await callAction('admin', data)) { setShowAddAdmin(false); await reload(); }
-                  });
-                }} onCancel={() => setShowAddAdmin(false)} pending={pending} />
-              )}
-              <div className="overflow-x-auto mt-2">
-                <table className="w-full text-sm">
-                  <thead className="text-right text-xs text-slate-400 border-b border-slate-100">
-                    <tr>
-                      <th className="px-2 py-2 font-medium">الاسم</th>
-                      <th className="px-2 py-2 font-medium">الدور</th>
-                      <th className="px-2 py-2 font-medium">آخر دخول</th>
-                      <th className="px-2 py-2 font-medium">الحالة</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {company.users.map((u) => (
-                      <tr key={u.id} className="border-b border-slate-50">
-                        <td className="px-2 py-2">
-                          <p className="font-medium text-slate-900">{u.fullName}</p>
-                          <p className="text-[11px] text-slate-400">{u.email}</p>
-                        </td>
-                        <td className="px-2 py-2 text-slate-600">{u.role}</td>
-                        <td className="px-2 py-2 text-slate-500 text-[12px]">
-                          {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
-                        </td>
-                        <td className="px-2 py-2">
-                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${u.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                            {u.active ? 'نشط' : 'معطّل'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                    {company.users.length === 0 && (
-                      <tr><td colSpan={4} className="px-2 py-6 text-center text-slate-400 text-sm">لا يوجد مستخدمون</td></tr>
-                    )}
-                  </tbody>
-                </table>
+            }
+            padded={false}
+          >
+            {showAddAdmin && (
+              <div className="p-5 border-b border-hairline">
+                <AddAdminForm
+                  m={m.detail.addAdminForm}
+                  cancelLabel={m.detail.cancelBtn}
+                  onSubmit={async (data) => {
+                    startTransition(async () => {
+                      if (await callAction('admin', data)) { setShowAddAdmin(false); await reload(); }
+                    });
+                  }}
+                  onCancel={() => setShowAddAdmin(false)}
+                  pending={pending}
+                />
               </div>
-            </CardBody>
-          </Card>
+            )}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-right text-xs text-slate-400 border-b border-hairline bg-canvas/40">
+                  <tr>
+                    <th className="px-5 py-3 font-semibold">{m.detail.userCols.name}</th>
+                    <th className="px-4 py-3 font-semibold">{m.detail.userCols.role}</th>
+                    <th className="px-4 py-3 font-semibold">{m.detail.userCols.lastLogin}</th>
+                    <th className="px-4 py-3 font-semibold">{m.detail.userCols.status}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {company.users.map((u) => (
+                    <tr key={u.id} className="border-b border-hairline hover:bg-canvas/40 transition-colors">
+                      <td className="px-5 py-3">
+                        <p className="font-medium text-slate-900">{u.fullName}</p>
+                        <p className="text-[11px] text-slate-400">{u.email}</p>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600 text-[13px]">{u.role}</td>
+                      <td className="px-4 py-3 text-slate-500 text-[12px]">
+                        {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold ${u.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                          {u.active ? m.detail.userActive : m.detail.userInactive}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {company.users.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-5 py-8 text-center text-slate-400 text-sm">
+                        {m.detail.noUsers}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </PremiumSectionCard>
         </div>
 
-        {/* Right — actions */}
+        {/* Right: actions */}
         <div className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle>الإجراءات</CardTitle></CardHeader>
-            <CardBody className="space-y-3">
+          <PremiumCommandPanel title={m.detail.actionsTitle} icon={<Settings />}>
+            <div className="p-4 space-y-2">
               {isActivatable && (
                 <Button variant="primary" size="sm" className="w-full" loading={pending}
                   onClick={() => startTransition(async () => { if (await callAction('activate')) await reload(); })}>
-                  <CheckCircle2 className="h-4 w-4 me-1" /> تفعيل الاشتراك
+                  <CheckCircle2 className="h-4 w-4 me-1.5" />
+                  {m.detail.actions.activate}
                 </Button>
               )}
               {isCancellable && !showCancelForm && (
-                <Button variant="outline" size="sm" className="w-full" onClick={() => setShowCancelForm(true)}>
-                  <XCircle className="h-4 w-4 me-1" /> إلغاء الاشتراك
+                <Button variant="outline" size="sm" className="w-full"
+                  onClick={() => setShowCancelForm(true)}>
+                  <XCircle className="h-4 w-4 me-1.5" />
+                  {m.detail.actions.cancelSub}
                 </Button>
               )}
               {isCancellable && !showCancelForm && (
                 <Button variant="outline" size="sm" className="w-full text-red-600 border-red-200 hover:bg-red-50" loading={pending}
                   onClick={() => startTransition(async () => { if (await callAction('suspend')) await reload(); })}>
-                  <PauseCircle className="h-4 w-4 me-1" /> إيقاف فوري
+                  <PauseCircle className="h-4 w-4 me-1.5" />
+                  {m.detail.actions.suspend}
                 </Button>
               )}
               {company.subscriptionStatus === 'SUSPENDED' && (
                 <Button variant="ghost" size="sm" className="w-full" loading={pending}
                   onClick={() => startTransition(async () => { if (await callAction('activate')) await reload(); })}>
-                  <RotateCcw className="h-4 w-4 me-1" /> رفع الإيقاف
+                  <RotateCcw className="h-4 w-4 me-1.5" />
+                  {m.detail.actions.unsuspend}
                 </Button>
               )}
-            </CardBody>
-          </Card>
+              <div className="pt-1">
+                <Link href="/dashboard/super-admin/companies" className="flex items-center gap-2 px-3 py-2 rounded-xl text-[13px] text-slate-500 hover:bg-canvas/50 transition-colors">
+                  <ArrowRight className="h-4 w-4" />
+                  {m.detail.breadcrumbs.platform}
+                </Link>
+              </div>
+            </div>
+          </PremiumCommandPanel>
 
           {showCancelForm && (
             <CancelForm
+              m={m.detail.cancelForm}
+              cancelLabel={m.detail.cancelBtn}
               onSubmit={async (data) => {
                 startTransition(async () => {
                   if (await callAction('cancel', data)) { setShowCancelForm(false); await reload(); }
@@ -282,8 +325,9 @@ export default function CompanyDetailPage() {
   );
 }
 
-function EditForm({ company, onSave, pending }: {
+function EditForm({ company, m, onSave, pending }: {
   company: CompanyDetail;
+  m: SaStrings['detail'];
   onSave: (data: object) => void;
   pending: boolean;
 }) {
@@ -301,58 +345,61 @@ function EditForm({ company, onSave, pending }: {
       maxUsers: fd.get('maxUsers') ? Number(fd.get('maxUsers')) : null,
     });
   }
+
+  const inputCls = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400';
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">الاسم</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.name}</label>
           <Input name="name" defaultValue={company.name} required />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">الدولة</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.country}</label>
           <Input name="country" defaultValue={company.country ?? ''} dir="ltr" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">العملة</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.currency}</label>
           <Input name="currency" defaultValue={company.currency} dir="ltr" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">المنطقة الزمنية</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.timezone}</label>
           <Input name="timezone" defaultValue={company.timezone} dir="ltr" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">خطة الاشتراك</label>
-          <select name="subscriptionPlan" defaultValue={company.subscriptionPlan}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-            <option value="TRIAL">تجريبي</option>
-            <option value="STARTER">أساسي</option>
-            <option value="PROFESSIONAL">احترافي</option>
-            <option value="ENTERPRISE">مؤسسي</option>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.plan}</label>
+          <select name="subscriptionPlan" defaultValue={company.subscriptionPlan} className={inputCls}>
+            {Object.entries(m.planOptions).map(([k, v]) => (
+              <option key={k} value={k}>{v}</option>
+            ))}
           </select>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">الحد الأقصى للمستخدمين</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.maxUsers}</label>
           <Input name="maxUsers" type="number" defaultValue={company.maxUsers ?? ''} dir="ltr" />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">تاريخ البدء</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.startAt}</label>
           <Input name="subscriptionStartAt" type="date" dir="ltr"
             defaultValue={company.subscriptionStartAt ? company.subscriptionStartAt.slice(0, 10) : ''} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">تاريخ الانتهاء</label>
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.fields.endAt}</label>
           <Input name="subscriptionEndAt" type="date" dir="ltr"
             defaultValue={company.subscriptionEndAt ? company.subscriptionEndAt.slice(0, 10) : ''} />
         </div>
       </div>
-      <div className="flex justify-end gap-2">
-        <Button type="submit" variant="primary" size="sm" loading={pending}>حفظ</Button>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="submit" variant="primary" size="sm" loading={pending}>{m.saveBtn}</Button>
       </div>
     </form>
   );
 }
 
-function CancelForm({ onSubmit, onClose, pending, subscriptionEndAt }: {
+function CancelForm({ m, cancelLabel, onSubmit, onClose, pending, subscriptionEndAt }: {
+  m: SaStrings['detail']['cancelForm'];
+  cancelLabel: string;
   onSubmit: (data: { immediate: boolean; reason?: string }) => void;
   onClose: () => void;
   pending: boolean;
@@ -360,44 +407,42 @@ function CancelForm({ onSubmit, onClose, pending, subscriptionEndAt }: {
 }) {
   const [immediate, setImmediate] = useState(false);
   const [reason, setReason] = useState('');
+
   return (
-    <Card>
-      <CardHeader><CardTitle className="text-red-700">إلغاء الاشتراك</CardTitle></CardHeader>
-      <CardBody className="space-y-3">
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <input type="radio" checked={!immediate} onChange={() => setImmediate(false)} />
-            <span>إلغاء في نهاية الفترة {subscriptionEndAt ? `(${formatDate(subscriptionEndAt)})` : ''}</span>
+    <PremiumSectionCard title={m.title} tone="danger">
+      <div className="space-y-4">
+        <div className="space-y-2.5">
+          <label className="flex items-start gap-2.5 text-sm cursor-pointer">
+            <input type="radio" className="mt-0.5" checked={!immediate} onChange={() => setImmediate(false)} />
+            <span>{m.endOfPeriodFn(subscriptionEndAt ? formatDate(subscriptionEndAt) : '—')}</span>
           </label>
-          <label className="flex items-center gap-2 text-sm cursor-pointer text-red-700">
-            <input type="radio" checked={immediate} onChange={() => setImmediate(true)} />
-            <span>إلغاء فوري (قطع الوصول الآن)</span>
+          <label className="flex items-start gap-2.5 text-sm cursor-pointer text-red-700">
+            <input type="radio" className="mt-0.5" checked={immediate} onChange={() => setImmediate(true)} />
+            <span>{m.immediate}</span>
           </label>
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-600 mb-1">سبب الإلغاء (اختياري)</label>
-          <textarea
-            rows={2}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
-            placeholder="انتهاء العقد، عدم التجديد…"
-          />
+          <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">{m.reasonLabel}</label>
+          <textarea rows={2} value={reason} onChange={(e) => setReason(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400 resize-none"
+            placeholder={m.reasonPlaceholder} />
         </div>
         <div className="flex gap-2 justify-end">
-          <Button variant="ghost" size="sm" onClick={onClose}>إلغاء</Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>{cancelLabel}</Button>
           <Button variant="primary" size="sm" loading={pending}
-            className="bg-red-600 hover:bg-red-700"
+            className="bg-red-600 hover:bg-red-700 focus:ring-red-500"
             onClick={() => onSubmit({ immediate, reason: reason || undefined })}>
-            تأكيد الإلغاء
+            {m.confirm}
           </Button>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </PremiumSectionCard>
   );
 }
 
-function AddAdminForm({ onSubmit, onCancel, pending }: {
+function AddAdminForm({ m, cancelLabel, onSubmit, onCancel, pending }: {
+  m: SaStrings['detail']['addAdminForm'];
+  cancelLabel: string;
   onSubmit: (data: { email: string; password: string; fullName: string }) => void;
   onCancel: () => void;
   pending: boolean;
@@ -412,16 +457,16 @@ function AddAdminForm({ onSubmit, onCancel, pending }: {
     });
   }
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-brand-100 bg-brand-50/30 p-4 mb-4 space-y-3">
-      <p className="text-sm font-semibold text-slate-700">إضافة مدير جديد</p>
+    <form onSubmit={handleSubmit} className="space-y-3">
+      <p className="text-[13px] font-bold text-slate-700">{m.title}</p>
       <div className="grid grid-cols-2 gap-3">
-        <Input name="fullName" required placeholder="الاسم الكامل" />
+        <Input name="fullName" required placeholder={m.fullName} />
         <Input name="email" type="email" required placeholder="admin@company.com" dir="ltr" />
       </div>
-      <Input name="password" type="password" required placeholder="كلمة المرور" dir="ltr" />
+      <Input name="password" type="password" required placeholder={m.password} dir="ltr" />
       <div className="flex gap-2 justify-end">
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>إلغاء</Button>
-        <Button type="submit" variant="primary" size="sm" loading={pending}>إضافة</Button>
+        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>{cancelLabel}</Button>
+        <Button type="submit" variant="primary" size="sm" loading={pending}>{m.addBtn}</Button>
       </div>
     </form>
   );

@@ -1,28 +1,29 @@
 import Link from 'next/link';
-import { Building2, CheckCircle2, Clock, AlertTriangle, XCircle, Plus } from 'lucide-react';
+import { Plus, Building2, AlertCircle } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { getLocale } from '@/lib/locale';
 import { saT } from '@/messages/super-admin';
 import { Button } from '@/components/ui/button';
-import {
-  PremiumPageHero,
-  PremiumMetricStrip,
-  PremiumSectionCard,
-} from '@/components/premium';
+import { PremiumPageHero, PremiumSectionCard } from '@/components/premium';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'Platform Management' };
+export const metadata = { title: 'Companies — Platform Admin' };
 
 interface CompanySummary {
   id: string;
   name: string;
   slug: string;
+  country: string | null;
+  currency: string;
   subscriptionPlan: string;
   subscriptionStatus: string;
+  subscriptionStartAt: string | null;
   subscriptionEndAt: string | null;
   userCount: number;
   maxUsers: number | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
   createdAt: string;
 }
 
@@ -35,68 +36,64 @@ const STATUS_BADGE: Record<string, string> = {
   SUSPENDED:  'bg-red-200 text-red-800',
 };
 
-export default async function SuperAdminOverviewPage() {
+export default async function CompaniesPage() {
   const [locale, res] = await Promise.all([
     getLocale(),
     safe(api.get<CompanySummary[]>('/super-admin/companies')),
   ]);
 
   const m = saT(locale);
-  const companies = res.data ?? [];
 
-  const total = companies.length;
-  const active = companies.filter((c) => c.subscriptionStatus === 'ACTIVE').length;
-  const trial = companies.filter((c) => c.subscriptionStatus === 'TRIAL').length;
-  const suspended = companies.filter((c) =>
-    ['SUSPENDED', 'CANCELLED', 'EXPIRED'].includes(c.subscriptionStatus),
-  ).length;
-  const now = Date.now();
-  const expiringSoon = companies.filter((c) => {
-    if (!['ACTIVE', 'CANCELLING'].includes(c.subscriptionStatus)) return false;
-    if (!c.subscriptionEndAt) return false;
-    const diff = new Date(c.subscriptionEndAt).getTime() - now;
-    return diff > 0 && diff < 30 * 24 * 60 * 60 * 1000;
-  }).length;
+  if (res.error) {
+    return (
+      <div className="space-y-6">
+        <PremiumPageHero
+          title={m.companies.title}
+          breadcrumbs={[
+            { label: m.companies.breadcrumbs.platform, href: '/dashboard/super-admin' },
+            { label: m.companies.breadcrumbs.companies },
+          ]}
+        />
+        <div className="flex items-center gap-2.5 rounded-2xl border border-red-100 bg-red-50/40 px-5 py-3.5 text-sm text-red-700">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          {m.companies.errorPrefix} {res.error}
+        </div>
+      </div>
+    );
+  }
+
+  const companies = res.data ?? [];
 
   return (
     <div className="space-y-6">
       <PremiumPageHero
-        title={m.overview.title}
-        description={m.overview.description}
-        badge={{ label: m.overview.badge }}
-        breadcrumbs={[{ label: m.overview.breadcrumbs.platform }]}
+        title={m.companies.title}
+        description={m.companies.descriptionFn(companies.length)}
+        badge={{ label: m.companies.badge }}
+        breadcrumbs={[
+          { label: m.companies.breadcrumbs.platform, href: '/dashboard/super-admin' },
+          { label: m.companies.breadcrumbs.companies },
+        ]}
         actions={
           <Link href="/dashboard/super-admin/companies/new">
             <Button variant="primary" leftIcon={<Plus className="h-4 w-4" />}>
-              {m.overview.newCompany}
+              {m.companies.newBtn}
             </Button>
           </Link>
         }
-      >
-        <PremiumMetricStrip
-          variant="compact"
-          cols={4}
-          className="border-t border-hairline px-7 sm:px-9 py-5"
-          metrics={[
-            { label: m.overview.kpi.total,        value: total,        icon: <Building2 />,     tone: 'neutral' },
-            { label: m.overview.kpi.active,        value: active,       icon: <CheckCircle2 />,  tone: 'success' },
-            { label: m.overview.kpi.trial,         value: trial,        icon: <Clock />,         tone: 'info' },
-            { label: m.overview.kpi.expiringSoon,  value: expiringSoon, icon: <AlertTriangle />, tone: 'warning' },
-          ]}
-        />
-      </PremiumPageHero>
+      />
 
       <PremiumSectionCard
-        title={m.overview.tableTitleFn(total)}
+        title={m.companies.tableTitle}
         icon={<Building2 />}
         padded={false}
       >
         {companies.length === 0 ? (
-          <div className="py-12 text-center p-6">
+          <div className="py-14 text-center px-6">
             <Building2 className="h-10 w-10 mx-auto text-slate-300 mb-3" />
-            <p className="text-sm text-slate-500">{m.overview.empty}</p>
+            <p className="text-sm text-slate-500">{m.companies.empty}</p>
             <Link href="/dashboard/super-admin/companies/new" className="mt-3 inline-block text-sm text-brand-600 hover:underline">
-              {m.overview.emptyLink}
+              {m.companies.emptyLink}
             </Link>
           </div>
         ) : (
@@ -104,12 +101,13 @@ export default async function SuperAdminOverviewPage() {
             <table className="w-full text-sm">
               <thead className="text-right text-xs text-slate-500 border-b border-hairline bg-canvas/40">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">{m.overview.cols.company}</th>
-                  <th className="px-4 py-3 font-semibold">{m.overview.cols.plan}</th>
-                  <th className="px-4 py-3 font-semibold">{m.overview.cols.status}</th>
-                  <th className="px-4 py-3 font-semibold">{m.overview.cols.users}</th>
-                  <th className="px-4 py-3 font-semibold">{m.overview.cols.endAt}</th>
-                  <th className="px-4 py-3 font-semibold">{m.overview.cols.createdAt}</th>
+                  <th className="px-5 py-3 font-semibold">{m.companies.cols.company}</th>
+                  <th className="px-4 py-3 font-semibold">{m.companies.cols.plan}</th>
+                  <th className="px-4 py-3 font-semibold">{m.companies.cols.status}</th>
+                  <th className="px-4 py-3 font-semibold">{m.companies.cols.users}</th>
+                  <th className="px-4 py-3 font-semibold">{m.companies.cols.startAt}</th>
+                  <th className="px-4 py-3 font-semibold">{m.companies.cols.endAt}</th>
+                  <th className="px-4 py-3 font-semibold">{m.companies.cols.createdAt}</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -132,6 +130,9 @@ export default async function SuperAdminOverviewPage() {
                       {c.userCount}{c.maxUsers ? ` / ${c.maxUsers}` : ''}
                     </td>
                     <td className="px-4 py-3.5 text-slate-500 text-[12px]">
+                      {c.subscriptionStartAt ? formatDate(c.subscriptionStartAt) : '—'}
+                    </td>
+                    <td className="px-4 py-3.5 text-slate-500 text-[12px]">
                       {c.subscriptionEndAt ? formatDate(c.subscriptionEndAt) : '—'}
                     </td>
                     <td className="px-4 py-3.5 text-slate-400 text-[12px]">
@@ -142,7 +143,7 @@ export default async function SuperAdminOverviewPage() {
                         href={`/dashboard/super-admin/companies/${c.id}`}
                         className="text-brand-600 text-[12px] font-semibold hover:underline"
                       >
-                        {m.overview.manageLinkLabel}
+                        {m.companies.manageLinkLabel}
                       </Link>
                     </td>
                   </tr>
@@ -152,13 +153,6 @@ export default async function SuperAdminOverviewPage() {
           </div>
         )}
       </PremiumSectionCard>
-
-      {suspended > 0 && (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-red-100 bg-red-50/40 px-5 py-3.5 text-sm text-red-700">
-          <XCircle className="h-4 w-4 shrink-0" />
-          <span>{m.overview.suspendedWarning(suspended)}</span>
-        </div>
-      )}
     </div>
   );
 }

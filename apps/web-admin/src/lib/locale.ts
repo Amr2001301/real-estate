@@ -8,3 +8,4 @@ export async function getLocale(): Promise<Locale> {
   const val = jar.get('admin-locale')?.value;
   return val === 'en' ? 'en' : 'ar';
 }
+

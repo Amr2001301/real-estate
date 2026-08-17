@@ -5,10 +5,11 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SuperAdminGuard } from '../../common/guards/super-admin.guard';
 import { BypassTenant } from '../../common/decorators/bypass-tenant.decorator';
 import { SuperAdminService } from './super-admin.service';
-import type {
+import {
   CreateCompanyDto,
   UpdateCompanyDto,
   CancelCompanyDto,
+  SuspendCompanyDto,
   CreateCompanyAdminDto,
 } from './dto/super-admin.dto';
 
@@ -44,8 +45,8 @@ export class SuperAdminController {
   }
 
   @Post('companies/:id/suspend')
-  suspendCompany(@Param('id') id: string, @Body() body: { reason?: string }) {
-    return this.service.suspendCompany(id, body.reason);
+  suspendCompany(@Param('id') id: string, @Body() dto: SuspendCompanyDto) {
+    return this.service.suspendCompany(id, dto.reason);
   }
 
   @Post('companies/:id/activate')
