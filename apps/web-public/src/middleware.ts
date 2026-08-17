@@ -5,24 +5,85 @@ import { NextRequest, NextResponse } from 'next/server';
  *
  *   1. /api-proxy/*  → inject `Authorization: Bearer` from the access_token
  *      cookie so authenticated client-side calls reach the API as proper JWTs.
- *      The actual proxying to the backend is done by the rewrite in
- *      next.config.ts (/api-proxy/:path* → ${API_BASE_URL}/v1/:path*). This
- *      middleware only adds the header; it does not itself proxy.
  *
- *   2. /account/*  → redirect unauthenticated visitors to /login (preserving
- *      the original destination in ?from=). /login and /register → bounce
- *      already-authenticated users to /account.
+ *   2. /account/*  → redirect unauthenticated visitors to /login.
+ *      /login and /register → bounce already-authenticated users to /account.
  *
- * Middleware checks cookie PRESENCE only. It never verifies the JWT and never
- * trusts the `user` cookie for authorization. Real checks live in:
- *   * apps/web-public/src/lib/session.ts (getSession / role checks at layout level)
- *   * the backend guards (RolesGuard, ...).
- *
- * If the access_token is present but expired, the page-level server fetch will
- * 401 and the refresh path (added in a later step) takes over. We deliberately
- * keep refresh out of the edge runtime.
+ * Transparent token refresh: when access_token is missing but refresh_token is
+ * present, the middleware calls POST /v1/auth/refresh, sets new cookies on the
+ * response, and continues the navigation — the user never sees the login page.
  */
-export function middleware(req: NextRequest) {
+
+const THIRTY_DAYS = 60 * 60 * 24 * 30;
+const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
+
+interface RefreshResult {
+  success: false;
+}
+interface RefreshSuccess {
+  success: true;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: { id: string; role: string; fullName: string };
+}
+
+async function tryRefresh(req: NextRequest): Promise<RefreshResult | RefreshSuccess> {
+  const raw = req.cookies.get('refresh_token')?.value;
+  if (!raw) return { success: false };
+  try {
+    const res = await fetch(`${API_BASE}/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ refreshToken: raw }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return { success: false };
+    const data = (await res.json()) as {
+      user: { id: string; role: string; fullName: string };
+      tokens: { accessToken: string; refreshToken: string; expiresIn: number };
+    };
+    return {
+      success: true,
+      accessToken: data.tokens.accessToken,
+      refreshToken: data.tokens.refreshToken,
+      expiresIn: data.tokens.expiresIn,
+      user: data.user,
+    };
+  } catch {
+    return { success: false };
+  }
+}
+
+function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: NextRequest) {
+  const secure = req.nextUrl.protocol === 'https:';
+  response.cookies.set('access_token', r.accessToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure,
+    path: '/',
+    maxAge: r.expiresIn,
+  });
+  response.cookies.set('refresh_token', r.refreshToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure,
+    path: '/',
+    maxAge: THIRTY_DAYS,
+  });
+  response.cookies.set(
+    'user',
+    JSON.stringify({ id: r.user.id, role: r.user.role, fullName: r.user.fullName }),
+    {
+      httpOnly: false,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: THIRTY_DAYS,
+    },
+  );
+}
+
+export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   // ── 1. /api-proxy/* — attach Bearer from cookie (rewrite handles routing) ──
@@ -47,9 +108,15 @@ export function middleware(req: NextRequest) {
   if (pathname.startsWith('/account')) {
     if (hasToken) return NextResponse.next();
 
+    // access_token gone but refresh_token may still be valid → try silent refresh.
+    const refreshed = await tryRefresh(req);
+    if (refreshed.success) {
+      const response = NextResponse.next();
+      applyRefreshCookies(response, refreshed, req);
+      return response;
+    }
+
     const loginUrl = new URL('/login', req.url);
-    // Preserve original destination (path + query) so login can honor ?from=.
-    // Consumers MUST validate it starts with '/account' before redirecting.
     loginUrl.searchParams.set('from', pathname + search);
     return NextResponse.redirect(loginUrl);
   }

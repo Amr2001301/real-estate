@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-export type SessionRole = 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'BROKER' | 'MAINTENANCE_SUPERVISOR';
+export type SessionRole = 'SUPER_ADMIN' | 'ADMIN' | 'SALES' | 'SALES_MANAGER' | 'BROKER' | 'MAINTENANCE_SUPERVISOR';
 
 export interface SessionUser {
   id: string;
@@ -28,12 +28,26 @@ export async function getSession(): Promise<SessionUser | null> {
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await getSession();
   if (!user) redirect('/login');
+  // SUPER_ADMIN is allowed through the dashboard layout — their sub-layout
+  // (super-admin/layout.tsx) handles the guard. Do NOT redirect here or a
+  // loop forms: dashboard/layout → redirect → dashboard/layout → ...
   if (user.role === 'BROKER') redirect('/portal');
-  // Maintenance supervisors are mobile-only; they have no dashboard workspace.
   if (user.role === 'MAINTENANCE_SUPERVISOR') redirect('/maintenance-app');
-  if (user.role !== 'ADMIN' && user.role !== 'SALES' && user.role !== 'SALES_MANAGER') {
+  if (
+    user.role !== 'SUPER_ADMIN' &&
+    user.role !== 'ADMIN' &&
+    user.role !== 'SALES' &&
+    user.role !== 'SALES_MANAGER'
+  ) {
     redirect('/login');
   }
+  return user;
+}
+
+export async function requireSuperAdmin(): Promise<SessionUser> {
+  const user = await getSession();
+  if (!user) redirect('/login');
+  if (user.role !== 'SUPER_ADMIN') redirect('/dashboard');
   return user;
 }
 

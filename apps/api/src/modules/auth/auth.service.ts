@@ -40,10 +40,14 @@ export class AuthService {
   // ------------- Email + password (Admin / Sales / Broker) -------------
 
   async loginEmail(email: string, password: string) {
-    const user = await this.prisma.user.findUnique({ where: { email } });
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      include: { company: { select: { subscriptionStatus: true, subscriptionEndAt: true } } },
+    });
     if (!user || !user.passwordHash) throw new UnauthorizedException('Invalid credentials');
     if (!user.active) throw new ForbiddenException('Account inactive');
     if (
+      user.role !== 'SUPER_ADMIN' &&
       user.role !== 'ADMIN' &&
       user.role !== 'SALES' &&
       user.role !== 'SALES_MANAGER' &&
@@ -54,6 +58,21 @@ export class AuthService {
     }
     const ok = await argon2.verify(user.passwordHash, password);
     if (!ok) throw new UnauthorizedException('Invalid credentials');
+
+    // Subscription enforcement: block staff from suspended/cancelled/expired companies.
+    // SUPER_ADMIN has no company and is always allowed.
+    if (user.role !== 'SUPER_ADMIN' && user.company) {
+      const status = user.company.subscriptionStatus;
+      if (status === 'SUSPENDED') {
+        throw new ForbiddenException('Your company account has been suspended. Contact your system administrator.');
+      }
+      if (status === 'CANCELLED') {
+        throw new ForbiddenException('Your company subscription has been cancelled. Contact your system administrator.');
+      }
+      if (status === 'EXPIRED') {
+        throw new ForbiddenException('Your company subscription has expired. Contact your system administrator.');
+      }
+    }
 
     await this.prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
     return this.issueTokens(user.id, user.role);

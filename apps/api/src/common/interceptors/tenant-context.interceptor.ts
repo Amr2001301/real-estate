@@ -58,6 +58,16 @@ export class TenantContextInterceptor implements NestInterceptor {
       const req = context.switchToHttp().getRequest<{
         user?: { companyId?: string | null; role?: string | null };
       }>();
+
+      // SUPER_ADMIN sits above all tenants — always bypass.
+      if (req.user?.role === 'SUPER_ADMIN') {
+        ctx = { companyId: null, bypass: true, isPublic: false };
+        return new Observable((subscriber) => {
+          enterTenantContext(ctx);
+          next.handle().subscribe(subscriber);
+        });
+      }
+
       const companyId = req.user?.companyId ?? null;
 
       if (!companyId) {

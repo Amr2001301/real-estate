@@ -12,6 +12,7 @@ const UI = {
     sidebar: {
       logout: 'تسجيل الخروج',
       roles: {
+        SUPER_ADMIN: 'مدير المنصة',
         ADMIN: 'مدير النظام',
         SALES: 'مبيعات',
         SALES_MANAGER: 'مدير مبيعات',
@@ -22,6 +23,7 @@ const UI = {
     mobile: { menu: 'القائمة', close: 'إغلاق' },
     nav: {
       sections: {
+        platform: 'إدارة المنصة',
         overview: 'نظرة عامة',
         sales: 'المبيعات',
         operations: 'العمليات',
@@ -30,6 +32,7 @@ const UI = {
         portal: 'البوابة',
       },
       items: {
+        companies: 'الشركات',
         dashboard: 'لوحة التحكم',
         projects: 'المشاريع',
         inventory: 'المخزون',
@@ -4973,6 +4976,7 @@ const UI = {
     sidebar: {
       logout: 'Log out',
       roles: {
+        SUPER_ADMIN: 'Platform Admin',
         ADMIN: 'System Admin',
         SALES: 'Sales',
         SALES_MANAGER: 'Sales Manager',
@@ -4983,6 +4987,7 @@ const UI = {
     mobile: { menu: 'Menu', close: 'Close' },
     nav: {
       sections: {
+        platform: 'Platform Management',
         overview: 'Overview',
         sales: 'Sales',
         operations: 'Operations',
@@ -4991,6 +4996,7 @@ const UI = {
         portal: 'Portal',
       },
       items: {
+        companies: 'Companies',
         dashboard: 'Dashboard',
         projects: 'Projects',
         inventory: 'Inventory',

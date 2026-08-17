@@ -23,9 +23,16 @@ model Company {
   currency      String   @default("SAR")    // ISO 4217
   defaultLocale Locale   @default(ar)
   timezone      String   @default("Asia/Riyadh") // IANA tz database name
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  isActive             Boolean            @default(true)
+  subscriptionPlan     SubscriptionPlan   @default(TRIAL)
+  subscriptionStatus   SubscriptionStatus @default(TRIAL)
+  subscriptionStartAt  DateTime?
+  subscriptionEndAt    DateTime?
+  maxUsers             Int?
+  cancelledAt          DateTime?
+  cancelReason         String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
   // ── Relations ──────────────────────────────────────────────────────────────
   users                    User[]
@@ -85,6 +92,7 @@ model Company {
 // =============================================================================
 
 enum UserRole {
+  SUPER_ADMIN
   ADMIN
   SALES
   CLIENT
@@ -92,6 +100,22 @@ enum UserRole {
   BROKER
   SALES_MANAGER
   MAINTENANCE_SUPERVISOR
+}
+
+enum SubscriptionPlan {
+  TRIAL
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  CANCELLING
+  CANCELLED
+  EXPIRED
+  SUSPENDED
 }
 
 enum Locale {

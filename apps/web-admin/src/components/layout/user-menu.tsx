@@ -7,6 +7,7 @@ import { Avatar } from '@/components/ui/avatar';
 import { logoutAction } from '@/app/login/actions';
 
 const ROLE_LABEL: Record<SessionRole, string> = {
+  SUPER_ADMIN: 'مدير المنصة',
   ADMIN: 'مدير النظام',
   SALES: 'مبيعات',
   SALES_MANAGER: 'مدير مبيعات',

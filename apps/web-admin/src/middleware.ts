@@ -11,17 +11,81 @@ import { NextRequest, NextResponse } from 'next/server';
  *      /login                   → redirect already-authenticated users to their
  *                                  workspace.
  *
- * Middleware only checks cookie PRESENCE. It never verifies the JWT
- * cryptographically and never trusts the `user` cookie for authorization
- * decisions — those checks live in:
- *   * apps/web-admin/src/lib/session.ts (requireAdmin / requireBroker)
- *   * the backend guards (RolesGuard, BrokerScopeGuard, ...).
- *
- * If the access_token cookie is present but expired/invalid, the page-level
- * server fetch will 401 and the auth refresh path takes over. We deliberately
- * keep that out of the edge runtime.
+ * Transparent token refresh: when access_token is missing but refresh_token is
+ * present, the middleware calls POST /v1/auth/refresh, sets new cookies on the
+ * response, and continues the navigation — the user never sees the login page.
  */
-export function middleware(req: NextRequest) {
+
+const THIRTY_DAYS = 60 * 60 * 24 * 30;
+const API_BASE = process.env.API_BASE_URL ?? 'http://localhost:4000';
+
+interface RefreshResult {
+  success: false;
+}
+interface RefreshSuccess {
+  success: true;
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  user: { id: string; role: string; fullName: string };
+}
+
+async function tryRefresh(req: NextRequest): Promise<RefreshResult | RefreshSuccess> {
+  const raw = req.cookies.get('refresh_token')?.value;
+  if (!raw) return { success: false };
+  try {
+    const res = await fetch(`${API_BASE}/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ refreshToken: raw }),
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) return { success: false };
+    const data = (await res.json()) as {
+      user: { id: string; role: string; fullName: string };
+      tokens: { accessToken: string; refreshToken: string; expiresIn: number };
+    };
+    return {
+      success: true,
+      accessToken: data.tokens.accessToken,
+      refreshToken: data.tokens.refreshToken,
+      expiresIn: data.tokens.expiresIn,
+      user: data.user,
+    };
+  } catch {
+    return { success: false };
+  }
+}
+
+function applyRefreshCookies(response: NextResponse, r: RefreshSuccess, req: NextRequest) {
+  const secure = req.nextUrl.protocol === 'https:';
+  response.cookies.set('access_token', r.accessToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure,
+    path: '/',
+    maxAge: r.expiresIn,
+  });
+  response.cookies.set('refresh_token', r.refreshToken, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure,
+    path: '/',
+    maxAge: THIRTY_DAYS,
+  });
+  response.cookies.set(
+    'user',
+    JSON.stringify({ id: r.user.id, role: r.user.role, fullName: r.user.fullName }),
+    {
+      httpOnly: false,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: THIRTY_DAYS,
+    },
+  );
+}
+
+export async function middleware(req: NextRequest) {
   const { pathname, search } = req.nextUrl;
 
   // ── 1. /api-proxy/*  — preserve original behavior verbatim ──────────────
@@ -47,18 +111,20 @@ export function middleware(req: NextRequest) {
     if (hasToken) return NextResponse.next();
 
     // Server Action POSTs carry a `Next-Action` header. 302-redirecting them to
-    // the login HTML page breaks the RSC action protocol on the client ("An
-    // unexpected response was received from the server"). Let them through so
-    // the action's own server-side auth (requireAdmin + backend guards) returns
-    // a graceful { error } the form can display, instead of crashing.
+    // the login HTML page breaks the RSC action protocol on the client.
     if (req.method === 'POST' && req.headers.has('next-action')) {
       return NextResponse.next();
     }
 
+    // access_token gone but refresh_token may still be valid → try silent refresh.
+    const refreshed = await tryRefresh(req);
+    if (refreshed.success) {
+      const response = NextResponse.next();
+      applyRefreshCookies(response, refreshed, req);
+      return response;
+    }
+
     const loginUrl = new URL('/login', req.url);
-    // Preserve the original destination (path + query) so a later iteration
-    // can honor ?from=… post-login. We URL-encode the whole thing as a single
-    // value; consumers should validate it starts with '/' before redirecting.
     loginUrl.searchParams.set('from', pathname + search);
     return NextResponse.redirect(loginUrl);
   }
@@ -66,20 +132,12 @@ export function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-/**
- * Best-effort routing hint based on the non-HttpOnly `user` cookie.
- * Untrusted by design — used ONLY to pick a landing page. The page itself
- * still calls requireAdmin() / requireBroker(), which do the real check.
- *
- * Per the route-protection spec: brokers go to /portal only when the cookie
- * clearly says BROKER. Anything else (missing, malformed, or any other role)
- * lands on /dashboard.
- */
 function landingPathForUser(req: NextRequest): string {
   const raw = req.cookies.get('user')?.value;
   if (!raw) return '/dashboard';
   try {
     const parsed = JSON.parse(raw) as { role?: unknown };
+    if (parsed && parsed.role === 'SUPER_ADMIN') return '/dashboard/super-admin';
     if (parsed && parsed.role === 'BROKER') return '/portal';
     if (parsed && parsed.role === 'MAINTENANCE_SUPERVISOR') return '/maintenance-app';
   } catch {

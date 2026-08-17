@@ -8,6 +8,7 @@ import {
   CalendarClock,
   BookmarkCheck,
   FileText,
+  Globe,
   Wallet,
   Receipt,
   Wrench,
@@ -28,6 +29,7 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react';
+
 import type { SessionRole } from './session';
 import type { NavItemKey, NavSectionKey } from '@/messages/ui';
 
@@ -39,6 +41,7 @@ import type { NavItemKey, NavSectionKey } from '@/messages/ui';
  * maps the key back to the Lucide component via this registry.
  */
 export const NAV_ICONS = {
+  Globe,
   LayoutDashboard,
   Building2,
   Home,
@@ -170,7 +173,19 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+export const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
+  {
+    title: 'المنصة',
+    titleKey: 'platform',
+    items: [
+      { href: '/dashboard/super-admin', label: 'لوحة التحكم', labelKey: 'dashboard', iconKey: 'LayoutDashboard' },
+      { href: '/dashboard/super-admin/companies', label: 'الشركات', labelKey: 'companies', iconKey: 'Globe' },
+    ],
+  },
+];
+
 export function filterNavForRole(role: SessionRole): NavSection[] {
+  if (role === 'SUPER_ADMIN') return SUPER_ADMIN_NAV_SECTIONS;
   // Brokers don't use the admin nav at all — see BROKER_NAV_SECTIONS below.
   if (role === 'BROKER') return [];
   return NAV_SECTIONS.map((section) => ({
