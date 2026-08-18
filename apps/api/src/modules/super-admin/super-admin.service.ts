@@ -7,6 +7,9 @@ import type {
   UpdateCompanyDto,
   CancelCompanyDto,
   CreateCompanyAdminDto,
+  CreatePricingPackageDto,
+  UpdatePricingPackageDto,
+  UpdateCompanyModulesDto,
 } from './dto/super-admin.dto';
 
 @Injectable()
@@ -204,6 +207,88 @@ export class SuperAdminService {
     ]);
 
     return { expired: expired.count, cancelled: cancelled.count };
+  }
+
+  // ── Pricing ────────────────────────────────────────────────────────────────
+
+  async listPricingPackages(companyId?: string) {
+    return this.prisma.pricingPackage.findMany({
+      where: companyId ? { companyId } : { companyId: null },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    });
+  }
+
+  async createPricingPackage(dto: CreatePricingPackageDto, companyId?: string) {
+    return this.prisma.pricingPackage.create({
+      data: {
+        companyId: companyId ?? null,
+        planTier: dto.planTier,
+        nameAr: dto.nameAr,
+        nameEn: dto.nameEn,
+        descAr: dto.descAr ?? null,
+        descEn: dto.descEn ?? null,
+        currency: dto.currency ?? 'SAR',
+        monthlyPrice: dto.monthlyPrice ?? null,
+        annualPrice: dto.annualPrice ?? null,
+        setupFee: dto.setupFee ?? null,
+        maxUsers: dto.maxUsers ?? null,
+        highlights: dto.highlights ?? [],
+        specialOffer: dto.specialOffer ?? null,
+        sortOrder: dto.sortOrder ?? 0,
+        isActive: dto.isActive ?? true,
+      },
+    });
+  }
+
+  async updatePricingPackage(id: string, dto: UpdatePricingPackageDto) {
+    const pkg = await this.prisma.pricingPackage.findUnique({ where: { id } });
+    if (!pkg) throw new NotFoundException('Pricing package not found');
+    return this.prisma.pricingPackage.update({
+      where: { id },
+      data: {
+        ...(dto.planTier !== undefined && { planTier: dto.planTier }),
+        ...(dto.nameAr !== undefined && { nameAr: dto.nameAr }),
+        ...(dto.nameEn !== undefined && { nameEn: dto.nameEn }),
+        ...(dto.descAr !== undefined && { descAr: dto.descAr }),
+        ...(dto.descEn !== undefined && { descEn: dto.descEn }),
+        ...(dto.currency !== undefined && { currency: dto.currency }),
+        ...(dto.monthlyPrice !== undefined && { monthlyPrice: dto.monthlyPrice }),
+        ...(dto.annualPrice !== undefined && { annualPrice: dto.annualPrice }),
+        ...(dto.setupFee !== undefined && { setupFee: dto.setupFee }),
+        ...(dto.maxUsers !== undefined && { maxUsers: dto.maxUsers }),
+        ...(dto.highlights !== undefined && { highlights: dto.highlights }),
+        ...(dto.specialOffer !== undefined && { specialOffer: dto.specialOffer }),
+        ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+      },
+    });
+  }
+
+  async deletePricingPackage(id: string) {
+    const pkg = await this.prisma.pricingPackage.findUnique({ where: { id } });
+    if (!pkg) throw new NotFoundException('Pricing package not found');
+    await this.prisma.pricingPackage.delete({ where: { id } });
+  }
+
+  // ── Modules ────────────────────────────────────────────────────────────────
+
+  async getCompanyModules(id: string) {
+    const company = await this.assertExists(id);
+    const defaults = {
+      broker: true, website: true, maintenance: true, reports: true,
+      leads: true, visits: true, contracts: true, installments: true, deposits: true,
+    };
+    return { modules: { ...defaults, ...(company.modules as object ?? {}) } };
+  }
+
+  async updateCompanyModules(id: string, dto: UpdateCompanyModulesDto) {
+    await this.assertExists(id);
+    const updated = await this.prisma.company.update({
+      where: { id },
+      data: { modules: dto.modules },
+      select: { id: true, modules: true },
+    });
+    return updated;
   }
 
   private async assertExists(id: string) {

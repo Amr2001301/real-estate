@@ -27,6 +27,7 @@ import {
   Files,
   MessageSquareText,
   Target,
+  Tag,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -42,6 +43,7 @@ import type { NavItemKey, NavSectionKey } from '@/messages/ui';
  */
 export const NAV_ICONS = {
   Globe,
+  Tag,
   LayoutDashboard,
   Building2,
   Home,
@@ -180,6 +182,7 @@ export const SUPER_ADMIN_NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/dashboard/super-admin', label: 'لوحة التحكم', labelKey: 'dashboard', iconKey: 'LayoutDashboard' },
       { href: '/dashboard/super-admin/companies', label: 'الشركات', labelKey: 'companies', iconKey: 'Globe' },
+      { href: '/dashboard/super-admin/pricing', label: 'باقات الأسعار', labelKey: 'reports', iconKey: 'Tag' },
     ],
   },
 ];

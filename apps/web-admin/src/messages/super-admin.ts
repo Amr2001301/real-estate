@@ -233,8 +233,123 @@ const SA = {
   },
 };
 
-export function saT(locale: Locale) {
-  return SA[locale];
-}
+const PRICING = {
+  ar: {
+    title: 'باقات الأسعار',
+    description: 'إدارة الباقات والعروض الخاصة للمنصة.',
+    badge: 'التسعير',
+    newBtn: 'باقة جديدة',
+    globalTab: 'الباقات العامة',
+    companyTab: 'تسعير الشركة',
+    pdfBtn: 'تصدير PDF',
+    breadcrumbs: { platform: 'إدارة المنصة', pricing: 'باقات الأسعار' },
+    emptyGlobal: 'لا توجد باقات عامة بعد.',
+    emptyCompany: 'لا يوجد تسعير خاص لهذه الشركة.',
+    addCompanyPkg: 'إضافة تسعير خاص',
+    deleteConfirm: 'هل أنت متأكد من حذف هذه الباقة؟',
+    cols: { name: 'الباقة', plan: 'الخطة', monthly: 'شهري', annual: 'سنوي', setup: 'رسوم الإعداد', users: 'مستخدمون', offer: 'عرض', status: 'الحالة' },
+    active: 'نشطة', inactive: 'غير نشطة',
+    form: {
+      title: 'بيانات الباقة',
+      planTier: 'الخطة', nameAr: 'الاسم (عربي)', nameEn: 'الاسم (إنجليزي)',
+      descAr: 'الوصف (عربي)', descEn: 'الوصف (إنجليزي)',
+      currency: 'العملة', monthlyPrice: 'السعر الشهري', annualPrice: 'السعر السنوي',
+      setupFee: 'رسوم الإعداد', maxUsers: 'الحد الأقصى للمستخدمين',
+      highlights: 'مميزات الباقة (سطر لكل ميزة)',
+      offerTitle: 'العرض الخاص',
+      offerTitleAr: 'عنوان العرض (عربي)', offerTitleEn: 'عنوان العرض (إنجليزي)',
+      offerDiscount: 'نسبة الخصم %', offerValidUntil: 'صالح حتى',
+      sortOrder: 'الترتيب', isActive: 'نشطة',
+      saveBtn: 'حفظ', cancelBtn: 'إلغاء', createBtn: 'إنشاء الباقة',
+    },
+    pdf: {
+      title: 'عرض الأسعار', subtitle: 'باقات الاشتراك', printBtn: 'طباعة / PDF',
+      monthly: 'شهرياً', annual: 'سنوياً', setup: 'رسوم إعداد',
+      unlimited: 'غير محدود', users: 'مستخدم',
+      specialOffer: 'عرض خاص', discount: 'خصم',
+      validUntil: 'صالح حتى', highlights: 'المميزات',
+      footer: 'للاستفسار والتعاقد يرجى التواصل مع الفريق',
+    },
+  },
+  en: {
+    title: 'Pricing Packages',
+    description: 'Manage platform pricing packages and special offers.',
+    badge: 'Pricing',
+    newBtn: 'New Package',
+    globalTab: 'Global Packages',
+    companyTab: 'Company Pricing',
+    pdfBtn: 'Export PDF',
+    breadcrumbs: { platform: 'Platform Management', pricing: 'Pricing Packages' },
+    emptyGlobal: 'No global packages yet.',
+    emptyCompany: 'No custom pricing for this company.',
+    addCompanyPkg: 'Add custom pricing',
+    deleteConfirm: 'Are you sure you want to delete this package?',
+    cols: { name: 'Package', plan: 'Plan', monthly: 'Monthly', annual: 'Annual', setup: 'Setup Fee', users: 'Users', offer: 'Offer', status: 'Status' },
+    active: 'Active', inactive: 'Inactive',
+    form: {
+      title: 'Package Details',
+      planTier: 'Plan Tier', nameAr: 'Name (Arabic)', nameEn: 'Name (English)',
+      descAr: 'Description (Arabic)', descEn: 'Description (English)',
+      currency: 'Currency', monthlyPrice: 'Monthly Price', annualPrice: 'Annual Price',
+      setupFee: 'Setup Fee', maxUsers: 'Max Users',
+      highlights: 'Package highlights (one per line)',
+      offerTitle: 'Special Offer',
+      offerTitleAr: 'Offer title (Arabic)', offerTitleEn: 'Offer title (English)',
+      offerDiscount: 'Discount %', offerValidUntil: 'Valid Until',
+      sortOrder: 'Sort Order', isActive: 'Active',
+      saveBtn: 'Save', cancelBtn: 'Cancel', createBtn: 'Create Package',
+    },
+    pdf: {
+      title: 'Pricing Proposal', subtitle: 'Subscription Packages', printBtn: 'Print / PDF',
+      monthly: '/mo', annual: '/yr', setup: 'Setup fee',
+      unlimited: 'Unlimited', users: 'users',
+      specialOffer: 'Special Offer', discount: 'discount',
+      validUntil: 'Valid until', highlights: 'Features',
+      footer: 'Contact our team for inquiries and contracts',
+    },
+  },
+};
+
+const MODULES_STRINGS = {
+  ar: {
+    title: 'تحكم بالوحدات',
+    description: 'اختر الأقسام الظاهرة لهذه الشركة.',
+    saveBtn: 'حفظ الإعدادات',
+    savedOk: 'تم حفظ الإعدادات',
+    modules: {
+      broker: 'الوسطاء',
+      website: 'البوابة الإلكترونية',
+      maintenance: 'الصيانة',
+      reports: 'التقارير',
+      leads: 'العملاء المحتملون',
+      visits: 'طلبات الزيارة',
+      contracts: 'العقود',
+      installments: 'الأقساط',
+      deposits: 'العربون',
+    },
+  },
+  en: {
+    title: 'Module Control',
+    description: 'Choose which sections are visible for this company.',
+    saveBtn: 'Save Settings',
+    savedOk: 'Settings saved',
+    modules: {
+      broker: 'Brokers',
+      website: 'Customer Portal',
+      maintenance: 'Maintenance',
+      reports: 'Reports',
+      leads: 'Leads',
+      visits: 'Visit Requests',
+      contracts: 'Contracts',
+      installments: 'Installments',
+      deposits: 'Deposits',
+    },
+  },
+};
+
+export function saT(locale: Locale) { return SA[locale]; }
+export function pricingT(locale: Locale) { return PRICING[locale]; }
+export function modulesT(locale: Locale) { return MODULES_STRINGS[locale]; }
 
 export type SaStrings = typeof SA['ar'];
+export type PricingStrings = typeof PRICING['ar'];

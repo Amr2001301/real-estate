@@ -82,9 +82,43 @@ model Company {
   chatSessions             ChatSession[]
   chatMessages             ChatMessage[]
   chatFeedback             ChatFeedback[]
+  pricingPackages          PricingPackage[]
+
+  // Module flags — controls which dashboard sections are visible for this company
+  modules                  Json?           // { broker, website, maintenance, reports, leads, visits, contracts, installments, deposits }
 
   @@index([slug])
   @@index([isActive])
+}
+
+// =============================================================================
+// PRICING
+// =============================================================================
+
+model PricingPackage {
+  id           String   @id @default(uuid()) @db.Uuid
+  companyId    String?  @db.Uuid                        // null = global template
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  planTier     String                                   // TRIAL | STARTER | PROFESSIONAL | ENTERPRISE | CUSTOM
+  nameAr       String
+  nameEn       String
+  descAr       String?
+  descEn       String?
+  currency     String   @default("SAR")
+  monthlyPrice Decimal? @db.Decimal(12, 2)
+  annualPrice  Decimal? @db.Decimal(12, 2)
+  setupFee     Decimal? @db.Decimal(12, 2)
+  maxUsers     Int?
+  highlights   Json     @default("[]")                 // string[]  — key bullet points
+  specialOffer Json?                                   // { titleAr, titleEn, discountPct, validUntil } | null
+  sortOrder    Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([companyId])
+  @@index([planTier])
 }
 
 // =============================================================================

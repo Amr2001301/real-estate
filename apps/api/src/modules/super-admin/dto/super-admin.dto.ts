@@ -5,6 +5,8 @@ import {
   IsEnum,
   IsInt,
   IsNotEmpty,
+  IsNumber,
+  IsObject,
   IsOptional,
   IsString,
   MinLength,
@@ -104,4 +106,121 @@ export class CreateCompanyAdminDto {
 
   @IsString() @IsNotEmpty()
   fullName!: string;
+}
+
+// ── Pricing ──────────────────────────────────────────────────────────────────
+
+export class CreatePricingPackageDto {
+  @IsString() @IsNotEmpty()
+  planTier!: string;
+
+  @IsString() @IsNotEmpty()
+  nameAr!: string;
+
+  @IsString() @IsNotEmpty()
+  nameEn!: string;
+
+  @IsString() @IsOptional()
+  descAr?: string;
+
+  @IsString() @IsOptional()
+  descEn?: string;
+
+  @IsString() @IsOptional()
+  currency?: string;
+
+  @IsNumber() @IsOptional()
+  monthlyPrice?: number;
+
+  @IsNumber() @IsOptional()
+  annualPrice?: number;
+
+  @IsNumber() @IsOptional()
+  setupFee?: number;
+
+  @IsInt() @Min(1) @IsOptional()
+  maxUsers?: number;
+
+  @IsOptional()
+  highlights?: string[];
+
+  @IsOptional()
+  specialOffer?: {
+    titleAr: string;
+    titleEn: string;
+    discountPct: number;
+    validUntil?: string;
+  } | null;
+
+  @IsInt() @IsOptional()
+  sortOrder?: number;
+
+  @IsBoolean() @IsOptional()
+  isActive?: boolean;
+}
+
+export class UpdatePricingPackageDto {
+  @IsString() @IsOptional()
+  planTier?: string;
+
+  @IsString() @IsOptional()
+  nameAr?: string;
+
+  @IsString() @IsOptional()
+  nameEn?: string;
+
+  @IsString() @IsOptional()
+  descAr?: string;
+
+  @IsString() @IsOptional()
+  descEn?: string;
+
+  @IsString() @IsOptional()
+  currency?: string;
+
+  @IsNumber() @IsOptional()
+  monthlyPrice?: number | null;
+
+  @IsNumber() @IsOptional()
+  annualPrice?: number | null;
+
+  @IsNumber() @IsOptional()
+  setupFee?: number | null;
+
+  @IsInt() @Min(1) @IsOptional()
+  maxUsers?: number | null;
+
+  @IsOptional()
+  highlights?: string[];
+
+  @IsOptional()
+  specialOffer?: {
+    titleAr: string;
+    titleEn: string;
+    discountPct: number;
+    validUntil?: string;
+  } | null;
+
+  @IsInt() @IsOptional()
+  sortOrder?: number;
+
+  @IsBoolean() @IsOptional()
+  isActive?: boolean;
+}
+
+// ── Modules ───────────────────────────────────────────────────────────────────
+
+export class UpdateCompanyModulesDto {
+  @IsObject()
+  modules!: {
+    broker?: boolean;
+    website?: boolean;
+    maintenance?: boolean;
+    reports?: boolean;
+    leads?: boolean;
+    visits?: boolean;
+    contracts?: boolean;
+    installments?: boolean;
+    deposits?: boolean;
+  };
 }
