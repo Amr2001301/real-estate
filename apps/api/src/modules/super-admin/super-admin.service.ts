@@ -97,6 +97,23 @@ export class SuperAdminService {
 
   async updateCompany(id: string, dto: UpdateCompanyDto) {
     await this.assertExists(id);
+
+    // When the subscription plan changes, derive maxUsers from the matching
+    // PricingPackage so the company limit stays in sync with the package definition.
+    // A manual dto.maxUsers without a plan change still works as an explicit override.
+    let syncedMaxUsers: number | null | undefined;
+    if (dto.subscriptionPlan !== undefined) {
+      const pkg = await this.prisma.pricingPackage.findFirst({
+        where: { planTier: dto.subscriptionPlan },
+        select: { maxUsers: true },
+      });
+      // pkg found: use its maxUsers (may be null for unlimited/CUSTOM)
+      // pkg not found: leave undefined so we fall back to dto.maxUsers
+      if (pkg !== null && pkg !== undefined) {
+        syncedMaxUsers = pkg.maxUsers ?? null;
+      }
+    }
+
     return this.prisma.company.update({
       where: { id },
       data: {
@@ -112,7 +129,10 @@ export class SuperAdminService {
         ...(dto.subscriptionEndAt !== undefined && {
           subscriptionEndAt: dto.subscriptionEndAt ? new Date(dto.subscriptionEndAt) : null,
         }),
-        ...(dto.maxUsers !== undefined && { maxUsers: dto.maxUsers }),
+        // Plan change: use package-derived limit; otherwise use explicit dto.maxUsers
+        ...(syncedMaxUsers !== undefined
+          ? { maxUsers: syncedMaxUsers }
+          : dto.maxUsers !== undefined && { maxUsers: dto.maxUsers }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -7,6 +8,7 @@ import {
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { claimSyntheticPeers } from '../../common/utils/identity-claim';
+import { getTenantContext } from '../../common/tenant/tenant-context';
 import { CreateUserDto, UpdateUserDto } from './dto/user.dto';
 import { Prisma, UserRole } from '@prisma/client';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -52,6 +54,22 @@ export class UsersService {
     if (!dto.email && !dto.phone) {
       throw new BadRequestException('Either email or phone is required');
     }
+
+    // Enforce plan user limit — only applies inside a tenant context (company admin).
+    // Super-admin bypass context skips this check intentionally.
+    const tenantCtx = getTenantContext();
+    if (tenantCtx && !tenantCtx.bypass && tenantCtx.companyId) {
+      const company = await this.prisma.company.findUnique({
+        where: { id: tenantCtx.companyId },
+        select: { maxUsers: true, _count: { select: { users: true } } },
+      });
+      if (company?.maxUsers != null && company._count.users >= company.maxUsers) {
+        throw new ForbiddenException(
+          `لقد وصلت إلى الحد الأقصى للمستخدمين (${company.maxUsers}) في باقتك الحالية. يرجى الترقية للإضافة المزيد.`,
+        );
+      }
+    }
+
     if (dto.managerId) await this.assertIsManager(dto.managerId);
     const passwordHash = dto.password ? await argon2.hash(dto.password) : null;
     return this.prisma.user.create({
