@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
-import { SubscriptionStatus } from '@prisma/client';
+import { Prisma, SubscriptionStatus } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import type {
@@ -233,7 +233,7 @@ export class SuperAdminService {
         setupFee: dto.setupFee ?? null,
         maxUsers: dto.maxUsers ?? null,
         highlights: dto.highlights ?? [],
-        specialOffer: dto.specialOffer ?? null,
+        specialOffer: dto.specialOffer ?? Prisma.JsonNull,
         sortOrder: dto.sortOrder ?? 0,
         isActive: dto.isActive ?? true,
       },
@@ -257,7 +257,7 @@ export class SuperAdminService {
         ...(dto.setupFee !== undefined && { setupFee: dto.setupFee }),
         ...(dto.maxUsers !== undefined && { maxUsers: dto.maxUsers }),
         ...(dto.highlights !== undefined && { highlights: dto.highlights }),
-        ...(dto.specialOffer !== undefined && { specialOffer: dto.specialOffer }),
+        ...(dto.specialOffer !== undefined && { specialOffer: dto.specialOffer ?? Prisma.JsonNull }),
         ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
