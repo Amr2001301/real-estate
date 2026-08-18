@@ -349,10 +349,19 @@ export class ContractsService {
       // Creating a reservation alone must NOT promote the role — the customer
       // can still walk away from a reservation. Mirrored test:
       // apps/api/test/e2e/me-reservations.e2e-spec.ts
-      await tx.user.updateMany({
+      const promoted = await tx.user.updateMany({
         where: { id: dto.customerId, role: 'CLIENT' },
         data: { role: 'CUSTOMER' },
       });
+      // Invalidate active refresh tokens so the portal immediately reflects the
+      // new CUSTOMER role — the user is bounced to /login on next page load
+      // instead of seeing a stale CLIENT view for up to 15 minutes.
+      if (promoted.count > 0) {
+        await tx.refreshToken.updateMany({
+          where: { userId: dto.customerId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
       // Mark unit SOLD
       const previous = unit.status;
       await tx.unit.update({

@@ -1665,10 +1665,19 @@ export class ReservationsService {
       // create(). Reservation.create alone must never promote — see
       // MeReservationsController docstring and e2e:
       // apps/api/test/e2e/me-reservations.e2e-spec.ts.
-      await tx.user.updateMany({
+      const promoted = await tx.user.updateMany({
         where: { id: customerId, role: UserRole.CLIENT },
         data: { role: UserRole.CUSTOMER },
       });
+      // Invalidate active refresh tokens so the portal immediately reflects the
+      // new CUSTOMER role — the user is bounced to /login on next page load
+      // instead of seeing a stale CLIENT view for up to 15 minutes.
+      if (promoted.count > 0) {
+        await tx.refreshToken.updateMany({
+          where: { userId: customerId, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
 
       // 3. Mark unit SOLD.
       const previousUnitStatus = reservation.unit.status;
