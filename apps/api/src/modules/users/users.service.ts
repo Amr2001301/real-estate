@@ -61,7 +61,7 @@ export class UsersService {
     if (tenantCtx && !tenantCtx.bypass && tenantCtx.companyId) {
       const company = await this.prisma.company.findUnique({
         where: { id: tenantCtx.companyId },
-        select: { maxUsers: true, _count: { select: { users: true } } },
+        select: { maxUsers: true, _count: { select: { users: { where: { role: { not: 'SUPER_ADMIN' } } } } } },
       });
       if (company?.maxUsers != null && company._count.users >= company.maxUsers) {
         throw new ForbiddenException(

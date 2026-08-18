@@ -19,7 +19,7 @@ export class SuperAdminService {
   async listCompanies() {
     const companies = await this.prisma.company.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { users: true } } },
+      include: { _count: { select: { users: { where: { role: { not: 'SUPER_ADMIN' } } } } } },
     });
     return companies.map((c) => ({
       id: c.id,
@@ -44,8 +44,9 @@ export class SuperAdminService {
     const company = await this.prisma.company.findUnique({
       where: { id },
       include: {
-        _count: { select: { users: true } },
+        _count: { select: { users: { where: { role: { not: 'SUPER_ADMIN' } } } } },
         users: {
+          where: { role: { not: 'SUPER_ADMIN' } },
           select: {
             id: true,
             fullName: true,

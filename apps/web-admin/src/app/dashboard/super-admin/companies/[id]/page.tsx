@@ -14,7 +14,6 @@ import { Field } from '@/components/form/field';
 import { formatDate } from '@/lib/format';
 import { getClientLocale } from '@/lib/locale-client';
 import { saT, type SaStrings } from '@/messages/super-admin';
-import { CompanyModulesPanel } from './_modules-panel';
 import { CompanyPricingPanel } from './_pricing-panel';
 import {
   PremiumPageHero,
@@ -327,16 +326,6 @@ export default function CompanyDetailPage() {
                 </table>
               </div>
             </PremiumSectionCard>
-
-            {/* Modules control */}
-            <CompanyModulesPanel
-              companyId={company.id}
-              initialModules={{
-                broker: true, website: true, maintenance: true, reports: true,
-                leads: true, visits: true, contracts: true, installments: true, deposits: true,
-                ...((company as { modules?: Record<string, boolean> }).modules ?? {}),
-              }}
-            />
 
             {/* Company-specific pricing */}
             <CompanyPricingPanel companyId={company.id} />
