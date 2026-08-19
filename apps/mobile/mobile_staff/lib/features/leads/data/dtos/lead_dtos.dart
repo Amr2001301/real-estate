@@ -1,5 +1,16 @@
 // Wire shapes for the leads endpoints. Data layer only.
 
+class LeadSourceDto {
+  const LeadSourceDto({required this.id, required this.name});
+  final String id;
+  final String name;
+
+  factory LeadSourceDto.fromJson(Map<String, dynamic> json) => LeadSourceDto(
+        id: json['id'] as String,
+        name: json['name'] as String? ?? '',
+      );
+}
+
 class LeadRowDto {
   const LeadRowDto({
     required this.id,

@@ -3,6 +3,7 @@ import {
   Body,
   ConflictException,
   Controller,
+  Delete,
   Get,
   Injectable,
   Logger,
@@ -846,6 +847,7 @@ export class ReservationsService {
     dateTo?: string;
   }) {
     const where: Prisma.ReservationWhereInput = {
+      deletedAt: null,
       ...(opts.status ? { status: opts.status } : {}),
       ...(opts.salesIds
         ? { salesId: { in: opts.salesIds } }
@@ -906,6 +908,19 @@ export class ReservationsService {
     });
     if (!reservation) throw new NotFoundException('Reservation not found');
     return reservation;
+  }
+
+  async softDelete(id: string) {
+    const exists = await this.prisma.reservation.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+    if (!exists) throw new NotFoundException('Reservation not found');
+    if (exists.deletedAt) throw new NotFoundException('Reservation already deleted');
+    await this.prisma.reservation.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
+  async restore(id: string) {
+    const exists = await this.prisma.reservation.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+    if (!exists) throw new NotFoundException('Reservation not found');
+    await this.prisma.reservation.update({ where: { id }, data: { deletedAt: null } });
   }
 
   /**
@@ -1011,6 +1026,7 @@ export class ReservationsService {
     opts: { page: number; pageSize: number; status?: ReservationStatus },
   ) {
     const where: Prisma.ReservationWhereInput = {
+      deletedAt: null,
       ...(opts.status ? { status: opts.status } : {}),
       OR: await this.buildUserOwnershipFilter(userId),
     };
@@ -2297,6 +2313,20 @@ class ReservationsController {
     @CurrentUser() user: AuthUser,
   ) {
     return this.svc.unconfirmBookingPayment(id, dto, user);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reservations:delete')
+  @Delete(':id')
+  softDelete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.softDelete(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('reservations:delete')
+  @Post(':id/restore')
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.restore(id);
   }
 }
 

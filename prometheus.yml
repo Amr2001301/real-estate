@@ -1,0 +1,24 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+scrape_configs:
+  - job_name: devora-api
+    # Set METRICS_TOKEN in .env and pass it here so the scraper can authenticate.
+    # Leave bearer_token empty (and unset METRICS_TOKEN in the API) for local dev.
+    bearer_token: ${METRICS_TOKEN:-}
+    static_configs:
+      - targets:
+          # When running via `--profile obs` the API is available on the Docker
+          # network. Adjust to `host.docker.internal:4000` for local-only dev.
+          - ${API_METRICS_TARGET:-api:4000}
+    metrics_path: /metrics
+    scheme: http

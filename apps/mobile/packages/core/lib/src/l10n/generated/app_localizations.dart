@@ -2864,6 +2864,48 @@ abstract class AppLocalizations {
   /// **'All'**
   String get leadsFilterAll;
 
+  /// No description provided for @leadsFilterSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Source'**
+  String get leadsFilterSource;
+
+  /// No description provided for @leadsFilterDateFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From date'**
+  String get leadsFilterDateFrom;
+
+  /// No description provided for @leadsFilterDateTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To date'**
+  String get leadsFilterDateTo;
+
+  /// No description provided for @leadsFilterApply.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply filters'**
+  String get leadsFilterApply;
+
+  /// No description provided for @leadsFilterClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get leadsFilterClear;
+
+  /// No description provided for @leadsActiveFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Active filters'**
+  String get leadsActiveFilters;
+
+  /// No description provided for @leadsFilterSheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter leads'**
+  String get leadsFilterSheet;
+
   /// No description provided for @leadsMine.
   ///
   /// In en, this message translates to:

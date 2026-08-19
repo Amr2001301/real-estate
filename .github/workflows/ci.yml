@@ -225,6 +225,28 @@ jobs:
       - name: Resolve workspace deps
         working-directory: apps/mobile
         run: flutter pub get
+      - name: Inject Firebase config (customer)
+        env:
+          FIREBASE_CUSTOMER_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_CUSTOMER_GOOGLE_SERVICES_JSON }}
+          FIREBASE_CUSTOMER_GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.FIREBASE_CUSTOMER_GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -n "$FIREBASE_CUSTOMER_GOOGLE_SERVICES_JSON" ]; then
+            echo "$FIREBASE_CUSTOMER_GOOGLE_SERVICES_JSON" > apps/mobile/mobile_customer/android/app/google-services.json
+          fi
+          if [ -n "$FIREBASE_CUSTOMER_GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$FIREBASE_CUSTOMER_GOOGLE_SERVICE_INFO_PLIST" > apps/mobile/mobile_customer/ios/Runner/GoogleService-Info.plist
+          fi
+      - name: Inject Firebase config (staff)
+        env:
+          FIREBASE_STAFF_GOOGLE_SERVICES_JSON: ${{ secrets.FIREBASE_STAFF_GOOGLE_SERVICES_JSON }}
+          FIREBASE_STAFF_GOOGLE_SERVICE_INFO_PLIST: ${{ secrets.FIREBASE_STAFF_GOOGLE_SERVICE_INFO_PLIST }}
+        run: |
+          if [ -n "$FIREBASE_STAFF_GOOGLE_SERVICES_JSON" ]; then
+            echo "$FIREBASE_STAFF_GOOGLE_SERVICES_JSON" > apps/mobile/mobile_staff/android/app/google-services.json
+          fi
+          if [ -n "$FIREBASE_STAFF_GOOGLE_SERVICE_INFO_PLIST" ]; then
+            echo "$FIREBASE_STAFF_GOOGLE_SERVICE_INFO_PLIST" > apps/mobile/mobile_staff/ios/Runner/GoogleService-Info.plist
+          fi
       - name: Analyze core
         working-directory: apps/mobile/packages/core
         run: flutter analyze

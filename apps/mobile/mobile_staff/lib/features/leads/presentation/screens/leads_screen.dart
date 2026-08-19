@@ -8,6 +8,8 @@ import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/lead.dart';
 import '../cubit/leads_cubit.dart';
 
+export '../cubit/leads_cubit.dart' show LeadSource;
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 Color _stageColor(String stage, AppColorsExt colors) => switch (stage) {
@@ -64,6 +66,15 @@ class _LeadsScreenState extends State<LeadsScreen> {
     }
   }
 
+  void _showFilterSheet(BuildContext context, LeadsCubit cubit) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _LeadFilterSheet(cubit: cubit),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n      = context.l10n;
@@ -84,7 +95,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
         children: [
           // ── Header ──────────────────────────────────────────────────────────
           BlocBuilder<LeadsCubit, LeadsListState>(
-            buildWhen: (a, b) => a.mine != b.mine,
+            buildWhen: (a, b) => a.mine != b.mine || a.hasAdvancedFilters != b.hasAdvancedFilters,
             builder: (context, state) => AppNavHeader(
               title: l10n.navLeads,
               subtitle: l10n.leadsSubtitle,
@@ -95,6 +106,13 @@ class _LeadsScreenState extends State<LeadsScreen> {
                       : Icons.person_outline_rounded,
                   tooltip: l10n.leadsMine,
                   onTap: cubit.toggleMine,
+                ),
+                NavHeaderAction(
+                  icon: state.hasAdvancedFilters
+                      ? Icons.filter_alt_rounded
+                      : Icons.filter_alt_outlined,
+                  tooltip: l10n.leadsFilterSheet,
+                  onTap: () => _showFilterSheet(context, cubit),
                 ),
               ],
             ),
@@ -113,6 +131,17 @@ class _LeadsScreenState extends State<LeadsScreen> {
               lang: lang,
               onSelected: (s) => cubit.setStage(s == state.stage ? null : s),
             ),
+          ),
+          // ── Active advanced filter chips ─────────────────────────────────────
+          BlocBuilder<LeadsCubit, LeadsListState>(
+            buildWhen: (a, b) =>
+                a.sourceId != b.sourceId ||
+                a.dateFrom != b.dateFrom ||
+                a.dateTo != b.dateTo,
+            builder: (context, state) {
+              if (!state.hasAdvancedFilters) return const SizedBox.shrink();
+              return _ActiveFilterChips(state: state, cubit: cubit, lang: lang);
+            },
           ),
           // ── Body ────────────────────────────────────────────────────────────
           Expanded(
@@ -668,6 +697,342 @@ class _LeadCard extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Active filter chip row ────────────────────────────────────────────────────
+
+class _ActiveFilterChips extends StatelessWidget {
+  const _ActiveFilterChips({
+    required this.state,
+    required this.cubit,
+    required this.lang,
+  });
+  final LeadsListState state;
+  final LeadsCubit cubit;
+  final String lang;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, AppSpacing.xs),
+      child: Row(
+        children: [
+          // Clear-all chip
+          _DismissChip(
+            label: l10n.leadsFilterClear,
+            icon: Icons.close_rounded,
+            onTap: cubit.clearAdvancedFilters,
+            colors: colors,
+            accent: colors.error,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          if (state.sourceId != null) ...[
+            _DismissChip(
+              label: lang == 'ar' ? 'المصدر: …' : 'Source: …',
+              onTap: () => cubit.setAdvancedFilters(clearSourceId: true),
+              colors: colors,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          if (state.dateFrom != null) ...[
+            _DismissChip(
+              label: '${lang == 'ar' ? 'من' : 'From'}: ${state.dateFrom}',
+              onTap: () => cubit.setAdvancedFilters(clearDateFrom: true),
+              colors: colors,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
+          if (state.dateTo != null)
+            _DismissChip(
+              label: '${lang == 'ar' ? 'إلى' : 'To'}: ${state.dateTo}',
+              onTap: () => cubit.setAdvancedFilters(clearDateTo: true),
+              colors: colors,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DismissChip extends StatelessWidget {
+  const _DismissChip({
+    required this.label,
+    required this.onTap,
+    required this.colors,
+    this.icon = Icons.cancel_outlined,
+    this.accent,
+  });
+  final String label;
+  final VoidCallback onTap;
+  final AppColorsExt colors;
+  final IconData icon;
+  final Color? accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = accent ?? colors.brandGold;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+          borderRadius: AppRadii.pillAll,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(icon, size: 13, color: color),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Filter bottom sheet ───────────────────────────────────────────────────────
+
+class _LeadFilterSheet extends StatefulWidget {
+  const _LeadFilterSheet({required this.cubit});
+  final LeadsCubit cubit;
+
+  @override
+  State<_LeadFilterSheet> createState() => _LeadFilterSheetState();
+}
+
+class _LeadFilterSheetState extends State<_LeadFilterSheet> {
+  List<LeadSource> _sources = [];
+  bool _loadingSources = true;
+
+  String? _sourceId;
+  String? _dateFrom;
+  String? _dateTo;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = widget.cubit.state;
+    _sourceId = s.sourceId;
+    _dateFrom = s.dateFrom;
+    _dateTo = s.dateTo;
+    _loadSources();
+  }
+
+  Future<void> _loadSources() async {
+    final sources = await widget.cubit.fetchSources();
+    if (mounted) setState(() { _sources = sources; _loadingSources = false; });
+  }
+
+  Future<void> _pickDate(bool isFrom) async {
+    final initial = DateTime.tryParse(isFrom ? (_dateFrom ?? '') : (_dateTo ?? ''))
+        ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null && mounted) {
+      final iso = '${picked.year.toString().padLeft(4, '0')}-'
+          '${picked.month.toString().padLeft(2, '0')}-'
+          '${picked.day.toString().padLeft(2, '0')}';
+      setState(() { if (isFrom) { _dateFrom = iso; } else { _dateTo = iso; } });
+    }
+  }
+
+  void _apply() {
+    widget.cubit.setAdvancedFilters(
+      sourceId: _sourceId,
+      clearSourceId: _sourceId == null,
+      dateFrom: _dateFrom,
+      clearDateFrom: _dateFrom == null,
+      dateTo: _dateTo,
+      clearDateTo: _dateTo == null,
+    );
+    Navigator.of(context).pop();
+  }
+
+  void _clear() {
+    setState(() { _sourceId = null; _dateFrom = null; _dateTo = null; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final colors = context.appColors;
+    final lang = Localizations.localeOf(context).languageCode;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm, AppSpacing.md, bottomPad + AppSpacing.md),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(color: colors.hairline, borderRadius: AppRadii.pillAll),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Title row
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.leadsFilterSheet,
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: colors.inkStrong),
+                ),
+              ),
+              TextButton(
+                onPressed: _clear,
+                child: Text(l10n.leadsFilterClear, style: TextStyle(color: colors.error, fontSize: 13)),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Source picker
+          Text(l10n.leadsFilterSource,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkMuted)),
+          const SizedBox(height: AppSpacing.xs),
+          if (_loadingSources)
+            const Center(child: SizedBox(height: 32, width: 32, child: CircularProgressIndicator(strokeWidth: 2)))
+          else
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _FilterChip(
+                    label: lang == 'ar' ? 'الكل' : 'All',
+                    active: _sourceId == null,
+                    onTap: () => setState(() => _sourceId = null),
+                  ),
+                  for (final src in _sources) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    _FilterChip(
+                      label: src.name,
+                      active: _sourceId == src.id,
+                      onTap: () => setState(() => _sourceId = _sourceId == src.id ? null : src.id),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          const SizedBox(height: AppSpacing.md),
+
+          // Date range
+          Text(
+            lang == 'ar' ? 'نطاق التاريخ' : 'Date range',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: colors.inkMuted),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Row(
+            children: [
+              Expanded(child: _DateButton(
+                label: _dateFrom ?? l10n.leadsFilterDateFrom,
+                hasValue: _dateFrom != null,
+                onTap: () => _pickDate(true),
+                onClear: _dateFrom != null ? () => setState(() => _dateFrom = null) : null,
+                colors: colors,
+              )),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(child: _DateButton(
+                label: _dateTo ?? l10n.leadsFilterDateTo,
+                hasValue: _dateTo != null,
+                onTap: () => _pickDate(false),
+                onClear: _dateTo != null ? () => setState(() => _dateTo = null) : null,
+                colors: colors,
+              )),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.lg),
+
+          // Apply button
+          FilledButton(
+            onPressed: _apply,
+            child: Text(l10n.leadsFilterApply),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DateButton extends StatelessWidget {
+  const _DateButton({
+    required this.label,
+    required this.hasValue,
+    required this.onTap,
+    required this.colors,
+    this.onClear,
+  });
+  final String label;
+  final bool hasValue;
+  final VoidCallback onTap;
+  final VoidCallback? onClear;
+  final AppColorsExt colors;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 10),
+        decoration: BoxDecoration(
+          color: hasValue ? colors.brandNavy.withValues(alpha: 0.06) : colors.surface,
+          border: Border.all(
+            color: hasValue ? colors.brandNavy.withValues(alpha: 0.25) : colors.hairline,
+          ),
+          borderRadius: AppRadii.card,
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.calendar_today_outlined, size: 14,
+                color: hasValue ? colors.brandNavy : colors.inkMuted),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: hasValue ? colors.inkStrong : colors.inkMuted,
+                  fontWeight: hasValue ? FontWeight.w600 : FontWeight.w400,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (onClear != null)
+              GestureDetector(
+                onTap: onClear,
+                child: Icon(Icons.close_rounded, size: 14, color: colors.inkMuted),
+              ),
+          ],
         ),
       ),
     );

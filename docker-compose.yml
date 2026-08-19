@@ -172,7 +172,40 @@ services:
     ports:
       - "${WEB_ADMIN_PORT:-3001}:3001"
 
+  # ── Observability stack (optional profile: "obs") ──────────────────────────
+  # Start with:  docker compose --profile obs up -d
+  # Grafana UI:  http://localhost:3009  (admin / admin — change on first login)
+  # Prometheus:  http://localhost:9090
+  prometheus:
+    image: prom/prometheus:v2.54.0
+    profiles: ["obs"]
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    profiles: ["obs"]
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3009}:3000"
+
 volumes:
   postgres-data:
   redis-data:
   minio-data:
+  prometheus-data:
+  grafana-data:

@@ -367,6 +367,11 @@ async function backfillCompanyId(companyId: string) {
 }
 
 async function main() {
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED_IN_PRODUCTION !== 'true') {
+    console.error('Seed blocked: NODE_ENV=production. Set ALLOW_SEED_IN_PRODUCTION=true to override.');
+    process.exit(1);
+  }
+
   const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com';
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'ChangeMe123!';
 

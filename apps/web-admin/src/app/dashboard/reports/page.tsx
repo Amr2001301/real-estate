@@ -213,9 +213,10 @@ export default async function ReportsPage({
         ]}
         actions={
           <div className="flex items-center gap-2">
-            <ExportMenu label={m.exportSales}       xlsxPath="/reports/sales/export.xlsx"       csvPath="/reports/sales/export.csv"       filenameBase="sales-report"       params={exportParams} />
-            <ExportMenu label={m.exportFinancial}   xlsxPath="/reports/financial/export.xlsx"   csvPath="/reports/financial/export.csv"   filenameBase="financial-report"   params={exportParams} />
-            <ExportMenu label={m.exportOperational} xlsxPath="/reports/operational/export.xlsx" csvPath="/reports/operational/export.csv" filenameBase="operational-report" />
+            <ExportMenu label={m.exportSales}       xlsxPath="/reports/sales/export.xlsx"       pdfPath="/reports/sales/export.pdf"         csvPath="/reports/sales/export.csv"       filenameBase="sales-report"       params={exportParams} />
+            <ExportMenu label={m.exportFinancial}   xlsxPath="/reports/financial/export.xlsx"   pdfPath="/reports/financial/export.pdf"     csvPath="/reports/financial/export.csv"   filenameBase="financial-report"   params={exportParams} />
+            <ExportMenu label={m.exportBrokers}                                                  pdfPath="/reports/broker-leaderboard/export.pdf"                                     filenameBase="broker-report"      params={exportParams} />
+            <ExportMenu label={m.exportOperational} xlsxPath="/reports/operational/export.xlsx"                                             csvPath="/reports/operational/export.csv" filenameBase="operational-report" />
           </div>
         }
       />

@@ -5,6 +5,8 @@ import '../../domain/entities/lead.dart';
 import '../../domain/repositories/leads_repository.dart';
 import '../../domain/usecases/lead_use_cases.dart';
 
+export '../../domain/repositories/leads_repository.dart' show LeadSource;
+
 class LeadsListState extends Equatable {
   const LeadsListState({
     this.status = DataStatus.initial,
@@ -16,6 +18,9 @@ class LeadsListState extends Equatable {
     this.page = 1,
     this.hasMore = false,
     this.isLoadingMore = false,
+    this.sourceId,
+    this.dateFrom,
+    this.dateTo,
   });
 
   final DataStatus status;
@@ -27,6 +32,11 @@ class LeadsListState extends Equatable {
   final int page;
   final bool hasMore;
   final bool isLoadingMore;
+  final String? sourceId;
+  final String? dateFrom;
+  final String? dateTo;
+
+  bool get hasAdvancedFilters => sourceId != null || dateFrom != null || dateTo != null;
 
   LeadsListState copyWith({
     DataStatus? status,
@@ -39,6 +49,12 @@ class LeadsListState extends Equatable {
     int? page,
     bool? hasMore,
     bool? isLoadingMore,
+    String? sourceId,
+    bool clearSourceId = false,
+    String? dateFrom,
+    bool clearDateFrom = false,
+    String? dateTo,
+    bool clearDateTo = false,
   }) =>
       LeadsListState(
         status: status ?? this.status,
@@ -50,23 +66,41 @@ class LeadsListState extends Equatable {
         page: page ?? this.page,
         hasMore: hasMore ?? this.hasMore,
         isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+        sourceId: clearSourceId ? null : (sourceId ?? this.sourceId),
+        dateFrom: clearDateFrom ? null : (dateFrom ?? this.dateFrom),
+        dateTo: clearDateTo ? null : (dateTo ?? this.dateTo),
       );
 
   @override
   List<Object?> get props =>
-      [status, leads, failure, stage, search, mine, page, hasMore, isLoadingMore];
+      [status, leads, failure, stage, search, mine, page, hasMore, isLoadingMore,
+       sourceId, dateFrom, dateTo];
 }
 
 class LeadsCubit extends Cubit<LeadsListState> {
-  LeadsCubit(this._getLeads) : super(const LeadsListState());
+  LeadsCubit(this._getLeads, this._repo) : super(const LeadsListState());
 
   final GetLeads _getLeads;
+  final LeadsRepository _repo;
+
+  Future<List<LeadSource>> fetchSources() async {
+    final result = await _repo.getSources();
+    return result.when(ok: (list) => list, err: (_) => const []);
+  }
+
+  LeadsQuery _buildQuery({int page = 1}) => LeadsQuery(
+        stage: state.stage,
+        search: state.search,
+        mine: state.mine,
+        page: page,
+        sourceId: state.sourceId,
+        dateFrom: state.dateFrom,
+        dateTo: state.dateTo,
+      );
 
   Future<void> load() async {
     emit(state.copyWith(status: DataStatus.loading, page: 1, hasMore: false));
-    final result = await _getLeads(
-      LeadsQuery(stage: state.stage, search: state.search, mine: state.mine, page: 1),
-    );
+    final result = await _getLeads(_buildQuery());
     result.when(
       ok: (paged) => emit(state.copyWith(
         status: paged.data.isEmpty ? DataStatus.empty : DataStatus.success,
@@ -82,9 +116,7 @@ class LeadsCubit extends Cubit<LeadsListState> {
     if (!state.hasMore || state.isLoadingMore) return;
     final nextPage = state.page + 1;
     emit(state.copyWith(isLoadingMore: true));
-    final result = await _getLeads(
-      LeadsQuery(stage: state.stage, search: state.search, mine: state.mine, page: nextPage),
-    );
+    final result = await _getLeads(_buildQuery(page: nextPage));
     result.when(
       ok: (paged) => emit(state.copyWith(
         leads: [...state.leads, ...paged.data],
@@ -108,6 +140,34 @@ class LeadsCubit extends Cubit<LeadsListState> {
 
   Future<void> toggleMine() async {
     emit(state.copyWith(mine: !state.mine));
+    await load();
+  }
+
+  Future<void> setAdvancedFilters({
+    String? sourceId,
+    bool clearSourceId = false,
+    String? dateFrom,
+    bool clearDateFrom = false,
+    String? dateTo,
+    bool clearDateTo = false,
+  }) async {
+    emit(state.copyWith(
+      sourceId: sourceId,
+      clearSourceId: clearSourceId,
+      dateFrom: dateFrom,
+      clearDateFrom: clearDateFrom,
+      dateTo: dateTo,
+      clearDateTo: clearDateTo,
+    ));
+    await load();
+  }
+
+  Future<void> clearAdvancedFilters() async {
+    emit(state.copyWith(
+      clearSourceId: true,
+      clearDateFrom: true,
+      clearDateTo: true,
+    ));
     await load();
   }
 }

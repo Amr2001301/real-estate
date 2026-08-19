@@ -34,6 +34,8 @@ import { CurrentUser, AuthUser } from '../../common/decorators/current-user.deco
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { FirebaseService } from '../../common/firebase/firebase.service';
 import { PushService } from './push.service';
+import { AuthModule } from '../auth/auth.module';
+import { EmailService } from '../auth/email.service';
 
 class UpsertTemplateDto {
   @IsString() code!: string;
@@ -136,6 +138,28 @@ function resolveText(
   return interpolate(raw, payload);
 }
 
+/** Template codes for which an email is also dispatched (best-effort). */
+const EMAIL_ELIGIBLE_TEMPLATES = new Set([
+  'reservation_status_changed',
+  'reservation_submitted_admin',
+  'reservation_payment_requested',
+  'reservation_booking_paid',
+  'contract_created_customer',
+  'contract_signed_customer',
+  'contract_document_available',
+  'deposit_recorded',
+  'deposit_verified',
+  'maintenance_request_created',
+  'maintenance_request_assigned',
+  'maintenance_request_resolved',
+  'maintenance_request_closed',
+  'installment_due_soon',
+  'broker_approved',
+  'broker_suspended',
+  'user_account_approved',
+  'user_account_suspended',
+]);
+
 @Injectable()
 export class NotificationsService implements OnModuleInit {
   private readonly logger = new Logger(NotificationsService.name);
@@ -143,6 +167,7 @@ export class NotificationsService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly push: PushService,
+    private readonly email: EmailService,
   ) {}
 
   /**
@@ -282,11 +307,11 @@ export class NotificationsService implements OnModuleInit {
       },
     });
 
-    // Best-effort push in the recipient's locale; never fail the write on it.
+    // Best-effort push + email in the recipient's locale; never fail the write.
     try {
       const user = await this.prisma.user.findUnique({
         where: { id: dto.userId },
-        select: { locale: true },
+        select: { locale: true, email: true },
       });
       const locale = pickLocale(user?.locale ?? 'ar');
       // FCM data values must all be strings. Include entityType/entityId so
@@ -307,6 +332,20 @@ export class NotificationsService implements OnModuleInit {
         body: resolveText(tpl.body, payload, locale, ''),
         data: fcmData,
       });
+
+      // Email fan-out for key domain events — best-effort alongside push.
+      if (user?.email && EMAIL_ELIGIBLE_TEMPLATES.has(dto.templateCode)) {
+        const subject = resolveText(tpl.subject, payload, locale, dto.templateCode);
+        const bodyText = resolveText(tpl.body, payload, locale, '');
+        const htmlBody = `
+          <div dir="${locale === 'ar' ? 'rtl' : 'ltr'}" style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:32px;color:#1a1a2e;">
+            <h2 style="margin:0 0 16px;color:#0F1E33;">${subject}</h2>
+            <p style="margin:0 0 24px;line-height:1.7;">${bodyText}</p>
+            <hr style="margin:28px 0;border:none;border-top:1px solid #eee;"/>
+            <p style="margin:0;font-size:12px;color:#999;">© ديفورا — منصة الإدارة العقارية</p>
+          </div>`;
+        void this.email.sendNotificationEmail(user.email, subject, htmlBody);
+      }
     } catch (err) {
       this.logger.warn(
         `Push delivery failed for ${dto.templateCode}: ${(err as Error).message}`,
@@ -810,6 +849,7 @@ class NotificationsController {
 }
 
 @Module({
+  imports: [AuthModule],
   controllers: [NotificationsController],
   providers: [NotificationsService, PushService, FirebaseService],
   exports: [NotificationsService],

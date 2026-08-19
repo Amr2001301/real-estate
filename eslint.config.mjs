@@ -152,6 +152,20 @@ export default [
     },
   },
 
+  // Backend API — ban $queryRawUnsafe (bypasses tenant middleware + injection risk).
+  {
+    files: ['apps/api/src/**/*.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name='$queryRawUnsafe']",
+          message: 'Use $queryRaw(Prisma.sql`...`) — $queryRawUnsafe bypasses the tenant middleware and is SQL-injection-prone.',
+        },
+      ],
+    },
+  },
+
   // Plain JS / mjs / cjs (configs, scripts).
   {
     files: ['**/*.{js,mjs,cjs}'],

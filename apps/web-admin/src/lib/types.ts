@@ -107,6 +107,25 @@ export interface Unit {
   history?: UnitStatusHistoryEntry[];
 }
 
+export interface InventoryMatrixBuilding {
+  id: string; name: string;
+  available: number; reserved: number; sold: number; total: number; totalValue: number;
+}
+export interface InventoryMatrixPhase {
+  id: string; name: string;
+  available: number; reserved: number; sold: number; total: number; totalValue: number;
+  buildings: InventoryMatrixBuilding[];
+}
+export interface InventoryMatrixProject {
+  id: string; name: string; city: string | null;
+  available: number; reserved: number; sold: number; total: number; totalValue: number;
+  phases: InventoryMatrixPhase[];
+}
+export interface InventoryMatrixResult {
+  projects: InventoryMatrixProject[];
+  summary: { available: number; reserved: number; sold: number; total: number; totalValue: number };
+}
+
 export interface Lead {
   id: string;
   /** Linked Client (User). Required at the schema level after the

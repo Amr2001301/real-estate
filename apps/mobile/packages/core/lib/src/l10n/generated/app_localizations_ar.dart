@@ -1479,6 +1479,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get leadsFilterAll => 'الكل';
 
   @override
+  String get leadsFilterSource => 'المصدر';
+
+  @override
+  String get leadsFilterDateFrom => 'من تاريخ';
+
+  @override
+  String get leadsFilterDateTo => 'إلى تاريخ';
+
+  @override
+  String get leadsFilterApply => 'تطبيق الفلاتر';
+
+  @override
+  String get leadsFilterClear => 'مسح الكل';
+
+  @override
+  String get leadsActiveFilters => 'الفلاتر المفعّلة';
+
+  @override
+  String get leadsFilterSheet => 'تصفية العملاء المحتملين';
+
+  @override
   String get leadsMine => 'عملائي';
 
   @override

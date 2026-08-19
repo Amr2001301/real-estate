@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { getSession } from '@/lib/session';
-import type { Paged, Unit, Project, UnitStatus } from '@/lib/types';
-import { tx, formatCurrency } from '@/lib/format';
+import type { Paged, Project, UnitStatus, InventoryMatrixResult, InventoryMatrixProject, InventoryMatrixPhase, InventoryMatrixBuilding } from '@/lib/types';
+import { formatCurrency } from '@/lib/format';
 import { getReportsCurrency } from '@/lib/currency';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,28 +38,12 @@ import { uiT } from '@/messages/ui';
 export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 
-// TODO(backend): swap for a dedicated inventory-matrix endpoint when unit count > 1000
-const SNAPSHOT_SIZE = 1000;
-
 type StatusFilter = 'all' | UnitStatus;
 
 interface Filters {
   q?: string;
   status?: string;
   projectId?: string;
-}
-
-interface BuildingBucket {
-  id: string; name: string;
-  available: number; reserved: number; sold: number; total: number; totalValue: number;
-}
-interface PhaseBucket {
-  id: string; name: string; buildings: Map<string, BuildingBucket>;
-  available: number; reserved: number; sold: number; total: number; totalValue: number;
-}
-interface ProjectBucket {
-  id: string; name: string; city: string | null; phases: Map<string, PhaseBucket>;
-  available: number; reserved: number; sold: number; total: number; totalValue: number;
 }
 
 export default async function InventoryPage({
@@ -79,69 +63,31 @@ export default async function InventoryPage({
   const status: StatusFilter =
     sp.status === 'AVAILABLE' || sp.status === 'RESERVED' || sp.status === 'SOLD'
       ? sp.status : 'all';
-  const projectId  = sp.projectId?.trim() || '';
+  const projectId = sp.projectId?.trim() || '';
 
-  const unitsQs = new URLSearchParams({ pageSize: String(SNAPSHOT_SIZE) });
-  if (projectId) unitsQs.set('projectId', projectId);
+  const matrixQs = new URLSearchParams();
+  if (q) matrixQs.set('q', q);
+  if (status !== 'all') matrixQs.set('status', status);
+  if (projectId) matrixQs.set('projectId', projectId);
+  const matrixQsStr = matrixQs.toString();
 
-  const [unitsRes, projectsRes] = await Promise.all([
-    safe(api.get<Paged<Unit>>(`/units?${unitsQs.toString()}`)),
+  const [matrixRes, projectsRes] = await Promise.all([
+    safe(api.get<InventoryMatrixResult>(`/units/inventory-matrix${matrixQsStr ? `?${matrixQsStr}` : ''}`)),
     safe(api.get<Paged<Project>>('/projects?pageSize=200')),
   ]);
 
-  const loadError     = unitsRes.error;
-  const projectsError = projectsRes.error;
-  const allUnits      = unitsRes.data?.data ?? [];
-  const projects      = projectsRes.data?.data ?? [];
+  const loadError      = matrixRes.error;
+  const projectsError  = projectsRes.error;
+  const projects       = projectsRes.data?.data ?? [];
+  const summary        = matrixRes.data?.summary ?? { available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0 };
+  const projectBuckets = matrixRes.data?.projects ?? [];
 
-  let units = allUnits;
-  if (q) {
-    const needle = q.toLowerCase();
-    units = units.filter((u) => {
-      const pName = u.building?.phase?.project?.name
-        ? `${u.building.phase.project.name.ar ?? ''} ${u.building.phase.project.name.en ?? ''}`.toLowerCase()
-        : '';
-      return (
-        pName.includes(needle) ||
-        (u.building?.name ?? '').toLowerCase().includes(needle) ||
-        (u.code ?? '').toLowerCase().includes(needle)
-      );
-    });
-  }
-  const matrixUnits = status === 'all' ? units : units.filter((u) => u.status === status);
-
-  const total          = units.length;
-  const available      = units.filter((u) => u.status === 'AVAILABLE').length;
-  const reserved       = units.filter((u) => u.status === 'RESERVED').length;
-  const sold           = units.filter((u) => u.status === 'SOLD').length;
-  const inventoryValue = units.reduce((s, u) => s + Number(u.price ?? 0), 0);
+  const total          = summary.total;
+  const available      = summary.available;
+  const reserved       = summary.reserved;
+  const sold           = summary.sold;
+  const inventoryValue = summary.totalValue;
   const avgPrice       = total > 0 ? inventoryValue / total : 0;
-
-  // ── Matrix build ────────────────────────────────────────────────────────
-  const matrix = new Map<string, ProjectBucket>();
-  for (const u of matrixUnits) {
-    const proj  = u.building?.phase?.project;
-    const phase = u.building?.phase;
-    const bld   = u.building;
-    if (!proj || !phase || !bld) continue;
-
-    let pB = matrix.get(proj.id);
-    if (!pB) { pB = { id: proj.id, name: tx(proj.name), city: proj.city ?? null, phases: new Map(), available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0 }; matrix.set(proj.id, pB); }
-    let phB = pB.phases.get(phase.id);
-    if (!phB) { phB = { id: phase.id, name: tx(phase.name), buildings: new Map(), available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0 }; pB.phases.set(phase.id, phB); }
-    let bB = phB.buildings.get(bld.id);
-    if (!bB) { bB = { id: bld.id, name: bld.name, available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0 }; phB.buildings.set(bld.id, bB); }
-
-    const price = Number(u.price ?? 0);
-    bB.total++;  bB.totalValue  += price;
-    phB.total++; phB.totalValue += price;
-    pB.total++;  pB.totalValue  += price;
-    if (u.status === 'AVAILABLE') { bB.available++; phB.available++; pB.available++; }
-    else if (u.status === 'RESERVED') { bB.reserved++; phB.reserved++; pB.reserved++; }
-    else if (u.status === 'SOLD')     { bB.sold++;     phB.sold++;     pB.sold++;     }
-  }
-
-  const projectBuckets = [...matrix.values()].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
 
   // ── URL helpers ─────────────────────────────────────────────────────────
   const qs = (extra: Record<string, string | undefined>) => {
@@ -274,7 +220,7 @@ export default async function InventoryPage({
           >
             <option value="">{uiT(locale).common.allProjects}</option>
             {projects.map((p) => (
-              <option key={p.id} value={p.id}>{tx(p.name)}</option>
+              <option key={p.id} value={p.id}>{p.name as unknown as string}</option>
             ))}
           </Select>
         </PremiumFilterField>
@@ -457,12 +403,12 @@ function ProjectMatrixCard({
   currency,
   matrixLabels,
 }: {
-  proj: ProjectBucket;
+  proj: InventoryMatrixProject;
   unitsHref: (overrides: Record<string, string | undefined>) => string;
   currency: string;
   matrixLabels: MatrixLabels;
 }) {
-  const phases = [...proj.phases.values()].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  const phases = [...proj.phases].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
   const av = proj.total > 0 ? (proj.available / proj.total) * 100 : 0;
   const rs = proj.total > 0 ? (proj.reserved  / proj.total) * 100 : 0;
   const sl = proj.total > 0 ? (proj.sold      / proj.total) * 100 : 0;
@@ -561,7 +507,7 @@ function ProjectMatrixCard({
           </thead>
           <tbody>
             {phases.map((ph) => {
-              const buildings = [...ph.buildings.values()].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+              const buildings = [...ph.buildings].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
               return <PhaseRows key={ph.id} ph={ph} buildings={buildings} currency={currency} phaseBadgeLabel={matrixLabels.phaseBadge} />;
             })}
           </tbody>
@@ -573,7 +519,7 @@ function ProjectMatrixCard({
 
 // ── PhaseRows ─────────────────────────────────────────────────────────────────
 
-function PhaseRows({ ph, buildings, currency, phaseBadgeLabel }: { ph: PhaseBucket; buildings: BuildingBucket[]; currency: string; phaseBadgeLabel: string }) {
+function PhaseRows({ ph, buildings, currency, phaseBadgeLabel }: { ph: InventoryMatrixPhase; buildings: InventoryMatrixBuilding[]; currency: string; phaseBadgeLabel: string }) {
   return (
     <>
       <tr className="border-t border-hairline bg-canvas/60">

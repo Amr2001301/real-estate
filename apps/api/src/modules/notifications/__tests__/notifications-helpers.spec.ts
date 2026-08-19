@@ -3,6 +3,7 @@ import { NotificationChannel, UserRole } from '@prisma/client';
 import { NotificationsService } from '../notifications.module';
 import { PushService } from '../push.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { EmailService } from '../../auth/email.service';
 
 /**
  * P3 — Unit tests for the broadcast helpers added on top of the existing
@@ -56,8 +57,9 @@ function makeService(prismaLike: ReturnType<typeof makePrisma>, opts?: { pushThr
       ? jest.fn().mockRejectedValue(new Error('push down'))
       : jest.fn().mockResolvedValue({ enabled: true, sent: 0, failed: 0, pruned: 0 }),
   } as unknown as PushService;
+  const emailStub = { sendNotificationEmail: jest.fn().mockResolvedValue(undefined) } as unknown as EmailService;
   // Cast prismaLike to PrismaService — it implements only the slice we use.
-  const svc = new NotificationsService(prismaLike as unknown as PrismaService, push);
+  const svc = new NotificationsService(prismaLike as unknown as PrismaService, push, emailStub);
   // Silence the helper's warning logs in the assertion output.
   jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   return { svc, push };

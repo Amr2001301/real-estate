@@ -16,9 +16,10 @@ class _FakeRemote implements LeadsRemoteDataSource {
   final DioException? error;
 
   @override
-  Future<List<LeadRowDto>> list(LeadsQuery query) async {
+  Future<Paginated<LeadRowDto>> list(LeadsQuery query) async {
     if (error != null) throw error!;
-    return rows;
+    final meta = PageMeta(page: 1, pageSize: 20, total: rows.length, totalPages: 1);
+    return Paginated(data: rows, meta: meta);
   }
 
   @override
@@ -27,19 +28,35 @@ class _FakeRemote implements LeadsRemoteDataSource {
   Future<void> updateStage(String id, String stage, String? reason) async {}
   @override
   Future<void> addNote(String id, String body) async {}
+  @override
+  Future<LeadRowDto> create(NewLead input) async => throw UnimplementedError();
+  @override
+  Future<List<LeadSourceDto>> listSources() async => const [];
 }
 
 class _FakeRepo implements LeadsRepository {
   _FakeRepo(this._leads);
   final Result<List<Lead>> _leads;
+
   @override
-  Future<Result<List<Lead>>> getLeads(LeadsQuery query) async => _leads;
+  Future<Result<Paginated<Lead>>> getLeads(LeadsQuery query) async => _leads.when(
+        ok: (list) {
+          final meta = PageMeta(page: 1, pageSize: 20, total: list.length, totalPages: 1);
+          return Ok(Paginated(data: list, meta: meta));
+        },
+        err: Err.new,
+      );
+
   @override
   Future<Result<LeadDetail>> getLead(String id) async => throw UnimplementedError();
   @override
   Future<Result<void>> updateStage(String id, String stage, {String? reason}) async => const Ok(null);
   @override
   Future<Result<void>> addNote(String id, String body) async => const Ok(null);
+  @override
+  Future<Result<Lead>> createLead(NewLead input) async => throw UnimplementedError();
+  @override
+  Future<Result<List<LeadSource>>> getSources() async => const Ok([]);
 }
 
 Map<String, dynamic> _row({String stage = 'NEW'}) => {
@@ -98,7 +115,7 @@ void main() {
     test('success maps rows', () async {
       final repo = LeadsRepositoryImpl(_FakeRemote(rows: [LeadRowDto.fromJson(_row())]));
       final result = await repo.getLeads(const LeadsQuery());
-      expect(result.dataOrNull, hasLength(1));
+      expect(result.dataOrNull?.data, hasLength(1));
     });
   });
 
@@ -106,20 +123,23 @@ void main() {
     Lead lead(String stage) => Lead(id: 'l1', fullName: 'Mona', stage: stage);
 
     test('empty → empty state', () async {
-      final cubit = LeadsCubit(GetLeads(_FakeRepo(const Ok([]))));
+      final repo = _FakeRepo(const Ok([]));
+      final cubit = LeadsCubit(GetLeads(repo), repo);
       await cubit.load();
       expect(cubit.state.status, DataStatus.empty);
     });
 
     test('setStage updates filter and reloads', () async {
-      final cubit = LeadsCubit(GetLeads(_FakeRepo(Ok([lead('WON')]))));
+      final repo = _FakeRepo(Ok([lead('WON')]));
+      final cubit = LeadsCubit(GetLeads(repo), repo);
       await cubit.setStage('WON');
       expect(cubit.state.stage, 'WON');
       expect(cubit.state.status, DataStatus.success);
     });
 
     test('toggleMine flips the mine flag', () async {
-      final cubit = LeadsCubit(GetLeads(_FakeRepo(Ok([lead('NEW')]))));
+      final repo = _FakeRepo(Ok([lead('NEW')]));
+      final cubit = LeadsCubit(GetLeads(repo), repo);
       await cubit.toggleMine();
       expect(cubit.state.mine, isTrue);
     });

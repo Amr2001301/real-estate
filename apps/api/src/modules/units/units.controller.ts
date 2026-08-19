@@ -19,6 +19,7 @@ import { UnitsService } from './units.service';
 import {
   CalcInstallmentDto,
   CreateUnitDto,
+  InventoryMatrixQueryDto,
   UnitQueryDto,
   UpdateUnitDto,
   UpdateUnitStatusDto,
@@ -57,6 +58,14 @@ export class UnitsController {
   @Get('units')
   list(@Query() query: UnitQueryDto) {
     return this.units.findAll(query);
+  }
+
+  // Must be declared before `units/:id` so the literal segment wins over the param route.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('units:read')
+  @Get('units/inventory-matrix')
+  inventoryMatrix(@Query() query: InventoryMatrixQueryDto) {
+    return this.units.inventoryMatrix(query);
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Injectable,
   Logger,
@@ -446,6 +447,7 @@ export class ContractsService {
     salesIds?: string[];
   }) {
     const where: Prisma.ContractWhereInput = {
+      deletedAt: null,
       ...(opts.salesIds ? { reservation: { salesId: { in: opts.salesIds } } } : {}),
       ...(opts.customerId ? { customerId: opts.customerId } : {}),
       ...(opts.brokerId ? { brokerId: opts.brokerId } : {}),
@@ -546,6 +548,19 @@ export class ContractsService {
     });
     if (!contract) throw new NotFoundException('Contract not found');
     return contract;
+  }
+
+  async softDelete(id: string) {
+    const exists = await this.prisma.contract.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+    if (!exists) throw new NotFoundException('Contract not found');
+    if (exists.deletedAt) throw new NotFoundException('Contract already deleted');
+    await this.prisma.contract.update({ where: { id }, data: { deletedAt: new Date() } });
+  }
+
+  async restore(id: string) {
+    const exists = await this.prisma.contract.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+    if (!exists) throw new NotFoundException('Contract not found');
+    await this.prisma.contract.update({ where: { id }, data: { deletedAt: null } });
   }
 
   async update(id: string, dto: UpdateContractDto, actorId: string) {
@@ -900,6 +915,20 @@ class ContractsController {
     @Body() dto: AttachContractDocumentDto,
   ) {
     return this.svc.attachDocument(id, user.sub, dto);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('contracts:delete')
+  @Delete(':id')
+  softDelete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.softDelete(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('contracts:delete')
+  @Post(':id/restore')
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.svc.restore(id);
   }
 }
 

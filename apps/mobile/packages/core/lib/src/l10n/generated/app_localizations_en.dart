@@ -1495,6 +1495,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leadsFilterAll => 'All';
 
   @override
+  String get leadsFilterSource => 'Source';
+
+  @override
+  String get leadsFilterDateFrom => 'From date';
+
+  @override
+  String get leadsFilterDateTo => 'To date';
+
+  @override
+  String get leadsFilterApply => 'Apply filters';
+
+  @override
+  String get leadsFilterClear => 'Clear all';
+
+  @override
+  String get leadsActiveFilters => 'Active filters';
+
+  @override
+  String get leadsFilterSheet => 'Filter leads';
+
+  @override
   String get leadsMine => 'My leads';
 
   @override

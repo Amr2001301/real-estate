@@ -92,6 +92,9 @@ export class LeadsController {
     @Query('q') q?: string,
     @Query('mine') mine?: string,
     @Query('clientId') clientId?: string,
+    @Query('sourceId') sourceId?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
     @Query('page') page = 1,
     @Query('pageSize') pageSize = 20,
   ) {
@@ -105,6 +108,9 @@ export class LeadsController {
       q,
       assignedToMe,
       clientId,
+      sourceId,
+      dateFrom,
+      dateTo,
     });
   }
 

@@ -28,7 +28,7 @@ class StaffProjectDetailScreen extends StatefulWidget {
 }
 
 class _StaffProjectDetailScreenState extends State<StaffProjectDetailScreen> {
-  String? _unitStatusFilter;
+  String? _unitStatusFilter; // UI-only: tracks which pill is highlighted
   late final ScrollController _scroll;
   double _px = 0;
   final _unitsSectionKey = GlobalKey();
@@ -102,13 +102,9 @@ class _StaffProjectDetailScreenState extends State<StaffProjectDetailScreen> {
             final p = detail.project;
             final description = detail.description?.resolve(lang);
             final name = p.name.resolve(lang);
-            final allUnits = detail.units;
-
-            final units = _unitStatusFilter == null
-                ? allUnits
-                : allUnits
-                    .where((u) => u.status == _unitStatusFilter)
-                    .toList();
+            final units = detail.units; // already filtered by API
+            final allUnits =
+                context.read<StaffProjectDetailCubit>().baseUnits;
 
             final availableUnits =
                 allUnits.where((u) => u.status == 'AVAILABLE').toList();
@@ -272,8 +268,12 @@ class _StaffProjectDetailScreenState extends State<StaffProjectDetailScreen> {
                                 child: AppFilterPills<String?>(
                                   allLabel: l10n.leadsFilterAll,
                                   selected: _unitStatusFilter,
-                                  onSelected: (v) => setState(
-                                      () => _unitStatusFilter = v),
+                                  onSelected: (v) {
+                                    setState(() => _unitStatusFilter = v);
+                                    context
+                                        .read<StaffProjectDetailCubit>()
+                                        .filterByStatus(v);
+                                  },
                                   options: const [
                                     FilterPillOption(
                                         value: 'AVAILABLE',

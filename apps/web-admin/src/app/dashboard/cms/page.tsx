@@ -1,6 +1,7 @@
 import { revalidatePath } from 'next/cache';
 import type { ReactNode } from 'react';
-import { FileText, Image, BookOpen, Plus, Globe, FileEdit } from 'lucide-react';
+import Link from 'next/link';
+import { FileText, Image, BookOpen, Plus, Globe, FileEdit, Pencil } from 'lucide-react';
 import { api, safe } from '@/lib/api';
 import { tx, formatDate } from '@/lib/format';
 import type { Translatable } from '@/lib/types';
@@ -352,14 +353,21 @@ export default async function CmsPage() {
       </div>
 
       {/* ── Section 3: Articles ────────────────────────────────────────────── */}
-      {/*
-       * Articles are read-only from this page — no create action exists here.
-       * Static header: no toggle, no form panel.
-       */}
       <PremiumSectionCard
         icon={<BookOpen />}
         title={m.sectionArticlesTitle}
-        trailing={articles.length > 0 ? <CountChip count={articles.length} /> : undefined}
+        trailing={
+          <div className="flex items-center gap-2">
+            {articles.length > 0 && <CountChip count={articles.length} />}
+            <Link
+              href="/dashboard/cms/articles/new"
+              className="inline-flex items-center gap-1 rounded-lg bg-brand-50 border border-brand-200 px-2.5 py-1 text-xs font-medium text-brand-700 hover:bg-brand-100 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {m.createArticleLabel}
+            </Link>
+          </div>
+        }
         padded={false}
       >
         {articles.length === 0 ? (
@@ -377,6 +385,7 @@ export default async function CmsPage() {
                   <th className="text-start font-semibold py-2.5 px-4">{m.colArticlePath}</th>
                   <th className="text-start font-semibold py-2.5 px-4">{m.colArticleStatus}</th>
                   <th className="text-start font-semibold py-2.5 px-4 whitespace-nowrap">{m.colCreatedAt}</th>
+                  <th className="text-start font-semibold py-2.5 px-4"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-hairline">
@@ -403,6 +412,15 @@ export default async function CmsPage() {
                     </td>
                     <td className="py-3 px-4 text-2xs text-slate-400 whitespace-nowrap">
                       {formatDate(a.createdAt)}
+                    </td>
+                    <td className="py-3 px-4">
+                      <Link
+                        href={`/dashboard/cms/articles/${a.slug}/edit`}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-slate-600 hover:text-brand-700 hover:bg-brand-50 transition-colors"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        {m.editArticleLabel}
+                      </Link>
                     </td>
                   </tr>
                 ))}

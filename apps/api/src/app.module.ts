@@ -56,6 +56,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { MeHomeModule } from './modules/me-home/me-home.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { HealthController } from './modules/health/health.controller';
+import { MetricsModule } from './common/observability/metrics.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { HealthController } from './modules/health/health.controller';
     ChatModule,
     MeHomeModule,
     SuperAdminModule,
+    MetricsModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -10,6 +10,7 @@ abstract interface class LeadsRemoteDataSource {
   Future<void> updateStage(String id, String stage, String? reason);
   Future<void> addNote(String id, String body);
   Future<LeadRowDto> create(NewLead input);
+  Future<List<LeadSourceDto>> listSources();
 }
 
 class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
@@ -26,6 +27,9 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
         'stage': ?query.stage,
         'q': ?(query.search?.isNotEmpty == true ? query.search : null),
         if (query.mine) 'mine': '1',
+        'sourceId': ?query.sourceId,
+        'dateFrom': ?query.dateFrom,
+        'dateTo': ?query.dateTo,
       },
     );
     final json = res.data ?? const <String, dynamic>{};
@@ -76,5 +80,14 @@ class LeadsRemoteDataSourceImpl implements LeadsRemoteDataSource {
       },
     );
     return LeadRowDto.fromJson(res.data ?? const {});
+  }
+
+  @override
+  Future<List<LeadSourceDto>> listSources() async {
+    final res = await _dio.get<List<dynamic>>('/lead-sources');
+    return (res.data ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(LeadSourceDto.fromJson)
+        .toList();
   }
 }

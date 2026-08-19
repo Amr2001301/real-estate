@@ -5,7 +5,7 @@ import '../dtos/staff_catalog_dtos.dart';
 abstract interface class StaffCatalogRemoteDataSource {
   Future<List<StaffProjectDto>> listProjects({String? search});
   Future<StaffProjectDto> getProject(String id);
-  Future<List<StaffUnitDto>> listUnits({required String projectId});
+  Future<List<StaffUnitDto>> listUnits({required String projectId, String? status});
   Future<StaffUnitDto> getUnit(String id);
 }
 
@@ -34,10 +34,15 @@ class StaffCatalogRemoteDataSourceImpl implements StaffCatalogRemoteDataSource {
   }
 
   @override
-  Future<List<StaffUnitDto>> listUnits({required String projectId}) async {
+  Future<List<StaffUnitDto>> listUnits({required String projectId, String? status}) async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/units',
-      queryParameters: {'page': 1, 'pageSize': 100, 'projectId': projectId},
+      queryParameters: {
+        'page': 1,
+        'pageSize': 100,
+        'projectId': projectId,
+        'status': ?(status),
+      },
     );
     final data = (res.data?['data'] as List?) ?? const [];
     return data.whereType<Map<String, dynamic>>().map(StaffUnitDto.fromJson).toList();

@@ -36,4 +36,12 @@ class LeadsRepositoryImpl implements LeadsRepository {
   Future<Result<Lead>> createLead(NewLead input) {
     return guardApiCall(() async => (await _remote.create(input)).toEntity());
   }
+
+  @override
+  Future<Result<List<LeadSource>>> getSources() {
+    return guardApiCall(() async {
+      final dtos = await _remote.listSources();
+      return dtos.map((d) => LeadSource(id: d.id, name: d.name)).toList();
+    });
+  }
 }

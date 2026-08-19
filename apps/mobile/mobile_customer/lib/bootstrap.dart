@@ -1,11 +1,14 @@
 import 'package:core/core.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_performance/firebase_performance.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'app.dart';
+import 'crashlytics_reporter.dart';
 import 'firebase_options.dart';
 import 'features/notifications/presentation/fcm_route_resolver.dart';
 
@@ -87,6 +90,11 @@ Future<void> _initFirebase() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+
+    // Crashlytics: route all uncaught Flutter errors + set the app error reporter.
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    AppLog.reporter = const CrashlyticsErrorReporter();
+
     FirebaseMessaging.onBackgroundMessage(_fcmBackgroundHandler);
 
     // Show alert/badge/sound on iOS even while the app is in the foreground.
@@ -102,10 +110,11 @@ Future<void> _initFirebase() async {
       pendingPushRoute = resolveFcmRoute(initialMessage);
     }
 
-    debugPrint('[Firebase] FCM initialized');
+    await FirebasePerformance.instance.setPerformanceCollectionEnabled(true);
+
+    debugPrint('[Firebase] FCM + Crashlytics + Performance initialized');
   } catch (e) {
-    // Firebase credentials not configured yet — push is disabled.
-    // See docs/mobile-firebase-setup.md to enable.
+    // Firebase credentials not configured yet — push and crash reporting disabled.
     debugPrint('[Firebase] FCM disabled: $e');
   }
 }

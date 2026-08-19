@@ -58,7 +58,7 @@ function makePrismaMock() {
     brokerCommission: { aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }) },
     brokerPayout: { groupBy: jest.fn().mockResolvedValue([]) },
     document: { findMany: emptyArr() },
-    $queryRawUnsafe: jest.fn().mockResolvedValue([]),
+    $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn().mockImplementation(async (ops: unknown) =>
       Array.isArray(ops) ? Promise.all(ops) : ops,
     ),

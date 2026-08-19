@@ -225,6 +225,13 @@ class CmsController {
 
   @Roles(UserRole.ADMIN)
   @Permissions('cms:articles:manage')
+  @Get('cms/articles/:slug')
+  getArticle(@Param('slug') slug: string) {
+    return this.svc.getArticle(slug);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('cms:articles:manage')
   @Post('cms/articles')
   upsertArticle(@Body() dto: UpsertArticleDto) {
     return this.svc.upsertArticle(dto);

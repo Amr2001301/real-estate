@@ -105,3 +105,9 @@ export class CalcInstallmentDto {
   @IsNumber() @Min(0) downPayment!: number;
   @IsInt() @Min(1) totalMonths!: number;
 }
+
+export class InventoryMatrixQueryDto {
+  @IsOptional() @IsString() q?: string;
+  @IsOptional() @IsUUID() projectId?: string;
+  @IsOptional() @IsEnum(UnitStatus) status?: UnitStatus;
+}

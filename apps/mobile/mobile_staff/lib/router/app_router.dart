@@ -379,6 +379,7 @@ GoRouter createStaffRouter(
           return BlocProvider(
             create: (ctx) => StaffProjectDetailCubit(
               GetStaffProjectDetail(ctx.read<StaffCatalogRepository>()),
+              ctx.read<StaffCatalogRepository>(),
               projectId: id,
             ),
             child: StaffProjectDetailScreen(fallback: project),

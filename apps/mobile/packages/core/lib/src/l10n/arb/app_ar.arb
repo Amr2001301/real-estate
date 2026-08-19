@@ -526,6 +526,13 @@
 
   "leadsSearchHint": "ابحث بالاسم أو الهاتف",
   "leadsFilterAll": "الكل",
+  "leadsFilterSource": "المصدر",
+  "leadsFilterDateFrom": "من تاريخ",
+  "leadsFilterDateTo": "إلى تاريخ",
+  "leadsFilterApply": "تطبيق الفلاتر",
+  "leadsFilterClear": "مسح الكل",
+  "leadsActiveFilters": "الفلاتر المفعّلة",
+  "leadsFilterSheet": "تصفية العملاء المحتملين",
   "leadsMine": "عملائي",
   "leadsEmptyTitle": "لا يوجد عملاء محتملون",
   "leadsEmptyMessage": "سيظهر هنا العملاء المحتملون المسندون إليك.",

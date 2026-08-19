@@ -199,6 +199,9 @@ export class LeadsService {
     q?: string;
     assignedToMe?: string;
     clientId?: string;
+    sourceId?: string;
+    dateFrom?: string;
+    dateTo?: string;
   }) {
     const page = opts.page ?? 1;
     const pageSize = opts.pageSize ?? 20;
@@ -211,6 +214,15 @@ export class LeadsService {
           : {}),
       ...(opts.assignedToMe ? { assignedSalesId: opts.assignedToMe } : {}),
       ...(opts.clientId ? { clientId: opts.clientId } : {}),
+      ...(opts.sourceId ? { sourceId: opts.sourceId } : {}),
+      ...(opts.dateFrom || opts.dateTo
+        ? {
+            createdAt: {
+              ...(opts.dateFrom ? { gte: new Date(opts.dateFrom) } : {}),
+              ...(opts.dateTo ? { lte: new Date(opts.dateTo + 'T23:59:59.999Z') } : {}),
+            },
+          }
+        : {}),
       ...(opts.q
         ? {
             OR: [

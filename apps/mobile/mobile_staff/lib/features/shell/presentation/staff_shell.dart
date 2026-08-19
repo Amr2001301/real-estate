@@ -64,7 +64,10 @@ class _StaffShellState extends State<StaffShell> {
       child: const DashboardScreen(),
     ),
     BlocProvider(
-      create: (ctx) => LeadsCubit(GetLeads(ctx.read<LeadsRepository>())),
+      create: (ctx) {
+        final repo = ctx.read<LeadsRepository>();
+        return LeadsCubit(GetLeads(repo), repo);
+      },
       child: const LeadsScreen(),
     ),
     BlocProvider(

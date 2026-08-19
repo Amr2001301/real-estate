@@ -7,13 +7,15 @@ import {
 import { Prisma, UnitStatus } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import {
+  CalcInstallmentDto,
   CreateUnitDto,
+  InventoryMatrixQueryDto,
   UnitQueryDto,
   UnitSort,
   UpdateUnitDto,
   UpdateUnitStatusDto,
-  CalcInstallmentDto,
 } from './dto/unit.dto';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { paginate, takeSkip } from '../../common/utils/pagination';
 import { serializePublicUnit } from './public-unit.serializer';
 
@@ -252,6 +254,136 @@ export class UnitsService {
       schedule.push({ month: m, amount: monthlyAmount, cumulative });
     }
     return { monthlyAmount, schedule };
+  }
+
+  async inventoryMatrix(query: InventoryMatrixQueryDto) {
+    const companyId = getRequiredCompanyId();
+
+    const conditions: Prisma.Sql[] = [Prisma.sql`p."companyId" = ${companyId}`];
+    if (query.projectId) {
+      conditions.push(Prisma.sql`ph."projectId" = ${query.projectId}`);
+    }
+    if (query.q?.trim()) {
+      const needle = `%${query.q.trim()}%`;
+      conditions.push(
+        Prisma.sql`(b.name ILIKE ${needle} OR p.name->>'ar' ILIKE ${needle} OR p.name->>'en' ILIKE ${needle})`,
+      );
+    }
+    const whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
+
+    interface MatrixRow {
+      projectId: string;
+      projectName: unknown;
+      projectCity: string | null;
+      phaseId: string;
+      phaseName: unknown;
+      buildingId: string;
+      buildingName: string;
+      total: number;
+      available: number;
+      reserved: number;
+      sold: number;
+      valueAvailable: number;
+      valueReserved: number;
+      valueSold: number;
+      totalValue: number;
+    }
+
+    const rows = await this.prisma.$queryRaw<MatrixRow[]>(Prisma.sql`
+      SELECT
+        p.id              AS "projectId",
+        p.name            AS "projectName",
+        p.city            AS "projectCity",
+        ph.id             AS "phaseId",
+        ph.name           AS "phaseName",
+        b.id              AS "buildingId",
+        b.name            AS "buildingName",
+        COUNT(*)::int                                                             AS total,
+        COUNT(*) FILTER (WHERE u.status = 'AVAILABLE')::int                      AS available,
+        COUNT(*) FILTER (WHERE u.status = 'RESERVED')::int                       AS reserved,
+        COUNT(*) FILTER (WHERE u.status = 'SOLD')::int                           AS sold,
+        COALESCE(SUM(u.price) FILTER (WHERE u.status = 'AVAILABLE'), 0)::float8  AS "valueAvailable",
+        COALESCE(SUM(u.price) FILTER (WHERE u.status = 'RESERVED'),  0)::float8  AS "valueReserved",
+        COALESCE(SUM(u.price) FILTER (WHERE u.status = 'SOLD'),      0)::float8  AS "valueSold",
+        COALESCE(SUM(u.price), 0)::float8                                        AS "totalValue"
+      FROM "Unit" u
+      JOIN "Building" b  ON b.id  = u."buildingId"
+      JOIN "Phase"    ph ON ph.id = b."phaseId"
+      JOIN "Project"  p  ON p.id  = ph."projectId"
+      ${whereClause}
+      GROUP BY p.id, p.name, p.city, ph.id, ph.name, b.id, b.name
+      ORDER BY p.name->>'ar', ph.name->>'ar', b.name
+    `);
+
+    // Summary counts (always all statuses — used for KPI strip and status chips)
+    const summary = rows.reduce(
+      (acc, r) => ({
+        available:  acc.available  + Number(r.available),
+        reserved:   acc.reserved   + Number(r.reserved),
+        sold:       acc.sold       + Number(r.sold),
+        total:      acc.total      + Number(r.total),
+        totalValue: acc.totalValue + Number(r.totalValue),
+      }),
+      { available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0 },
+    );
+
+    // Build nested Project → Phase → Building structure.
+    // When a status filter is active, mask other-status counts to zero so the
+    // matrix mirrors the previous client-side filter behaviour exactly.
+    const statusKey = query.status as string | undefined;
+
+    type PhaseBucket = {
+      id: string; name: unknown;
+      available: number; reserved: number; sold: number; total: number; totalValue: number;
+      buildings: { id: string; name: string; available: number; reserved: number; sold: number; total: number; totalValue: number }[];
+    };
+    type ProjectBucket = {
+      id: string; name: unknown; city: string | null;
+      available: number; reserved: number; sold: number; total: number; totalValue: number;
+      phases: Map<string, PhaseBucket>;
+    };
+
+    const projectMap = new Map<string, ProjectBucket>();
+
+    for (const row of rows) {
+      let av = Number(row.available);
+      let rs = Number(row.reserved);
+      let sl = Number(row.sold);
+      let tv = Number(row.totalValue);
+
+      if (statusKey === 'AVAILABLE') { rs = 0; sl = 0; tv = Number(row.valueAvailable); }
+      else if (statusKey === 'RESERVED') { av = 0; sl = 0; tv = Number(row.valueReserved); }
+      else if (statusKey === 'SOLD')     { av = 0; rs = 0; tv = Number(row.valueSold); }
+
+      const tt = av + rs + sl;
+      if (statusKey && tt === 0) continue; // building has none of the requested status
+
+      let proj = projectMap.get(row.projectId);
+      if (!proj) {
+        proj = {
+          id: row.projectId, name: row.projectName, city: row.projectCity,
+          available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0, phases: new Map(),
+        };
+        projectMap.set(row.projectId, proj);
+      }
+      proj.available += av; proj.reserved += rs; proj.sold += sl;
+      proj.total += tt;     proj.totalValue += tv;
+
+      let phase = proj.phases.get(row.phaseId);
+      if (!phase) {
+        phase = {
+          id: row.phaseId, name: row.phaseName,
+          available: 0, reserved: 0, sold: 0, total: 0, totalValue: 0, buildings: [],
+        };
+        proj.phases.set(row.phaseId, phase);
+      }
+      phase.available += av; phase.reserved += rs; phase.sold += sl;
+      phase.total += tt;     phase.totalValue += tv;
+      phase.buildings.push({ id: row.buildingId, name: row.buildingName, available: av, reserved: rs, sold: sl, total: tt, totalValue: tv });
+    }
+
+    const projects = [...projectMap.values()].map((p) => ({ ...p, phases: [...p.phases.values()] }));
+    return { summary, projects };
   }
 
   private async assertExists(id: string) {

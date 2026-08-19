@@ -3,6 +3,7 @@ import { NotificationChannel, UserRole } from '@prisma/client';
 import { NotificationsService, BroadcastTarget, BroadcastChannel } from '../notifications.module';
 import { PushService, PushResult } from '../push.service';
 import { PrismaService } from '../../../common/prisma/prisma.service';
+import { EmailService } from '../../auth/email.service';
 
 /**
  * Broadcast hardening unit tests.
@@ -111,7 +112,8 @@ function makeService(
         ),
   } as unknown as PushService;
 
-  const svc = new NotificationsService(prismaLike as unknown as PrismaService, push);
+  const emailStub = { sendNotificationEmail: jest.fn().mockResolvedValue(undefined) } as unknown as EmailService;
+  const svc = new NotificationsService(prismaLike as unknown as PrismaService, push, emailStub);
   jest.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
   jest.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
   return { svc, push };

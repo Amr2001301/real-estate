@@ -529,6 +529,13 @@
 
   "leadsSearchHint": "Search by name or phone",
   "leadsFilterAll": "All",
+  "leadsFilterSource": "Source",
+  "leadsFilterDateFrom": "From date",
+  "leadsFilterDateTo": "To date",
+  "leadsFilterApply": "Apply filters",
+  "leadsFilterClear": "Clear all",
+  "leadsActiveFilters": "Active filters",
+  "leadsFilterSheet": "Filter leads",
   "leadsMine": "My leads",
   "leadsEmptyTitle": "No leads",
   "leadsEmptyMessage": "Leads assigned to you will appear here.",

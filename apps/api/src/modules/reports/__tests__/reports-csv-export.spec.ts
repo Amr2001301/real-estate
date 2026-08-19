@@ -82,7 +82,7 @@ function makePrismaMock() {
     brokerCommission: { aggregate: jest.fn().mockResolvedValue({ _sum: { netAmount: 0 }, _count: { _all: 0 } }) },
     brokerPayout: { groupBy: jest.fn().mockResolvedValue([]) },
     document: { findMany: emptyArr() },
-    $queryRawUnsafe: jest.fn().mockResolvedValue([]),
+    $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: jest.fn().mockImplementation(async (ops: unknown) => {
       if (Array.isArray(ops)) return Promise.all(ops);
       return ops;
@@ -127,7 +127,7 @@ describe('Reports module · CSV export', () => {
   beforeEach(() => {
     FakeAuthGuard.currentUser = null;
     prismaMock.userPermission.findMany.mockClear();
-    prismaMock.$queryRawUnsafe.mockClear();
+    prismaMock.$queryRaw.mockClear();
   });
 
   // ── Metadata ────────────────────────────────────────────────────────────
@@ -297,10 +297,14 @@ describe('Reports module · CSV export', () => {
       await request(app.getHttpServer())
         .get('/reports/sales/export.csv?period=2030-03')
         .expect(200);
-      // sales() builds a $queryRawUnsafe with the sanitized period embedded.
-      const calls = prismaMock.$queryRawUnsafe.mock.calls;
+      // sales() builds a $queryRaw with the Prisma.sql tagged template; the
+      // second argument is the period string bound as a parameter.
+      const calls = prismaMock.$queryRaw.mock.calls;
       expect(calls.length).toBeGreaterThan(0);
-      expect(String(calls[0]![0])).toContain('2030-03');
+      // The period value is passed as a parameterised SQL literal, not embedded
+      // in the query string — verify it appears somewhere in the call args.
+      const args = JSON.stringify(calls);
+      expect(args).toContain('2030-03');
     });
 
     it('ADMIN missing reports:sales:read is NOT blocked (bypass)', async () => {

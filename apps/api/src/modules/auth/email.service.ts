@@ -97,6 +97,28 @@ export class EmailService {
     }
   }
 
+  /**
+   * Generic transactional email for domain events (reservation, contract,
+   * deposit, maintenance). Subject and HTML body are resolved by the caller
+   * from the notification template. Best-effort — never throws.
+   */
+  async sendNotificationEmail(to: string, subject: string, htmlBody: string): Promise<void> {
+    const from = this.config.get<string>('SMTP_FROM') ?? 'noreply@devora.sa';
+    const transporter = this.createTransporter();
+    if (!transporter) {
+      if (this.config.get<string>('NODE_ENV') !== 'production') {
+        this.logger.warn(`[email] notification email to ${to} — ${subject}`);
+      }
+      return;
+    }
+    try {
+      const text = htmlBody.replace(/<[^>]+>/g, '');
+      await transporter.sendMail({ from, to, subject, text, html: htmlBody });
+    } catch (err) {
+      this.logger.error(`Failed to send notification email to ${to}: ${(err as Error).message}`);
+    }
+  }
+
   private createTransporter(): Transporter | null {
     const host = this.config.get<string>('SMTP_HOST');
     const user = this.config.get<string>('SMTP_USER');

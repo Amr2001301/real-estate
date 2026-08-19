@@ -12,6 +12,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { DateSerializerInterceptor } from './common/interceptors/date-serializer.interceptor';
+import { ApiVersionInterceptor } from './common/interceptors/api-version.interceptor';
 import { JsonLoggerService } from './common/logging/json-logger.service';
 import { requestIdMiddleware } from './common/logging/request-id.middleware';
 import { isSentryEnabled } from './common/observability/sentry';
@@ -33,7 +34,7 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/'] });
+  app.setGlobalPrefix('v1', { exclude: ['health', 'health/live', 'health/ready', '/', 'metrics'] });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -44,12 +45,12 @@ async function bootstrap() {
     }),
   );
 
-  app.useGlobalInterceptors(new DateSerializerInterceptor());
+  app.useGlobalInterceptors(new DateSerializerInterceptor(), new ApiVersionInterceptor());
 
   const swagger = new DocumentBuilder()
-    .setTitle('Devora API')
-    .setDescription('Backend for Public, Admin, Sales, Client/Customer surfaces')
-    .setVersion('0.1.0')
+    .setTitle('Devora API v1')
+    .setDescription('Backend for Public, Admin, Sales, Client/Customer surfaces. All endpoints are prefixed /v1. See docs/API_VERSIONING.md for the versioning policy.')
+    .setVersion('1.0.0')
     .addBearerAuth()
     .build();
   const doc = SwaggerModule.createDocument(app, swagger);

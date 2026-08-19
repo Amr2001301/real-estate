@@ -6,20 +6,18 @@ import { Button } from '@/components/ui/button';
 
 /**
  * P15.2 — shared export control. Styled XLSX is the default (single click on the
- * main button); the caret reveals a menu with the raw-data CSV fallback (and,
- * later, a board-style report). All downloads are binary-safe (fetch → blob →
- * anchor) and route through the authenticated proxies:
+ * main button); the caret reveals a menu with PDF and raw-data CSV options.
+ * All downloads are binary-safe (fetch → blob → anchor) routed through proxies:
  *   • XLSX/PDF → /api/export  (preserves raw bytes + content-type)
  *   • CSV      → /api/csv     (text fallback)
- *
- * Shows a loading state and a friendly Arabic error — never a raw backend error,
- * never a silent no-op.
  */
 interface ExportMenuProps {
-  /** API path (no /v1) for the styled XLSX — must be whitelisted on /api/export. */
-  xlsxPath: string;
+  /** API path (no /v1) for the styled XLSX. When omitted, pdfPath becomes primary. */
+  xlsxPath?: string;
   /** Base name for the downloaded file (date + extension appended). */
   filenameBase: string;
+  /** Optional branded PDF path — must be whitelisted on /api/export. */
+  pdfPath?: string;
   /** Optional raw-data CSV fallback path — must be whitelisted on /api/csv. */
   csvPath?: string;
   /** Extra query params (filters) forwarded to the upstream endpoint. */
@@ -31,6 +29,7 @@ interface ExportMenuProps {
 export function ExportMenu({
   xlsxPath,
   filenameBase,
+  pdfPath,
   csvPath,
   params,
   label = 'تصدير',
@@ -95,6 +94,12 @@ export function ExportMenu({
   }
 
   const loading = state === 'loading';
+  // Primary action: XLSX if available, otherwise PDF.
+  const primaryPath = xlsxPath ?? pdfPath ?? '';
+  const primaryExt  = xlsxPath ? 'xlsx' : 'pdf';
+  const primaryIcon = xlsxPath ? <FileSpreadsheet className="h-4 w-4" /> : <FileText className="h-4 w-4" />;
+  // Show the caret dropdown when there are secondary options beyond the primary.
+  const hasSecondary = (xlsxPath && pdfPath) || pdfPath || csvPath;
 
   return (
     <div className="flex flex-col items-stretch sm:items-end gap-1">
@@ -104,13 +109,13 @@ export function ExportMenu({
           variant="outline"
           size="md"
           loading={loading}
-          leftIcon={<FileSpreadsheet className="h-4 w-4" />}
-          onClick={() => download('export', xlsxPath, 'xlsx')}
+          leftIcon={primaryIcon}
+          onClick={() => download('export', primaryPath, primaryExt)}
         >
           {label}
         </Button>
 
-        {csvPath && (
+        {hasSecondary && (
           <>
             <Button
               type="button"
@@ -130,18 +135,30 @@ export function ExportMenu({
                 role="menu"
                 className="absolute end-0 top-full mt-2 w-56 bg-surface border border-hairline rounded-2xl shadow-lg p-1.5 animate-fade-in z-50"
               >
-                <MenuItem
-                  icon={<FileSpreadsheet className="h-4 w-4" />}
-                  label="ملف Excel ‏(.xlsx)"
-                  hint="منسّق"
-                  onClick={() => download('export', xlsxPath, 'xlsx')}
-                />
-                <MenuItem
-                  icon={<FileText className="h-4 w-4" />}
-                  label="ملف CSV"
-                  hint="بيانات خام"
-                  onClick={() => download('csv', csvPath, 'csv')}
-                />
+                {xlsxPath && (
+                  <MenuItem
+                    icon={<FileSpreadsheet className="h-4 w-4" />}
+                    label="ملف Excel ‏(.xlsx)"
+                    hint="منسّق"
+                    onClick={() => download('export', xlsxPath, 'xlsx')}
+                  />
+                )}
+                {pdfPath && (
+                  <MenuItem
+                    icon={<FileText className="h-4 w-4" />}
+                    label="ملف PDF"
+                    hint="مُبرمَج"
+                    onClick={() => download('export', pdfPath, 'pdf')}
+                  />
+                )}
+                {csvPath && (
+                  <MenuItem
+                    icon={<FileText className="h-4 w-4" />}
+                    label="ملف CSV"
+                    hint="بيانات خام"
+                    onClick={() => download('csv', csvPath, 'csv')}
+                  />
+                )}
               </div>
             )}
           </>

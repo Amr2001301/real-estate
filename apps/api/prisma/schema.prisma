@@ -1010,6 +1010,8 @@ model Reservation {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  deletedAt DateTime?
+
   @@index([unitId])
   @@index([salesId])
   @@index([clientId])
@@ -1019,6 +1021,7 @@ model Reservation {
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
+  @@index([deletedAt])
 }
 
 enum ReservationActivityType {
@@ -1097,12 +1100,15 @@ model Contract {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  deletedAt DateTime?
+
   @@index([customerId])
   @@index([unitId])
   @@index([reservationId])
   @@index([brokerId])
   @@index([brokerAgentId])
   @@index([companyId])
+  @@index([deletedAt])
 }
 
 model InstallmentPlan {
@@ -1197,12 +1203,15 @@ model Deposit {
   companyId String?  @db.Uuid
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  deletedAt DateTime?
+
   @@index([contractId])
   @@index([reservationId])
   @@index([reviewStatus])
   @@index([reviewedById])
   @@index([proofDocumentId])
   @@index([companyId])
+  @@index([deletedAt])
 }
 
 // =============================================================================

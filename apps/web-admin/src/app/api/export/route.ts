@@ -30,6 +30,10 @@ const ALLOWED = [
   /^\/broker-reports\/export\/summary\.xlsx$/,
   // P15.5 — broker-portal performance (broker-scoped; firm comes from the token)
   /^\/portal\/performance\/export\.xlsx$/,
+  // PDF exports — sales, financial, broker leaderboard
+  /^\/reports\/sales\/export\.pdf$/,
+  /^\/reports\/financial\/export\.pdf$/,
+  /^\/reports\/broker-leaderboard\/export\.pdf$/,
 ];
 
 const XLSX_MIME =
