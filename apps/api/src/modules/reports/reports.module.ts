@@ -24,6 +24,7 @@ import {
   DepositType,
   DocumentCategory,
   DocumentOwnerType,
+  InfoRequestStatus,
   InstallmentStatus,
   MaintenanceStatus,
   Prisma,
@@ -339,7 +340,7 @@ class ReportsService {
         where: { status: ReservationStatus.PENDING, expiresAt: { gte: now, lte: expiringHorizon } },
       }),
       this.prisma.visitAppointment.count({ where: { status: AppointmentStatus.SCHEDULED } }),
-      this.prisma.infoRequest.count({ where: { status: 'OPEN' } }),
+      this.prisma.infoRequest.count({ where: { status: InfoRequestStatus.OPEN } }),
       // ── extended inventory / pipeline ──
       this.prisma.unit.count({ where: { status: UnitStatus.SOLD } }),
       this.prisma.contract.count({ where: { signedAt: { not: null } } }),

@@ -102,6 +102,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorUnknown => 'An unexpected error occurred. Please try again.';
 
   @override
+  String get offlineMessage => 'No internet connection';
+
+  @override
   String get settingsTitle => 'Settings';
 
   @override
@@ -532,6 +535,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requestInfo => 'Request info';
 
   @override
+  String get infoRequestTitle => 'Request Information';
+
+  @override
+  String get infoRequestMessage => 'Message';
+
+  @override
+  String get infoRequestMessageHint =>
+      'What would you like to know about this project?';
+
+  @override
+  String get infoRequestMessageRequired => 'Please enter a message';
+
+  @override
+  String get infoRequestSubmit => 'Send Request';
+
+  @override
+  String get infoRequestSuccess =>
+      'Your request has been sent. We\'ll be in touch soon.';
+
+  @override
   String areaValue(String value) {
     return '$value m²';
   }
@@ -685,6 +708,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get authAcceptTerms => 'I accept the terms and conditions';
+
+  @override
+  String get authForgotPassword => 'Forgot password?';
+
+  @override
+  String get authForgotPasswordTitle => 'Reset password';
+
+  @override
+  String get authForgotPasswordSubtitle =>
+      'Enter your email address and we\'ll send you a reset link.';
+
+  @override
+  String get authForgotPasswordSent =>
+      'If that email is registered, a reset link has been sent.';
+
+  @override
+  String get authForgotPasswordSend => 'Send reset link';
+
+  @override
+  String get authResetPasswordTitle => 'New password';
+
+  @override
+  String get authResetPasswordSubtitle =>
+      'Enter the token from your email and choose a new password.';
+
+  @override
+  String get authResetToken => 'Reset token';
+
+  @override
+  String get authNewPassword => 'New password';
+
+  @override
+  String get authResetSuccess => 'Password updated. Please log in.';
+
+  @override
+  String get authResetSubmit => 'Set new password';
 
   @override
   String get fieldEmail => 'Email';
@@ -1022,6 +1081,27 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contractsDocumentsTitle => 'Documents';
 
   @override
+  String get contractCustomer => 'Customer';
+
+  @override
+  String get contractUnit => 'Unit';
+
+  @override
+  String get contractTotalAmount => 'Total amount';
+
+  @override
+  String get contractDownPayment => 'Down payment';
+
+  @override
+  String get contractSalesRep => 'Sales rep';
+
+  @override
+  String get contractMonthlyPayment => 'Monthly payment';
+
+  @override
+  String get contractInstallmentLabel => 'Installment plan';
+
+  @override
   String get documentsEmptyTitle => 'No documents';
 
   @override
@@ -1067,6 +1147,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get depositTypePayment => 'Payment';
+
+  @override
+  String get navDeposits => 'Deposits';
+
+  @override
+  String get recordDeposit => 'Record Payment';
+
+  @override
+  String get depositAmount => 'Amount';
+
+  @override
+  String get depositPaymentDate => 'Payment date';
+
+  @override
+  String get depositSelectInstallment => 'Select installment';
+
+  @override
+  String get depositContractRef => 'Contract';
+
+  @override
+  String get depositRecordSuccess => 'Payment recorded successfully';
 
   @override
   String get installmentsTitle => 'Installments';
@@ -1442,6 +1543,30 @@ class AppLocalizationsEn extends AppLocalizations {
   String get leadActivityReservation => 'Reservation';
 
   @override
+  String get leadNew => 'New lead';
+
+  @override
+  String get leadCreate => 'Create lead';
+
+  @override
+  String get leadCreated => 'Lead created.';
+
+  @override
+  String get leadFullName => 'Full name';
+
+  @override
+  String get leadFullNameRequired => 'Please enter a name.';
+
+  @override
+  String get leadPhone => 'Phone';
+
+  @override
+  String get leadEmail => 'Email';
+
+  @override
+  String get leadNotes => 'Notes';
+
+  @override
   String get clientsSubtitle =>
       'Track your clients and their current opportunities';
 
@@ -1569,6 +1694,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get navReservations => 'Reservations';
+
+  @override
+  String get navContracts => 'Contracts';
 
   @override
   String get visitsToday => 'Today';
@@ -1702,6 +1830,36 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customerRescheduleReasonLabel => 'Reschedule reason';
+
+  @override
+  String get visitReschedule => 'Reschedule';
+
+  @override
+  String get visitRescheduleSuccess => 'Visit rescheduled.';
+
+  @override
+  String get visitReassign => 'Reassign';
+
+  @override
+  String get visitReassignSalesHint => 'Enter staff member ID';
+
+  @override
+  String get visitReassignSuccess => 'Visit reassigned.';
+
+  @override
+  String get visitSalesFeedback => 'Sales feedback';
+
+  @override
+  String get visitFeedbackNotes => 'Feedback notes';
+
+  @override
+  String get visitFeedbackRating => 'Rating (1–5)';
+
+  @override
+  String get visitFeedbackSubmit => 'Submit feedback';
+
+  @override
+  String get visitFeedbackSuccess => 'Feedback submitted.';
 
   @override
   String get reservationsEmptyTitle => 'No reservations';

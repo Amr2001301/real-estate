@@ -10,10 +10,10 @@ class LeadsRepositoryImpl implements LeadsRepository {
   final LeadsRemoteDataSource _remote;
 
   @override
-  Future<Result<List<Lead>>> getLeads(LeadsQuery query) {
+  Future<Result<Paginated<Lead>>> getLeads(LeadsQuery query) {
     return guardApiCall(() async {
-      final rows = await _remote.list(query);
-      return rows.map((r) => r.toEntity()).toList();
+      final page = await _remote.list(query);
+      return page.map((r) => r.toEntity());
     });
   }
 
@@ -30,5 +30,10 @@ class LeadsRepositoryImpl implements LeadsRepository {
   @override
   Future<Result<void>> addNote(String id, String body) {
     return guardApiCall(() => _remote.addNote(id, body));
+  }
+
+  @override
+  Future<Result<Lead>> createLead(NewLead input) {
+    return guardApiCall(() async => (await _remote.create(input)).toEntity());
   }
 }

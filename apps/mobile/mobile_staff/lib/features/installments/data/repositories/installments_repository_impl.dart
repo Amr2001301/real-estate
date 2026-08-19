@@ -16,4 +16,9 @@ class InstallmentsRepositoryImpl implements InstallmentsRepository {
       return rows.map((r) => r.toEntity()).toList();
     });
   }
+
+  @override
+  Future<Result<InstallmentResult>> calculateInstallment(InstallmentInput input) {
+    return guardApiCall(() => _remote.calculateInstallment(input));
+  }
 }

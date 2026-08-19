@@ -48,6 +48,24 @@ enum MaintenanceResolvedBy {
   }
 }
 
+/// Warranty status snapshotted at request creation.
+enum MaintenanceWarrantyStatus {
+  inWarranty('IN_WARRANTY'),
+  outOfWarranty('OUT_OF_WARRANTY'),
+  unknown('UNKNOWN');
+
+  const MaintenanceWarrantyStatus(this.wire);
+  final String wire;
+
+  static MaintenanceWarrantyStatus? fromWire(String? wire) {
+    if (wire == null || wire.isEmpty) return null;
+    for (final v in values) {
+      if (v.wire == wire) return v;
+    }
+    return null;
+  }
+}
+
 /// Status transitions a supervisor may drive (mirrors backend
 /// SUPERVISOR_TRANSITIONS; the backend re-validates).
 enum MaintenanceTransition {
@@ -75,6 +93,9 @@ class MaintenanceRequest extends Equatable {
     this.unitLng,
     this.unitAddress,
     this.categoryName,
+    this.warrantyStatus,
+    this.warrantyEndSnapshot,
+    this.itemName,
     this.createdAt,
     this.approvedAt,
     this.assignedAt,
@@ -104,6 +125,9 @@ class MaintenanceRequest extends Equatable {
   final double? unitLng;
   final String? unitAddress;
   final Translatable? categoryName;
+  final MaintenanceWarrantyStatus? warrantyStatus;
+  final DateTime? warrantyEndSnapshot;
+  final Translatable? itemName;
   final DateTime? createdAt;
   final DateTime? approvedAt;
   final DateTime? assignedAt;
@@ -167,7 +191,6 @@ class MaintenanceDoc extends Equatable {
   final String id;
   final String? title;
   final String? fileName;
-  // TODO(backend): populate once the staff detail endpoint returns signed URLs.
   final String? url;
   final String? mimeType;
 

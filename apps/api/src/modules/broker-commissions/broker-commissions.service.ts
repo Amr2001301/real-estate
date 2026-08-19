@@ -5,7 +5,7 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { BrokerCommissionStatus, Prisma } from '@prisma/client';
+import { BrokerCommissionStatus, LeadActivityType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.module';
 import { paginate, takeSkip } from '../../common/utils/pagination';
@@ -531,7 +531,7 @@ export class BrokerCommissionsService {
 
   private async writeActivity(
     commissionId: string,
-    type: string,
+    type: LeadActivityType,
     payload: Record<string, unknown>,
   ): Promise<void> {
     try {

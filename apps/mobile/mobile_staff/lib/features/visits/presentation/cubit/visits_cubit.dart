@@ -12,6 +12,9 @@ class VisitsListState extends Equatable {
     this.failure,
     this.statusFilter,
     this.today = false,
+    this.page = 1,
+    this.hasMore = false,
+    this.isLoadingMore = false,
   });
 
   final DataStatus status;
@@ -19,6 +22,9 @@ class VisitsListState extends Equatable {
   final AppFailure? failure;
   final String? statusFilter;
   final bool today;
+  final int page;
+  final bool hasMore;
+  final bool isLoadingMore;
 
   VisitsListState copyWith({
     DataStatus? status,
@@ -27,6 +33,9 @@ class VisitsListState extends Equatable {
     String? statusFilter,
     bool clearStatusFilter = false,
     bool? today,
+    int? page,
+    bool? hasMore,
+    bool? isLoadingMore,
   }) =>
       VisitsListState(
         status: status ?? this.status,
@@ -34,10 +43,14 @@ class VisitsListState extends Equatable {
         failure: failure ?? this.failure,
         statusFilter: clearStatusFilter ? null : (statusFilter ?? this.statusFilter),
         today: today ?? this.today,
+        page: page ?? this.page,
+        hasMore: hasMore ?? this.hasMore,
+        isLoadingMore: isLoadingMore ?? this.isLoadingMore,
       );
 
   @override
-  List<Object?> get props => [status, visits, failure, statusFilter, today];
+  List<Object?> get props =>
+      [status, visits, failure, statusFilter, today, page, hasMore, isLoadingMore];
 }
 
 class VisitsCubit extends Cubit<VisitsListState> {
@@ -47,16 +60,36 @@ class VisitsCubit extends Cubit<VisitsListState> {
   final GetVisits _getVisits;
 
   Future<void> load() async {
-    emit(state.copyWith(status: DataStatus.loading));
+    emit(state.copyWith(status: DataStatus.loading, page: 1, hasMore: false));
     final result = await _getVisits(
-      VisitsQuery(status: state.statusFilter, today: state.today),
+      VisitsQuery(status: state.statusFilter, today: state.today, page: 1),
     );
     result.when(
-      ok: (visits) => emit(state.copyWith(
-        status: visits.isEmpty ? DataStatus.empty : DataStatus.success,
-        visits: visits,
+      ok: (paged) => emit(state.copyWith(
+        status: paged.data.isEmpty ? DataStatus.empty : DataStatus.success,
+        visits: paged.data,
+        page: 1,
+        hasMore: paged.hasMore,
       )),
       err: (failure) => emit(state.copyWith(status: DataStatus.failure, failure: failure)),
+    );
+  }
+
+  Future<void> loadMore() async {
+    if (!state.hasMore || state.isLoadingMore) return;
+    final nextPage = state.page + 1;
+    emit(state.copyWith(isLoadingMore: true));
+    final result = await _getVisits(
+      VisitsQuery(status: state.statusFilter, today: state.today, page: nextPage),
+    );
+    result.when(
+      ok: (paged) => emit(state.copyWith(
+        visits: [...state.visits, ...paged.data],
+        page: nextPage,
+        hasMore: paged.hasMore,
+        isLoadingMore: false,
+      )),
+      err: (_) => emit(state.copyWith(isLoadingMore: false)),
     );
   }
 

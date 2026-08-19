@@ -69,6 +69,14 @@ class AuthRepositoryImpl implements AuthRepository {
     await _tokenStorage.clear();
     return const Ok(null);
   }
+
+  @override
+  Future<Result<void>> forgotPassword(String email) =>
+      guardApiCall(() => _remote.forgotPassword(email));
+
+  @override
+  Future<Result<void>> resetPassword(String token, String newPassword) =>
+      guardApiCall(() => _remote.resetPassword(token, newPassword));
 }
 
 /// Sentinel so a missing refresh token maps to an unauthorized AppFailure.

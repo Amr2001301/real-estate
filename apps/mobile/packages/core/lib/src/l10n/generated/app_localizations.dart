@@ -272,6 +272,12 @@ abstract class AppLocalizations {
   /// **'An unexpected error occurred. Please try again.'**
   String get errorUnknown;
 
+  /// No description provided for @offlineMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection'**
+  String get offlineMessage;
+
   /// No description provided for @settingsTitle.
   ///
   /// In en, this message translates to:
@@ -1076,6 +1082,42 @@ abstract class AppLocalizations {
   /// **'Request info'**
   String get requestInfo;
 
+  /// No description provided for @infoRequestTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Request Information'**
+  String get infoRequestTitle;
+
+  /// No description provided for @infoRequestMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Message'**
+  String get infoRequestMessage;
+
+  /// No description provided for @infoRequestMessageHint.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to know about this project?'**
+  String get infoRequestMessageHint;
+
+  /// No description provided for @infoRequestMessageRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a message'**
+  String get infoRequestMessageRequired;
+
+  /// No description provided for @infoRequestSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Request'**
+  String get infoRequestSubmit;
+
+  /// No description provided for @infoRequestSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Your request has been sent. We\'ll be in touch soon.'**
+  String get infoRequestSuccess;
+
   /// No description provided for @areaValue.
   ///
   /// In en, this message translates to:
@@ -1357,6 +1399,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I accept the terms and conditions'**
   String get authAcceptTerms;
+
+  /// No description provided for @authForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get authForgotPassword;
+
+  /// No description provided for @authForgotPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset password'**
+  String get authForgotPasswordTitle;
+
+  /// No description provided for @authForgotPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email address and we\'ll send you a reset link.'**
+  String get authForgotPasswordSubtitle;
+
+  /// No description provided for @authForgotPasswordSent.
+  ///
+  /// In en, this message translates to:
+  /// **'If that email is registered, a reset link has been sent.'**
+  String get authForgotPasswordSent;
+
+  /// No description provided for @authForgotPasswordSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get authForgotPasswordSend;
+
+  /// No description provided for @authResetPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get authResetPasswordTitle;
+
+  /// No description provided for @authResetPasswordSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the token from your email and choose a new password.'**
+  String get authResetPasswordSubtitle;
+
+  /// No description provided for @authResetToken.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset token'**
+  String get authResetToken;
+
+  /// No description provided for @authNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get authNewPassword;
+
+  /// No description provided for @authResetSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated. Please log in.'**
+  String get authResetSuccess;
+
+  /// No description provided for @authResetSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Set new password'**
+  String get authResetSubmit;
 
   /// No description provided for @fieldEmail.
   ///
@@ -2000,6 +2108,48 @@ abstract class AppLocalizations {
   /// **'Documents'**
   String get contractsDocumentsTitle;
 
+  /// No description provided for @contractCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer'**
+  String get contractCustomer;
+
+  /// No description provided for @contractUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get contractUnit;
+
+  /// No description provided for @contractTotalAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Total amount'**
+  String get contractTotalAmount;
+
+  /// No description provided for @contractDownPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Down payment'**
+  String get contractDownPayment;
+
+  /// No description provided for @contractSalesRep.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales rep'**
+  String get contractSalesRep;
+
+  /// No description provided for @contractMonthlyPayment.
+  ///
+  /// In en, this message translates to:
+  /// **'Monthly payment'**
+  String get contractMonthlyPayment;
+
+  /// No description provided for @contractInstallmentLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Installment plan'**
+  String get contractInstallmentLabel;
+
   /// No description provided for @documentsEmptyTitle.
   ///
   /// In en, this message translates to:
@@ -2089,6 +2239,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Payment'**
   String get depositTypePayment;
+
+  /// No description provided for @navDeposits.
+  ///
+  /// In en, this message translates to:
+  /// **'Deposits'**
+  String get navDeposits;
+
+  /// No description provided for @recordDeposit.
+  ///
+  /// In en, this message translates to:
+  /// **'Record Payment'**
+  String get recordDeposit;
+
+  /// No description provided for @depositAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount'**
+  String get depositAmount;
+
+  /// No description provided for @depositPaymentDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment date'**
+  String get depositPaymentDate;
+
+  /// No description provided for @depositSelectInstallment.
+  ///
+  /// In en, this message translates to:
+  /// **'Select installment'**
+  String get depositSelectInstallment;
+
+  /// No description provided for @depositContractRef.
+  ///
+  /// In en, this message translates to:
+  /// **'Contract'**
+  String get depositContractRef;
+
+  /// No description provided for @depositRecordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Payment recorded successfully'**
+  String get depositRecordSuccess;
 
   /// No description provided for @installmentsTitle.
   ///
@@ -2768,6 +2960,54 @@ abstract class AppLocalizations {
   /// **'Reservation'**
   String get leadActivityReservation;
 
+  /// No description provided for @leadNew.
+  ///
+  /// In en, this message translates to:
+  /// **'New lead'**
+  String get leadNew;
+
+  /// No description provided for @leadCreate.
+  ///
+  /// In en, this message translates to:
+  /// **'Create lead'**
+  String get leadCreate;
+
+  /// No description provided for @leadCreated.
+  ///
+  /// In en, this message translates to:
+  /// **'Lead created.'**
+  String get leadCreated;
+
+  /// No description provided for @leadFullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get leadFullName;
+
+  /// No description provided for @leadFullNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a name.'**
+  String get leadFullNameRequired;
+
+  /// No description provided for @leadPhone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get leadPhone;
+
+  /// No description provided for @leadEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get leadEmail;
+
+  /// No description provided for @leadNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get leadNotes;
+
   /// No description provided for @clientsSubtitle.
   ///
   /// In en, this message translates to:
@@ -2989,6 +3229,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reservations'**
   String get navReservations;
+
+  /// No description provided for @navContracts.
+  ///
+  /// In en, this message translates to:
+  /// **'Contracts'**
+  String get navContracts;
 
   /// No description provided for @visitsToday.
   ///
@@ -3241,6 +3487,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reschedule reason'**
   String get customerRescheduleReasonLabel;
+
+  /// No description provided for @visitReschedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Reschedule'**
+  String get visitReschedule;
+
+  /// No description provided for @visitRescheduleSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit rescheduled.'**
+  String get visitRescheduleSuccess;
+
+  /// No description provided for @visitReassign.
+  ///
+  /// In en, this message translates to:
+  /// **'Reassign'**
+  String get visitReassign;
+
+  /// No description provided for @visitReassignSalesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter staff member ID'**
+  String get visitReassignSalesHint;
+
+  /// No description provided for @visitReassignSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit reassigned.'**
+  String get visitReassignSuccess;
+
+  /// No description provided for @visitSalesFeedback.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales feedback'**
+  String get visitSalesFeedback;
+
+  /// No description provided for @visitFeedbackNotes.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback notes'**
+  String get visitFeedbackNotes;
+
+  /// No description provided for @visitFeedbackRating.
+  ///
+  /// In en, this message translates to:
+  /// **'Rating (1–5)'**
+  String get visitFeedbackRating;
+
+  /// No description provided for @visitFeedbackSubmit.
+  ///
+  /// In en, this message translates to:
+  /// **'Submit feedback'**
+  String get visitFeedbackSubmit;
+
+  /// No description provided for @visitFeedbackSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Feedback submitted.'**
+  String get visitFeedbackSuccess;
 
   /// No description provided for @reservationsEmptyTitle.
   ///

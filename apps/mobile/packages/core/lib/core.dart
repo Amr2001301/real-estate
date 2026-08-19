@@ -60,6 +60,7 @@ export 'src/common/date_formatter.dart';
 export 'src/contact/contact_actions.dart';
 
 // Network
+export 'src/network/connectivity_cubit.dart';
 export 'src/network/dio_client.dart';
 export 'src/network/interceptors/auth_interceptor.dart'
     show
@@ -107,6 +108,9 @@ export 'src/widgets/summary_tile.dart';
 
 // Foreground in-app notification banner (shared between customer + staff)
 export 'src/notifications/notification_banner.dart';
+
+// Offline connectivity banner
+export 'src/widgets/offline_banner.dart';
 
 // Gallery (dev/visual verification)
 export 'src/gallery/component_gallery_screen.dart';

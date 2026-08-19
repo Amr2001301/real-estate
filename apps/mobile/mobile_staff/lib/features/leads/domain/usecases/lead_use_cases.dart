@@ -3,12 +3,12 @@ import 'package:core/core_domain.dart';
 import '../entities/lead.dart';
 import '../repositories/leads_repository.dart';
 
-class GetLeads implements UseCase<List<Lead>, LeadsQuery> {
+class GetLeads implements UseCase<Paginated<Lead>, LeadsQuery> {
   const GetLeads(this._repo);
   final LeadsRepository _repo;
 
   @override
-  Future<Result<List<Lead>>> call(LeadsQuery params) => _repo.getLeads(params);
+  Future<Result<Paginated<Lead>>> call(LeadsQuery params) => _repo.getLeads(params);
 }
 
 class GetLeadDetail implements UseCase<LeadDetail, String> {
@@ -48,4 +48,12 @@ class AddLeadNote implements UseCase<void, AddLeadNoteParams> {
   @override
   Future<Result<void>> call(AddLeadNoteParams params) =>
       _repo.addNote(params.id, params.body);
+}
+
+class CreateLead implements UseCase<Lead, NewLead> {
+  const CreateLead(this._repo);
+  final LeadsRepository _repo;
+
+  @override
+  Future<Result<Lead>> call(NewLead params) => _repo.createLead(params);
 }

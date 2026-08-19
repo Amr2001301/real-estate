@@ -9,6 +9,8 @@ abstract interface class StaffAuthRemoteDataSource {
   Future<AuthBundleDto> login(String email, String password);
   Future<AuthBundleDto> refresh(String refreshToken);
   Future<void> logout(String refreshToken);
+  Future<void> forgotPassword(String email);
+  Future<void> resetPassword(String token, String newPassword);
 }
 
 class StaffAuthRemoteDataSourceImpl implements StaffAuthRemoteDataSource {
@@ -43,6 +45,24 @@ class StaffAuthRemoteDataSourceImpl implements StaffAuthRemoteDataSource {
     await _dio.post<Map<String, dynamic>>(
       '/auth/logout',
       data: {'refreshToken': refreshToken},
+      options: _public,
+    );
+  }
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    await _dio.post<void>(
+      '/auth/forgot-password',
+      data: {'email': email},
+      options: _public,
+    );
+  }
+
+  @override
+  Future<void> resetPassword(String token, String newPassword) async {
+    await _dio.post<void>(
+      '/auth/reset-password',
+      data: {'token': token, 'newPassword': newPassword},
       options: _public,
     );
   }

@@ -33,10 +33,9 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
 
   Future<void> _apply(VisitTransition t) async {
     final cubit = context.read<VisitDetailCubit>();
-    // Cancel / no-show optionally capture a reason.
     if (t == VisitTransition.cancel || t == VisitTransition.noShow) {
       final reason = await _askReason();
-      if (reason == null) return; // dismissed
+      if (reason == null) return;
       await cubit.apply(t, reason: reason.isEmpty ? null : reason);
     } else {
       await cubit.apply(t);
@@ -63,6 +62,116 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
     );
     controller.dispose();
     return result;
+  }
+
+  Future<void> _doReschedule() async {
+    final l10n = context.l10n;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked == null || !mounted) return;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (time == null || !mounted) return;
+    final scheduledAt = DateTime(
+      picked.year, picked.month, picked.day,
+      time.hour, time.minute,
+    );
+    await context.read<VisitDetailCubit>().reschedule(scheduledAt);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.visitRescheduleSuccess)),
+      );
+    }
+  }
+
+  Future<void> _doReassign() async {
+    final l10n = context.l10n;
+    final controller = TextEditingController();
+    final salesId = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.visitReassign),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(hintText: l10n.visitReassignSalesHint),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.actionCancel)),
+          TextButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                Navigator.pop(ctx, controller.text.trim());
+              }
+            },
+            child: Text(l10n.actionContinue),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (salesId == null || !mounted) return;
+    await context.read<VisitDetailCubit>().assign(salesId);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.visitReassignSuccess)),
+      );
+    }
+  }
+
+  Future<void> _doFeedback() async {
+    final l10n = context.l10n;
+    final notesController = TextEditingController();
+    final ratingController = TextEditingController();
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.visitSalesFeedback),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: ratingController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(hintText: l10n.visitFeedbackRating),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: notesController,
+              maxLines: 3,
+              decoration: InputDecoration(hintText: l10n.visitFeedbackNotes),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.actionCancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.visitFeedbackSubmit),
+          ),
+        ],
+      ),
+    );
+    final rating = int.tryParse(ratingController.text.trim());
+    final notes = notesController.text.trim();
+    notesController.dispose();
+    ratingController.dispose();
+    if (submitted != true || !mounted) return;
+    await context.read<VisitDetailCubit>().submitFeedback(
+      rating: rating,
+      notes: notes.isEmpty ? null : notes,
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.visitFeedbackSuccess)),
+      );
+    }
   }
 
   String _label(AppLocalizations l10n, VisitTransition t) => switch (t) {
@@ -103,6 +212,9 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
     final detail = state.detail!;
     final v = detail.visit;
     final allowed = allowedVisitTransitions(v);
+    final isAdmin = context.read<SessionCubit>().state.role == AppRole.admin;
+    final isActive = !const {'COMPLETED', 'CANCELLED', 'NO_SHOW'}.contains(v.status);
+    final isCompleted = v.status == 'COMPLETED';
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -213,6 +325,40 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
                   onPressed: state.working ? null : () => _apply(t),
                 ),
             ],
+          ),
+        ],
+        // ── Reschedule / Reassign ─────────────────────────────────────────
+        if (isActive || isAdmin) ...[
+          const SizedBox(height: AppSpacing.md),
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              if (isActive)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                  label: Text(l10n.visitReschedule),
+                  onPressed: state.working ? null : _doReschedule,
+                ),
+              if (isAdmin)
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.person_outlined, size: 16),
+                  label: Text(l10n.visitReassign),
+                  onPressed: state.working ? null : _doReassign,
+                ),
+            ],
+          ),
+        ],
+        // ── Sales feedback (completed visits) ────────────────────────────
+        if (isCompleted) ...[
+          const SizedBox(height: AppSpacing.lg),
+          Text(l10n.visitSalesFeedback, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: AppSpacing.sm),
+          AppButton(
+            label: l10n.visitFeedbackSubmit,
+            size: AppButtonSize.medium,
+            variant: AppButtonVariant.outline,
+            onPressed: state.working ? null : _doFeedback,
           ),
         ],
         if (detail.salesNotes != null && detail.salesNotes!.isNotEmpty) ...[

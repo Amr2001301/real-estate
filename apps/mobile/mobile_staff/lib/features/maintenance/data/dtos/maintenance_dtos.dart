@@ -17,6 +17,10 @@ class MaintenanceRequestDto {
     this.unitAddress,
     this.categoryNameAr,
     this.categoryNameEn,
+    this.warrantyStatus,
+    this.warrantyEndSnapshot,
+    this.itemNameAr,
+    this.itemNameEn,
     this.createdAt,
     this.approvedAt,
     this.assignedAt,
@@ -47,6 +51,10 @@ class MaintenanceRequestDto {
   final String? unitAddress;
   final String? categoryNameAr;
   final String? categoryNameEn;
+  final String? warrantyStatus;
+  final String? warrantyEndSnapshot;
+  final String? itemNameAr;
+  final String? itemNameEn;
   final String? createdAt;
   final String? approvedAt;
   final String? assignedAt;
@@ -75,6 +83,8 @@ class MaintenanceRequestDto {
     final unit = _asMap(json['unit']);
     final category = _asMap(json['category']);
     final categoryName = _asMap(category?['name']);
+    final item = _asMap(json['item']);
+    final itemName = _asMap(item?['name']);
     return MaintenanceRequestDto(
       id: json['id'] as String,
       description: json['description'] as String? ?? '',
@@ -96,6 +106,10 @@ class MaintenanceRequestDto {
       unitAddress: unit?['address'] as String? ?? unit?['fullAddress'] as String?,
       categoryNameAr: categoryName?['ar'] as String?,
       categoryNameEn: categoryName?['en'] as String?,
+      warrantyStatus: json['warrantyStatus'] as String?,
+      warrantyEndSnapshot: json['warrantyEndSnapshot'] as String?,
+      itemNameAr: itemName?['ar'] as String?,
+      itemNameEn: itemName?['en'] as String?,
       createdAt: json['createdAt'] as String?,
       approvedAt: json['approvedAt'] as String?,
       assignedAt: json['assignedAt'] as String?,
@@ -132,9 +146,9 @@ class MaintenanceDocDto {
         id: json['id'] as String,
         title: json['title'] as String?,
         fileName: json['fileName'] as String?,
-        // Backend returns 'fileUrl' (permanent storage URL) for supervisor role.
-        // Fallbacks cover other field names used by other endpoints.
-        url: (json['fileUrl'] ?? json['url'] ?? json['signedUrl'] ?? json['downloadUrl']) as String?,
+        // supervisorFindOne adds 'signedUrl' (1-hour presigned GET). Prefer it
+        // over 'fileUrl', which is the raw private-bucket key and not loadable.
+        url: (json['signedUrl'] ?? json['url'] ?? json['fileUrl'] ?? json['downloadUrl']) as String?,
         mimeType: json['mimeType'] as String?,
       );
 }

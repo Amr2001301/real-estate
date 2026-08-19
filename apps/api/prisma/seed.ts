@@ -545,6 +545,27 @@ async function main() {
     }
   }
 
+  // ---- Default bonus rule (idempotent: skip if any rule already exists for company) ----
+  // Created inactive so admins consciously enable auto-commission per company.
+  // To activate: set active=true AND autoApplyOnSignedContract=true in admin panel.
+  const existingBonusRule = await prisma.bonusRule.findFirst({
+    where: { companyId: company.id },
+    select: { id: true },
+  });
+  if (!existingBonusRule) {
+    await prisma.bonusRule.create({
+      data: {
+        name: 'Sales Commission (Default)',
+        percentage: 2,
+        active: false,
+        autoApplyOnSignedContract: false,
+        conditions: {},
+        companyId: company.id,
+      },
+    });
+    console.log('   ✓ Default bonus rule seeded (inactive — enable in admin panel)');
+  }
+
   // ---- Notification templates (already idempotent via @unique code) ----
   await Promise.all(
     [

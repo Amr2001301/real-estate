@@ -7,6 +7,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 import '../features/account/presentation/account_screen.dart';
+import '../features/auth/domain/repositories/auth_repository.dart';
+import '../features/auth/domain/usecases/forgot_password.dart';
+import '../features/auth/domain/usecases/reset_password.dart';
+import '../features/auth/presentation/forgot_password_cubit.dart';
+import '../features/auth/presentation/forgot_password_screen.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/otp_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
@@ -102,8 +107,12 @@ import '../features/visits/presentation/my_requests_screen.dart';
 import '../features/visits/presentation/my_visits_cubit.dart';
 import '../features/visits/presentation/visit_request_cubit.dart';
 import '../features/visits/presentation/visit_request_screen.dart';
+import '../features/info_request/domain/repositories/info_request_repository.dart';
+import '../features/info_request/domain/usecases/submit_info_request.dart';
+import '../features/info_request/presentation/cubit/info_request_cubit.dart';
+import '../features/info_request/presentation/screens/info_request_screen.dart';
 
-const _authRoutes = {'/login', '/register', '/login/otp'};
+const _authRoutes = {'/login', '/register', '/login/otp', '/forgot-password'};
 
 /// Customer App routing. Catalog + chat are public (Guest). The account area
 /// requires an authenticated **customer-side** role. Screens get their
@@ -142,6 +151,7 @@ GoRouter createCustomerRouter(
         return null;
       }
       if (loc == '/visit-request') return authed ? null : '/login';
+      if (loc == '/info-request') return authed ? null : '/login';
       return null;
     },
     routes: [
@@ -151,6 +161,16 @@ GoRouter createCustomerRouter(
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(path: '/login/otp', builder: (_, _) => const OtpScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) {
+            final repo = ctx.read<AuthRepository>();
+            return ForgotPasswordCubit(ForgotPassword(repo), ResetPassword(repo));
+          },
+          child: const ForgotPasswordScreen(),
+        ),
+      ),
 
       // ── Persistent shell ────────────────────────────────────────────────
       // One StatefulShellRoute hosts BOTH the public browsing branches and the
@@ -500,6 +520,22 @@ GoRouter createCustomerRouter(
             ),
             child: VisitRequestScreen(
               projectId: args['projectId'] as String? ?? '',
+              unitId: args['unitId'] as String?,
+            ),
+          );
+        },
+      ),
+
+      GoRoute(
+        path: '/info-request',
+        builder: (context, state) {
+          final args = (state.extra as Map<String, dynamic>?) ?? const {};
+          return BlocProvider(
+            create: (ctx) => InfoRequestCubit(
+              SubmitInfoRequest(ctx.read<InfoRequestRepository>()),
+            ),
+            child: InfoRequestScreen(
+              projectId: args['projectId'] as String?,
               unitId: args['unitId'] as String?,
             ),
           );

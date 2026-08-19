@@ -100,6 +100,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get errorUnknown => 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.';
 
   @override
+  String get offlineMessage => 'لا يوجد اتصال بالإنترنت';
+
+  @override
   String get settingsTitle => 'الإعدادات';
 
   @override
@@ -529,6 +532,24 @@ class AppLocalizationsAr extends AppLocalizations {
   String get requestInfo => 'طلب معلومات';
 
   @override
+  String get infoRequestTitle => 'طلب معلومات';
+
+  @override
+  String get infoRequestMessage => 'الرسالة';
+
+  @override
+  String get infoRequestMessageHint => 'ما الذي تودّ معرفته عن هذا المشروع؟';
+
+  @override
+  String get infoRequestMessageRequired => 'يرجى إدخال رسالة';
+
+  @override
+  String get infoRequestSubmit => 'إرسال الطلب';
+
+  @override
+  String get infoRequestSuccess => 'تم إرسال طلبك. سنتواصل معك قريباً.';
+
+  @override
   String areaValue(String value) {
     return '$value م²';
   }
@@ -680,6 +701,42 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get authAcceptTerms => 'أوافق على الشروط والأحكام';
+
+  @override
+  String get authForgotPassword => 'نسيت كلمة المرور؟';
+
+  @override
+  String get authForgotPasswordTitle => 'إعادة تعيين كلمة المرور';
+
+  @override
+  String get authForgotPasswordSubtitle =>
+      'أدخل بريدك الإلكتروني وسنرسل لك رابط الإعادة.';
+
+  @override
+  String get authForgotPasswordSent =>
+      'إذا كان البريد مسجلاً، تم إرسال رابط الإعادة.';
+
+  @override
+  String get authForgotPasswordSend => 'إرسال رابط الإعادة';
+
+  @override
+  String get authResetPasswordTitle => 'كلمة مرور جديدة';
+
+  @override
+  String get authResetPasswordSubtitle =>
+      'أدخل الرمز من بريدك الإلكتروني واختر كلمة مرور جديدة.';
+
+  @override
+  String get authResetToken => 'رمز الإعادة';
+
+  @override
+  String get authNewPassword => 'كلمة المرور الجديدة';
+
+  @override
+  String get authResetSuccess => 'تم تحديث كلمة المرور. الرجاء تسجيل الدخول.';
+
+  @override
+  String get authResetSubmit => 'تعيين كلمة المرور الجديدة';
 
   @override
   String get fieldEmail => 'البريد الإلكتروني';
@@ -1013,6 +1070,27 @@ class AppLocalizationsAr extends AppLocalizations {
   String get contractsDocumentsTitle => 'المستندات';
 
   @override
+  String get contractCustomer => 'العميل';
+
+  @override
+  String get contractUnit => 'الوحدة';
+
+  @override
+  String get contractTotalAmount => 'إجمالي المبلغ';
+
+  @override
+  String get contractDownPayment => 'الدفعة الأولى';
+
+  @override
+  String get contractSalesRep => 'مسؤول المبيعات';
+
+  @override
+  String get contractMonthlyPayment => 'القسط الشهري';
+
+  @override
+  String get contractInstallmentLabel => 'خطة التقسيط';
+
+  @override
   String get documentsEmptyTitle => 'لا توجد مستندات';
 
   @override
@@ -1056,6 +1134,27 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get depositTypePayment => 'دفعة';
+
+  @override
+  String get navDeposits => 'الدفعات';
+
+  @override
+  String get recordDeposit => 'تسجيل دفعة';
+
+  @override
+  String get depositAmount => 'المبلغ';
+
+  @override
+  String get depositPaymentDate => 'تاريخ الدفع';
+
+  @override
+  String get depositSelectInstallment => 'اختر القسط';
+
+  @override
+  String get depositContractRef => 'العقد';
+
+  @override
+  String get depositRecordSuccess => 'تم تسجيل الدفعة بنجاح';
 
   @override
   String get installmentsTitle => 'الأقساط';
@@ -1428,6 +1527,30 @@ class AppLocalizationsAr extends AppLocalizations {
   String get leadActivityReservation => 'حجز';
 
   @override
+  String get leadNew => 'عميل محتمل جديد';
+
+  @override
+  String get leadCreate => 'إنشاء عميل محتمل';
+
+  @override
+  String get leadCreated => 'تم إنشاء العميل المحتمل.';
+
+  @override
+  String get leadFullName => 'الاسم الكامل';
+
+  @override
+  String get leadFullNameRequired => 'الرجاء إدخال الاسم.';
+
+  @override
+  String get leadPhone => 'رقم الهاتف';
+
+  @override
+  String get leadEmail => 'البريد الإلكتروني';
+
+  @override
+  String get leadNotes => 'ملاحظات';
+
+  @override
   String get clientsSubtitle => 'تابع بيانات العملاء وفرصهم الحالية';
 
   @override
@@ -1553,6 +1676,9 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get navReservations => 'الحجوزات';
+
+  @override
+  String get navContracts => 'العقود';
 
   @override
   String get visitsToday => 'اليوم';
@@ -1683,6 +1809,36 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get customerRescheduleReasonLabel => 'سبب إعادة الجدولة';
+
+  @override
+  String get visitReschedule => 'إعادة الجدولة';
+
+  @override
+  String get visitRescheduleSuccess => 'تمت إعادة جدولة الزيارة.';
+
+  @override
+  String get visitReassign => 'إعادة تعيين';
+
+  @override
+  String get visitReassignSalesHint => 'أدخل معرف الموظف';
+
+  @override
+  String get visitReassignSuccess => 'تمت إعادة التعيين.';
+
+  @override
+  String get visitSalesFeedback => 'ملاحظات المبيعات';
+
+  @override
+  String get visitFeedbackNotes => 'الملاحظات';
+
+  @override
+  String get visitFeedbackRating => 'التقييم (١–٥)';
+
+  @override
+  String get visitFeedbackSubmit => 'إرسال الملاحظات';
+
+  @override
+  String get visitFeedbackSuccess => 'تم إرسال الملاحظات.';
 
   @override
   String get reservationsEmptyTitle => 'لا توجد حجوزات';

@@ -7,11 +7,42 @@ import 'package:mobile_staff/features/installments/domain/repositories/installme
 import 'package:mobile_staff/features/installments/domain/usecases/installment_use_cases.dart';
 import 'package:mobile_staff/features/installments/presentation/cubit/calculator_cubit.dart';
 
+// Full fake: listTemplates returns empty; calculateInstallment runs the
+// formula locally (mirrors duration-calc.ts) so cubit tests stay meaningful.
 class _FakeRepo implements InstallmentsRepository {
-  _FakeRepo(this._result);
-  final Result<List<InstallmentPlanTemplate>> _result;
+  const _FakeRepo();
+
   @override
-  Future<Result<List<InstallmentPlanTemplate>>> getPlanTemplates({String? projectId}) async => _result;
+  Future<Result<List<InstallmentPlanTemplate>>> getPlanTemplates({String? projectId}) async =>
+      const Ok([]);
+
+  @override
+  Future<Result<InstallmentResult>> calculateInstallment(InstallmentInput input) async {
+    if (input.netPrice <= 0 ||
+        input.durationMonths < 1 ||
+        input.durationMonths > 600 ||
+        input.downPayment < 0 ||
+        input.reservationAmount < 0 ||
+        input.increasePercentage < 0 ||
+        (input.reservationAmount + input.downPayment) > input.netPrice) {
+      return Err(AppFailure(type: FailureType.validation));
+    }
+    final remaining =
+        (input.netPrice - input.reservationAmount - input.downPayment).clamp(0, double.infinity).toDouble();
+    final financed = remaining * (1 + input.increasePercentage / 100);
+    final monthly = input.durationMonths > 0 ? financed / input.durationMonths : 0.0;
+    final total = input.reservationAmount + input.downPayment + financed;
+    return Ok(InstallmentResult(
+      remainingAmount: remaining,
+      financedAmount: financed,
+      monthlyInstallment: monthly,
+      totalPayable: total,
+      downPayment: input.downPayment,
+      reservationAmount: input.reservationAmount,
+      durationMonths: input.durationMonths,
+      schedule: List<double>.filled(input.durationMonths, monthly),
+    ));
+  }
 }
 
 void main() {
@@ -32,8 +63,9 @@ void main() {
     });
   });
 
-  group('CalculateInstallment (mirrors backend formula)', () {
-    const calc = CalculateInstallment();
+  group('CalculateInstallment (delegates to server via repo)', () {
+    final repo = const _FakeRepo();
+    final calc = CalculateInstallment(repo);
 
     test('computes remaining/financed/monthly/total', () async {
       final r = await calc(const InstallmentInput(
@@ -83,9 +115,11 @@ void main() {
   });
 
   group('CalculatorCubit', () {
+    final repo = const _FakeRepo();
+
     CalculatorCubit build({double? price}) => CalculatorCubit(
-          GetPlanTemplates(_FakeRepo(const Ok([]))),
-          const CalculateInstallment(),
+          GetPlanTemplates(repo),
+          CalculateInstallment(repo),
           initialPrice: price,
         );
 

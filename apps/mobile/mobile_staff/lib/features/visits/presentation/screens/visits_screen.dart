@@ -16,10 +16,26 @@ class VisitsScreen extends StatefulWidget {
 }
 
 class _VisitsScreenState extends State<VisitsScreen> {
+  final _scrollCtrl = ScrollController();
+
   @override
   void initState() {
     super.initState();
     context.read<VisitsCubit>().load();
+    _scrollCtrl.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 200) {
+      context.read<VisitsCubit>().loadMore();
+    }
   }
 
   Future<void> _create() async {
@@ -78,14 +94,22 @@ class _VisitsScreenState extends State<VisitsScreen> {
                     return RefreshIndicator(
                       onRefresh: cubit.load,
                       child: ListView.separated(
+                        controller: _scrollCtrl,
                         padding: EdgeInsets.fromLTRB(
                             AppSpacing.md, AppSpacing.sm,
                             AppSpacing.md, bottomPad + 100),
-                        itemCount: state.visits.length,
+                        itemCount: state.visits.length + (state.isLoadingMore ? 1 : 0),
                         separatorBuilder: (_, _) =>
                             const SizedBox(height: AppSpacing.sm),
-                        itemBuilder: (context, i) =>
-                            _VisitTile(visit: state.visits[i]),
+                        itemBuilder: (context, i) {
+                          if (i == state.visits.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                              child: Center(child: CircularProgressIndicator()),
+                            );
+                          }
+                          return _VisitTile(visit: state.visits[i]);
+                        },
                       ),
                     );
                 }

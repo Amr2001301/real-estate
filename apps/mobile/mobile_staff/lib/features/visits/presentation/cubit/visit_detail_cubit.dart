@@ -40,11 +40,20 @@ class VisitDetailState extends Equatable {
 }
 
 class VisitDetailCubit extends Cubit<VisitDetailState> {
-  VisitDetailCubit(this._getDetail, this._updateStatus, {required this.visitId})
-      : super(const VisitDetailState());
+  VisitDetailCubit(
+    this._getDetail,
+    this._updateStatus,
+    this._reschedule,
+    this._assign,
+    this._salesFeedback, {
+    required this.visitId,
+  }) : super(const VisitDetailState());
 
   final GetVisitDetail _getDetail;
   final UpdateVisitStatus _updateStatus;
+  final RescheduleVisit _reschedule;
+  final AssignVisit _assign;
+  final SubmitSalesFeedback _salesFeedback;
   final String visitId;
 
   Future<void> load() async {
@@ -70,6 +79,50 @@ class VisitDetailCubit extends Cubit<VisitDetailState> {
       emit(state.copyWith(working: false, actionFailure: failure));
       return;
     }
+    await _refresh();
+  }
+
+  Future<void> reschedule(DateTime scheduledAt, {String? salesNotes}) async {
+    if (state.working) return;
+    emit(state.copyWith(working: true, clearActionFailure: true));
+    final result = await _reschedule(
+      RescheduleVisitParams(id: visitId, scheduledAt: scheduledAt, salesNotes: salesNotes),
+    );
+    final failure = result.failureOrNull;
+    if (failure != null) {
+      emit(state.copyWith(working: false, actionFailure: failure));
+      return;
+    }
+    await _refresh();
+  }
+
+  Future<void> assign(String assignedSalesId) async {
+    if (state.working) return;
+    emit(state.copyWith(working: true, clearActionFailure: true));
+    final result = await _assign(AssignVisitParams(id: visitId, assignedSalesId: assignedSalesId));
+    final failure = result.failureOrNull;
+    if (failure != null) {
+      emit(state.copyWith(working: false, actionFailure: failure));
+      return;
+    }
+    await _refresh();
+  }
+
+  Future<void> submitFeedback({int? rating, String? notes}) async {
+    if (state.working) return;
+    emit(state.copyWith(working: true, clearActionFailure: true));
+    final result = await _salesFeedback(
+      SubmitSalesFeedbackParams(id: visitId, rating: rating, notes: notes),
+    );
+    final failure = result.failureOrNull;
+    if (failure != null) {
+      emit(state.copyWith(working: false, actionFailure: failure));
+      return;
+    }
+    emit(state.copyWith(working: false));
+  }
+
+  Future<void> _refresh() async {
     final refreshed = await _getDetail(visitId);
     refreshed.when(
       ok: (detail) => emit(state.copyWith(working: false, detail: detail, status: DataStatus.success)),

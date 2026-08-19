@@ -22,6 +22,11 @@ extension MaintenanceRequestDtoMapper on MaintenanceRequestDto {
         categoryName: (categoryNameAr != null || categoryNameEn != null)
             ? Translatable(ar: categoryNameAr ?? '', en: categoryNameEn ?? '')
             : null,
+        warrantyStatus: MaintenanceWarrantyStatus.fromWire(warrantyStatus),
+        warrantyEndSnapshot: _date(warrantyEndSnapshot),
+        itemName: (itemNameAr != null || itemNameEn != null)
+            ? Translatable(ar: itemNameAr ?? '', en: itemNameEn ?? '')
+            : null,
         createdAt: _date(createdAt),
         approvedAt: _date(approvedAt),
         assignedAt: _date(assignedAt),

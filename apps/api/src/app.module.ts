@@ -1,9 +1,8 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { BullModule } from '@nestjs/bullmq';
 
 import { configValidation } from './config/env.validation';
 import { PrismaModule } from './common/prisma/prisma.module';
@@ -66,12 +65,6 @@ import { HealthController } from './modules/health/health.controller';
     }),
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
-    BullModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: { url: config.getOrThrow<string>('REDIS_URL') },
-      }),
-    }),
     PrismaModule,
     CronLockModule,
     OwnershipModule,

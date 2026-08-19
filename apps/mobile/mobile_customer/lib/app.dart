@@ -63,6 +63,9 @@ import 'features/profile/domain/repositories/profile_repository.dart';
 import 'features/visits/data/datasources/visits_remote_data_source.dart';
 import 'features/visits/data/repositories/visits_repository_impl.dart';
 import 'features/visits/domain/repositories/visits_repository.dart';
+import 'features/info_request/data/datasources/info_request_remote_data_source.dart';
+import 'features/info_request/data/repositories/info_request_repository_impl.dart';
+import 'features/info_request/domain/repositories/info_request_repository.dart';
 import 'package:flutter/services.dart' show HapticFeedback;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -148,6 +151,11 @@ class CustomerApp extends StatelessWidget {
             HomeSummaryRemoteDataSourceImpl(ctx.read<Dio>()),
           ),
         ),
+        RepositoryProvider<InfoRequestRepository>(
+          create: (ctx) => InfoRequestRepositoryImpl(
+            InfoRequestRemoteDataSourceImpl(ctx.read<Dio>()),
+          ),
+        ),
         RepositoryProvider<PushRegistrationService>(
           create: (ctx) => PushRegistrationService(
             const FirebasePushTokenProvider(),
@@ -186,6 +194,7 @@ class CustomerApp extends StatelessWidget {
               );
             },
           ),
+          BlocProvider(create: (_) => ConnectivityCubit()),
         ],
         child: const _CustomerRoot(),
       ),
@@ -370,6 +379,12 @@ class _CustomerRootState extends State<_CustomerRoot> {
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         routerConfig: router,
+        builder: (context, child) => Column(
+          children: [
+            const OfflineBanner(),
+            Expanded(child: child ?? const SizedBox.shrink()),
+          ],
+        ),
       ),
     );
   }

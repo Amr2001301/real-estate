@@ -126,6 +126,16 @@ class UpdatePlanTemplateDto {
   durationOptions?: DurationOptionDto[];
 }
 
+// ─── Calculator DTO ──────────────────────────────────────────────────────────
+
+class CalculateInstallmentDto {
+  @IsNumber() @IsPositive() netPrice!: number;
+  @IsNumber() @Min(0) reservationAmount!: number;
+  @IsNumber() @Min(0) downPaymentAmount!: number;
+  @IsInt() @Min(1) @Max(600) durationMonths!: number;
+  @IsNumber() @Min(0) increasePercentage!: number;
+}
+
 // ─── Existing contract-based plan service ─────────────────────────────────────
 
 @Injectable()
@@ -1250,6 +1260,22 @@ class PlanTemplatesController {
   @Get('stats')
   stats() {
     return this.svc.stats();
+  }
+
+  // Pure server-side formula evaluation — no DB access, always in sync with
+  // duration-calc.ts. Mounted before ':id' so the literal 'calculate' path
+  // is never mistaken for a template UUID.
+  @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)
+  @Permissions('installments:read')
+  @Post('calculate')
+  calculate(@Body() dto: CalculateInstallmentDto) {
+    return computeDurationOption({
+      netPrice: dto.netPrice,
+      reservationAmount: dto.reservationAmount,
+      downPaymentAmount: dto.downPaymentAmount,
+      durationMonths: dto.durationMonths,
+      increasePercentage: dto.increasePercentage,
+    });
   }
 
   @Roles(UserRole.ADMIN, UserRole.SALES, UserRole.SALES_MANAGER)

@@ -40,6 +40,12 @@ IconData _statusIcon(MaintenanceStatus s) => switch (s) {
   _ => Icons.build_rounded,
 };
 
+Color _warrantyColor(MaintenanceWarrantyStatus s) => switch (s) {
+  MaintenanceWarrantyStatus.inWarranty => const Color(0xFF4ADE80),
+  MaintenanceWarrantyStatus.outOfWarranty => const Color(0xFFF97316),
+  MaintenanceWarrantyStatus.unknown => const Color(0xFF9CA3AF),
+};
+
 Color _priorityColor(MaintenancePriority p) => switch (p) {
   MaintenancePriority.low => const Color(0xFF6B7280),
   MaintenancePriority.medium => AppPalette.gold300,
@@ -193,7 +199,7 @@ class _MaintenanceDetailScreenState extends State<MaintenanceDetailScreen> {
       ],
 
       // 4. Workflow / SLA card
-      _WorkflowCard(r: r, l10n: l10n, fmtDate: fmtDate),
+      _WorkflowCard(r: r, l10n: l10n, lang: lang, fmtDate: fmtDate),
       const SizedBox(height: 12),
 
       // 5. Unified action card
@@ -812,10 +818,12 @@ class _WorkflowCard extends StatelessWidget {
   const _WorkflowCard({
     required this.r,
     required this.l10n,
+    required this.lang,
     required this.fmtDate,
   });
   final MaintenanceRequest r;
   final AppLocalizations l10n;
+  final String lang;
   final String Function(DateTime?) fmtDate;
 
   @override
@@ -844,6 +852,12 @@ class _WorkflowCard extends StatelessWidget {
                         label: maintenanceResolvedByLabel(r.resolvedBy),
                         color: _resolvedByColor(r.resolvedBy),
                       ),
+                      if (r.warrantyStatus != null &&
+                          r.warrantyStatus != MaintenanceWarrantyStatus.unknown)
+                        _StatusPill(
+                          label: maintenanceWarrantyStatusLabel(r.warrantyStatus!),
+                          color: _warrantyColor(r.warrantyStatus!),
+                        ),
                       if (r.isOverdue)
                         _StatusPill(
                           label: l10n.supervisorDetailOverdueLabel,
@@ -879,6 +893,19 @@ class _WorkflowCard extends StatelessWidget {
                       icon: Icons.report_rounded,
                       label: l10n.supervisorDetailComplaintDateLabel,
                       value: fmtDate(r.complaintAt),
+                    ),
+                  if (r.warrantyStatus == MaintenanceWarrantyStatus.inWarranty &&
+                      r.warrantyEndSnapshot != null)
+                    _InfoRow(
+                      icon: Icons.shield_rounded,
+                      label: 'انتهاء الضمان',
+                      value: fmtDate(r.warrantyEndSnapshot),
+                    ),
+                  if (r.itemName != null)
+                    _InfoRow(
+                      icon: Icons.build_circle_outlined,
+                      label: 'العنصر المُصان',
+                      value: r.itemName!.resolve(lang),
                     ),
                 ],
               ),

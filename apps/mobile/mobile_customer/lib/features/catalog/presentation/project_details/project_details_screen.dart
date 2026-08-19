@@ -1199,6 +1199,12 @@ class _StickyDock extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpacing.sm),
                       _GlassBtn(
+                        icon: Icons.info_outline_rounded,
+                        tooltip: l10n.requestInfo,
+                        onTap: () => _onRequestInfo(context),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      _GlassBtn(
                         icon: Icons.auto_awesome_rounded,
                         tooltip: l10n.homeAskAssistant,
                         onTap: () => context.push('/chat'),
@@ -1218,6 +1224,15 @@ class _StickyDock extends StatelessWidget {
     final authed = context.read<SessionCubit>().state.isAuthenticated;
     if (authed) {
       context.push('/visit-request', extra: {'projectId': project.id});
+    } else {
+      _showVisitPrompt(context, project);
+    }
+  }
+
+  void _onRequestInfo(BuildContext context) {
+    final authed = context.read<SessionCubit>().state.isAuthenticated;
+    if (authed) {
+      context.push('/info-request', extra: {'projectId': project.id});
     } else {
       _showVisitPrompt(context, project);
     }

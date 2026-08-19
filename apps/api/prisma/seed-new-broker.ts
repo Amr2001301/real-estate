@@ -15,6 +15,7 @@ import {
   BrokerPayoutStatus,
   BrokerStatus,
   BrokerUserStatus,
+  LeadActivityType,
   PrismaClient,
   ReservationStatus,
   UserRole,
@@ -320,7 +321,7 @@ async function main() {
   // Payout events → BrokerActivityLog rows (PAYOUT_* enum only)
   console.log('8/8  Creating activity log…');
 
-  const ensureLeadActivity = async (leadId: string, type: string, daysAgo: number, meta: object) => {
+  const ensureLeadActivity = async (leadId: string, type: LeadActivityType, daysAgo: number, meta: object) => {
     const existing = await prisma.leadActivity.findFirst({
       where: { leadId, type, createdAt: { gte: ago(daysAgo + 1), lte: ago(daysAgo - 1) } },
       select: { id: true },

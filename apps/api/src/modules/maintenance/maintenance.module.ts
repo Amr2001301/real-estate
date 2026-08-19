@@ -819,6 +819,7 @@ export class MaintenanceService {
       unit: true,
       category: true,
       assignedAdmin: { select: { id: true, fullName: true } },
+      item: { select: { id: true, name: true, warrantyEnd: true } },
     });
     if (req.assignedAdminId !== userId) {
       throw new NotFoundException('Maintenance request not found');
@@ -828,7 +829,25 @@ export class MaintenanceService {
       id,
       20,
     );
-    return { ...req, documents };
+    // Add a 1-hour presigned GET URL to each document so the supervisor mobile
+    // app can display photos without exposing the raw private-bucket key.
+    const signedDocs = await Promise.all(
+      documents.map(async (d) => {
+        try {
+          const key = this.r2.keyFromStoredValue(d.fileUrl);
+          const { url } = await this.r2.createPresignedDownload({
+            key,
+            fileName: d.fileName,
+            contentType: d.mimeType,
+            expiresIn: 3600,
+          });
+          return { ...d, signedUrl: url };
+        } catch {
+          return { ...d, signedUrl: null };
+        }
+      }),
+    );
+    return { ...req, documents: signedDocs };
   }
 
   async supervisorSetStatus(userId: string, id: string, next: MaintenanceStatus) {

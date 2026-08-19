@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../cubit/staff_auth_cubit.dart';
 
@@ -95,6 +96,11 @@ class _StaffLoginScreenState extends State<StaffLoginScreen> {
                             isLoading: state.isSubmitting,
                             onPressed: state.isSubmitting ? null : _submit,
                           ),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        AuthFooterLink(
+                          text: l10n.authForgotPassword,
+                          onTap: () => context.push('/forgot-password'),
                         ),
                       ],
                     ),

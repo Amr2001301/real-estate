@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { BrokerActivityType, Prisma } from '@prisma/client';
+import { BrokerActivityType, LeadActivityType, Prisma } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { paginate } from '../../common/utils/pagination';
 import type { BrokerScopeContext } from '../../common/guards/broker-scope.guard';
@@ -8,7 +8,7 @@ import {
   PortalActivityType,
 } from './dto/portal-activity.dto';
 
-type RawType = string;
+type RawType = LeadActivityType;
 type EntityType =
   | 'Lead'
   | 'VisitRequest'
@@ -17,9 +17,9 @@ type EntityType =
   | 'Commission'
   | 'Payout';
 
-// LeadActivity.type → portal type/entity. Adding a new event here is a
-// one-line change.
-const LEAD_TYPE_MAP: Record<RawType, { portal: PortalActivityType; entity: EntityType }> = {
+// LeadActivity.type → portal type/entity (broker-visible subset only).
+// Adding a new event here is a one-line change.
+const LEAD_TYPE_MAP: Partial<Record<RawType, { portal: PortalActivityType; entity: EntityType }>> = {
   broker_submitted: { portal: 'LEAD_SUBMITTED', entity: 'Lead' },
   broker_submitted_via_visit: { portal: 'LEAD_SUBMITTED', entity: 'Lead' },
   broker_visit_requested: { portal: 'VISIT_REQUESTED', entity: 'VisitRequest' },
@@ -125,9 +125,9 @@ export class BrokerPortalActivityService {
     scope: BrokerScopeContext,
     query: PortalActivityQueryDto,
   ): Prisma.LeadActivityWhereInput {
-    let rawTypes = Object.keys(LEAD_TYPE_MAP);
+    let rawTypes = Object.keys(LEAD_TYPE_MAP) as RawType[];
     if (query.type) {
-      rawTypes = rawTypes.filter((t) => LEAD_TYPE_MAP[t]!.portal === query.type);
+      rawTypes = rawTypes.filter((t) => LEAD_TYPE_MAP[t]?.portal === query.type);
     }
     // sourceForFilter() already routes 'Payout' entityType to the broker source
     // so reaching this code with entityType === 'Payout' is unreachable in
@@ -135,7 +135,7 @@ export class BrokerPortalActivityService {
     // we accept the entityType as a string here.
     if (query.entityType && (query.entityType as string) !== 'Payout') {
       const e = query.entityType;
-      rawTypes = rawTypes.filter((t) => LEAD_TYPE_MAP[t]!.entity === e);
+      rawTypes = rawTypes.filter((t) => LEAD_TYPE_MAP[t]?.entity === e);
     }
     if (rawTypes.length === 0) {
       // No matching raw types — short-circuit by filtering on a never-matching id.

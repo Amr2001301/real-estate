@@ -10,6 +10,7 @@ import { ConversionService } from './providers/rule-based/conversion.service';
 import { UnitsModule } from '../units/units.module';
 import { ProjectsModule } from '../projects/projects.module';
 import { RequestsModule } from '../requests/requests.module';
+import { ChatRetentionCron } from './chat-retention.cron';
 
 /**
  * AI Chat module (v1). Public, non-streaming, FREE rule-based assistant — no
@@ -26,6 +27,7 @@ import { RequestsModule } from '../requests/requests.module';
     { provide: ChatProvider, useClass: RuleBasedChatProvider },
     { provide: CatalogSearchTool, useClass: CatalogSearchService },
     { provide: ConversionTool, useClass: ConversionService },
+    ChatRetentionCron,
   ],
 })
 export class ChatModule {}

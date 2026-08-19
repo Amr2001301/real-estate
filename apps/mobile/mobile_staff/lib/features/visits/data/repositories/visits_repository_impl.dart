@@ -10,10 +10,10 @@ class VisitsRepositoryImpl implements VisitsRepository {
   final VisitsRemoteDataSource _remote;
 
   @override
-  Future<Result<List<Visit>>> getVisits(VisitsQuery query) {
+  Future<Result<Paginated<Visit>>> getVisits(VisitsQuery query) {
     return guardApiCall(() async {
-      final rows = await _remote.list(query);
-      return rows.map((r) => r.toEntity()).toList();
+      final page = await _remote.list(query);
+      return page.map((r) => r.toEntity());
     });
   }
 
@@ -36,4 +36,16 @@ class VisitsRepositoryImpl implements VisitsRepository {
   }) {
     return guardApiCall(() => _remote.transition(id, transition, notes, reason));
   }
+
+  @override
+  Future<Result<void>> reschedule(String id, DateTime scheduledAt, {String? salesNotes}) =>
+      guardApiCall(() => _remote.reschedule(id, scheduledAt, salesNotes: salesNotes));
+
+  @override
+  Future<Result<void>> assign(String id, String assignedSalesId) =>
+      guardApiCall(() => _remote.assign(id, assignedSalesId));
+
+  @override
+  Future<Result<void>> submitSalesFeedback(String id, {int? rating, String? notes}) =>
+      guardApiCall(() => _remote.salesFeedback(id, rating: rating, notes: notes));
 }

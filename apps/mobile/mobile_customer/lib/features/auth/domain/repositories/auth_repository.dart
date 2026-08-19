@@ -38,4 +38,7 @@ abstract interface class AuthRepository {
 
   /// Revokes the refresh token server-side (best-effort) and clears storage.
   Future<Result<void>> logout();
+
+  Future<Result<void>> forgotPassword(String email);
+  Future<Result<void>> resetPassword(String token, String newPassword);
 }

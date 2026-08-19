@@ -6,6 +6,10 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/auth/domain/repositories/staff_auth_repository.dart';
+import '../features/auth/domain/usecases/forgot_staff_password.dart';
+import '../features/auth/presentation/cubit/forgot_staff_password_cubit.dart';
+import '../features/auth/presentation/screens/forgot_staff_password_screen.dart';
 import '../features/auth/presentation/screens/staff_login_screen.dart';
 import '../features/bonus/domain/repositories/bonus_repository.dart';
 import '../features/bonus/domain/usecases/get_bonus_entries.dart';
@@ -63,7 +67,9 @@ import '../features/clients/presentation/screens/client_detail_screen.dart';
 import '../features/leads/domain/entities/lead.dart';
 import '../features/leads/domain/repositories/leads_repository.dart';
 import '../features/leads/domain/usecases/lead_use_cases.dart';
+import '../features/leads/presentation/cubit/create_lead_cubit.dart';
 import '../features/leads/presentation/cubit/lead_detail_cubit.dart';
+import '../features/leads/presentation/screens/create_lead_screen.dart';
 import '../features/leads/presentation/screens/lead_detail_screen.dart';
 import '../features/notifications/domain/repositories/notifications_repository.dart';
 import '../features/notifications/domain/usecases/notification_use_cases.dart';
@@ -82,6 +88,23 @@ import '../features/reservations/presentation/cubit/reservations_cubit.dart';
 import '../features/reservations/presentation/screens/create_reservation_screen.dart';
 import '../features/reservations/presentation/screens/reservation_detail_screen.dart';
 import '../features/reservations/presentation/screens/reservations_screen.dart';
+import '../features/contracts/domain/entities/staff_contract.dart';
+import '../features/contracts/domain/repositories/contracts_repository.dart';
+import '../features/contracts/domain/usecases/contract_use_cases.dart';
+import '../features/contracts/presentation/cubit/contract_detail_cubit.dart';
+import '../features/contracts/presentation/cubit/contracts_cubit.dart';
+import '../features/contracts/presentation/screens/contract_detail_screen.dart';
+import '../features/contracts/presentation/screens/contracts_screen.dart';
+import '../features/deposits/domain/repositories/deposits_repository.dart';
+import '../features/deposits/domain/usecases/deposit_use_cases.dart';
+import '../features/deposits/presentation/cubit/deposits_cubit.dart';
+import '../features/deposits/presentation/cubit/record_deposit_cubit.dart';
+import '../features/deposits/presentation/screens/deposits_screen.dart';
+import '../features/deposits/presentation/screens/record_deposit_screen.dart';
+import '../features/documents/domain/repositories/documents_repository.dart';
+import '../features/documents/domain/usecases/document_use_cases.dart';
+import '../features/documents/presentation/cubit/documents_cubit.dart';
+import '../features/documents/presentation/screens/documents_screen.dart';
 import '../features/visits/domain/entities/visit.dart';
 import '../features/visits/domain/repositories/visits_repository.dart';
 import '../features/visits/domain/usecases/visit_use_cases.dart';
@@ -112,7 +135,7 @@ String? staffRedirect(SessionState session, String loc) {
 
   final role = session.role;
   final isStaff = session.isAuthenticated && role.isStaffSide;
-  if (!isStaff) return loc == '/login' ? null : '/login';
+  if (!isStaff) return (loc == '/login' || loc == '/forgot-password') ? null : '/login';
 
   // `/notifications` is a shared inbox; the backend scopes results to the
   // signed-in user regardless of role.
@@ -160,6 +183,19 @@ GoRouter createStaffRouter(
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, _) => const StaffLoginScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) {
+            final repo = ctx.read<StaffAuthRepository>();
+            return ForgotStaffPasswordCubit(
+              ForgotStaffPassword(repo),
+              ResetStaffPassword(repo),
+            );
+          },
+          child: const ForgotStaffPasswordScreen(),
+        ),
+      ),
       // ── Broker workspace (Phase 5) ───────────────────────────────────────
       GoRoute(
         path: '/broker/home',
@@ -290,6 +326,15 @@ GoRouter createStaffRouter(
         },
       ),
 
+      // ── Lead create ─────────────────────────────────────────────────────
+      GoRoute(
+        path: '/leads/new',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) => CreateLeadCubit(CreateLead(ctx.read<LeadsRepository>())),
+          child: const CreateLeadScreen(),
+        ),
+      ),
+
       // ── Lead detail ──────────────────────────────────────────────────────
       GoRoute(
         path: '/leads/:id',
@@ -390,7 +435,14 @@ GoRouter createStaffRouter(
           return BlocProvider(
             create: (ctx) {
               final repo = ctx.read<VisitsRepository>();
-              return VisitDetailCubit(GetVisitDetail(repo), UpdateVisitStatus(repo), visitId: id);
+              return VisitDetailCubit(
+                GetVisitDetail(repo),
+                UpdateVisitStatus(repo),
+                RescheduleVisit(repo),
+                AssignVisit(repo),
+                SubmitSalesFeedback(repo),
+                visitId: id,
+              );
             },
             child: VisitDetailScreen(fallback: visit),
           );
@@ -444,6 +496,80 @@ GoRouter createStaffRouter(
         },
       ),
 
+      // ── Contracts ────────────────────────────────────────────────────────
+      GoRoute(
+        path: '/contracts',
+        builder: (context, _) => BlocProvider(
+          create: (ctx) =>
+              ContractsCubit(ListContracts(ctx.read<StaffContractsRepository>())),
+          child: const ContractsScreen(),
+        ),
+      ),
+      GoRoute(
+        path: '/contracts/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final contract = state.extra as StaffContract?;
+          return BlocProvider(
+            create: (ctx) => ContractDetailCubit(
+              GetContractDetail(ctx.read<StaffContractsRepository>()),
+              contractId: id,
+            ),
+            child: ContractDetailScreen(fallback: contract),
+          );
+        },
+      ),
+
+      // ── Deposits (list + record) ─────────────────────────────────────────
+      GoRoute(
+        path: '/deposits',
+        builder: (context, state) {
+          final contractId = state.uri.queryParameters['contractId'];
+          return BlocProvider(
+            create: (ctx) => DepositsCubit(ListDeposits(ctx.read<StaffDepositsRepository>())),
+            child: DepositsScreen(contractId: contractId),
+          );
+        },
+      ),
+      GoRoute(
+        path: '/deposits/record',
+        builder: (context, state) {
+          final args = (state.extra as Map<String, dynamic>?) ?? const {};
+          return BlocProvider(
+            create: (ctx) =>
+                RecordDepositCubit(RecordDeposit(ctx.read<StaffDepositsRepository>())),
+            child: RecordDepositScreen(
+              contractId: args['contractId'] as String,
+              installmentId: args['installmentId'] as String,
+              suggestedAmount: (args['amount'] as num?)?.toDouble() ?? 0,
+              installmentLabel: args['label'] as String?,
+            ),
+          );
+        },
+      ),
+
+      // ── Documents viewer ─────────────────────────────────────────────────
+      GoRoute(
+        path: '/documents-view',
+        builder: (context, state) {
+          final q = state.uri.queryParameters;
+          final ownerType = q['ownerType'] ?? 'CONTRACT';
+          final ownerId = q['ownerId'] ?? '';
+          final title = q['title'];
+          return BlocProvider(
+            create: (ctx) => DocumentsCubit(
+              ListStaffDocuments(ctx.read<StaffDocumentsRepository>()),
+              GetDocumentDownloadUrl(ctx.read<StaffDocumentsRepository>()),
+            ),
+            child: StaffDocumentsScreen(
+              ownerType: ownerType,
+              ownerId: ownerId,
+              title: title,
+            ),
+          );
+        },
+      ),
+
       // ── Payments review (P11.6) — ADMIN + SALES_MANAGER view; ADMIN acts ──
       GoRoute(
         path: '/payments-review',
@@ -493,7 +619,7 @@ GoRouter createStaffRouter(
           return BlocProvider(
             create: (ctx) => CalculatorCubit(
               GetPlanTemplates(ctx.read<InstallmentsRepository>()),
-              const CalculateInstallment(),
+              CalculateInstallment(ctx.read<InstallmentsRepository>()),
               initialPrice: args['price'] as double?,
               projectId: args['projectId'] as String?,
             ),

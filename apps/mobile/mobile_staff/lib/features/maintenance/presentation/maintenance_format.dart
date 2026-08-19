@@ -66,3 +66,9 @@ BadgeTone maintenanceResolvedByTone(MaintenanceResolvedBy? by) => switch (by) {
       MaintenanceResolvedBy.supervisor => BadgeTone.gold,
       null => BadgeTone.neutral,
     };
+
+String maintenanceWarrantyStatusLabel(MaintenanceWarrantyStatus s) => switch (s) {
+      MaintenanceWarrantyStatus.inWarranty => 'ضمان ساري',
+      MaintenanceWarrantyStatus.outOfWarranty => 'خارج الضمان',
+      MaintenanceWarrantyStatus.unknown => 'ضمان غير محدد',
+    };

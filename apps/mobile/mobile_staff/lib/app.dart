@@ -75,6 +75,15 @@ import 'features/reservations/domain/repositories/reservations_repository.dart';
 import 'features/visits/data/datasources/visits_remote_data_source.dart';
 import 'features/visits/data/repositories/visits_repository_impl.dart';
 import 'features/visits/domain/repositories/visits_repository.dart';
+import 'features/contracts/data/datasources/contracts_remote_data_source.dart';
+import 'features/contracts/data/repositories/contracts_repository_impl.dart';
+import 'features/contracts/domain/repositories/contracts_repository.dart';
+import 'features/deposits/data/datasources/deposits_remote_data_source.dart';
+import 'features/deposits/data/repositories/deposits_repository_impl.dart';
+import 'features/deposits/domain/repositories/deposits_repository.dart';
+import 'features/documents/data/datasources/documents_remote_data_source.dart';
+import 'features/documents/data/repositories/documents_repository_impl.dart';
+import 'features/documents/domain/repositories/documents_repository.dart';
 import 'features/maintenance/data/datasources/maintenance_remote_data_source.dart';
 import 'features/maintenance/data/repositories/maintenance_repository_impl.dart';
 import 'features/maintenance/domain/repositories/maintenance_repository.dart';
@@ -133,6 +142,18 @@ class StaffApp extends StatelessWidget {
         ),
         RepositoryProvider<VisitsRepository>(
           create: (ctx) => VisitsRepositoryImpl(VisitsRemoteDataSourceImpl(ctx.read<Dio>())),
+        ),
+        RepositoryProvider<StaffContractsRepository>(
+          create: (ctx) =>
+              StaffContractsRepositoryImpl(StaffContractsRemoteDataSourceImpl(ctx.read<Dio>())),
+        ),
+        RepositoryProvider<StaffDepositsRepository>(
+          create: (ctx) =>
+              StaffDepositsRepositoryImpl(StaffDepositsRemoteDataSourceImpl(ctx.read<Dio>())),
+        ),
+        RepositoryProvider<StaffDocumentsRepository>(
+          create: (ctx) =>
+              StaffDocumentsRepositoryImpl(StaffDocumentsRemoteDataSourceImpl(ctx.read<Dio>())),
         ),
         RepositoryProvider<ReservationsRepository>(
           create: (ctx) =>
@@ -198,6 +219,7 @@ class StaffApp extends StatelessWidget {
               GetUnreadCount(ctx.read<NotificationsRepository>()),
             ),
           ),
+          BlocProvider(create: (_) => ConnectivityCubit()),
         ],
         child: const _StaffRoot(),
       ),
@@ -363,6 +385,12 @@ class _StaffRootState extends State<_StaffRoot> {
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         routerConfig: router,
+        builder: (context, child) => Column(
+          children: [
+            const OfflineBanner(),
+            Expanded(child: child ?? const SizedBox.shrink()),
+          ],
+        ),
       ),
     );
   }

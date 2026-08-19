@@ -41,17 +41,27 @@ class LeadsScreen extends StatefulWidget {
 
 class _LeadsScreenState extends State<LeadsScreen> {
   final _search = TextEditingController();
+  final _scrollCtrl = ScrollController();
 
   @override
   void initState() {
     super.initState();
     context.read<LeadsCubit>().load();
+    _scrollCtrl.addListener(_onScroll);
   }
 
   @override
   void dispose() {
     _search.dispose();
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 200) {
+      context.read<LeadsCubit>().loadMore();
+    }
   }
 
   @override
@@ -62,6 +72,14 @@ class _LeadsScreenState extends State<LeadsScreen> {
     final lang      = Localizations.localeOf(context).languageCode;
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final created = await context.push<bool>('/leads/new');
+          if (created == true && context.mounted) cubit.load();
+        },
+        tooltip: l10n.leadNew,
+        child: const Icon(Icons.add_rounded),
+      ),
       body: Column(
         children: [
           // ── Header ──────────────────────────────────────────────────────────
@@ -119,6 +137,7 @@ class _LeadsScreenState extends State<LeadsScreen> {
                     return RefreshIndicator(
                       onRefresh: cubit.load,
                       child: CustomScrollView(
+                        controller: _scrollCtrl,
                         physics: const AlwaysScrollableScrollPhysics(),
                         slivers: [
                           SliverToBoxAdapter(
@@ -129,21 +148,29 @@ class _LeadsScreenState extends State<LeadsScreen> {
                               AppSpacing.md,
                               AppSpacing.xs,
                               AppSpacing.md,
-                              bottomPad + 100,
+                              AppSpacing.md,
                             ),
                             sliver: SliverList(
                               delegate: SliverChildBuilderDelegate(
                                 (context, i) {
                                   if (i.isOdd) {
-                                    return const SizedBox(
-                                      height: AppSpacing.sm,
-                                    );
+                                    return const SizedBox(height: AppSpacing.sm);
                                   }
                                   return _LeadCard(lead: state.leads[i ~/ 2]);
                                 },
                                 childCount: state.leads.length * 2 - 1,
                               ),
                             ),
+                          ),
+                          if (state.isLoadingMore)
+                            const SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                                child: Center(child: CircularProgressIndicator()),
+                              ),
+                            ),
+                          SliverPadding(
+                            padding: EdgeInsets.only(bottom: bottomPad + 100),
                           ),
                         ],
                       ),

@@ -120,6 +120,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       expand: true,
                       onPressed: () => context.pushAuthRoute('/login/otp'),
                     ),
+                    const SizedBox(height: AppSpacing.sm),
+                    AuthFooterLink(
+                      text: l10n.authForgotPassword,
+                      onTap: () => context.push('/forgot-password'),
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     AuthFooterLink(
                       text: l10n.authNoAccountCta,

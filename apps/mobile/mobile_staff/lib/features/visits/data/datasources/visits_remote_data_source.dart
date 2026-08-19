@@ -1,3 +1,4 @@
+import 'package:core/core_domain.dart';
 import 'package:dio/dio.dart';
 
 import '../../domain/entities/visit.dart';
@@ -5,10 +6,13 @@ import '../../domain/repositories/visits_repository.dart';
 import '../dtos/visit_dtos.dart';
 
 abstract interface class VisitsRemoteDataSource {
-  Future<List<VisitDto>> list(VisitsQuery query);
+  Future<Paginated<VisitDto>> list(VisitsQuery query);
   Future<VisitDetailDto> getOne(String id);
   Future<VisitDto> create(NewVisit input);
   Future<void> transition(String id, VisitTransition transition, String? notes, String? reason);
+  Future<void> reschedule(String id, DateTime scheduledAt, {String? salesNotes});
+  Future<void> assign(String id, String assignedSalesId);
+  Future<void> salesFeedback(String id, {int? rating, String? notes});
 }
 
 class VisitsRemoteDataSourceImpl implements VisitsRemoteDataSource {
@@ -16,19 +20,29 @@ class VisitsRemoteDataSourceImpl implements VisitsRemoteDataSource {
   final Dio _dio;
 
   @override
-  Future<List<VisitDto>> list(VisitsQuery query) async {
+  Future<Paginated<VisitDto>> list(VisitsQuery query) async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/visits/appointments',
       queryParameters: {
-        'page': 1,
-        'pageSize': 50,
+        'page': query.page,
+        'pageSize': 20,
         'status': ?query.status,
         'leadId': ?query.leadId,
         if (query.today) 'today': '1',
       },
     );
-    final data = (res.data?['data'] as List?) ?? const [];
-    return data.whereType<Map<String, dynamic>>().map(VisitDto.fromJson).toList();
+    final json = res.data ?? const <String, dynamic>{};
+    final items = (json['data'] as List? ?? [])
+        .whereType<Map<String, dynamic>>()
+        .map(VisitDto.fromJson)
+        .toList();
+    final meta = PageMeta(
+      page: (json['page'] as num?)?.toInt() ?? query.page,
+      pageSize: (json['pageSize'] as num?)?.toInt() ?? 20,
+      total: (json['total'] as num?)?.toInt() ?? items.length,
+      totalPages: (json['totalPages'] as num?)?.toInt() ?? 1,
+    );
+    return Paginated(data: items, meta: meta);
   }
 
   @override
@@ -73,5 +87,27 @@ class VisitsRemoteDataSourceImpl implements VisitsRemoteDataSource {
       if (transition == VisitTransition.noShow) 'noShowReason': ?reason,
     };
     await _dio.post<Map<String, dynamic>>('/visits/appointments/$id/$path', data: data);
+  }
+
+  @override
+  Future<void> reschedule(String id, DateTime scheduledAt, {String? salesNotes}) async {
+    await _dio.post<void>('/visits/appointments/$id/reschedule', data: {
+      'scheduledAt': scheduledAt.toUtc().toIso8601String(),
+      'salesNotes': ?salesNotes,
+    });
+  }
+
+  @override
+  Future<void> assign(String id, String assignedSalesId) async {
+    await _dio.patch<void>('/visits/appointments/$id/assign',
+        data: {'assignedSalesId': assignedSalesId});
+  }
+
+  @override
+  Future<void> salesFeedback(String id, {int? rating, String? notes}) async {
+    await _dio.post<void>('/visits/appointments/$id/sales-feedback', data: {
+      'rating': ?rating,
+      'notes': ?notes,
+    });
   }
 }
