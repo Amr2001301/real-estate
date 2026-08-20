@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../common/reservation_status_label.dart';
 import '../../../../common/staff_contact_actions.dart';
@@ -43,22 +44,41 @@ class _ReservationDetailScreenState extends State<ReservationDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.fallback?.reservationNumber ?? l10n.navReservations)),
-      body: BlocConsumer<ReservationDetailCubit, ReservationDetailState>(
-        listenWhen: (a, b) => a.actionFailure != b.actionFailure && b.actionFailure != null,
-        listener: (context, state) => showFailureSnackBar(context, state.actionFailure!),
-        builder: (context, state) {
-          switch (state.status) {
-            case DataStatus.initial:
-            case DataStatus.loading:
-              return const Center(child: CircularProgressIndicator());
-            case DataStatus.failure:
-              return ErrorState(failure: state.failure, onRetry: () => context.read<ReservationDetailCubit>().load());
-            case DataStatus.empty:
-            case DataStatus.success:
-              return _body(context, state);
-          }
-        },
+      body: Column(
+        children: [
+          BlocBuilder<ReservationDetailCubit, ReservationDetailState>(
+            buildWhen: (a, b) =>
+                a.detail?.reservation.reservationNumber !=
+                b.detail?.reservation.reservationNumber,
+            builder: (context, state) => AppNavHeader(
+              title: state.detail?.reservation.reservationNumber
+                  ?? widget.fallback?.reservationNumber
+                  ?? l10n.navReservations,
+              leadingAction: NavHeaderAction(
+                icon: Icons.arrow_back_ios_new_rounded,
+                onTap: () => context.pop(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<ReservationDetailCubit, ReservationDetailState>(
+              listenWhen: (a, b) => a.actionFailure != b.actionFailure && b.actionFailure != null,
+              listener: (context, state) => showFailureSnackBar(context, state.actionFailure!),
+              builder: (context, state) {
+                switch (state.status) {
+                  case DataStatus.initial:
+                  case DataStatus.loading:
+                    return const Center(child: CircularProgressIndicator());
+                  case DataStatus.failure:
+                    return ErrorState(failure: state.failure, onRetry: () => context.read<ReservationDetailCubit>().load());
+                  case DataStatus.empty:
+                  case DataStatus.success:
+                    return _body(context, state);
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

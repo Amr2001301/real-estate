@@ -25,29 +25,42 @@ class _ContractDetailScreenState extends State<ContractDetailScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.fallback?.contractNumber != null
-              ? '#${widget.fallback!.contractNumber}'
-              : l10n.navContracts,
-        ),
-      ),
-      body: BlocBuilder<ContractDetailCubit, ContractDetailState>(
-        builder: (context, state) {
-          switch (state.status) {
-            case DataStatus.initial:
-            case DataStatus.loading:
-              return const Center(child: CircularProgressIndicator());
-            case DataStatus.failure:
-              return ErrorState(
-                failure: state.failure,
-                onRetry: () => context.read<ContractDetailCubit>().load(),
-              );
-            case DataStatus.empty:
-            case DataStatus.success:
-              return _body(context, state.contract!);
-          }
-        },
+      body: Column(
+        children: [
+          BlocBuilder<ContractDetailCubit, ContractDetailState>(
+            buildWhen: (a, b) => a.contract?.contractNumber != b.contract?.contractNumber,
+            builder: (context, state) => AppNavHeader(
+              title: state.contract?.contractNumber != null
+                  ? '#${state.contract!.contractNumber}'
+                  : (widget.fallback?.contractNumber != null
+                      ? '#${widget.fallback!.contractNumber}'
+                      : l10n.navContracts),
+              leadingAction: NavHeaderAction(
+                icon: Icons.arrow_back_ios_new_rounded,
+                onTap: () => context.pop(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocBuilder<ContractDetailCubit, ContractDetailState>(
+              builder: (context, state) {
+                switch (state.status) {
+                  case DataStatus.initial:
+                  case DataStatus.loading:
+                    return const Center(child: CircularProgressIndicator());
+                  case DataStatus.failure:
+                    return ErrorState(
+                      failure: state.failure,
+                      onRetry: () => context.read<ContractDetailCubit>().load(),
+                    );
+                  case DataStatus.empty:
+                  case DataStatus.success:
+                    return _body(context, state.contract!);
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

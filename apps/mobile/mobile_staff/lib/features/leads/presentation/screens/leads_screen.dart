@@ -336,24 +336,38 @@ class _FilterChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 4,
-        ),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? colors.brandNavy : colors.surface,
+          gradient: active
+              ? const LinearGradient(
+                  colors: [Color(0xFFAA8528), AppPalette.gold400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: active ? null : colors.surface,
           border: Border.all(
-            color: active ? colors.brandNavy : colors.hairline,
+            color: active ? AppPalette.gold500 : colors.hairline,
+            width: active ? 0.8 : 1.0,
           ),
           borderRadius: AppRadii.pillAll,
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: AppPalette.gold400.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-            color: active ? Colors.white : colors.inkStrong,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+            color: active ? AppPalette.navy : colors.inkStrong,
             height: 1.2,
           ),
         ),
@@ -435,14 +449,22 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        gradient: LinearGradient(
+          begin:  Alignment.topLeft,
+          end:    Alignment.bottomRight,
+          colors: [color.withValues(alpha: 0.12), color.withValues(alpha: 0.04)],
+        ),
+        border:       Border.all(color: color.withValues(alpha: 0.22)),
         borderRadius: AppRadii.card,
+        boxShadow: [
+          BoxShadow(
+            color:      color.withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset:     const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,20 +472,20 @@ class _KpiCard extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
+              fontSize:   24,
               fontWeight: FontWeight.w800,
-              color: color,
-              height: 1.1,
+              color:      color,
+              height:     1.1,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: colors.inkMuted,
-              height: 1.2,
+              fontSize:   11,
+              fontWeight: FontWeight.w600,
+              color:      colors.inkMuted,
+              height:     1.2,
             ),
           ),
         ],
@@ -474,230 +496,230 @@ class _KpiCard extends StatelessWidget {
 
 // ── Lead card ─────────────────────────────────────────────────────────────────
 
-class _LeadCard extends StatelessWidget {
+class _LeadCard extends StatefulWidget {
   const _LeadCard({required this.lead});
   final Lead lead;
+
+  @override
+  State<_LeadCard> createState() => _LeadCardState();
+}
+
+class _LeadCardState extends State<_LeadCard> {
+  bool _pressed = false;
+  Lead get lead => widget.lead;
 
   @override
   Widget build(BuildContext context) {
     final l10n       = context.l10n;
     final colors     = context.appColors;
     final lang       = Localizations.localeOf(context).languageCode;
+    final isRtl      = context.read<LocaleCubit>().isRtl;
     final stageColor = _stageColor(lead.stage, colors);
     final initials   = _initials(lead.fullName);
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: AppRadii.card,
-        boxShadow: colors.shadowCard,
-      ),
-      child: ClipRRect(
-        borderRadius: AppRadii.card,
-        child: Material(
-          color: colors.surface,
-          child: InkWell(
-            onTap: () => context.push('/leads/${lead.id}', extra: lead),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: colors.hairline, width: 0.5),
-                borderRadius: AppRadii.card,
+    return GestureDetector(
+      onTapDown:   (_) => setState(() => _pressed = true),
+      onTapUp:     (_) => setState(() => _pressed = false),
+      onTapCancel: ()  => setState(() => _pressed = false),
+      onTap: () => context.push('/leads/${lead.id}', extra: lead),
+      child: AnimatedScale(
+        scale:    _pressed ? 0.975 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve:    Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color:        colors.surface,
+            borderRadius: AppRadii.card,
+            border:       Border.all(color: stageColor.withValues(alpha: 0.14), width: 0.8),
+            boxShadow: [
+              BoxShadow(
+                color:      stageColor.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset:     const Offset(0, 5),
               ),
-              child: Stack(
-                children: [
-                  // Colored start-side indicator (right in RTL)
-                  PositionedDirectional(
-                    top: 0,
-                    bottom: 0,
-                    start: 0,
-                    child: Container(width: 4, color: stageColor),
+              BoxShadow(
+                color:      Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset:     const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize:       MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Top gradient accent strip ─────────────────────────────
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin:  isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    end:    isRtl ? Alignment.centerLeft  : Alignment.centerRight,
+                    colors: [stageColor, stageColor.withValues(alpha: 0.0)],
                   ),
-                  // Main content
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      AppSpacing.md,
-                      AppSpacing.md,
-                      AppSpacing.md,
-                      AppSpacing.md,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+              // ── Card body ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm,
+                  AppSpacing.md, AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Avatar + name/project + badge + chevron ──────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // ── Row 1: avatar + name/project + badge + chevron ──
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Avatar — RTL index 0 = right side
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: stageColor.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: stageColor.withValues(alpha: 0.28),
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                initials,
-                                style: TextStyle(
-                                  color: stageColor,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  height: 1,
-                                ),
-                              ),
+                        Container(
+                          width:  44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color:  stageColor.withValues(alpha: 0.12),
+                            shape:  BoxShape.circle,
+                            border: Border.all(color: stageColor.withValues(alpha: 0.30)),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            initials,
+                            style: TextStyle(
+                              color:      stageColor,
+                              fontSize:   15,
+                              fontWeight: FontWeight.w700,
+                              height:     1,
                             ),
-                            const SizedBox(width: AppSpacing.sm),
-                            // Name + project/phone
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    lead.fullName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: colors.inkStrong,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  if (lead.projectInterest != null)
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.apartment_outlined,
-                                          size: 12,
-                                          color: colors.inkMuted,
-                                        ),
-                                        const SizedBox(width: 3),
-                                        Expanded(
-                                          child: Text(
-                                            lead.projectInterest!,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: colors.inkMuted,
-                                              height: 1.3,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    )
-                                  else if (lead.phone != null)
-                                    Text(
-                                      lead.phone!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colors.inkMuted,
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            // Stage badge
-                            StatusBadge(
-                              label: leadStageLabel(l10n, lead.stage),
-                              tone: leadStageTone(lead.stage),
-                            ),
-                            const SizedBox(width: AppSpacing.xxs),
-                            // chevron_right auto-mirrors to ‹ in RTL
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              size: 20,
-                              color: colors.inkMuted,
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: AppSpacing.xs),
-                        // Divider
-                        Container(height: 0.5, color: colors.hairline),
-                        const SizedBox(height: AppSpacing.xs),
-                        // ── Row 2: date chip + call button ──────────────────
-                        Row(
-                          children: [
-                            if (lead.createdAt != null)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppSpacing.xs,
-                                  vertical: 3,
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                lead.fullName,
+                                maxLines:  1,
+                                overflow:  TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize:   15,
+                                  fontWeight: FontWeight.w700,
+                                  color:      colors.inkStrong,
+                                  height:     1.2,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: colors.brandNavy.withValues(alpha: 0.06),
-                                  border: Border.all(
-                                    color: colors.brandNavy
-                                        .withValues(alpha: 0.14),
-                                  ),
-                                  borderRadius: AppRadii.pillAll,
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                              ),
+                              const SizedBox(height: 2),
+                              if (lead.projectInterest != null)
+                                Row(
                                   children: [
-                                    Icon(
-                                      Icons.calendar_today_outlined,
-                                      size: 11,
-                                      color: colors.brandNavy
-                                          .withValues(alpha: 0.65),
-                                    ),
-                                    const SizedBox(width: AppSpacing.xxs),
-                                    Text(
-                                      DateFormatter.shortDate(
-                                        lead.createdAt!,
-                                        languageCode: lang,
-                                      ),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: colors.brandNavy,
+                                    Icon(Icons.apartment_outlined, size: 12, color: colors.inkMuted),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        lead.projectInterest!,
+                                        maxLines:  1,
+                                        overflow:  TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
                                       ),
                                     ),
                                   ],
+                                )
+                              else if (lead.phone != null)
+                                Text(
+                                  lead.phone!,
+                                  style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
                                 ),
-                              )
-                            else
-                              const SizedBox.shrink(),
-                            const Spacer(),
-                            // Call button — RTL last = left side
-                            if (lead.phone != null)
-                              GestureDetector(
-                                onTap: () => ContactActions.call(lead.phone!),
-                                behavior: HitTestBehavior.opaque,
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: colors.success
-                                        .withValues(alpha: 0.10),
-                                    border: Border.all(
-                                      color: colors.success
-                                          .withValues(alpha: 0.25),
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.call_rounded,
-                                    size: 16,
-                                    color: colors.success,
-                                  ),
-                                ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: AppSpacing.xs),
+                        StatusBadge(
+                          label: leadStageLabel(l10n, lead.stage),
+                          tone:  leadStageTone(lead.stage),
+                        ),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Icon(Icons.chevron_right_rounded, size: 20, color: colors.inkMuted),
                       ],
                     ),
-                  ),
-                ],
+                    // ── Date chip + call button ──────────────────────────
+                    const SizedBox(height: AppSpacing.xs),
+                    Container(height: 0.5, color: colors.hairline),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        if (lead.createdAt != null)
+                          _LeadInfoChip(
+                            icon:  Icons.calendar_today_outlined,
+                            label: DateFormatter.shortDate(lead.createdAt!, languageCode: lang),
+                            color: colors.brandNavy,
+                          )
+                        else
+                          const SizedBox.shrink(),
+                        const Spacer(),
+                        if (lead.phone != null)
+                          GestureDetector(
+                            onTap:    () => ContactActions.call(lead.phone!),
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              width:  34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color:  colors.success.withValues(alpha: 0.10),
+                                border: Border.all(color: colors.success.withValues(alpha: 0.25)),
+                                shape:  BoxShape.circle,
+                              ),
+                              child: Icon(Icons.call_rounded, size: 15, color: colors.success),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Shared info chip ──────────────────────────────────────────────────────────
+
+class _LeadInfoChip extends StatelessWidget {
+  const _LeadInfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+  final IconData icon;
+  final String   label;
+  final Color    color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color:        color.withValues(alpha: 0.07),
+        border:       Border.all(color: color.withValues(alpha: 0.20)),
+        borderRadius: AppRadii.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color.withValues(alpha: 0.80)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize:   11,
+              fontWeight: FontWeight.w600,
+              color:      color,
+              height:     1.2,
+            ),
+          ),
+        ],
       ),
     );
   }

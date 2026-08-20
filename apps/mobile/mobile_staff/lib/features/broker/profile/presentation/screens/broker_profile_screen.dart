@@ -428,9 +428,7 @@ class _SettingRow extends StatelessWidget {
             ),
             if (trailing != null) ...[trailing!, const SizedBox(width: 6)],
             Icon(
-              Directionality.of(context) == TextDirection.rtl
-                  ? Icons.arrow_back_ios_new_rounded
-                  : Icons.arrow_forward_ios_rounded,
+              Icons.arrow_back_ios_new_rounded,
               size: 13,
               color: colors.inkMuted,
             ),

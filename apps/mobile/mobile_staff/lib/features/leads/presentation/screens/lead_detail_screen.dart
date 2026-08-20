@@ -44,16 +44,13 @@ class _LeadDetailScreenState extends State<LeadDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n  = context.l10n;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return Scaffold(
       body: Column(
         children: [
           AppNavHeader(
             title: widget.fallbackName ?? l10n.navLeads,
             leadingAction: NavHeaderAction(
-              icon: isRtl
-                  ? Icons.arrow_forward_ios_rounded
-                  : Icons.arrow_back_ios_new_rounded,
+              icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
             ),
           ),

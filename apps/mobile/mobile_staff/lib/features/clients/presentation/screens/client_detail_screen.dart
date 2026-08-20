@@ -26,16 +26,14 @@ class _ClientDetailScreenState extends State<ClientDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n  = context.l10n;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isRtl = context.read<LocaleCubit>().isRtl;
     return Scaffold(
       body: Column(
         children: [
           AppNavHeader(
             title: widget.fallback?.fullName ?? l10n.navClients,
             leadingAction: NavHeaderAction(
-              icon: isRtl
-                  ? Icons.arrow_forward_ios_rounded
-                  : Icons.arrow_back_ios_new_rounded,
+              icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
             ),
           ),
@@ -365,7 +363,7 @@ class _LeadCard extends StatelessWidget {
     final theme  = Theme.of(context);
     final tone   = leadStageTone(lead.stage);
     final stageColor = _toneColor(colors, tone);
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isRtl = context.read<LocaleCubit>().isRtl;
 
     return GestureDetector(
       onTap: () => context.push('/leads/${lead.leadId}'),
@@ -465,9 +463,7 @@ class _LeadCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Icon(
-                        isRtl
-                            ? Icons.chevron_left_rounded
-                            : Icons.chevron_right_rounded,
+                        Icons.chevron_right_rounded,
                         color: colors.inkMuted,
                         size: 18,
                       ),

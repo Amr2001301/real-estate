@@ -27,7 +27,7 @@ class _TargetsScreenState extends State<TargetsScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final cubit  = context.read<TargetsCubit>();
-    final isRtl  = Directionality.of(context) == TextDirection.rtl;
+    final isRtl  = context.read<LocaleCubit>().isRtl;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       body: Column(
@@ -35,9 +35,7 @@ class _TargetsScreenState extends State<TargetsScreen> {
           AppNavHeader(
             title: l10n.targetsTitle,
             leadingAction: NavHeaderAction(
-              icon: isRtl
-                  ? Icons.arrow_forward_ios_rounded
-                  : Icons.arrow_back_ios_new_rounded,
+              icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
             ),
           ),

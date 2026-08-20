@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_contact_actions.dart';
 import '../../../../common/visit_status_label.dart';
@@ -183,24 +184,41 @@ class _VisitDetailScreenState extends State<VisitDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
+    final l10n  = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(widget.fallback?.clientName ?? l10n.navVisits)),
-      body: BlocConsumer<VisitDetailCubit, VisitDetailState>(
-        listenWhen: (a, b) => a.actionFailure != b.actionFailure && b.actionFailure != null,
-        listener: (context, state) => showFailureSnackBar(context, state.actionFailure!),
-        builder: (context, state) {
-          switch (state.status) {
-            case DataStatus.initial:
-            case DataStatus.loading:
-              return const Center(child: CircularProgressIndicator());
-            case DataStatus.failure:
-              return ErrorState(failure: state.failure, onRetry: () => context.read<VisitDetailCubit>().load());
-            case DataStatus.empty:
-            case DataStatus.success:
-              return _body(context, state);
-          }
-        },
+      body: Column(
+        children: [
+          BlocBuilder<VisitDetailCubit, VisitDetailState>(
+            buildWhen: (a, b) => a.detail?.visit.clientName != b.detail?.visit.clientName,
+            builder: (context, state) => AppNavHeader(
+              title: state.detail?.visit.clientName
+                  ?? widget.fallback?.clientName
+                  ?? l10n.navVisits,
+              leadingAction: NavHeaderAction(
+                icon: Icons.arrow_back_ios_new_rounded,
+                onTap: () => context.pop(),
+              ),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<VisitDetailCubit, VisitDetailState>(
+              listenWhen: (a, b) => a.actionFailure != b.actionFailure && b.actionFailure != null,
+              listener: (context, state) => showFailureSnackBar(context, state.actionFailure!),
+              builder: (context, state) {
+                switch (state.status) {
+                  case DataStatus.initial:
+                  case DataStatus.loading:
+                    return const Center(child: CircularProgressIndicator());
+                  case DataStatus.failure:
+                    return ErrorState(failure: state.failure, onRetry: () => context.read<VisitDetailCubit>().load());
+                  case DataStatus.empty:
+                  case DataStatus.success:
+                    return _body(context, state);
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

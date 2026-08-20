@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/staff_deposit.dart';
@@ -26,8 +27,17 @@ class _DepositsScreenState extends State<DepositsScreen> {
     final l10n = context.l10n;
     final cubit = context.read<DepositsCubit>();
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navDeposits)),
-      body: BlocBuilder<DepositsCubit, DepositsListState>(
+      body: Column(
+        children: [
+          AppNavHeader(
+            title: l10n.navDeposits,
+            leadingAction: NavHeaderAction(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: BlocBuilder<DepositsCubit, DepositsListState>(
         builder: (context, state) {
           switch (state.status) {
             case DataStatus.initial:
@@ -54,6 +64,9 @@ class _DepositsScreenState extends State<DepositsScreen> {
               );
           }
         },
+      ),
+          ),
+        ],
       ),
     );
   }

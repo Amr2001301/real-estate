@@ -47,7 +47,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
     final l10n   = context.l10n;
     final cubit  = context.read<CalculatorCubit>();
     final lang   = Localizations.localeOf(context).languageCode;
-    final isRtl  = Directionality.of(context) == TextDirection.rtl;
+    final isRtl  = context.read<LocaleCubit>().isRtl;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -56,9 +56,7 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
           AppNavHeader(
             title: l10n.calculatorTitle,
             leadingAction: NavHeaderAction(
-              icon: isRtl
-                  ? Icons.arrow_forward_ios_rounded
-                  : Icons.arrow_back_ios_new_rounded,
+              icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
             ),
           ),

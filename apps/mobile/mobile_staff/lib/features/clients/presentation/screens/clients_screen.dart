@@ -352,17 +352,31 @@ class _FilterChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.sm,
-          vertical: 4,
-        ),
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 2, vertical: 6),
         decoration: BoxDecoration(
-          color: active ? colors.brandNavy : colors.surface,
+          gradient: active
+              ? const LinearGradient(
+                  colors: [Color(0xFFAA8528), AppPalette.gold400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: active ? null : colors.surface,
           border: Border.all(
-            color: active ? colors.brandNavy : colors.hairline,
+            color: active ? AppPalette.gold500 : colors.hairline,
+            width: active ? 0.8 : 1.0,
           ),
           borderRadius: AppRadii.pillAll,
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: AppPalette.gold400.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -370,10 +384,10 @@ class _FilterChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                color: active ? Colors.white : colors.inkStrong,
-                height: 1.2,
+                fontSize:   12,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+                color:      active ? AppPalette.navy : colors.inkStrong,
+                height:     1.2,
               ),
             ),
             if (count > 0) ...[
@@ -383,16 +397,16 @@ class _FilterChip extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: active
                       ? Colors.white.withValues(alpha: 0.22)
-                      : colors.brandGold.withValues(alpha: 0.14),
+                      : AppPalette.gold400.withValues(alpha: 0.14),
                   borderRadius: AppRadii.pillAll,
                 ),
                 child: Text(
                   '$count',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize:   10,
                     fontWeight: FontWeight.w700,
-                    color: active ? Colors.white : colors.brandGold,
-                    height: 1.1,
+                    color:      active ? AppPalette.navy : AppPalette.gold600,
+                    height:     1.1,
                   ),
                 ),
               ),
@@ -477,14 +491,22 @@ class _KpiCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.appColors;
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.sm, AppSpacing.sm, AppSpacing.sm, AppSpacing.sm),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.07),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
+        gradient: LinearGradient(
+          begin:  Alignment.topLeft,
+          end:    Alignment.bottomRight,
+          colors: [color.withValues(alpha: 0.12), color.withValues(alpha: 0.04)],
+        ),
+        border:       Border.all(color: color.withValues(alpha: 0.22)),
         borderRadius: AppRadii.card,
+        boxShadow: [
+          BoxShadow(
+            color:      color.withValues(alpha: 0.10),
+            blurRadius: 10,
+            offset:     const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,20 +514,20 @@ class _KpiCard extends StatelessWidget {
           Text(
             value,
             style: TextStyle(
-              fontSize: 22,
+              fontSize:   24,
               fontWeight: FontWeight.w800,
-              color: color,
-              height: 1.1,
+              color:      color,
+              height:     1.1,
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 3),
           Text(
             label,
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: colors.inkMuted,
-              height: 1.2,
+              fontSize:   11,
+              fontWeight: FontWeight.w600,
+              color:      colors.inkMuted,
+              height:     1.2,
             ),
           ),
         ],
@@ -516,209 +538,193 @@ class _KpiCard extends StatelessWidget {
 
 // ── Client card ───────────────────────────────────────────────────────────────
 
-class _ClientCard extends StatelessWidget {
+class _ClientCard extends StatefulWidget {
   const _ClientCard({required this.client});
   final StaffClient client;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final colors = context.appColors;
-    final stageColor = _stageColor(client.latestStage, colors);
-    final initials = _initials(client.fullName);
+  State<_ClientCard> createState() => _ClientCardState();
+}
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: AppRadii.card,
-        boxShadow: colors.shadowCard,
-      ),
-      child: ClipRRect(
-        borderRadius: AppRadii.card,
-        child: Material(
-          color: colors.surface,
-          child: InkWell(
-            onTap: () =>
-                context.push('/clients/${client.clientId}', extra: client),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: colors.hairline, width: 0.5),
-                borderRadius: AppRadii.card,
+class _ClientCardState extends State<_ClientCard> {
+  bool _pressed = false;
+  StaffClient get client => widget.client;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n       = context.l10n;
+    final colors     = context.appColors;
+    final isRtl      = context.read<LocaleCubit>().isRtl;
+    final stageColor = _stageColor(client.latestStage, colors);
+    final initials   = _initials(client.fullName);
+
+    return GestureDetector(
+      onTapDown:   (_) => setState(() => _pressed = true),
+      onTapUp:     (_) => setState(() => _pressed = false),
+      onTapCancel: ()  => setState(() => _pressed = false),
+      onTap: () => context.push('/clients/${client.clientId}', extra: client),
+      child: AnimatedScale(
+        scale:    _pressed ? 0.975 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve:    Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color:        colors.surface,
+            borderRadius: AppRadii.card,
+            border:       Border.all(color: stageColor.withValues(alpha: 0.14), width: 0.8),
+            boxShadow: [
+              BoxShadow(
+                color:      stageColor.withValues(alpha: 0.08),
+                blurRadius: 18,
+                offset:     const Offset(0, 5),
               ),
-              child: Stack(
-                children: [
-                  // Colored start-side indicator — thinner for clients (3px)
-                  PositionedDirectional(
-                    top: 0,
-                    bottom: 0,
-                    start: 0,
-                    child: Container(width: 3, color: stageColor),
+              BoxShadow(
+                color:      Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset:     const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize:       MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ── Top gradient accent strip ─────────────────────────────
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin:  isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    end:    isRtl ? Alignment.centerLeft  : Alignment.centerRight,
+                    colors: [stageColor, stageColor.withValues(alpha: 0.0)],
                   ),
-                  // Main content
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      AppSpacing.md,
-                      12,
-                      AppSpacing.md,
-                      12,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                ),
+              ),
+              // ── Card body ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm,
+                  AppSpacing.md, AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Avatar + name/phone + badge + chevron ────────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // ── Row 1: avatar + name/phone + badge + chevron ────
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            // Avatar — RTL index 0 = right side
-                            Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: stageColor.withValues(alpha: 0.12),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: stageColor.withValues(alpha: 0.28),
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                initials,
+                        Container(
+                          width:  42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color:  stageColor.withValues(alpha: 0.12),
+                            shape:  BoxShape.circle,
+                            border: Border.all(color: stageColor.withValues(alpha: 0.30)),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            initials,
+                            style: TextStyle(
+                              color:      stageColor,
+                              fontSize:   14,
+                              fontWeight: FontWeight.w700,
+                              height:     1,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                client.fullName,
+                                maxLines:  1,
+                                overflow:  TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  color: stageColor,
-                                  fontSize: 14,
+                                  fontSize:   15,
                                   fontWeight: FontWeight.w700,
-                                  height: 1,
+                                  color:      colors.inkStrong,
+                                  height:     1.2,
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            // Name + phone
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    client.fullName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: colors.inkStrong,
-                                      height: 1.2,
-                                    ),
-                                  ),
-                                  if (client.phone != null) ...[
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      client.phone!,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: colors.inkMuted,
-                                        height: 1.3,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                            // Stage badge
-                            StatusBadge(
-                              label: leadStageLabel(l10n, client.latestStage),
-                              tone: leadStageTone(client.latestStage),
-                            ),
-                            const SizedBox(width: AppSpacing.xxs),
-                            // chevron_right auto-mirrors to ‹ in RTL
-                            Icon(
-                              Icons.chevron_right_rounded,
-                              size: 20,
-                              color: colors.inkMuted,
-                            ),
-                          ],
+                              if (client.phone != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  client.phone!,
+                                  maxLines:  1,
+                                  overflow:  TextOverflow.ellipsis,
+                                  style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        // Divider
-                        Container(height: 0.5, color: colors.hairline),
-                        const SizedBox(height: 6),
-                        // ── Row 2: opportunity chip + call button ───────────
-                        Row(
-                          children: [
-                            // Opportunity count chip — RTL index 0 = right
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppSpacing.xs,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colors.brandNavy.withValues(alpha: 0.06),
-                                border: Border.all(
-                                  color: colors.brandNavy.withValues(
-                                    alpha: 0.14,
-                                  ),
-                                ),
-                                borderRadius: AppRadii.pillAll,
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.business_center_outlined,
-                                    size: 11,
-                                    color: colors.brandNavy.withValues(
-                                      alpha: 0.65,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppSpacing.xxs),
-                                  Text(
-                                    l10n.salesOpportunityCount(
-                                      client.leadCount,
-                                    ),
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: colors.brandNavy,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Spacer(),
-                            // Call button — RTL last = left side
-                            if (client.phone != null)
-                              GestureDetector(
-                                onTap: () => ContactActions.call(client.phone!),
-                                behavior: HitTestBehavior.opaque,
-                                child: Container(
-                                  width: 36,
-                                  height: 36,
-                                  decoration: BoxDecoration(
-                                    color: colors.success.withValues(
-                                      alpha: 0.10,
-                                    ),
-                                    border: Border.all(
-                                      color: colors.success.withValues(
-                                        alpha: 0.25,
-                                      ),
-                                    ),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    Icons.call_rounded,
-                                    size: 16,
-                                    color: colors.success,
-                                  ),
-                                ),
-                              ),
-                          ],
+                        const SizedBox(width: AppSpacing.xs),
+                        StatusBadge(
+                          label: leadStageLabel(l10n, client.latestStage),
+                          tone:  leadStageTone(client.latestStage),
                         ),
+                        const SizedBox(width: AppSpacing.xxs),
+                        Icon(Icons.chevron_right_rounded, size: 20, color: colors.inkMuted),
                       ],
                     ),
-                  ),
-                ],
+                    // ── Opportunity chip + call button ───────────────────
+                    const SizedBox(height: 6),
+                    Container(height: 0.5, color: colors.hairline),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color:        colors.brandNavy.withValues(alpha: 0.07),
+                            border:       Border.all(color: colors.brandNavy.withValues(alpha: 0.18)),
+                            borderRadius: AppRadii.pillAll,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.business_center_outlined,
+                                size:  11,
+                                color: colors.brandNavy.withValues(alpha: 0.75),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                l10n.salesOpportunityCount(client.leadCount),
+                                style: TextStyle(
+                                  fontSize:   11,
+                                  fontWeight: FontWeight.w600,
+                                  color:      colors.brandNavy,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        if (client.phone != null)
+                          GestureDetector(
+                            onTap:    () => ContactActions.call(client.phone!),
+                            behavior: HitTestBehavior.opaque,
+                            child: Container(
+                              width:  34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color:  colors.success.withValues(alpha: 0.10),
+                                border: Border.all(color: colors.success.withValues(alpha: 0.25)),
+                                shape:  BoxShape.circle,
+                              ),
+                              child: Icon(Icons.call_rounded, size: 15, color: colors.success),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

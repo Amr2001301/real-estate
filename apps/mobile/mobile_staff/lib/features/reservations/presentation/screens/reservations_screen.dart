@@ -33,7 +33,6 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     final l10n = context.l10n;
     final cubit = context.read<ReservationsCubit>();
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navReservations)),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _create,
         icon: const Icon(Icons.add_rounded),
@@ -41,6 +40,13 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
       ),
       body: Column(
         children: [
+          AppNavHeader(
+            title: l10n.navReservations,
+            leadingAction: NavHeaderAction(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
           _StatusFilter(),
           Expanded(
             child: BlocBuilder<ReservationsCubit, ReservationsListState>(

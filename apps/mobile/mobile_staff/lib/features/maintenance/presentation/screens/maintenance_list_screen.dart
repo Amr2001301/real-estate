@@ -744,7 +744,7 @@ class _RequestCard extends StatelessWidget {
     final colors = context.appColors;
     final theme  = Theme.of(context);
     final lang   = Localizations.localeOf(context).languageCode;
-    final isRtl  = Directionality.of(context) == TextDirection.rtl;
+    final isRtl  = context.read<LocaleCubit>().isRtl;
 
     final ct           = _resolveCardTheme(request.status);
     final category     = request.categoryName?.resolve(lang);
@@ -1080,9 +1080,7 @@ class _DetailsRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(7),
               ),
               child: Icon(
-                isRtl
-                    ? Icons.arrow_back_ios_new_rounded
-                    : Icons.arrow_forward_ios_rounded,
+                Icons.arrow_back_ios_new_rounded,
                 color: accent,
                 size: 13,
               ),

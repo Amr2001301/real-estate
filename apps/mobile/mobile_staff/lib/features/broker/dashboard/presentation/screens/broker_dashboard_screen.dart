@@ -401,9 +401,7 @@ class _KpiTile extends StatelessWidget {
                 if (onTap != null) ...[
                   const Spacer(),
                   Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Icons.arrow_back_ios_new_rounded
-                        : Icons.arrow_forward_ios_rounded,
+                    Icons.arrow_back_ios_new_rounded,
                     size: 11,
                     color: Colors.white.withValues(alpha: 0.4),
                   ),
@@ -528,9 +526,7 @@ class _CommissionCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(
-              Directionality.of(context) == TextDirection.rtl
-                  ? Icons.arrow_back_ios_new_rounded
-                  : Icons.arrow_forward_ios_rounded,
+              Icons.arrow_back_ios_new_rounded,
               color: Colors.white.withValues(alpha: 0.5),
               size: 13,
             ),

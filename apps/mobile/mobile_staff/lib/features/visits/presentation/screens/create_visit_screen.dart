@@ -40,16 +40,13 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
   Widget build(BuildContext context) {
     final l10n  = context.l10n;
     final lang  = Localizations.localeOf(context).languageCode;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return Scaffold(
       body: Column(
         children: [
           AppNavHeader(
             title: l10n.visitNew,
             leadingAction: NavHeaderAction(
-              icon: isRtl
-                  ? Icons.arrow_forward_ios_rounded
-                  : Icons.arrow_back_ios_new_rounded,
+              icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
             ),
           ),
@@ -124,9 +121,7 @@ class _CreateVisitScreenState extends State<CreateVisitScreen> {
                             ),
                           ),
                           Icon(
-                            Directionality.of(context) == TextDirection.rtl
-                                ? Icons.chevron_left_rounded
-                                : Icons.chevron_right_rounded,
+                            Icons.chevron_right_rounded,
                             color: colors.inkMuted,
                           ),
                         ],

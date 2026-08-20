@@ -13,7 +13,6 @@ class CreateLeadScreen extends StatefulWidget {
 }
 
 class _CreateLeadScreenState extends State<CreateLeadScreen> {
-  final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -29,7 +28,7 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
   }
 
   void _submit() {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (_nameCtrl.text.trim().isEmpty) return;
     context.read<CreateLeadCubit>().submit(
           fullName: _nameCtrl.text.trim(),
           phone: _phoneCtrl.text.trim(),
@@ -53,54 +52,65 @@ class _CreateLeadScreenState extends State<CreateLeadScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.leadNew)),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [
-              TextFormField(
-                controller: _nameCtrl,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(labelText: l10n.leadFullName),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? l10n.leadFullNameRequired : null,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _phoneCtrl,
-                keyboardType: TextInputType.phone,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(labelText: l10n.leadPhone),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                decoration: InputDecoration(labelText: l10n.leadEmail),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              TextFormField(
-                controller: _notesCtrl,
-                maxLines: 3,
-                textInputAction: TextInputAction.done,
-                decoration: InputDecoration(labelText: l10n.leadNotes),
-              ),
-              const SizedBox(height: AppSpacing.xl),
-              BlocBuilder<CreateLeadCubit, CreateLeadState>(
-                buildWhen: (a, b) => a.status != b.status,
-                builder: (context, state) => AppButton(
-                  label: l10n.leadCreate,
-                  size: AppButtonSize.large,
-                  variant: AppButtonVariant.gold,
-                  isLoading: state.status == CreateLeadStatus.submitting,
-                  onPressed:
-                      state.status == CreateLeadStatus.submitting ? null : _submit,
+        body: Builder(
+          builder: (context) {
+            return Column(
+              children: [
+                AppNavHeader(
+                  title: l10n.leadNew,
+                  leadingAction: NavHeaderAction(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    onTap: () => context.pop(),
+                  ),
                 ),
-              ),
-            ],
-          ),
+                Expanded(
+                  child: ListView(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      children: [
+                        AppTextField(
+                          label: l10n.leadFullName,
+                          controller: _nameCtrl,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        AppTextField(
+                          label: l10n.leadPhone,
+                          controller: _phoneCtrl,
+                          keyboardType: TextInputType.phone,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        AppTextField(
+                          label: l10n.leadEmail,
+                          controller: _emailCtrl,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        AppTextField(
+                          label: l10n.leadNotes,
+                          controller: _notesCtrl,
+                          maxLines: 3,
+                          textInputAction: TextInputAction.done,
+                        ),
+                        const SizedBox(height: AppSpacing.xl),
+                        BlocBuilder<CreateLeadCubit, CreateLeadState>(
+                          buildWhen: (a, b) => a.status != b.status,
+                          builder: (context, state) => AppButton(
+                            label: l10n.leadCreate,
+                            size: AppButtonSize.large,
+                            variant: AppButtonVariant.gold,
+                            isLoading: state.status == CreateLeadStatus.submitting,
+                            onPressed:
+                                state.status == CreateLeadStatus.submitting ? null : _submit,
+                          ),
+                        ),
+                      ],
+                    ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

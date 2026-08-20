@@ -44,7 +44,6 @@ class DashboardBonusCard extends StatelessWidget {
     final l10n = context.l10n;
     final colors = context.appColors;
     final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
 
     return BlocBuilder<BonusSummaryCubit, BonusSummaryState>(
       builder: (context, state) {
@@ -84,7 +83,7 @@ class DashboardBonusCard extends StatelessWidget {
                       _PeriodChip(label: _periodLabel(DateTime.now())),
                       const SizedBox(width: AppSpacing.xs),
                       Transform.flip(
-                        flipX: isRtl,
+                        flipX: false,
                         child: Icon(
                           Icons.chevron_right_rounded,
                           size: 20,

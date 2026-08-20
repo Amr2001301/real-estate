@@ -498,9 +498,7 @@ class _FallbackBackButton extends StatelessWidget {
           shape: BoxShape.circle,
         ),
         child: Icon(
-          Directionality.of(context) == TextDirection.rtl
-              ? Icons.arrow_forward_ios_rounded
-              : Icons.arrow_back_ios_new_rounded,
+          Icons.arrow_back_ios_new_rounded,
           size: 16,
           color: Colors.white,
         ),
@@ -744,10 +742,8 @@ class _NavOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final backIcon = isRtl
-        ? Icons.arrow_forward_ios_rounded
-        : Icons.arrow_back_ios_new_rounded;
+    final isRtl = context.read<LocaleCubit>().isRtl;
+    final backIcon = Icons.arrow_back_ios_new_rounded;
 
     // When in header mode: full-width navy bar with back button + title.
     // Otherwise: just a floating circle button positioned at the start corner.
@@ -1369,7 +1365,7 @@ class _UnitCard extends StatelessWidget {
     final lang = Localizations.localeOf(context).languageCode;
     final hasPrice = unit.price != null && unit.price!.isNotEmpty;
     final available = unit.status == 'AVAILABLE';
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isRtl = context.read<LocaleCubit>().isRtl;
 
     return AppCard(
       padding: EdgeInsets.zero,
@@ -1496,9 +1492,7 @@ class _UnitCard extends StatelessWidget {
                     ),
                     const SizedBox(width: AppSpacing.xxs),
                     Icon(
-                      isRtl
-                          ? Icons.arrow_back_ios_new_rounded
-                          : Icons.arrow_forward_ios_rounded,
+                      Icons.arrow_back_ios_new_rounded,
                       size: 12,
                       color: colors.brandGold,
                     ),

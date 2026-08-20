@@ -614,7 +614,7 @@ class _FocusItemCardState extends State<_FocusItemCard> {
     final colors = context.appColors;
     final toneColor = widget.item.tone.baseColor(colors);
     final hasRoute = widget.item.route != null;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isRtl = context.read<LocaleCubit>().isRtl;
 
     return GestureDetector(
       onTapDown: hasRoute ? (_) => setState(() => _pressed = true) : null,
@@ -696,7 +696,6 @@ class _FocusItemCardState extends State<_FocusItemCard> {
                   ],
                 ),
               ),
-              // Disclosure indicator — on the trailing/end side (LEFT in RTL)
               if (hasRoute) ...[
                 const SizedBox(width: AppSpacing.xs),
                 Container(
@@ -709,13 +708,10 @@ class _FocusItemCardState extends State<_FocusItemCard> {
                     ),
                     shape: BoxShape.circle,
                   ),
-                  child: Transform.flip(
-                    flipX: isRtl,
-                    child: Icon(
-                      Icons.chevron_left_rounded,
-                      color: toneColor,
-                      size: 18,
-                    ),
+                  child: Icon(
+                    Icons.chevron_right_rounded,
+                    color: toneColor,
+                    size: 18,
                   ),
                 ),
               ],
@@ -727,7 +723,7 @@ class _FocusItemCardState extends State<_FocusItemCard> {
   }
 }
 
-// ── 3. Quick actions — primary banner + 2×2 grid ──────────────────────────────
+// ── 3. Quick actions — unified grid ───────────────────────────────────────────
 
 class _CompactQuickActions extends StatelessWidget {
   const _CompactQuickActions({
@@ -739,26 +735,26 @@ class _CompactQuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _PrimaryBookingCard(l10n: l10n),
-        const SizedBox(height: AppSpacing.sm),
-        _SecondaryActionsGrid(l10n: l10n, canReviewPayments: canReviewPayments),
-      ],
-    );
+    return _SecondaryActionsGrid(l10n: l10n, canReviewPayments: canReviewPayments);
   }
 }
 
-class _PrimaryBookingCard extends StatefulWidget {
-  const _PrimaryBookingCard({required this.l10n});
-  final AppLocalizations l10n;
+// Full-width primary action cell with gold gradient (replaces the heavy banner card)
+class _PrimaryActionCell extends StatefulWidget {
+  const _PrimaryActionCell({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
 
   @override
-  State<_PrimaryBookingCard> createState() => _PrimaryBookingCardState();
+  State<_PrimaryActionCell> createState() => _PrimaryActionCellState();
 }
 
-class _PrimaryBookingCardState extends State<_PrimaryBookingCard> {
+class _PrimaryActionCellState extends State<_PrimaryActionCell> {
   bool _pressed = false;
 
   static const _gold1 = Color(0xFFAA8528);
@@ -766,113 +762,60 @@ class _PrimaryBookingCardState extends State<_PrimaryBookingCard> {
 
   @override
   Widget build(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode;
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-
+    final isRtl = context.read<LocaleCubit>().isRtl;
     return GestureDetector(
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
-      onTap: () => context.push('/reservations/new'),
+      onTap: widget.onTap,
       child: AnimatedScale(
         scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 120),
-        curve: const Cubic(0.32, 0.72, 0, 1),
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOutCubic,
         child: Container(
-          height: 62,
+          height: 52,
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [_gold1, _gold2],
               begin: Alignment.centerLeft,
               end: Alignment.centerRight,
             ),
-            borderRadius: AppRadii.card,
+            borderRadius: BorderRadius.circular(AppRadii.md),
             boxShadow: [
               BoxShadow(
-                color: AppPalette.gold400.withValues(alpha: 0.38),
-                blurRadius: 14,
-                offset: const Offset(0, 5),
+                color: AppPalette.gold400.withValues(alpha: 0.32),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          clipBehavior: Clip.antiAlias,
-          child: Stack(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Positioned.fill(
-                child: CustomPaint(painter: _DotPatternPainter()),
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(widget.icon, color: Colors.white, size: 17),
               ),
-              Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(
-                  AppSpacing.md,
-                  0,
-                  AppSpacing.sm,
-                  0,
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                widget.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  height: 1.2,
                 ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.18),
-                        borderRadius: const BorderRadius.all(
-                          Radius.circular(13),
-                        ),
-                      ),
-                      child: const Icon(
-                        Icons.bookmark_add_outlined,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            widget.l10n.reservationNew,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              height: 1.2,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            lang == 'ar'
-                                ? 'ابدأ حجزاً جديداً الآن'
-                                : 'Start a new booking now',
-                            style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.72),
-                              fontSize: 12,
-                              height: 1.2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Disclosure indicator on trailing side (LEFT in RTL)
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Transform.flip(
-                        flipX: isRtl,
-                        child: Icon(
-                          Icons.chevron_left_rounded,
-                          color: Colors.white.withValues(alpha: 0.85),
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              ),
+              const SizedBox(width: AppSpacing.xs),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.white.withValues(alpha: 0.75),
+                size: 18,
               ),
             ],
           ),
@@ -895,6 +838,13 @@ class _SecondaryActionsGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // Primary action — full width, gold accent
+        _PrimaryActionCell(
+          icon: Icons.bookmark_add_outlined,
+          label: l10n.reservationNew,
+          onTap: () => context.push('/reservations/new'),
+        ),
+        const SizedBox(height: AppSpacing.xs),
         Row(
           children: [
             Expanded(
@@ -1415,13 +1365,28 @@ class _PipelineCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Divider(height: 1, thickness: 1, color: colors.hairline),
           const SizedBox(height: AppSpacing.xs),
-          for (final stage in kLeadStages)
-            _PipelineRow(
-              stage: stage,
-              count: data.pipeline[stage] ?? 0,
-              maxCount: maxCount,
-              l10n: l10n,
-            ),
+          if (total == 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: Text(
+                l10n.leadsEmptyTitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colors.inkMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            )
+          else
+            for (final stage in kLeadStages)
+              if ((data.pipeline[stage] ?? 0) > 0)
+                _PipelineRow(
+                  stage: stage,
+                  count: data.pipeline[stage]!,
+                  maxCount: maxCount,
+                  l10n: l10n,
+                ),
         ],
       ),
     );

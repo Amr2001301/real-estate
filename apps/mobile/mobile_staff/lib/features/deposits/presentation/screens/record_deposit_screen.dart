@@ -90,12 +90,23 @@ class _RecordDepositScreenState extends State<RecordDepositScreen> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(title: Text(l10n.recordDeposit)),
-        body: Form(
-          key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            children: [
+        body: Builder(
+          builder: (context) {
+            return Column(
+              children: [
+                AppNavHeader(
+                  title: l10n.recordDeposit,
+                  leadingAction: NavHeaderAction(
+                    icon: Icons.arrow_back_ios_new_rounded,
+                    onTap: () => context.pop(),
+                  ),
+                ),
+                Expanded(
+                  child: Form(
+                    key: _formKey,
+                    child: ListView(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
+                      children: [
               if (widget.installmentLabel != null) ...[
                 AppCard(
                   elevation: AppCardElevation.soft,
@@ -153,8 +164,13 @@ class _RecordDepositScreenState extends State<RecordDepositScreen> {
                   );
                 },
               ),
-            ],
-          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

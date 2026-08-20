@@ -69,8 +69,10 @@ import '../features/leads/domain/repositories/leads_repository.dart';
 import '../features/leads/domain/usecases/lead_use_cases.dart';
 import '../features/leads/presentation/cubit/create_lead_cubit.dart';
 import '../features/leads/presentation/cubit/lead_detail_cubit.dart';
+import '../features/leads/presentation/cubit/leads_cubit.dart';
 import '../features/leads/presentation/screens/create_lead_screen.dart';
 import '../features/leads/presentation/screens/lead_detail_screen.dart';
+import '../features/leads/presentation/screens/leads_screen.dart';
 import '../features/notifications/domain/repositories/notifications_repository.dart';
 import '../features/notifications/domain/usecases/notification_use_cases.dart';
 import '../features/notifications/presentation/cubit/notifications_cubit.dart';
@@ -324,6 +326,18 @@ GoRouter createStaffRouter(
             child: MaintenanceDetailScreen(fallback: request),
           );
         },
+      ),
+
+      // ── Leads list ──────────────────────────────────────────────────────
+      GoRoute(
+        path: '/leads',
+        builder: (context, state) => BlocProvider(
+          create: (ctx) {
+            final repo = ctx.read<LeadsRepository>();
+            return LeadsCubit(GetLeads(repo), repo);
+          },
+          child: const LeadsScreen(),
+        ),
       ),
 
       // ── Lead create ─────────────────────────────────────────────────────

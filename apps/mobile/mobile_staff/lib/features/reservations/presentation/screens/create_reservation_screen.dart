@@ -25,8 +25,17 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.reservationNew)),
-      body: BlocConsumer<CreateReservationCubit, CreateReservationState>(
+      body: Column(
+        children: [
+          AppNavHeader(
+            title: l10n.reservationNew,
+            leadingAction: NavHeaderAction(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: BlocConsumer<CreateReservationCubit, CreateReservationState>(
         listenWhen: (a, b) => a.submitted != b.submitted || a.submitFailure != b.submitFailure,
         listener: (context, state) {
           if (state.submitted) {
@@ -75,6 +84,9 @@ class _CreateReservationScreenState extends State<CreateReservationScreen> {
             ],
           );
         },
+      ),
+          ),
+        ],
       ),
     );
   }

@@ -35,9 +35,15 @@ class _ContractsScreenState extends State<ContractsScreen> {
     final cubit = context.read<ContractsCubit>();
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.navContracts)),
       body: Column(
         children: [
+          AppNavHeader(
+            title: l10n.navContracts,
+            leadingAction: NavHeaderAction(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppSpacing.lg, AppSpacing.sm, AppSpacing.lg, 0),

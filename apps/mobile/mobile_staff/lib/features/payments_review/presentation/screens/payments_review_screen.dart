@@ -1,6 +1,7 @@
 import 'package:core/core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../common/staff_list_skeleton.dart';
 import '../../domain/entities/payment_review_item.dart';
@@ -124,13 +125,20 @@ class _PaymentsReviewScreenState extends State<PaymentsReviewScreen> {
     final cubit = context.read<PaymentsReviewCubit>();
     final canReview = _canReview;
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.paymentReviewTitle)),
-      body: BlocListener<ProofDownloadCubit, ProofDownloadState>(
-        // Fire only when an open attempt settled with a problem (success just
-        // opened the file externally — no SnackBar needed).
-        listenWhen: (a, b) => b.openingId == null && (b.failure != null || b.launchFailed),
-        listener: _onProofDownload,
-        child: BlocConsumer<PaymentsReviewCubit, PaymentsReviewState>(
+      body: Column(
+        children: [
+          AppNavHeader(
+            title: l10n.paymentReviewTitle,
+            leadingAction: NavHeaderAction(
+              icon: Icons.arrow_back_ios_new_rounded,
+              onTap: () => context.pop(),
+            ),
+          ),
+          Expanded(
+            child: BlocListener<ProofDownloadCubit, ProofDownloadState>(
+              listenWhen: (a, b) => b.openingId == null && (b.failure != null || b.launchFailed),
+              listener: _onProofDownload,
+              child: BlocConsumer<PaymentsReviewCubit, PaymentsReviewState>(
           listenWhen: (a, b) => a.actionEpoch != b.actionEpoch,
           listener: _onAction,
           builder: (context, state) {
@@ -176,6 +184,9 @@ class _PaymentsReviewScreenState extends State<PaymentsReviewScreen> {
             }
           },
         ),
+      ),
+          ),
+        ],
       ),
     );
   }

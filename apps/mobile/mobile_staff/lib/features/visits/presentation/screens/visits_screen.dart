@@ -47,7 +47,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
   Widget build(BuildContext context) {
     final l10n     = context.l10n;
     final cubit    = context.read<VisitsCubit>();
-    final isRtl    = Directionality.of(context) == TextDirection.rtl;
+    final isRtl    = context.read<LocaleCubit>().isRtl;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -58,9 +58,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
             builder: (context, state) => AppNavHeader(
               title: l10n.navVisits,
               leadingAction: NavHeaderAction(
-                icon: isRtl
-                    ? Icons.arrow_forward_ios_rounded
-                    : Icons.arrow_back_ios_new_rounded,
+                icon: Icons.arrow_back_ios_new_rounded,
                 onTap: () => context.pop(),
               ),
               actions: [
@@ -191,21 +189,37 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm + 4, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm + 4, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? colors.brandNavy : colors.surface,
+          gradient: active
+              ? const LinearGradient(
+                  colors: [Color(0xFFAA8528), AppPalette.gold400],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          color: active ? null : colors.surface,
           borderRadius: AppRadii.pillAll,
           border: Border.all(
-            color: active ? colors.brandNavy : colors.hairline,
+            color: active ? AppPalette.gold500 : colors.hairline,
+            width: active ? 0.8 : 1.0,
           ),
+          boxShadow: active
+              ? [
+                  BoxShadow(
+                    color: AppPalette.gold400.withValues(alpha: 0.28),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-            color: active ? Colors.white : colors.inkStrong,
+            color: active ? AppPalette.navy : colors.inkStrong,
             height: 1.2,
           ),
         ),
@@ -216,116 +230,231 @@ class _FilterChip extends StatelessWidget {
 
 // ── Visit tile ────────────────────────────────────────────────────────────────
 
-class _VisitTile extends StatelessWidget {
+class _VisitTile extends StatefulWidget {
   const _VisitTile({required this.visit});
   final Visit visit;
 
-  Color _toneColor(BadgeTone tone, AppColorsExt c) => switch (tone) {
-        BadgeTone.success => c.success,
-        BadgeTone.warning => c.warning,
-        BadgeTone.error   => c.error,
-        BadgeTone.info    => c.info,
-        BadgeTone.gold    => c.brandGold,
-        _                 => c.inkMuted,
-      };
+  @override
+  State<_VisitTile> createState() => _VisitTileState();
+}
+
+class _VisitTileState extends State<_VisitTile> {
+  bool _pressed = false;
+  Visit get visit => widget.visit;
+
+  static Color _toneColor(BadgeTone tone, AppColorsExt c) => switch (tone) {
+    BadgeTone.success => c.success,
+    BadgeTone.warning => c.warning,
+    BadgeTone.error   => c.error,
+    BadgeTone.info    => c.info,
+    BadgeTone.gold    => c.brandGold,
+    _                 => c.inkMuted,
+  };
+
+  static IconData _statusIcon(String status) => switch (status) {
+    'SCHEDULED'  => Icons.event_available_rounded,
+    'COMPLETED'  => Icons.check_circle_outline_rounded,
+    'CANCELLED'  => Icons.event_busy_rounded,
+    'NO_SHOW'    => Icons.person_off_outlined,
+    _            => Icons.event_outlined,
+  };
 
   @override
   Widget build(BuildContext context) {
-    final l10n        = context.l10n;
-    final colors      = context.appColors;
-    final lang        = Localizations.localeOf(context).languageCode;
-    final tone        = visitStatusTone(visit.status);
-    final statusColor = _toneColor(tone, colors);
+    final l10n    = context.l10n;
+    final colors  = context.appColors;
+    final lang    = Localizations.localeOf(context).languageCode;
+    final isRtl   = context.read<LocaleCubit>().isRtl;
+    final tone    = visitStatusTone(visit.status);
+    final accent  = _toneColor(tone, colors);
+    final hasDate = visit.scheduledAt != null;
+    final hasUnit = visit.unitCode != null;
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: AppRadii.card,
-        boxShadow: colors.shadowCard,
-      ),
-      child: ClipRRect(
-        borderRadius: AppRadii.card,
-        child: Material(
-          color: colors.surface,
-          child: InkWell(
-            onTap: () => context.push('/visits/${visit.id}', extra: visit),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border.all(color: colors.hairline, width: 0.5),
-                borderRadius: AppRadii.card,
+    return GestureDetector(
+      onTapDown:   (_) => setState(() => _pressed = true),
+      onTapUp:     (_) => setState(() => _pressed = false),
+      onTapCancel: ()  => setState(() => _pressed = false),
+      onTap: ()        => context.push('/visits/${visit.id}', extra: visit),
+      child: AnimatedScale(
+        scale:    _pressed ? 0.975 : 1.0,
+        duration: const Duration(milliseconds: 110),
+        curve:    Curves.easeOutCubic,
+        child: Container(
+          decoration: BoxDecoration(
+            color:        colors.surface,
+            borderRadius: AppRadii.card,
+            border:       Border.all(color: accent.withValues(alpha: 0.14), width: 0.8),
+            boxShadow: [
+              BoxShadow(
+                color:      accent.withValues(alpha: 0.10),
+                blurRadius: 18,
+                offset:     const Offset(0, 5),
               ),
-              child: Stack(
-                children: [
-                  PositionedDirectional(
-                    top: 0, bottom: 0, start: 0,
-                    child: Container(width: 4, color: statusColor),
+              BoxShadow(
+                color:      Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset:     const Offset(0, 2),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize:         MainAxisSize.min,
+            crossAxisAlignment:   CrossAxisAlignment.stretch,
+            children: [
+              // ── Top gradient accent strip ──────────────────────────────
+              Container(
+                height: 3,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin:  isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    end:    isRtl ? Alignment.centerLeft  : Alignment.centerRight,
+                    colors: [accent, accent.withValues(alpha: 0.0)],
                   ),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.fromSTEB(
-                      AppSpacing.md, AppSpacing.md,
-                      AppSpacing.md, AppSpacing.md,
-                    ),
-                    child: Row(
+                ),
+              ),
+              // ── Card body ─────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md, AppSpacing.sm,
+                  AppSpacing.md, AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── Icon + name + badge row ────────────────────────
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
+                        Container(
+                          width:  42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color:  accent.withValues(alpha: 0.10),
+                            shape:  BoxShape.circle,
+                            border: Border.all(color: accent.withValues(alpha: 0.24)),
+                          ),
+                          child: Icon(_statusIcon(visit.status), color: accent, size: 20),
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                visit.clientName ??
-                                    visit.projectName ??
-                                    l10n.navVisits,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                visit.clientName ?? visit.projectName ?? l10n.navVisits,
+                                maxLines:  1,
+                                overflow:  TextOverflow.ellipsis,
                                 style: TextStyle(
-                                  fontSize: 15,
+                                  fontSize:   15,
                                   fontWeight: FontWeight.w700,
-                                  color: colors.inkStrong,
-                                  height: 1.2,
+                                  color:      colors.inkStrong,
+                                  height:     1.2,
                                 ),
                               ),
-                              if (visit.scheduledAt != null) ...[
-                                const SizedBox(height: 3),
-                                Row(children: [
-                                  Icon(Icons.schedule_rounded,
-                                      size: 12, color: colors.inkMuted),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    DateFormatter.shortDate(
-                                        visit.scheduledAt!,
-                                        languageCode: lang),
-                                    style: TextStyle(
-                                        fontSize: 12,
-                                        color: colors.inkMuted,
-                                        height: 1.3),
-                                  ),
-                                  if (visit.unitCode != null) ...[
-                                    Text(' · ',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: colors.inkMuted)),
-                                    Text(visit.unitCode!,
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: colors.inkMuted)),
+                              if (visit.clientName != null && visit.projectName != null) ...[
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(Icons.apartment_outlined, size: 12, color: colors.inkMuted),
+                                    const SizedBox(width: 3),
+                                    Expanded(
+                                      child: Text(
+                                        visit.projectName!,
+                                        maxLines:  1,
+                                        overflow:  TextOverflow.ellipsis,
+                                        style: TextStyle(fontSize: 12, color: colors.inkMuted, height: 1.3),
+                                      ),
+                                    ),
                                   ],
-                                ]),
+                                ),
                               ],
                             ],
                           ),
                         ),
                         const SizedBox(width: AppSpacing.xs),
-                        StatusBadge(
-                          label: visitStatusLabel(l10n, visit.status),
-                          tone: tone,
-                        ),
+                        StatusBadge(label: visitStatusLabel(l10n, visit.status), tone: tone),
                       ],
                     ),
-                  ),
-                ],
+                    // ── Info chips + disclosure arrow ─────────────────
+                    if (hasDate || hasUnit) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Container(height: 0.5, color: colors.hairline),
+                      const SizedBox(height: AppSpacing.xs),
+                      Row(
+                        children: [
+                          if (hasDate)
+                            _InfoChip(
+                              icon:  Icons.schedule_rounded,
+                              label: DateFormatter.shortDate(visit.scheduledAt!, languageCode: lang),
+                              color: colors.brandNavy,
+                            ),
+                          if (hasDate && hasUnit) const SizedBox(width: AppSpacing.xs),
+                          if (hasUnit)
+                            _InfoChip(
+                              icon:  Icons.apartment_outlined,
+                              label: visit.unitCode!,
+                              color: colors.brandGold,
+                            ),
+                          const Spacer(),
+                          Transform.flip(
+                            flipX: false,
+                            child: Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size:  12,
+                              color: colors.inkMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Shared info chip ──────────────────────────────────────────────────────────
+
+class _InfoChip extends StatelessWidget {
+  const _InfoChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+  final IconData icon;
+  final String   label;
+  final Color    color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color:        color.withValues(alpha: 0.07),
+        border:       Border.all(color: color.withValues(alpha: 0.20)),
+        borderRadius: AppRadii.pillAll,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: color.withValues(alpha: 0.80)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize:   11,
+              fontWeight: FontWeight.w600,
+              color:      color,
+              height:     1.2,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -28,7 +28,7 @@ class _BonusScreenState extends State<BonusScreen> {
   Widget build(BuildContext context) {
     final l10n      = context.l10n;
     final cubit     = context.read<BonusCubit>();
-    final isRtl     = Directionality.of(context) == TextDirection.rtl;
+    final isRtl     = context.read<LocaleCubit>().isRtl;
     final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -37,9 +37,7 @@ class _BonusScreenState extends State<BonusScreen> {
           AppNavHeader(
             title: l10n.bonusTitle,
             leadingAction: NavHeaderAction(
-              icon: isRtl
-                  ? Icons.arrow_forward_ios_rounded
-                  : Icons.arrow_back_ios_new_rounded,
+              icon: Icons.arrow_back_ios_new_rounded,
               onTap: () => context.pop(),
             ),
           ),
