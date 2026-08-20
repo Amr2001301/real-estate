@@ -118,6 +118,7 @@ export class UsersService {
     const roleFilter: Prisma.UserWhereInput =
       roles.length > 1 ? { role: { in: roles } } : roles.length === 1 ? { role: roles[0] } : {};
     const where: Prisma.UserWhereInput = {
+      deletedAt: null,
       ...roleFilter,
       ...(trimmed
         ? {
@@ -146,7 +147,7 @@ export class UsersService {
       where: { id },
       select: this.publicSelect(),
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user || !!user.deletedAt) throw new NotFoundException('User not found');
     return user;
   }
 
@@ -270,6 +271,26 @@ export class UsersService {
     return updated;
   }
 
+  async softDelete(id: string) {
+    await this.assertExists(id);
+    return this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: new Date(), active: false },
+      select: this.publicSelect(),
+    });
+  }
+
+  async restore(id: string) {
+    const user = await this.prisma.user.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.deletedAt === null) throw new BadRequestException('User is not deleted');
+    return this.prisma.user.update({
+      where: { id },
+      data: { deletedAt: null },
+      select: this.publicSelect(),
+    });
+  }
+
   private publicSelect() {
     return {
       id: true,
@@ -283,13 +304,17 @@ export class UsersService {
       createdAt: true,
       updatedAt: true,
       lastLoginAt: true,
+      deletedAt: true,
       managerId: true,
       manager: { select: { id: true, fullName: true } },
     } as const;
   }
 
   private async assertExists(id: string) {
-    const exists = await this.prisma.user.findUnique({ where: { id }, select: { id: true } });
+    const exists = await this.prisma.user.findUnique({
+      where: { id, deletedAt: null },
+      select: { id: true },
+    });
     if (!exists) throw new NotFoundException('User not found');
   }
 }

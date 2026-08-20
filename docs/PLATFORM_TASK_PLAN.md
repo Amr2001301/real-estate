@@ -39,7 +39,7 @@ Update status as you work. Do not begin P2/P3 tasks while any P0 remains open.
 
 ### TASK-P0-001 — Fix Reports Cross-Tenant SQL Leak
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P0
 - **Effort**: L
 - **Affects Score**: Security (+15), Backend (+5), APIs (+4) → **+24 pts overall**
@@ -101,7 +101,7 @@ Update status as you work. Do not begin P2/P3 tasks while any P0 remains open.
 
 ### TASK-P1-001 — Email Notifications on Domain Events
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P1
 - **Effort**: L
 - **Affects Score**: Backend (+3), APIs (+2), Testing Readiness (+2) → **+7 pts**
@@ -155,7 +155,7 @@ Update status as you work. Do not begin P2/P3 tasks while any P0 remains open.
 
 ### TASK-P1-002 — Add Production Guard to Seed Script
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P1
 - **Effort**: S
 - **Affects Score**: Security (+2), Backend (+1) → **+3 pts**
@@ -192,7 +192,7 @@ Update status as you work. Do not begin P2/P3 tasks while any P0 remains open.
 
 ### TASK-P1-003 — Firebase Assets in Mobile Release Pipeline
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P1
 - **Effort**: M
 - **Affects Score**: Staff Mobile (+5), Customer Mobile (+5), Testing Readiness (+3) → **+13 pts**
@@ -243,7 +243,7 @@ Update status as you work. Do not begin P2/P3 tasks while any P0 remains open.
 
 ### TASK-P1-004 — CD Pipeline + web-public Dockerfile
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P1
 - **Effort**: XL
 - **Affects Score**: Web Public (+5), Testing Readiness (+3), Observability (+2) → **+10 pts**
@@ -302,7 +302,7 @@ No automated deployment pipeline exists. All Railway/Vercel deployments are manu
 
 ### TASK-P2-001 — Migrate Reports SQL to Prisma.sql (Safety)
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P2
 - **Effort**: M
 - **Affects Score**: Security (+3), Backend (+2) → **+5 pts**
@@ -334,7 +334,7 @@ Even after adding `companyId` bindings in P0-001, the `$queryRawUnsafe` pattern 
 
 ### TASK-P2-002 — Inventory Matrix Server-Side Pagination
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P2
 - **Effort**: L
 - **Affects Score**: Web Admin (+3), Performance (+4) → **+7 pts**
@@ -367,7 +367,7 @@ Even after adding `companyId` bindings in P0-001, the `$queryRawUnsafe` pattern 
 
 ### TASK-P2-003 — Mobile Units Filters via API
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P2
 - **Effort**: M
 - **Affects Score**: Staff Mobile (+3), Customer Mobile (+3), APIs (+2) → **+8 pts**
@@ -401,7 +401,7 @@ Unit filters (bedrooms, bathrooms, price range, type) are applied client-side wi
 
 ### TASK-P2-004 — CMS Article Editor with RTE and Image Upload
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P2
 - **Effort**: XL
 - **Affects Score**: Web Admin (+3), Web Public (+2) → **+5 pts**
@@ -435,7 +435,7 @@ CMS articles are read-only in web-admin. No rich-text editor, no in-article imag
 
 ### TASK-P2-005 — Customer Maintenance Actions on Web-Public Portal
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P2
 - **Effort**: M
 - **Affects Score**: Web Public (+4) → **+4 pts**
@@ -469,7 +469,7 @@ Mobile customer can confirm maintenance resolution and submit complaints. These 
 
 ### TASK-P2-006 — APM and Alerting
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P2
 - **Effort**: XL
 - **Affects Score**: Observability (+8), Performance (+3) → **+11 pts**
@@ -520,7 +520,7 @@ No metrics collection, no alerting. Issues only discoverable through Sentry (opt
 
 ### TASK-P3-001 — Split God Files in Backend
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P3
 - **Effort**: L per file × 3 files
 - **Affects Score**: Code Quality, Maintainability
@@ -546,7 +546,7 @@ No metrics collection, no alerting. Issues only discoverable through Sentry (opt
 
 ### TASK-P3-002 — Reports PDF and Excel Export
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P3
 - **Effort**: L
 - **Affects Score**: Web Admin (+3)
@@ -577,7 +577,7 @@ No metrics collection, no alerting. Issues only discoverable through Sentry (opt
 
 ### TASK-P3-003 — Advanced Lead Filters on Staff Mobile
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P3
 - **Effort**: M
 - **Affects Score**: Staff Mobile (+2)
@@ -604,7 +604,7 @@ No metrics collection, no alerting. Issues only discoverable through Sentry (opt
 
 ### TASK-P3-004 — Verify / Remove PlanTemplateScheduleItem Dead Code
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P3
 - **Effort**: S
 
@@ -626,7 +626,7 @@ No metrics collection, no alerting. Issues only discoverable through Sentry (opt
 
 ### TASK-P3-005 — Standardize Soft-Delete Pattern
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P3
 - **Effort**: L
 - **Affects Score**: Database (+3)
@@ -656,7 +656,7 @@ No metrics collection, no alerting. Issues only discoverable through Sentry (opt
 
 ### TASK-P3-006 — Add DB-Level Constraints
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P3
 - **Effort**: S
 - **Affects Score**: Database (+2)
@@ -685,7 +685,7 @@ No metrics collection, no alerting. Issues only discoverable through Sentry (opt
 
 ### TASK-P3-007 — API Versioning Strategy Documentation
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P3
 - **Effort**: S
 - **Affects Score**: APIs (+2)
@@ -716,7 +716,7 @@ These are testing tasks that must be created **after** the fixes above are deplo
 
 ### TASK-TEST-001 — Reports MT Isolation E2E Test
 
-- **Status**: `[ ]`
+- **Status**: `[x]`
 - **Priority**: P0 companion
 - **Effort**: M
 - **Depends On**: TASK-P0-001

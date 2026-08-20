@@ -1,3 +1,7 @@
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  getRequiredCompanyId: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+}));
+
 import {
   CanActivate,
   ExecutionContext,

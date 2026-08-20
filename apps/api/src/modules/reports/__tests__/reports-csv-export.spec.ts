@@ -1,3 +1,9 @@
+// Stub tenant context so service methods that call getRequiredCompanyId() don't
+// throw inside the test HTTP harness.
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  getRequiredCompanyId: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+}));
+
 import {
   CanActivate,
   ExecutionContext,

@@ -17,6 +17,7 @@ import {
   UserRole,
 } from '@prisma/client';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { getRequiredCompanyId } from '../../common/tenant/tenant-context';
 import { toCsv, type CsvCell } from '../../common/utils/csv';
 import {
   buildBrokerPdf,
@@ -97,8 +98,9 @@ export class ReportsService {
   }
 
   async sales(period?: string, dateFrom?: string, dateTo?: string) {
+    const companyId = getRequiredCompanyId();
     let where: Prisma.ContractWhereInput = {};
-    const conditions: Prisma.Sql[] = [];
+    const conditions: Prisma.Sql[] = [Prisma.sql`c."companyId" = ${companyId}`];
     if (dateFrom || dateTo) {
       where = {
         createdAt: {
@@ -199,7 +201,11 @@ export class ReportsService {
   }
 
   async brokerLeaderboard(dateFrom?: string, dateTo?: string) {
-    const conditions: Prisma.Sql[] = [Prisma.sql`bc.status IN ('APPROVED', 'PAID')`];
+    const companyId = getRequiredCompanyId();
+    const conditions: Prisma.Sql[] = [
+      Prisma.sql`bc."companyId" = ${companyId}`,
+      Prisma.sql`bc.status IN ('APPROVED', 'PAID')`,
+    ];
     if (dateFrom) conditions.push(Prisma.sql`bc."earnedAt" >= ${new Date(dateFrom)}`);
     if (dateTo)   conditions.push(Prisma.sql`bc."earnedAt" <= ${new Date(dateTo + 'T23:59:59.999Z')}`);
     const whereClause = Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`;
@@ -224,6 +230,7 @@ export class ReportsService {
   }
 
   async salesTrend(year: number, projectId?: string) {
+    const companyId = getRequiredCompanyId();
     const safeYear = Math.floor(year);
     const projectJoin = projectId
       ? Prisma.sql`JOIN "Unit" u ON u.id = c."unitId"
@@ -242,6 +249,7 @@ export class ReportsService {
        FROM "Contract" c
        ${projectJoin}
        WHERE EXTRACT(YEAR FROM c."createdAt") = ${safeYear}
+       AND c."companyId" = ${companyId}
        ${projectFilter}
        GROUP BY EXTRACT(MONTH FROM c."createdAt")
     `);

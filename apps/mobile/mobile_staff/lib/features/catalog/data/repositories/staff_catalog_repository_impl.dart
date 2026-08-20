@@ -32,9 +32,25 @@ class StaffCatalogRepositoryImpl implements StaffCatalogRepository {
   }
 
   @override
-  Future<Result<List<StaffUnit>>> getProjectUnits(String projectId, {String? status}) {
+  Future<Result<List<StaffUnit>>> getProjectUnits(
+    String projectId, {
+    String? status,
+    int? bedrooms,
+    int? bathrooms,
+    num? priceMin,
+    num? priceMax,
+    String? type,
+  }) {
     return guardApiCall(() async {
-      final units = await _remote.listUnits(projectId: projectId, status: status);
+      final units = await _remote.listUnits(
+        projectId: projectId,
+        status: status,
+        bedrooms: bedrooms,
+        bathrooms: bathrooms,
+        priceMin: priceMin,
+        priceMax: priceMax,
+        type: type,
+      );
       return units.map((u) => u.toEntity()).toList();
     });
   }

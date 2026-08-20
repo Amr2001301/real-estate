@@ -5,7 +5,15 @@ import '../dtos/staff_catalog_dtos.dart';
 abstract interface class StaffCatalogRemoteDataSource {
   Future<List<StaffProjectDto>> listProjects({String? search});
   Future<StaffProjectDto> getProject(String id);
-  Future<List<StaffUnitDto>> listUnits({required String projectId, String? status});
+  Future<List<StaffUnitDto>> listUnits({
+    required String projectId,
+    String? status,
+    int? bedrooms,
+    int? bathrooms,
+    num? priceMin,
+    num? priceMax,
+    String? type,
+  });
   Future<StaffUnitDto> getUnit(String id);
 }
 
@@ -34,14 +42,27 @@ class StaffCatalogRemoteDataSourceImpl implements StaffCatalogRemoteDataSource {
   }
 
   @override
-  Future<List<StaffUnitDto>> listUnits({required String projectId, String? status}) async {
+  Future<List<StaffUnitDto>> listUnits({
+    required String projectId,
+    String? status,
+    int? bedrooms,
+    int? bathrooms,
+    num? priceMin,
+    num? priceMax,
+    String? type,
+  }) async {
     final res = await _dio.get<Map<String, dynamic>>(
       '/units',
       queryParameters: {
         'page': 1,
         'pageSize': 100,
         'projectId': projectId,
-        'status': ?(status),
+        'status': ?status,
+        'bedrooms': ?bedrooms,
+        'bathrooms': ?bathrooms,
+        'priceMin': ?priceMin,
+        'priceMax': ?priceMax,
+        'type': ?(type?.isNotEmpty == true ? type : null),
       },
     );
     final data = (res.data?['data'] as List?) ?? const [];

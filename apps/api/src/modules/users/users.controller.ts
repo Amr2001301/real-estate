@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -101,5 +102,19 @@ export class UsersController {
   @Patch(':id/activate')
   activate(@Param('id', ParseUUIDPipe) id: string) {
     return this.users.activate(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:delete')
+  @Delete(':id')
+  softDelete(@Param('id', ParseUUIDPipe) id: string) {
+    return this.users.softDelete(id);
+  }
+
+  @Roles(UserRole.ADMIN)
+  @Permissions('users:restore')
+  @Post(':id/restore')
+  restore(@Param('id', ParseUUIDPipe) id: string) {
+    return this.users.restore(id);
   }
 }

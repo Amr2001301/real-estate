@@ -1,3 +1,9 @@
+// Stub tenant context so service methods that call getRequiredCompanyId() don't
+// throw MissingTenantContextError inside the permissions test HTTP harness.
+jest.mock('../../../common/tenant/tenant-context', () => ({
+  getRequiredCompanyId: () => 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+}));
+
 import { CanActivate, ExecutionContext, Global, INestApplication, Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { Test } from '@nestjs/testing';

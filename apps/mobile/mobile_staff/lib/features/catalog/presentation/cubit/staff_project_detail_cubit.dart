@@ -35,11 +35,28 @@ class StaffProjectDetailCubit extends Cubit<StaffProjectDetailState> {
     );
   }
 
-  Future<void> filterByStatus(String? status) async {
+  Future<void> filterByStatus(String? status) => applyFilters(status: status);
+
+  Future<void> applyFilters({
+    String? status,
+    int? bedrooms,
+    int? bathrooms,
+    num? priceMin,
+    num? priceMax,
+    String? type,
+  }) async {
     final current = state.data;
     if (current == null) return;
     emit(state.toLoading());
-    final result = await _repo.getProjectUnits(projectId, status: status);
+    final result = await _repo.getProjectUnits(
+      projectId,
+      status: status,
+      bedrooms: bedrooms,
+      bathrooms: bathrooms,
+      priceMin: priceMin,
+      priceMax: priceMax,
+      type: type,
+    );
     result.when(
       ok: (units) => emit(StaffProjectDetailState.success(
         StaffProjectDetail(
