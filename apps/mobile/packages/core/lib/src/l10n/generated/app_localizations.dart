@@ -2102,6 +2102,12 @@ abstract class AppLocalizations {
   /// **'Draft'**
   String get contractStatusDraft;
 
+  /// No description provided for @contractSignedDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Date signed:'**
+  String get contractSignedDate;
+
   /// No description provided for @contractsDocumentsTitle.
   ///
   /// In en, this message translates to:

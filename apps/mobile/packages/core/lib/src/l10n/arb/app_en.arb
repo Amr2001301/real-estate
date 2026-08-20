@@ -382,6 +382,7 @@
   "contractsEmptyMessage": "Your contracts will appear here once available.",
   "contractStatusSigned": "Signed",
   "contractStatusDraft": "Draft",
+  "contractSignedDate": "Date signed:",
   "contractsDocumentsTitle": "Documents",
   "contractCustomer": "Customer",
   "contractUnit": "Unit",

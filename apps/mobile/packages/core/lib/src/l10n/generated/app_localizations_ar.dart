@@ -1067,6 +1067,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get contractStatusDraft => 'مسودة';
 
   @override
+  String get contractSignedDate => 'تاريخ التوقيع:';
+
+  @override
   String get contractsDocumentsTitle => 'المستندات';
 
   @override

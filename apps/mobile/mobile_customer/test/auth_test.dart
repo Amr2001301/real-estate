@@ -32,6 +32,10 @@ class _ThrowingRemote implements AuthRemoteDataSource {
   Future<AuthBundleDto> refresh(String t) async => throw error;
   @override
   Future<void> logout(String t) async => throw error;
+  @override
+  Future<void> forgotPassword(String email) async => throw error;
+  @override
+  Future<void> resetPassword(String token, String newPassword) async => throw error;
 }
 
 /// Fake repository returning canned results (no network, no storage).
@@ -56,6 +60,10 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Result<Session>> refreshSession() async => _r;
   @override
   Future<Result<void>> logout() async => const Ok(null);
+  @override
+  Future<Result<void>> forgotPassword(String email) async => const Ok(null);
+  @override
+  Future<Result<void>> resetPassword(String token, String newPassword) async => const Ok(null);
 }
 
 DioException _http(int status) => DioException(

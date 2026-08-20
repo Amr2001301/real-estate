@@ -21,9 +21,12 @@ class _FakeRemote implements VisitsRemoteDataSource {
   final List<VisitTransition> applied = [];
 
   @override
-  Future<List<VisitDto>> list(VisitsQuery query) async {
+  Future<Paginated<VisitDto>> list(VisitsQuery query) async {
     if (error != null) throw error!;
-    return rows;
+    return Paginated(
+      data: rows,
+      meta: PageMeta(page: 1, pageSize: 20, total: rows.length, totalPages: 1),
+    );
   }
 
   @override
@@ -39,13 +42,22 @@ class _FakeRemote implements VisitsRemoteDataSource {
   Future<void> transition(String id, VisitTransition t, String? notes, String? reason) async {
     applied.add(t);
   }
+
+  @override
+  Future<void> reschedule(String id, DateTime scheduledAt, {String? salesNotes}) async {}
+
+  @override
+  Future<void> assign(String id, String assignedSalesId) async {}
+
+  @override
+  Future<void> salesFeedback(String id, {int? rating, String? notes}) async {}
 }
 
 class _FakeRepo implements VisitsRepository {
-  _FakeRepo(this._list);
-  final Result<List<Visit>> _list;
+  _FakeRepo(this._paged);
+  final Result<Paginated<Visit>> _paged;
   @override
-  Future<Result<List<Visit>>> getVisits(VisitsQuery query) async => _list;
+  Future<Result<Paginated<Visit>>> getVisits(VisitsQuery query) async => _paged;
   @override
   Future<Result<VisitDetail>> getVisit(String id) async => throw UnimplementedError();
   @override
@@ -53,6 +65,12 @@ class _FakeRepo implements VisitsRepository {
   @override
   Future<Result<void>> updateStatus(String id, VisitTransition t, {String? notes, String? reason}) async =>
       const Ok(null);
+  @override
+  Future<Result<void>> reschedule(String id, DateTime scheduledAt, {String? salesNotes}) async => const Ok(null);
+  @override
+  Future<Result<void>> assign(String id, String assignedSalesId) async => const Ok(null);
+  @override
+  Future<Result<void>> submitSalesFeedback(String id, {int? rating, String? notes}) async => const Ok(null);
 }
 
 Map<String, dynamic> _row({String status = 'SCHEDULED'}) => {
@@ -107,7 +125,7 @@ void main() {
     test('success maps rows', () async {
       final repo = VisitsRepositoryImpl(_FakeRemote(rows: [VisitDto.fromJson(_row())]));
       final r = await repo.getVisits(const VisitsQuery());
-      expect(r.dataOrNull, hasLength(1));
+      expect(r.dataOrNull?.data, hasLength(1));
     });
 
     test('transition delegates to the right endpoint', () async {
@@ -120,15 +138,19 @@ void main() {
 
   group('VisitsCubit', () {
     test('empty → empty', () async {
-      final cubit = VisitsCubit(GetVisits(_FakeRepo(const Ok([]))));
+      final cubit = VisitsCubit(GetVisits(_FakeRepo(const Ok(Paginated(
+        data: [],
+        meta: PageMeta(page: 1, pageSize: 20, total: 0, totalPages: 0),
+      )))));
       await cubit.load();
       expect(cubit.state.status, DataStatus.empty);
     });
 
     test('toggleToday flips and reloads', () async {
-      final cubit = VisitsCubit(GetVisits(_FakeRepo(Ok([
-        const Visit(id: 'v1', status: 'SCHEDULED'),
-      ]))));
+      final cubit = VisitsCubit(GetVisits(_FakeRepo(Ok(const Paginated(
+        data: [Visit(id: 'v1', status: 'SCHEDULED')],
+        meta: PageMeta(page: 1, pageSize: 20, total: 1, totalPages: 1),
+      )))));
       await cubit.toggleToday();
       expect(cubit.state.today, isTrue);
       expect(cubit.state.status, DataStatus.success);
@@ -142,6 +164,9 @@ void main() {
       final cubit = VisitDetailCubit(
         GetVisitDetail(repo),
         UpdateVisitStatus(repo),
+        RescheduleVisit(repo),
+        AssignVisit(repo),
+        SubmitSalesFeedback(repo),
         visitId: 'v1',
       );
       await cubit.load();

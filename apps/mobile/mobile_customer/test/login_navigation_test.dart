@@ -38,6 +38,10 @@ class _FakeAuthRepository implements AuthRepository {
   Future<Result<Session>> refreshSession() async => Result.ok(_session);
   @override
   Future<Result<void>> logout() async => const Ok(null);
+  @override
+  Future<Result<void>> forgotPassword(String email) async => const Ok(null);
+  @override
+  Future<Result<void>> resetPassword(String token, String newPassword) async => const Ok(null);
 }
 
 void main() {

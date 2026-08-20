@@ -379,6 +379,7 @@
   "contractsEmptyMessage": "ستظهر عقودك هنا عند توفّرها.",
   "contractStatusSigned": "موقّع",
   "contractStatusDraft": "مسودة",
+  "contractSignedDate": "تاريخ التوقيع:",
   "contractCustomer": "العميل",
   "contractUnit": "الوحدة",
   "contractTotalAmount": "إجمالي المبلغ",

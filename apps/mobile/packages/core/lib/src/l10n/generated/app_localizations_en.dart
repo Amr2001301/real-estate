@@ -1078,6 +1078,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contractStatusDraft => 'Draft';
 
   @override
+  String get contractSignedDate => 'Date signed:';
+
+  @override
   String get contractsDocumentsTitle => 'Documents';
 
   @override
