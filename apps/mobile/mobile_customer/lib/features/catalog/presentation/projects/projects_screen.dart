@@ -318,9 +318,7 @@ class _ProjectsHeaderDelegate extends SliverPersistentHeaderDelegate {
                     width: 44,
                     child: canPop
                         ? _HeaderIconButton(
-                            icon: Directionality.of(context) == TextDirection.rtl
-                                ? Icons.arrow_forward_ios_rounded
-                                : Icons.arrow_back_ios_rounded,
+                            icon: Icons.arrow_back_ios_rounded,
                             onTap: () => Navigator.of(context).maybePop(),
                           )
                         : null,

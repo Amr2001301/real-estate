@@ -165,7 +165,6 @@ class CardOpenArrow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
     return Container(
       width: 32,
       height: 32,
@@ -175,7 +174,7 @@ class CardOpenArrow extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Icon(
-        !rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+        Icons.chevron_right_rounded,
         size: 20,
         color: colors.inkStrong,
       ),

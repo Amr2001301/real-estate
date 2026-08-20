@@ -787,7 +787,6 @@ class _HowItWorks extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final colors = context.appColors;
-    final rtl = Directionality.of(context) == TextDirection.rtl;
 
     final steps = [
       (Icons.touch_app_outlined, l10n.compareStepSelect),
@@ -811,9 +810,7 @@ class _HowItWorks extends StatelessWidget {
               padding: const EdgeInsets.only(
                   top: AppSpacing.lg, bottom: AppSpacing.xl),
               child: Icon(
-                rtl
-                    ? Icons.chevron_left_rounded
-                    : Icons.chevron_right_rounded,
+                Icons.chevron_right_rounded,
                 size: 20,
                 color: colors.hairline,
               ),

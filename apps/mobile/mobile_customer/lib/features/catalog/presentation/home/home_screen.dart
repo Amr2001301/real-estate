@@ -1475,7 +1475,6 @@ class _HomeProjectCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = context.l10n;
     final city = project.city.trim();
-    final rtl = Directionality.of(context) == TextDirection.rtl;
     final radius = BorderRadius.circular(AppRadii.xl);
 
     return GestureDetector(
@@ -1595,9 +1594,7 @@ class _HomeProjectCard extends StatelessWidget {
                             width: 34,
                             height: 34,
                             child: Icon(
-                              !rtl
-                                  ? Icons.chevron_left_rounded
-                                  : Icons.chevron_right_rounded,
+                              Icons.chevron_right_rounded,
                               color: Colors.white,
                               size: 20,
                             ),

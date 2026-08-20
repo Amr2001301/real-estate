@@ -539,10 +539,7 @@ class _NavOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
-    final backIcon = isRtl
-        ? Icons.arrow_forward_ios_rounded
-        : Icons.arrow_back_ios_new_rounded;
+    final backIcon = Icons.arrow_back_ios_new_rounded;
     final iconColor =
         (!showHeader && overSheet) ? colors.inkStrong : Colors.white;
 
