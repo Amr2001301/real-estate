@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../common/catalog_status_label.dart';
 import '../../../../common/staff_list_skeleton.dart';
+import '../../../../common/staff_share.dart';
 import '../../../../features/leads/domain/repositories/leads_repository.dart';
 import '../../domain/entities/staff_project.dart';
 import '../cubit/staff_project_detail_cubit.dart';
@@ -687,9 +688,16 @@ class _StaffActions extends StatelessWidget {
               color: colors.brandGold.withValues(alpha: 0.55),
               width: 1.3,
             ),
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.staffShareWithClient)),
-            ),
+            onTap: () {
+              final detail =
+                  context.read<StaffProjectDetailCubit>().state.data;
+              if (detail == null) return;
+              final lang = Localizations.localeOf(context).languageCode;
+              StaffShare.project(
+                projectId: detail.project.id,
+                projectName: detail.project.name.resolve(lang),
+              );
+            },
           ),
         ),
       ],
@@ -1424,7 +1432,8 @@ class _UnitCard extends StatelessWidget {
                               ),
                             ],
                           ),
-                          if (available) _SendChip(l10n: l10n),
+                          if (available)
+                            _SendChip(unit: unit, l10n: l10n),
                         ],
                       ),
                     ),
@@ -1440,7 +1449,8 @@ class _UnitCard extends StatelessWidget {
 }
 
 class _SendChip extends StatelessWidget {
-  const _SendChip({required this.l10n});
+  const _SendChip({required this.unit, required this.l10n});
+  final StaffUnit unit;
   final AppLocalizations l10n;
 
   @override
@@ -1448,8 +1458,12 @@ class _SendChip extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.staffSendToClient)),
+        final state = context.read<StaffProjectDetailCubit>().state;
+        final lang  = Localizations.localeOf(context).languageCode;
+        StaffShare.unit(
+          unitId:      unit.id,
+          unitCode:    unit.code,
+          projectName: state.data?.project.name.resolve(lang) ?? '',
         );
       },
       child: Container(

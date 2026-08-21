@@ -43,10 +43,7 @@ class _StaffUnitDetailScreenState extends State<StaffUnitDetailScreen> {
             );
           case DataStatus.empty:
           case DataStatus.success:
-            return _DetailPage(
-              unit: state.data!,
-              projectId: widget.projectId,
-            );
+            return _DetailPage(unit: state.data!, projectId: widget.projectId);
         }
       },
     );
@@ -75,8 +72,7 @@ class _LoadingScaffold extends StatelessWidget {
               ),
               const Expanded(
                 child: Center(
-                  child: CircularProgressIndicator(
-                      color: AppPalette.gold400),
+                  child: CircularProgressIndicator(color: AppPalette.gold400),
                 ),
               ),
             ],
@@ -162,7 +158,11 @@ class _DetailPage extends StatelessWidget {
                 collapseMode: CollapseMode.parallax,
                 stretchModes: const [StretchMode.zoomBackground],
                 titlePadding: const EdgeInsetsDirectional.fromSTEB(
-                    AppSpacing.xl, 0, AppSpacing.lg, AppSpacing.md),
+                  AppSpacing.xl,
+                  0,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                ),
                 title: Text(
                   unit.code,
                   maxLines: 1,
@@ -172,9 +172,7 @@ class _DetailPage extends StatelessWidget {
                     fontWeight: FontWeight.w900,
                     color: Colors.white,
                     letterSpacing: 0.5,
-                    shadows: [
-                      Shadow(color: Colors.black54, blurRadius: 10),
-                    ],
+                    shadows: [Shadow(color: Colors.black54, blurRadius: 10)],
                   ),
                 ),
                 background: _HeroBackground(unit: unit, lang: lang),
@@ -196,7 +194,11 @@ class _DetailPage extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg, AppSpacing.xl, AppSpacing.lg, AppSpacing.md),
+                  AppSpacing.lg,
+                  AppSpacing.xl,
+                  AppSpacing.lg,
+                  AppSpacing.md,
+                ),
                 child: _SectionTitle(l10n.unitDetails),
               ),
             ),
@@ -211,23 +213,25 @@ class _DetailPage extends StatelessWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg, AppSpacing.xl,
-                      AppSpacing.lg, AppSpacing.md),
+                    AppSpacing.lg,
+                    AppSpacing.xl,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
                   child: _SectionTitle(l10n.navProjects),
                 ),
               ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg),
+                    horizontal: AppSpacing.lg,
+                  ),
                   child: _ProjectCard(unit: unit, lang: lang),
                 ),
               ),
             ],
 
-            const SliverToBoxAdapter(
-              child: SizedBox(height: AppSpacing.xxl),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: AppSpacing.xxl)),
           ],
         ),
       ),
@@ -250,14 +254,14 @@ class _HeroBackground extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         // Image
-        if (heroUrl != null)
-          AppNetworkImage(url: heroUrl)
-        else
-          _Placeholder(),
+        if (heroUrl != null) AppNetworkImage(url: heroUrl) else _Placeholder(),
 
         // Top gradient — protects back button
         const Positioned(
-          top: 0, left: 0, right: 0, height: 200,
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 200,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -273,7 +277,10 @@ class _HeroBackground extends StatelessWidget {
 
         // Bottom gradient — behind title + location
         const Positioned(
-          left: 0, right: 0, bottom: 0, height: 200,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: 200,
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -296,7 +303,6 @@ class _HeroBackground extends StatelessWidget {
             tone: unitStatusTone(unit.status),
           ),
         ),
-
       ],
     );
   }
@@ -308,12 +314,10 @@ class _StatusPill extends StatelessWidget {
   final BadgeTone tone;
 
   Color _bg() => switch (tone) {
-        BadgeTone.success =>
-          const Color(0xFF22C55E).withValues(alpha: 0.90),
-        BadgeTone.warning =>
-          const Color(0xFFF59E0B).withValues(alpha: 0.90),
-        _ => Colors.black.withValues(alpha: 0.50),
-      };
+    BadgeTone.success => const Color(0xFF22C55E).withValues(alpha: 0.90),
+    BadgeTone.warning => const Color(0xFFF59E0B).withValues(alpha: 0.90),
+    _ => Colors.black.withValues(alpha: 0.50),
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -323,14 +327,17 @@ class _StatusPill extends StatelessWidget {
         color: _bg(),
         borderRadius: AppRadii.pillAll,
         border: Border.all(
-            color: Colors.white.withValues(alpha: 0.25), width: 0.8),
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 0.8,
+        ),
       ),
       child: Text(
         label,
         style: const TextStyle(
-            color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.w700),
+          color: Colors.white,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }
@@ -342,8 +349,11 @@ class _Placeholder extends StatelessWidget {
     return const ColoredBox(
       color: _navyDeep,
       child: Center(
-        child: Icon(Icons.home_work_outlined,
-            size: 64, color: Color(0x33FFFFFF)),
+        child: Icon(
+          Icons.home_work_outlined,
+          size: 64,
+          color: Color(0x33FFFFFF),
+        ),
       ),
     );
   }
@@ -367,7 +377,9 @@ class _CircleBackButton extends StatelessWidget {
           color: Colors.white.withValues(alpha: 0.18),
           shape: BoxShape.circle,
           border: Border.all(
-              color: Colors.white.withValues(alpha: 0.30), width: 0.8),
+            color: Colors.white.withValues(alpha: 0.30),
+            width: 0.8,
+          ),
         ),
         child: const Icon(
           Icons.arrow_back_ios_new_rounded,
@@ -397,11 +409,11 @@ class _SummaryCard extends StatelessWidget {
   final bool available;
 
   Color get _accent => switch (unit.status) {
-        'AVAILABLE' => colors.success,
-        'RESERVED' => colors.warning,
-        'SOLD' => const Color(0xFFEF4444),
-        _ => colors.inkMuted,
-      };
+    'AVAILABLE' => colors.success,
+    'RESERVED' => colors.warning,
+    'SOLD' => const Color(0xFFEF4444),
+    _ => colors.inkMuted,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -410,7 +422,11 @@ class _SummaryCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.fromLTRB(
-          AppSpacing.lg, AppSpacing.lg, AppSpacing.lg, 0),
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        0,
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadii.xl),
@@ -429,8 +445,11 @@ class _SummaryCard extends StatelessWidget {
           // ── Identity row ─────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg, AppSpacing.lg,
-                AppSpacing.lg, AppSpacing.lg),
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+            ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -465,10 +484,9 @@ class _SummaryCard extends StatelessWidget {
                         width: 36,
                         height: 2.5,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: [
-                            AppPalette.gold400,
-                            Color(0x00B8941F),
-                          ]),
+                          gradient: const LinearGradient(
+                            colors: [AppPalette.gold400, Color(0x00B8941F)],
+                          ),
                           borderRadius: BorderRadius.circular(999),
                         ),
                       ),
@@ -479,12 +497,16 @@ class _SummaryCard extends StatelessWidget {
                 // Status badge (end = left in RTL)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 8),
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: accent.withValues(alpha: 0.10),
                     borderRadius: AppRadii.pillAll,
                     border: Border.all(
-                        color: accent.withValues(alpha: 0.35), width: 1.2),
+                      color: accent.withValues(alpha: 0.35),
+                      width: 1.2,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -530,8 +552,11 @@ class _SummaryCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg, AppSpacing.md,
-                  AppSpacing.lg, AppSpacing.lg),
+                AppSpacing.lg,
+                AppSpacing.md,
+                AppSpacing.lg,
+                AppSpacing.lg,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -546,14 +571,11 @@ class _SummaryCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    PriceFormatter.formatString(unit.price,
-                        languageCode: lang),
+                    PriceFormatter.formatString(unit.price, languageCode: lang),
                     style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w900,
-                      color: available
-                          ? colors.brandGold
-                          : colors.inkMuted,
+                      color: available ? colors.brandGold : colors.inkMuted,
                       letterSpacing: -0.5,
                       height: 1.0,
                     ),
@@ -596,10 +618,10 @@ class _SectionTitle extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: colors.inkStrong,
-                letterSpacing: -0.2,
-              ),
+            fontWeight: FontWeight.w800,
+            color: colors.inkStrong,
+            letterSpacing: -0.2,
+          ),
         ),
       ],
     );
@@ -639,41 +661,41 @@ class _SpecsGrid extends StatelessWidget {
         (Icons.layers_outlined, '${unit.floor}', l10n.unitFloor),
     ];
 
-    if (specs.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    if (specs.isEmpty)
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
 
     // Build rows of 2
     final rows = <Widget>[];
     for (int i = 0; i < specs.length; i += 2) {
-      rows.add(Row(
-        children: [
-          Expanded(
-            child: _SpecCard(
-              icon: specs[i].$1,
-              value: specs[i].$2,
-              label: specs[i].$3,
-            ),
-          ),
-          if (i + 1 < specs.length) ...[
-            const SizedBox(width: AppSpacing.sm),
+      rows.add(
+        Row(
+          children: [
             Expanded(
               child: _SpecCard(
-                icon: specs[i + 1].$1,
-                value: specs[i + 1].$2,
-                label: specs[i + 1].$3,
+                icon: specs[i].$1,
+                value: specs[i].$2,
+                label: specs[i].$3,
               ),
             ),
-          ] else
-            const Expanded(child: SizedBox.shrink()),
-        ],
-      ));
+            if (i + 1 < specs.length) ...[
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _SpecCard(
+                  icon: specs[i + 1].$1,
+                  value: specs[i + 1].$2,
+                  label: specs[i + 1].$3,
+                ),
+              ),
+            ] else
+              const Expanded(child: SizedBox.shrink()),
+          ],
+        ),
+      );
       if (i + 2 < specs.length) rows.add(const SizedBox(height: AppSpacing.sm));
     }
 
     return SliverToBoxAdapter(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: rows,
-      ),
+      child: Column(mainAxisSize: MainAxisSize.min, children: rows),
     );
   }
 }
@@ -695,12 +717,13 @@ class _SpecCard extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.symmetric(
-          vertical: AppSpacing.xl, horizontal: AppSpacing.md),
+        vertical: AppSpacing.xl,
+        horizontal: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(
-            color: colors.hairline.withValues(alpha: 0.6)),
+        border: Border.all(color: colors.hairline.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -719,7 +742,8 @@ class _SpecCard extends StatelessWidget {
               color: AppPalette.gold400.withValues(alpha: 0.10),
               shape: BoxShape.circle,
               border: Border.all(
-                  color: AppPalette.gold400.withValues(alpha: 0.20)),
+                color: AppPalette.gold400.withValues(alpha: 0.20),
+              ),
             ),
             child: Icon(icon, size: 24, color: colors.brandGold),
           ),
@@ -741,8 +765,10 @@ class _SpecCard extends StatelessWidget {
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelMedium
-                ?.copyWith(color: colors.inkMuted, letterSpacing: 0.1),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: colors.inkMuted,
+              letterSpacing: 0.1,
+            ),
           ),
         ],
       ),
@@ -770,8 +796,7 @@ class _ProjectCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(
-            color: AppPalette.gold400.withValues(alpha: 0.20)),
+        border: Border.all(color: AppPalette.gold400.withValues(alpha: 0.20)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
@@ -793,8 +818,11 @@ class _ProjectCard extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(AppRadii.md + 2),
             ),
-            child: const Icon(Icons.apartment_rounded,
-                color: Colors.white, size: 26),
+            child: const Icon(
+              Icons.apartment_rounded,
+              color: Colors.white,
+              size: 26,
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
@@ -805,8 +833,9 @@ class _ProjectCard extends StatelessWidget {
                   Text(
                     name,
                     style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: colors.inkStrong),
+                      fontWeight: FontWeight.w700,
+                      color: colors.inkStrong,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -815,14 +844,18 @@ class _ProjectCard extends StatelessWidget {
                 if (city != null)
                   Row(
                     children: [
-                      Icon(Icons.location_on_rounded,
-                          size: 13, color: colors.brandGold),
+                      Icon(
+                        Icons.location_on_rounded,
+                        size: 13,
+                        color: colors.brandGold,
+                      ),
                       const SizedBox(width: 3),
                       Flexible(
                         child: Text(
                           city,
-                          style: theme.textTheme.bodySmall
-                              ?.copyWith(color: colors.inkMuted),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colors.inkMuted,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -903,40 +936,28 @@ class _StickyActionBar extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppButton(
-                        label: l10n.reservationCreate,
-                        icon: Icons.bookmark_add_outlined,
-                        variant: available
-                            ? AppButtonVariant.gold
-                            : AppButtonVariant.outline,
-                        size: AppButtonSize.large,
-                        expand: true,
-                        onPressed: available
-                            ? () => context.push(
-                                  '/reservations/new',
-                                  extra: {'unitId': unit.id},
-                                )
-                            : null,
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
+                      // Reserve — AVAILABLE only
+                      if (available) ...[
+                        AppButton(
+                          label: l10n.reservationCreate,
+                          icon: Icons.bookmark_add_outlined,
+                          variant: AppButtonVariant.gold,
+                          size: AppButtonSize.large,
+                          expand: true,
+                          onPressed: () => context.push(
+                            '/reservations/new',
+                            extra: {'unitId': unit.id},
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                      ],
+
+                      // Second row — hide Schedule visit for SOLD units
                       Row(
                         children: [
-                          if (effProjectId != null) ...[
-                            Expanded(
-                              child: _GlassAction(
-                                label: l10n.visitNew,
-                                icon: Icons.event_outlined,
-                                onTap: () => context.push(
-                                  '/visits/new',
-                                  extra: {
-                                    'projectId': effProjectId,
-                                    'unitId': unit.id,
-                                  },
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: AppSpacing.xs),
-                          ],
+                          if (available && effProjectId != null ||
+                              unit.status == 'RESERVED' && effProjectId != null)
+                            ...[],
                           Expanded(
                             child: _GlassAction(
                               label: l10n.calculatorTitle,
@@ -980,8 +1001,7 @@ class _GlassAction extends StatelessWidget {
       color: Colors.white.withValues(alpha: 0.10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppRadii.md),
-        side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.25)),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.25)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -995,11 +1015,10 @@ class _GlassAction extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Text(
                 label,
-                style:
-                    Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                        ),
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ],
           ),
